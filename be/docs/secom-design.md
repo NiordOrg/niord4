@@ -350,8 +350,8 @@ gains transactional application events, the listener swaps trivially.
 
 The listener and the sweep's units are two writers of the same dataset rows. Each locks the row
 (a `PESSIMISTIC_WRITE` row lock) before it reads the message, so they take turns and the later one
-reads what the earlier one committed. The row has no version column; before the lock (until PR
-#322), a writer that had read the published warning just before a cancel committed wrote its ACTIVE
+reads what the earlier one committed. The row has no version column; before the lock
+existed, a writer that had read the published warning just before a cancel committed wrote its ACTIVE
 row over the CANCELLED one, and the cancelled warning was served and pushed as in force until the
 sweep's cancellation pass or the next status event put it back.
 

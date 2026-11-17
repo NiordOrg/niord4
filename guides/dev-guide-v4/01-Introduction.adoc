@@ -13,9 +13,9 @@ system is put together and which rules the code follows, and for the details it 
 documents in the source repository that are kept up to date with the code. Where this guide and
 such a document disagree, the document in the repository is right.
 
-The source code of Niord 4 lives in one repository, which is not public yet; it is to move to
-the NiordOrg organisation on GitHub (https://github.com/NiordOrg). This guide therefore names
-files as paths relative to the root of that repository, such as `be/README.md`.
+The source code of Niord 4 lives in one public repository in the NiordOrg organisation on GitHub
+(https://github.com/NiordOrg). This guide names files as paths relative to the root of that
+repository, such as `be/README.md`.
 
 Earlier versions have guides of their own, kept as an archive:
 link:../dev-guide-v3/guide.html[Niord v3 (Quarkus)] and

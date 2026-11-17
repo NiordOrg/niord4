@@ -72,9 +72,9 @@ What the build does, in order:
    accident.
 
 The output is never committed: `_site/` and `_kit/` (the kit's guides on their way) are ignored by
-git. The `Guides` workflow (`.github/workflows/guides.yml`) builds the site on pull requests into
-main that touch `guides/`, the kit's guides or the help map, and keeps it as a downloadable
-artifact; it deploys nothing.
+git. The `Guides` workflow (`.github/workflows/guides.yml`) builds the site on every pull request,
+drafts included, that touches `guides/`, the kit's guides or the help map, and keeps it as a
+downloadable artifact; it deploys nothing.
 
 **Publishing in a folder, before the root.** Until the new system is live, docs.niord.org's root
 keeps the manuals of the system in production, and these guides are published beside them in the

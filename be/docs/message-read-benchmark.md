@@ -1,4 +1,4 @@
-# Message reads: niord-ng against the previous Niord
+# Message reads: Niord 4 against the previous Niord
 
 **Status:** 2026-11-05. niord-base's core defaults batch lazy loads 256 owners a query (16 before). niord-dk's and
 niord-gl's local profiles still set 16, which wins over the core defaults, so their local runs stay at 16 and only
@@ -16,7 +16,7 @@ map images, which have [their own benchmark](map-image-benchmark.md).
 
 - **The backlog's figures** (2026-11-02):
   `GET /rest/messages/search?language=en&mainType=NW&mainType=NM&areaId=453` answered in 110–150 ms on the
-  previous Niord's test environment and in about 1 s on a Windows workstation against niord-ng on the same data,
+  previous Niord's test environment and in about 1 s on a Windows workstation against Niord 4 on the same data,
   where it made 541 table lookups; how they were counted is not recorded. The machine, the database engine (MySQL
   against PostgreSQL) and the path to the database all differ, so the factor of 7 is not a like-for-like figure.
 - **That request lists everything.** `/rest/messages/search` reads the area from `area` and the language from
@@ -24,12 +24,12 @@ map images, which have [their own benchmark](map-image-benchmark.md).
   100 of the 199 published NW and NM messages, with the texts of every language. Both applications read the same
   names, so the two figures do time the same request.
 - **The repository's own records show no factor of 7.** The map-image benchmark timed the previous Niord on its
-  test environment from a workstation (R5, medians: one message 72 ms, a list of 176 messages 621 ms) and niord-ng
+  test environment from a workstation (R5, medians: one message 72 ms, a list of 176 messages 621 ms) and Niord 4
   on a workstation with the test data and niord-dk's local profile (case 6: one message about 39 ms, the list
   search with `maxSize=200` about 560 ms). Neither pair is like for like, but they are close.
 - **The batch size's own records**, on the test data: a list of 100 took 1,119 statements and about 4.5 s without
   batching, and 92 statements and about 0.5 s at 16 (niord-dk's local profile, which set it first); the public
-  message list, about 275 messages, took 21–25 s without and 1.2–3 s at 16 (#280, which put 16 into the core
+  message list, about 275 messages, took 21–25 s without and 1.2–3 s at 16 (which was then put into the core
   defaults).
 
 ## 2. What is the same and what differs
@@ -38,10 +38,10 @@ The same in both: the associations of the message and of the 19 entities its val
 annotations, compared file by file), and the search: one query for the ids, one for the messages, then the value
 objects walk each message's associations.
 
-| | Previous Niord | niord-ng |
+| | Previous Niord | Niord 4 |
 | --- | --- | --- |
 | Stack | Quarkus 3.7.2, Hibernate ORM 6.4.3, MySQL | Spring Boot 4.0.7, Hibernate ORM 7.2, PostgreSQL 18 |
-| Batch fetch size | 16, Quarkus's default | 256 in `niord-core-defaults.yml` since 2026-11-05 (16 from #280); 16 in the local runs of niord-dk and niord-gl, whose local profiles still set it |
+| Batch fetch size | 16, Quarkus's default | 256 in `niord-core-defaults.yml` since 2026-11-05 (16 before); 16 in the local runs of niord-dk and niord-gl, whose local profiles still set it |
 | Second-level cache | on for the 18 `@Cacheable` entities: Quarkus's default, built on Caffeine, 10,000 entries a region, no expiry | off: no cache provider is configured, so `@Cacheable` does nothing |
 | Cached collections | none: no collection carries `@Cache` | none |
 | Bytecode enhancement | always: Quarkus enhances the entities at build time | none |
@@ -92,13 +92,13 @@ In this order; steps 2 and 3 are independent of each other.
    never reaches that JVM. If the time is in the statements, it falls with their count.
 2. **The benchmark**, built on `be/scripts/bench-map-images.mjs` (its harness, credentials and result files; its
    case 6 and R5 already time one message and the list search) rather than a second script beside it: the reads of
-   the scope as cases, each timed (median and p95), with niord-ng's statements per request recorded, in its two
-   modes: `local`, both applications on one workstation with the test data (the previous one on MySQL, niord-ng on
+   the scope as cases, each timed (median and p95), with Niord 4's statements per request recorded, in its two
+   modes: `local`, both applications on one workstation with the test data (the previous one on MySQL, Niord 4 on
    its PostgreSQL copy), and `remote`, the two test environments with GET requests only. The pass rule is the
-   map-image benchmark's, for `local`: in every case niord-ng's median and p95 are at most the previous Niord's
+   map-image benchmark's, for `local`: in every case Niord 4's median and p95 are at most the previous Niord's
    × 1.05, with an allowance of at least 2 ms for operations under about 40 ms. `remote` is a guide, not the
    gate. **Needs:** for `local`, the test data's MySQL dump and a running build of the previous Niord; for
-   `remote`, a niord-ng test deployment on the test data.
+   `remote`, a Niord 4 test deployment on the test data.
 3. **The second-level cache**, as the previous Niord had it: `org.hibernate.orm:hibernate-jcache` with Caffeine's
    JCache (`com.github.ben-manes.caffeine:jcache`), both versions managed by Spring Boot, `ENABLE_SELECTIVE`,
    10,000 entries a region; a deliberate `pom.xml` change. Three conditions come first:

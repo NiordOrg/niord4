@@ -1,7 +1,7 @@
 # AGENTS.md
 
-niord-ng is the next-generation Niord stack — the maritime safety information system for Navigational
-Warnings and Notices to Mariners — as one repository with two halves that ship together:
+Niord is the maritime safety information system for Navigational Warnings and Notices to Mariners.
+This repository holds the base product, as one repository with two halves that ship together:
 
 | Path | What | Own conventions |
 |---|---|---|
@@ -52,7 +52,7 @@ The nested files own everything specific to a half. This file holds only what is
 - **Suspected production bugs found outside the task** go to `be/docs/potential-errors.md` (open items only,
   one `## CODE. title` entry each) or `fe/docs/backlog.md`; do not fix unrelated code in passing.
 - **Country-specific behaviour** lives in the repositories `SIFA-DK/niord-dk` and `SIFA-DK/niord-gl`, backend and
-  frontend, never in the shared code paths: niord-ng holds no country's folder, only the base product's neutral
+  frontend, never in the shared code paths: this repository holds no country's folder, only the base product's neutral
   defaults at the seams (each frontend application's `country-specific/default/`). The backend contract a country
   builds on (its extension points, the protected list, the override check) is
   [`be/docs/country-api.md`](be/docs/country-api.md); the frontend's (the seams, the country API, the set-up from

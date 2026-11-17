@@ -280,7 +280,7 @@ The end-to-end suite is deliberately excluded (it needs a live backend and Keycl
 
 The repository's publish workflow (`.github/workflows/publish.yml`) follows Frontend CI and
 Backend CI on `main` and releases the backend's artefacts to GitHub Packages and Harbor, with the
-administration app's bundle (`niord-web-admin`, classifier `en`), and from P4 of the country split
+administration app's bundle (`niord-web-admin`, classifier `en`), and
 the base product's frontend source zip, `org.niord.web:niord-fe-src`, whose sha256 it records, with
 the zip, in the GitHub release of the tag `v4.0.<run>`
 ([country-kit/README.md](../country-kit/README.md#publishing)). A country builds, tests and pushes its

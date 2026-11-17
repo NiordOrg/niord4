@@ -736,9 +736,9 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   `niord-base`.
 - **Description:** two artifacts are hosted only by GRAD, `secom-v2-core-jakarta` 0.1.0 (jar and pom) and its
   parent pom `secom-v2-parent` 0.1.0; everything else comes from Central. On 2026-10-23 GRAD refused
-  connections (from GitHub's runners and from a workstation alike), and niord-dk #7's backend job failed at
+  connections (from GitHub's runners and from a workstation alike), and a backend job of niord-dk's CI failed at
   dependency resolution: niord-dk had no Maven cache yet (`Cache not found for input keys: … maven-Linux-`), so
-  the `restore-keys` fallback that keeps niord-ng's own CI green during such an outage (#41) had nothing to
+  the `restore-keys` fallback that keeps the base product's own CI green during such an outage had nothing to
   restore.
 - **Why it looks wrong / risk:** the build's availability is GRAD's. While GRAD is down, a country repository
   without a cache, any cache that has expired (7 days unused), and a newcomer's first `./start-local.sh
@@ -746,10 +746,10 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **What a fix needs (an owner decision):** a lasting home for the two artifacts that does not depend on GRAD's
   repository being up. The owner's ruling of 2026-11-01 keeps the library in the countries' file mirror for now;
   where it lives for good is a later ruling (F5, the mirrors' removal, waits for it). A country may carry a file
-  mirror, `be/third-party-maven/`, listed first in its pom: niord-dk (#8) and niord-gl (#6) do, holding the files
-  byte for byte with GRAD's checksums, with a README on how to remove it. niord-ng has none: its CI cache holds the
+  mirror, `be/third-party-maven/`, listed first in its pom: niord-dk and niord-gl do, holding the files
+  byte for byte with GRAD's checksums, with a README on how to remove it. The base product has none: its CI cache holds the
   files, and a fresh local build here still needs GRAD or a warm cache, so the entry stays open.
-- **Exposed by:** niord-dk #7's CI, 2026-10-23 (run 39946054458).
+- **Exposed by:** niord-dk's CI, 2026-10-23.
 - **Severity:** Medium — availability of every build that has no warm cache, outside our control.
 
 ## ERR2 — Handler-reachable `IllegalStateException` sites that are server faults rendered as 409 *(LOW · FIXED)*
@@ -1055,8 +1055,7 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 - **Location:** `SIFA-DK/niord-dk` `be/src/test/java/org/niord/core/DkNavWarnDateFormatterTest.java`.
 - **Description:** the test formats its inputs and `System.out.println`s the results without a single assertion:
   it fails only if an exception escapes, so a silently wrong Danish NAV-warn date passes the suite.
-  `DkLightCharacterTest`, the other one this entry named, asserts each rendering non-blank since DK's C6
-  (`SIFA-DK/niord-dk` #2).
+  `DkLightCharacterTest`, the other one this entry named, asserts each rendering non-blank since DK's C6.
 - **Why it looks wrong:** it is the only test of the Danish NAV-warn date formatting; it should pin the expected
   output strings.
 - **Exposed by:** a review of the two Danish unit tests — neither carried a meaningful assertion.
@@ -1064,7 +1063,7 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 ## DICT1. `DictionaryService` hard-fails startup when the database's default language has no bundle on the class path
 
 - **Location:** `DefaultTexts.read` (`niord/src/main/java/org/niord/core/defaults/DefaultTexts.java`), called from `DictionaryService.init`: when neither layer has a file for a bundle in the default language it throws `IllegalStateException("No default-language text for the '<bundle>' dictionary: neither … nor … is on the class path")`. The language list and the default language still come from the **persisted** `modelLanguages`/`defaultLanguage` settings.
-- **Description:** the default language's text for a bundle may come from the country's texts (`defaults/country/texts/<lang>/`) or from the language pack (`defaults/packs/<lang>/`, for `en` the base product's `defaults/base/texts/en/`); a root-level `<bundle>_<lang>.properties` is no longer read (NG-B). Pointing the English `niord-app` at a database whose default language is `da` (one that `niord-dk` or `niord-gl` has started, since DK's and GL's `defaults/country/settings.json` both set `defaultLanguage` `da` (GL's `main` `ffca4eb8` has one; gh api, 2026-11-02), or whose `defaultLanguage` row is `da`) stops start-up, because `niord-app` has neither for `da`. The IT fixture alone does not: `niord-base-data.sql` holds no `Setting` row since C4b, so the IT start writes `modelLanguages` `["da","en"]` from the test tree's `niord.json` and `defaultLanguage` `en` from the base product's settings file; a missing `da` file would only warn, and the test tree's stand-in `da` pack (`src/test/resources/defaults/packs/da/`) gives one. A language other than the default one with no file in either layer only warns and contributes no texts.
+- **Description:** the default language's text for a bundle may come from the country's texts (`defaults/country/texts/<lang>/`) or from the language pack (`defaults/packs/<lang>/`, for `en` the base product's `defaults/base/texts/en/`); a root-level `<bundle>_<lang>.properties` is no longer read (NG-B). Pointing the English `niord-app` at a database whose default language is `da` (one that `niord-dk` or `niord-gl` has started, since DK's and GL's `defaults/country/settings.json` both set `defaultLanguage` `da` (GL's `main` has one, read on 2026-11-02), or whose `defaultLanguage` row is `da`) stops start-up, because `niord-app` has neither for `da`. The IT fixture alone does not: `niord-base-data.sql` holds no `Setting` row since C4b, so the IT start writes `modelLanguages` `["da","en"]` from the test tree's `niord.json` and `defaultLanguage` `en` from the base product's settings file; a missing `da` file would only warn, and the test tree's stand-in `da` pack (`src/test/resources/defaults/packs/da/`) gives one. A language other than the default one with no file in either layer only warns and contributes no texts.
 - **Why it looks wrong:** a missing translation is degraded content, not an integrity violation, yet a default language without a bundle stops the application. `docs/code-data-config-plan.md` keeps this case fatal (§4.2), so the entry stays open under it too.
 - **Exposed by:** the dev-loop run of 2026-08-20; re-read against the code on 2026-10-20; re-read on 2026-11-02.
 
@@ -1084,9 +1083,9 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   which differs between APFS (macOS) and ext4 (Linux CI). The S-124/SECOM block runs *last* locally and
   *first* on CI, so the same commit was green on a developer machine and red on CI. Identical mechanism
   to [[TESTQ2]].
-- **Exposed by:** the SECAUD branch (PR #11), which added two IT classes and thereby reshuffled the
+- **Exposed by:** the SECAUD branch, which added two IT classes and thereby reshuffled the
   filesystem order on Linux. The bug is **pre-existing**, not introduced there: it reproduces on
-  unmodified `main` (3c8b4a3f) with
+  unmodified `main` with
   `./mvnw -o verify -pl niord -Dfailsafe.runOrder=reversealphabetical -Dit.test='S124ServiceITTest,S124RestServiceITTest,S124CancellationWarningITTest,S124DatasetPipelineITTest,SecomProtocolITTest,PublicationServiceGapITTest'`
   → `expected: <0> but was: <17>`.
 - **Fixed here** by making the filter match nothing deterministically (an extra `msg.uid == '<unique>'`
@@ -1124,14 +1123,14 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   so the search saw `2 + 3 = 5`.
 - **Why it looks wrong:** whether the assertion holds depends on which classes Failsafe happens to
   run first. On the Linux CI runner `MailingListRestRecipientsITTest` precedes `ContactServiceITTest`
-  (09:26:08 vs 09:26:31 in run 32564737759); locally the order is reversed, so the same commit is
+  (09:26:08 vs 09:26:31 in the CI run); locally the order is reversed, so the same commit is
   green on macOS and red on CI. The deeper issue is that a committed-write test class leaves rows in
   a database later classes assume is pristine — any other test that counts rows globally is exposed
   to the same trap. **Fixed here** by asserting the delta (`before + 2`) plus the presence of the
   test's own two e-mails, which is independent of both class order and leftover rows; the pollution
   itself remains.
-- **Exposed by:** Backend CI, once enabled in #5. Reproduces identically on `main`
-  (run 32563081692, `tests=2302`, `expected: <2> but was: <5>`), so it predates and is independent
+- **Exposed by:** Backend CI, once it was enabled. Reproduces identically on `main`
+  (`tests=2302`, `expected: <2> but was: <5>`), so it predates and is independent
   of any one branch.
 
 ## TESTQ5. `SecomProtocolITTest.cancelledDatasetsRequireATemporalExtentOrDataReference` expects an empty database-wide summary
@@ -1142,8 +1141,8 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   `GET /api/secom/v2/object` with no parameters and asserts 404.
 - **Description:** without a temporal extent the summary serves every *active* S-124 dataset in the shared
   database, not only this test's. The assertion therefore requires that no other test has left a published,
-  uncancelled dataset behind at that moment. Backend CI on `main` for `b6cf27e8` (2026-10-06, run
-  37426976771) found one — `NW-112-01`, data reference `8a0980ce-65a7-8ea0-98a0-3662403d8e11`, committed by
+  uncancelled dataset behind at that moment. Backend CI on `main` (2026-10-06)
+  found one — `NW-112-01`, data reference `8a0980ce-65a7-8ea0-98a0-3662403d8e11`, committed by
   another IT class that ran earlier — and the step failed with "Expected: a collection with size <0>, Actual:
   <[{dataReference=8a0980ce-…, info_identifier=NW-112-01, …}]>"; the same commit's suite was green on the pull
   request and green on the rerun. The second summary assertion (`validFrom=1970-01-01`, `hasSize(1)`) has the
@@ -1152,7 +1151,7 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   individually in its last step; the two database-wide assertions pin the state of the whole shared database
   instead, which depends on run order and on which earlier classes clean up after themselves — the TESTQ3
   kind of coupling, in a class that TESTQ3 names as a polluter of others.
-- **What exposed it:** a red `main` after a merge whose change could not touch SECOM (#133, a registry URL in
+- **What exposed it:** a red `main` after a merge whose change could not touch SECOM (a registry URL in
   the pom and a workflow), with a green rerun of the same job. A fix would filter the summary assertions to
   the test's own dataset (or assert that it is absent/present by `dataReference`), not pin the collection size.
 
@@ -1186,7 +1185,7 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   hanging. The single-language path renders inline on the caller and must never find the latch armed. Dropping
   the thread comparison and keeping only the distinct-session assertion would also end the flake, but a pool of
   one would then pass.
-- **Exposed by:** Backend CI "Integration tests", run 35959046132 attempt 1 (2026-09-24, PR #62):
+- **Exposed by:** Backend CI "Integration tests", the first attempt of a run on 2026-09-24:
   `both languages were drawn on one thread, so nothing overlapped ==> expected: not equal but was:
   <pool-100-thread-3>`, the one failure among 2987 tests; the re-run passed, and the PR changed report-PDF code
   only, not the render path. A standalone run of the same pattern (two back-to-back submits to a warm
@@ -1475,25 +1474,25 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Location:** `niord/src/main/java/org/niord/core/util/CdiUtils.java:34, :44-46, :55-57` (`private static ApplicationContext applicationContext`, set by `setApplicationContext` of each context that starts, read by `getBean`); the scripts that call `CdiUtils.getBean` (`ScriptResourceCheck.ALLOWED_BEAN_TYPES`), for example `templates/mailinglist/fetch-firing-exercises.js` in DK's and GL's bootstraps.
 - **Description:** in a JVM with more than one application context, every context that starts overwrites the field, so `CdiUtils.getBean` in a script resolves the beans of the context that started last, which reads another database. Every IT suite with a test that starts a context of its own on a container of its own (`BootstrapITTest`-style) has several. DK's first whole run of its C6 failed this way (`DkDgpsTemplateITTest`'s script found no area); DK's and GL's IT fixtures re-point the field at the test's own context (`DkBootstrapTemplates.pointScriptsAt`, `GlBootstrapTemplates.pointScriptsAt`). niord-base's own suite carries the same latent order dependence: `BootstrapITTest`, `BootstrapSameRunITTest` and `LiquibaseBootstrapITTest` start their own contexts beside `ITTest`'s cached one [inferred; no niord-base test has failed this way yet]. A production backend has one context and is not affected.
 - **Why it looks wrong:** a test's outcome depends on which context started last, and a script under test can read and act on another test's data without any error.
-- **Exposed by:** DK's and GL's C6 (`SIFA-DK/niord-dk` #2, `SIFA-DK/niord-gl` #2, 2026-10-22). Recorded, not fixed.
+- **Exposed by:** DK's and GL's C6 (`SIFA-DK/niord-dk` and `SIFA-DK/niord-gl`, 2026-10-22). Recorded, not fixed.
 
-## SETTINGS-4. A database set up before #281 may still store the former published `pdfEncryptionPassword` default
+## SETTINGS-4. A database set up before 2026-11-04 may still store the former published `pdfEncryptionPassword` default
 
-- **Location:** the `pdfEncryptionPassword` row of a deployment's `Setting` table. The code is fixed: since #281
-  (2026-11-04, the owner's ruling) the default is empty
+- **Location:** the `pdfEncryptionPassword` row of a deployment's `Setting` table. The code is fixed: since 2026-11-04
+  (the owner's ruling) the default is empty
   (`niord/src/main/java/org/niord/core/script/FmTemplateService.java` 67-71, `defaultValue = ""`;
   `defaults/base/settings-catalog.json` 731-733, `"codeDefault": ""`), and `getPDFEncryptionPassword` (102-107)
   encrypts only with a non-blank password.
-- **Description:** until #281 the code default was a known sentence, published in the settings catalog. Start-up
+- **Description:** until that fix the code default was a known sentence, published in the settings catalog. Start-up
   adds a missing operator setting with its code default and never changes a stored row (`SettingsService.addMissing`),
-  so a database that started a niord-ng from 4.0.74 (the catalog's `introducedIn`) up to #281 without the row
+  so a database that started a base product version from 4.0.74 (the catalog's `introducedIn`) up to that fix without the row
   stores that sentence, and a database carried over from the legacy Niord may store it too [inferred; no
   deployment's row was read]. A deployment that switches `pdfEncryptionEnabled` on there without setting the
   password encrypts its PDF reports with a value anyone with the old source can read.
 - **Why it looks wrong:** an encryption password that ships as a default protects nothing, and the code fix cannot
   reach a stored row (a repository change never changes data, `docs/code-data-config-plan.md`).
-- **Exposed by:** the second review of PR #179 (2026-10-22), reading the settings catalog; the code half fixed by
-  #281 (2026-11-04); narrowed to the stored rows by the cross-check of the error hunt of 2026-11-12 against this file.
+- **Exposed by:** the second review of the code, data and configuration work (2026-10-22), reading the settings catalog; the code half fixed
+  on 2026-11-04; narrowed to the stored rows by the cross-check of the error hunt of 2026-11-12 against this file.
 - **Severity:** Low — encryption is off by default. Fix: none in code; at the deploy step a sysadmin sets the
   password before switching encryption on, and the operators' guide can say so.
 
@@ -1506,7 +1505,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Why it looks wrong:** the base product names no country or organisation (C5's done-when), and a mail from
   another organisation's address may be rejected or misread. `e-navigation` is not on C5's word list, which is why
   the scan missed it.
-- **Exposed by:** the second review of PR #179 (2026-10-22). Pre-existing; not changed by the code/data/config work.
+- **Exposed by:** the second review of the code, data and configuration work (2026-10-22). Pre-existing; not changed by that work.
 
 
 ## CATEGORY1. Every category the import finds "has changed", so it is rewritten whole on every import
@@ -1525,7 +1524,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   element-wise into the row's own collection, so it is not affected.
 - **Why it looks wrong:** `hasChanged` exists to skip an unchanged category, and an unchanged import writes every
   category's rows again. Copying the lists before comparing them, as `sameList` does, closes it.
-- **Exposed by:** the review of PR #188 (2026-10-22); pinned by the error hunt of 2026-11-12 (track A4),
+- **Exposed by:** a review of 2026-10-22; pinned by the error hunt of 2026-11-12 (track A4),
   `CategoryImportRoundTripITTest#anUnchangedImportRewritesEveryTemplateParameter_documentsBug`. The opposite fault
   in `Area.hasChanged` (fields left out of the comparison) was fixed on 2026-11-13. Pre-existing; recorded, not
   fixed.
@@ -1541,7 +1540,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   bootstrap run, adds to it [inferred from the code; not run].
 - **Why it looks wrong:** an import file's root is meant to match a root. A `parent IS NULL` predicate when no
   parent is given closes it; the firing-exercises lookup (`getFiringExercisesCategory`) reads the same way.
-- **Exposed by:** the review of PR #188 (2026-10-22). Pre-existing; recorded, not fixed.
+- **Exposed by:** a review of 2026-10-22. Pre-existing; recorded, not fixed.
 
 ## SCRIPT8. A deployment's `common.js` or `fetch-firing-exercises.js` row copied from a pre-port deployment may predate the port
 
@@ -1558,8 +1557,8 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Why it looks wrong:** the data of a running deployment is the truth, so a stale row stays until a sysadmin
   imports the release file and ticks the overwrite. Whether DK's and GL's rows are stale is a check for the deploy
   step.
-- **Exposed by:** the PR #159 review of the code, data and configuration plan (2026-10-20); narrowed to the
-  deployment data by the review of PR #188 (2026-10-22). Seen by the error hunt of 2026-11-12 (wave 3, the soak
+- **Exposed by:** the review of the code, data and configuration plan (2026-10-20); narrowed to the
+  deployment data by a review of 2026-10-22. Seen by the error hunt of 2026-11-12 (wave 3, the soak
   track): on two local copies of `niord_test` (`niord_d`, `niord_guides`) the audio-broadcast list's
   firing-exercise trigger 1949666 fails with `messageService.search is not a function`, so the list's scheduled
   mail is never made, and `GET /rest/mailing-lists/execute-report/1949666.html` answers 500 on the same script;
@@ -1828,11 +1827,11 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `saveEntity` and before the flush that raises the row's JPA `@Version` (`VersionedEntity`).
 - **Description:** an entry is numbered the resource's version, as the save holds it before the flush, plus one.
   Over the editor's REST calls that numbers right: a resource created and changed twice has the entries 1, 2 and 3
-  (the error hunt's guard, see Exposed by), so the first update of a resource niord-ng created does not say 1 again
+  (the error hunt's guard, see Exposed by), so the first update of a resource this backend created does not say 1 again
   on that path, as this entry first read the code. Which path leaves the version unmoved was not traced; the one
   case seen was a release import. In `niord_test` and `niord_guides` (read on 2026-11-11) every
   history follows row version + 1 except `templates/messages/nm-accumulated-report-pdf.ftl`, the one resource
-  niord-ng has changed: two entries, both version 1 (created 2026-09-14, release import 2026-11-02), row version 1.
+  this backend has changed: two entries, both version 1 (created 2026-09-14, release import 2026-11-02), row version 1.
 - **Why it looks wrong:** the History dialog keys its rows and its selection on the version
   (`fe/ui-apps/admin/.../sysadmin/script-resources/script-resource-history-dialog.ts` 57-62 and `.html` 25-38): ticking
   either version-1 row ticks both and shows the two compared, neither can be shown alone, and a third tick selects
@@ -2052,7 +2051,7 @@ unless they say otherwise.
 
 - **Location:** `org/niord/core/message/MessageLuceneIndex.java` `updateLuceneIndex(int)` (its one try around the
   whole batch and the outer catch), with `Message.findUpdatedMessagesAfter` ordered by `updated` and id. The
-  LUCENE-4 fix of 2026-11-12 (#312) changed the marker and the read, not this: the batch is still one try.
+  LUCENE-4 fix of 2026-11-12 changed the marker and the read, not this: the batch is still one try.
 - **Description:** the batch is indexed inside one try. A RuntimeException for one message returns 0 before the
   marker and the commit, so the next pass (every minute) reads the same messages from the same marker, and that
   message blocks every later one while it is among the first 5,000. (A message of the look-back window behind the
@@ -2430,8 +2429,9 @@ code by the developer or the checker of the cluster named; most were not run.
   takes for binary makes Git Bash's GNU grep 3.0 print `Binary file …/example.log matches` instead of the matching
   line. On a Windows run of 2026-11-13 the part passed, and its summary row ended in that sentence: the lines on the
   generated backend, publishing and pinning, the fixture upgrade and the upgrade test were not in the row.
-- **Why it looks wrong:** the summary is what a sub-PR carries as its verification, and it then hides what the
-  harness reported having run or skipped. The part's result is not affected (it is the harness's exit status).
+- **Why it looks wrong:** the summary is what a developer reads of a local run before pushing, and it then hides
+  what the harness reported having run or skipped. The part's result is not affected (it is the harness's exit
+  status).
 - **Exposed by:** the error hunt's fix stage, its closing `./verify-local`, 2026-11-13 (read in the summary and the
   script).
 - **Severity:** Low, tooling only. Fix: `grep -a` on the three calls, so the log is read as text whatever it holds.
@@ -2516,7 +2516,7 @@ code by the developer or the checker of the cluster named; most were not run.
     two columns only, and the sample's guard lists the schema's changesets (`SampleFolderTest`
     `theGuardsChangesetsAreTheChangelogs` is red for any new change set). So the change set comes with
     `niord/scripts/regen-sample.sh` (the docker-compose `niord-db` and the local realm) and
-    `niord/scripts/regen-test-seed-postgres.sh` (a throwaway PostGIS container), as V011 did (f9dc4f2c).
+    `niord/scripts/regen-test-seed-postgres.sh` (a throwaway PostGIS container), as V011 did.
   - **An image older than the change set** (a rolled-back image) maps the categories as a bag: a save deletes the
     message's join rows and inserts them again with the two columns only. With the column `NOT NULL` and no default,
     every save of a message that has a category then fails (500) while that image runs. This does not hold for

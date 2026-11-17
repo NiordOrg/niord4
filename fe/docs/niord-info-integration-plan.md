@@ -1,4 +1,4 @@
-# niord-info in niord-ng — analysis and integration plan
+# niord-info in the base product — analysis and integration plan
 
 niord-info is the public, anonymous, lightweight web UI of Niord: the mariner's view of active
 Navigational Warnings and Notices to Mariners (map, table, details, print, publications, teaser).
@@ -13,8 +13,8 @@ code, the measurements, the task lists and the decision log keep what was true w
 written.
 
 **Sources analysed (2026-09-21):**
-`NiordOrg/niord-info` @ `419ddd7` (the library, `src/lib/**`) and `kaspernielsen/niord-info` @ `3b5033b`
-(the DK shell: app config, footer, legal dialogs, Dockerfile, nginx). 41 source files, 3 251 lines of
+`NiordOrg/niord-info` @ `419ddd7` (the library, `src/lib/**`) and the DK shell around it
+(app config, footer, legal dialogs, Dockerfile, nginx). 41 source files, 3 251 lines of
 TypeScript with inline templates, 35 spec files (2 249 lines), 802 lines of SCSS.
 
 ## Requirements
@@ -478,7 +478,7 @@ One deliberate difference from the administration app: the time zone stays a cou
 site has no domain. The rule that survives is "never the browser's zone", and the zoned-date
 helpers are copied, not imported.
 
-## From Bootstrap to the niord-ng design
+## From Bootstrap to the workspace's design
 
 The Bootstrap surface is small — 96 distinct classes in 180 places in the library, 20 in 59 in
 the shell, three ng-bootstrap APIs, 14 icons, one date-range picker — but the shell imports the
@@ -550,8 +550,8 @@ browser ──> niord-info container (nginx, static files)
   not shared; the keys are namespaced (`niord-info.language`, …) regardless.
 - CI: `.github/workflows/info-ci.yml`, built like `fe-ci.yml`: `pull_request` is **not**
   path-filtered; a `changes` job decides, work jobs are skipped with a job-level `if:`, and an
-  always-running **Info gate** is the second check for branch protection to require (it is
-  switched on before production go-live; until then both gates are advisory). The change filter
+  always-running **Info gate** is the second gate the ruleset on `main` requires, beside the
+  **Frontend gate** and the backend's **Unit tests**. The change filter
   covers `fe/ui-apps/info/**`, the three shared folders, `fe/package*.json`, `fe/.npmrc`,
   `fe/.nvmrc`, `fe/.postcssrc.json`, the Prettier configuration and `fe/.editorconfig`,
   `fe/angular.json`, `fe/tsconfig*.json`, `fe/eslint.config.js`, `fe/vitest.config.ts`, the
@@ -662,10 +662,8 @@ end of each.
 The plan is executed without the owner at the keyboard; every decision taken along the way is
 recorded here, newest last, for review at the end.
 
-- Pull requests go group by group into the integration branch `feature/niord-info-integration`,
-  never into `main`; both CI workflows now also run for pull requests into `feature/**`.
-  (Withdrawn 2026-09-25 to save Actions minutes: pull requests into `feature/**` run no CI and are
-  verified with `./verify-local`; see the root `CLAUDE.md`.)
+- Pull requests go group by group into an integration branch, never into `main`; both CI
+  workflows also run for pull requests into `feature/**`.
 - Merge mode is rebase-merge (the repository allows no merge commits), so the pure-rename commit
   of the move stays a commit of its own.
 - The Angular project name of the administration app stays `niord-app`; only its folder changes.
@@ -689,8 +687,8 @@ recorded here, newest last, for review at the end.
   inventory are untouched. `API-CONTRACT.md` was edited by hand with its line count kept.
   (m) => m
 - **Group A is done: niord-info builds, lints and passes its specs inside the workspace, unchanged
-  in behaviour.** Imported from `NiordOrg/niord-info` @ `419ddd7` and `kaspernielsen/niord-info` @
-  `3b5033b`. Compared file by file after identical formatting, the library sources differ from
+  in behaviour.** Imported from `NiordOrg/niord-info` @ `419ddd7` and the DK shell around it.
+  Compared file by file after identical formatting, the library sources differ from
   upstream in 44 lines: the `/rest` prefix, the removed interceptor option and dead
   `getPublication()`, eight unused imports, eight `Array<>` annotations, two lint exemptions.
   34 spec files, 177 tests pass; the administration suite is unchanged at 476 files, 5 152 tests.
@@ -893,7 +891,7 @@ recorded here, newest last, for review at the end.
 - Found and filed, not fixed: the running backend now offers `kl` to the Danish site, whose asset
   overlay ships no `kl` flag or branding (two 404s, a broken flag) — a country-overlay decision;
   the centre pins are computed when messages are drawn, not when the reader zooms (the review
-  follow-up removed the pins, #51).
+  follow-up removed the pins).
 
 - **Parity check against the current public site (group E).** 103 features compared between the
   old site at nautiskinformation.soefartsstyrelsen.dk (production data) and the new site (test data)
@@ -1006,22 +1004,22 @@ recorded here, newest last, for review at the end.
   measure, 398 400 B: warning 410 kB, error 430 kB. The first visit the gate measures grew by
   293 B.
 
-- **Review of the merged work, 2026-09-23 to 2026-09-24.** Once the site was on `main` (#39) it
+- **Review of the merged work, 2026-09-23 to 2026-09-24.** Once the site was on `main` it
   was reviewed as a whole — the public site, the shared folders, the administration app where the
   work touched it, the backend's report paths, the gates and the documents — and every finding
   was checked against the tree before anything was changed. The owner settled the open questions
-  in advance, and the fixes went into the integration branch `feature/pr39-review-fixes` as one
+  in advance, and the fixes went into an integration branch as one
   pull request per theme, each through its own gates: the query allow-list of the two report
-  locations (#43); the backend's anonymous report hardening, the execution mode that defaults to
-  `production`, the public report and the report's time zone (#46); the guard gaps in CI, lint,
-  the paths check and the bundle gate (#45); the administration app's message indents and
-  stale-deploy recovery (#44); the language on every list read and Browse by publication (#47);
-  bars that never cover the language switcher, focus or content (#48); security headers, proxy
-  hardening and HTML and URL safety (#49); the map kit's hit tolerance, hover timing and
-  attribution, no centre pins, and the teaser on OpenStreetMap (#51); accessible names,
-  languages, focus and landmarks (#52); link affordance, forced colours, field names, contrast and
-  reduced motion (#53); loading and failure states (#54); comments, literals, branding assets and
-  legal texts (#55). The last pass brought the documents level with all of it: the Definition of
+  locations; the backend's anonymous report hardening, the execution mode that defaults to
+  `production`, the public report and the report's time zone; the guard gaps in CI, lint,
+  the paths check and the bundle gate; the administration app's message indents and
+  stale-deploy recovery; the language on every list read and Browse by publication;
+  bars that never cover the language switcher, focus or content; security headers, proxy
+  hardening and HTML and URL safety; the map kit's hit tolerance, hover timing and
+  attribution, no centre pins, and the teaser on OpenStreetMap; accessible names,
+  languages, focus and landmarks; link affordance, forced colours, field names, contrast and
+  reduced motion; loading and failure states; comments, literals, branding assets and
+  legal texts. The last pass brought the documents level with all of it: the Definition of
   Done and the review skill name the gates of each application and mark what holds for the
   administration app alone; the map kit's exception to translation ownership is written where the
   rule lives; the analysis sections of this plan, the reference documents and the CI/CD design
@@ -1029,8 +1027,8 @@ recorded here, newest last, for review at the end.
   shared folder or the scripts, an npm script or a build configuration that does not exist, and an
   `ng` recipe that does not name its project. The sanitiser's inline-style policy and the
   server-rendered PDF left the list below, settled by the hand-over follow-ups (2) and (3). What
-  was deferred rather than fixed is in [backlog.md](backlog.md), each item with the owner's reason
-  (#42): keyboard operation of the map itself, a first-visit baseline per country, an image that
+  was deferred rather than fixed is in [backlog.md](backlog.md), each item with the owner's reason:
+  keyboard operation of the map itself, a first-visit baseline per country, an image that
   fits a hardened pod, the dormant `/wms/` proxy, a tile host a deployment can set, the end-to-end
   suite against the local stack, the shared stylesheets' hygiene, the public site's component
   names and its pre-translated dialog titles and badge labels, the Kalaallisut go-live mechanics,
@@ -1050,7 +1048,7 @@ must be done before the site's first release are owned by [`backlog.md`](backlog
 public site's first release".
 
 - **The client-rendered print view's banner.** `/messages/print`, which only the previous site's `/details.html` links reach, reads "Efterretninger for søfarende og Navigationsadvarsler den …" whatever was printed, where the old site adapted it to the chosen families and to a single message. Matching it would be new text.
-- **Branch protection on `main`**, requiring "Frontend gate", "Info gate" and the backend's "Unit tests": done 2026-11-17, a ruleset on `main` of the public `NiordOrg/niord4`.
+- **Branch protection on `main`**, requiring "Frontend gate", "Info gate" and the backend's "Unit tests": done 2026-11-17, a ruleset on `main`.
 - **Greenlandic.** The translator's workbook of 2026-09-22 (`niord-info-tekster-til-oversaettelse-kl-v2`) carries every row the site ships; when it returns, its values replace the machine-made ones and `kl-unverified.json` is emptied. Go-live for Greenland requires that.
 - **Brand and wording for the new authority.** The DK footer, logos and legal texts still carry the previous authority's name and images where the owner has not yet replaced them (the English disclaimer's liability paragraph is done). Greenland needs its own logos, footer links and host name; today it shows the Danish placeholders, and the Kalaallisut visitor sees the English-language logo.
 - **Whether the Danish site should ever offer `kl`.** The Danish deployable declares `infoSiteLanguages` as `["da","en"]` (`be/niord-dk/src/main/resources/niord.json`), so it does not. A deployment that adds `kl` on the Settings page gets a broken flag with two 404s, because the DK asset overlay has no `kl` flag or branding, and a `kl` reader's footer shows the bundle's product line ("Niord © year") inside the authority's link where the Danish branding line belongs — the backlog's maintenance item. Either the overlay gains the assets, or `kl` stays out of Denmark's setting.
