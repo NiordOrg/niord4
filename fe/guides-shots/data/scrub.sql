@@ -32,15 +32,36 @@
 --   a private person in a source ("<company> v/<name> <date>") and a private mailbox in two notices (g_private_mail)
 --                                                                     -> the company and date stay, the mailbox is an
 --                                                                        invented one; history snapshots deleted
+--   a person's e-mail address in any text: the users' addresses and the addresses comments were mailed to (not the
+--   functional mailboxes of g_functional_login) and the private mailbox above, wherever a text column of any table
+--   gives it (message titles, parts, sources, references, promulgations, attachments, publications, templates,
+--   settings, ...), and in the search rows       -> the invented address the person gets in "User" (or in
+--                                                                        "Comment_emailAddresses"), case-insensitively,
+--                                                                        mailto: links included; the history
+--                                                                        snapshots: english-history.mjs, by
+--                                                                        guides.scrub_mail (no real address in it)
+--   an address that is a person's by its form (guides.scrub_shape: first name, middle initial, last name) and
+--   belongs to no person above, in any text and in the search rows
+--                                                                     -> one invented address per distinct address,
+--                                                                        duty.officer<N>@example.org; the history
+--                                                                        snapshots: english-history.mjs, likewise
+--   default-deny: any other address outside example.org that is neither on the functional list (g_functional_login)
+--   nor made of role words only (scrub-lists.mjs's ROLE_WORDS), in any text and in the search rows
+--                                                                     -> one invented address per distinct address,
+--                                                                        contact<N>@example.org; the history
+--                                                                        snapshots: english-history.mjs, likewise
+--
+-- Run with -v role_words=<scrub-lists.mjs role-words> (make-guides-db.sh passes it); without it the run stops.
 --
 -- The staff words (initials and names) are read from the copy's own "User" and "Comment_emailAddresses" rows before
 -- they are rewritten, kept in ON COMMIT DROP tables and never written anywhere. make-guides-db.sh's check-names.sh
 -- reads the same words from niord_test, inside the container, to prove none is left.
 --
 -- What is not touched: the message content (published content is public; the texts of messages that were never
--- public are scanned and counted by make-guides-db.sh, not rewritten), the message history snapshots (they are
--- message content: a snapshot holds no user field, the history's user is the "User" row it points at; the
--- exceptions are the deleted test messages and the notices with a private contact above), the script resources and
+-- public are scanned and counted by make-guides-db.sh, not rewritten), but for a person's address, the message history
+-- snapshots (they are message content: a snapshot holds no user field, the history's user is the "User" row it points
+-- at; the exceptions are the deleted test messages, the notices with a private contact above and a person's address,
+-- which english-history.mjs replaces), the functional and unit mailboxes in message texts, the script resources and
 -- their history (templates; the only addresses in them are functional mailboxes of the organisations), organisation
 -- names, sources, charts, areas, categories, publications and dictionaries.
 --
@@ -148,6 +169,116 @@ BEGIN
     RETURN t;
 END $$;
 
+-- The persons' addresses, for "A person's address in any text" below, read here before step 1 rewrites "User" (the
+-- comment recipients are added after step 5, the private mailbox before step 7.9). Each gets the invented address the
+-- person gets elsewhere in the copy (repl: a user's is filled in after step 2). A functional mailbox
+-- (g_functional_login) is a role, not a person: it stays where a notice gives it. src and key name the source row
+-- without the address (the user's id; the rank k of g_comment_mail; the private mailbox's rank), so that
+-- english-history.mjs, which reads the same persons from niord_test, finds each one's invented address in
+-- guides.scrub_mail without the copy keeping a real address.
+CREATE TEMP TABLE g_person_mail (addr text PRIMARY KEY, src text NOT NULL, key bigint NOT NULL, repl text) ON COMMIT DROP;
+
+INSERT INTO g_person_mail (addr, src, key)
+SELECT DISTINCT ON (lower(btrim(email))) lower(btrim(email)), 'user', id
+FROM public."User"
+WHERE email LIKE '%@%' AND split_part(lower(btrim(email)), '@', 1) NOT IN (SELECT login FROM g_functional_login)
+ORDER BY lower(btrim(email)), id;
+
+-- The addresses that are a person's by their form, for "An address of a person's form" below (the owner's ruling of
+-- 2026-11-14 on a named person of an outside authority, first name, middle initial and last name, in NM notices),
+-- read here from every text column before any step rewrites one. The form is the local part: a word, a single
+-- letter, a word. Measured on niord_test (2026-11-14), in the texts that survive the scrub (step 4 replaces every
+-- comment text), the search rows and the history snapshots: no role mailbox has that form, and the addresses of the
+-- form word.word stand in comment texts only. Kept in the copy (it holds no address)
+-- for check.sql; scrub-lists.mjs reads this line for english-history.mjs and repo-files.mjs, so the form is written
+-- here only.
+CREATE SCHEMA IF NOT EXISTS guides;
+DROP TABLE IF EXISTS guides.scrub_shape;
+CREATE TABLE guides.scrub_shape (form text NOT NULL);
+INSERT INTO guides.scrub_shape (form) VALUES ('[a-z]{2,}\.[a-z]\.[a-z]{2,}');
+
+-- Each match of the form in a text column (the whole local part, at any domain), lower case. scrub-lists.mjs reads
+-- the same set from niord_test, so a rank below names the same address on both sides.
+CREATE FUNCTION pg_temp.g_shape_pattern() RETURNS text LANGUAGE sql STABLE AS $$
+    SELECT '(?<![a-z0-9._%+-])((?:' || form || ')@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})(?![a-z0-9-])'
+    FROM guides.scrub_shape
+$$;
+CREATE TEMP TABLE g_shape_seen (addr text PRIMARY KEY) ON COMMIT DROP;
+DO $$
+DECLARE
+    c record;
+    pat text := pg_temp.g_shape_pattern();
+BEGIN
+    FOR c IN
+        SELECT col.table_name AS t, col.column_name AS c
+        FROM information_schema.columns col
+        JOIN information_schema.tables tb ON tb.table_schema = col.table_schema AND tb.table_name = col.table_name
+        WHERE col.table_schema = 'public' AND tb.table_type = 'BASE TABLE'
+          AND col.data_type IN ('text', 'character varying')
+          AND col.table_name NOT IN ('databasechangelog', 'databasechangeloglock')
+    LOOP
+        EXECUTE format('INSERT INTO g_shape_seen (addr) SELECT DISTINCT lower(m[1]) FROM public.%I x, '
+                       || 'regexp_matches(x.%I, $1, ''gi'') m WHERE x.%I LIKE ''%%@%%'' ON CONFLICT DO NOTHING',
+                       c.t, c.c, c.c) USING pat;
+    END LOOP;
+END $$;
+
+-- Default-deny (the orchestrator's decision of 2026-11-14 under the owner's "remove GDPR information"): no rule can
+-- tell a first-name or initials mailbox from a role by its form, so an address outside example.org is kept only when
+-- it is known to be a role: its local part is on the functional list (g_functional_login), or every word of its local
+-- part (split at dots, hyphens, underscores and digits) is on the list of generic role, department and unit words
+-- that scrub-lists.mjs keeps (ROLE_WORDS; make-guides-db.sh passes it as -v role_words). Every other address counts
+-- as a person's: see "An address default-deny does not keep" below. The address pattern is written here only
+-- (guides.scrub_address; scrub-lists.mjs reads this line for english-history.mjs and repo-files.mjs, check.sql the
+-- table).
+DROP TABLE IF EXISTS guides.scrub_address;
+CREATE TABLE guides.scrub_address (pattern text NOT NULL);
+INSERT INTO guides.scrub_address (pattern) VALUES ('(?<![a-z0-9._%+-])([a-z0-9_%+-](?:[a-z0-9._%+-]*[a-z0-9_%+-])?@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})(?![a-z0-9-])');
+
+CREATE TEMP TABLE g_role_word (word text PRIMARY KEY) ON COMMIT DROP;
+INSERT INTO g_role_word (word) SELECT DISTINCT unnest(string_to_array(:'role_words', '|'));
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM g_role_word) OR EXISTS (SELECT 1 FROM g_role_word WHERE word !~ '^[a-z]+$') THEN
+        RAISE EXCEPTION 'scrub.sql: -v role_words must hold scrub-lists.mjs''s ROLE_WORDS (make-guides-db.sh passes them)';
+    END IF;
+END $$;
+
+-- Whether default-deny keeps an address (lower case) as it is
+CREATE FUNCTION pg_temp.g_mail_kept(a text) RETURNS boolean LANGUAGE sql STABLE AS $$
+    SELECT split_part(a, '@', 2) = 'example.org'
+        OR split_part(a, '@', 1) IN (SELECT login FROM g_functional_login)
+        OR coalesce((SELECT bool_and(w IN (SELECT word FROM g_role_word)) AND count(*) > 0
+                     FROM unnest(regexp_split_to_array(split_part(a, '@', 1), '[._0-9-]+')) w WHERE w <> ''), false)
+$$;
+
+-- Every address in a text column or among the search words, lower case, read before any step rewrites one;
+-- scrub-lists.mjs reads the same set from niord_test, so a rank below names the same address on both sides.
+CREATE TEMP TABLE g_mail_seen (addr text PRIMARY KEY) ON COMMIT DROP;
+DO $$
+DECLARE
+    c record;
+    pat text := (SELECT pattern FROM guides.scrub_address);
+BEGIN
+    FOR c IN
+        SELECT col.table_name AS t, col.column_name AS c
+        FROM information_schema.columns col
+        JOIN information_schema.tables tb ON tb.table_schema = col.table_schema AND tb.table_name = col.table_name
+        WHERE col.table_schema = 'public' AND tb.table_type = 'BASE TABLE'
+          AND col.data_type IN ('text', 'character varying')
+          AND col.table_name NOT IN ('databasechangelog', 'databasechangeloglock')
+    LOOP
+        EXECUTE format('INSERT INTO g_mail_seen (addr) SELECT DISTINCT lower(m[1]) FROM public.%I x, '
+                       || 'regexp_matches(x.%I, $1, ''gi'') m WHERE x.%I LIKE ''%%@%%'' ON CONFLICT DO NOTHING',
+                       c.t, c.c, c.c) USING pat;
+    END LOOP;
+    INSERT INTO g_mail_seen (addr)
+    SELECT DISTINCT lower(m[1]) FROM public.message_search_text x,
+           regexp_matches(array_to_string(tsvector_to_array(x.search_tsv), ' '), pat, 'gi') m
+    WHERE x.search_tsv::text LIKE '%@%'
+    ON CONFLICT DO NOTHING;
+END $$;
+
 -- ---------------------------------------------------------------------------------------------------------------
 -- Users
 -- ---------------------------------------------------------------------------------------------------------------
@@ -225,6 +356,17 @@ WITH u AS (
     WHERE c."emailAddresses" = m.addr
     RETURNING 1)
 INSERT INTO g_report SELECT 5, 'Comment_emailAddresses', 'invented recipient on example.org', count(*) FROM u;
+
+-- The persons the comments were mailed to, for the rule below, with the invented address step 5 gave them (the one
+-- of their first value, k, when several values give one address); a user's address keeps the user's.
+INSERT INTO g_person_mail (addr, src, key, repl)
+SELECT DISTINCT ON (x.a) x.a, 'comment', x.k, lower(f.name) || '.' || lower(l.name) || '@example.org'
+FROM (SELECT lower(btrim(coalesce(substring(addr FROM '<([^>]*)>'), addr))) AS a, k FROM g_comment_mail) x
+JOIN g_first f ON f.i = (x.k * 3 + 7) % 41
+JOIN g_last l ON l.i = (x.k * 5 + 2) % 43
+WHERE x.a LIKE '%@%' AND split_part(x.a, '@', 1) NOT IN (SELECT login FROM g_functional_login)
+  AND x.a NOT IN (SELECT addr FROM g_person_mail)
+ORDER BY x.a, x.k;
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- Saved filters and tags named after a colleague: "Korrektur <name>" (proof-reading by <name>)
@@ -420,6 +562,17 @@ JOIN public."Message" m ON m.id = p.message_id,
 WHERE m."shortId" IN (SELECT short_id FROM g_private_mail)
 GROUP BY p.message_id;
 
+-- The private mailbox, for the rule below, which takes it out of any other text too (step 7.9's invented one)
+INSERT INTO g_person_mail (addr, src, key, repl)
+SELECT a, 'private', dense_rank() OVER (ORDER BY a) - 1, 'harbour.office@example.org'
+FROM (SELECT DISTINCT lower(a[1]) AS a
+      FROM public."MessagePartDesc" pd
+      JOIN public."MessagePart" p ON p.id = pd.entity_id
+      JOIN public."Message" m ON m.id = p.message_id,
+           regexp_matches(pd.details, '([A-Za-z0-9._%+-]+@brk\.dk)', 'g') a
+      WHERE m."shortId" IN (SELECT short_id FROM g_private_mail)) x
+WHERE a NOT IN (SELECT addr FROM g_person_mail);
+
 WITH u AS (
     UPDATE public.message_search_text s
     SET search_tsv = ts_delete(s.search_tsv, tsvector_to_array(to_tsvector(
@@ -448,6 +601,123 @@ INSERT INTO g_report SELECT 7.9, 'MessagePartDesc', 'a private person''s mailbox
 WITH u AS (
     DELETE FROM public."MessageHistory" WHERE message_id IN (SELECT message_id FROM g_private_person) RETURNING 1)
 INSERT INTO g_report SELECT 7.95, 'MessageHistory', 'history of a message naming a private person: deleted', count(*) FROM u;
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- A person's address in any text (the owner's ruling of 2026-11-14: a staff member's work address, initials at the
+-- authority's domain, stood in the details of published NM notices, mailto: links included). Every text column of
+-- every table (message titles, parts, sources, references, promulgations, attachments, publications, templates,
+-- settings, ...; the columns rewritten above hold none any more) gets, for each person of g_person_mail, the invented
+-- address the person gets elsewhere in the copy: case-insensitively, wherever the whole address stands (not inside a
+-- longer one). The search rows' words likewise. The history snapshots are gzip, which SQL cannot rewrite:
+-- english-history.mjs replaces the same addresses there, by guides.scrub_mail, and fails the run when one is left.
+-- check-names.sh proves that no address of niord_test's persons is left in a text column or a search row.
+-- An address at a staff domain that is no user's and no comment recipient's stays: in niord_test those are a duty
+-- mailbox and units' mailboxes written as abbreviations, and no rule tells a former colleague's initials from them.
+--
+-- An address of a person's form (guides.scrub_shape, read above) that belongs to none of these persons is a person's
+-- too (an outside authority's officer in NM notices; the owner's ruling of 2026-11-14): it joins the rule with one
+-- invented address per distinct address, duty.officer<N>@example.org, N its rank (src 'shape', key N in
+-- guides.scrub_mail, which english-history.mjs finds by the same rank over niord_test). check.sql fails the run when
+-- an address of the form outside example.org is left in a text, JSON or search column.
+-- ---------------------------------------------------------------------------------------------------------------
+
+INSERT INTO g_person_mail (addr, src, key, repl)
+SELECT addr, 'shape', dense_rank() OVER (ORDER BY addr), 'duty.officer' || dense_rank() OVER (ORDER BY addr) || '@example.org'
+FROM g_shape_seen
+WHERE addr NOT IN (SELECT addr FROM g_person_mail) AND split_part(addr, '@', 2) <> 'example.org';
+
+INSERT INTO g_report
+SELECT 7.959, 'g_person_mail', 'addresses of a person''s form that belong to no person above (replaced like them)',
+       count(*) FROM g_person_mail WHERE src = 'shape';
+
+-- An address default-deny does not keep (see g_mail_kept above: neither on the functional list nor made of role
+-- words) and that belongs to none of the persons above is a person's too: an outside person whose mailbox is a first
+-- name or initials, which no form tells from a role (the second check of 2026-11-14). It joins the rule with one
+-- invented address per distinct address, contact<N>@example.org, N its rank (src 'deny', key N in guides.scrub_mail,
+-- which english-history.mjs finds by the same rank over niord_test). check.sql fails the run when an address that
+-- default-deny does not keep is left in a text, JSON or search column.
+INSERT INTO g_person_mail (addr, src, key, repl)
+SELECT addr, 'deny', dense_rank() OVER (ORDER BY addr), 'contact' || dense_rank() OVER (ORDER BY addr) || '@example.org'
+FROM g_mail_seen
+WHERE addr NOT IN (SELECT addr FROM g_person_mail) AND NOT pg_temp.g_mail_kept(addr);
+
+INSERT INTO g_report
+SELECT 7.9595, 'g_person_mail', 'other addresses default-deny does not keep (replaced like them)',
+       count(*) FROM g_person_mail WHERE src = 'deny';
+INSERT INTO g_report
+SELECT 7.9596, 'g_mail_seen', 'addresses outside example.org default-deny keeps (functional list or role words)',
+       count(*) FROM g_mail_seen WHERE split_part(addr, '@', 2) <> 'example.org' AND pg_temp.g_mail_kept(addr)
+                                  AND addr NOT IN (SELECT addr FROM g_person_mail);
+
+UPDATE g_person_mail p SET repl = u.email FROM public."User" u WHERE p.src = 'user' AND u.id = p.key;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM g_person_mail WHERE repl IS NULL OR repl !~* '@example\.org$') THEN
+        RAISE EXCEPTION 'scrub.sql: a person''s address has no invented address on example.org';
+    END IF;
+END $$;
+
+-- The text with every person's address replaced (the longest first, so no address is cut inside a longer one)
+CREATE FUNCTION pg_temp.g_scrub_mail(t text) RETURNS text LANGUAGE plpgsql STABLE AS $$
+DECLARE
+    r record;
+BEGIN
+    IF t IS NULL OR position('@' IN t) = 0 THEN
+        RETURN t;
+    END IF;
+    FOR r IN SELECT addr, repl FROM g_person_mail ORDER BY length(addr) DESC, addr LOOP
+        IF position(r.addr IN lower(t)) > 0 THEN
+            t := regexp_replace(t, '(?<![A-Za-z0-9._%+-])' || regexp_replace(r.addr, '([^a-z0-9@])', '\\\1', 'g')
+                                   || '(?![A-Za-z0-9-]|\.[A-Za-z0-9])', r.repl, 'gi');
+        END IF;
+    END LOOP;
+    RETURN t;
+END $$;
+
+CREATE TEMP TABLE g_mail_column (tbl text, col text, n bigint) ON COMMIT DROP;
+
+DO $$
+DECLARE
+    c record;
+    n bigint;
+BEGIN
+    FOR c IN
+        SELECT col.table_name AS t, col.column_name AS c
+        FROM information_schema.columns col
+        JOIN information_schema.tables tb ON tb.table_schema = col.table_schema AND tb.table_name = col.table_name
+        WHERE col.table_schema = 'public' AND tb.table_type = 'BASE TABLE'
+          AND col.data_type IN ('text', 'character varying')
+          AND col.table_name NOT IN ('databasechangelog', 'databasechangeloglock')
+        ORDER BY 1, 2
+    LOOP
+        EXECUTE format('UPDATE public.%I SET %I = pg_temp.g_scrub_mail(%I) WHERE %I LIKE ''%%@%%'' AND %I IS DISTINCT FROM pg_temp.g_scrub_mail(%I)',
+                       c.t, c.c, c.c, c.c, c.c, c.c);
+        GET DIAGNOSTICS n = ROW_COUNT;
+        INSERT INTO g_mail_column (tbl, col, n) VALUES (c.t, c.c, n);
+    END LOOP;
+END $$;
+
+INSERT INTO g_report
+SELECT 7.96, tbl, 'a person''s address in ' || col || ' replaced by the invented one', n FROM g_mail_column WHERE n > 0;
+INSERT INTO g_report
+SELECT 7.961, 'every text column', 'columns read for a person''s address: ' || count(*), coalesce(sum(n), 0) FROM g_mail_column;
+
+WITH u AS (
+    UPDATE public.message_search_text s
+    SET search_tsv = ts_delete(s.search_tsv, ARRAY(SELECT addr FROM g_person_mail))
+                     || to_tsvector('simple', (SELECT string_agg(p.repl, ' ') FROM g_person_mail p
+                                               WHERE p.addr = ANY (tsvector_to_array(s.search_tsv))))
+    WHERE tsvector_to_array(s.search_tsv) && ARRAY(SELECT addr FROM g_person_mail)
+    RETURNING 1)
+INSERT INTO g_report SELECT 7.97, 'message_search_text', 'a person''s address among the search words replaced', count(*) FROM u;
+
+-- For english-history.mjs: each person's invented address by the source row (no real address)
+CREATE SCHEMA IF NOT EXISTS guides;
+DROP TABLE IF EXISTS guides.scrub_mail;
+CREATE TABLE guides.scrub_mail (src text NOT NULL, key bigint NOT NULL, repl text NOT NULL, PRIMARY KEY (src, key));
+WITH u AS (INSERT INTO guides.scrub_mail (src, key, repl) SELECT src, key, repl FROM g_person_mail RETURNING 1)
+INSERT INTO g_report SELECT 7.98, 'guides.scrub_mail', 'persons whose address english-history.mjs replaces in the snapshots', count(*) FROM u;
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- Mailing-list recipients: niord_test has no contacts and no list members, so invented ones are added: 40 contacts

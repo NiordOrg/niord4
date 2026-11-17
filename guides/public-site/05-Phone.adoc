@@ -35,7 +35,8 @@ image::PublicSiteMessageDialogPhone.png[A message on a phone, 244]
 On a phone the panel _Additional Messages_ lies across the top of the map. Click _Minimize_ to fold
 it up to its title, which leaves the map free; _Maximize_ opens it again. Move the map with one
 finger and zoom with two. Even folded up, the panel lies over the map's _+_ button, so zoom with
-your fingers.
+your fingers. The picture shows navigational warnings only, each with a position, so the panel is
+not there.
 
 .The Map view on a phone
 image::PublicSiteMapPagePhone.png[The Map view on a phone, 244]

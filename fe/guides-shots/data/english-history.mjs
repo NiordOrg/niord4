@@ -13,8 +13,25 @@
 //     (guides.english_navtex);
 //   - an audio broadcast text that looks Danish (english.sql's guides.looks_danish, ported; its word list is read from
 //     the function in the database) is blanked;
-// and written back, gzip-compressed, when it changed. Reads and writes niord_guides only, through psql in the database
-// container (GUIDES_DB_CONTAINER, by default niord-db), and prints what it changed.
+//   - a person's e-mail address (scrub.sql's rule "A person's address in any text": the users' addresses and the
+//     comment recipients', not the functional mailboxes, and the private mailbox, and an address of a person's form,
+//     guides.scrub_shape, that is none of theirs) becomes the invented address scrub.sql gave it,
+//     case-insensitively, wherever the whole address stands (an address of the form scrub.sql never saw, in a
+//     snapshot only, a new duty.officer<N>@example.org);
+//   - default-deny (2026-11-14, scrub.sql): any other address outside example.org that is neither on the functional
+//     list nor made of scrub-lists.mjs's role words only becomes scrub.sql's contact<N>@example.org for it (one
+//     scrub.sql never saw, in a snapshot only, a new contact<N>@example.org);
+// and written back, gzip-compressed, when it changed. Reads and writes niord_guides, through psql in the database
+// container (GUIDES_DB_CONTAINER, by default niord-db), and prints what it changed. It reads the persons' addresses
+// from niord_test (GUIDES_SOURCE_DB), only reads, into memory: they are never written or printed; the invented address
+// of each is guides.scrub_mail's row for the same source row (the user's id, the comment address's rank), which
+// holds no real address.
+//
+// A second self-check (2026-11-14): no snapshot, as written back, may still hold one of those addresses, also after a
+// dot or before a dot (stricter than the rule), an address of a person's form outside example.org, or an address
+// default-deny does not keep (also with the at-sign as an entity or encoded); the script then exits 1 and names the
+// history rows by id. GUIDES_HISTORY_PROOF_SQL (the proof that it fails; never set in a run) is SQL run first in the
+// transaction the snapshots are read in, which is rolled back; the script then writes nothing back.
 //
 // The self-check (the fifth check, 2026-11-11), as english.sql's for the current texts: the editor's History page shows
 // every snapshot of a live message, so after the rewrite no snapshot of a message now in DRAFT, VERIFIED or PUBLISHED
@@ -31,12 +48,23 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { gunzipSync, gzipSync } from 'node:zlib';
+import {
+  ADDRESS_PATTERN,
+  keptAddress,
+  readPersons,
+  scrubLists,
+  shapePattern,
+} from './scrub-lists.mjs';
 
 const CONTAINER = process.env.GUIDES_DB_CONTAINER || 'niord-db';
 const DB = 'niord_guides';
+const SOURCE_DB = process.env.GUIDES_SOURCE_DB || 'niord_test';
 const USER = process.env.GUIDES_DB_USER || 'niord';
+// The proof that the self-checks fail (never set in a run): SQL run first in the transaction the snapshots are read
+// in, which is rolled back; the script then writes nothing back.
+const PROOF_SQL = process.env.GUIDES_HISTORY_PROOF_SQL || '';
 
-function psql(...commands) {
+function psqlOn(db, ...commands) {
   return execFileSync(
     'docker',
     [
@@ -50,12 +78,131 @@ function psql(...commands) {
       '-U',
       USER,
       '-d',
-      DB,
+      db,
       ...commands.flatMap((c) => ['-c', c]),
     ],
     { encoding: 'utf8', maxBuffer: 1 << 28, windowsHide: true },
   );
 }
+const psql = (...commands) => psqlOn(DB, ...commands);
+
+// The persons' addresses (scrub.sql's g_person_mail, the same rule and the same source rows): from niord_test, with
+// the source row that names each without the address; a user's address first, then a comment recipient's, then the
+// private mailbox's, then an address of a person's form that is none of theirs (scrub.sql's guides.scrub_shape, by
+// its rank). The functional mailboxes are left out. scrub-lists.mjs reads scrub.sql's lists (g_functional_login,
+// g_private_mail, the form), so they are written once.
+const sourcePersons = readPersons({ container: CONTAINER, db: SOURCE_DB, user: USER });
+// An address of the person's form that scrub.sql never saw (in a snapshot only) gets an invented address after the
+// ones guides.scrub_mail holds, one per distinct address, in the order the snapshots are read (by id).
+const SHAPE = new RegExp(shapePattern(scrubLists().shape), 'gi');
+const shapeExtra = new Map();
+const inventedBySource = new Map(
+  JSON.parse(
+    psql(
+      `SELECT coalesce(json_agg(json_build_array(src || ':' || key, repl)), '[]') FROM guides.scrub_mail`,
+    ),
+  ),
+);
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+const persons = new Map();
+for (const [addr, src, key] of sourcePersons.sort(
+  (a, b) => a[3] - b[3] || a[1].localeCompare(b[1]),
+)) {
+  if (persons.has(addr)) continue;
+  const invented = inventedBySource.get(`${src}:${key}`);
+  if (!invented)
+    throw new Error(
+      `A person's address of ${SOURCE_DB} (${src} ${key}) has no row in guides.scrub_mail: run make-guides-db.sh.`,
+    );
+  persons.set(addr, {
+    addr,
+    src,
+    invented,
+    // scrub.sql's rule: the whole address, not inside a longer one
+    rule: new RegExp(
+      `(?<![A-Za-z0-9._%+-])${escapeRegex(addr)}(?![A-Za-z0-9-]|\\.[A-Za-z0-9])`,
+      'gi',
+    ),
+    // the self-check: also after a dot and before a dot
+    check: new RegExp(`(?<![a-z0-9_%+-])${escapeRegex(addr)}(?![a-z0-9-])`),
+  });
+}
+if (persons.size === 0) throw new Error(`No person's address was read from ${SOURCE_DB}.`);
+const personList = [...persons.values()].sort((a, b) => b.addr.length - a.addr.length);
+const shapeKeys = [...inventedBySource.keys()].filter((k) => k.startsWith('shape:'));
+// The ranks name the same addresses on both sides only when both saw the same set
+if (shapeKeys.length !== sourcePersons.filter((p) => p[1] === 'shape').length)
+  throw new Error(
+    `guides.scrub_mail holds ${shapeKeys.length} addresses of a person's form, ${SOURCE_DB} gives ` +
+      `${sourcePersons.filter((p) => p[1] === 'shape').length}: run make-guides-db.sh again.`,
+  );
+const denyKeys = [...inventedBySource.keys()].filter((k) => k.startsWith('deny:'));
+if (denyKeys.length !== sourcePersons.filter((p) => p[1] === 'deny').length)
+  throw new Error(
+    `guides.scrub_mail holds ${denyKeys.length} addresses default-deny replaces, ${SOURCE_DB} gives ` +
+      `${sourcePersons.filter((p) => p[1] === 'deny').length}: run make-guides-db.sh again.`,
+  );
+let nextOfficer = Math.max(0, ...shapeKeys.map((k) => Number(k.slice(6)))) + 1;
+// Default-deny (scrub.sql): any other address that is neither on the functional list nor made of role words only.
+// One that scrub.sql never saw (in a snapshot only) gets an invented address after the ones guides.scrub_mail holds,
+// one per distinct address, in the order the snapshots are read (by id).
+const ADDRESS = new RegExp(ADDRESS_PATTERN, 'gi');
+const functional = scrubLists().functional;
+const kept = (address) => keptAddress(address, functional);
+const denyExtra = new Map();
+let nextContact = Math.max(0, ...denyKeys.map((k) => Number(k.slice(5)))) + 1;
+/** The invented address of an address default-deny does not keep (a listed one's, else a new one). */
+function inventedForDeny(addr) {
+  const lower = addr.toLowerCase();
+  const known = persons.get(lower)?.invented ?? denyExtra.get(lower);
+  if (known) return known;
+  const invented = `contact${nextContact++}@example.org`;
+  denyExtra.set(lower, invented);
+  return invented;
+}
+/** Whether a text still holds an address default-deny does not keep (also with the at-sign as an entity or encoded). */
+const holdsDenied = (text) =>
+  [
+    ...text
+      .toLowerCase()
+      .replace(/&#0*64;|&#x0*40;|&commat;|%40|\\u0040/g, '@')
+      .matchAll(ADDRESS),
+  ].some((m) => !kept(m[1]));
+/** Every string of a parsed snapshot. */
+function strings(node, out = []) {
+  if (typeof node === 'string') out.push(node);
+  else if (Array.isArray(node)) node.forEach((item) => strings(item, out));
+  else if (node && typeof node === 'object') Object.values(node).forEach((v) => strings(v, out));
+  return out;
+}
+/** A parsed snapshot with every address default-deny does not keep replaced in its strings. */
+function denyStrings(node, stats) {
+  if (typeof node === 'string') {
+    if (!node.includes('@')) return node;
+    return node.replace(ADDRESS, (match) => {
+      if (kept(match)) return match;
+      stats.deny++;
+      return inventedForDeny(match);
+    });
+  }
+  if (Array.isArray(node)) return node.map((item) => denyStrings(item, stats));
+  if (node && typeof node === 'object')
+    return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, denyStrings(v, stats)]));
+  return node;
+}
+/** The invented address of an address of the person's form (a listed one's, else a new one). */
+function inventedForShape(addr) {
+  const lower = addr.toLowerCase();
+  if (lower.endsWith('@example.org')) return addr;
+  const known = persons.get(lower)?.invented ?? shapeExtra.get(lower);
+  if (known) return known;
+  const invented = `duty.officer${nextOfficer++}@example.org`;
+  shapeExtra.set(lower, invented);
+  return invented;
+}
+/** Whether a text still holds an address of the person's form outside example.org. */
+const holdsShape = (text) =>
+  [...text.toLowerCase().matchAll(SHAPE)].some((m) => !m[1].endsWith('@example.org'));
 
 // A PostgreSQL ARE (the patterns english.sql applies) as a JavaScript one: \m and \M are word boundaries there.
 const WORD = '[\\p{L}\\p{N}_]';
@@ -271,7 +418,22 @@ function rewrite(node, stats) {
 const dir = mkdtempSync(join(tmpdir(), 'guides-history-'));
 const outFile = join(dir, 'history.tsv');
 const out = createWriteStream(outFile, 'utf8');
-const totals = { read: 0, changed: 0, danish: 0, english: 0, audio: 0, stillDanish: 0 };
+const totals = {
+  read: 0,
+  changed: 0,
+  danish: 0,
+  english: 0,
+  audio: 0,
+  stillDanish: 0,
+  mail: 0,
+  mailSnapshots: 0,
+  shape: 0,
+  shapeSnapshots: 0,
+  deny: 0,
+  denySnapshots: 0,
+};
+// The second self-check's findings: history rows (ids) whose snapshot still holds a person's address.
+const mailLeft = [];
 const stillDanishSamples = [];
 // The self-check's findings: a live message's snapshot (not in guides.names_only) with a Danish English text.
 const liveDanish = new Map();
@@ -289,12 +451,14 @@ const copy = spawn(
     USER,
     '-d',
     DB,
+    ...(PROOF_SQL ? ['-q', '-c', 'BEGIN', '-c', PROOF_SQL] : []),
     '-c',
     `COPY (SELECT h.id, h.message_id, replace(encode(h.snapshot, 'base64'), E'\\n', ''), ` +
       `coalesce(m.status IN ('DRAFT', 'VERIFIED', 'PUBLISHED'), false) ` +
       `AND NOT EXISTS (SELECT 1 FROM guides.names_only n WHERE n.message_id = h.message_id) ` +
       `FROM "MessageHistory" h LEFT JOIN "Message" m ON m.id = h.message_id ` +
       `WHERE h.snapshot IS NOT NULL ORDER BY h.id) TO STDOUT`,
+    ...(PROOF_SQL ? ['-c', 'ROLLBACK'] : []),
   ],
   { windowsHide: true },
 );
@@ -304,10 +468,33 @@ const closed = new Promise((resolve) => copy.on('close', resolve));
 for await (const line of createInterface({ input: copy.stdout, crlfDelay: Infinity })) {
   if (!line) continue;
   const [id, messageId, b64, checked] = line.split('\t');
+  if (!b64) continue;
   totals.read++;
-  const json = gunzipSync(Buffer.from(b64, 'base64')).toString('utf8');
-  const stats = { danish: 0, english: 0, audio: 0 };
-  const snapshot = rewrite(JSON.parse(json), stats);
+  let json = gunzipSync(Buffer.from(b64, 'base64')).toString('utf8');
+  const stats = { danish: 0, english: 0, audio: 0, mail: 0, shape: 0, deny: 0 };
+  // A person's address: the invented one (an address holds no character JSON escapes)
+  if (json.includes('@')) {
+    const lower = json.toLowerCase();
+    for (const person of personList) {
+      if (!lower.includes(person.addr)) continue;
+      json = json.replace(person.rule, () => {
+        if (person.src === 'shape') stats.shape++;
+        else if (person.src === 'deny') stats.deny++;
+        else stats.mail++;
+        return person.invented;
+      });
+    }
+    // An address of the person's form that is no listed one (scrub.sql never saw it)
+    json = json.replace(SHAPE, (match) => {
+      const invented = inventedForShape(match);
+      if (invented !== match) stats.shape++;
+      return invented;
+    });
+  }
+  // Default-deny: any other address that is neither on the functional list nor made of role words only, in the
+  // snapshot's strings as decoded (in the JSON text, an escape such as \n would stand glued before the address)
+  const parsed = json.includes('@') ? denyStrings(JSON.parse(json), stats) : JSON.parse(json);
+  const snapshot = rewrite(parsed, stats);
   // What an English entry still holds that looks Danish, for the report (not rewritten: no rule exists for it).
   const englishTexts = [];
   const collect = (node) => {
@@ -338,12 +525,34 @@ for await (const line of createInterface({ input: copy.stdout, crlfDelay: Infini
       liveDanish.set(messageId, texts);
     }
   }
-  if (stats.danish + stats.english + stats.audio === 0) continue;
+  const changed =
+    stats.danish + stats.english + stats.audio + stats.mail + stats.shape + stats.deny > 0;
+  const written = changed ? JSON.stringify(snapshot) : json;
+  // The second self-check, on the snapshot as written back: a person's address, an address of the person's form
+  // outside example.org, or (2026-11-14, default-deny) any address that is neither on the functional list nor made of
+  // role words only, also with the at-sign as an entity or encoded.
+  if (/@|&#0*64;|&#x0*40;|&commat;|%40|\\u0040/i.test(written)) {
+    const lower = written.toLowerCase();
+    if (
+      personList.some((person) => lower.includes(person.addr) && person.check.test(lower)) ||
+      holdsShape(written) ||
+      strings(JSON.parse(written)).some(holdsDenied)
+    )
+      mailLeft.push(id);
+  }
+  if (!changed) continue;
   totals.changed++;
   totals.danish += stats.danish;
   totals.english += stats.english;
   totals.audio += stats.audio;
-  const compressed = gzipSync(Buffer.from(JSON.stringify(snapshot), 'utf8')).toString('base64');
+  totals.mail += stats.mail;
+  totals.shape += stats.shape;
+  totals.deny += stats.deny;
+  if (stats.mail > 0) totals.mailSnapshots++;
+  if (stats.shape > 0) totals.shapeSnapshots++;
+  if (stats.deny > 0) totals.denySnapshots++;
+  if (PROOF_SQL) continue;
+  const compressed = gzipSync(Buffer.from(written, 'utf8')).toString('base64');
   if (!out.write(`${id}\t${compressed}\n`))
     await new Promise((resolve) => out.once('drain', resolve));
 }
@@ -351,7 +560,8 @@ const code = await closed;
 await new Promise((resolve) => out.end(resolve));
 if (code !== 0) throw new Error(`Reading the snapshots failed (${code}): ${stderr}`);
 
-if (totals.changed > 0) {
+if (PROOF_SQL) console.log('english-history: proof run: nothing written back');
+if (totals.changed > 0 && !PROOF_SQL) {
   execFileSync('docker', ['cp', outFile, `${CONTAINER}:/tmp/guides-history.tsv`], {
     windowsHide: true,
   });
@@ -390,6 +600,22 @@ console.log(
   `english-history: ${totals.read} snapshots read, ${totals.changed} rewritten: ${totals.danish} Danish entries ` +
     `dropped, ${totals.english} English texts corrected, ${totals.audio} Danish audio texts blanked`,
 );
+console.log(
+  `english-history: ${totals.mail} persons' addresses replaced by the invented ones in ${totals.mailSnapshots} ` +
+    `snapshots, ${totals.shape} addresses of a person's form in ${totals.shapeSnapshots} snapshots, ` +
+    `${totals.deny} other addresses default-deny does not keep in ${totals.denySnapshots} snapshots ` +
+    `(${persons.size} addresses read from ${SOURCE_DB}, ${shapeKeys.length} of them of the form, ` +
+    `${denyKeys.length} others; ${shapeExtra.size} more of the form and ${denyExtra.size} other addresses in the ` +
+    `snapshots only); snapshots still holding one: ${mailLeft.length}`,
+);
+if (mailLeft.length > 0) {
+  console.error(
+    `english-history: the self-check failed: history rows ${mailLeft.slice(0, 50).join(', ')} still hold a ` +
+      `person's address of ${SOURCE_DB}, an address of a person's form or an address default-deny does not keep: ` +
+      'make scrub.sql\'s rule "A person\'s address in any text" find it, and run make-guides-db.sh again.',
+  );
+  process.exitCode = 1;
+}
 console.log(
   `english-history: ${totals.stillDanish} snapshots still hold an English text that looks Danish (no rule for it)`,
 );
