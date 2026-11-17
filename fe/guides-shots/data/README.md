@@ -183,16 +183,19 @@ amendment needs the publication files of the repository import, and the firing e
 last are there before any picture, whatever the hour). Since 2026-11-14 `seed-examples.mjs` first runs the check of
 the imported files itself (`repo-files.mjs check-db`, about 5 minutes with `pdftotext`: it fails when a `RepoFile` row
 holds an address default-deny does not keep, or when the table is empty) and stops, making nothing, when it fails;
-nobody has to remember it. `repo-files.mjs check-db` can still be run alone:
+nobody has to remember it:
 
 ```
 node fe/guides-shots/data/seed-examples.mjs
 ```
 
+The check can still be run alone: `node fe/guides-shots/data/repo-files.mjs check-db`.
+
 The order on a new copy is: `make-guides-db.sh`, `make-guides-home.sh`, `start-rig.sh`, the repository import,
-`seed-examples.mjs` (which runs `repo-files.mjs check-db` first and stops on a hit), then the pictures. `prepare.sql` leaves `BatchData` empty, so the repository import is the
-backend's job instance 1. The batch engine keeps its runs in memory, so after a restart of the rig the Batch Jobs page
-lists the runs since it, and the sysadmin manual's Batch Jobs pictures start the runs they show again.
+`seed-examples.mjs` (which runs `repo-files.mjs check-db` first and stops on a hit), then the pictures. `prepare.sql`
+leaves `BatchData` empty, so the repository import is the backend's job instance 1. The batch engine keeps its runs in
+memory, so after a restart of the rig the Batch Jobs page lists the runs since it, and the sysadmin manual's Batch Jobs
+pictures start the runs they show again.
 `make-guides-db.sh` also removes the guides home's `batch-jobs` folder: the job numbers start again on a new copy, and a
 run would otherwise append its log to the file an earlier copy's run left there.
 

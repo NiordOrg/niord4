@@ -2073,8 +2073,8 @@ INSERT INTO english_counts (grp, rows) SELECT 'script resources: the voice-broad
 -- audio block in Danish is left (a template niord_test gains or changes). The backend caches script resources: start
 -- the rig again after this file runs (data/README.md).
 --
--- After the error hunt (2026-11-14) niord_test holds Denmark's corrected templates (the template carry of
--- fix/error-hunt-templates, and the base product's corrected common.ftl, markings.ftl's and work-vessel.ftl's macros),
+-- After the error hunt (2026-11-14) niord_test holds Denmark's corrected templates (its own, and the base product's
+-- corrected common.ftl, markings.ftl's and work-vessel.ftl's macros),
 -- so nine bodies were made again from the corrected English details: exercise.ftl (an exercise without a type is "an
 -- exercise", a capital without dates), object-adrift.ftl ("have" for a plural object), obstruction-found.ftl ("have"
 -- for several positions; mine.ftl's "The mines" and torpedo.ftl's "Torpedoes" come from their callers),

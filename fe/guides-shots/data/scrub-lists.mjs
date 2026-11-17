@@ -50,7 +50,7 @@ export function scrubLists() {
 export const sqlList = (values) => `(${values.map((v) => `'${v}'`).join(', ')})`;
 
 /**
- * Default-deny (the orchestrator's decision of 2026-11-14 under the owner's "remove GDPR information"): an address
+ * Default-deny (the decision of 2026-11-14 under the owner's "remove GDPR information"): an address
  * outside example.org is kept only when it is known to be a role: its local part is on scrub.sql's functional list
  * (g_functional_login), or every word of its local part (split at dots, hyphens, underscores and digits) is on this
  * list of generic role, department and unit words. Every other address counts as a person's and is replaced (texts,

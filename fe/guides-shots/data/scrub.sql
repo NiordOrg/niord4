@@ -223,7 +223,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- Default-deny (the orchestrator's decision of 2026-11-14 under the owner's "remove GDPR information"): no rule can
+-- Default-deny (the decision of 2026-11-14 under the owner's "remove GDPR information"): no rule can
 -- tell a first-name or initials mailbox from a role by its form, so an address outside example.org is kept only when
 -- it is known to be a role: its local part is on the functional list (g_functional_login), or every word of its local
 -- part (split at dots, hyphens, underscores and digits) is on the list of generic role, department and unit words

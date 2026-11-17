@@ -8,7 +8,7 @@
 //   node repo-files.mjs check-db                exits 1 when a RepoFile row of niord_guides still holds one, or when
 //                                               the table is empty (seed-examples.mjs runs it first and stops on it)
 //
-// An address default-deny does not keep (the orchestrator's decision of 2026-11-14 under the owner's "remove GDPR
+// An address default-deny does not keep (the decision of 2026-11-14 under the owner's "remove GDPR
 // information"): every address outside example.org that is neither on scrub.sql's functional list nor made of
 // scrub-lists.mjs's role words only (ROLE_WORDS: info, post, havn, ...). That covers scrub.sql's persons (the users'
 // addresses, the comment recipients', the private mailbox) and the addresses of a person's form (guides.scrub_shape),
