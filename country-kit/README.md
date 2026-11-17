@@ -1620,7 +1620,10 @@ Before it, the repository needs:
   build and the launcher read it;
 - the release in `.niord/` at the repository root: both zips and `SHA256SUMS`, checked with
   `sha256sum -c`, and only the kit package unzipped, into `.niord/kit/`, from where `init` runs.
-  `init` reads the source zip in memory, from `.niord/`, else from `fe/.niord/`.
+  `init` reads the source zip in memory, from `.niord/`, else from `fe/.niord/`;
+- on GitHub, "Automatically delete head branches" on (Settings, General, or
+  `gh api -X PATCH repos/<owner>/niord-<cc> -F delete_branch_on_merge=true`), so that a merged pull
+  request's branch, each base bump's included, goes with it.
 
 No `be/pom.xml` and no Maven wrapper come first: `init` writes both. A `be/pom.xml` that exists is
 kept, and its `<parent>` must name the kit's version. The repository should hold none of the other

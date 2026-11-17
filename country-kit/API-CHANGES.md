@@ -66,6 +66,18 @@ lead lists an entry again and a reused one hides a new entry. Each entry says:
 
 ## Unreleased
 
+**The agent template deletes a branch with its pull request.** In `templates/AGENTS.md`, "Never"
+adds: leave a branch behind its pull request. The repository's "Automatically delete head branches"
+deletes a merged one's branch; a branch of a pull request closed without merging, the Niord base
+bump app's included, is deleted once nothing on it is wanted. "Starting a country" in the kit's
+README lists the setting among what a new repository needs. No export is added or removed. Why:
+GitHub keeps every head branch unless the setting is on, and DK's and GL's repositories had kept one
+per merged pull request.
+
+What a country must do at its bump: merge the line from `.niord/kit/templates/AGENTS.md` into
+`AGENTS.md`; the Base bump comment's agent-template box asks for it. Turn the setting on if it is
+off (DK's and GL's are on since 2026-11-17).
+
 **The base product's repository is `NiordOrg/niord4`, public, from 4.0.182.** The Base bump
 template's `BASE_REPO` names it instead of `SIFA-DK/niord-ng`, and the kit's guides download a
 release from it (`gh release download v<version> --repo NiordOrg/niord4`). No export, text or
