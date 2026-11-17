@@ -279,9 +279,10 @@ class MailHtmlTest {
      */
     @Test
     void theMessageClassesAreTheFrontendsVocabulary() throws IOException {
-        // The frontend's list is in niord-ng only. This class also runs in every country build (the country build
-        // group), from niord-base's test-jar and in a country repository's tree, where the check does not apply.
-        assumeTrue(insideNiordNg(), "the frontend's list is checked in niord-ng's own build");
+        // The frontend's list is in the base product's repository only. This class also runs in every country build
+        // (the country build group), from niord-base's test-jar and in a country repository's tree, where the check
+        // does not apply.
+        assumeTrue(insideBaseProduct(), "the frontend's list is checked in the base product's own build");
         String ts = Files.readString(repositoryFile(MESSAGE_HTML_CLASSES_TS));
         Matcher set = Pattern.compile("MESSAGE_HTML_CLASSES\\b[^=]*=\\s*new Set\\(\\[(.*?)]\\)", Pattern.DOTALL)
                 .matcher(ts);
@@ -299,8 +300,8 @@ class MailHtmlTest {
         assertEquals(frontend, mail, "MailHtml.MESSAGE_CLASSES and " + MESSAGE_HTML_CLASSES_TS + " have drifted apart");
     }
 
-    /** Whether the working directory is in a niord-ng tree: be/niord/pom.xml is at or above it */
-    private static boolean insideNiordNg() {
+    /** Whether the working directory is in the base product's tree: be/niord/pom.xml is at or above it */
+    private static boolean insideBaseProduct() {
         for (Path dir = Path.of("").toAbsolutePath(); dir != null; dir = dir.getParent()) {
             if (Files.isRegularFile(dir.resolve("be/niord/pom.xml"))) {
                 return true;

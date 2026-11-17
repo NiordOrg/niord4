@@ -104,7 +104,8 @@ const KIT_COUNTRY_FOLDERS = ['templates', 'example'];
 // workspace's script.
 const KIT_GUIDES = 'country-kit/docs/';
 
-// The kit's folder, the second root beside fe/, as niord-ng's tree and the documentation name it.
+// The kit's folder, the second root beside fe/, as the base product's tree and the documentation
+// name it.
 const KIT_FOLDER = 'country-kit/';
 
 // The kit's change log, whose sections below Unreleased record released versions.

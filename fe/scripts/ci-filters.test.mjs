@@ -505,7 +505,7 @@ describe('the two Detect steps against a real git history', () => {
         HEAD_SHA: head,
         RUN_ITS: 'true',
         GH_TOKEN: '',
-        REPO: 'example/niord-ng',
+        REPO: 'example/niord',
         SHA: commits.java,
         RUN_ATTEMPT: '1',
         RUNS_URL: 'https://ci.example/runs',
@@ -528,7 +528,7 @@ describe('the two Detect steps against a real git history', () => {
       {
         'be/niord-app/pom.xml': '<project/>\n',
         'be/niord/src/main/java/X.java': 'class X {}\n',
-        'README.md': 'niord-ng\n',
+        'README.md': 'Niord\n',
       },
       'the base',
     );

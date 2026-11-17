@@ -119,8 +119,8 @@ class AdminDataRoundTripITTest extends RoundTripSupport {
 
     /**
      * A resource created and changed twice through the editor's REST calls keeps its content byte for byte and numbers
-     * its history 1, 2, 3. (SCRIPT9 in be/docs/potential-errors.md describes a repeated 1 for a resource's first
-     * niord-ng change; over these calls it does not occur.)
+     * its history 1, 2, 3. (SCRIPT9 in be/docs/potential-errors.md describes a change numbered as its previous
+     * entry; over these calls it does not occur.)
      */
     @Test
     void aScriptResourceKeepsItsContentAndNumbersItsHistory() {

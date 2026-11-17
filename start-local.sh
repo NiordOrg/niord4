@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Start the whole local niord-ng stack with one command:
+# Start the whole local Niord stack with one command:
 #   - the docker-compose services (PostgreSQL/PostGIS, Keycloak, MailHog)  be/docker-compose.yml
 #   - the Spring Boot backend be/niord-app (the generic English application)  http://localhost:${BE_PORT:-8888}/rest
 #   - the Angular dev server(s): the administration app (fe/ui-apps/admin)   http://localhost:${FE_PORT:-4100}
@@ -391,7 +391,7 @@ fi
 
 cat <<EOF
 
-  niord-ng is running (loopback only) — slot $SLOT$($FE_ONLY && echo ', frontend only')
+  Niord is running (loopback only) — slot $SLOT$($FE_ONLY && echo ', frontend only')
     Application $APP
     Frontend    http://localhost:$FE_PORT          $($INFO && ! $BOTH && echo 'the public site' || echo 'log in as sysadmin / sysadmin')
 $($BOTH && echo "    Public site http://localhost:$INFO_PORT")
