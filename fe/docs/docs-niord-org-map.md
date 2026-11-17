@@ -48,8 +48,8 @@ for the overlay itself.
 In `help-urls.json`, and nowhere else: the same map in every build configuration, production
 included, and in every country's build. Until it moved there, the map was the `helpUrls` block of
 each environment file, which left a production build with five keys; `AppConfig.helpUrls` is now
-deprecated and ignored, so a country file that still carries the block compiles and changes nothing
-(`country-kit/API-CHANGES.md`, "The help paths are code"). The block is excluded from the
+deprecated and ignored, so a country file that still carries the block compiles and changes nothing.
+The block is excluded from the
 web-settings overlay as before, so its leaf names never collide with a setting's.
 
 The map is JSON so that the guides' build can read it as it is: each value is a page of the guides

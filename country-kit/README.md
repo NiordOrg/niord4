@@ -294,7 +294,7 @@ three jobs:
   already, and after a failed `compute`, counts the unticked boxes and sets the status on the pull
   request's head.
 
-`BASE_REPO` in its `env:` is the base product's repository, `NiordOrg/niord4` since 4.0.182: the one
+`BASE_REPO` in its `env:` is the base product's repository, `NiordOrg/niord4`: the one
 value in it that changes when that repository moves. A
 country takes the new value with the template at its bump, and the comment lists a copy that differs
 from the kit's as an item.
@@ -1488,7 +1488,8 @@ the countries built on it are developed together by the same people, so for now:
 - the boxes of the Base bump comment are information: an unticked box, and the red
   `niord/upgrade-actions` status it sets, hold no merge back;
 - `API-CHANGES.md` gets an entry only when the base product's upgrade test demands one
-  ([The example country](#the-example-country), _The upgrade test_).
+  ([The example country](#the-example-country), _The upgrade test_);
+- the Changes table of the backend contract, `docs/country-api.md`, gets no row.
 
 Not paused:
 

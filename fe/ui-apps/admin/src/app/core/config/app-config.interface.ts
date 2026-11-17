@@ -122,10 +122,9 @@ export interface AppConfig {
    * Deprecated: ignored. The help paths are code now (`HELP_URLS`, beside
    * `HelpUrlService`), the same in every build; only `documentationUrl` is
    * configuration. Kept, optional, so that a country's environment file that still
-   * carries the block compiles; delete the block (country-kit/API-CHANGES.md,
-   * "The help paths are code"). It goes in a later version, once DK and GL have
-   * taken one without it. Not a JSDoc deprecation tag, which the lint would turn
-   * into an error in every file that still sets it.
+   * carries the block compiles; delete the block. It goes in a later version, once
+   * DK and GL have taken one without it. Not a JSDoc deprecation tag, which the lint
+   * would turn into an error in every file that still sets it.
    */
   readonly helpUrls?: Readonly<Record<string, string>>;
   readonly keycloak: KeycloakConfig;

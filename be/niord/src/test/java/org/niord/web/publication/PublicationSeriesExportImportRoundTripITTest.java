@@ -211,8 +211,8 @@ class PublicationSeriesExportImportRoundTripITTest extends PublicationHttpFixtur
         String answer = upload(List.of(changed), OTHER_DOMAIN);
         assertTrue(answer.startsWith("Started batch job"), "the upload started: " + answer);
         assertEquals(BatchStatus.COMPLETED, lastImport(), "the job completes, skipping the row");
-        assertEquals(before, object(as("admin").get(BASE + "/editable-series/" + seriesId)),
-                "a row from another desk does not change the series");
+        Map<String, Object> after = object(as("admin").get(BASE + "/editable-series/" + seriesId));
+        assertEquals(sharingSorted(before), sharingSorted(after), "a row from another desk does not change the series");
     }
 
     // ------------------------------------------------------------------------------------------- //
@@ -296,7 +296,8 @@ class PublicationSeriesExportImportRoundTripITTest extends PublicationHttpFixtur
         upload(List.of(dangling), DOMAIN);
 
         assertEquals(BatchStatus.COMPLETED, lastImport(), "the import completes, skipping the row");
-        assertEquals(before, object(as("admin").get(BASE + "/editable-series/" + seriesId)),
+        Map<String, Object> after = object(as("admin").get(BASE + "/editable-series/" + seriesId));
+        assertEquals(sharingSorted(before), sharingSorted(after),
                 "the stored series is untouched: neither the operand nor the new names arrived");
         String log = importLog();
         assertTrue(log.contains("Skipping series " + seriesId) && log.contains("name nothing"),
@@ -496,13 +497,9 @@ class PublicationSeriesExportImportRoundTripITTest extends PublicationHttpFixtur
     }
 
     private static Map<String, Object> withoutRowFields(Map<String, Object> row) {
-        Map<String, Object> out = new LinkedHashMap<>(row);
+        // The sharing list has no order column; compared without regard to its order
+        Map<String, Object> out = sharingSorted(row);
         ROW_FIELDS.forEach(out::remove);
-        // The sharing list has no order column; compared as a set
-        Object shared = out.get("availableDomainIds");
-        if (shared instanceof List<?> l) {
-            out.put("availableDomainIds", new TreeSet<>(l.stream().map(String::valueOf).toList()));
-        }
         return out;
     }
 

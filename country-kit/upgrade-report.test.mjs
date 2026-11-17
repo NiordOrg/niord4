@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { fingerprint } from './lib/overrides.mjs';
 import { kitZipOf, previousBase, readRecord, RECORD, zipOf } from './lib/previous-base.mjs';
 import {
@@ -48,8 +47,6 @@ const zipBytes = (files) =>
 const zipped = (files) => new Map(readZip(zipBytes(files)).map(({ name, data }) => [name, data]));
 const sha256Of = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
-/** The kit's own folder, which holds this file: its API-CHANGES.md is the one a country gets. */
-const KIT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const KIT = 'country-kit/';
 /** The kit's files of a files object, named relative to the kit, as the kit package holds them. */
 const kitOf = (files) =>
@@ -353,9 +350,83 @@ describe('the upgrade report: Versions', () => {
     ]);
   });
 
+  // Two entries as they stood in the kit's API-CHANGES.md, kept here as fixtures, each in a section
+  // with a neighbour after it: the parser is held to entries of the real record's shape (a numbered
+  // list after a lead-in, items that wrap over several lines, a "What a country should know" list
+  // after the answer) whatever the record itself holds.
+  const IMAGE_BACKEND_JOB = [
+    "**The image template's backend job; set-up runs before Maven.** `templates/image-backend-job.yml`",
+    'is new: the backend job, which runs set-up before Maven, then builds the jar, runs the override',
+    'check over it, splits it and hands it on as `backend-dist.tar` with its SHA-256. `init` writes it',
+    'into a new `image.yml` and prints it when `image.yml` exists. In `templates/image.yml` the push job',
+    '`needs: [frontend, backend]`, downloads `backend-dist` and verifies `backend-dist.tar.sha256`',
+    'beside the other two, and runs the new step `Check the version` before it pushes; the `env` gains',
+    "`MODULE` (empty until the country sets it), `MVN_FLAGS` and `MAVEN_OPTS`. The README's",
+    "[The backend build](README.md#the-backend-build) gives the pom's copies of a staged pack and the",
+    'Maven check. No export is added or removed. Why: no backend job ran set-up, so',
+    "`fe/.niord/packs/<lang>/backend/` did not exist when Maven ran, and a pinned pack's backend half",
+    'reached no jar.',
+    '',
+    'What a country must do at its bump:',
+    '',
+    '1. Add the backend job to `image.yml` by hand, as `init` prints it, and set `MODULE` to its',
+    "   deployable's `artifactId`. Where `image.yml` already has a backend job, add `setup-node` and",
+    '   `Set up the workspace` (in `fe/`, the workflow token bound) before `Build the jar`. Either way,',
+    "   take the push job's changes from `.niord/kit/templates/image.yml`: both jobs as its",
+    '   needs, the `backend-dist` download and its `sha256sum -c`, and `Check the version`.',
+    '2. Add `setup-node` and `Set up the workspace` before `./test-it` in the backend test job of its',
+    '   `ci.yml`.',
+    "3. Re-point the pom's pack copies from `fe/packs/<lang>/` to",
+    '   `fe/.niord/packs/<lang>/backend` and `fe/.niord/packs/<lang>/img/flags` for every staged pack,',
+    "   adding a pinned pack's copies where the pom has none.",
+    "4. Add the Maven check, `maven-antrun-plugin`'s `require-staged-packs` at `validate`, over the paths",
+    '   the copies read.',
+    '5. Run `node fe/setup.mjs` before any local Maven build.',
+  ].join('\n');
+  const BASE_BUMP_APP = [
+    "**The Niord base bump app opens the base bump; the pinned packs ride along.** The base product's",
+    'publish run opens the bump pull request minutes after each release, in every country repository',
+    'that installed the GitHub App Niord base bump (`https://github.com/apps/niord-base-bump`): it',
+    'pushes `base-bump/<version>` from the default branch, whose one change is the `<parent>` of',
+    '`be/pom.xml`. A newer release moves the open one on its branch; a branch in conflict with `main` is',
+    'replaced by a fresh pull request, and the old one is closed with a comment.',
+    "`templates/base-bump.yml` moves every pinned pack to its home's newest pack",
+    '(`node setup.mjs --update-pins`) in its pin commit and names each moved pin, from and to, with the',
+    "home's `pack-releases.md`, in its comment; keeps the tick of a box while what it is about is",
+    'unchanged when it posts the comment again (its text, and for a box about a kit template the',
+    "template's content, named by a hidden marker at the box's end); and accepts `base-bump/` branches",
+    'only. `templates/renovate.json` is',
+    'retired, with its `CODEOWNERS` line and its place among the templates the upgrade report compares;',
+    'the comment of `templates/dependabot.yml` names the base bump instead of Renovate; `init` writes no',
+    '`.github/renovate.json` and names the install link in its closing lines. No export is added or',
+    'removed. Why: the bump arrives by itself within minutes, with no schedule to pause and no',
+    'credential in the country.',
+    '',
+    'What a country must do: Nothing at its bump beyond the boxes the Base bump comment itself lists',
+    '(the copy of `.niord/kit/templates/base-bump.yml` over `.github/workflows/base-bump.yml` and the',
+    'merge of `.niord/kit/templates/AGENTS.md` into `AGENTS.md`).',
+    '',
+    'What a country should know:',
+    '',
+    '- Install the Niord base bump app once on this repository, with "Only select repositories"',
+    '  ([Install the Niord base bump app](docs/responsibilities-and-upgrades.md#install-the-niord-base-bump-app)),',
+    '  so each base version arrives as a pull request. Without it, push `base-bump/<version>` as before',
+    '  ([Without the app](docs/responsibilities-and-upgrades.md#without-the-app-push-base-bumpversion)).',
+    '- `.github/renovate.json` and its `CODEOWNERS` line are inert where no Renovate is installed:',
+    '  delete them, or keep them.',
+    '- The pack refresh and the kept ticks start at the bump after the copied `base-bump.yml` is on',
+    '  `main`.',
+    "- `.github/dependabot.yml` may take the template's new comment; its settings are unchanged.",
+  ].join('\n');
+  const neighbour = (lead) =>
+    `**${lead}** The change, and why.\n\nWhat a country must do: nothing.`;
+  const ENTRIES = changes(
+    `## Unreleased\n\n${BASE_BUMP_APP}\n\n${neighbour('A later entry.')}\n`,
+    `## 4.0.1: the image template\n\n${neighbour('An earlier entry.')}\n\n${IMAGE_BACKEND_JOB}\n\n${neighbour('The entry after it.')}\n`,
+  );
+
   it("gives the image template's backend job entry as five whole actions", () => {
-    const text = fs.readFileSync(path.join(KIT_DIR, 'API-CHANGES.md'), 'utf8');
-    const entry = changeSections(text)
+    const entry = changeSections(ENTRIES)
       .flatMap((s) => changeEntries(s.body))
       .find((e) => e.lead.startsWith("The image template's backend job"));
     assert.ok(entry, "no entry on the image template's backend job");
@@ -371,9 +442,8 @@ describe('the upgrade report: Versions', () => {
   });
 
   it("gives the base bump app's entry one action, its Nothing, which asks for no box", () => {
-    const text = fs.readFileSync(path.join(KIT_DIR, 'API-CHANGES.md'), 'utf8');
     const lead = 'The Niord base bump app opens the base bump; the pinned packs ride along.';
-    const entries = changeSections(text).flatMap((s) => changeEntries(s.body));
+    const entries = changeSections(ENTRIES).flatMap((s) => changeEntries(s.body));
     const same = entries.filter((e) => e.lead === lead);
     assert.equal(same.length, 1, `the lead "${lead}" is used ${same.length} times`);
     const [entry] = same;
@@ -1590,7 +1660,7 @@ describe('the upgrade report: Unreleased compared per entry', () => {
     ]);
   });
 
-  // API-CHANGES.md's Unreleased entry on the service worker's media/ cache wraps the phrase so.
+  // An entry of API-CHANGES.md is wrapped at 100 columns, so the phrase can break at any of its spaces.
   it('reads a "What a country must do" that wraps across lines', () => {
     const { data, markdown } = between(
       unreleased(A),
