@@ -1,0 +1,101 @@
+Niord
+
+Niord is licensed under the Apache License, Version 2.0. The text of the
+licence is in the file LICENSE.
+
+
+Copyright
+---------
+
+The copyright lines below are quoted from the files of this repository.
+
+  Copyright (c) 2016 Danish Maritime Authority.
+      be/LICENSE
+
+  Copyright 2016 Danish Maritime Authority.
+  Copyright 2017 Danish Maritime Authority.
+  Copyright 2024 Danish Maritime Authority.
+  Copyright 2026 Danish Maritime Authority.
+  Copyright 2026 Danish Emergency Management Agency.
+      The headers of the Java source files under be/.
+
+  Copyright 2017 Danish Maritime Authority.
+      The headers of seven template scripts under
+      be/niord/bootstrap/templates/ and be/niord/sample/archive/templates/.
+
+  Copyright (c) 2008 Kasper Nielsen.
+      The header of be/niord/src/main/java/org/niord/core/mail/MailConfig.java.
+
+  Copyright 2026 Danish Emergency Management Agency (Beredskabsstyrelsen)
+      fe/LICENSE. fe/README.md names the same holder for the frontend, whose
+      source files carry no header of their own.
+
+
+Parts under their own licence
+-----------------------------
+
+The following are not under the Apache License, Version 2.0. Each is under
+the licence it states itself.
+
+GNU General Public License, version 3:
+
+  be/niord/src/main/java/org/niord/web/aton/AtonIconRenderer.java
+      The renderer of the aid-to-navigation icons. Its header reads
+      "Copyright 2014 Malcolm Herring" and places the file under "the terms
+      of the GNU General Public License as published by the Free Software
+      Foundation, version 3 of the License".
+
+  com.github.NiordOrg:josm-seachart, version 0.1.0
+      A compile dependency of the backend library (be/pom.xml,
+      be/niord/pom.xml), which that renderer draws with: its packages render
+      and s57. It is not in this repository; Maven fetches it when the
+      backend is built. The pom it is published with states "GNU General
+      Public License v3.0 only".
+
+Both were taken over from the previous Niord.
+
+
+Third-party material in this repository
+---------------------------------------
+
+Each entry says what the files themselves state.
+
+  fe/.claude/skills/angular-developer/
+      Guidance files for Angular development. SKILL.md states "license: MIT"
+      and "author: Copyright 2026 Google LLC".
+
+  country-kit/example/fe/styles/fonts/lato/
+      The Lato font, under the SIL Open Font License, Version 1.1. Its
+      copyright notice and the licence are in OFL.txt beside the font.
+
+  guides/stylesheets/github-light.css
+      "Copyright 2014 GitHub Inc.", under the Apache License, Version 2.0
+      (its header).
+
+  be/mvnw, be/mvnw.cmd
+      The start scripts of the Apache Maven Wrapper, version 3.3.4. Their
+      headers read "Licensed to the Apache Software Foundation (ASF) under
+      one or more contributor license agreements" and place them under the
+      Apache License, Version 2.0.
+
+  fe/shared-map/portrayal/*.svg
+      The six map symbols. Their comments name the IHO S-124 symbol each one
+      draws or follows. The four with letters (nw-point.svg, nw-tag.svg,
+      nm-point.svg, nm-tag.svg) say that the letters are outlines of
+      Liberation Sans Bold 2.1.5 (SIL OFL). fe/docs/map-portrayal.md
+      describes how the symbols follow the IHO S-124 portrayal catalogue,
+      Edition 2.0.0, which is not in this repository.
+
+  be/niord/src/main/resources/aton/INT-1-preset.xml
+      The INT-1 seamark preset from
+      https://raw.githubusercontent.com/OpenSeaMap/josm/master/INT-1-preset.xml
+      (the address is in AtonDefaultsService.java). The file names its
+      authors and states no licence.
+
+  be/niord/src/test/resources/OSMSchema.xsd
+      Its first line names the original version:
+      https://github.com/oschrenk/osm/blob/master/osm-io/src/main/resources/OSMSchema.xsd
+      It states no licence.
+
+The libraries that Maven and npm fetch when Niord is built are not in this
+repository. Each is under its own licence.

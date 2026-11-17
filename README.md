@@ -241,3 +241,8 @@ npm run start:local           # http://localhost:4200, /rest proxied to the loca
 ```
 
 See `be/README.md` and `fe/README.md` for the full instructions of each part.
+
+## Licence
+
+Niord is licensed under the Apache License 2.0: see [LICENSE](LICENSE). [NOTICE](NOTICE) holds the
+copyright lines and names the parts that are under a licence of their own.
