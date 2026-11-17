@@ -71,7 +71,8 @@ The nested files own everything specific to a half. This file holds only what is
   test (part of the required `Frontend gate`) demands one. Two things do not sleep: that upgrade test;
   and a country's pack holds a value for every new English text, as a draft listed unaccepted, while an
   accepted translation is never rewritten in a bump. One deliberate pull request, decided by the owner,
-  wakes the record. The kit's README gets the full description in a later change.
+  wakes the record. The full description is in
+  [`country-kit/README.md`](country-kit/README.md#paused-until-production).
 - **`fe/shared-map/portrayal/`** (the portrayal definition and its symbols) is also read by the backend's map-image
   renderer: Maven copies it into niord-base. A change there runs Backend CI and is measured in both applications and
   in the server-made map images.
