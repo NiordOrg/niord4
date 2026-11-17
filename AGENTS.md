@@ -50,12 +50,6 @@ The nested files own everything specific to a half. This file holds only what is
   PR into `main`, where a full local run beforehand only repeats what CI does (backend ~7 min
   locally, ~10 min on CI). Commit as often as useful but push when the work is done: every push to a
   ready PR into `main` restarts the full CI and cancels the run in flight.
-- **A branch goes with its PR.** GitHub deletes a merged PR's branch: "Automatically delete head
-  branches" is on in `NiordOrg/niord4`, `SIFA-DK/niord-dk` and `SIFA-DK/niord-gl` (since 2026-11-17),
-  and a repository Niord adds turns it on:
-  `gh api -X PATCH repos/<owner>/<repo> -F delete_branch_on_merge=true`. A PR closed without merging
-  keeps its branch: delete it (`git push origin --delete <branch>`) once nothing on it is wanted.
-  Never change the settings of `NiordOrg/niord`, the legacy production repository.
 - **Production is touched only on request.** Do not start work on the production environments, prepare
   it, or suggest starting it — the prod values, secrets, cluster, promote and the host questions that
   gate them (`be/docs/cicd/`, step C of the order of work) — unless the owner asks for exactly that.

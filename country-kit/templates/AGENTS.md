@@ -168,10 +168,6 @@ The build, the backend and the launcher:
   a request to the base product.
 - Commit a secret: frontend files ship to every browser, and the settings file holds none.
 - Post a bootstrap or an import to any deployment but your local one.
-- Leave a branch behind its pull request. The repository's "Automatically delete head branches"
-  (Settings, General) deletes a merged one's branch; a pull request closed without merging, the
-  Niord base bump app's included, keeps its branch: delete it (`git push origin --delete <branch>`)
-  once nothing on it is wanted.
 
 ## The base bump
 
