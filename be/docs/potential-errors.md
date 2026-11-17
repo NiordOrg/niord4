@@ -2429,8 +2429,9 @@ code by the developer or the checker of the cluster named; most were not run.
   takes for binary makes Git Bash's GNU grep 3.0 print `Binary file …/example.log matches` instead of the matching
   line. On a Windows run of 2026-11-13 the part passed, and its summary row ended in that sentence: the lines on the
   generated backend, publishing and pinning, the fixture upgrade and the upgrade test were not in the row.
-- **Why it looks wrong:** the summary is what a sub-PR carries as its verification, and it then hides what the
-  harness reported having run or skipped. The part's result is not affected (it is the harness's exit status).
+- **Why it looks wrong:** the summary is what a developer reads of a local run before pushing, and it then hides
+  what the harness reported having run or skipped. The part's result is not affected (it is the harness's exit
+  status).
 - **Exposed by:** the error hunt's fix stage, its closing `./verify-local`, 2026-11-13 (read in the summary and the
   script).
 - **Severity:** Low, tooling only. Fix: `grep -a` on the three calls, so the log is read as text whatever it holds.

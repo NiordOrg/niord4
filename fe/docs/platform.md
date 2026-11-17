@@ -595,9 +595,9 @@ that touch its inputs. `./verify-local` at the repository root runs the same ste
 example country's image when Docker runs; the root `AGENTS.md` has the rule). A newer
 push to a pull request cancels the run in flight; runs on `main` are never cancelled.
 
-Every job pays its own checkout and `npm ci`, so each workflow keeps its work in as few jobs as its
-parallel parts need. Within a job every step runs even when an
-earlier one failed, so one red check never hides another.
+Every job pays its own checkout and `npm ci` before it does anything, so each workflow keeps its
+steps in few jobs. Within a job every step runs even when an earlier one failed, so one red check
+never hides another.
 
 **`.github/workflows/fe-ci.yml`**, the administration app:
 

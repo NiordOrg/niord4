@@ -28,8 +28,7 @@ in the repository's `AGENTS.md` (section _Working here_), `README.md` (section _
 === Continuous integration
 
 The workflows are in `.github/workflows/` at the root of the repository; GitHub reads them nowhere
-else. The checking workflows run on every pull request, into `main` or into a `feature/<name>`
-branch, drafts included. On a
+else. The checking workflows run on every pull request, into any branch, drafts included. On a
 pull request, each workflow first looks at which files the change touches and skips the work that
 does not concern it. On a push to `main`, a workflow starts only when the push touches the paths it
 watches, and `guides.yml` never runs on a push: it runs on pull requests that touch the
