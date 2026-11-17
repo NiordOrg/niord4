@@ -34,9 +34,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * The length of one publication period, measured where a weekly or daily series' next cut-off is proposed from it
  * ({@code IssueDraftService} 186-203, {@code IssuePublishService} 1596-1601, the gap rows of {@code GapSynthesis}),
- * across the clock changes of the series' cut-off zone (error hunt 2026-11-12, track B2, the zone and date-boundary
- * matrix). Europe/Copenhagen and America/Nuuk, both changes of 2027, and UTC as the control; New Year, a leap day
- * and the ISO week 53 of 2026 for the months and years, which are measured in the zone.
+ * across the clock changes of the series' cut-off zone (the zone and date-boundary matrix). Europe/Copenhagen and
+ * America/Nuuk, both changes of 2027, and UTC as the control; New Year, a leap day and the ISO week 53 of 2026 for
+ * the months and years, which are measured in the zone.
  */
 class GapDetectionClockChangeTest {
 
@@ -90,7 +90,7 @@ class GapDetectionClockChangeTest {
     }
 
     /**
-     * TZ6 (B2-11, error hunt 2026-11-12): a week or a day that holds a clock change is 167 or 169 hours, 23 or 25
+     * TZ6 (2026-11-12): a week or a day that holds a clock change is 167 or 169 hours, 23 or 25
      * hours long, so its length is measured in the series' zone as months and years are. The next cut-off that a new
      * weekly or daily issue (the draft, or the one a release opens) is proposed with keeps the series' cut-off clock:
      * a Friday 12:00 Copenhagen cut-off before the spring change proposes the next at 12:00, not 13:00; before the
@@ -109,7 +109,7 @@ class GapDetectionClockChangeTest {
     }
 
     /**
-     * TZ6 (B2-11): the gap rows are stepped week by week in the zone, so a missing week that holds the spring change,
+     * TZ6: the gap rows are stepped week by week in the zone, so a missing week that holds the spring change,
      * between two weekly issues released at 12:00 Copenhagen time, is shown from Friday 12:00 to the next Friday
      * 12:00, the series' own cut-off clock. No length is measured anywhere: the cadence and the zone are passed.
      */

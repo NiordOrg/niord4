@@ -66,7 +66,7 @@ export const ISSUE_BUSY = 'ISSUE_BUSY';
  * Named here because the preview maps it to a sentence of its own ("Only an
  * open issue can be previewed"), while every other write it refuses (an edit,
  * a curation, an upload, a file clear, a release) reads the neutral one in the
- * table below (L-046).
+ * table below.
  */
 export const ISSUE_NOT_OPEN = 'ISSUE_NOT_OPEN';
 
@@ -76,7 +76,7 @@ export const ISSUE_NOT_OPEN = 'ISSUE_NOT_OPEN';
  * Named here because its sentence is a save's ("could not be saved as it
  * stands"), and the series page also meets it on an activation or a
  * reinstatement, where nothing was saved: there the page says which step
- * failed and lists the rules instead (L-044).
+ * failed and lists the rules instead.
  */
 export const SERIES_INVALID = 'SERIES_INVALID';
 
@@ -84,8 +84,8 @@ export const SERIES_INVALID = 'SERIES_INVALID';
  * The refusal of a read for a publication that is not there.
  *
  * Named here because the series page and the one-off page answer it with a
- * sentence and no Retry: the same read can only meet the same 404 again
- * (L-174). See {@link seriesNotFound}.
+ * sentence and no Retry: the same read can only meet the same 404
+ * again. See {@link seriesNotFound}.
  */
 export const SERIES_NOT_FOUND = 'SERIES_NOT_FOUND';
 
@@ -221,7 +221,7 @@ const CODE_KEYS: Readonly<Record<string, string>> = {
   NOT_ONE_OFF: 'admin.publications.error.seriesNotOneOff',
   SERIES_NOT_ACTIVE: 'admin.publications.error.seriesNotActive',
 
-  // A category save (L-047). The id is already taken, or the server's own checks
+  // A category save. The id is already taken, or the server's own checks
   // refused the id, the name or the Order. The categories tab's form holds back
   // what it can see, so either one arriving names something the form could not
   // know (another admin's category) or a rule it does not repeat. CATEGORY_IN_USE

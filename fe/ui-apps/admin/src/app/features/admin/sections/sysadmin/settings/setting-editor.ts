@@ -125,7 +125,7 @@ export class SettingEditor {
 
   /**
    * True for the number kinds, whose empty value the backend reads as the
-   * setting's default (L-180): the drawer says so under the input. An emptied
+   * setting's default: the drawer says so under the input. An emptied
    * number is still sent as null; text, password, json and the others keep an
    * empty value as meant, so they show no such hint.
    */

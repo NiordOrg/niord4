@@ -440,7 +440,7 @@ export class SeriesDetail {
   );
 
   /**
-   * What the banner says when the series cannot be shown (L-174).
+   * What the banner says when the series cannot be shown.
    *
    * A series the server says is not there is named as such, and the banner
    * offers no Retry (the template leaves its label out): the same read can only
@@ -1090,7 +1090,7 @@ export class SeriesDetail {
    * A refusal by the series rules (SERIES_INVALID) is the save's code, and its
    * shared sentence says a save failed. Nothing was saved here, so the step's
    * own failure sentence is said instead, with the rules the answer named
-   * listed under it in the words the series editor uses (L-044). The toast
+   * listed under it in the words the series editor uses. The toast
    * stays until it is closed: a list of rules is not read in five seconds.
    */
   private changeStatus(

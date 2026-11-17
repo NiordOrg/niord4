@@ -260,7 +260,7 @@ function fill(dialog: DialogInternals, paramId: string): void {
   }));
 }
 
-describe('TemplateParamsField — parameter ids are unique in the list (L-181)', () => {
+describe('TemplateParamsField — parameter ids are unique in the list', () => {
   it('a new parameter cannot take an id another row holds', async () => {
     const { fixture, host, field } = await setup((h) => h.params.set([param('a'), param('b')]));
     field.add();

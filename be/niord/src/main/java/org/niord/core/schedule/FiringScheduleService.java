@@ -335,8 +335,8 @@ public class FiringScheduleService extends BaseService {
 
         // Handle updated firing periods. A period that starts before the day being saved is listed on it for its
         // hours on this day; the editor shows it locked and sends it back as stored. Sent back unchanged it is
-        // left as stored, so a period stored with its end before its start, which is listed on the next day too
-        // (L-103), does not make that day's save fail on a row that can only be corrected on its start day
+        // left as stored, so a period stored with its end before its start, which is listed on the next day too,
+        // does not make that day's save fail on a row that can only be corrected on its start day
         Domain domain = domainService.currentDomain();
         Date dayStart = TimeUtils.resetTime(date, domain != null ? domain.timeZone() : null);
         updatedFps.stream()

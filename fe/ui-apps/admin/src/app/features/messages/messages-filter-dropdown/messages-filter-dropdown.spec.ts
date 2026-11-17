@@ -100,7 +100,7 @@ describe('MessagesFilterDropdown named-filter items', () => {
     expect(confirmRemove).toHaveBeenCalledWith(filter);
   });
 
-  // L-043: a failed load read as "no saved filters". It now shows the load error as a disabled row.
+  // A failed load read as "no saved filters". It now shows the load error as a disabled row.
   it('shows the load error as a disabled item when the saved filters failed to load', () => {
     const { component } = setup({ loadFailed: true, hasLoaded: false });
     const named = namedItems(component.items());

@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Settings that take effect at once when they are changed on the Settings page (SECOM-UI-1, L-019): the mail
+ * Settings that take effect at once when they are changed on the Settings page (SECOM-UI-1): the mail
  * recipients filter {@code mailValidRecipients} is read for every mail, so a sysadmin who narrows it in an incident
  * does not wait for a restart. Before, {@link MailService} read the value injected at start-up. The other two live
  * reads are tested where their code is: {@code wmsProtected} in {@code WmsProxyServletITTest} and

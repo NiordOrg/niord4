@@ -1324,7 +1324,7 @@ export class IssueDetail {
    * The preview's refusal, in the section's words.
    *
    * ISSUE_NOT_OPEN keeps the preview's own sentence here: the shared one is
-   * neutral, because every other write that meets it is not a preview (L-046).
+   * neutral, because every other write that meets it is not a preview.
    */
   protected readonly previewErrorKey = computed(() => {
     const response = this.facade.lastPreviewError();
@@ -2526,9 +2526,9 @@ export class IssueDetail {
    * Not a toggle: clearing removes a document somebody uploaded by hand. On a
    * series that generates its document the next release renders over the slot;
    * on one whose document is uploaded the release generates nothing and is
-   * refused until another file is uploaded, so the confirm says that instead
-   * (L-045). There is no undo — the bytes are gone from this screen's reach the
-   * moment the request lands.
+   * refused until another file is uploaded, so the confirm says that
+   * instead. There is no undo — the bytes are gone from this screen's reach
+   * the moment the request lands.
    */
   protected clearFile(lang: string): void {
     if (this.facade.working() || !this.writable()) {

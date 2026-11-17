@@ -796,7 +796,7 @@ describeScenario('a navigational warning from a template to its cancellation', (
       expect(cancelMails, 'one cancel mail, not two').toHaveLength(1);
       expectShows('cancel mail', cancelMails[0].text, shortId);
 
-      // E1-4: the cancellation warning's own mail says what it cancels, not only the area.
+      // The cancellation warning's own mail says what it cancels, not only the area.
       const id = cancellation?.shortId ?? '';
       const warningMails = await waitForMails(
         request,

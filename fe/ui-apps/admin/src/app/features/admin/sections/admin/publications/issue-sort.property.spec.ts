@@ -10,8 +10,8 @@ import {
 } from './issue-sort';
 
 /**
- * Properties of the order of a series' issue list, over generated archives from a fixed seed (error
- * hunt, phase 2): the comparator is a total order whatever the rows, so the list comes out the same
+ * Properties of the order of a series' issue list, over generated archives from a fixed seed:
+ * the comparator is a total order whatever the rows, so the list comes out the same
  * whatever order the answer arrived in; it is a permutation of the rows; numbers inside names and
  * editions count as numbers; the two directions read the primary column in opposite orders; and
  * rows that tie on the primary column break the tie the same way in both directions, newest period

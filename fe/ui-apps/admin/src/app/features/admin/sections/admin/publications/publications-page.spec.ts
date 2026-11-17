@@ -296,7 +296,7 @@ async function setup(options: SetupOptions = {}) {
         useValue: {
           snapshot: {
             // Kept beside the stream for anything that still reads the
-            // snapshot; the list's filter follows the stream (L-175).
+            // snapshot; the list's filter follows the stream.
             queryParamMap: {
               get: (name: string) =>
                 name === 'seriesFilter' ? (options.seriesFilter ?? null) : null,
@@ -1227,7 +1227,7 @@ describe('PublicationsPage - the title filter', () => {
 
   /**
    * Back moves the address and the router keeps the page, so the filter follows
-   * the address rather than being read from it once (L-175).
+   * the address rather than being read from it once.
    */
   it('follows the address when Back drops the filter', async () => {
     const { element, fixture, page } = await setup({

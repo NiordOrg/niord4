@@ -291,7 +291,7 @@ class MessageReportRestCrudITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // POST /expand-params (L-164): the Print reports page's Test prints the report as the editor holds
+    // POST /expand-params: the Print reports page's Test prints the report as the editor holds
     // it, saved or not. Its ${year} and ${week} are expanded as GET /reports expands a stored report's,
     // in the current domain's zone, so the test PDF's header does not print them raw. Nothing is stored.
     // ------------------------------------------------------------------------------------------- //

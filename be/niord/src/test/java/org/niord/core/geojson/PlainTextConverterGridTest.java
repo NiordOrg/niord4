@@ -179,7 +179,7 @@ public class PlainTextConverterGridTest {
 
     @Test
     public void utmText_aZoneThatDoesNotExist_isRefused_namingTheLine() {
-        // L-155: three UTM lines, the middle one in zone 61, the first zone past the last: the text is refused,
+        // Three UTM lines, the middle one in zone 61, the first zone past the last: the text is refused,
         // naming that line, instead of placing it at 183° east, off the globe.
         String text = String.join("\n",
                 "32 V 624726.15 6207884.60",

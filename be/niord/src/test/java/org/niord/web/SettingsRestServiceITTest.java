@@ -665,7 +665,7 @@ class SettingsRestServiceITTest extends ITTest {
 
     /**
      * A number setting the Settings page empties (its drawer sends null) is saved empty, and a live read gives its
-     * default at once, as an injected field does after the next start (L-180; the owner's ruling). Before, the live
+     * default at once, as an injected field does after the next start (the owner's ruling). Before, the live
      * read gave null until a restart.
      */
     @Test

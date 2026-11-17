@@ -34,8 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Fault injection on two steps of the status-change mail path that used to fail silently, as unit tests. The error
- * hunt of 2026-11-12, wave 2 (track C-tests), running MAILLIST2 (be/docs/potential-errors.md): a trigger's message
+ * Fault injection on two steps of the status-change mail path that used to fail silently, as unit tests. Both steps
+ * are MAILLIST2's (be/docs/potential-errors.md), run on 2026-11-12: a trigger's message
  * filter that throws, and the listener's poll loop when the broker connection fails. Both are regression tests of the
  * fix now.
  */

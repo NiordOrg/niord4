@@ -579,7 +579,7 @@ class ScheduledMailServiceITTest extends ITTest {
     }
 
     /**
-     * The purge reads mailDeleteAfterDays live (SECOM-UI-1, L-019), the value the mail queue's page shows: a change
+     * The purge reads mailDeleteAfterDays live (SECOM-UI-1), the value the mail queue's page shows: a change
      * on the Settings page applies to the next run, without a restart. The setting commits, so it is put back.
      */
     @Test

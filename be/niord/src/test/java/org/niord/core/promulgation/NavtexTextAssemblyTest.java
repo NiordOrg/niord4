@@ -106,8 +106,8 @@ public class NavtexTextAssemblyTest {
         // NAVTEX lines are 40 characters (NavtexPromulgationService.NAVTEX_LINE_LENGTH). TextUtils.maxLineLength
         // breaks at the last space inside the window, so a line broken at a space is at most 39 long (U6, kept on
         // purpose); only a paragraph's last line, or a word with no space in it, reaches the limit. The text of the
-        // first test ends nowhere near it, so a fold at 41 passed this class (error hunt 2026-11-12, detector
-        // check). Here paragraphs of 30 to 50 characters, in words of 1 to 12 letters, and single words of 38 to 45
+        // first test ends nowhere near it, so a fold at 41 passed this class.
+        // Here paragraphs of 30 to 50 characters, in words of 1 to 12 letters, and single words of 38 to 45
         // letters put the end of the text at every column around 40, generated from the details and typed into
         // the NAVTEX field alike.
         List<String> failures = new ArrayList<>();

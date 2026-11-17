@@ -355,7 +355,7 @@ public class PublicationCategoryWriteTest {
 
     /**
      * A cleared Order arrives as an explicit null. The update used to keep the stored priority and answer as if the
-     * change were saved (L-173); it is refused now, and only an absent key keeps the stored priority.
+     * change were saved; it is refused now, and only an absent key keeps the stored priority.
      */
     @Test
     void anupdateWithANullPriorityIsRefusedAndOneWithoutItKeepsTheStoredPriority() {

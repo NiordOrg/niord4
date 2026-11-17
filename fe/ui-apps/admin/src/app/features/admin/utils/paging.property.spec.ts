@@ -6,7 +6,7 @@ import { clampPageToTotal } from './server-page-clamp';
 
 /**
  * Properties of the admin tables' paging arithmetic, over generated lists and page moves from a
- * fixed seed (error hunt, phase 2): the client pager always shows a page in range, its pages cover
+ * fixed seed: the client pager always shows a page in range, its pages cover
  * the list exactly once, and a shrinking list never strands the reader on an empty page; the server
  * clamp corrects an overflowing page once and never loops.
  */

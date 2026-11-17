@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * A link one-off whose languages change after it was created and released (left by wave 1, track A2): created in
+ * A link one-off whose languages change after it was created and released: created in
  * Danish and English, then edited to English and German, the Danish name and link dropped. What the series, its
  * released issue and the public reads hold afterwards, in each language.
  *

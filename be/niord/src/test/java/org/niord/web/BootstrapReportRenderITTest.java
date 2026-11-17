@@ -60,7 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Every report and mail template the base product's bootstrap ships, rendered to the HTML the PDF renderer or the
  * mail is made from, over the fixture's sample messages and one message the test makes with three parts, several
- * positions, two references and no title, and read (error hunt 2026-11-12, track B2): every message the search
+ * positions, two references and no title, and read: every message the search
  * returns is in the report, in the search's order; the table of contents names the area headings the list has;
  * nothing a template should have resolved is left in the text (a {@code null}, a {@code ${}, a FreeMarker error, a
  * {@code ???}, minutes of 60 or more). The rendered pages are written to {@code target/b2-reports/} for reading.
@@ -232,8 +232,8 @@ class BootstrapReportRenderITTest extends RoundTripSupport {
             // The reports print a message's details as stored, and no report template formats a position itself:
             // the positions reach a report through the details, where the editor's "Insert locations" writes them
             // (format-message-geometry, the geometry templates through LatLonDirective). So the details carry the
-            // part's positions formatted that way, and a formatter fault shows in the report (error hunt 2026-11-12,
-            // detector check: with the positions only in the geometry, POS1's old rounding passed this class).
+            // part's positions formatted that way, and a formatter fault shows in the report (with the positions
+            // only in the geometry, POS1's old rounding passed this class).
             String en = formattedPositions(geometry, "en");
             String da = formattedPositions(geometry, "da");
             part.put("descs", List.of(
@@ -374,7 +374,7 @@ class BootstrapReportRenderITTest extends RoundTripSupport {
     }
 
     /**
-     * RENDER8 (error hunt 2026-11-12, B2-13): the NM almanac report's table of contents printed {@code ${msg.shortId}}
+     * RENDER8 (2026-11-12): the NM almanac report's table of contents printed {@code ${msg.shortId}}
      * unguarded ({@code nm-almanac-report-pdf.ftl} line 53), so a list that held a message without a short id (a
      * draft or a verified notice not yet numbered, which the print dialog lists when asked for them) answered 500
      * "Error generating PDF for messages" instead of the PDF. The short id is now guarded as every other template
@@ -413,8 +413,8 @@ class BootstrapReportRenderITTest extends RoundTripSupport {
      * A list marks a cancelled notice, and an expired one that is not permanent, beside its short id
      * ({@code message-support.ftl} 293-295), so that a mariner reading the standard or the draft list over every
      * status does not take a cancelled warning for one in force. Every message of the search with a short id is found
-     * by its id, and the label after it is the one its status calls for, or none (error hunt 2026-11-12, detector
-     * check: a template that no longer labelled cancelled notices passed every other test of this class).
+     * by its id, and the label after it is the one its status calls for, or none (a template that no longer
+     * labelled cancelled notices passed every other test of this class).
      */
     @Test
     void theLists_labelEveryCancelledAndExpiredMessage_besideItsShortId() {
@@ -469,7 +469,7 @@ class BootstrapReportRenderITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL20 (error hunt 2026-11-15, L-022): a draft print heads each language of a message with the language's name,
+     * TMPL20 (2026-11-15): a draft print heads each language of a message with the language's name,
      * {@code text('lang.' + lang)} ({@code message-support.ftl}), and a model language that no dictionary holds a
      * {@code lang.<code>} for threw "No such key", so the whole print answered 500. The test's packs hold
      * {@code lang.en} and {@code lang.da}; a third model language, {@code fo}, has none. The print now renders and
@@ -553,7 +553,7 @@ class BootstrapReportRenderITTest extends RoundTripSupport {
     }
 
     /**
-     * MAILLIST4 (error hunt 2026-11-12, B2-12): the NAVTEX station mail ({@code publish-navtex.ftl},
+     * MAILLIST4 (2026-11-12): the NAVTEX station mail ({@code publish-navtex.ftl},
      * {@code <@txtToHtml text=navtex.preamble/>}) failed with a FreeMarker error when the message's NAVTEX promulgation
      * had no preamble, which is the case for every message of a series without a NAVTEX format (the sample's and
      * {@code niord_test}'s {@code dma-nw-local}): {@code TextToHtmlDirective} refused a null text instead of printing
@@ -606,7 +606,7 @@ class BootstrapReportRenderITTest extends RoundTripSupport {
     }
 
     /**
-     * MAILLIST5 (error hunt 2026-11-12, wave 3, E1): the mailing-list mail of a cancellation warning said only its
+     * MAILLIST5 (2026-11-12): the mailing-list mail of a cancellation warning said only its
      * number, its date and its area ({@code publish-navwarn-common.ftl} {@code renderNavWarnDetails} prints the parts'
      * details, and a cancellation warning has none). Its title, which names the warning it cancels, is now printed.
      * A published dma-nw warning is cancelled over REST, which issues the cancellation warning; the PUBLISHED mail of

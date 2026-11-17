@@ -152,12 +152,12 @@ describe('SeriesDetailFacade', () => {
     httpTesting.expectNone(ISSUES_URL);
     expect(facade.error()).toBe(true);
     expect(facade.loading()).toBe(false);
-    // Any failure but the coded 404 may pass on a second try (L-174).
+    // Any failure but the coded 404 may pass on a second try.
     expect(facade.notFound()).toBe(false);
   });
 
   /**
-   * A series that is not there is told apart from a read that failed (L-174).
+   * A series that is not there is told apart from a read that failed.
    *
    * The screen says so without Retry: the same read can only meet the same 404.
    * A Retry afterwards that succeeds clears it again.

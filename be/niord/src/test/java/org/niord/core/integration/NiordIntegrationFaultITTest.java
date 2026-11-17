@@ -49,8 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Fault injection on the Niord integration pull: what the target series holds after the other server answers
- * something implausible, and what an imported warning loses and how the run says so. The error hunt of 2026-11-12,
- * wave 2 (track C-tests), ran INT5 and INT6 here; their fixes turned the pins into these tests. The other server is an
+ * something implausible, and what an imported warning loses and how the run says so. INT5 and INT6 were first pinned
+ * here (2026-11-12); their fixes turned the pins into these tests. The other server is an
  * {@link HttpStub}; the engine runs in its own committed transaction, so the fixtures are committed and removed by
  * their legacy ids afterwards, as in {@link NiordIntegrationImportITTest}.
  */

@@ -4,7 +4,7 @@ import { htmlDiff } from './html-diff.util';
 
 /**
  * Properties of the message comparison's Changes tab, over generated pairs of message texts from a
- * fixed seed (error hunt, phase 2): the diff, with its deletions dropped and its insertions kept,
+ * fixed seed: the diff, with its deletions dropped and its insertions kept,
  * reads as the new text; with its insertions dropped and its deletions kept, as the old one; and the
  * same text on both sides marks nothing.
  *

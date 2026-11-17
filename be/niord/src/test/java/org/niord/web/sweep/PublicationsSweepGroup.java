@@ -1289,7 +1289,7 @@ class PublicationsSweepGroup implements SweepGroup {
                         .query("nextIssue", true)))
                 // The sibling read (editable-publication) answers an unknown id 404 "No such publication"; this
                 // one answers 204 with no body, as the old system's handler did. No screen calls it and the release
-                // calls it only with an id it has just found: not a fault (wave 3b's second reader)
+                // calls it only with an id it has just found: not a fault
                 .probes((ctx, as) -> {
                     SweepResponse unknown = ctx.ok(as, SweepRequest.get(P_COPY)
                             .var("publicationId", UNKNOWN_PUBLICATION).note("unknown-id probe"));

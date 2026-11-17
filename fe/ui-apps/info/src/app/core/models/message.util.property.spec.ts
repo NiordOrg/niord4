@@ -5,7 +5,7 @@ import { computeAreaHeadings, filterByAreaIds, rootAreaOf, sortDescs } from './m
 
 /**
  * Properties of the public site's message helpers, over generated messages and area trees from a
- * fixed seed (error hunt, phase 2): the reader's language comes first in every text list and the
+ * fixed seed: the reader's language comes first in every text list and the
  * other languages keep their order, without changing the fetched message; the area chips keep
  * exactly the messages filed under a ticked area or one of its sub-areas; and an area heading is
  * printed above the first message of each run of one area, and only there.

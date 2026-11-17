@@ -617,7 +617,7 @@ class FiringScheduleServiceITTest extends ITTest {
     }
 
     /**
-     * L-103: a period stored with its end before its start, 22:00 to 02:00 of one day, is read as
+     * A period stored with its end before its start, 22:00 to 02:00 of one day, is read as
      * ending at 02:00 of the next day (as the hourly run reads it), so it is listed on its start day and, for its
      * early hours, on the next day too; on no other day. A period of the day before that ends at 23:00 of that
      * day is not listed on the next day.
@@ -641,7 +641,7 @@ class FiringScheduleServiceITTest extends ITTest {
     }
 
     /**
-     * L-103: the next day's save sends the backward period of the day before back as it is stored (the editor
+     * The next day's save sends the backward period of the day before back as it is stored (the editor
      * shows it locked there): it is kept as stored, and the day's other periods are saved. Changed there, it is
      * refused, and on its start day it is still refused until it is corrected (FIRING2).
      */

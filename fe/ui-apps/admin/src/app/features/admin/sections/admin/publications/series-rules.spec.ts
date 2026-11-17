@@ -549,7 +549,7 @@ describe('the preview window', () => {
     expect(previewIntervalFrom(modelOf({ cadence: 'DAILY' }), CUTOFF)).toBe(CUTOFF - DAY);
   });
 
-  /** A1-5: a cadence-less series has no period, and previously got no bound at all. */
+  /** A cadence-less series has no period, and previously got no bound at all. */
   it('bounds a cadence-less series rather than probing unbounded', () => {
     const from = previewIntervalFrom(modelOf({ cadence: 'NONE' }), CUTOFF);
     expect(from).toBeDefined();

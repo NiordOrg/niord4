@@ -22,7 +22,7 @@ import { convertFeature, mergeFeatures, splitFeature } from './geometry-ops';
 
 /**
  * Properties of the geometry editor's merge, split and convert, over generated geometries from a
- * fixed seed (error hunt, phase 2). A position's name is stored as `name:<index>:<lang>` against
+ * fixed seed. A position's name is stored as `name:<index>:<lang>` against
  * its breadth-first index, so every operation that re-partitions positions must move each name
  * with its position: the names a message gives its positions are printed beside them in the
  * message text and drawn on the map.

@@ -57,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * ({@link #lint}), are pinned in a golden file per template under {@code src/test/resources/golden/templates/}, so
  * a change to a template or to a formatter shows as a diff ({@code -Dgolden.write=true} rewrites them; then the
  * diff has to be read). The faults the reading found are pinned one by one by the {@code _documentsBug} tests
- * below, which flip when they are fixed (error hunt 2026-11-12, track B2).
+ * below, which flip when they are fixed.
  *
  * <p>The templates come from the IT database's fixture, which carries the bootstrap's 80 templates as rows
  * ({@code TestFixtureCurrentTest} keeps it equal to {@code niord/bootstrap/templates/}). Nothing is saved: the
@@ -816,7 +816,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     // ------------------------------------------------------------------------------------------- //
 
     /**
-     * TMPL8 (error hunt 2026-11-12): a reduced depth whose water depth was left empty (Mandatory is not enforced)
+     * TMPL8 (2026-11-12): a reduced depth whose water depth was left empty (Mandatory is not enforced)
      * printed "Water depths down to 0m" and "WATER DEPTHS DOWN TO 0M", a depth nobody entered, through
      * {@code ${params.water_depth!0?c}}. Without a depth the texts now say only what the editor knows: "Reduced water
      * depths have been observed" and "REDUCED WATER DEPTHS OBSERVED", with no number.
@@ -866,7 +866,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL9 (error hunt 2026-11-12): radio-navigation.ftl serves both the RACON and the AIS category, and decided
+     * TMPL9 (2026-11-12): radio-navigation.ftl serves both the RACON and the AIS category, and decided
      * between them by whether the position carried an {@code ais_status}; the status is optional, and an AIS warning
      * without one said "RACON" in its subject, details and NAVTEX text. The category's own {@code ais} parameter now
      * decides: the AIS template prints AIS whatever its status.
@@ -896,7 +896,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL10 (B2-3, error hunt 2026-11-12): a template whose positions come from the part's geometry
+     * TMPL10 (2026-11-12): a template whose positions come from the part's geometry
      * ({@code renderPositionList geomParam=part}) printed "in pos." with nothing after it when the message had no
      * position: "A vessel has sunk in pos.." (wreck, uncharted obstruction, mine, torpedo, grenade, exercise, the
      * work templates, bridge closed). {@code common.ftl} now prints the position phrase only for one position or
@@ -923,7 +923,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * DICT4 (B2-8, error hunt 2026-11-12): a date interval within one day prints no Danish "kl." in the ENGLISH
+     * DICT4 (2026-11-12): a date interval within one day prints no Danish "kl." in the ENGLISH
      * details of a deployment whose first model language is Danish, as DK's and GL's are and as this suite's is
      * ({@code niord.json}: {@code modelLanguages} [da, en]). The English value of
      * {@code navwarn.date.time_interval_prefix} is empty on purpose (bootstrap {@code texts.json},
@@ -942,7 +942,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL15 (B2-10, error hunt 2026-11-12): radio-navigation.ftl and object-adrift.ftl wrote their subject over two
+     * TMPL15 (2026-11-12): radio-navigation.ftl and object-adrift.ftl wrote their subject over two
      * lines of the field template, and the line break stayed in the subject and in the title made from it: "AIS\n
      * unreliable." and "Object\nadrift"; the title read "Denmark. The Baltic Sea. AIS\nunreliable.". Everywhere the
      * title is plain text (a mail's subject, the NAVTEX and Twitter titles, a PDF's bookmarks, a list's one-line
@@ -983,7 +983,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL14 (B2-9, error hunt 2026-11-12), cosmetic English and NAVTEX forms the reading found: the AtoN type was
+     * TMPL14 (2026-11-12), cosmetic English and NAVTEX forms the reading found: the AtoN type was
      * capitalised mid-sentence ("AIS on The light Hals Barre"); an uncharted obstruction without a type was "An
      * uncharted Obstruction ... Obstruction is unmarked"; the category's name was lower case, so its title ended
      * "light destroyed."; reduced-depth.ftl's NAVTEX text ended "MARINERS ADVISED TO KEEP CLEAR" without the full stop
@@ -1103,7 +1103,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL11 (B2-4, error hunt 2026-11-12): work-vessel.ftl printed the vessel's name as "???" when only a call sign
+     * TMPL11 (2026-11-12): work-vessel.ftl printed the vessel's name as "???" when only a call sign
      * was given: "Work is carried out by «???» call sign OXYZ." Without a name the vessel is now named by its call
      * sign: "Work is carried out by the vessel with call sign OXYZ.", "BY VESSEL WITH CALL SIGN OXYZ.". The control: a
      * vessel with a name and a call sign is still named and quoted.
@@ -1123,7 +1123,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL12 (B2-5, error hunt 2026-11-12): obstruction-found.ftl (mine, torpedo, grenade) put the plural object in
+     * TMPL12 (2026-11-12): obstruction-found.ftl (mine, torpedo, grenade) put the plural object in
      * front of a singular verb when there were several positions: "Mines has been reported in pos. ...". The torpedo
      * template's plural was "Torpedos" and the mine template's "The Mines" was capitalised mid-text. object-adrift.ftl
      * did the same for its plural objects: "Logs has been observed adrift", "Fishing stakes has been observed adrift".
@@ -1155,7 +1155,7 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
     }
 
     /**
-     * TMPL13 (B2-6, error hunt 2026-11-12): salvage-operations.ftl printed "salvage operations is carried out" (plural
+     * TMPL13 (2026-11-12): salvage-operations.ftl printed "salvage operations is carried out" (plural
      * subject, singular verb), and the work templates (hydrographic survey, cable, diving, underwater survey,
      * salvage) and the exercise started their sentence in lower case when the message had no event dates:
      * "hydrographic survey is carried out in pos. ...", "a military exercise will take place ..."; an exercise without

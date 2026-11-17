@@ -147,7 +147,7 @@ public class NavWarnDateFormatterZoneGridTest {
      * The month is named in the language the formatter is given, whatever the JVM's default locale: the default is
      * Danish on the workstations and English on CI and in the containers, so a month named in the default locale
      * passes on one of them and prints "maj" in an English text (or "May" in a Danish one) on the other. The grid
-     * above runs in the default locale; this sets it against the language (error hunt 2026-11-12, detector check).
+     * above runs in the default locale; this sets it against the language.
      */
     @Test
     public void theMonth_isNamedInTheFormattersLanguage_whateverTheJvmLocale() {
@@ -253,7 +253,7 @@ public class NavWarnDateFormatterZoneGridTest {
     public void timedInterval_ofOneHourInTheRepeatedHour_namesBothEnds_withTheirZones() {
         // Copenhagen 25 October 2026: 03:00 CEST becomes 02:00 CET, so 02:30 happens twice. An interval from the
         // first 02:30 to the second is one hour long. The formatter used to compare the printed wall clocks only
-        // ("0230" = "0230") and print it as a single moment (TZ5, error hunt 2026-11-12).
+        // ("0230" = "0230") and print it as a single moment (TZ5, 2026-11-12).
         ZoneId z = ZoneId.of("Europe/Copenhagen");
         Instant from = Instant.parse("2026-10-25T00:30:00Z");   // 02:30 CEST
         Instant to = Instant.parse("2026-10-25T01:30:00Z");     // 02:30 CET

@@ -4,7 +4,7 @@ import { forceAllDayBounds } from './event-date-bounds.util';
 
 /**
  * Properties of the all-day event dates, over generated instants in the domains' zones from a fixed
- * seed (error hunt, phase 2): an all-day interval runs from the first to the last millisecond of the
+ * seed: an all-day interval runs from the first to the last millisecond of the
  * day each end falls on in the domain's zone, on every day of the year the clocks change on
  * included; it holds the instants it was made from; and making it all-day again changes nothing.
  */

@@ -61,7 +61,7 @@ export class TemplateParamDialog {
   });
   protected readonly form = form(this.formModel, (path) => {
     required(path.paramId);
-    // L-181. The execute form keys its values by paramId, so two rows with one id would
+    // The execute form keys its values by paramId, so two rows with one id would
     // share one value. Compared exactly, as the server compares them.
     validate(path.paramId, ({ value }) =>
       this.takenIds().includes(value()) ? { kind: ID_TAKEN } : null,

@@ -46,7 +46,7 @@ export function lengthErrorAny(
 }
 
 /**
- * "n of max" under a text input whose column has a limit (ERR7, L-148).
+ * "n of max" under a text input whose column has a limit (ERR7).
  *
  * The limit is kept by the form, not by the input: the editor holds Save back
  * with a {@link lengthError} rule while a text is too long, and this line says

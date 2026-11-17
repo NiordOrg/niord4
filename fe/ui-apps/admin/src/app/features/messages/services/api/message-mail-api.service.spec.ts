@@ -31,7 +31,7 @@ describe('MessageMailApiService', () => {
     s.httpTesting.verify();
   });
 
-  it(`POSTs ${API_BASE}/message-mail/send with the mail in the body and the selection in the query (L-153)`, () => {
+  it(`POSTs ${API_BASE}/message-mail/send with the mail in the body and the selection in the query`, () => {
     const params = new HttpParams().set('tag', 't1').set('lang', 'en');
     const body = {
       mailTo: ['a@x.test', 'b@x.test'],

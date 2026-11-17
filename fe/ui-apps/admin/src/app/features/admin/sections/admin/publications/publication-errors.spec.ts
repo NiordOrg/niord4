@@ -119,7 +119,7 @@ describe('publicationErrorKey', () => {
   });
 
   /**
-   * L-047. A refused category save used to say only "The category could not be
+   * A refused category save used to say only "The category could not be
    * saved". The two codes a save can meet have sentences, and the bundle carries
    * them, or they would render as the key.
    */
@@ -143,7 +143,7 @@ describe('publicationErrorKey', () => {
   });
 
   /**
-   * L-046. ISSUE_NOT_OPEN is thrown by edits, curation, uploads, a file clear
+   * ISSUE_NOT_OPEN is thrown by edits, curation, uploads, a file clear
    * and a release as well as by the preview, so the shared sentence is a
    * neutral one: it used to say "Only an open issue can be previewed" for all
    * of them. The preview keeps its own sentence where it maps its own refusal.
@@ -167,7 +167,7 @@ describe('publicationErrorKey', () => {
    * the failure the whole mapping exists to prevent — and it has already
    * happened twice, to the overlap refusal and to the already-published one.
    *
-   * Of the CATEGORY_* codes, the two a category save can meet are here (L-047).
+   * Of the CATEGORY_* codes, the two a category save can meet are here.
    * CATEGORY_IN_USE is absent on purpose: the categories tab words it itself,
    * with the counts it reads off the refusal.
    */
@@ -387,7 +387,7 @@ describe('publicationErrorCode', () => {
   });
 });
 
-/** A publication that is not there, told apart from a read that failed (L-174). */
+/** A publication that is not there, told apart from a read that failed. */
 describe('seriesNotFound', () => {
   it('is true for a 404 with SERIES_NOT_FOUND, coded or in the message', () => {
     expect(seriesNotFound(refusal({ code: 'SERIES_NOT_FOUND', message: 'no series' }, 404))).toBe(
@@ -733,7 +733,7 @@ describe('the messages a refused removal named', () => {
  * Why a series rule refused, worded once for every screen that lists one.
  *
  * The two editors list a refused rule beside its field, and the series page
- * lists the rules an activation or a reinstatement was refused over (L-044).
+ * lists the rules an activation or a reinstatement was refused over.
  * One function words them, so a rule reads the same in both places.
  */
 describe('the sentence a series rule refused with', () => {

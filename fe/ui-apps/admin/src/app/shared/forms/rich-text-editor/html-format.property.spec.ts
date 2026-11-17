@@ -4,7 +4,7 @@ import { formatHtml } from './html-format';
 
 /**
  * Properties of the rich-text source view's Format action, over generated message HTML from a fixed
- * seed (error hunt, phase 2): formatting changes only the whitespace between blocks, so the
+ * seed: formatting changes only the whitespace between blocks, so the
  * formatted source, parsed again, holds the same elements in the same order with the same text; and
  * formatting it again changes nothing. That holds for text escaped in the source (`&lt;`, `&amp;`)
  * also where it sits directly beside a block element rather than in a paragraph of its own, which
