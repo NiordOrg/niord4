@@ -75,7 +75,8 @@
 #                   home need a path without whitespace: the JVM and Maven arguments split at a space.
 #                   Deliberately NOT the ~/.niord of the legacy Quarkus backend: its Lucene 9.5 message index
 #                   there makes this backend (Lucene 9.12) fail at startup with "Could not load codec 'Lucene95'".
-#                   Never ~/.niord-local/keycloak either: that folder is the local realm's place.
+#                   Refused as a home, in any spelling of the path: ~/.niord, ~/.niord-local itself (the folder
+#                   of the homes) and ~/.niord-local/keycloak (the local realm's place).
 #
 # The backend JVM runs in UTC (-Duser.timezone=UTC). The database stores timestamps as wall-clock values
 # without a zone, converted with the JVM's default time zone, and the test/production data was written by a
@@ -199,8 +200,46 @@ BASE_DB="$NIORD_DB"
 if $OWN_DB; then NIORD_DB="${NIORD_DB}_slot$SLOT"; fi
 
 [[ "$NIORD_DB" =~ ^[a-z_][a-z0-9_]*$ ]] || die "NIORD_DB must be a plain lower-case identifier, got '$NIORD_DB'."
-# ~/.niord-local/keycloak holds the realm the compose file mounts (local_realm_path): never a Niord home.
-[[ "${NIORD_HOME_DIR%/}" == */.niord-local/keycloak ]] && die "The Niord home $NIORD_HOME_DIR is the local realm's folder, never a Niord home: name another NIORD_DB or NIORD_HOME_DIR."
+
+# A path as the file system reads it, for the refusals below: backslashes as slashes, a folder that exists by its
+# physical path (a link to it reads as the folder), a relative path from the current folder, `.`, `..` and repeated
+# or closing slashes resolved, and on Windows the one spelling cygpath gives every other (/c/..., C:/..., a mount
+# such as /tmp).
+home_path() {
+    local backslash='\' path part other
+    local parts=() kept=()
+    path=${1//"$backslash"//}
+    if other="$(cd -P "$path" 2>/dev/null && pwd -P)"; then path="$other"; fi
+    if [[ "$path" != /* ]] && ! { $WINDOWS && [[ "$path" == [A-Za-z]:/* ]]; }; then path="$PWD/$path"; fi
+    IFS=/ read -r -a parts <<< "$path"
+    for part in ${parts[@]+"${parts[@]}"}; do
+        case "$part" in
+            ''|.) ;;
+            ..) if (( ${#kept[@]} )); then unset "kept[$(( ${#kept[@]} - 1 ))]"; fi ;;
+            *) kept+=("$part") ;;
+        esac
+    done
+    path=""
+    for part in ${kept[@]+"${kept[@]}"}; do path+="/$part"; done
+    if $WINDOWS; then
+        if [[ "$path" == /[A-Za-z]:* ]]; then path="${path#/}/"; fi
+        if other="$(cygpath -m -- "${path:-/}" 2>/dev/null)"; then path="${other%/}"; fi
+    fi
+    printf '%s' "${path:-/}"
+}
+# Never a Niord home, in any spelling of the path: ~/.niord-local/keycloak holds the realm the compose file mounts
+# (local_realm_path), ~/.niord-local holds that folder and every database's home, and ~/.niord is the legacy
+# backend's (the header). Compared without regard to case, as NTFS and APFS read a path.
+HOME_PATH="$(home_path "$NIORD_HOME_DIR")"
+shopt -s nocasematch
+if [[ "$HOME_PATH" == */.niord-local/keycloak ]]; then
+    die "The Niord home $NIORD_HOME_DIR is the local realm's folder, never a Niord home: name another NIORD_DB or NIORD_HOME_DIR."
+elif [[ "$HOME_PATH" == */.niord-local ]]; then
+    die "The Niord home $NIORD_HOME_DIR is the folder of the homes and of the local realm, never a Niord home itself: name a folder in it, as the default ~/.niord-local/<NIORD_DB> is."
+elif [[ "$HOME_PATH" == */.niord && "$HOME_PATH" == "$(home_path "$HOME/.niord")" ]]; then
+    die "The Niord home $NIORD_HOME_DIR is the legacy backend's, whose message index this backend cannot load (see --help): unset NIORD_HOME_DIR or name another folder."
+fi
+shopt -u nocasematch
 
 # The backend's JVM arguments and Maven's MAVEN_ARGS are split at every space, so a path with whitespace in
 # them would break the run later with a misleading error.
