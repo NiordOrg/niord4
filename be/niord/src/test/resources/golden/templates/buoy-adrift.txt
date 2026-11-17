@@ -1,0 +1,312 @@
+# Buoy adrift  [templates/tmpl/object-adrift.js, templates/tmpl/object-adrift.ftl]
+# std fields [type, promulgation, positions, areas], params [ParamDef[paramId=date, type=date, positionList=false], ParamDef[paramId=object, type=marking_type_list, positionList=false]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 56° 00.0'N - 012° 00.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 56-00.0N
+  | 012-00.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow buoy has been observed adrift in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 56° 00.0'N - 012° 00.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 56-00.0N
+  | 012-00.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow buoy has been observed adrift in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 61° 06.0'N - 045° 15.0'W the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 61-06.0N
+  | 045-15.0W 120830 UTC MAY 26.
+AUDIO:   A black-yellow buoy has been observed adrift in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift between pos. 55° 30.0'N - 010° 30.0'E and 55° 36.0'N - 010° 45.0'E and 55° 42.0'N - 011° 00.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 55-30.0N
+  | 010-30.0E AND 55-36.0N 010-45.0E AND
+  | 55-42.0N 011-00.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow buoy has been observed adrift between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 36.0 min. North - 010 degrees 45.0 min. East and 55 degrees 42.0 min. North - 011 degrees 00.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: an area (polygon)
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in the area between pos. 55° 30.0'N - 010° 30.0'E and 55° 30.0'N - 011° 00.0'E and 56° 00.0'N - 011° 00.0'E and 56° 00.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT IN AREA
+  | 55-30.0N 010-30.0E AND 55-30.0N
+  | 011-00.0E AND 56-00.0N 011-00.0E AND
+  | 56-00.0N 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow buoy has been observed adrift in the area between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 30.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 120830 UTC MAY
+  | 26.
+AUDIO:   A black-yellow buoy has been observed adrift the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param date = 31 Dec 23:30 local
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 31 st December 2026 at 2230 UTC. Cancel this warning the 1 st January 2027 at 1030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 55-30.0N
+  | 010-30.0E 312230 UTC DEC 26.
+AUDIO:   A black-yellow buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 31st December 2026 at 2230 UTC. Cancel this warning the 1st January 2027 at 1030 UTC.
+
+### param date = 1 Jan 00:30 local
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 31 st December 2026 at 2330 UTC. Cancel this warning the 1 st January 2027 at 1130 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 55-30.0N
+  | 010-30.0E 312330 UTC DEC 26.
+AUDIO:   A black-yellow buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 31st December 2026 at 2330 UTC. Cancel this warning the 1st January 2027 at 1130 UTC.
+
+### param date = empty
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 55-30.0N
+  | 010-30.0E.
+AUDIO:   A black-yellow buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param object = aton.type.buoy.black_yellow
+TITLE:   Denmark. The Baltic Sea. Black-yellow buoy adrift.
+SUBJECT: Black-yellow buoy adrift
+DETAILS: A black-yellow buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.yellow_black
+TITLE:   Denmark. The Baltic Sea. Yellow-black buoy adrift.
+SUBJECT: Yellow-black buoy adrift
+DETAILS: A yellow-black buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | YELLOW-BLACK BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A yellow-black buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.black_yellow_black
+TITLE:   Denmark. The Baltic Sea. Black-yellow-black buoy adrift.
+SUBJECT: Black-yellow-black buoy adrift
+DETAILS: A black-yellow-black buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW-BLACK BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow-black buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.yellow_black_yellow
+TITLE:   Denmark. The Baltic Sea. Yellow-black-yellow buoy adrift.
+SUBJECT: Yellow-black-yellow buoy adrift
+DETAILS: A yellow-black-yellow buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | YELLOW-BLACK-YELLOW BUOY ADRIFT
+  | 55-30.0N 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A yellow-black-yellow buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.green
+TITLE:   Denmark. The Baltic Sea. Green buoy adrift.
+SUBJECT: Green buoy adrift
+DETAILS: A green buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | GREEN BUOY ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A green buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.red
+TITLE:   Denmark. The Baltic Sea. Red buoy adrift.
+SUBJECT: Red buoy adrift
+DETAILS: A red buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | RED BUOY ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A red buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Green-red-green buoy adrift.
+SUBJECT: Green-red-green buoy adrift
+DETAILS: A green-red-green buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | GREEN-RED-GREEN BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A green-red-green buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Red-green-red buoy adrift.
+SUBJECT: Red-green-red buoy adrift
+DETAILS: A red-green-red buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | RED-GREEN-RED BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A red-green-red buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.red_white
+TITLE:   Denmark. The Baltic Sea. Red-white bouy adrift.
+SUBJECT: Red-white bouy adrift
+DETAILS: A red-white bouy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | RED-WHITE BOUY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A red-white bouy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.yellow
+TITLE:   Denmark. The Baltic Sea. Yellow buoy adrift.
+SUBJECT: Yellow buoy adrift
+DETAILS: A yellow buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | YELLOW BUOY ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A yellow buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.buoy.black_red
+TITLE:   Denmark. The Baltic Sea. Black-red buoy adrift.
+SUBJECT: Black-red buoy adrift
+DETAILS: A black-red buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-RED BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-red buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.black_yellow
+TITLE:   Denmark. The Baltic Sea. Black-yellow light buoy adrift.
+SUBJECT: Black-yellow light buoy adrift
+DETAILS: A black-yellow light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.yellow_black
+TITLE:   Denmark. The Baltic Sea. Yellow-black light buoy adrift.
+SUBJECT: Yellow-black light buoy adrift
+DETAILS: A yellow-black light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | YELLOW-BLACK LIGHT BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A yellow-black light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.black_yellow_black
+TITLE:   Denmark. The Baltic Sea. Black-yellow-black light buoy adrift.
+SUBJECT: Black-yellow-black light buoy adrift
+DETAILS: A black-yellow-black light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-YELLOW-BLACK LIGHT BUOY ADRIFT
+  | 55-30.0N 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-yellow-black light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.yellow_black_yellow
+TITLE:   Denmark. The Baltic Sea. Yellow-black-yellow light buoy adrift.
+SUBJECT: Yellow-black-yellow light buoy adrift
+DETAILS: A yellow-black-yellow light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | YELLOW-BLACK-YELLOW LIGHT BUOY ADRIFT
+  | 55-30.0N 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A yellow-black-yellow light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.green
+TITLE:   Denmark. The Baltic Sea. Green light buoy adrift.
+SUBJECT: Green light buoy adrift
+DETAILS: A green light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | GREEN LIGHT BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A green light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.red
+TITLE:   Denmark. The Baltic Sea. Red light buoy adrift.
+SUBJECT: Red light buoy adrift
+DETAILS: A red light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | RED LIGHT BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A red light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Green-red-green light buoy adrift.
+SUBJECT: Green-red-green light buoy adrift
+DETAILS: A green-red-green light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | GREEN-RED-GREEN LIGHT BUOY ADRIFT
+  | 55-30.0N 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A green-red-green light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Red-green-red light buoy adrift.
+SUBJECT: Red-green-red light buoy adrift
+DETAILS: A red-green-red light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | RED-GREEN-RED LIGHT BUOY ADRIFT
+  | 55-30.0N 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A red-green-red light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.red_white
+TITLE:   Denmark. The Baltic Sea. Red-white bouy adrift.
+SUBJECT: Red-white bouy adrift
+DETAILS: A red-white bouy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | RED-WHITE BOUY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A red-white bouy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.yellow
+TITLE:   Denmark. The Baltic Sea. Yellow light buoy adrift.
+SUBJECT: Yellow light buoy adrift
+DETAILS: A yellow light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | YELLOW LIGHT BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A yellow light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.black_red
+TITLE:   Denmark. The Baltic Sea. Black-red light buoy adrift.
+SUBJECT: Black-red light buoy adrift
+DETAILS: A black-red light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLACK-RED LIGHT BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A black-red light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = aton.type.light_buoy.blue_yellow
+TITLE:   Denmark. The Baltic Sea. Blue-yellow light buoy adrift.
+SUBJECT: Blue-yellow light buoy adrift
+DETAILS: A blue-yellow light buoy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BLUE-YELLOW LIGHT BUOY ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A blue-yellow light buoy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = empty
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | AN OBJECT ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   An object has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+

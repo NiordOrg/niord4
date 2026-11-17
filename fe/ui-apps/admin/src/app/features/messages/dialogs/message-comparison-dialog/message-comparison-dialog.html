@@ -1,0 +1,153 @@
+<app-dialog
+  [visible]="dialog.visible()"
+  (visibleChange)="dialog.onVisibleChange($event)"
+  (opened)="onOpened()"
+  [header]="'messages.compare.title' | transloco"
+  [style]="dialogStyle()"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2">
+      <span class="font-semibold">{{ 'messages.compare.title' | transloco }}</span>
+      <app-help-anchor section="compare-messages" />
+    </div>
+  </ng-template>
+
+  <div class="flex flex-col gap-4">
+    <!-- Two id pickers (deleted messages selectable) + the content-language pills. -->
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="w-24 shrink-0 text-sm font-medium text-fg-muted">
+          {{ 'messages.compare.message1' | transloco }}
+        </span>
+        <app-message-id-field
+          class="min-w-[16rem] flex-1"
+          [includeDeleted]="true"
+          [value]="dialog.messageId1()"
+          (valueChange)="dialog.messageId1.set($event)"
+          placeholder="messages.compare.message1"
+        />
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="w-24 shrink-0 text-sm font-medium text-fg-muted">
+          {{ 'messages.compare.message2' | transloco }}
+        </span>
+        <app-message-id-field
+          class="min-w-[16rem] flex-1"
+          [includeDeleted]="true"
+          [value]="dialog.messageId2()"
+          (valueChange)="dialog.messageId2.set($event)"
+          placeholder="messages.compare.message2"
+        />
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="w-24 shrink-0 text-sm font-medium text-fg-muted">
+          {{ 'messages.compare.language' | transloco }}
+        </span>
+        <div
+          class="flex gap-0.5"
+          role="group"
+          [attr.aria-label]="'messages.compare.language' | transloco"
+        >
+          @for (lang of languages; track lang.value) {
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full border border-surface-300 px-2.5 py-0.5 text-[11px] font-semibold text-fg-subtle transition-colors dark:border-surface-600"
+              [style.background-color]="
+                previewLang() === lang.value ? 'var(--niord-primary)' : null
+              "
+              [style.border-color]="previewLang() === lang.value ? 'var(--niord-primary)' : null"
+              [style.color]="previewLang() === lang.value ? 'var(--niord-fg-on-primary)' : null"
+              [attr.aria-pressed]="previewLang() === lang.value"
+              (click)="selectLanguage(lang.value)"
+            >
+              <app-language-flag
+                class="h-3 w-[1.125rem] rounded-xs"
+                [lang]="lang.value"
+                [flagPath]="lang.flagPath"
+                [codeFallback]="false"
+              />
+              {{ lang.value.toUpperCase() }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($event ?? 'sideBySide')">
+      <app-tab-list>
+        <app-tab value="sideBySide">{{ 'messages.compare.tab.sideBySide' | transloco }}</app-tab>
+        <app-tab value="changes">{{ 'messages.compare.tab.changes' | transloco }}</app-tab>
+        <app-tab value="data">{{ 'messages.compare.tab.data' | transloco }}</app-tab>
+      </app-tab-list>
+      <app-tab-panels>
+        <app-tab-panel value="sideBySide">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="flex flex-col gap-2">
+              <div
+                class="border-b border-surface-200 pb-1 text-sm font-bold dark:border-surface-700"
+              >
+                {{ 'messages.compare.message1' | transloco }}
+              </div>
+              @if (message1(); as msg1) {
+                <app-message-details-renderer
+                  #renderer1
+                  [message]="msg1"
+                  [language]="previewLang()"
+                  [showPromulgation]="true"
+                />
+              }
+            </div>
+            <div class="flex flex-col gap-2">
+              <div
+                class="border-b border-surface-200 pb-1 text-sm font-bold dark:border-surface-700"
+              >
+                {{ 'messages.compare.message2' | transloco }}
+              </div>
+              @if (message2(); as msg2) {
+                <app-message-details-renderer
+                  #renderer2
+                  [message]="msg2"
+                  [language]="previewLang()"
+                  [showPromulgation]="true"
+                />
+              }
+            </div>
+          </div>
+        </app-tab-panel>
+        <app-tab-panel value="changes">
+          @if (message1() && message2()) {
+            <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-fg-muted">
+              <span>{{ 'messages.compare.changesIntro' | transloco }}</span>
+              <span class="inline-flex items-center gap-1">
+                <span class="diff-swatch-add inline-block h-3 w-3 rounded-xs"></span>
+                {{ 'messages.compare.additions' | transloco }}
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="diff-swatch-del inline-block h-3 w-3 rounded-xs"></span>
+                {{ 'messages.compare.deletions' | transloco }}
+              </span>
+            </div>
+            <div class="message-diff text-sm" [innerHTML]="diffHtml()"></div>
+          } @else {
+            <p class="text-sm text-fg-muted">{{ 'messages.compare.changesEmpty' | transloco }}</p>
+          }
+        </app-tab-panel>
+        <app-tab-panel value="data">
+          <app-json-diff-pane [snapshots]="snapshots()" />
+        </app-tab-panel>
+      </app-tab-panels>
+    </app-tabs>
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary mr-auto" (click)="dialog.swap()">
+      {{ 'messages.compare.swap' | transloco }}
+    </button>
+    <button type="button" class="btn-tertiary" [attr.aria-pressed]="showXL()" (click)="toggleXL()">
+      {{ 'messages.compare.showXL' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" (click)="dialog.dismiss()">
+      {{ 'messages.compare.close' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

@@ -1,0 +1,69 @@
+<!--
+  The card opens `?messageId=` on the current search, so its title is a real
+  link and the card body opens the same URL in a new tab on a ctrl/cmd/shift or
+  middle click. A plain click still runs `onActivate` (hold-E edit shortcut
+  included). The title is the card's tab stop; a message with no title has no
+  link text to give one, so that card keeps being the button it was.
+-->
+<div
+  class="card-interactive group relative rounded border border-surface-200 dark:border-surface-700 overflow-hidden focus-visible:outline-2 focus-visible:outline-primary-500"
+  [attr.tabindex]="title() ? -1 : 0"
+  [attr.role]="title() ? null : 'button'"
+  [attr.aria-label]="title() || null"
+  [appRowLink]="[]"
+  [rowLinkQueryParams]="{ messageId: message().id }"
+  rowLinkQueryParamsHandling="merge"
+  (appRowLinkActivate)="onActivate()"
+>
+  <!--
+    Eager loading: every visible result's thumbnail starts fetching as soon as
+    the view renders, instead of waiting for the user to scroll the card into
+    view. Lazy loading produced stutter during scroll because each thumbnail's
+    HTTP + decode happened mid-gesture.
+  -->
+  <img
+    [src]="thumbnailUrl()"
+    [alt]="thumbnailAlt()"
+    class="w-full aspect-square object-cover block"
+    loading="eager"
+  />
+
+  <header class="card-overlay-top">
+    <div>
+      <app-message-id-badge [message]="message()" />
+    </div>
+    @if (title()) {
+      <a appRowLinkAnchor class="row-link block text-sm font-medium line-clamp-2">{{ title() }}</a>
+    }
+    @if (languageMismatch() && mismatchLanguage(); as foreign) {
+      <app-language-flag
+        class="ml-1 h-3 w-[1.125rem] align-middle opacity-60"
+        [lang]="foreign.lang"
+        [flagPath]="foreign.flagPath"
+      />
+    }
+  </header>
+
+  @if (parts().length > 0) {
+    <div class="card-overlay-bottom text-xs flex flex-col gap-1">
+      @for (part of parts(); track $index) {
+        <app-message-part [part]="part" [subject]="false" />
+      }
+    </div>
+  }
+
+  <div class="absolute top-2 right-2 z-10" data-menu-slot>
+    <app-message-row-menu [messageId]="message().id" [message]="message()" size="xs" />
+  </div>
+
+  <div
+    class="selection-star-overlay absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 text-3xl drop-shadow-md transition-opacity duration-150"
+    [class.is-selected]="isSelected()"
+    [class.opacity-100]="isSelected()"
+    [class.opacity-0]="!isSelected()"
+    [class.group-hover:opacity-100]="!isSelected()"
+    [class.group-focus-within:opacity-100]="!isSelected()"
+  >
+    <app-message-selection-toggle [message]="message()" />
+  </div>
+</div>

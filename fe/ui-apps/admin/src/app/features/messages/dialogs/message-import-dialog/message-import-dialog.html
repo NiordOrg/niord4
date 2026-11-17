@@ -1,0 +1,226 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="close()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [header]="'messages.import.title' | transloco"
+  [style]="{ width: '44rem', maxWidth: '95vw' }"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2">
+      <span class="font-semibold">{{ 'messages.import.title' | transloco }}</span>
+      <app-help-anchor section="import-action" />
+    </div>
+  </ng-template>
+
+  <form (submit)="$event.preventDefault()" class="flex flex-col gap-4 pt-1">
+    <div
+      class="file-drop-zone"
+      [class.is-dragover]="dragOver()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+    >
+      <label class="btn-primary" for="messageImportFile">
+        {{ 'messages.import.chooseFile' | transloco }}
+      </label>
+      <span class="text-fg-muted">
+        @if (selectedFile(); as file) {
+          {{ file.name }}
+        } @else {
+          {{ 'messages.import.dropHint' | transloco }}
+        }
+      </span>
+      <input
+        id="messageImportFile"
+        type="file"
+        class="sr-only"
+        accept=".zip"
+        (change)="onFileSelected($event)"
+        [disabled]="uploading()"
+      />
+    </div>
+
+    <fieldset class="flex flex-col gap-1">
+      <legend class="text-sm font-medium text-fg-title">
+        {{ 'messages.import.assignNewUids.legend' | transloco }}
+      </legend>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="anu-false"
+          class="radio"
+          name="assignNewUids"
+          [checked]="!assignNewUids()"
+          (change)="assignNewUids.set(false)"
+        />
+        <label for="anu-false" class="text-sm">
+          {{ 'messages.import.assignNewUids.false' | transloco }}
+        </label>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="anu-true"
+          class="radio"
+          name="assignNewUids"
+          [checked]="assignNewUids()"
+          (change)="assignNewUids.set(true)"
+        />
+        <label for="anu-true" class="text-sm">
+          {{ 'messages.import.assignNewUids.true' | transloco }}
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-1">
+      <legend class="text-sm font-medium text-fg-title">
+        {{ 'messages.import.preserveStatus.legend' | transloco }}
+      </legend>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="ps-false"
+          class="radio"
+          name="preserveStatus"
+          [checked]="!preserveStatus()"
+          (change)="preserveStatus.set(false)"
+        />
+        <label for="ps-false" class="text-sm">
+          {{ 'messages.import.preserveStatus.false' | transloco }}
+        </label>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="ps-true"
+          class="radio"
+          name="preserveStatus"
+          [checked]="preserveStatus()"
+          (change)="preserveStatus.set(true)"
+        />
+        <label for="ps-true" class="text-sm">
+          {{ 'messages.import.preserveStatus.true' | transloco }}
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-1">
+      <legend class="text-sm font-medium text-fg-title">
+        {{ 'messages.import.createBaseData.legend' | transloco }}
+      </legend>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="cbd-false"
+          class="radio"
+          name="createBaseData"
+          [checked]="!createBaseData()"
+          (change)="createBaseData.set(false)"
+        />
+        <label for="cbd-false" class="text-sm">
+          {{ 'messages.import.createBaseData.false' | transloco }}
+        </label>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="cbd-true"
+          class="radio"
+          name="createBaseData"
+          [checked]="createBaseData()"
+          (change)="createBaseData.set(true)"
+        />
+        <label for="cbd-true" class="text-sm">
+          {{ 'messages.import.createBaseData.true' | transloco }}
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="flex flex-col gap-1">
+      <legend class="text-sm font-medium text-fg-title">
+        {{ 'messages.import.assignDefaultSeries.legend' | transloco }}
+      </legend>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="ads-false"
+          class="radio"
+          name="assignDefaultSeries"
+          [checked]="!assignDefaultSeries()"
+          (change)="assignDefaultSeries.set(false)"
+        />
+        <label for="ads-false" class="text-sm">
+          {{ 'messages.import.assignDefaultSeries.false' | transloco }}
+        </label>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          type="radio"
+          id="ads-true"
+          class="radio"
+          name="assignDefaultSeries"
+          [checked]="assignDefaultSeries()"
+          (change)="assignDefaultSeries.set(true)"
+        />
+        <label for="ads-true" class="text-sm">
+          {{ 'messages.import.assignDefaultSeries.true' | transloco }}
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="flex flex-col gap-1">
+      <label for="import-series" class="text-sm font-medium text-fg-title">
+        {{ 'messages.import.defaultSeries' | transloco }}
+      </label>
+      <app-select
+        class="w-80"
+        inputId="import-series"
+        [formField]="form.seriesId"
+        [options]="seriesIds()"
+        [placeholder]="'messages.import.defaultSeriesPlaceholder' | transloco"
+        [ariaLabel]="'messages.import.defaultSeries' | transloco"
+        [scrollHeight]="'min(24rem, 60vh)'"
+      />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <span class="text-sm font-medium text-fg-title">{{ 'messages.import.tag' | transloco }}</span>
+      <app-single-tag-field
+        [formField]="form.tagId"
+        [placeholder]="'messages.import.tag' | transloco"
+        [ariaLabel]="'messages.import.tag' | transloco"
+      />
+    </div>
+
+    @if (resultText(); as result) {
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">{{
+          'messages.import.result' | transloco
+        }}</span>
+        <textarea
+          class="min-h-24 w-full rounded border border-surface-300 bg-surface-0 px-3 py-2 font-mono text-xs whitespace-pre-wrap text-fg dark:border-surface-700 dark:bg-surface-900"
+          readonly
+          [value]="result"
+        ></textarea>
+        <a [routerLink]="jobLink" class="text-sm font-medium text-primary hover:underline">
+          {{ 'messages.import.viewBatchJob' | transloco }}
+        </a>
+      </div>
+    }
+  </form>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="close()">
+      {{ 'messages.import.close' | transloco }}
+    </button>
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="!canUpload() || form().invalid()"
+      (click)="upload()"
+    >
+      {{ 'messages.import.upload' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

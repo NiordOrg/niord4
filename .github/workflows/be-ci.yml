@@ -1,0 +1,793 @@
+name: Backend CI
+
+# CI for the Spring Boot 4 backend under be/ (reactor: niord + niord-app).
+#
+# Two jobs run in parallel, so the cost of "with vs. without integration tests" stays visible in
+# every run:
+#
+#   Unit tests         ./mvnw verify -DskipITs   (Surefire only, no Docker)
+#   Integration tests  ./test-it --its-only      (Failsafe/Testcontainers only)
+#
+# A third, `Generated country`, builds the backend of a country made by the kit's init against
+# this commit, when the scaffold inputs changed and on every run on main (see The generated country
+# below).
+#
+# The integration tests start their own containers via Testcontainers (PostGIS 18, Keycloak 22,
+# ActiveMQ Artemis, MailHog) — Docker is preinstalled on the GitHub-hosted ubuntu runners, so no
+# `services:` block is needed.
+#
+# ---------------------------------------------------------------------------------------------
+# Why this file lives at the repository root
+# ---------------------------------------------------------------------------------------------
+# GitHub only reads workflows from `.github/workflows/` at the root of the repository. When the
+# backend was merged into this monorepo it brought its `.github/` directory along as `be/.github/`,
+# where GitHub never looks — so the workflow was not merely manual, it was not registered at all
+# (`gh workflow list` returned nothing). Keep this file here; a copy under be/ does nothing.
+#
+# ---------------------------------------------------------------------------------------------
+# Which pull requests
+# ---------------------------------------------------------------------------------------------
+# Only pull requests into main, and only once they are ready for review. Actions minutes are
+# billed (the organisation's Free plan has 2,000 a month for every repository together), and the
+# sub-PRs into a long-lived `feature/**` branch were most of them: those run no CI at all — the
+# session that makes one verifies it with ./verify-local and puts the summary in the PR — and the
+# feature branch's own PR into main runs everything. `pull_request` has no draft filter, so a push
+# to a draft still starts a run; every job then skips itself (see `changes`) and the run costs
+# nothing. Marking the PR ready for review (`ready_for_review`) starts the full run on the same
+# commit. fe-ci.yml explains what a skipped job means for a required check, and why a re-run is
+# never skipped as a draft.
+#
+# `edited` is not among the types: it fires on every title and description edit too. A PR opened
+# into a `feature/**` branch and later retargeted to main therefore starts no run until its next
+# push — or close and reopen it, or mark it draft and ready again.
+#
+# ---------------------------------------------------------------------------------------------
+# Why `pull_request` is not path-filtered
+# ---------------------------------------------------------------------------------------------
+# The unit-test job is meant to be a *required* status check. A workflow that a `paths:` filter
+# skips never reports its checks at all, so on a frontend-only PR a required check would sit at
+# "Expected — waiting for status to be reported" forever and the PR could never merge. The filter
+# therefore lives in the `changes` job below, and the test jobs skip themselves with a job-level
+# `if:` when the PR does not touch be/. A job skipped by its condition still reports — as
+# "skipped", which branch protection counts as passing — and costs no runner time, so a
+# frontend-only PR costs the one detection job, a minute. `Unit tests` skips only when detection
+# succeeded and found no backend change (or on a draft's first attempt): when `Detect` fails, the
+# unit tests run anyway, so a broken detection step can never turn the required check green by
+# itself.
+#
+# `push` has no such constraint, so it is path-filtered the cheap way, at the trigger.
+#
+# ---------------------------------------------------------------------------------------------
+# Why documentation under be/ runs nothing
+# ---------------------------------------------------------------------------------------------
+# Of the 30 merges into main before 2026-10-07, six touched only be/docs/ or a Markdown file under
+# be/, and each ran the suite twice (the pull request, then the push to main) and minted a version
+# whose jars were the previous one's (docs/pipeline-latency-plan.md §3). The two filters — the
+# `push` trigger's `paths:` and the `Detect` step's relevant_paths, which must say the same —
+# therefore leave out be/docs/** and every *.md under be/, with four re-includes: a Markdown file
+# under src/test/resources is a fixture a test may read (ImportCheckITTest reads
+# import-check-trigger-audit.md), so it keeps counting; so does be/niord/bootstrap/README.md,
+# which BootstrapFolderTest requires (the bootstrap is data, and its README says so); so does
+# be/niord/sample/README.md, which SampleFolderTest requires (the sample is data loaded only into
+# the loopback niord_sample, and its README says so); and so does be/docs/country-api.md, the backend contract a country builds on, which CountryApiDocTest holds
+# to the code's lists (the script allow-list, the start-up guard's protected names). GitHub
+# evaluates `paths:` patterns in order and the last match wins, which is why the re-includes
+# stand after the two exclusions.
+# The user guides (docs.niord.org's sources) live in guides/ at the repository root, outside be/,
+# so neither filter matches them and a guides-only change runs no Backend CI; guides.yml builds them.
+#
+# What a documentation-only merge means now: no Backend CI run on main, and — since publish.yml
+# starts on `workflow_run` of Backend CI, Frontend CI or Info CI, none of which a documentation-only
+# merge starts — no publish and no version; the next code
+# merge publishes the documentation along with itself. On its pull request the detection reports
+# "Backend changed: false" and the test jobs skip, as they do for a frontend-only PR.
+#
+# publish.yml is in both filters too. It was in no workflow's filter, so a change to it was
+# published only when a be/ path rode along — and in 478ffcc8 that path was documentation, which
+# no longer counts. Listed here, a publish change is published by its own merge, at the price of
+# one run of the suite.
+#
+# ---------------------------------------------------------------------------------------------
+# The fingerprint: what the pull request run tested, and whether the run on main skips
+# (step 2a: the report; step 2b: the skip)
+# ---------------------------------------------------------------------------------------------
+# A squash merge of a pull request whose head is H onto a main at P makes a commit whose tree is
+# the tree of `git merge-tree P H`. A pull request run checks out GitHub's refs/pull/N/merge, which
+# is merge(B, H) for the main tip B at the time of the run — so when main did not move between the
+# run and the merge (B = P), the push to main tests a tree byte-identical to the one the pull
+# request run tested: 7.5 minutes for a result that is known (docs/pipeline-latency-plan.md §4).
+# When main did move, but only in paths no test reads (a documentation merge, above), the trees
+# differ and the tests would still say the same. So what is compared is not the tree but a
+# fingerprint of its backend-relevant part: `git ls-tree -r <commit>` — every file with its mode
+# and its blob id — kept to the paths relevant_paths keeps, hashed with `git hash-object`. Two
+# commits have the same fingerprint exactly when no backend-relevant path differs between them:
+# added, removed, changed or moved (a file moved into be/docs/ leaves the listing; there is no
+# rename detection to get wrong). This workflow file is itself one of the paths, so a change of
+# the rule changes the fingerprint. Each side computes the value alone, from its own checkout.
+#
+# The record: `changes`, on a pull request run that found a backend change, posts ONE commit
+# status on the pull request's head before the tests run — context `Backend CI / fingerprint`,
+# state success, description `fp=<fingerprint of the checkout> run=<run id>`. The status is a
+# pointer, not a verdict: it says which run tests which fingerprint, and whether the tests passed
+# is asked of the run, by the id — a status cannot be withdrawn when a re-run goes red, and a
+# run's own API object says nothing about which B its merge ref had (its `pull_requests[]` is
+# empty for these runs). On the head, because that is what a merged commit is looked up by. Same
+# repository only — a fork's token could not post it — and a failure to post is a warning, not a
+# job failure: the run on main then runs everything, which is today's behaviour.
+#
+# The run on main (a push), in `changes`: find the pull request the pushed commit S merged, read
+# the newest `Backend CI / fingerprint` status of its head H, require its fp to equal the
+# fingerprint of S computed here by the same function, then ask the run it names (completed,
+# success, this workflow's pull request run of H — the conclusion of its latest attempt, so a
+# head re-run red after a green is not reused). All true: the unit and the integration suite
+# have run green on this backend content.
+#
+# Fail-safe direction: every unexpected answer — no pull request, no status, a fingerprint that
+# differs, a run that is not this workflow's green run of H, an API error — is `tested=false`,
+# today's behaviour. A workflow_dispatch and a re-run (run_attempt > 1) never compute it. The
+# price of that direction is a quiet failure (a missing permission makes the skip never apply and
+# nothing goes red; without `actions: read`, for one, the question to the run is refused), so
+# every fall-through writes its reason to the job summary and the log.
+#
+# Step 2a (2026-10-08, #145) was the report alone: `tested` computed and written, the test jobs
+# still running; its first push run on main reported true for its own merge. Step 2b (the same
+# day) is the skip: both test jobs carry `needs.changes.outputs.tested != 'true'` in their `if:`.
+# Two skipped jobs leave the workflow's conclusion `success`, which is what publish.yml's gate
+# reads for the commit, so a merge whose pull request run tested this backend content is
+# published about a minute after it lands instead of eight. The summary's `Tested already:`
+# line is the place to look when a push run tests again: its reason says why. The Generated
+# country job (below) is not skipped that way, so since November 2026 a backend merge waits for it.
+#
+# ---------------------------------------------------------------------------------------------
+# The generated country
+# ---------------------------------------------------------------------------------------------
+# A country's repository starts as the kit's init writes it from a handful of answers
+# (country-kit/init.mjs, country-kit/lib/scaffold.mjs, country-kit/templates/be/): a pom whose
+# parent is niord-parent with the country build group's test dependencies, the Maven wrapper, an
+# application class and its configuration, the country's defaults and bootstrap. The `Generated
+# country` job proves that such a fresh standard country builds against niord-parent and
+# niord-base of this commit: the example harness (country-kit/example/run.mjs --backend
+# --skip-frontend) installs both into a scratch Maven repository as 4.0.0-example, runs the
+# untouched init of a made-up country `yy`, then its be/mvnw verify (the @CountryBuildGroup
+# integration tests on Testcontainers), its be/scripts/check-country-build-group.sh and the
+# override check, as the country's own ci.yml runs them. What it catches is what no base product
+# test sees: a new group member that needs another test dependency in the scaffold's pom, a boot
+# property or bean the base requires and the scaffold does not give, a base settings key the
+# country defaults check refuses.
+#
+# When it runs: on a pull request when Detect's scaffold rule matches (the parent pom,
+# niord-base's, niord-app's and the bootstrap's poms, the bootstrap, the base settings, the
+# country build group, the backend contract be/docs/country-api.md, the Maven wrapper, the
+# override check, the kit's init, answers schema, scaffold and templates, and the harness and the
+# two workflows that run it; fe-ci.yml's Detect and ./verify-local's SCAFFOLD_RULE are the same
+# expression), and on every push to main and every dispatch, whatever `tested` says: a pull
+# request run built it only when the rule matched, and a change elsewhere in niord-base (a new
+# group member tagged in its own class) can still break it. The push trigger's paths are not
+# widened for it: a kit-only change is built on its pull request, by this job and by fe-ci.yml's
+# Example job with --backend. Not a required check. Its cost is about 8 to 10 minutes on those
+# runs; on main it runs beside the test jobs, so a backend merge's Backend CI, and with it
+# publish.yml's gate, takes that long even when the test jobs skip.
+#
+# ---------------------------------------------------------------------------------------------
+# What a job checks out: never the guides' pictures
+# ---------------------------------------------------------------------------------------------
+# The user guides' screenshots live in guides/ (guides/<sub-site>/images/, 23 MB in November 2026
+# and several times that once they are retaken), and only guides.yml, which builds the guides,
+# reads them. So that no other job downloads them, now or as their history grows, every checkout
+# in this repository's other workflows is a sparse one. A job that reads the whole tree takes
+# everything but the pictures:
+#
+#     sparse-checkout: |
+#       /*
+#       !/guides/**/images/
+#     sparse-checkout-cone-mode: false
+#
+# gitignore-style patterns: every path, then no folder named images anywhere under guides/; the
+# guides' text stays, since documents name it. Exactly these two lines: git matches a file against
+# the lines before it looks at the file's folders, so an added line that names files (`*.png`,
+# `/guides/**`) brings pictures back wherever it stands. A job that reads a few folders names them in cone
+# mode instead (`sparse-checkout: be`, publish.yml). With a sparse-checkout, actions/checkout
+# makes a partial clone (--filter=blob:none): it fetches the commits and trees, then only the file
+# contents the sparse set puts on disk. git ls-files still lists the left-out pictures (as
+# skip-worktree entries), so a step that opens every file git lists must leave guides/ out.
+# The three Detect jobs (here, fe-ci.yml, info-ci.yml) read no file, only git's history —
+# merge-base, diff --name-only --no-renames and the fingerprint's ls-tree, which the commits and
+# trees answer without a file's contents — so they check out .github alone (and, as cone mode
+# always does, the files at the root), and their full history is every commit and tree but no old
+# file contents. In such a clone a git command that needs a file's contents fetches them then, or
+# fails where the step has no credentials (publish.yml's build and web jobs): --no-renames is also
+# what keeps the Detect diff from reading contents, and no step runs git archive, git log -p or
+# git show over the tree. fe/scripts/ci-checkouts.test.mjs fails a checkout outside guides.yml
+# that has neither form or sets a filter of its own, and a picture under guides/ outside a folder
+# named images. It runs in test:guards, so on the pull
+# requests that run Frontend CI or Info CI (fe-ci.yml, info-ci.yml, publish.yml and
+# retract-version.yml count) and in ./verify-local's frontend parts; a pull request that changes
+# only this file, guides.yml or a new workflow is not checked by it, and a checkout added there
+# without the sparse-checkout shows as a red guard on the next pull request that runs it. Running
+# Frontend CI for such a pull request only to check this was judged not worth its minutes.
+on:
+  pull_request:
+    branches: [ main ]
+    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  push:
+    branches: [ main ]
+    paths:
+      - 'be/**'
+      - '.github/workflows/be-ci.yml'
+      # A publish change is published by its own merge (see the header)
+      - '.github/workflows/publish.yml'
+      # MailHtmlTest checks the backend's copy of this class list against it
+      - 'fe/shared-html/message-html-classes.ts'
+      # The portrayal definition: niord-base carries it for the map images, PortrayalDefinitionTest checks it
+      - 'fe/shared-map/portrayal/**'
+      # LocalRunLibraryTest reads the root launcher: no library function defined twice, the --dk/--gl refusal
+      - 'start-local.sh'
+      # Documentation runs nothing; the re-includes after the two exclusions win for the places a
+      # test reads Markdown (see the header): test resources, the bootstrap folder, whose
+      # README.md BootstrapFolderTest reads, the sample folder, whose README.md SampleFolderTest
+      # reads, and be/docs/country-api.md, which CountryApiDocTest reads, so a change to one of
+      # them, or its deletion, runs Backend CI. The `Detect` step's relevant_paths says the same.
+      - '!be/docs/**'
+      - '!be/**/*.md'
+      - 'be/**/src/test/resources/**'
+      - 'be/niord/bootstrap/**'
+      - 'be/niord/sample/**'
+      - 'be/docs/country-api.md'
+  workflow_dispatch:
+    inputs:
+      run_integration_tests:
+        description: 'Run the Docker/Testcontainers integration-test suite'
+        type: boolean
+        default: true
+
+# A newer push to the same pull request cancels its in-flight run, so superseded builds are not
+# paid for. Push and dispatch runs are never cancelled or replaced: each gets a group of its own
+# (its run id). publish.yml publishes a main commit only when every CI run for it concluded
+# success, and a frontend-only merge only when the newest Backend CI run it contains did — so one
+# cancelled run on main would block publishing until the next backend change. A shared group with
+# `cancel-in-progress: false` is not enough: GitHub still replaces a *pending* run of the group
+# when a third one arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # -B/-ntp: batch mode, no download-progress spam. -fae: fail-at-end so one failing test does not
+  # abort the reactor and skew the timing of the rest.
+  MVN_FLAGS: "-B -ntp -fae -e"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Does this change touch the backend at all? See the trigger comment above for
+  # why this is a job rather than a `paths:` filter on `pull_request`. Skipped on
+  # a draft's first attempt, and with it every job below (a re-run reuses the
+  # draft flag of the run it repeats, and must not skip again: see fe-ci.yml).
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect backend changes
+    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # A job-level block replaces the workflow's, so `contents: read` is restated or the checkout
+    # fails. `statuses: write` posts the fingerprint on a pull request run; the other two are for
+    # the run on main (see the header): the pull request of a commit, and the conclusion of the
+    # run a status names — without `actions: read` that last question is refused. The two test
+    # jobs, which run the project's code, keep the workflow's `contents: read` alone.
+    permissions:
+      contents: read
+      statuses: write
+      pull-requests: read
+      actions: read
+    outputs:
+      backend: ${{ steps.detect.outputs.backend }}
+      integration: ${{ steps.detect.outputs.integration }}
+      fingerprint: ${{ steps.detect.outputs.fingerprint }}
+      tested: ${{ steps.detect.outputs.tested }}
+      scaffold: ${{ steps.detect.outputs.scaffold }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so `git merge-base` with the target branch resolves on pull_request runs.
+          # Not conditional on the event: `<cond> && 0 || 1` is the classic GitHub-expressions trap
+          # — 0 is falsy there, so the "true" branch falls through to 1 and the clone comes back
+          # shallow exactly when the merge base is needed. The sparse-checkout makes it a partial
+          # clone: every commit and tree, which is all the Detect step reads, and the contents of
+          # .github alone (see the header, What a job checks out).
+          fetch-depth: 0
+          sparse-checkout: .github
+
+      - name: Detect
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ITS: ${{ github.event_name != 'workflow_dispatch' || inputs.run_integration_tests }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUNS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs
+        run: |
+          set -euo pipefail
+          # The relevance rule, in one place: a path is a backend change when it matches the first
+          # pattern and is not documentation — nothing under be/docs/, no Markdown file — except
+          # under src/test/resources, where a test may read it, under be/niord/bootstrap/, whose
+          # README.md BootstrapFolderTest reads, under be/niord/sample/, whose README.md
+          # SampleFolderTest reads, and be/docs/country-api.md, which CountryApiDocTest reads, so
+          # a change to one of them, or its deletion, runs Backend CI (see the header). The `push`
+          # trigger's `paths:` above says the same in GitHub's syntax; keep the two in step. Fed a
+          # list of paths on stdin, prints the relevant ones.
+          # `|| true`: grep answers "nothing matched" with exit 1, and under pipefail that would
+          # end the step — an empty list is an answer here, not an error.
+          relevant_paths() {
+            grep -E '^(be/|\.github/workflows/(be-ci|publish)\.yml$|fe/shared-html/message-html-classes\.ts$|fe/shared-map/portrayal/|start-local\.sh$)' \
+              | awk '$0 == "be/docs/country-api.md" || (!/^be\/docs\// && (!/\.md$/ || /\/src\/test\/resources\// || /^be\/niord\/bootstrap\// || /^be\/niord\/sample\//))' \
+              || true
+          }
+          if [ "$EVENT" = "pull_request" ]; then
+            # `git diff A...B` semantics — the same "changed by this PR" set GitHub's own path
+            # filters use, so a change already on main does not count as a backend change here.
+            base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+            # --no-renames: a moved file is listed under BOTH its paths. Rename detection would
+            # list only the new one, so a file moved out of be/ would not count as a backend change.
+            changed=$(git diff --name-only --no-renames "$base" "$HEAD_SHA")
+            echo "Files changed by this PR:"
+            echo "$changed" | sed 's/^/  /'
+            # A here-string, not `echo | relevant_paths`: under pipefail that pipe reads FALSE for a
+            # large PR. A reader that exits on its first match (`grep -q` did, until 2026-10-07)
+            # leaves echo with SIGPIPE if the list is bigger than the 64 KiB pipe buffer, and the
+            # failed pipeline sends a backend PR down the "no backend changes" branch. The
+            # 1,066-file publications port (#22) was merged untested that way.
+            relevant=$(relevant_paths <<< "$changed")
+            if [ -n "$relevant" ]; then
+              backend=true
+              echo "Of which backend-relevant:"
+              echo "$relevant" | sed 's/^/  /'
+            else
+              backend=false
+              echo "None of them backend-relevant."
+            fi
+            # The scaffold rule (see the header, The generated country): what the generated
+            # country's backend build reads, kit files included, so a kit-only change is built on
+            # its pull request. fe-ci.yml's Detect and ./verify-local's SCAFFOLD_RULE are the same
+            # expression.
+            scaffold_rule='^(be/pom\.xml$|be/niord/pom\.xml$|be/niord-app/|be/niord-bootstrap/|be/niord/bootstrap/|be/niord/src/main/resources/defaults/base/|be/niord/src/test/java/org/niord/test/CountryBuildGroup(Test)?\.java$|be/docs/country-api\.md$|be/mvnw(\.cmd)?$|be/\.mvn/|be/k8s/scripts/(check-overrides\.sh|CheckOverrides\.java)$|country-kit/init\.mjs$|country-kit/init-answers\.schema\.json$|country-kit/lib/(scaffold|answers|where)\.mjs$|country-kit/templates/be/|country-kit/templates/ci\.yml$|country-kit/example/(run|acceptance)\.mjs$|\.github/workflows/(be-ci|fe-ci)\.yml$)'
+            if grep -qE "$scaffold_rule" <<< "$changed"; then scaffold=true; else scaffold=false; fi
+          else
+            # push is already path-filtered at the trigger; workflow_dispatch is explicit. The
+            # generated country is built on every run on main whatever `tested` says below: a pull
+            # request run built it only when the scaffold rule matched.
+            backend=true
+            scaffold=true
+          fi
+
+          # The fingerprint of the checkout (see the header): the `git ls-tree -r` listing — mode,
+          # type, blob id and path of every file — kept to the paths relevant_paths keeps, hashed.
+          # The names go through the rule once, on their own, and the full lines of those names
+          # are kept in ls-tree's order. On a pull request the checkout is GitHub's merge of the
+          # head onto main, which the test jobs are about to test; on a push, the pushed commit.
+          fingerprint() {
+            git ls-tree -r "$1" \
+              | awk -F'\t' 'NR == FNR { keep[$0] = 1; next } ($2 in keep)' \
+                  <(git ls-tree -r --name-only "$1" | relevant_paths) - \
+              | git hash-object --stdin
+          }
+          fp=""
+          if { [ "$EVENT" = "pull_request" ] && [ "$backend" = "true" ]; } || [ "$EVENT" = "push" ]; then
+            fp=$(fingerprint HEAD)
+            echo "Fingerprint of the checkout: $fp"
+          fi
+
+          # Did the pull request's run test this backend content already? (Step 2a: reported,
+          # not yet acted on — see the header.) Every check that fails sets `reason` and returns 1;
+          # the `||` keeps `set -e` out of it, so an API error is a reason, not a red job.
+          tested=false
+          reason=""
+          pr_number=""
+          pr_run=""
+          tested_by_pull_request() {
+            local S=$1 pr n h status recorded fp_h run answer st cc ev path rh
+            # 1. The pull request S merged (a squash commit maps to one merged pull request).
+            pr=$(gh api "repos/$REPO/commits/$S/pulls" \
+                   --jq '[.[] | select(.merged_at != null)] | .[0] | "\(.number) \(.head.sha)"') \
+              || { reason="could not list the pull requests of $S"; return 1; }
+            read -r n h <<< "$pr"
+            { [ -n "$n" ] && [ "$n" != "null" ]; } || { reason="no merged pull request for $S"; return 1; }
+            # 2. The newest fingerprint status of its head (the list is newest first): its fp must
+            #    be the fingerprint of S.
+            status=$(gh api "repos/$REPO/commits/$h/statuses?per_page=100" \
+                       --jq '[.[] | select(.context == "Backend CI / fingerprint")] | .[0] | "\(.state) \(.description)"') \
+              || { reason="could not read the statuses of $h (#$n)"; return 1; }
+            [ "$status" != "null null" ] || status="none"
+            recorded='^success fp=([0-9a-f]{40}) run=([0-9]+)$'
+            [[ "$status" =~ $recorded ]] \
+              || { reason="#$n's head $h has no fingerprint status of this workflow (newest: '$status')"; return 1; }
+            fp_h=${BASH_REMATCH[1]}; run=${BASH_REMATCH[2]}
+            [ "$fp_h" = "$fp" ] \
+              || { reason="the fingerprint differs: #$n's run $run tested $fp_h, $S is $fp — main moved in a backend-relevant path between them"; return 1; }
+            # 3. The run the status names: this workflow's pull request run of H, green.
+            answer=$(gh api "repos/$REPO/actions/runs/$run" \
+                       --jq '"\(.status) \(.conclusion) \(.event) \(.path) \(.head_sha)"') \
+              || { reason="could not read run $run named by the status of $h (#$n)"; return 1; }
+            read -r st cc ev path rh <<< "$answer"
+            { [ "$ev" = "pull_request" ] && [ "$path" = ".github/workflows/be-ci.yml" ] && [ "$rh" = "$h" ]; } \
+              || { reason="run $run is not this workflow's pull request run of $h ($ev, $path, $rh)"; return 1; }
+            { [ "$st" = "completed" ] && [ "$cc" = "success" ]; } \
+              || { reason="run $run of #$n is $st/$cc, not completed/success"; return 1; }
+            pr_number=$n
+            pr_run=$run
+            return 0
+          }
+          if [ "$EVENT" = "push" ] && [ "$RUN_ATTEMPT" = "1" ]; then
+            if tested_by_pull_request "$SHA"; then
+              tested=true
+              echo "Tested already: #$pr_number's run $pr_run tested this backend content ($RUNS_URL/$pr_run)."
+            else
+              echo "Not tested already: $reason"
+            fi
+          fi
+
+          {
+            echo "backend=$backend"
+            echo "fingerprint=$fp"
+            echo "tested=$tested"
+            echo "scaffold=$scaffold"
+            if [ "$backend" = "true" ] && [ "$RUN_ITS" = "true" ]; then
+              echo "integration=true"
+            else
+              echo "integration=false"
+            fi
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Backend CI"
+            echo ""
+            echo "Backend changed: **$backend** · integration tests: **$RUN_ITS**"
+            echo ""
+            echo "Generated country: **$scaffold**"
+            if [ -n "$fp" ]; then
+              echo ""
+              echo "Fingerprint of the checkout: \`$fp\`"
+            fi
+            if [ "$EVENT" = "push" ]; then
+              echo ""
+              if [ "$tested" = "true" ]; then
+                echo "Tested already: **true** — pull request #$pr_number's run [$pr_run]($RUNS_URL/$pr_run) tested this backend content. The test jobs skip (step 2b)."
+              elif [ "$RUN_ATTEMPT" != "1" ]; then
+                echo "Tested already: **not computed** — a re-run (attempt $RUN_ATTEMPT) never skips."
+              else
+                echo "Tested already: **false** — $reason"
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The record, on the pull request's head, before the tests run (see the header). Same
+      # repository only: a fork's token could not post it. A failure to post is a warning — the
+      # run on main then runs everything, which is today's behaviour — so the step neither fails
+      # nor fails the job.
+      - name: Post the fingerprint
+        if: steps.detect.outputs.backend == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DESCRIPTION: fp=${{ steps.detect.outputs.fingerprint }} run=${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if gh api "repos/$REPO/statuses/$HEAD_SHA" -f state=success -f context="Backend CI / fingerprint" \
+               -f description="$DESCRIPTION" -f target_url="$RUN_URL" > /dev/null; then
+            echo "Posted 'Backend CI / fingerprint' on $HEAD_SHA: $DESCRIPTION"
+          else
+            echo "::warning::Could not post the fingerprint status on $HEAD_SHA; the run on main will run everything."
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Fast lane: compile everything + run the unit tests (Surefire). No Docker.
+  # This is the job to mark as a required status check. It skips itself on a
+  # draft's first attempt, when detection succeeded and found no backend
+  # change, and on a push to main whose content a pull request run already
+  # tested (`tested`, the fingerprint above; step 2b), and runs when detection failed (`!cancelled()`, not the default
+  # `success()`); see the trigger comment above. No other job in any workflow may
+  # be named `Unit tests`: a required check matches a check run by name alone.
+  # ---------------------------------------------------------------------------
+  unit-tests:
+    name: Unit tests
+    needs: changes
+    if: >-
+      ${{ !cancelled() && (!github.event.pull_request.draft || github.run_attempt > 1)
+      && !(needs.changes.result == 'success' && needs.changes.outputs.backend != 'true')
+      && needs.changes.outputs.tested != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: be
+    env:
+      MAVEN_OPTS: "-Xmx2g"
+    steps:
+      # Everything but the guides' pictures (see the header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      # The Maven repository cache, with a fallback. setup-java's own `cache: maven` keys on a hash
+      # of every pom.xml and restores nothing when that key misses, so any pom edit — a comment
+      # included — started from an empty ~/.m2 and downloaded every dependency. The SECOM library
+      # (org.grad.secom) exists only on GLA's repository, rnavlab.gla-rad.org, so whenever that host
+      # was down every pom-touching PR failed before compiling (#40). restore-keys falls back to the
+      # newest cache with the same prefix — main's included, which pull requests may read — and
+      # Maven then downloads only what the poms changed. The second prefix is setup-java's key
+      # format, so the first run after this change still starts from the caches main already has.
+      # The path is spelled exactly as setup-java spells it: a cache is restored only when its
+      # version matches, and the version is a hash of the path string, so `~/.m2/repository` would
+      # never see those caches (#41's first run).
+      - name: Maven repository cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+            setup-java-${{ runner.os }}-x64-maven-
+
+      # ./mvnw, not the runner's preinstalled `mvn`: the wrapper pins the Maven version
+      # (.mvn/wrapper/maven-wrapper.properties) so CI runs the same Maven a developer runs, and a
+      # runner-image Maven bump cannot change the build under us.
+      - name: Build + unit tests (skip ITs)
+        run: |
+          set -o pipefail
+          START=$(date +%s)
+          status=0
+          ./mvnw $MVN_FLAGS clean verify -DskipITs 2>&1 | tee build.log || status=$?
+          END=$(date +%s)
+          echo "ELAPSED=$((END - START))" >> "$GITHUB_ENV"
+          exit $status
+
+      # The sample (be/niord/sample/: its archive, its messages, niord-sample.sql and the attachment
+      # files) is loaded only into the loopback database niord_sample, and never travels in a jar or
+      # an image — the safety rule of docs/fe-country-split-plan.md P9 (2026-10-19). The check
+      # (be/k8s/scripts/check-no-sample.sh, the JDK's source launcher, built-ins only) walks every
+      # jar the build just made — niord-base and its test-jar, niord-app's executable jar with the
+      # jars nested in it — and the base product's bootstrap zip, and fails on an entry in the
+      # sample's layout, a file with the bytes of a sample file, or the sentinel line the sample's
+      # SQL carries. After the build only (the default `success()`): a red build has no jars to
+      # check. publish.yml runs the same check before anything is deployed or pushed.
+      - name: No jar carries the sample
+        run: k8s/scripts/check-no-sample.sh niord/sample niord/target/*.jar niord-app/target/*.jar niord-bootstrap/target/*.zip
+
+      - name: Timing summary
+        if: always()
+        run: |
+          {
+            echo "## Unit tests — without ITs"
+            echo ""
+            echo "**mvn step wall-clock: ${ELAPSED:-?} s**"
+            echo ""
+            echo '```'
+            grep -E "Tests run:|BUILD (SUCCESS|FAILURE)|Total time:|SUCCESS \[|FAILURE \[" build.log | tail -40 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Surefire redirects unit-test stdout/stderr to target/surefire-reports/<Class>-output.txt
+      # rather than the console (see be/docs/test-infrastructure.md), so without this a red run
+      # here would leave nothing to debug once the runner is torn down. The integration-tests job
+      # below uploads the same tree under a different artifact name. Red runs only: a green run has
+      # nothing to debug, and the Free plan gives the organisation 0.5 GB of Actions storage for a
+      # whole month across all its private repositories, billed by the hour (the arithmetic is with
+      # the artifact deletion in publish.yml) — every run's reports for 7 days held 1.3 GB on
+      # 2026-09-30. `cancelled()` too, not `failure()` alone: a hung suite that hits the job's
+      # timeout-minutes is cancelled, not failed, and that is exactly when the <Class>-output.txt
+      # files show how far it got. A run that a newer push to its pull request cancelled
+      # (concurrency above) is `cancelled()` too and uploads its partial tree; expressions cannot
+      # tell the two apart, and at ~7 MB a run it is an accepted cost. Kept 7 days so a red run
+      # before a long weekend can still be read afterwards; a handful of red runs cost nothing next
+      # to every run.
+      - name: Upload surefire reports
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-unit
+          path: |
+            be/**/target/surefire-reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Full lane: compile + integration tests (Failsafe; the unit suite is the job
+  # above's, run in parallel, so it is skipped here). Testcontainers spins up
+  # PostGIS/Keycloak/Artemis/MailHog on the runner's Docker daemon. Runs only when
+  # detection succeeded and asked for it (not a required check).
+  # ---------------------------------------------------------------------------
+  integration-tests:
+    name: Integration tests
+    needs: changes
+    if: needs.changes.outputs.integration == 'true' && needs.changes.outputs.tested != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: be
+    env:
+      # Heap for the single test JVM (ITs use the shared-singleton container pattern, one JVM, no
+      # forking). The containers run as separate processes.
+      MAVEN_OPTS: "-Xmx3g"
+    steps:
+      # Everything but the guides' pictures (see the header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      # See the matching step in unit-tests for why the cache has a fallback.
+      - name: Maven repository cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+            setup-java-${{ runner.os }}-x64-maven-
+
+      - name: Docker sanity check
+        run: docker version
+
+      # ./test-it, not a bare `./mvnw verify`: the integration tests SKIP (a JUnit assumption in
+      # ITTest) rather than fail when Docker is missing, so `mvn verify` can report BUILD SUCCESS
+      # having run nothing at all. test-it runs the suite and then asserts from the Failsafe XML
+      # reports that it really ran. Calling the developer-facing script here rather than
+      # reimplementing the check keeps CI and the local loop provably identical — the check itself
+      # is be/scripts/it-report-check.py, used by both.
+      #
+      # --its-only: Failsafe only. The Unit tests job runs the 4,795 unit tests in parallel with
+      # this one, and this job used to run them again (a minute of run 37513320751, 2026-10-06)
+      # before Failsafe started. The flag is test-it's own: it appends the pair
+      # `-Dtest=_none_ -Dsurefire.failIfNoSpecifiedTests=false` to the Maven call, so Surefire
+      # selects no test (-DskipTests would skip Failsafe too, and test-it refuses it; the pom is
+      # untouched, so the country repositories that inherit it see nothing). test-it's report check
+      # reads the Failsafe reports only, and its floor of 50 executed ITs stays, since the pair is
+      # appended after the floor is read.
+      #
+      # The docker pulls: Testcontainers pulls each image the first time a class needs it, one
+      # after the other and only once the compile is over (PostGIS 17 s, MailHog 13 s, Keycloak
+      # 11 s, Artemis 10 s on the same run). Pulled here in a background subshell before ./test-it,
+      # they overlap the compile, and Testcontainers uses an image it finds locally. In the SAME
+      # step as ./test-it, not a step of its own: the runner makes no promise that a background
+      # process outlives its step. `wait` after test-it so a slow pull is not left running into
+      # the next step. A failed pull is a warning, not a failure: Testcontainers then pulls the
+      # image itself, as before. The names come from be/scripts/it-images.sh, which reads them
+      # from the test sources, so a bumped image is pulled without a change here.
+      - name: Build + integration tests (Failsafe only)
+        run: |
+          set -o pipefail
+          START=$(date +%s)
+          (
+            imgs=$(scripts/it-images.sh) || echo "::warning::scripts/it-images.sh failed; Testcontainers pulls the images itself"
+            for img in $imgs; do
+              docker pull -q "$img" || echo "::warning::pull of $img failed; Testcontainers pulls it itself"
+            done
+          ) &
+          pull_pid=$!
+          status=0
+          ./test-it --its-only $MVN_FLAGS 2>&1 | tee build.log || status=$?
+          wait $pull_pid || true
+          END=$(date +%s)
+          echo "ELAPSED=$((END - START))" >> "$GITHUB_ENV"
+          exit $status
+
+      - name: Timing summary
+        if: always()
+        run: |
+          {
+            echo "## Integration tests — Failsafe only"
+            echo ""
+            echo "**mvn step wall-clock: ${ELAPSED:-?} s**"
+            echo ""
+            if [ -f target/it-stats.txt ]; then
+              read -r F T EX SK FA ER < target/it-stats.txt
+              echo "IT report files: **$F** · tests: **$T** · executed: **$EX** · skipped: **$SK** · failures: **$FA** · errors: **$ER**"
+              echo ""
+            fi
+            echo '```'
+            grep -E "Tests run:|BUILD (SUCCESS|FAILURE)|Total time:|SUCCESS \[|FAILURE \[" build.log | tail -60 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Red and cancelled runs only, kept 7 days: see the matching step in unit-tests.
+      - name: Upload surefire + failsafe reports
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            be/**/target/surefire-reports/**
+            be/**/target/failsafe-reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # A fresh standard country from the kit's init, its backend built against this
+  # commit (see the header, The generated country): country-kit/example/run.mjs
+  # with --backend --skip-frontend builds the source zip and the kit package,
+  # installs them and niord-parent as 4.0.0-example into a scratch Maven
+  # repository under $RUNNER_TEMP, runs the untouched init of `yy` from
+  # --answers and --sha256-file and its set-up, installs niord-base and its
+  # test-jar, then runs yy's be/mvnw verify (the country build group on
+  # Testcontainers), be/scripts/check-country-build-group.sh and the override
+  # check, as a country's ci.yml runs them. Runs when Detect's scaffold output
+  # is true: the scaffold rule on a pull request, every push to main and every
+  # dispatch; a draft's first attempt skips `changes` and with it this job. Not
+  # a required check. No `npm ci`: the kit, the source zip and the set-up are
+  # Node built-ins (fe-ci.yml's Example job relies on the same), so setup-node
+  # has no npm cache to restore. The workflow's `contents: read` is all it needs.
+  # ---------------------------------------------------------------------------
+  generated-country:
+    name: Generated country
+    needs: changes
+    if: needs.changes.outputs.scaffold == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: fe
+    env:
+      MAVEN_OPTS: "-Xmx3g"
+    steps:
+      # Everything but the guides' pictures (see the header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      # The other jobs' Maven repository, restored and never saved: run.mjs reads it as the
+      # read-only tail of its scratch repository, so a save could only put a stale or near-empty
+      # repository under the key the test jobs save their full one to (fe-ci.yml's Example job
+      # does the same). Key and path as the test jobs.
+      - name: Maven repository cache (restore only)
+        uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+            setup-java-${{ runner.os }}-x64-maven-
+
+      - name: Docker sanity check
+        run: docker version
+
+      - name: 'The generated country: init, set-up and its backend (run.mjs --backend --skip-frontend)'
+        run: node ../country-kit/example/run.mjs --work "$RUNNER_TEMP/example" --backend --skip-frontend

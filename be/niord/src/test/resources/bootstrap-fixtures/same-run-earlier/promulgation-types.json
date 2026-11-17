@@ -1,0 +1,60 @@
+[
+  {
+    "typeId": "it-navtex",
+    "serviceId": "navtex",
+    "name": "It NAVTEX",
+    "priority": 1,
+    "active": true,
+    "language": "en",
+    "domains": [
+      {
+        "domainId": "it-earlier"
+      }
+    ]
+  },
+  {
+    "typeId": "it-domains-only",
+    "serviceId": "navtex",
+    "name": "It domains only",
+    "priority": 4,
+    "active": true,
+    "language": "en"
+  },
+  {
+    "typeId": "it-flags",
+    "serviceId": "navtex",
+    "name": "It flags",
+    "priority": 6,
+    "active": true,
+    "language": "en"
+  },
+  {
+    "typeId": "it-changes",
+    "serviceId": "navtex",
+    "name": "It changes",
+    "priority": 2,
+    "active": true,
+    "language": "en",
+    "requirement": "OPTIONAL",
+    "messageTypes": [
+      "LOCAL_WARNING"
+    ],
+    "scriptResourcePaths": [
+      "templates/it/same-run-a.ftl"
+    ]
+  },
+  {
+    "typeId": "it-emptied",
+    "serviceId": "navtex",
+    "name": "It emptied",
+    "priority": 3,
+    "active": true,
+    "language": "en",
+    "messageTypes": [
+      "LOCAL_WARNING"
+    ],
+    "scriptResourcePaths": [
+      "templates/it/same-run-a.ftl"
+    ]
+  }
+]

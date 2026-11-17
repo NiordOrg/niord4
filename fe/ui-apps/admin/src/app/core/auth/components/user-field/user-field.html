@@ -1,0 +1,46 @@
+<div class="flex items-center gap-2">
+  <app-autocomplete
+    class="flex-1"
+    [value]="valueItems()"
+    [suggestions]="suggestions()"
+    [itemLabel]="userLabel"
+    [multiple]="false"
+    [showClear]="false"
+    [minLength]="1"
+    [placeholder]="placeholder() | transloco"
+    [ariaLabel]="placeholder() | transloco"
+    [fetchError]="fetchError()"
+    [emptyMessage]="'common.emptyMessage' | transloco"
+    [errorMessage]="'common.fetchError' | transloco"
+    [removeLabel]="'common.remove' | transloco"
+    [disabled]="searchDisabled()"
+    (query)="onSearch($event)"
+    (selectionChange)="onSelectItems($event)"
+    (touched)="markTouched()"
+  >
+    <ng-template #option let-user>
+      <div class="flex flex-col leading-tight">
+        <span>{{ user.displayName }}</span>
+        @if (user.username !== user.displayName) {
+          <span class="text-xs text-surface-500 dark:text-surface-400">{{ user.username }}</span>
+        }
+      </div>
+    </ng-template>
+  </app-autocomplete>
+  @if (canShowMe()) {
+    <button type="button" class="btn-tertiary text-sm" (click)="setMe()">
+      <app-icon name="lucideUser" />
+      <span>{{ 'messages.filter.user.field.me' | transloco }}</span>
+    </button>
+  }
+  @if (canShowClear()) {
+    <button
+      type="button"
+      class="icon-button rounded-full text-xs"
+      (click)="clear()"
+      [attr.aria-label]="'messages.filter.user.field.clear' | transloco"
+    >
+      <app-icon name="lucideTrash2" />
+    </button>
+  }
+</div>

@@ -1,0 +1,904 @@
+
+:imagesdir: images
+
+[#publications]
+== Publications
+
+Niord keeps the publications that go out alongside the messages: the weekly Notices to Mariners, a
+list of the temporary and preliminary notices in force, a yearly compilation, an uploaded handbook,
+a link to a list of lights. Some of them Niord makes itself from the messages; others are files or
+web addresses that you add. A publication can be cited from a message where its settings allow it
+(see <<publication-series-basics>>), and a publication in a public category is offered for download
+on the public site.
+
+You manage publications on the _Publications_ page of the _Admin_ area: open _Admin_ in the main
+menu, then _Publications_ in the menu on the left. The page needs the administrator role. Each
+publication belongs to one domain (see <<publication-domains>>), so the page lists the publications
+of the domain you have chosen in the header; choose another domain there to work on its
+publications.
+
+The categories that group the publications on the public site have a page of their own, described
+in the next chapter, <<publication-categories>>.
+
+[#publication-concepts]
+=== Series, Issues and One-off Publications
+
+Four words describe every publication in Niord:
+
+[cols="25,75",options="header"]
+|===
+| Term
+| What it is
+
+| Series
+| A publication that comes out again and again, for example the weekly Notices to Mariners. The
+  series holds the settings that all its issues follow: its category, what its content is, how
+  often it comes out, how its issues and files are named and, for a series that Niord makes from
+  the messages, which messages it selects.
+
+| Issue
+| One released document of a series, for example the Notices to Mariners of week 36. An issue is
+  _Open_ while it is being prepared, _Published_ once it has gone out, and _Withdrawn_ if it was
+  taken off the public list afterwards. Every issue has a permanent link of its own.
+
+| One-off publication
+| A publication that comes out once: an uploaded document, a link to a document elsewhere, or a
+  publication that only exists so that messages can cite it (a list of wrecks, a journal number).
+  A one-off publication is a series with exactly one issue.
+
+| Category
+| A group of publications, such as "Notices to Mariners" or "External publications". The category
+  decides whether its publications are shown on the public site, and in which order.
+|===
+
+An issue carries four moments, and it helps to keep them apart:
+
+[cols="25,75",options="header"]
+|===
+| Moment
+| What it means
+
+| Content period
+| The stretch of time whose messages the issue carries, from its _Period start_ to its cut-off.
+  The next issue's content period starts where this one's ended.
+
+| Cut-off
+| The instant at which it is decided which messages are in the issue. While the issue is open, its
+  _Planned cut-off_ is only a plan; the cut-off is stamped when you publish.
+
+| Published
+| When somebody pressed _Publish_ and the issue went out.
+
+| Public period
+| When the public site lists the issue. It starts when the issue is published and normally ends
+  when the next issue of the series is published.
+|===
+
+How often a series comes out and how it selects its messages are two separate settings. A weekly
+Notices to Mariners and a weekly list of the notices in force both come out every week, but the
+first carries the messages _published_ during the week, while the second carries every message
+that is still _in force_ at the cut-off, however old it is (see <<publication-criteria>>).
+
+[#publication-roles]
+=== Who May Do What
+
+[cols="30,70",options="header"]
+|===
+| Role
+| What it allows
+
+| Administrator
+| Everything in this chapter and the next: creating and changing series, one-off publications and
+  categories, preparing, publishing, amending and withdrawing issues, and adding or leaving out
+  messages by hand. An administrator changes the publications of the domains he or she
+  administers; a publication of another domain can be read but not changed (see
+  <<publication-domains>>).
+
+| _publication-curate_
+| A separate role that allows adding and leaving out messages by hand on an open issue. Since the
+  pages for publications are in the _Admin_ area, the role is only useful together with the
+  administrator role.
+
+| Editor
+| Cites published issues in a message, through the _Publications_ field of the message editor, and
+  sees which issues a message has gone out in (see
+  link:../editor-manual/manual.html#publication-editor-field[the Publications field] in the editor
+  manual).
+
+| System administrator
+| Manages the print reports that render the documents of the generated series (see
+  link:../sysadmin-manual/manual.html#print-reports[Print Reports] in the system administrator
+  manual), besides everything an administrator may do.
+|===
+
+[#publications-page]
+=== The Publications Page
+
+image::PublicationsOverview.png[Publications, 800]
+
+The page shows the publications of the current domain in three groups:
+
+* *The series cards.* One card for each active or draft series, three to a row.
+* *One-offs.* A table of the one-off publications.
+* *Retired.* The series that are no longer used, folded away under a line with their count. Click
+  the line to show them; click a name to open the series.
+
+Above the groups:
+
+* _Filter publications…_ narrows all three groups to the publications whose name holds the text
+  you type. The filter is kept in the page's address, so a filtered list survives a reload and can
+  be sent as a link.
+* _New_ creates a series or a one-off publication (_New series_, _New one-off publication_).
+* The cog menu _Publication actions_ exports and imports series definitions (see
+  <<publication-import-export>>).
+
+[#publications-page-cards]
+==== The Series Card
+
+image::PublicationSeriesCard.png[A Series Card, 211]
+
+A card tells you at a glance whether a series is keeping up:
+
+* The name, which opens the series page, and how often the series comes out (_Weekly_, _Yearly_,
+  _No fixed cadence_). A _Draft_ badge marks a series that does not publish yet. A retired series
+  has no card: it is listed in the _Retired_ group.
+* A row of numbered cells: one cell for each of the last periods, numbered by week, month or year. A
+  filled cell is an open issue, an outlined one an issue that went out, a dashed one a period for
+  which nothing was released, and a quiet one a period still to come. Point at a cell to read its
+  status and number of messages; click it to open that issue, or, for a missing period, the series
+  page where the period can be created. A line under the cells counts the missing periods.
+* _Open: <name>_ is the issue being prepared, with its expected _Cut-off_ and the number of
+  messages it holds so far. The cut-off is shown in italics with a clock, because it is only
+  stamped when somebody publishes.
+* _Open the issue_ goes straight to the open issue; _All issues_ opens the series page. A series
+  with no open issue offers _New issue_ instead (see <<publication-new-issue>>).
+
+A series with no fixed frequency has no periods to draw. Its card says how many issues it has and
+which came out last, and what kind of content its next issue would be (_Issues are uploaded as
+PDF_, _Issues are external links_). A series that has released nothing for several periods is
+marked _dormant_.
+
+[#publications-page-one-offs]
+==== The One-offs Table
+
+image::PublicationOneOffTable.png[One-off Publications, 640]
+
+The table lists the one-off publications of the domain with their _Type_ (_Uploaded PDF_,
+_External link_ or _Reference only_), their _Status_ (_Draft_, _Published_ or _Withdrawn_), when
+they are _Public_ on the public site, from which domains they _Can be cited from_ and the _File /
+link_ behind them, with a button that copies its address. Click the _Public_ heading to sort the
+rows by the start of their public period, again to reverse the order, and a third time for the
+original order.
+
+Click a name to open the publication's own page (see <<publication-one-offs>>). The cog at the end
+of a row offers _Edit_, _Move to domain…_ (where you administer another domain to move it to)
+and, for a published publication, _Withdraw_.
+
+When the domain has no one-off publications the table says so, and reminds you that publications
+owned by another domain can still be cited from messages here.
+
+[#publication-series-settings]
+=== Creating and Configuring a Series
+
+[[publication-templates-tab]]
+[[adding-or-editing-publication-templates]]To create a series, click _New_ and choose _New series_. To change one, open the series and click
+_Settings_. Both open the _Series settings_ drawer, which has four tabs: _Basics_, _Content_,
+_Frequency & naming_ and _Criteria_. A new series is created as a draft in the current domain and
+publishes nothing until you activate it (see <<publication-series-lifecycle>>).
+
+To start from an existing series, open it and choose _Copy series_ in its cog menu: the drawer
+opens as a new series with every setting of the original filled in, and a new _Series ID_ to give.
+
+[#publication-series-basics]
+==== Basics
+
+[[message-publication]]
+image::PublicationSeriesBasics.png[Series Settings: Basics, 512]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Name
+| The name of the series, one field per language.
+
+| Series ID
+| The permanent identity of the series. Niord proposes one from the name; you can change it until
+  the series is created, and never afterwards, because imports, exports and every stored citation
+  use it.
+
+| Languages
+| The languages the series is written in. Each language gets its own name, patterns and, if
+  wanted, its own file.
+
+| Category
+| The publication category the series belongs to. The category's _Show on the public site_ setting
+  decides whether the published issues appear on the public site.
+
+| Owner domain
+| The domain the series belongs to: the current domain when it was created. It is shown, not
+  chosen; see <<publication-domains>> for moving a series.
+
+| [[none-file-type]][[link-file-type]][[uploaded-file-file-type]]Content type
+| What an issue holds: _Generated from criteria_ (Niord selects the messages by the criteria on the
+  _Criteria_ tab and renders a document at every release), _Uploaded PDF_ (a file you upload for
+  each issue), _External link_ (an address of a document elsewhere) or _Reference only_ (no
+  document; the publication exists to be cited).
+
+| Can be cited from messages in
+| From which domains a message may cite the series' issues: _This domain only_, _Selected domains_
+  (tick the domains in the list that appears) or _Every domain_. Only the owner domain can change
+  the series.
+
+| Selectable as a reference in messages
+| Whether editors can cite the series in a message, and in which list of the message: _No_ (the
+  series cannot be cited at all), _Internal_, or _External (shown publicly on the message)_. It can
+  be changed only while the series
+  is a draft: citations already written live in the field that was chosen at the time.
+
+| Reference format
+| Shown when the series can be cited: how the citation reads on a message, one per language, for
+  example `NtM ${week}/${year}`. The token `${parameters}` stands for what the editor types when
+  citing, such as a light number.
+|===
+
+[#publication-series-content]
+==== Content
+
+image::PublicationSeriesContent.png[Series Settings: Content, 502]
+
+The fields of the report are shown for a series generated from criteria; a series of uploads or
+links has only the file and link patterns.
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Report template
+| The print report that renders the issue's document, chosen from the reports a system
+  administrator keeps (see link:../sysadmin-manual/manual.html#print-reports[Print Reports]). A
+  generated series cannot be activated without one.
+
+| Page size, Orientation, Map thumbnails
+| How the report is printed.
+
+| Report parameters
+| Values handed to the report, as name and value pairs (_add parameter_). Week, year and edition
+  are set from the issue and cannot be typed here. Where the report names parameters of its own,
+  they are offered to add.
+
+| Sort messages by, Sort direction
+| The order of the messages in the document. Set both or neither.
+
+| A separate file per language
+| Whether each language gets its own document, or one document serves every language.
+
+| File name pattern
+| How the document's file is named, one per language, for example `NtM-Week-${week}-${year}.pdf`.
+  Two languages cannot share one file name.
+
+| Link pattern
+| For a series of external links: how the address of each issue is built.
+|===
+
+The patterns can use these tokens, which the _Insert_ button beside each field also offers:
+`${week}`, `${week-2-digits}`, `${weekTo}`, `${weekTo-2-digits}`, `${year}`, `${year-2-digits}`,
+`${month}`, `${month-2-digits}`, `${day}`, `${day-2-digits}` and `${edition}`. They are filled in
+from the issue's cut-off: an issue is named after the week, month and year in which its content
+period ends, read in the time zone of the series' domain. `${weekTo}` is used by an issue that
+covers more than one week, such as a double issue over a holiday ("Week 51-52"); it is empty
+otherwise. The values can be overridden for one issue (see <<publication-tailor>>).
+
+[#publication-series-frequency]
+==== Frequency & Naming
+
+image::PublicationSeriesFrequency.png[Series Settings: Frequency & Naming, 502]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Frequency
+| _No fixed cadence_, _Daily_, _Weekly_, _Monthly_ or _Yearly_.
+
+| Nominal cut-off time, Cut-off weekday, Cut-off month, Cut-off day of month
+| The planned schedule: the time of day and, depending on the frequency, the weekday, the day of
+  the month and the month on which a period normally closes. The actual cut-off is stamped when an
+  issue is published, and the next issue starts exactly there.
+
+| Release
+| How an issue goes out. _Manual gate_: the issue is prepared automatically, but only goes out
+  when somebody clicks _Publish_. This is the only way issues are released.
+
+| Cut-off falls at
+| Where the content period ends by default: at _The release moment_, or, for a yearly series only,
+  at _The start of the period_ or _The end of the period_. When publishing you can still choose
+  the planned cut-off instead of the present moment.
+
+| Numbering
+| How the issues are numbered: _Not numbered_, _Week/year (ISO week)_, _Year and edition_,
+  _Month/year_ or _Running edition number_.
+
+| New issue is created
+| Shown, not chosen. A series with a frequency opens its next issue itself as soon as the current
+  one is published (_Automatically when the previous one publishes_); a series without one has
+  each issue created by hand.
+
+| Name suggestion pattern
+| How a new issue is named, one per language, for example `NtM Week ${week} - ${year}`. The same
+  tokens as above can be used.
+
+| First interval starts
+| For a series that selects messages published in an interval: where the very first content
+  period opens. Later issues follow on from the previous cut-off.
+|===
+
+[#publication-criteria]
+=== Criteria and Time Relation
+
+[[message-file-type]]
+image::PublicationSeriesCriteria.png[Series Settings: Criteria, 502]
+
+The _Criteria_ tab decides which messages a series generated from criteria puts in each issue. It
+has two parts.
+
+*Time relation* says how a message's dates place it in an issue:
+
+[cols="35,65",options="header"]
+|===
+| Time relation
+| Which messages an issue holds
+
+| Published in the issue's interval
+| Every message published between the previous cut-off and this one. Use it for a publication of
+  what is new, such as the weekly Notices to Mariners.
+
+| In force at the cut-off
+| Every message that is still in force at the cut-off, whenever it was published. Use it for a
+  list of what applies now, such as the temporary and preliminary notices in force.
+
+| Compiled from another series
+| Everything the issues of another series printed during the period. Use it for a yearly
+  compilation (see <<publication-compilations>>).
+|===
+
+_Only messages still in force at the cut-off_ leaves out the messages that were cancelled or had
+expired by the cut-off. For _In force at the cut-off_ it is always on.
+
+*The criteria* say which messages qualify at all. Add a criterion with the buttons after _Add
+criterion:_ (_Message series_, _Main type_, _Message type_, _Domain_, _Area_, _Category_, _Chart_),
+then tick or pick its values. Every criterion must match: they are combined with AND, so a
+_Message series_ criterion with the series of your notices to mariners and a _Message type_
+criterion with the temporary and preliminary notices select the temporary and preliminary notices
+of that message series. Within one criterion, any of the ticked values matches. Each kind of criterion can be used once, a series can
+hold at most eight criteria, and every series needs at least one message series or domain, so that
+it does not reach every message in the installation. Remove a criterion with its bin.
+
+_What this would select_ tries the criteria on the messages as you change them and shows how many
+messages they would select now, with a sample of their numbers and any warnings, for example
+messages that would also belong to another issue.
+
+Where the old Niord used a free "message tag filter" expression and a message tag for each issue,
+the criteria and the time relation now do the work: an in-force list is _In force at the cut-off_
+with the criteria for the message types, and a weekly list of everything published in the week is
+_Published in the issue's interval_.
+
+[#publication-series-lifecycle]
+=== Draft, Active and Retired Series
+
+A series is in one of three states:
+
+* *Draft*: being set up. It accepts no issues and editors cannot cite it.
+* *Active*: in use. It accepts issues and appears in the message editor's list of publications.
+* *Retired*: no longer used for new issues. The issues it has published stay on the public list,
+  and their files stay at their links.
+
+The state is changed from the cog menu _Publication actions_ on the series page, which also holds
+_Copy series_ and _Move to domain…_:
+
+* _Activate_ checks the series' rules once more and activates it. A draft series also offers
+  _Activate the series…_ in the note at the top of its page.
+* _Retire series_ asks for a reason, which is kept in the series' history.
+* _Reinstate series_ makes a retired series active again, after checking its rules.
+
+[#publication-check-rules]
+==== Checking the Rules
+
+image::PublicationSeriesCheckRules.png[Checking a New Series, 512]
+
+Before saving, click _Check rules_ at the bottom of the settings drawer. Niord checks the series as
+it stands in the drawer, without saving it, and either says _Every rule passes. The series can be
+activated._ or lists each rule that fails, under the name of the field it concerns, for example
+that a series generated from criteria needs a report and at least one criterion. The same rules
+are checked when you save and when you activate the series, and a field that breaks one is marked
+in place.
+
+[#publication-series-page]
+=== The Series Page
+
+[[publications-tab]]
+image::PublicationSeriesPage.png[The Series Page, 800]
+
+Click a series' name on the _Publications_ page to open its page:
+
+* *The header* names the series, how often it comes out and what is _Public now_ on the public site:
+  the current issue and its public period. _Settings_ opens the settings drawer, and the cog menu
+  _Publication actions_ holds _Copy series_, _Move to domain…_ and _Activate_, _Retire series_
+  or _Reinstate series_.
+* *Current issue* shows the open issue with its planned cut-off, the number of messages and how far
+  it is from being published (_Ready to publish_, or the number of warnings), and _Open the issue_.
+  When nothing is open, it says _No open issue_ and offers _New issue_.
+* *The issue list* holds every issue of the series, newest first, 20 to a page, with its _Status_,
+  _Cut-off_, _Public period_ and number of _Messages_. _Filter issues…_ narrows the list by name.
+  Click _Issue_ or _Cut-off_ to sort by that column. A series numbered by edition (_Year and
+  edition_, _Running edition number_) also has an _Edition_ column, which sorts the same way. Click
+  a row to open the issue.
+* *History of the series*, folded away at the bottom, records what was done to the series itself:
+  its activation and retirement, a move to another domain, and the one line that is left when an
+  issue is deleted.
+
+image::PublicationSeriesHistory.png[History of the Series, 640]
+
+A cut-off that was not stamped when its issue was published is marked with how it was found:
+_reconstructed_ for an issue carried over from the previous system, _chosen_ for a cut-off picked
+by hand when publishing. A cut-off or public period in italics with a clock is still expected, not
+recorded.
+
+For a series with a frequency, Niord also looks for periods with no issue. A period for which
+nothing was released shows as a _Missing_ row, and the period being worked towards as an
+_Upcoming_ row. On an active series of your domain, a _Missing_ row has a _Create_ button that
+opens the new issue dialog for that period. An _Upcoming_ row has it only while no issue is open,
+because the series opens that period itself when the current issue is published. When
+the periods were not looked for, a line above the list says why: for example, that the series is
+dormant because nothing has been released for several periods. A series that has no issue at all
+says _No issues yet_ instead of the list, with no rows for its periods: its card on the
+_Publications_ page shows the missing periods, and _New issue_ under _Current issue_ opens the
+dialog for the first of them.
+
+[#publication-new-issue]
+=== Creating an Issue
+
+[[adding-or-editing-publication]]
+A series with a frequency opens its next issue by itself as soon as the current one is published,
+so you rarely create an issue by hand. You do so for a series without a fixed frequency, for a
+period that was missed, or when no issue is open: click _New issue_ on the series card or the
+series page, or _Create_ on a _Missing_ or _Upcoming_ row.
+
+image::PublicationNewIssueDialog.png[New Issue, 400]
+
+The _New issue_ dialog shows the issue before it is created: its _Period start_ and _Period end_
+(change them if the proposal is wrong), each with a word that says where the proposal came from,
+such as _nominal_ for a moment taken from the series' schedule; its name in each language; and its
+edition, when it is not the first. _Would be selected_ says how many messages the period would
+hold (_Not counted_ when it cannot be counted, for example for a series that is not generated from
+criteria or a period with no end yet), and _Chained from_ names
+the issue whose cut-off the period follows on from (a series' first issue has none). Warnings tell you what to know before you
+create it, for example that the period does not start where the previous issue closed, or, for a
+series that lists what is in force at the cut-off, that the period has no start. Click _Create
+issue_ to create it.
+
+[#publication-issue]
+=== Working on an Open Issue
+
+image::PublicationOpenIssue.png[An Open Issue, 800]
+
+An open issue is the one being prepared. Open it with _Open the issue_ on the series card or the
+series page. Its page shows:
+
+* *The header*: the issue's name and status, the series, and how it is released. _Tailor issue_,
+  _Edit_ and the cog menu _Publication actions_ are on the right.
+* *The facts*: the _Content period_ (with how its start was found), the _Planned cut-off_, the
+  _Public period_ (empty until the issue is published) and the _Criteria_ in use.
+* *Messages in this issue*: the messages the issue holds, with their _Status_, the date they were
+  _Published_ and _Why_ they are in the issue (_Published in the period_, _Still in force at the
+  cut-off_, _Printed by its source issue_, _Added by hand_).
+* *Left out by the criteria*: the messages near the issue that the criteria leave out, each with
+  the reason.
+* On the right, the *Checklist* with the _Publish…_ button (see <<publication-publish>>), the
+  *Document* and the *History* of the issue.
+
+[#publication-issue-view]
+==== As of Now or As of the Planned Cut-off
+
+An open issue is a moving target: messages are published, cancelled and corrected while you
+prepare it. The two buttons above the list show the issue _As of now_ (what would go out if you
+published at this moment) or _As of the planned cut-off_. Messages published after the planned
+cut-off are gathered under _Published after the planned cut-off_, marked _Included if you publish
+now_ or _Not included at the planned cut-off_, so you can see what your choice of cut-off decides.
+
+[#publication-issue-left-out]
+==== Messages Left Out by the Criteria
+
+image::PublicationIssueLeftOut.png[Left Out by the Criteria, 401]
+
+Click _Left out by the criteria_ to see the messages that the criteria considered and rejected,
+each with the reason: _Published before the period started_, _Published after the cut-off_, _Not
+in force at the cut-off_, _Not published_, _Does not match the criteria_ or _No publication date_.
+When the list is long, it shows the most recent and says so. Click a message to open it. A message
+left out wrongly can be added by hand (see <<publication-curation>>).
+
+[#publication-issue-edit]
+==== Editing the Period and Edition
+
+Click _Edit_ to change the issue's _Edition_ (usually 1; raise it when the same period goes out
+more than once), its _Period start_ and its _Planned cut-off_. The issue's name is changed with
+_Tailor issue_ (see <<publication-tailor>>), together with its file name and numbering. Moving the
+start changes which messages fall in the period; moving the planned cut-off changes the name the
+series suggests and what the planned view shows. What actually goes out is decided by the cut-off
+you confirm when you publish.
+
+In the same editor you can tailor the _Criteria_ for this issue alone, for example to leave out an
+area for one week. The issue then shows its own criteria; _Use the series criteria again_ goes
+back to the series' ones. The pencil beside the criteria in the facts opens the same editor. _Save_
+keeps the changes; _Cancel_, or _Cancel edit_ in the header, throws them away.
+
+[#publication-tailor]
+==== Tailoring an Issue
+
+image::PublicationTailorIssue.png[Tailor Issue, 512]
+
+_Tailor issue_ opens the _Tailor this issue_ drawer, for the few things that have to differ from
+the series for one issue:
+
+* _Name_ and _File name_ in each language. Under each field Niord says what the series would
+  suggest.
+* _Numbering_: the _Week_, _Year_ and _Edition_ printed on the issue. They are worked out from the
+  cut-off, but are free text: write "51 & 52" for a double issue, and the name, the file name and
+  the report's heading follow.
+* _Report_ and _Report parameters_: another report, or other parameter values, for this issue only.
+
+A tailored field shows _Follow the series again_ beside it, and _Reset all tailoring_ undoes them
+all. A tailored issue is marked _Tailored_ beside its name.
+
+[#publication-issue-document]
+==== The Document
+
+image::PublicationIssueDocument.png[The Document Card, 223]
+
+The _Document_ card shows the issue's file in each language and where it came from:
+
+* For a series generated from criteria the document is _generated when you publish_. _Generate
+  preview_ renders it now, as it would look if you published at the moment the list is shown at
+  (_As of now_ or _As of the planned cut-off_), and _Download preview_ opens it. _Replace document…_
+  lets you upload a file of your own instead; an uploaded file is kept as it is, and publishing
+  does not generate over it.
+* For a series of uploaded files, _Upload file…_ adds the file, and _Clear file_ removes it
+  again.
+* For a series of external links, type the address in _External link_ and click _Save link_.
+
+[#publication-curation]
+=== Adding and Excluding Messages by Hand
+
+The criteria decide which messages an issue holds, but you can overrule them for one issue. Every
+such decision needs a reason of 3 to 512 characters, is shown beside the message in the issue's
+list and is kept in the issue's history with your name and the time. Only an open issue can be
+changed this way.
+
+To add a message that the criteria leave out, click _Add message_ above the list. In the dialog,
+search the message by its number or title (only published, expired and cancelled messages of the
+domain can be added), choose it, type the reason and click _Add to the issue_.
+
+image::PublicationAddMessageDialog.png[Add a Message by Hand, 400]
+
+To take messages out, tick them in _Messages in this issue_ and click _Exclude selected_, or click
+_Exclude_ at the end of one row. Type the reason and click _Exclude_. The messages stay published;
+only what this issue contains changes.
+
+image::PublicationExcludeDialog.png[Exclude Messages, 320]
+
+A message added by hand shows _Added by hand_ and who added it; an excluded one stays in the list,
+marked as left out by you, with _Include again_. _Withdraw decision_ removes a manual decision
+altogether, and the criteria decide again.
+
+[#publication-publish]
+=== The Checklist and Publishing
+
+[[releasing-publications]]
+image::PublicationChecklist.png[The Checklist, 223]
+
+The _Checklist_ on the right of an open issue checks whether the issue can go out, and is checked
+again whenever the issue changes. Its verdict is _Ready to publish_, a number of warnings that do
+not stop you (_2 warnings — can be published_), or a number of problems _stopping the release_.
+Each warning and problem is explained; click the line with the number of checks passed to see the
+others. The checks:
+
+[cols="45,55",options="header"]
+|===
+| Check
+| What it looks at
+
+| The issue is open and its series is active
+| Only an open issue of an active series can be published.
+
+| The content period has a start
+| A series that selects by interval needs a period start.
+
+| The period starts where the previous issue ended
+| A gap or an overlap with the previous issue.
+
+| The cut-off is not in the future, is after the previous issue's, is before the next issue's
+| A content period cannot end in the future, reopen a closed period or take content that has
+  already gone out.
+
+| No other issue covers this period
+| Two issues of the same series sharing messages.
+
+| The messages have been resolved; the number of messages is within the limit
+| The issue's messages could be worked out, and there are no more than 1,000 of them.
+
+| No message cancelled after the cut-off is still counted
+| A message cancelled after the cut-off that is still dated as in force at it.
+
+| Every manual include or exclude still applies
+| A decision made by hand that no longer concerns any message.
+
+| Every language has a file; every language has a citation format; a report is configured
+| What the document and the citations need.
+
+| Every period of the source series has a published issue
+| For a compilation: a source period with nothing published, or a source issue still open.
+|===
+
+A check that does not concern the issue, such as a report for a series of uploads, is left out:
+it is not shown, and it is not counted in the number of checks passed or in the verdict. That is
+why two issues can show a different number of checks passed.
+
+To publish, click _Publish…_. The dialog asks for the cut-off:
+
+image::PublicationPublishDialog.png[Publish, 400]
+
+* _At the planned cut-off_ ends the content period at the planned moment. _Change…_ moves the
+  planned cut-off first.
+* _Now_ ends the content period at the present moment.
+
+The sentence at the top says what will happen: how many messages go out, when the cut-off is
+stamped, that the document is generated and, for a series with a frequency, that the next issue
+opens. If the checklist has warnings, they are listed and you acknowledge each before _Publish_ can
+be pressed.
+
+Publishing an issue:
+
+. stamps the cut-off and freezes the list of messages: later changes to a message no longer move
+  it in or out of the issue;
+. generates the document from the series' report (unless a file was uploaded or linked);
+. opens the issue's public period, and ends the public period of the issue it follows;
+. opens the next issue of a series with a frequency.
+
+[#publication-after-publish]
+=== After Publishing: Amend, New Edition, Withdraw and Delete
+
+image::PublicationPublishedIssue.png[A Published Issue, 800]
+
+A published issue shows the messages that went out, marked _frozen at publication_. A message that
+has changed since then, for example expired, been cancelled or changed its type, keeps its place in
+the issue and gets a warning sign; point at it to read what changed. Amending the issue runs the
+selection again, so the issue in the picture, which was amended once, has no such sign. The
+_Checklist_ card now
+shows when the issue was published, its public period and its number of messages, and the
+issue's _History_ keeps the checklist as it was at publication.
+
+For a series that selects its messages by criteria, a message published after the issue, with a
+publish date inside the issue's period, belongs to that period and so to no other issue of the
+series. The published issue then shows a warning that
+names these messages, with _Amend_ to take them in; the message's _Publications_ panel in the
+editor marks the issue _Missed by a released issue_.
+
+image::PublicationIssueHistory.png[Issue History, 223]
+
+The header offers _Copy link_ (the issue's permanent address) and _Withdraw_, and the cog menu
+_Publication actions_ the other actions:
+
+* *Amend* runs the selection again against the same cut-off and replaces the document where it
+  stands, with the same links, the same public period and the same cut-off. Use it when something
+  has to be corrected: messages cancelled, retyped or corrected since, or a change to the series'
+  criteria or report. Amending asks for a reason; the replaced document is archived and can still
+  be opened from the issue's history (_Replaced document_). An issue carried over from the
+  previous system cannot be amended: its messages and document are a historical record.
++
+image::PublicationAmendDialog.png[Amend Issue, 340]
+* *New edition* creates a new, open issue for the same period, linked to this one. This issue stays
+  the current one on the public site until the new edition is published. It is not offered on a
+  series that opens its next issue by itself, nor on a one-off publication.
+* *Withdraw* takes the issue off the public list, with a reason. Its file and links stay, so the
+  messages that cite it keep working. A withdrawn issue offers *Reinstate*, which puts it back on
+  the public list with the public period it had.
+* *Delete issue…* removes an open or withdrawn issue for good, with its history. A published issue
+  must be withdrawn first, and an issue that a message still cites cannot be deleted: Niord names
+  the citing messages instead. The series keeps a one-line record of the deletion.
+
+[#publication-compilations]
+=== Compilations
+
+A compilation collects what the issues of another series printed. A yearly accumulated Notices to
+Mariners, for example, is a series with the time relation _Compiled from another series_ and the
+weekly Notices to Mariners as its _Source series_:
+
+image::PublicationSeriesCompiledFrom.png[A Compiled Series, 502]
+
+A compilation has no criteria of its own: its messages are the frozen lists of the source series'
+published issues. Only a series generated from criteria can be a source, and a compilation cannot
+compile another compilation.
+
+image::PublicationCompilationOpen.png[An Open Compilation, 616]
+
+A compilation lists its messages grouped by the source issue they came from, with the week and
+the period of each; click a group to show its messages. Messages added by hand follow the source
+issues' groups in a group of their own, _Added by hand_: the picture shows the end of the list of
+an open compilation, the last source groups folded and the _Added by hand_ group opened. While the
+compilation is open, the _Source issues_ card on the right lists the source issues its period
+holds, and the checklist warns when a period of the source series has no published issue or a
+source issue is still open.
+
+Once published, the compilation keeps the groups as they were at its cut-off:
+
+image::PublicationCompilationPublished.png[A Published Compilation, 800]
+
+The document of a compilation is rendered by its own report, which a system administrator sets up
+in the print reports.
+
+[#publication-one-offs]
+=== One-off Publications
+
+To add a one-off publication, click _New_ on the _Publications_ page and choose _New one-off
+publication_.
+
+image::PublicationNewOneOffDialog.png[New One-off Publication, 512]
+
+Fill in:
+
+* _Name_, in each language.
+* _Type_: _Reference only_, _Uploaded PDF_ or _External link_ (type the address in each language).
+* _Category_ and _Can be cited from messages in_, as for a series. The _Owner domain_ is the
+  current domain.
+* Under _Advanced_, if needed: the _Identifier_ (derived from the name when left empty; it cannot
+  be changed later), the _Sort order_, _A separate file per language_, the _File name pattern_ and
+  whether and how messages can cite the publication (_Selectable as a reference in messages_,
+  _Reference format_).
+
+_Check rules_ checks the publication without saving it, as for a series. Click _Create as draft_.
+The file of an uploaded publication is added after this first save, on the publication's own
+page, which opens when you click its name in the one-offs table:
+
+image::PublicationOneOffPage.png[A One-off Publication, 800]
+
+* *Document* shows the file or the link, with _Upload file…_ or _Replace file…_, and the
+  citation a message will show.
+* *On the public site* says whether, and when, the publication is listed on the public site, with
+  its status, its public period and its category. _Publish_ releases a draft publication;
+  _Withdraw from the public site_ takes it off the site (with a reason), and _Publish again_ puts it
+  back. Messages that cite the publication keep working either way.
+* _Edit public period_ sets when the publication is on the public site. A start in the future is
+  allowed: the publication is prepared now and appears on the day. A publication with no end stays
+  on the site until somebody ends the period.
++
+image::PublicationPublicPeriodDialog.png[Public Period, 380]
+* *History* records what was done to the publication.
+* _Edit_ opens the same drawer as on creation, and the cog menu _Publication actions_ offers _Move
+  to domain…_.
+
+[#publication-domains]
+=== Domains: Owner, Citing and Moving
+
+Every series and one-off publication has an _Owner domain_: the domain where it is listed and
+administered, and whose time zone its cut-offs are read in. Only an administrator working in the
+owner domain can change it.
+
+Who may cite it is a separate setting, _Can be cited from messages in_:
+
+image::PublicationAvailabilityField.png[Where a Publication Can Be Cited, 131]
+
+* _This domain only_: only the owner domain can see and cite the publication.
+* _Selected domains_: the domains you tick can cite it as well, but cannot change it.
+* _Every domain_: every domain can cite it; only the owner can change it.
+
+If you open a publication of another domain, for example from a link, Niord shows _Another domain's
+publication_ and offers to switch to its domain:
+
+image::PublicationForeignDomain.png[Another Domain's Publication, 800]
+
+To give a publication to another domain, choose _Move to domain…_ in its cog menu, pick the domain
+under _Move to_, type a reason and click _Move publication_. You need administrator rights in both
+domains. From then on only the new domain can change the publication, and its future cut-offs are
+read in the new domain's time zone; nothing already published changes.
+
+[#publication-public-site]
+=== What the Public Site Shows
+
+An issue or one-off publication is listed on the public site when all three hold:
+
+* its category has _Show on the public site_ ticked (see <<publication-categories>>);
+* it is published, and not withdrawn;
+* its public period has begun and has not ended.
+
+The site's _Downloads_ page lists them on the tab _Active NtM and Publications_, grouped under
+their categories in the categories' order. _Historical NtM and Publications_ lists the publications
+of a date range, with a button for each of the last five years.
+
+image::PublicSitePublications.png[Publications on the Public Site, 800]
+
+_Download_ opens the issue's document. An issue generated from criteria also has _Browse_, which
+shows the messages it holds on the public site's message pages:
+
+image::PublicSitePublicationBrowse.png[Browsing an Issue on the Public Site, 800]
+
+The page lists only the issue's messages, under their areas, and does not name the issue. While
+you browse an issue, the bar above the messages offers _Print_ and the areas its messages are in,
+but not the other filters of the message pages.
+
+In the administration application, editors see which issues a message is in, and cite published
+issues from the message editor; see
+link:../editor-manual/manual.html#publication-editor-field[the Publications field] in the editor
+manual.
+
+[#publication-import-export]
+=== Importing and Exporting Series Definitions
+
+[[importing-and-exporting-publications]]
+The cog menu _Publication actions_ on the _Publications_ page offers _Export series definitions_
+and _Import series definitions_. They move the configuration of series between installations, for
+example from a test system to production.
+
+The file holds the definitions of the series and nothing else: no issues and no categories. It is
+therefore not a backup of what has been published.
+
+image::PublicationImportSeriesConfirm.png[Import Series Definitions, 240]
+
+Importing asks first, because the file rewrites every series it names, field for field, leaving
+only its status alone. A series whose category does not exist in this installation is skipped with
+a line in the batch job's log. Click _Choose a file_ and pick the file. The import runs as the
+batch job _publication-series-import_, which system administrators can follow on the
+link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] page. Nothing is activated by an import:
+activate the imported series yourself once you have checked them.
+
+An example of one series in the file, a monthly overview generated from the messages published in
+each month. A moment in the file, such as `firstIssueStartsAt` (where the first content period
+opens, see <<publication-series-frequency>>), is written with its offset from UTC.
+
+[source,json]
+----
+[
+  {
+    "seriesId": "monthly-overview",
+    "categoryId": "notices-to-mariners",
+    "descs": [
+      {
+        "lang": "en",
+        "name": "Monthly overview",
+        "nameSuggestionPattern": "Overview ${month}/${year}",
+        "fileNamePattern": "Overview-${year}-${month-2-digits}.pdf"
+      }
+    ],
+    "status": "ACTIVE",
+    "contentMode": "GENERATED_FROM_QUERY",
+    "cadence": "MONTHLY",
+    "nominalCutoffDayOfMonth": 1,
+    "nominalCutoffTime": "12:00",
+    "numberingScheme": "MONTH_YEAR",
+    "timeRelation": "PUBLISHED_IN_INTERVAL",
+    "aliveAtCutoff": true,
+    "firstIssueStartsAt": "2026-01-01T00:00:00.000+00:00",
+    "criteria": {
+      "schemaVersion": 1,
+      "match": "ALL",
+      "criteria": [
+        { "kind": "messageSeries", "operator": "IN", "values": ["example-nm"] }
+      ]
+    },
+    "domainId": "example-nm",
+    "availability": "ALL_DOMAINS",
+    "languages": ["en"],
+    "reportId": "standard",
+    "pageSize": "A4",
+    "pageOrientation": "PORTRAIT",
+    "mapThumbnails": false,
+    "messagePublication": "NONE",
+    "releaseMode": "MANUAL_GATE",
+    "cutoffDefault": "RELEASE_MOMENT",
+    "nextIssueCreation": "AUTO_ON_PUBLISH",
+    "languageSpecific": false
+  }
+]
+----

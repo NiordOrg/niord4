@@ -1,0 +1,119 @@
+<div class="admin-toolbar">
+  <span class="relative">
+    <input
+      type="text"
+      class="w-64 text-input"
+      [value]="filter()"
+      (input)="onSearch($any($event.target).value)"
+      [placeholder]="'admin.users.filterPlaceholder' | transloco"
+      [attr.aria-label]="'admin.users.filterPlaceholder' | transloco"
+    />
+    @if (filter() !== '') {
+      <button
+        type="button"
+        class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+        [attr.aria-label]="'admin.users.clearFilter' | transloco"
+        (click)="onSearch('')"
+      >
+        <app-icon name="lucideX" class="text-xs" />
+      </button>
+    }
+  </span>
+  <span class="admin-toolbar-spacer"></span>
+  <button type="button" class="btn-primary" (click)="addUser()">
+    <app-icon name="lucidePlus" class="mr-1 text-xs" />
+    {{ 'admin.users.addUser' | transloco }}
+  </button>
+  <!-- Standalone external console link — no cog menu (design canon). Placed after
+       the primary action, matching the Domains toolbar order. -->
+  <a
+    [href]="keycloakConsoleUrl"
+    target="_blank"
+    rel="noopener"
+    class="btn-secondary inline-flex items-center"
+  >
+    <app-icon name="lucideExternalLink" class="mr-1 text-xs" />
+    {{ 'admin.users.keycloakLink' | transloco }}
+  </a>
+</div>
+
+<app-progress-bar [visible]="facade.usersLoading()" />
+
+@if (facade.usersError()) {
+  <app-error-banner
+    [title]="'admin.users.loadError' | transloco"
+    [retryLabel]="'admin.users.retry' | transloco"
+    (retry)="facade.loadUsers()"
+  />
+} @else if (!facade.usersLoading() && filtered().length === 0) {
+  <app-empty-state icon="lucideUsers" [title]="'admin.users.empty' | transloco" />
+} @else if (filtered().length > 0) {
+  <div class="admin-card">
+    <table class="niord-table">
+      <thead>
+        <tr>
+          <th>{{ 'admin.users.column.username' | transloco }}</th>
+          <th>{{ 'admin.users.column.email' | transloco }}</th>
+          <th>{{ 'admin.users.column.name' | transloco }}</th>
+          <th class="w-16">{{ 'admin.users.column.language' | transloco }}</th>
+          <th class="w-24">
+            <span class="sr-only">{{ 'admin.users.column.actions' | transloco }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of pager.paged(); track user.keycloakId) {
+          <tr>
+            <td class="font-mono">{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ fullName(user) }}</td>
+            <td>
+              @if (user.language) {
+                <app-language-flag
+                  class="h-3.5 w-5"
+                  [lang]="user.language"
+                  [flagPath]="flagPathFor(user.language)"
+                  [alt]="languageLabelFor(user.language)"
+                />
+              }
+            </td>
+            <td class="text-right whitespace-nowrap">
+              <button
+                type="button"
+                class="icon-button text-xs"
+                [attr.aria-label]="'admin.users.editUser' | transloco"
+                (click)="editUser(user)"
+              >
+                <app-icon name="lucidePencil" />
+              </button>
+              <button
+                type="button"
+                class="icon-button text-xs hover:text-danger"
+                [attr.aria-label]="'admin.users.deleteUser' | transloco"
+                (click)="deleteUser(user)"
+              >
+                <app-icon name="lucideTrash2" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (pager.total() > pager.rows) {
+    <app-pager
+      [first]="pager.first()"
+      [rows]="pager.rows"
+      [total]="pager.total()"
+      (pageChange)="pager.setFirst($event)"
+    />
+  }
+}
+
+<app-user-editor
+  [model]="editorModel()"
+  [groups]="facade.groups()"
+  [mailingLists]="facade.mailingLists()"
+  (saved)="onEditorSaved()"
+  (closed)="editorModel.set(undefined)"
+/>

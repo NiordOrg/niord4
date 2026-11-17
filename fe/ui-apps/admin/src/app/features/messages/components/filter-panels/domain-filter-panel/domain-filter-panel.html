@@ -1,0 +1,7 @@
+<app-filter-panel label="messages.filter.domain.label" (clear)="clear()">
+  <app-domain-field
+    placeholder="messages.filter.domain.placeholder"
+    [value]="value()"
+    (valueChange)="onChange($any($event))"
+  />
+</app-filter-panel>

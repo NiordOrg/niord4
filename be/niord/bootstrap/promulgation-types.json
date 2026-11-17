@@ -1,0 +1,26 @@
+[
+  {
+    "typeId": "navtex",
+    "serviceId": "navtex",
+    "name": "NAVTEX",
+    "priority": 1,
+    "active": true,
+    "language": "en"
+  },
+  {
+    "typeId": "twitter",
+    "serviceId": "twitter",
+    "name": "Twitter",
+    "priority": 100,
+    "active": false,
+    "language": "en"
+  },
+  {
+    "typeId": "audio",
+    "serviceId": "audio",
+    "name": "Audio",
+    "priority": 50,
+    "active": true,
+    "language": "en"
+  }
+]

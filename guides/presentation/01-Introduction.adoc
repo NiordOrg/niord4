@@ -1,0 +1,17 @@
+[#introduction]
+== Introduction
+
+Niord is a system for writing, publishing and archiving Navigational Warnings (NW) and Notices to
+Mariners (NM). It is developed and run by the Danish Emergency Management Agency.
+
+This document gives guidelines for how a client, such as a navigation system, a website or an app,
+can show Niord's messages to a reader. It assumes the messages are in the
+link:../model/model.html[Niord Message Model] format, as the
+link:../public-api/api.html[Niord Public API] returns them; please read those two documents first.
+
+The example throughout is the public site that comes with Niord, a client of the public API that
+shows the messages in force to mariners in three views: the full text of each message, a list of
+titles, and a map. One deployment of it can be seen at
+https://nautiskinformation.brs2.dk/messages/map[nautiskinformation.brs2.dk^]. In the source code,
+which is published under https://github.com/NiordOrg, the public site is the folder
+`fe/ui-apps/info`, and the rules below point to the parts of it that follow them.

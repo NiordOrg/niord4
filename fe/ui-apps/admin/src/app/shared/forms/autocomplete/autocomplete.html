@@ -1,0 +1,104 @@
+<div
+  #control
+  cdkOverlayOrigin
+  #trigger="cdkOverlayOrigin"
+  class="ac-control"
+  [class.ac-disabled]="disabled()"
+>
+  @if (showChips()) {
+    @for (item of value(); track item) {
+      <span class="chip is-active ac-chip">
+        <span class="ac-chip-label">{{ itemLabel()(item) }}</span>
+        <button
+          type="button"
+          class="ac-chip-remove"
+          [disabled]="disabled()"
+          [attr.aria-label]="removeLabel() || null"
+          (mousedown)="onRemoveMousedown($event, item)"
+        >
+          <app-icon name="lucideX" aria-hidden="true" />
+        </button>
+      </span>
+    }
+  }
+
+  @if (leadingIcon(); as glyph) {
+    <!-- A flex sibling of the input, so the control's own gap does the spacing and
+         the input keeps the padding it has without the icon. -->
+    <app-icon [name]="glyph" class="ml-1 text-fg-subtle" aria-hidden="true" />
+  }
+
+  <input
+    #input
+    type="text"
+    class="ac-input"
+    role="combobox"
+    autocomplete="off"
+    aria-autocomplete="list"
+    aria-haspopup="listbox"
+    [id]="inputId() || null"
+    [attr.aria-label]="ariaLabel() || null"
+    [attr.aria-expanded]="showPanel()"
+    [attr.aria-controls]="showPanel() ? listboxId : null"
+    [attr.aria-activedescendant]="activeId() ?? null"
+    [value]="queryText()"
+    [disabled]="disabled()"
+    [placeholder]="placeholderText()"
+    (input)="onInput($event)"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+    (keydown)="onKeydown($event)"
+  />
+
+  @if (showClear() && !disabled() && (value().length > 0 || queryText().length > 0)) {
+    <button
+      type="button"
+      class="ac-clear"
+      [attr.aria-label]="clearLabel() || null"
+      (mousedown)="onClearMousedown($event)"
+    >
+      <app-icon [name]="clearIcon()" aria-hidden="true" />
+    </button>
+  }
+</div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayOpen]="showPanel()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayWidth]="overlayWidth()"
+  [cdkConnectedOverlayMinWidth]="overlayMinWidth()"
+  [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+  [cdkConnectedOverlayViewportMargin]="8"
+  [cdkConnectedOverlayHasBackdrop]="false"
+  [cdkConnectedOverlayPush]="false"
+  [cdkConnectedOverlayGrowAfterOpen]="false"
+  [cdkConnectedOverlayFlexibleDimensions]="flexibleDimensions()"
+  [cdkConnectedOverlayPanelClass]="panelClasses()"
+  (overlayOutsideClick)="onOutsideClick($event)"
+>
+  <ul class="ac-panel" role="listbox" [id]="listboxId" [attr.aria-label]="ariaLabel() || null">
+    @if (loading()) {
+      <li class="ac-status" aria-live="polite">
+        <app-icon name="lucideLoaderCircle" [spin]="true" aria-hidden="true" />
+      </li>
+    } @else if (suggestions().length > 0) {
+      @for (opt of suggestions(); track opt) {
+        <li
+          class="ac-option"
+          [appAutocompleteOption]="opt"
+          (mousedown)="onOptionMousedown($event, opt)"
+        >
+          @if (rowTpl(); as tpl) {
+            <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: opt }" />
+          } @else {
+            {{ itemLabel()(opt) }}
+          }
+        </li>
+      }
+    } @else {
+      <li class="ac-empty" aria-live="polite">{{ emptyText() }}</li>
+    }
+  </ul>
+</ng-template>

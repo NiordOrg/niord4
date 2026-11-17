@@ -1,0 +1,13 @@
+@for (areaPath of formattedAreas(); track $index) {
+  <span class="message-area">
+    @for (segment of areaPath; track $index; let last = $last) {
+      <span>{{ segment }}</span>
+      @if (!last) {
+        <span class="mx-1 text-surface-500"> - </span>
+      }
+    }
+  </span>
+  @if (!$last) {
+    <span class="mx-1">,</span>
+  }
+}

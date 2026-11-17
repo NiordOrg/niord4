@@ -1,0 +1,123 @@
+<app-admin-section-page
+  titleKey="admin.sections.settings.label"
+  descriptionKey="admin.settings.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.settings.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.settings.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.settings.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.settings.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.settings.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.settings.loadError' | transloco"
+      [retryLabel]="'admin.settings.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.settings().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.settings.empty.none' | transloco" />
+    } @else {
+      <app-empty-state
+        icon="lucideFilterX"
+        [title]="'admin.settings.empty.noMatches' | transloco"
+      />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <!-- Auto layout: the key column shrinks to its content (`w-px` + nowrap, so it
+           never grows past the longest key when wide, and never dominates on narrow
+           screens), while the description + value columns absorb the remaining width
+           (`max-w-0` caps their content measurement so the long text doesn't size the
+           column) and truncate to the COLUMN edge. Titles make the full text hoverable. -->
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-px whitespace-nowrap">{{ 'admin.settings.column.key' | transloco }}</th>
+            <th>{{ 'admin.settings.column.description' | transloco }}</th>
+            <th>{{ 'admin.settings.column.value' | transloco }}</th>
+            <th class="w-16">
+              <span class="sr-only">{{ 'admin.settings.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (setting of pageRows(); track setting.key) {
+            <tr>
+              <td class="w-px whitespace-nowrap font-mono text-xs">{{ setting.key }}</td>
+              <td class="max-w-0">
+                <div class="truncate" [title]="setting.description ?? ''">
+                  {{ setting.description }}
+                </div>
+              </td>
+              <td class="max-w-0">
+                <div class="truncate" [title]="listValue(setting)">{{ listValue(setting) }}</div>
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.settings.editSetting' | transloco"
+                  (click)="editSetting(setting)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-setting-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="onEditorClosed()"
+  />
+
+  <app-json-import-dialog
+    titleKey="admin.settings.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.settings.label"
+    (closed)="onImportClosed()"
+  />
+</app-admin-section-page>

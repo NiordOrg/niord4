@@ -1,0 +1,289 @@
+# Generic Niord framework defaults, shipped with the niord-base library.
+#
+# NiordCoreDefaultsEnvironmentPostProcessor (registered in META-INF/spring.factories) adds this
+# document as the LOWEST-precedence property source of any application that has niord-base on
+# its classpath: command-line args, environment variables, profiles and the deployable's own
+# application.yml all override these values. Keep this file a single YAML document — the EPP
+# loads every document unconditionally (no spring.config.activate.on-profile support).
+spring:
+  application:
+    # Library default; a deployable overrides this with its own name (a country deployable does).
+    name: niord
+  servlet:
+    # The multipart limits of every upload (an attachment, a publication file, an import, the bootstrap
+    # command): Spring Boot's own 1 MB a part and 10 MB a request were below a publication PDF of a few
+    # megabytes. 50 MB is the body limit of the chart's proxy, so the two refuse the same uploads; a
+    # deployment that needs more raises both here and at its proxy.
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  mvc:
+    # Render REST errors as RFC 9457 ProblemDetail (application/problem+json). This auto-configures a
+    # ResponseEntityExceptionHandler that handles the built-in MVC exceptions AND any ErrorResponse — including
+    # the ResponseStatusException-based NiordWebException the resources throw (its reason -> ProblemDetail detail).
+    problemdetails:
+      enabled: true
+  jackson:
+    # Spring Boot 4 defaults the auto-configured mapper to Jackson 3 (tools.jackson), whose out-of-the-box
+    # defaults differ from Jackson 2 (e.g. alphabetical property sorting). The app and its REST/JSON contract
+    # were built against Jackson 2 semantics, so align the auto-configured JsonMapper with Jackson 2 defaults.
+    use-jackson2-defaults: true
+  # Liquibase builds the schema on every startup (it is enabled by default — no flag needed): it creates
+  # the PostgreSQL 18 + PostGIS schema from the committed changelog (shipped in niord-base), and Hibernate
+  # then validates against it. Every deployment uses this bare master; a new database holds no data until it
+  # is bootstrapped once (docs/code-data-config-plan.md §7). Only the integration tests point change-log at
+  # the test changelog that also layers the base-data seed on top (niord-base's test resource
+  # db/changelog/changelog-with-seed.yaml — see ITTest).
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Liquibase owns the schema; Hibernate only validates it — everywhere, the integration tests and the
+      # seed-regeneration script included (DefaultsLedger and BootstrapState have no JPA entity, so a schema
+      # Hibernate built would lack them).
+      ddl-auto: validate
+      naming:
+        # Match Quarkus/Hibernate defaults: keep entity field & @Column names as the
+        # physical names (no camelCase->snake_case conversion). Spring Boot's default
+        # SpringPhysicalNamingStrategy would convert `messageId`->`message_id`, colliding
+        # with explicit `message_id` columns (Hibernate 7 rejects this as a duplicate mapping).
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
+    properties:
+      hibernate:
+        format_sql: false
+        # PostgreSQL migration: quote ALL generated identifiers. Several entity/column names collide with
+        # PostgreSQL reserved words that MySQL tolerated unquoted — notably the `User` table and the `user`
+        # column on AtonNode. Global quoting also preserves the PascalCase physical names (e.g. "AtonNode",
+        # "AreaDesc") consistently instead of letting Postgres fold unquoted identifiers to lowercase.
+        globally_quoted_identifiers: true
+        # ...but do NOT quote columnDefinition type strings: otherwise `GEOMETRY`/`TEXT`/`integer default 0`
+        # would be emitted as quoted type identifiers ("GEOMETRY", ...) which Postgres rejects as nonexistent
+        # types. With this skip, columnDefinitions are emitted verbatim (unquoted -> case-insensitive type names).
+        globally_quoted_identifiers_skip_column_definitions: true
+        # PostgreSQL migration: use Hibernate 7's default PER-ENTITY sequence strategy for
+        # @GeneratedValue(AUTO) ids (a `<Entity>_SEQ` sequence each), rather than the single shared
+        # `hibernate_sequence` table the original MySQL build used. The regenerated Postgres seed
+        # captures each sequence at its post-import value.
+        # The original Quarkus build had no Hibernate Validator on the classpath, so JPA @NotNull/@Size
+        # constraints were NOT enforced on persist (a documented quirk the tests pin). Spring Boot brings
+        # Hibernate Validator; disable JPA-layer validation to preserve the original persistence behaviour.
+        validator.autoregistration_listeners: false
+        # Load lazy collections and proxies for up to 256 owners per query instead of one query each (Spring
+        # Boot sets nothing). Without it a message list issues a query per message and collection: the public
+        # message list of the test data took ~21 s locally, against ~3 s at 16 owners a query. A list walks
+        # some fifteen collections of every message, each loaded once per batch, so the size sets the number
+        # of round trips: a page of 100 sample messages takes 86 statements at 16 and 19 at 256. On
+        # PostgreSQL Hibernate binds a batch as one array parameter, so the size changes neither the SQL text
+        # nor the plan cache.
+        default_batch_fetch_size: 256
+  # Embedded ActiveMQ Artemis broker provides the jakarta.jms.ConnectionFactory
+  # that MessageService injects (message-status topic).
+  artemis:
+    mode: embedded
+    embedded:
+      enabled: true
+      persistent: false
+  mail:
+    host: ${niord.smtp.host:localhost}
+    port: ${niord.smtp.port:1025}
+  # The threads of the scheduler every @Scheduled job runs on (Spring Boot's default is one). With one
+  # thread a long pass (an index rebuild, a mail queue stalled by its SMTP server) held up every other
+  # job, the message sweeps among them. A cron job is still never started again on one node while its
+  # last run is running. Four jobs at once can hold about nine database connections: the mail sender up
+  # to five (one per sender thread while its mail goes to the SMTP server), the firing run two, the
+  # message sweep one, an index pass one. The connection pool below is sized for that. A deployment can
+  # set its own number (SPRING_TASK_SCHEDULING_POOL_SIZE).
+  task:
+    scheduling:
+      pool:
+        size: 4
+  # The database connection pool (Hikari). Spring Boot's default is ten connections, opened at start and
+  # kept. The scheduled jobs above can hold about nine at once, when the SMTP server is slow at the hour of
+  # the firing run, and the REST requests would then wait for the one left. So the pool may grow to twenty,
+  # and keeps ten when idle, as before: the further ten are opened only when all ten are in use and closed
+  # again after ten idle minutes (Hikari's idle timeout). Each backend process can thus take up to twenty
+  # of the database's connections (PostgreSQL's default max_connections is 100, shared with whatever else
+  # uses the server). A deployment sets its own with SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE and
+  # SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE.
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+
+# Niord application settings (replaces Quarkus application.properties keys). The server's home folder is
+# not among them: it is the setting niord.home, read from the system property or the environment variable
+# of that exact name, else the settings file (SettingsService).
+niord:
+  smtp:
+    host: localhost
+    port: 1025
+  # The message-report PDFs (/rest/message-reports/report.pdf and /message/{id}.pdf) made at once for
+  # anonymous callers, the public site's readers among them; a further anonymous request is answered
+  # 503 until one of them is done. Signed-in and ticketed callers (the administration application,
+  # the publication release) are not counted. At least 1.
+  reports:
+    anonymous-pdf-concurrency: 3
+  # Keycloak (SecurityConfig). base-client is the client whose roles form every caller's base
+  # identity. A bearer token is accepted only when its azp claim - the client it was issued to - is
+  # in allowed-clients; the default is niord-web (the admin application) plus the base client. A
+  # script or test client that calls the API with its own token must be added here (or as
+  # NIORD_OIDC_ALLOWED_CLIENTS), or its requests are answered 401. The value is ONE comma-separated
+  # string, never a YAML list: a list does not resolve, and the default then applies without a warning.
+  # oidc:
+  #   base-client: niord-client-master
+  #   allowed-clients: niord-web,niord-client-master
+  # Message status sweeps (ScheduledMessageService), both once a minute: auto-publish promotes
+  # VERIFIED messages whose publishDateFrom has passed, auto-expire moves PUBLISHED messages past
+  # publishDateTo to EXPIRED. The defaults below are baked into the @Scheduled annotations and are
+  # repeated here for reference only - uncomment to re-tune, or set a sweep to "-" (Spring's
+  # Scheduled.CRON_DISABLED) to turn it off, which is what the integration-test suite does with
+  # both of them. The hourly firing-exercise run (FiringExerciseService) is a property too, which
+  # the integration-test suite also turns off.
+  # Auto-publish runs at second 7, a second no other per-minute job uses, so a message due at a whole
+  # minute is published before that minute's mail sender (second 24) and mailing-list run (second 37).
+  # schedule:
+  #   auto-publish-cron: 7 * * * * ?
+  #   auto-expire-cron: 28 * * * * ?
+  #   firing-exercise-cron: 50 21 */1 * * ?
+  # S-124 (org.niord.s124): the deployment's IHO S-62 producer code. REQUIRED to generate any
+  # S-124 dataset - it is the agencyResponsibleForProduction (S-124 clause 4.3.3) and part of
+  # the datasetFileIdentifier of every dataset, and names the SECOM exchange-set files - and
+  # the library ships no default: exactly four uppercase ASCII letters/digits. A malformed
+  # value fails startup; a missing one fails the first generation, and startup when SECOM is
+  # enabled. A country deployable sets its producer code in its application.yml.
+  #
+  # enabled says whether this deployment does S-124 at all (S124SwitchCheck; on by default).
+  # false unmaps /rest/S-124/** (the XSDs included), and the producer code is neither used nor
+  # checked. niord.secom.enabled needs it: start-up refuses enabled=false with SECOM on. The
+  # automatic cancellation warning is not affected (decision 2 of s124-cancellation-plan.md).
+  # A boot property: a restart applies it.
+  s124:
+    enabled: true
+    # producer-code: XX00
+  # SECOM/S-124 integration (docs/secom-design.md). Disabled by default: no servlet,
+  # filters, schedulers or SECOM beans exist unless enabled=true, which also needs
+  # niord.s124.enabled true (SECOM exchanges S-124 datasets). When enabling, configure
+  # the MCP PKI stores below, and expose the message series to publish via the sysadmin
+  # SECOM series config (PUT /rest/secom/series-config/{seriesId}). NB: the truststore should
+  # contain the CA(s) that ISSUE remote peer certificates, not just the MCP root: a peer that
+  # sends only its leaf certificate then still validates.
+  #
+  # Only the keys below are Spring properties. The runtime tunables are DB-backed settings
+  # (sysadmin Settings page), each overridable by an env var / system property under its
+  # EXACT camelCase setting name — putting them in this file is a silent no-op:
+  #   secomServiceRegistryUrl       MSR endpoint used to resolve peer endpoints
+  #                                 (e.g. https://msr.maritimeconnectivity.net/api/secom)
+  #   secomServiceRegistryInsecure  skip TLS validation towards test registries (default false)
+  #   secomAllowInsecureEndpoints   allow deliveries to http:// peer endpoints and to peers on
+  #                                 loopback/link-local/private addresses (default false;
+  #                                 test environments only - production peers are https and
+  #                                 public, and the registry entry must match the peer's MRN)
+  #   secomMaxSubscriptionsPerNode  the max number of subscriptions one remote node may hold
+  #                                 (default 50; further non-identical requests get a 400)
+  #   secomCallbackEndpoint         public URL remote consumers deliver acknowledgements to;
+  #                                 default = the baseUri setting + /api/secom
+  #   secomSignatureAlgorithm       outgoing signatures; default SHA2_384_WITH_ECDSA (the
+  #                                 design mandate), set SHA3_384_WITH_ECDSA for legacy
+  #                                 SHA3-only peers (incoming accepts either 384-bit variant)
+  #   secomValidateClientChain      validate forwarded client certs against the truststore
+  #                                 (default true)
+  #   secomRevocationCheck          soft-fail OCSP->CRL revocation checking, inbound client
+  #                                 certs AND outbound connections (default true)
+  #   secomAlertEmails              comma-separated recipients mailed on terminal delivery
+  #                                 failures and approaching certificate expiry
+  #                                 (default empty = no alerts)
+  #   secomCertExpiryWarnDays       days before SECOM service certificate expiry at which
+  #                                 warning mails to the alert recipients begin (default 60;
+  #                                 mails repeat weekly, escalating at 14 days and on expiry)
+  #   secomRenewalEnabled           unattended certificate renewal via the MCP Identity
+  #                                 Registry (default false; also needs the
+  #                                 niord.secom.renewal.* properties below)
+  #   secomRenewalWindowDays        days before expiry at which the service and renewal-robot
+  #                                 certificates are renewed automatically (default 60 = the
+  #                                 G1183 renew-2-months-early point)
+  secom:
+    enabled: false
+    # Whether the X-Secom-Cert header is a trusted source of the peer identity. Only true
+    # behind a TLS-terminating proxy that verifies the peer's client certificate, sets the
+    # header from the handshake and is the only way to reach the app. Off by default: SECOM
+    # Edition 2 carries the peer certificate in the signed envelope, the chart's proxy sets no
+    # such header, and with false the header is ignored whoever sends it (every request but
+    # ping is refused until the filter reads the envelope - s124-secom-spec-gap-analysis.md §7).
+    # trust-cert-header: false
+    # keystore:
+    #   location: file:/run/secrets/secom/keystore.p12   # MCP service cert + key (PKCS12; file may be base64)
+    #   password: changeit
+    #   alias: "1"
+    # truststore:
+    #   location: file:/run/secrets/secom/truststore.p12
+    #   password: changeit
+    #   root-alias: ""          # optional; "" = the first certificate entry
+    # File-backed stores are polled every minute and hot-reloaded when their content
+    # changes (e.g. a k8s secret updated in place); reloads and load failures are mailed
+    # to the secomAlertEmails recipients. Set store-watch-cron: "-" to disable the watch;
+    # classpath: stores cannot change on disk and always need a restart.
+    # store-watch-cron: 47 * * * * ?
+    # Unattended certificate renewal (identity plan T3; default off - the DB setting
+    # secomRenewalEnabled must also be true). The robot credential is a dedicated MIR user
+    # whose permissions map to SERVICE_ADMIN - a service certificate cannot renew itself.
+    # The daily job runs before the expiry check; set renewal-cron: "-" to disable it.
+    # renewal-cron: 13 27 5 * * ?
+    # renewal:
+    #   mir-url: https://test-api.maritimeconnectivity.net   # MIR base URL (/x509/api/... is appended)
+    #   org-mrn: urn:mrn:mcp:org:mcc:example                 # the MCP organisation MRN (required)
+    #   service-mrn: ""       # default: derived from the service certificate subject UID
+    #   user-mrn: ""          # robot user MRN; default: derived from the robot certificate subject UID
+    #   timeout-seconds: 30   # MIR HTTP timeout
+    #   keystore:             # the robot-user credential (PKCS12; file may be base64)
+    #     location: file:/run/secrets/secom/renewal-keystore.p12
+    #     password: changeit
+    #     alias: "1"
+    #   k8s:                  # k8s backend (identity plan T3b): PATCH renewed stores into their
+    #     enabled: false      # Secrets via the API server instead of writing the (read-only)
+    #                         # mounts; the pod ServiceAccount needs get/patch on those Secrets.
+    #                         # The mounted files then converge via the kubelet + store watch.
+    #     secret-mounts: ""   # <mount-directory>=<secret-name> pairs, comma-separated - a store
+    #                         # under a mapped directory is PATCHed into that Secret, key = file
+    #                         # name, e.g. /run/secrets/secom=niord-secom-stores
+    #     namespace: ""       # "" = the pod's own namespace (the mounted serviceaccount file)
+    #     api-url: ""         # "" = in-cluster API discovery (KUBERNETES_SERVICE_HOST)
+
+# Spring Boot's Jersey integration served the actuator endpoints under the Jersey application path
+# (/rest/actuator/*). Now that the REST layer is Spring MVC and Jersey is removed, pin the actuator base
+# path so the health/monitoring URL contract (/rest/actuator/health) is unchanged.
+management:
+  endpoints:
+    web:
+      base-path: /rest/actuator
+  endpoint:
+    health:
+      # Boot auto-enables the liveness/readiness probe GROUPS only when it detects a Kubernetes
+      # environment. Pin them on everywhere so /rest/actuator/health/{liveness,readiness} — the
+      # three URLs the k8s probes use (k8s/helm/niord/templates/app/deployment.yaml) — also
+      # resolve locally and in the integration tests. Without this they 404 outside k8s, so the
+      # production health contract cannot be exercised anywhere it could be caught before deploy.
+      probes:
+        enabled: true
+  health:
+    # spring-boot-starter-mail is a compile dependency and spring.mail.host defaults to
+    # localhost:1025, so MailHealthIndicator drags the aggregate health DOWN whenever no SMTP
+    # server happens to be running. Health answers "can Niord serve traffic"; it can serve
+    # traffic without SMTP. (Mail delivery failures surface through ScheduledMailService, not here.)
+    mail:
+      enabled: false
+
+logging:
+  level:
+    org.niord: INFO
+  pattern:
+    # Boot's default console AND file patterns both interpolate ${LOG_LEVEL_PATTERN}, so overriding
+    # the level pattern adds the correlation fields to both without forking (and then having to
+    # re-sync) the full pattern on every Boot upgrade.
+    #
+    # requestId is set by RequestIdFilter for every HTTP request and by the MDC TaskDecorator
+    # (as job-<id>) for @Async/@Scheduled work; domain is set by NiordDomainFilter. %X{k:-}
+    # renders empty when the key is absent, so startup and un-instrumented background lines read
+    # "req= dom=" — a deliberate marker for "this is not request work", greppable as such.
+    level: "%5p req=%X{requestId:-} dom=%X{domain:-}"

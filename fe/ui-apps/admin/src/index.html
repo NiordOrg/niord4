@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Niord</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <style>
+      /* Bootstrap splash — shown inside <app-root> until Angular renders over it. Self-contained
+         (no app CSS/theme yet) so the user sees a spinner instead of a blank page while the
+         render-blocking auth/domain initializers run (and during any slow Keycloak wait). */
+      .niord-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        background: #f8fafc;
+        color: #475569;
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        letter-spacing: 0.1em;
+      }
+      .niord-splash__spinner {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 3px solid #cbd5e1;
+        border-top-color: #1e3a5f;
+        border-radius: 50%;
+        animation: niord-splash-spin 0.8s linear infinite;
+      }
+      @keyframes niord-splash-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <app-root>
+      <div class="niord-splash">
+        <div class="niord-splash__spinner"></div>
+        <div>NIORD</div>
+      </div>
+    </app-root>
+  </body>
+</html>

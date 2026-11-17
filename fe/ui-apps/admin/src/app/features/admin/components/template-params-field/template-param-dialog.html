@@ -1,0 +1,88 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [header]="headerKey() | transloco"
+  [style]="{ width: '40rem', maxWidth: '95vw' }"
+>
+  <form class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <label for="tp-param-id" class="text-sm font-medium text-fg-title">
+        {{ 'admin.paramTypes.paramDialog.paramId' | transloco }}
+      </label>
+      <input
+        id="tp-param-id"
+        type="text"
+        [formField]="form.paramId"
+        class="w-full text-input"
+        [attr.aria-invalid]="idTaken() ? true : null"
+        [attr.aria-describedby]="idTaken() ? 'tp-param-id-error' : null"
+      />
+      @if (idTaken()) {
+        <p id="tp-param-id-error" class="text-xs text-danger" role="alert">
+          {{ 'admin.paramTypes.paramDialog.idTaken' | transloco }}
+        </p>
+      }
+    </div>
+
+    <fieldset class="flex flex-col gap-2">
+      <legend class="mb-1 text-sm font-medium text-fg-title">
+        {{ 'admin.paramTypes.paramDialog.name' | transloco }}
+      </legend>
+      <div class="flex flex-col gap-2">
+        @for (desc of form.descs().value(); track desc.lang; let i = $index) {
+          <app-localized-text-input
+            [formField]="form.descs[i].name"
+            [lang]="desc.lang"
+            ariaLabelKey="admin.paramTypes.paramDialog.name"
+          />
+        }
+      </div>
+    </fieldset>
+
+    <div class="flex flex-col gap-1">
+      <label for="tp-type" class="text-sm font-medium text-fg-title">
+        {{ 'admin.paramTypes.paramDialog.type' | transloco }}
+      </label>
+      <select
+        id="tp-type"
+        class="w-full text-input"
+        [formField]="form.type"
+        [attr.aria-label]="'admin.paramTypes.paramDialog.type' | transloco"
+      >
+        @for (option of typeOptions(); track option) {
+          <option [value]="option">{{ option }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <input type="checkbox" id="tp-mandatory" class="checkbox" [formField]="form.mandatory" />
+      <label for="tp-mandatory" class="text-sm">
+        {{ 'admin.paramTypes.paramDialog.mandatory' | transloco }}
+      </label>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <input
+        type="checkbox"
+        id="tp-position-list"
+        class="checkbox"
+        [formField]="form.positionList"
+      />
+      <label for="tp-position-list" class="text-sm">
+        {{ 'admin.paramTypes.paramDialog.positionList' | transloco }}
+      </label>
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.paramTypes.paramDialog.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="okDisabled()" (click)="ok()">
+      {{ 'admin.paramTypes.paramDialog.ok' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

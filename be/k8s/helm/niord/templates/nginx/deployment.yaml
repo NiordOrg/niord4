@@ -1,0 +1,58 @@
+{{- if .Values.proxy.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "niord.componentName" (list . "proxy") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "proxy") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "niord.componentSelectorLabels" (list . "proxy") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "niord.componentSelectorLabels" (list . "proxy") | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/nginx/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # The image's `nginx` user (101) instead of a root master process; nginx.conf keeps the
+      # pid file and the temp directories in /tmp for it. Pod Security `restricted`.
+      securityContext:
+        {{- include "niord.podSecurityContext" 101 | nindent 8 }}
+      containers:
+        - name: nginx
+          image: {{ include "niord.image" (list . "proxy") | quote }}
+          imagePullPolicy: {{ .Values.proxy.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8888
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.proxy.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "niord.componentName" (list . "proxy") }}
+{{- end }}

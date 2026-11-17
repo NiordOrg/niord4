@@ -1,0 +1,124 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  size="wide"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="report-id" class="text-sm font-medium text-fg-title">
+          {{ 'admin.reports.field.reportId' | transloco }}
+        </label>
+        <input id="report-id" type="text" [formField]="form.reportId" class="w-full text-input" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="report-name" class="text-sm font-medium text-fg-title">
+          {{ 'admin.reports.field.name' | transloco }}
+        </label>
+        <input id="report-name" type="text" [formField]="form.name" class="w-full text-input" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="report-sort" class="text-sm font-medium text-fg-title">
+          {{ 'admin.reports.field.sortOrder' | transloco }}
+        </label>
+        <input
+          id="report-sort"
+          type="number"
+          step="1"
+          [formField]="form.sortOrder"
+          class="w-32 text-input"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.reports.field.templatePath' | transloco }}
+        </span>
+        <app-script-resources-field
+          [formField]="$any(form.templatePath)"
+          pathPattern=".+\.(ftl|FTL)"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.reports.field.domains' | transloco }}
+        </span>
+        <app-domain-multiselect-field
+          [formField]="form.domains"
+          [placeholder]="'admin.reports.field.domainsPlaceholder' | transloco"
+          [ariaLabel]="'admin.reports.field.domains' | transloco"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.reports.field.properties' | transloco }}
+        </span>
+        <app-code-text-input
+          [formField]="form.properties"
+          [language]="'json'"
+          [rows]="8"
+          [ariaLabel]="'admin.reports.field.properties' | transloco"
+        />
+        @if (propertiesInvalid()) {
+          <span class="text-xs text-danger">{{ 'admin.reports.field.jsonError' | transloco }}</span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.reports.field.params' | transloco }}
+        </span>
+        <app-code-text-input
+          [formField]="form.params"
+          [language]="'json'"
+          [rows]="8"
+          [ariaLabel]="'admin.reports.field.params' | transloco"
+        />
+        @if (paramsInvalid()) {
+          <span class="text-xs text-danger">{{ 'admin.reports.field.jsonError' | transloco }}</span>
+        }
+      </div>
+
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+
+    <!-- Test-print row — outside the report form so the tag selection never gates Save. -->
+    <fieldset
+      class="mt-4 flex flex-col gap-2 border-t border-surface-200 pt-4 dark:border-surface-700"
+    >
+      <legend class="text-sm font-medium text-fg-title">
+        {{ 'admin.reports.test.legend' | transloco }}
+      </legend>
+      <div class="flex items-end gap-2">
+        <div class="flex flex-1 flex-col gap-1">
+          <span class="text-xs text-fg-muted">{{ 'admin.reports.test.tag' | transloco }}</span>
+          <app-single-tag-field
+            [value]="testTagId()"
+            (valueChange)="testTagId.set($any($event))"
+            [placeholder]="'admin.reports.test.tag' | transloco"
+            [ariaLabel]="'admin.reports.test.tag' | transloco"
+          />
+        </div>
+        <button type="button" class="btn-tertiary" (click)="testPrint()">
+          {{ 'admin.reports.test.print' | transloco }}
+        </button>
+      </div>
+    </fieldset>
+  }
+
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.reports.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.reports.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

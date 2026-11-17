@@ -1,0 +1,545 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import org.springframework.stereotype.Service;
+import jakarta.inject.Inject;
+import jakarta.persistence.LockModeType;
+import org.springframework.transaction.annotation.Transactional;
+import org.niord.core.publication.series.resolve.IssueNaming;
+import org.niord.core.service.BaseService;
+import org.niord.core.user.User;
+
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * The issue transitions other than publish: create, retro-create, new edition,
+ * amend, retire, reactivate. Removing an issue outright is NOT here -- it ends
+ * the row rather than changing its state, and what it has to consult before it
+ * may proceed is the rest of the estate rather than the issue; it lives in
+ * {@link IssueDeleteService}.
+ *
+ * Two of these carry decisions worth stating rather than inferring.
+ *
+ * RETIRE deliberately leaves the file and the public window in place. A retired
+ * issue is withdrawn from the workflow, not from history: its PDF stays at its
+ * link because people have cited it, and its window stays because it still
+ * occupies its bracket. Clearing either would leave the predecessor uncapped and
+ * break the chain behind it.
+ *
+ * NEW EDITION is a distinct, audited action rather than an edit. It sets
+ * supersedes and caps the predecessor in ONE transaction, because the
+ * alternative -- edit the fields, then remember to cap -- is where step three
+ * gets forgotten and two current editions reach the public download site at
+ * once. It is also the only write path supersedes has: without it the column
+ * and its audit action are unreachable by any API call.
+ */
+@Service
+public class IssueLifecycleService extends BaseService {
+
+    @Inject
+    IssueAuditService audit;
+
+    @Inject
+    IssueShape shape;
+
+    /** A transition was refused. Carries the wire code so callers do not invent one. */
+    public static class TransitionRefusedException extends PublicationException {
+
+        public TransitionRefusedException(String code, String message) {
+            this(code, message, List.of());
+        }
+
+        /**
+         * A refusal that knows which fields failed.
+         *
+         * A form cannot render "seven rules fail" against anything. The rules
+         * already say which field each belongs to, and dropping that on the way
+         * out left the client with one sentence and no way to put a message
+         * beside the control that caused it.
+         */
+        public TransitionRefusedException(String code, String message,
+                                          List<SeriesValidator.FieldError> fieldErrors) {
+            super(code, message, fieldErrors);
+        }
+    }
+
+    /** The one reason rule, for every action that changes what the public reads. */
+    public static final int MIN_REASON = 3;
+    public static final int MAX_REASON = 512;
+
+    /**
+     * A reason somebody can read, or a refusal.
+     *
+     * The floor is what separates a reason from a keystroke: "x" records that
+     * somebody typed something, which is worse than nothing because it looks
+     * like a decision was explained. The ceiling keeps a trail readable.
+     */
+    public static String requireReason(String reason, String why) {
+        String trimmed = reason == null ? "" : reason.trim();
+        if (trimmed.length() < MIN_REASON || trimmed.length() > MAX_REASON) {
+            throw new TransitionRefusedException("REASON_REQUIRED",
+                    why + " -- in between " + MIN_REASON + " and " + MAX_REASON + " characters");
+        }
+        return trimmed;
+    }
+
+    // ================================================================= create
+
+    /** T0. A new issue. publicId is minted at CREATE and immutable for life. */
+    @Transactional
+    public PublicationIssue create(PublicationSeries series, Date intervalFrom,
+                                   IntervalBoundSource fromSource, User actor) {
+        return create(series, intervalFrom, fromSource, null, actor);
+    }
+
+    /**
+     * T0, with the close the caller already reviewed.
+     *
+     * The draft shows both bounds and lets an admin move either, so the create has
+     * to be able to take both. Without this the interval that was on the screen
+     * had to be re-applied by a second call through the edit endpoint -- two
+     * writes, two audit entries, and a window in between where the issue carried a
+     * period nobody chose. A null close still means "derive the nominal one".
+     *
+     * A close sent here is recorded as MANUAL. A caller that knows where the close
+     * came from -- the create endpoint asks {@link IssueDraftService#boundSourcesFor}
+     * -- says so through the overload that takes its source.
+     */
+    @Transactional
+    public PublicationIssue create(PublicationSeries series, Date intervalFrom,
+                                   IntervalBoundSource fromSource, Date intervalTo, User actor) {
+        return create(series, intervalFrom, fromSource, intervalTo,
+                intervalTo == null ? null : IntervalBoundSource.MANUAL, actor);
+    }
+
+    /**
+     * T0, with both bounds and where each of them came from.
+     *
+     * The source of a bound is a fact about where its value came from, not about
+     * whether a value was sent: the draft dialog always sends both bounds, and an
+     * issue created from it with nothing changed has the nominal close the cadence
+     * gave it, not one somebody typed.
+     *
+     * @param toSource the close's source; null with a close lets the shaping mark it
+     *                 NOMINAL, and it is ignored without one
+     */
+    @Transactional
+    public PublicationIssue create(PublicationSeries series, Date intervalFrom,
+                                   IntervalBoundSource fromSource, Date intervalTo,
+                                   IntervalBoundSource toSource, User actor) {
+        // The same refusal the draft makes, in the same words: an interval that
+        // ends before it starts selects nothing, and the issue would publish EMPTY
+        // rather than fail.
+        if (intervalFrom != null && intervalTo != null && !intervalFrom.before(intervalTo)) {
+            throw new TransitionRefusedException("INTERVAL_INVERTED",
+                    "the period would close at " + intervalTo + ", at or before it opens at "
+                            + intervalFrom + ". An interval that ends before it starts selects "
+                            + "nothing, and the issue would publish empty rather than fail.");
+        }
+        assertNoOverlap(series, intervalFrom, null);
+        PublicationIssue issue = newIssue(series, intervalFrom, fromSource, intervalTo,
+                intervalTo == null ? null : toSource);
+        em.persist(issue);
+        audit.created(issue, actor, AuditAction.CREATED);
+        return issue;
+    }
+
+    /**
+     * A new issue may not claim a period a PUBLISHED one still covers.
+     *
+     * Only where issues TILE. An IN_FORCE_AT_CUTOFF series' issues overlap by
+     * construction -- the 2026 and 2027 firing-area editions share thirty-one of
+     * their thirty-two members -- so asking whether they overlap is a category
+     * error rather than a violation.
+     *
+     * Public because the DRAFT asks the same question before an admin presses
+     * create. One rule, called from both places: a draft that answered "this is
+     * fine" from its own copy of the test and then hit a refusal on save would be
+     * worse than no preview at all.
+     *
+     * The test is against the neighbour's own close, not against the cadence. A
+     * week published EARLY closes early, and the next issue opening at that
+     * earlier instant is the chain working: it is exactly where the previous one
+     * ended. What is refused is an interval that starts BEFORE a neighbour closed,
+     * because the content between those two instants has already gone out in that
+     * neighbour, and a second issue claiming it would publish the same messages
+     * twice under two names.
+     *
+     * A RETIRED NEIGHBOUR DOES NOT CLAIM ITS PERIOD, and that is the whole reason
+     * this asks for PUBLISHED alone. Retiring an issue is the statement that what
+     * went out for that period should not stand -- and where the issue cannot be
+     * amended, which is every issue carried over from the previous system, a new
+     * issue for the same period IS the correction. Counting the withdrawn one as
+     * coverage refused precisely that issue: the one thing an admin is allowed to
+     * do about a wrong published document, refused on behalf of the document they
+     * had already withdrawn. Nothing publishes twice as a result, because the
+     * retired issue is off the public list -- what is on it is the replacement.
+     */
+    public void assertNoOverlap(PublicationSeries series, Date intervalFrom, PublicationIssue ignoring) {
+        if (series == null || intervalFrom == null
+                || series.getTimeRelation() == null || !series.getTimeRelation().tiles()) {
+            return;
+        }
+        List<PublicationIssue> released = em.createQuery(
+                        "SELECT i FROM PublicationIssue i WHERE i.series = :s AND i.status IN :st "
+                                + "ORDER BY i.id DESC", PublicationIssue.class)
+                .setParameter("s", series)
+                .setParameter("st", IssuePublishService.COVERING_STATUSES)
+                .getResultList();
+
+        for (PublicationIssue other : released) {
+            if (ignoring != null && other.getId() != null && other.getId().equals(ignoring.getId())) {
+                continue;
+            }
+            Date closed = other.effectiveCutoff();
+            Date opened = other.getIntervalFrom();
+            // Strictly inside the neighbour's period: at its close is the chain,
+            // at or before its open is a period that ended before this one began.
+            if (closed != null && intervalFrom.before(closed)
+                    && (opened == null || !intervalFrom.before(opened))) {
+                throw new TransitionRefusedException("ISSUE_INTERVAL_OVERLAP",
+                        "a period starting " + intervalFrom + " falls inside '" + other.getPublicId()
+                                + "', which was released covering up to " + closed + ". Those messages "
+                                + "have already gone out; an issue claiming them again would publish "
+                                + "them twice under two names.");
+            }
+        }
+    }
+
+    /**
+     * Retro-create: an issue for a period that was missed.
+     *
+     * Only meaningful where issues tile. An IN_FORCE_AT_CUTOFF series has no
+     * missing period to recover, because its issues overlap -- asking for one is
+     * a category error rather than an unusual request.
+     */
+    @Transactional
+    public PublicationIssue retroCreate(PublicationSeries series, Date intervalFrom, Date intervalTo,
+                                        User actor) {
+        if (series.getTimeRelation() == null || !series.getTimeRelation().tiles()) {
+            throw new TransitionRefusedException("RETRO_CREATE_NOT_APPLICABLE",
+                    "this series' issues overlap rather than tile, so there is no missing period to recover");
+        }
+        assertNoOverlap(series, intervalFrom, null);
+        // The close comes in with the request: a recovered period is one somebody
+        // worked out, and its end is RECOVERED for the same reason its start is --
+        // nothing stamped it and no cadence derived it.
+        PublicationIssue issue = newIssue(series, intervalFrom, IntervalBoundSource.RECOVERED,
+                intervalTo, intervalTo == null ? null : IntervalBoundSource.RECOVERED);
+        issue.setCutoffReconstructed(true);
+        em.persist(issue);
+        audit.created(issue, actor, AuditAction.CREATED_RETROACTIVELY);
+        return issue;
+    }
+
+    /**
+     * A new edition of an in-force publication, superseding an existing one.
+     *
+     * The LINK is made here, where it cannot be forgotten; the WINDOW changes
+     * hands in the publish that takes over, where the successor becomes
+     * readable. Skydeomraader has two editions in 2020 and three in 2022, so
+     * this fires predictably rather than exceptionally.
+     *
+     * ONE OPEN SUCCESSOR PER PREDECESSOR. While an edition that supersedes this
+     * issue is still OPEN, the call answers with that edition rather than opening
+     * a second "edition 2" beside it: the app offers New edition as long as the
+     * predecessor is PUBLISHED, so going back to it, or two admins at once, would
+     * otherwise give one document two successors with the same number. The
+     * repeated call writes no audit entry and ignores its intervalFrom.
+     */
+    @Transactional
+    public PublicationIssue newEdition(PublicationIssue predecessor, Date intervalFrom, User actor) {
+        if (predecessor.getStatus() != IssueStatus.PUBLISHED) {
+            throw new TransitionRefusedException("PREDECESSOR_NOT_PUBLISHED",
+                    "only a published issue can be superseded");
+        }
+
+        // Two concurrent presses are serialised on the predecessor's row, and the
+        // second finds the first's edition and answers with it. The predecessor is a
+        // row this transaction read, not one it wrote, so the lock needs no flush.
+        em.lock(predecessor, LockModeType.PESSIMISTIC_WRITE);
+        List<PublicationIssue> open = em.createQuery(
+                        "SELECT i FROM PublicationIssue i WHERE i.supersedes = :p AND i.status = :open "
+                                + "ORDER BY i.id", PublicationIssue.class)
+                .setParameter("p", predecessor)
+                .setParameter("open", IssueStatus.OPEN)
+                .getResultList();
+        if (!open.isEmpty()) {
+            return open.get(0);
+        }
+
+        PublicationSeries series = predecessor.getSeries();
+        assertNoOverlap(series, intervalFrom, predecessor);
+        PublicationIssue edition = newIssue(series, intervalFrom, IntervalBoundSource.MANUAL);
+        edition.setSupersedes(predecessor);
+        // The number that tells the two apart, and then the names again -- a
+        // pattern that names the edition has to render the one this issue
+        // actually carries, and newIssue derived them against the first.
+        edition.setEdition(IssueShape.editionAfter(predecessor));
+        shape.renumber(edition, series);
+        em.persist(edition);
+
+        // The LINK is made here, in the same transaction as the issue, so it can
+        // never be forgotten. The CAP is not, and that is deliberate: this edition
+        // is OPEN and nobody can read it yet, so closing the predecessor's window
+        // now would leave the download site with no current edition at all until
+        // somebody publishes. The cap happens where the successor becomes public
+        // -- the publish transaction caps the predecessor at the new stamp minus
+        // one millisecond, for every series and both time relations, so the two
+        // windows meet exactly and neither overlaps nor gaps.
+        audit.created(edition, actor, AuditAction.CREATED_NEW_EDITION);
+        audit.supersededBy(predecessor, edition, actor);
+        return edition;
+    }
+
+    private PublicationIssue newIssue(PublicationSeries series, Date intervalFrom, IntervalBoundSource source) {
+        return newIssue(series, intervalFrom, source, null, null);
+    }
+
+    /**
+     * T0, in one place.
+     *
+     * @param intervalTo the close, where the caller already knows it; null lets the
+     *                   cadence derive the nominal one
+     */
+    private PublicationIssue newIssue(PublicationSeries series, Date intervalFrom,
+                                      IntervalBoundSource source,
+                                      Date intervalTo, IntervalBoundSource toSource) {
+        // A one-off holds exactly one issue, and refusing the second is what
+        // makes its kind a fact rather than a description of the current row
+        // count. A publication that turns out to keep appearing is an
+        // UNSCHEDULED series -- and saying so should be a decision somebody
+        // makes, not a side effect of an upload.
+        //
+        // Every path that reaches here is a person asking: the automatic
+        // successor in IssuePublishService requires a cadence, and a one-off
+        // has none, so it can never arrive at this check.
+        if (series != null && series.isOneOff()) {
+            Long existing = em.createQuery(
+                            "SELECT COUNT(i) FROM PublicationIssue i WHERE i.series = :s", Long.class)
+                    .setParameter("s", series)
+                    .getSingleResult();
+            if (existing > 0) {
+                throw new TransitionRefusedException("SERIES_IS_ONE_OFF",
+                        "'" + series.getSeriesId() + "' is a one-off and already has its issue. "
+                                + "If this publication is going to keep appearing, change its kind "
+                                + "to UNSCHEDULED first -- that is a decision about the publication "
+                                + "rather than about this upload.");
+            }
+        }
+
+        PublicationIssue issue = new PublicationIssue();
+        issue.setSeries(series);
+        // Minted at create, immutable for life: it is what message HTML cites.
+        issue.setPublicId(UUID.randomUUID().toString());
+        issue.setRepoPath("publications/" + issue.getPublicId());
+        issue.setStatus(IssueStatus.OPEN);
+        issue.setIntervalFrom(intervalFrom);
+        issue.setIntervalFromSource(source);
+        issue.setIntervalTo(intervalTo);
+        issue.setIntervalToSource(toSource);
+        // The first edition of the period, before the names are derived: a
+        // file-name pattern that names the edition expands against this, and an
+        // issue born with no edition published as "…-v-2027.pdf" -- an empty
+        // substitution, which is not an unresolved token and so was refused by
+        // nothing. The new-edition action overwrites it with the next number.
+        issue.setEdition(IssueShape.FIRST_EDITION_TEXT);
+
+        // One desc row per CONFIGURED language, from the moment of create.
+        //
+        // Creating them lazily on first write leaves an issue in a state where a
+        // language the series declares has nowhere to put its file name or link,
+        // and the failure then surfaces as "no such language" at upload time
+        // rather than as a missing row at create time.
+        for (String lang : series.getLanguages()) {
+            issue.createDesc(lang);
+        }
+
+        // The nominal close, the numbers and the per-language names, all from the
+        // one derivation the draft answers with. The name is SUGGESTED, not final:
+        // it renders the period the issue closes in, the real cut-off arrives at
+        // publish, and an admin may type over it before then.
+        shape.apply(issue, series, new Date());
+        return issue;
+    }
+
+
+    /**
+     * A provisional name for a new issue.
+     *
+     * Falls back through the series pattern, then the series name, then the
+     * series id. Every step is a real answer rather than a placeholder, because
+     * a name reading "untitled" is what ends up on a published document when
+     * nobody noticed it was never set.
+     *
+     * Public because the legacy import opens periods of its own -- the annuals of
+     * a compiled series that the archive never held -- and those rows have to
+     * arrive under the name the create dialog would have given them. A second
+     * naming routine for issues nobody typed a name for is a second answer to the
+     * one question the pattern exists to answer.
+     */
+    public static String suggestName(PublicationSeries series, String lang, IssueNaming.Numbers numbers) {
+        return suggestName(series, lang, numbers, IssueNaming.Labels.NONE);
+    }
+
+    /**
+     * The same, told what this edition PRINTS where the numbers would go.
+     *
+     * A typed "36+37" has to reach the suggested name, or the drawer's own hint
+     * -- "name, file name and the report's heading follow" -- is untrue of the
+     * first of the three. The labels are the issue's, and the draft, which has no
+     * issue yet, passes none.
+     */
+    static String suggestName(PublicationSeries series, String lang, IssueNaming.Numbers numbers,
+                              IssueNaming.Labels labels) {
+        PublicationSeriesDesc seriesDesc = series.getDescs().stream()
+                .filter(d -> lang.equals(d.getLang()))
+                .findFirst().orElse(null);
+
+        if (seriesDesc != null && seriesDesc.getNameSuggestionPattern() != null
+                && !seriesDesc.getNameSuggestionPattern().isBlank() && numbers != null) {
+            try {
+                return IssueNaming.expand(seriesDesc.getNameSuggestionPattern(), numbers, labels);
+            } catch (RuntimeException e) {
+                // A pattern that cannot expand is a series-validation problem,
+                // not a reason to refuse to create an issue.
+            }
+        }
+        if (seriesDesc != null && seriesDesc.getName() != null && !seriesDesc.getName().isBlank()) {
+            return seriesDesc.getName();
+        }
+        return series.getSeriesId();
+    }
+
+
+    // ============================================================ retire / reactivate
+
+    /**
+     * T3. Withdraw an issue from the workflow, leaving history intact.
+     *
+     * The file stays at its link and the window stays open to whatever it was:
+     * people have cited this document, and it still occupies its bracket in the
+     * chain. Clearing either would leave the issue before it uncapped.
+     */
+    @Transactional
+    public PublicationIssue retire(PublicationIssue issue, User actor, String reason) {
+        if (issue.getStatus() != IssueStatus.PUBLISHED) {
+            throw new TransitionRefusedException("ISSUE_NOT_PUBLISHED",
+                    "only a published issue can be retired");
+        }
+        // Retiring takes a document off the public list that people may be
+        // reading; the trail must say why, in words. Reactivating restores the
+        // state it was already published in and asks for none.
+        requireReason(reason, "retiring removes this issue from the public list; it must say why");
+        Date fileBefore = issue.getPublicTo();
+
+        issue.setStatus(IssueStatus.RETIRED);
+        issue.setRetiredAt(new Date());
+        issue.setRetiredBy(actor);
+        issue.setRetiredReason(reason);
+
+        // Explicitly unchanged, so a later reader can see it was a decision.
+        issue.setPublicTo(fileBefore);
+
+        audit.retired(issue, actor, reason);
+        return em.merge(issue);
+    }
+
+    /** T4. Put a retired issue back. */
+    @Transactional
+    public PublicationIssue reactivate(PublicationIssue issue, User actor, String reason) {
+        if (issue.getStatus() != IssueStatus.RETIRED) {
+            throw new TransitionRefusedException("ISSUE_NOT_RETIRED",
+                    "only a retired issue can be reactivated");
+        }
+        issue.setStatus(IssueStatus.PUBLISHED);
+        issue.setRetiredAt(null);
+        issue.setRetiredBy(null);
+        issue.setRetiredReason(null);
+        audit.reactivated(issue, actor, reason);
+        return em.merge(issue);
+    }
+
+    // ================================================================= delete
+
+    /**
+     * S4 / X-5. A series may be deleted only when it has no issues at all.
+     *
+     * THE TRAIL GOES WITH IT, and it has to go FIRST. An audit entry owns a
+     * foreign key to the row it describes, and nothing cascades it -- so a series
+     * that had ever been activated, retired or moved to another domain carried at
+     * least one series-level entry and could not be deleted at all. The delete
+     * failed inside the flush on a constraint naming a table nobody was thinking
+     * about, on a screen whose only other option is "retire".
+     *
+     * Only the SERIES-level entries are addressed here, and that is exactly the
+     * set: IssueAuditEntry sets either its issue or its series and never both, and
+     * this method has already refused a series that still has issues -- so there is
+     * no issue-level row of this series left to reach. The issue-level ones are
+     * deleted by whatever deletes the issue: {@link IssueDeleteService} clears an
+     * issue's own, and the import undo clears both halves before it bulk-deletes.
+     *
+     * Deleting the trail is right rather than regrettable. The entries describe a
+     * publication that is about to stop existing, and a deletable series is one
+     * that never published anything -- the events worth keeping are the ones on
+     * issues, and a series with issues cannot be deleted. What is left is the
+     * server log line the resource writes, which is the only thing that says the
+     * series was ever there.
+     */
+    @Transactional
+    public void deleteSeries(PublicationSeries series) {
+        Long issues = em.createQuery(
+                        "SELECT COUNT(i) FROM PublicationIssue i WHERE i.series = :s", Long.class)
+                .setParameter("s", series).getSingleResult();
+        if (issues > 0) {
+            throw new TransitionRefusedException("SERIES_HAS_ISSUES",
+                    "the series has " + issues + " issue(s); retire it instead of deleting it");
+        }
+        // A series another one compiles is the operand of that one's membership.
+        // The database refuses the delete anyway -- the foreign key is RESTRICT --
+        // but it does so inside the flush, as a constraint violation naming a
+        // column, on a screen whose only other option is "retire". Said here it is
+        // a sentence naming the publication that depends on this one.
+        List<String> compiledBy = em.createQuery(
+                        "SELECT s.seriesId FROM PublicationSeries s WHERE s.sourceSeries = :s",
+                        String.class)
+                .setParameter("s", series).getResultList();
+        if (!compiledBy.isEmpty()) {
+            throw new TransitionRefusedException("SERIES_IS_COMPILED",
+                    "the series is compiled by " + String.join(", ", compiledBy)
+                            + "; point that publication at another source, or delete it first");
+        }
+        // Through the persistence context, not as a bulk DELETE: a bulk statement
+        // reaches the database directly and leaves the context holding entries for
+        // rows that no longer exist, and Hibernate 7 refuses to flush a managed
+        // entity whose foreign key names the row being removed -- so a caller that
+        // had written or read this series' trail got a TransientPropertyValueException
+        // out of the flush instead of its delete.
+        audit.deleteForSeries(series);
+
+        PublicationSeries managed = em.contains(series) ? series : em.merge(series);
+        // Emptied through the mapping rather than deleted around it: the list is
+        // owned here, so clearing it makes Hibernate remove the join rows in the
+        // same flush that removes the series, and in the right order. A native
+        // delete would work too, and would go stale the day the table is renamed.
+        managed.getAvailableDomains().clear();
+        em.remove(managed);
+    }
+}

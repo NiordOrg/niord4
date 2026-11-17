@@ -1,0 +1,162 @@
+
+:imagesdir: images
+
+[#message-template-execution]
+== Message Template Execution
+
+A _message template_ writes a message for you. You choose the template for the hazard, such as
+"Light unlit" or "Buoy missing", give the facts it asks for (the position, the name of the light,
+the dates), and Niord writes the message's title and text in every language, and the texts for
+the promulgation channels, in the standard wording. You then check the message in the editor and
+save it.
+
+Templates suit navigational warnings best, which are short and follow strict rules for their
+wording (for MSI and NAVTEX, for example). Notices to mariners are usually longer and freer, and
+are mostly written by hand.
+
+A template is a message _category_ of the type _template_, with the scripts that write the
+message. System administrators set templates up and decide which fields and parameters each one
+asks for (see the link:../sysadmin-manual/manual.html#categories[Categories] chapter of the system
+administrator manual). Templates are used in a domain only when a system administrator has
+switched them on for it; you need the editor role to use them. Which templates there are, and
+what each one asks for, differs from one deployment to the next: the pictures in this chapter show
+examples.
+
+[#template-start]
+=== Starting a Message from a Template
+
+On the editor's start screen (*Editor* in the main menu, see <<blank-editor-page,Create a
+Message>>), each card has a button below "— or from a template —": *Select NW template…* on the
+_Navigational Warning_ card and *Select NM template…* on the _Notice to Mariners_ card.
+
+image::TemplateSearchPopover.png[The template search on the start screen, 461]
+
+The button opens a list of the domain's templates, with the search box ready for typing: type a
+part of a name to narrow the list. Each template is marked _Per position_ when it asks for some
+facts once for each position (the name of each buoy, for example), and _Template-level_ when it
+asks for everything once. Point at a template, or move to it with the arrow keys, and the
+_Example_ beside the list shows the example message a system administrator has linked to the
+template ("No example available." when it has none); until you do, it says "Hover a template to
+preview its example."
+
+Click a template, or press Enter, to start: the _Execute templates_ page opens on a new message of
+that type (<<template-execution-dialog>>). In a narrow window the example takes the place of the
+list: tap a template to see its example, then *Use this template*, or *Back to templates*.
+
+[#template-rerun]
+=== Running a Template on an Open Message
+
+You can also run templates on a message you are editing. Open the *Categories* row of the message
+(see <<categories-editor-field,Categories>>) and click *Run template…*; it is there when the domain
+uses templates and you can edit the message. When the message has been saved before, the _Execute
+templates_ page opens with the message as it is, including your unsaved changes, and with the
+templates among its categories already chosen. When it has none, the template selection opens
+first (<<template-selection-dialog>>).
+
+A new message that has never been saved is different: the page starts from a blank message of the
+same type, and only the templates among its categories come along. The title, areas, positions and
+other fields you have filled in are not on the page, and *Execute* replaces them with the result.
+To run templates on what you have filled in, save the message first.
+
+[#template-execution-dialog]
+=== The Execute Templates Page
+
+image::TemplateExecution.png[The Execute templates page with the Light unlit template filled in, 800]
+
+The page has the parameters of the message on the left and the live preview on the right. At the
+top are *Cancel*, the title _Execute templates_ with its help link, and *Execute*.
+
+* *Templates* lists the templates you have chosen. The cross on a template takes it out; *Change*
+  opens the template selection (<<template-selection-dialog>>).
+* *Base fields* holds the message's general fields that the chosen templates ask for, marked
+  "Configured in Sysadmin": *Type*, *Promulgation* (the channels; a mandatory channel cannot be
+  switched off), *ID* (the message series), *Publish date*, and *Areas* with the vicinity. These
+  are the same fields as in the editor (see <<edit-editor-page,Edit Page>>).
+* *Template parameters* has a card for each template, with the facts that template asks for:
+** *Event dates*: *Add date* adds a period, with *All day* and the trash icon to remove it.
+** *Positions*: a small map of the template's positions, a numbered list, *Edit positions*, which
+   opens the <<position-editor,position editor>>, and *Edit as text* (<<text-editor>>). When the
+   message has no area yet, Niord fills in the areas from the positions; *Compute from locations*
+   under *Areas* does it again, replacing the areas chosen.
+** The template's own parameters: text and number fields, tick boxes, dates and lists. A star
+   marks a parameter you must fill in. A light's character and a radio call sign are checked as
+   you type. Parameters that belong together are framed together, and a parameter asked for once
+   for each position appears once for each position, numbered like the positions; it appears when
+   the template has its first position.
+** Some templates ask for groups of facts of their own, such as a work vessel (its name, call
+   sign and contact) or the markings of a hazard.
+** A template that asks for nothing says "This template has no parameters."
+
+image::TemplateExecutionDialog.png[The parameters of the Light unlit template filled in, 655]
+
+With more than one template, each template writes one part of the message, in the order of the
+cards; drag a card by its handle, or use its up and down arrows, to change the order.
+
+The _Live preview_ on the right shows the message as the templates write it, and is written again
+each time you change something. Above it, Niord says what it is doing: "Updating preview…",
+"Preview updated." or, when the templates could not run, "Preview failed — retry."; the last good
+preview stays. *Refresh preview* writes it again at once. In a window up to 1080 pixels wide, the
+preview opens in a panel from *Preview* at the top of the page.
+
+A parameter may not hold text that looks like web page markup: a `<` followed by a letter, `/`, `!`
+or `?`, as in `<b>` or `</`. The templates refuse to run, and the preview fails, until you take it
+out. A `<` before anything else, as in "< 2 m", is plain text.
+
+[#template-selection-dialog]
+=== Selecting Templates
+
+*Change* on the _Execute templates_ page opens _Select templates_; it also opens by itself when no
+template is chosen yet.
+
+image::TemplateSelectionDrawer.png[The Select templates panel with the Light group chosen, 687]
+
+* *Category*, on the left: *All templates*, or a group of templates (such as _Light_ or _Buoy_) to
+  show that group only.
+* In the middle, the search box and the templates, each with a tick box and marked _Per position_
+  or _Template-level_ as on the start screen.
+* *Example*, on the right: point at a template to see its example message.
+
+Tick the templates you want, and click *Use templates*; below the list, Niord counts the templates
+ticked. *Cancel* closes the panel and leaves the choice as it was. Usually you run a single
+template, but several can run together: a message with a part for each template.
+
+[#template-execute]
+=== Executing the Templates
+
+*Execute* runs the templates and opens the result on the editor's _Edit_ page
+(<<edit-editor-page,Edit Page>>). The message is not saved yet: check it, complete the fields the
+templates do not fill, and save it.
+
+While a parameter marked with a star is empty, *Execute* cannot be clicked, and a line beside it
+names what is missing: "Fill in the parameters marked * to execute:" followed by the parameters'
+names. The preview keeps following your changes. A tick box is never missing, and in a framed group
+of parameters the starred ones count once you fill in any part of the group, or when the group
+itself is starred.
+
+The templates write the message as a whole, from the facts on the page:
+
+* each template writes the subject and text of its message part, in every language, with its
+  positions;
+* the promulgation channels that have scripts of their own, such as NAVTEX, get their texts
+  written again;
+* a title Niord generates is made again from the areas and the subjects, and when the message has
+  a single part, that part's subject is hidden in the message text.
+
+When you run templates on an open message, the result replaces the whole message, not only the
+fields the page shows. If the message has changes you have not saved, Niord asks first (_Replace
+message?_, "Executing this template replaces the whole message and discards your unsaved changes.
+Continue?"): *Replace* goes on, *Cancel* goes back to the page. When the templates cannot run,
+Niord says "Could not execute the template." and the page stays as it was.
+
+*Cancel* at the top of the page goes back to where you came from, the start screen or the message,
+and changes nothing; when you have changed something on the page, Niord asks first. The page holds
+its work only while it is open: reloading it goes back to the start screen.
+
+[#template-changes]
+=== Differences from the Old Niord
+
+The old Niord chose a template in a field of the blank editor page and ran it in two dialogs,
+_Template Selection_ and _Template Execution_, with a *Refresh Preview* button and *OK*. Today you
+start from the start screen's search or from *Run template…*, choose templates in the
+_Select templates_ panel, and fill in a page of its own whose preview follows your changes;
+*Execute* takes the place of *OK*.

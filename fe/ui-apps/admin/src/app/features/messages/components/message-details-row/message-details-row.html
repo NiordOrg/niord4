@@ -1,0 +1,62 @@
+<div class="details-row">
+  <!--
+    Thumb (220×170 via the .details-thumb Layer 3 class). The selection-
+    toggle floats centered over the image as a hover-reveal: invisible
+    until the row is hovered or focused, persistent once the message is
+    in the user's selection set. Surface-sunken bg in .details-thumb
+    fills the box before the image resolves.
+  -->
+  <div class="details-thumb relative">
+    <!--
+      The thumb is the row's link: the row itself opens a URL, and this is the
+      one element in it that is always there to hang an href on (the title is
+      drawn by the renderer, which is shared with the dialog, where a link to
+      the message already on screen would say nothing). It is the row's single
+      tab stop, named after the message.
+    -->
+    <a appRowLinkAnchor class="row-link block h-full w-full" [attr.aria-label]="title()">
+      <img
+        [src]="thumbnailUrl()"
+        [alt]="thumbnailAlt()"
+        class="w-full h-full object-cover block"
+        loading="eager"
+      />
+    </a>
+    <div
+      class="selection-star-overlay absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 text-3xl drop-shadow-md transition-opacity duration-150"
+      [class.is-selected]="isSelected()"
+      [class.opacity-100]="isSelected()"
+      [class.opacity-0]="!isSelected()"
+      [class.group-hover:opacity-100]="!isSelected()"
+      [class.group-focus-within:opacity-100]="!isSelected()"
+    >
+      <app-message-selection-toggle [message]="message()" />
+    </div>
+  </div>
+
+  <!--
+    Body — min-w-0 lets the grid track shrink below the body content's
+    intrinsic width (long titles otherwise force the third column to
+    overflow the row). Original-information indicator sits above the
+    renderer when present.
+  -->
+  <div class="flex flex-col gap-2 min-w-0">
+    @if (hasOriginalInformation()) {
+      <span
+        class="inline-flex items-center gap-1 text-xs text-warning"
+        [attr.aria-label]="originalInfoAriaLabel()"
+      >
+        <app-icon name="lucideStar" [filled]="true" />
+      </span>
+    }
+    <app-message-details-renderer
+      [message]="message()"
+      (referenceClicked)="openRequested.emit($event)"
+    />
+  </div>
+
+  <!-- Actions column (3rd grid track). -->
+  <div data-menu-slot>
+    <app-message-row-menu [messageId]="message().id" [message]="message()" size="xs" />
+  </div>
+</div>

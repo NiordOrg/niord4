@@ -1,0 +1,9 @@
+# EnvironmentPostProcessors are registered via spring.factories (there is no
+# META-INF/spring/*.imports mechanism for them), under the Boot 4 key.
+org.springframework.boot.EnvironmentPostProcessor=\
+org.niord.core.conf.NiordCoreDefaultsEnvironmentPostProcessor
+
+# The country contract's start-up guard (be/docs/country-api.md): an initializer, not a component,
+# so it applies whatever packages a deployable scans.
+org.springframework.context.ApplicationContextInitializer=\
+org.niord.core.conf.CountryContractInitializer

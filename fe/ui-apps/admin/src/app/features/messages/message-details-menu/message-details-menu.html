@@ -1,0 +1,16 @@
+<!--
+  `iconClass="text-xl!"` fixes the cog glyph at 1.25rem so it matches the
+  enlarged `.icon-button` glyph size regardless of the surrounding text size
+  (the <app-icon> otherwise scales with font-size and would shrink in a
+  smaller-text row).
+-->
+<app-menu-trigger
+  icon="lucideSettings"
+  iconClass="text-xl!"
+  [size]="buttonSize()"
+  [ariaLabel]="t.buttonLabel()"
+  [menu]="menuRef"
+  (opened)="onOpened()"
+/>
+<app-menu #menuRef [model]="items()" [ariaLabel]="'messages.detailsMenu.buttonLabel' | transloco" />
+<app-tag-picker mode="add" />

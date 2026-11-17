@@ -1,0 +1,31 @@
+[
+  {
+    "reportId": "it-report",
+    "name": "It report renamed",
+    "sortOrder": 0,
+    "templatePath": "templates/it/same-run-a.ftl",
+    "properties": {
+      "b": "3"
+    },
+    "domains": [
+      {
+        "domainId": "it-later"
+      },
+      {
+        "domainId": "it-later"
+      },
+      {
+        "domainId": "it-missing"
+      }
+    ]
+  },
+  {
+    "reportId": "it-report-changes",
+    "sortOrder": 2,
+    "templatePath": "templates/it/same-run-b.ftl",
+    "params": {
+      "p": "1",
+      "q": "2"
+    }
+  }
+]

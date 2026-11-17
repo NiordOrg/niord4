@@ -1,0 +1,64 @@
+# Dependabot: security updates only (the owner's ruling of 2026-09-26, docs/security-review-2026-09.md §8).
+#
+# Dependabot alerts and security updates are switched on in the repository settings; this file only shapes
+# the pull requests they open. `open-pull-requests-limit: 0` switches version updates off (the limit does not
+# apply to security updates), and the security updates of each directory arrive as one grouped pull request.
+# A security-update pull request targets main and runs the full CI like any other.
+version: 2
+updates:
+  # The reactor under be/, and the SECOM test client, which is outside the reactor.
+  - package-ecosystem: maven
+    directories:
+      - /be
+      - /be/k8s/secom-test-client
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      maven-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /fe
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    # The Angular toolchain moves one major at a time, deliberately (Angular's update procedure: changelogs and
+    # peer ranges first). A security fix that exists only in a new major of one of these packages therefore
+    # does not arrive as a pull request: its alert stays open and the major is taken as a planned update.
+    # (@angular/build 22 supports vitest ^4 only; a grouped security update once proposed vitest 5.)
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "angular-eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "rxjs"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jsdom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@jsverse/transloco"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"

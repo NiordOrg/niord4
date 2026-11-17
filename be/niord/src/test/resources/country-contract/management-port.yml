@@ -1,0 +1,4 @@
+# A country jar that moves the actuator onto a management port of its own: refused (CountryContractGuard).
+management:
+  server:
+    port: 9001

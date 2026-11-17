@@ -1,0 +1,40 @@
+<app-menu-trigger
+  icon="lucideFilter"
+  [label]="'menu.filter' | transloco"
+  [badge]="enabledFilterCount()"
+  [menu]="menuRef"
+  align="end"
+  (opened)="onShow()"
+/>
+<app-menu #menuRef [model]="items()" [ariaLabel]="'menu.filter' | transloco">
+  <ng-template appMenuItemDef let-item>
+    @if (isNamedFilterItem(item)) {
+      <app-icon name="lucideFilter" />
+      <span class="flex-1">{{ item.label }}</span>
+      <button
+        type="button"
+        class="icon-button text-xs rounded-full"
+        (click)="onDeleteClick($event, item)"
+        [attr.aria-label]="'messages.filters.deleteNamed' | transloco"
+      >
+        <app-icon name="lucideTrash2" />
+      </button>
+    } @else {
+      @if (item.icon) {
+        <app-icon [name]="item.icon" />
+      }
+      <span class="flex-1">{{ item.label }}</span>
+      @if (chosenDot(item)) {
+        <span class="status-dot is-active" aria-hidden="true"></span>
+        <span class="sr-only">{{ 'common.active' | transloco }}</span>
+      }
+    }
+  </ng-template>
+</app-menu>
+
+<app-save-named-filter-dialog
+  [visible]="saveDialogVisible()"
+  (visibleChange)="saveDialogVisible.set($event)"
+/>
+
+<app-confirm />

@@ -1,0 +1,23 @@
+<div
+  class="inline-flex items-center gap-2 rounded-md border border-surface-300 bg-surface-0 px-3 py-1.5 dark:border-surface-700 dark:bg-surface-900"
+  [class.min-h-14]="!dense()"
+  role="group"
+  [attr.aria-label]="label() | transloco"
+>
+  <span class="text-sm font-medium text-surface-700 dark:text-surface-200">
+    {{ label() | transloco }}
+  </span>
+  <div class="flex items-center gap-2">
+    <ng-content />
+  </div>
+  @if (closable()) {
+    <button
+      type="button"
+      class="icon-button rounded-full text-xs"
+      (click)="clear.emit()"
+      [attr.aria-label]="'common.clearFilter' | transloco"
+    >
+      <app-icon name="lucideCircleX" />
+    </button>
+  }
+</div>

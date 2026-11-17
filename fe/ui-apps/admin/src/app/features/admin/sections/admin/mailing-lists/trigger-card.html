@@ -1,0 +1,242 @@
+@let v = value();
+<div class="rounded border border-surface-200 dark:border-surface-700">
+  <!-- Header bar -->
+  <div class="flex items-center gap-2 bg-surface-sunken px-3 py-2">
+    <button
+      type="button"
+      class="icon-button text-xs"
+      [attr.aria-expanded]="v.expanded"
+      [attr.aria-label]="
+        (v.expanded
+          ? 'admin.mailingLists.trigger.hideDetails'
+          : 'admin.mailingLists.trigger.showDetails'
+        ) | transloco
+      "
+      (click)="toggleExpand()"
+    >
+      <app-icon [name]="v.expanded ? 'lucideChevronDown' : 'lucideChevronRight'" />
+    </button>
+    <span class="min-w-0 flex-1 truncate text-sm">{{ summary() }}</span>
+    <button
+      type="button"
+      class="icon-button text-xs"
+      [attr.aria-label]="'admin.mailingLists.trigger.test' | transloco"
+      (click)="test.emit()"
+    >
+      <app-icon name="lucidePlay" />
+    </button>
+    @if (editable()) {
+      <button
+        type="button"
+        class="icon-button text-xs"
+        [attr.aria-label]="'admin.mailingLists.trigger.copy' | transloco"
+        (click)="duplicate.emit()"
+      >
+        <app-icon name="lucideCopy" />
+      </button>
+      <button
+        type="button"
+        class="icon-button text-xs hover:text-danger"
+        [attr.aria-label]="'admin.mailingLists.trigger.delete' | transloco"
+        (click)="remove.emit()"
+      >
+        <app-icon name="lucideTrash2" />
+      </button>
+    }
+  </div>
+
+  @if (v.expanded) {
+    <div class="flex flex-col gap-4 p-3">
+      <!-- Trigger type -->
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.mailingLists.trigger.type' | transloco }}
+        </span>
+        <div
+          class="seg self-start"
+          role="group"
+          [attr.aria-label]="'admin.mailingLists.trigger.type' | transloco"
+        >
+          @for (type of triggerTypes; track type) {
+            <button
+              type="button"
+              class="seg-btn"
+              [class.is-active]="v.type === type"
+              [disabled]="!editable()"
+              (click)="setType(type)"
+            >
+              {{ 'admin.mailingLists.trigger.typeLabel.' + type | transloco }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Mail Subject (per language, with enable checkbox) -->
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.mailingLists.trigger.subject' | transloco }}
+        </legend>
+        @for (subject of v.subjects; track subject.lang; let j = $index) {
+          <div class="flex items-center gap-2">
+            <input
+              type="checkbox"
+              class="checkbox"
+              [checked]="subject.enabled"
+              [disabled]="!editable()"
+              [attr.aria-label]="
+                'admin.mailingLists.trigger.subjectEnabled' | transloco: { lang: subject.lang }
+              "
+              (change)="toggleSubject(j)"
+            />
+            <span class="w-8 text-xs font-semibold tracking-wide text-fg-subtle uppercase">
+              {{ subject.lang }}
+            </span>
+            <input
+              type="text"
+              class="w-full text-input"
+              [value]="subject.subject"
+              [disabled]="!subject.enabled || !editable()"
+              [placeholder]="'admin.mailingLists.trigger.subject' | transloco"
+              [attr.aria-label]="'admin.mailingLists.trigger.subject' | transloco"
+              (input)="setSubject(j, $any($event.target).value)"
+            />
+          </div>
+        }
+      </fieldset>
+
+      <!-- Mail Body (script resource paths) -->
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.mailingLists.trigger.body' | transloco }}
+        </span>
+        <app-script-resources-field
+          [formField]="$any(triggerField().scriptResourcePaths)"
+          [multiple]="true"
+        />
+      </div>
+
+      @if (v.type === 'STATUS_CHANGE') {
+        <!-- Statuses -->
+        <fieldset class="flex flex-col gap-1">
+          <legend class="mb-1 text-sm font-medium text-fg-title">
+            {{ 'admin.mailingLists.trigger.statuses' | transloco }}
+          </legend>
+          <div class="flex flex-wrap gap-4 text-sm">
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                class="checkbox"
+                [formField]="triggerField().statusPublished"
+              />
+              {{ 'admin.mailingLists.trigger.status.published' | transloco }}
+            </label>
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                class="checkbox"
+                [formField]="triggerField().statusCancelled"
+              />
+              {{ 'admin.mailingLists.trigger.status.cancelled' | transloco }}
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" class="checkbox" [formField]="triggerField().statusExpired" />
+              {{ 'admin.mailingLists.trigger.status.expired' | transloco }}
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- Message filter -->
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-fg-title" for="trigger-filter-{{ index() }}">
+            {{ 'admin.mailingLists.trigger.messageFilter' | transloco }}
+          </label>
+          <input
+            id="trigger-filter-{{ index() }}"
+            type="text"
+            class="text-input"
+            [formField]="triggerField().messageFilter"
+            [placeholder]="'admin.mailingLists.trigger.messageFilterPlaceholder' | transloco"
+          />
+        </div>
+      } @else {
+        <!-- Schedule -->
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-fg-title">
+              {{ 'admin.mailingLists.trigger.schedule' | transloco }}
+            </span>
+            <select
+              class="text-input w-40"
+              [disabled]="!editable()"
+              [attr.aria-label]="'admin.mailingLists.trigger.schedule' | transloco"
+              (change)="setScheduleType($any($event.target).value)"
+            >
+              @for (scheduleType of scheduleTypes; track scheduleType) {
+                <option [value]="scheduleType" [selected]="scheduleType === v.scheduleType">
+                  {{ 'admin.mailingLists.trigger.scheduleType.' + scheduleType | transloco }}
+                </option>
+              }
+            </select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-fg-title">
+              {{ 'admin.mailingLists.trigger.time' | transloco }}
+            </span>
+            <app-time-field
+              class="w-28"
+              [formField]="triggerField().scheduledExecutionTime"
+              [ariaLabel]="'admin.mailingLists.trigger.time' | transloco"
+            />
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-fg-title">
+              {{ 'admin.mailingLists.trigger.timeZone' | transloco }}
+            </span>
+            <select
+              class="text-input w-56"
+              [disabled]="!editable()"
+              [attr.aria-invalid]="timeZoneInvalid() || null"
+              [attr.aria-label]="'admin.mailingLists.trigger.timeZone' | transloco"
+              (change)="setTimeZone($any($event.target).value)"
+            >
+              <!-- An unset zone is a state to be seen and answered, not a blank row. -->
+              <option value="" disabled [selected]="!v.scheduledExecutionTimeZone">
+                {{ 'admin.mailingLists.trigger.timeZonePlaceholder' | transloco }}
+              </option>
+              @for (zone of timeZones(); track zone) {
+                <option [value]="zone" [selected]="zone === v.scheduledExecutionTimeZone">
+                  {{ zone }}
+                </option>
+              }
+            </select>
+            @if (timeZoneInvalid()) {
+              <p class="text-xs text-danger" role="alert">
+                {{ 'admin.mailingLists.trigger.timeZoneRequired' | transloco }}
+              </p>
+            }
+          </div>
+        </div>
+
+        <!-- Message query -->
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-fg-title" for="trigger-query-{{ index() }}">
+            {{ 'admin.mailingLists.trigger.messageQuery' | transloco }}
+          </label>
+          <input
+            id="trigger-query-{{ index() }}"
+            type="text"
+            class="text-input"
+            [formField]="triggerField().messageQuery"
+            [placeholder]="'admin.mailingLists.trigger.messageQueryPlaceholder' | transloco"
+          />
+        </div>
+
+        <!-- Public report -->
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" class="checkbox" [formField]="triggerField().publicReport" />
+          {{ 'admin.mailingLists.trigger.publicReport' | transloco }}
+        </label>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,177 @@
+@if (model(); as m) {
+  <form (submit)="$event.preventDefault(); save()" class="flex min-h-0 flex-1 flex-col">
+    <!-- flex+gap, not space-y: `space-y` hangs the spacing off the PRECEDING sibling's margin,
+         and `<app-editor-fields-grid>` is a `display: contents` host, which generates no box and
+         so silently drops that margin — collapsing the gap under it to zero. A container `gap`
+         spaces the real boxes instead, so a transparent-wrapper child costs no spacing. -->
+    <div class="flex flex-1 flex-col gap-5 overflow-y-auto p-5">
+      <h2 class="text-base font-semibold text-fg">
+        {{
+          (m.mode === 'add'
+            ? 'admin.categories.editor.addTitle'
+            : 'admin.categories.editor.editTitle'
+          ) | transloco
+        }}
+      </h2>
+
+      @if (m.mode === 'add' && parentName()) {
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.categories.field.parent' | transloco }}
+          </span>
+          <span class="text-input bg-surface-100 text-fg-muted dark:bg-surface-800">
+            {{ parentName() }}
+          </span>
+        </div>
+      }
+
+      <div class="flex items-center gap-2 text-sm">
+        <input type="checkbox" id="category-active" class="checkbox" [formField]="form.active" />
+        <label for="category-active">{{ 'admin.categories.field.active' | transloco }}</label>
+      </div>
+
+      <!-- Per-language names: one heading, then a flagged field per configured language (first required). -->
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.categories.field.name' | transloco }}
+        </span>
+        <div class="flex flex-col gap-2">
+          @for (lang of languages; track lang.value) {
+            <app-localized-text-input
+              [lang]="lang.value"
+              [value]="names()[lang.value]"
+              (valueChange)="setName(lang.value, $event)"
+              ariaLabelKey="admin.categories.field.name"
+            />
+          }
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="category-mrn" class="text-sm font-medium text-fg-title">
+          {{ 'admin.categories.field.mrn' | transloco }}
+        </label>
+        <input class="text-input" id="category-mrn" type="text" [formField]="form.mrn" />
+      </div>
+
+      <!-- Additional editor fields: the message-editor fields this category force-enables. -->
+      <app-editor-fields-grid
+        label="admin.categories.field.editorFields"
+        [candidates]="editorFieldCandidates"
+        [(value)]="editorFields"
+      />
+
+      <div class="flex flex-col gap-1">
+        <label for="category-aton-filter" class="text-sm font-medium text-fg-title">
+          {{ 'admin.categories.field.atonFilter' | transloco }}
+        </label>
+        <input
+          class="text-input"
+          id="category-aton-filter"
+          type="text"
+          [formField]="form.atonFilter"
+        />
+      </div>
+
+      <!-- Type: CATEGORY | TEMPLATE (deliberately mutable post-create). -->
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.categories.field.type' | transloco }}
+        </span>
+        <div
+          class="inline-flex w-fit overflow-hidden rounded border border-surface-300 dark:border-surface-600"
+        >
+          @for (type of categoryTypes; track type) {
+            <button
+              type="button"
+              class="px-3 py-1.5 text-sm not-last:border-r not-last:border-surface-300 dark:not-last:border-surface-600"
+              [class.bg-primary]="form.type().value() === type"
+              [class.text-fg-on-primary]="form.type().value() === type"
+              [class.text-fg]="form.type().value() !== type"
+              (click)="form.type().value.set(type)"
+            >
+              {{ 'admin.categories.type.' + type | transloco }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- TEMPLATE authoring block. -->
+      @if (isTemplate()) {
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.categories.field.domains' | transloco }}
+          </span>
+          <app-domain-multiselect-field [value]="domains()" (valueChange)="domains.set($event)" />
+        </div>
+
+        <app-editor-fields-grid
+          label="admin.categories.field.stdTemplateFields"
+          [candidates]="stdTemplateFieldCandidates"
+          [(value)]="stdTemplateFields"
+        />
+
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.categories.field.templateParams' | transloco }}
+          </span>
+          <app-template-params-field
+            [templateParams]="templateParams()"
+            (templateParamsChange)="templateParams.set($event)"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.categories.field.scriptResources' | transloco }}
+          </span>
+          <app-script-resources-field
+            [multiple]="true"
+            [value]="scriptResourcePaths()"
+            (valueChange)="scriptResourcePaths.set($any($event))"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.categories.field.exampleMessage' | transloco }}
+          </span>
+          <div class="flex items-start gap-2">
+            <app-message-id-field
+              class="flex-1"
+              [value]="form.messageId().value()"
+              (valueChange)="setMessageId($event)"
+              [placeholder]="'admin.categories.field.exampleMessagePlaceholder' | transloco"
+            />
+            <button
+              type="button"
+              class="btn-secondary"
+              [disabled]="testDisabled()"
+              (click)="test()"
+            >
+              {{ 'admin.categories.editor.test' | transloco }}
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </div>
+
+    <div class="flex justify-end gap-2 border-t border-surface-200 p-3 dark:border-surface-700">
+      <button type="button" class="btn-tertiary" (click)="cancelled.emit()">
+        {{ 'admin.categories.editor.cancel' | transloco }}
+      </button>
+      <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+        {{ 'admin.categories.editor.save' | transloco }}
+      </button>
+    </div>
+  </form>
+} @else {
+  <div class="flex flex-1 items-center justify-center p-8 text-sm text-fg-muted">
+    {{ 'admin.categories.editor.empty' | transloco }}
+  </div>
+}
+
+<app-category-template-result-dialog />

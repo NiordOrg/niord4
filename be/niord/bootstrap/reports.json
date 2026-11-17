@@ -1,0 +1,26 @@
+[
+  {
+    "reportId": "standard",
+    "name": "Standard",
+    "sortOrder": 0,
+    "templatePath": "/templates/messages/message-list-pdf.ftl"
+  },
+  {
+    "reportId": "draft",
+    "name": "Draft",
+    "sortOrder": 1,
+    "templatePath": "/templates/messages/message-list-pdf.ftl",
+    "properties": {
+      "draft": true
+    }
+  },
+  {
+    "reportId": "public",
+    "name": "Public",
+    "sortOrder": 2,
+    "templatePath": "/templates/messages/message-list-pdf.ftl",
+    "properties": {
+      "frontPage": false
+    }
+  }
+]

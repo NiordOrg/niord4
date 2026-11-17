@@ -1,0 +1,1381 @@
+name: Publish
+
+# Publishes a versioned artefact set from main — the "every merge is a release candidate" half of
+# be/docs/cicd/design.md (§3 versioning, §5 pipelines):
+#
+#   build    first builds the base product's frontend source zip from fe/ with the kit's own code
+#            (country-kit/source-zip.mjs, Node built-ins only, no npm): the files of fe/ the explicit
+#            include list country-kit/zip-include.json selects, with catalog.json at its root.
+#            It fails on any entry outside that list and on a country word in any entry (the
+#            country-word guard over the archive, country-kit/country-words.json, words only;
+#            test:guards checks the unused allow-list entries over fe/ and country-kit/, in Frontend
+#            CI and Info CI) before anything is deployed (web-publish and harbor wait for this
+#            job; web only builds the bundle beside it). It builds the country kit's package from
+#            country-kit/ the same way (source-zip.mjs --package kit): the files
+#            country-kit/kit-include.json selects, plus docs/country-api.md (from be/docs) and the
+#            marker kit.json, checked by verify (the list, the marker, no import leaving the
+#            package) and the guard. Then it
+#            builds the whole reactor once as 4.0.<run> and deploys niord-parent + niord-base, and
+#            the base product's bootstrap as org.niord:niord-bootstrap:4.0.<run>:zip, to the GitHub
+#            Packages Maven registry of NiordOrg/niord, the product's public home (the library is
+#            the one Maven artefact anyone builds on; this repository's own registry holds the
+#            versions up to 4.0.54), the image tools — be/k8s/docker and the scripts a country
+#            pipeline runs: the two it builds its image with and the override check — as
+#            org.niord:niord-image-tools, the files a country's launcher takes for a local run (the
+#            launcher library, bootstrap.sh, load-sample.sh with the sample, the compose file and
+#            the local realm, built by be/scripts/local-run-zip.sh; never an image input) as
+#            org.niord:niord-local-run (type zip), the source zip as org.niord.web:niord-fe-src
+#            (type zip), which a country's set-up fetches by `dependency:copy`
+#            (docs/fe-country-split-plan.md §3.1-§3.2), and the kit package as
+#            org.niord:niord-country-kit (type zip), the backend contract country-api.md's one
+#            published home.
+#   web      builds the administration web app once, the generic build, with the npm script
+#            Frontend CI runs, and hands the bundle on as a run artifact. No environment and no
+#            secret: npm's install scripts run here.
+#   web-publish
+#            deploys that bundle to GitHub Packages as org.niord.web:niord-web-admin, a zip under
+#            the classifier en (versions published before P7 also carry dk and gl), once build has
+#            succeeded, and runs no npm. The generic image carries it, served at / by the backend.
+#            A country repository builds its own administration bundle from niord-fe-src, and
+#            nothing reads niord-web-admin's other classifiers.
+#   harbor   builds the generic deployable's image from that build's jar (unpacked by the build
+#            job with be/k8s/scripts/split-jar.sh: the third-party jars become a layer that is
+#            the same bytes on every publish, so Harbor stores it once) and its web app, with
+#            be/k8s/docker/Dockerfile through be/k8s/scripts/publish-images.sh, and pushes
+#            <registry>/<project>/niord/niord-app-en:4.0.<run> (until 2026-10-06 also
+#            niord-app-dk and niord-app-gl, built from the monorepo's copies of the country
+#            modules; niord/<module>-be until 4.0.49) — then packages be/k8s/helm/niord as
+#            4.0.<run> and pushes it to oci://<registry>/<project>/charts. See
+#            docs/image-split-plan.md. Before it builds anything, it checks that the image's
+#            inputs carry nothing of the sample (be/niord/sample, loaded only into the loopback
+#            niord_sample), as the build job checks its jars before the first deploy.
+#   tag      deletes the jars and the bundle that build and web handed on, then tags the commit
+#            v4.0.<run> once all of that exists, and creates the GitHub release on that tag: its
+#            notes hold two lines, `<sha256>  niord-fe-src-4.0.<run>.zip` and
+#            `<sha256>  niord-country-kit-4.0.<run>.zip` (a record the registry token cannot
+#            rewrite, docs/fe-country-split-plan.md §4.11 rule 2), and a sentence naming the
+#            version's Maven packages, and both zips are attached to it. The source zip's
+#            attachment is what Frontend CI's upgrade test reads: the publish token is main-only,
+#            so a pull request's run cannot read the registry with it, while a release asset of
+#            this repository is readable with the workflow's own `contents: read` (decided
+#            2026-10-22, §4.8 of that plan).
+#   bump     once the release exists, has the Niord base bump app (a GitHub App of this repository's
+#            organisation, installed by each country repository that wants it) open the pull request
+#            base-bump/4.0.<run> in each country repository it is installed on, moving that
+#            repository's be/pom.xml <parent> to the new version, or move the one bump pull request
+#            the app has open there: fe/scripts/open-bump-pull-requests.mjs, Node built-ins only,
+#            one summary row per repository. The country's own Base bump workflow then pins and
+#            reports on that pull request as before. A job of its own, although a job is billed a
+#            whole minute (the tag job's reason not to be one): the tag job holds a GITHUB_TOKEN
+#            with contents: write and actions: write and keeps a git credential, and the app's key
+#            never sits beside them. This job has contents: read and no git credential, and one
+#            billed minute a publish is the price of that. It skips with a notice while the
+#            `publish` environment has no app key or id, and a failure of it leaves the run green
+#            (continue-on-error): everything is published before it starts.
+#
+# The build runs no tests of its own: the gate only lets a commit through when Backend CI (unit
+# AND integration tests) concluded success for the backend that commit contains. The country
+# repositories build their deployables and images in their own workflows against the published
+# niord-parent/niord-base; this workflow builds niord-app's image from exactly the jars CI tested.
+#
+# Deployment is NOT here: a staging deploy is devops-niord's scripts/staging-bump.py, run by hand,
+# which pins the version in the deploy repo, and Argo CD applies it (docs/pipeline-latency-plan.md
+# item 17; a self-hosted Renovate on GitLab was decided against on 2026-10-03,
+# docs/renovate-plan.md). This workflow never talks to the deploy repo, Argo CD or a cluster.
+#
+# ---------------------------------------------------------------------------------------------
+# Version and tag
+# ---------------------------------------------------------------------------------------------
+# `4.0.<run number of THIS workflow + 181>` (design §3) — monotonic and sortable, which is all a
+# pin needs (staging-bump.py and a country's <parent>). The 181: this repository, NiordOrg/niord4,
+# started on 2026-11-17 with no history and its run numbers at 1, and SIFA-DK/niord-ng, where this
+# workflow ran before, published up to 4.0.181; so run 1 is 4.0.182 and the sequence goes on. An
+# expression cannot add, so the run's name shows the run number; the gate's summary, the tag and
+# the release carry the version. Every "4.0.<run>" below means that version. It is passed to Maven
+# as -Drevision (be/pom.xml declares <version>${revision}</version>), so nothing in the tree is
+# edited, and it is both the chart's version and its appVersion — the chart's default app image
+# tag. Skipped runs (see the gate) consume a number too, so the published sequence has gaps; that
+# is fine.
+#
+# ---------------------------------------------------------------------------------------------
+# When it runs
+# ---------------------------------------------------------------------------------------------
+# 1. `workflow_run` — after Backend CI, Frontend CI or Info CI completes on main. The three CI
+#    workflows are path-filtered on push, so a backend-only merge never starts Frontend CI or Info
+#    CI at all; "all green" therefore means: every CI workflow that has a push run for this commit
+#    concluded success. Info CI is waited for because the source zip carries the public site's
+#    sources (ui-apps/info/{src,public,nginx}, since P4 of docs/fe-country-split-plan.md), and a
+#    country takes a fix of them only from a published version: so a merge confined to the
+#    public site publishes a version too (its zip changed), after Info CI alone.
+#    Each CI completion starts a publish run; the gate job publishes only from the LAST one (the
+#    other CI workflows are finished or never ran) and skips otherwise, so a commit is published
+#    once. The concurrency group serialises publish runs per commit; if two CI workflows finish
+#    at the same instant the second run finds the tag already pushed and skips.
+#    `workflow_run` only fires for a workflow file on the default branch.
+#
+# 2. `workflow_dispatch` — the BREAK-GLASS path (design §5): publish after UNIT tests only, for
+#    the day prod is down and the integration suite is in the way. Every run of it is labelled as
+#    such in the run name and the job summary, and it still starts Backend CI so the integration
+#    tests run and report afterwards. Not for routine use. From main only, and by a maintainer
+#    only: the gate fails a dispatch of any other ref, and a run whose triggering actor is not a
+#    login on .github/maintainers — the file as it is on main, never the dispatched ref's copy.
+#
+# There is deliberately no pull_request trigger, and the gate publishes only a commit on main
+# that CI ran on for a push to main in this repository. `branches: [ main ]` alone does not say
+# that: it matches the triggering run's head branch by name, and a pull request's CI run carries
+# its own head branch — from a fork, a branch that may well be called main. So the gate also
+# checks the triggering run's event (push), head repository (this one) and head branch, and
+# that main contains the commit, for the break-glass path as well.
+#
+# A dispatch runs the dispatched ref's own copy of this file, so the in-file checks bind only a
+# copy that still contains them. What holds for every copy is the deployment branch rule of the
+# `publish` and `harbor` environments — main only — a repository setting (Settings →
+# Environments), not this file: a branch's copy then never gets the robot credentials, so it
+# pushes no image or chart and no tag (the tag job needs the jobs that use them), and from the
+# country split never the publishing token either; until then that token is a repository secret,
+# which a branch's copy can name (Secrets, below). GitHub creates an environment a job names if
+# it does not exist, with no rule at all, so the gate refuses (red) to publish while `publish` or
+# `harbor` is missing or allows any other branch, before a job enters either.
+#
+# ---------------------------------------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------------------------------------
+# The one job that pushes to Harbor declares `environment: harbor` and logs in with the
+# environment secrets HARBOR_ROBOT_USER / HARBOR_ROBOT_PASSWORD. GitHub Packages is another
+# organisation's registry, NiordOrg/niord's, which no token of this repository can write: the
+# build and web-publish jobs declare `environment: publish` and deploy with the repository
+# secrets NIORDORG_PACKAGES_USER / NIORDORG_PACKAGES_TOKEN (a classic personal access token of a
+# NiordOrg account with write:packages), handed to the deploy steps as NIORD_PUBLISH_USER /
+# NIORD_PUBLISH_TOKEN, the names setup-java writes into the settings.xml server `github`. That is
+# the owner's choice of 2026-10-22, until the country split: then a NiordOrg machine user's
+# publish-only token becomes a secret of `publish` (NIORD_PUBLISH_TOKEN, its login in the variable
+# NIORD_PUBLISH_USER), its delete-only token one of `retract`, both are rotated at the repository
+# move and yearly, and the repository secrets are deleted (docs/fe-country-split-plan.md §4.11
+# rule 1). `publish` itself, main only, is required already: the gate checks it. Until `retract`
+# exists, retract-version.yml refuses every run. Decided 2026-10-06 (be/pom.xml,
+# github.repository): the Maven registry is repository-scoped, so packages published here, from a
+# private repository, were readable by no other repository's workflow; packages of the public
+# NiordOrg/niord are readable with any token and cost no storage. Apart from the bump job, nothing
+# else needs more than the workflow token: the tag job pushes the tag and creates the release with
+# its own GITHUB_TOKEN (contents: write).
+#
+# The bump job signs in as the Niord base bump app with the secret NIORD_BUMP_APP_PRIVATE_KEY (the
+# app's .pem, whole) and the variable NIORD_BUMP_APP_ID. Both belong to the `publish` environment
+# and never to the repository, so a branch's copy of a workflow cannot read the key. The key signs a
+# JSON web token, which the script exchanges for one installation token per installation. Each token
+# is valid for an hour at most and is masked in the log. Those tokens may write what a country
+# granted at its install: the contents and pull requests of that one repository, on any branch, the
+# default branch included where nothing protects it, but no workflow file (the app has no workflows
+# permission). The script writes only base-bump/ branches, and it comments on and closes only the
+# app's own pull requests. An app key does not expire, so it is rotated yearly with the other
+# publish credentials: a new key in the app's settings, the secret replaced, the old key deleted. A
+# key stored by mistake as a repository secret can be read by every branch's copy of a workflow.
+# While it is stored there, the gate's step "Check where the bump app key is" warns on every run.
+#
+# The robot password goes to `docker login` / `helm registry login` on stdin and to no action.
+# Only GitHub-owned actions (actions/*) are used, by major tag like every workflow here; a
+# third-party action added later is pinned to its full commit SHA, the version in a comment.
+# be/k8s/scripts/publish-images.sh and split-jar.sh run in the harbor job with the robot's Docker
+# session, so a change to them is reviewed like a change to this file; they call nothing but
+# docker, java and coreutils.
+# The checkouts of the build, web, web-publish, harbor and bump jobs keep no git credential
+# (persist-credentials: false); only the tag job, which pushes, keeps one.
+
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch'
+      && format('⚠️ BREAK-GLASS publish, run {0} (unit tests only): {1}', github.run_number, inputs.reason)
+      || format('Publish run {0} after {1}', github.run_number, github.event.workflow_run.name) }}
+
+on:
+  workflow_run:
+    workflows: [ Backend CI, Frontend CI, Info CI ]
+    types: [ completed ]
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: >-
+          BREAK-GLASS — publishes after UNIT TESTS ONLY (integration tests run afterwards and
+          report separately). State why the normal path cannot be waited for.
+        required: true
+        type: string
+
+# One publish run at a time per commit, never cancelled: a superseded run must finish (or skip)
+# on its own so a half-published version is impossible.
+concurrency:
+  group: publish-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # -B/-ntp: batch mode, no download-progress spam. No -fae: a publish stops at the first failure.
+  MVN_FLAGS: "-B -ntp -e"
+  REGISTRY: reg.sitcloud.dk
+  HARBOR_PROJECT: cu3504-mssb-brs
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Decide whether this run publishes, and what. Outputs the commit and the
+  # version so the jobs agree on both.
+  # ---------------------------------------------------------------------------
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write   # read the CI runs and the environments; the break-glass path also starts Backend CI
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      sha: ${{ steps.decide.outputs.sha }}
+      version: ${{ steps.decide.outputs.version }}
+      break_glass: ${{ steps.decide.outputs.break_glass }}
+    steps:
+      # Where the bump app's key is (Secrets, in the header). This job names no environment, so it
+      # sees a repository or organisation secret and never an environment's. The expression hands
+      # the step a boolean, true when the secret is set where this job can see it, and never the
+      # secret's value (GitHub's behaviour, stated from knowledge). It is a warning, not a failure:
+      # the key works from there, but any branch's copy of a workflow can read it. The warning
+      # names the repository case; an organisation secret of that name, which there is none of,
+      # would trip it too and is moved the same way.
+      - name: Check where the bump app key is
+        env:
+          REPO_LEVEL: ${{ secrets.NIORD_BUMP_APP_PRIVATE_KEY != '' }}
+        run: |
+          set -euo pipefail
+          if [ "$REPO_LEVEL" = true ]; then
+            echo "::warning::NIORD_BUMP_APP_PRIVATE_KEY is a repository secret: any branch's copy of a workflow can read it; move it to Settings > Environments > publish and delete the repository secret"
+          fi
+
+      - name: Decide
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER_NAME: ${{ github.event.workflow_run.name }}
+          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
+          TRIGGER_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          TRIGGER_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          TRIGGER_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          TRIGGER_URL: ${{ github.event.workflow_run.html_url }}
+          REASON: ${{ inputs.reason }}
+          # Who started this attempt: on a re-run the person re-running it, not the first actor.
+          ACTOR: ${{ github.triggering_actor }}
+        run: |
+          set -euo pipefail
+          # + 181: SIFA-DK/niord-ng published up to 4.0.181 (header, "Version and tag").
+          version="4.0.$((GITHUB_RUN_NUMBER + 181))"
+
+          skip() {
+            echo "::notice::$1"
+            printf '## Publish %s — skipped\n\n%s\n' "$version" "$1" >> "$GITHUB_STEP_SUMMARY"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          # The triggering actor must be a login on .github/maintainers as main has it — never the
+          # dispatched ref's copy. Comments, CRs, blanks and surrounding spaces are dropped; the
+          # match is a whole line, ignoring case (logins are case-insensitive). Same in
+          # retract-version.yml.
+          require_maintainer() {
+            local list logins
+            if ! list=$(gh api -H 'Accept: application/vnd.github.raw' "repos/$REPO/contents/.github/maintainers?ref=main"); then
+              echo "::error::Could not read .github/maintainers from main; nobody is a maintainer until it can be read."
+              exit 1
+            fi
+            logins=$(printf '%s\n' "$list" | tr -d '\r' | sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^$' || true)
+            if [ -z "$ACTOR" ] || [ -z "$logins" ] || ! grep -Fxiq -- "$ACTOR" <<< "$logins"; then
+              echo "::error::'$ACTOR' is not on .github/maintainers (main). Only a maintainer may $1."
+              exit 1
+            fi
+            echo "  $ACTOR is a maintainer (.github/maintainers on main)"
+          }
+
+          # The environment must exist and allow deployments from main and nothing else: GitHub
+          # creates a missing one, without any rule, when a job names it. The shapes are those of
+          # GET .../environments/<env> and .../deployment-branch-policies (Actions: read).
+          require_main_only() {
+            local policy branches
+            if ! policy=$(gh api "repos/$REPO/environments/$1" \
+                            --jq '.deployment_branch_policy | "\(.protected_branches) \(.custom_branch_policies)"'); then
+              echo "::error::Environment '$1' does not exist or cannot be read. Create it with the deployment branch rule main only (Settings → Environments)."
+              exit 1
+            fi
+            if [ "$policy" != "false true" ]; then
+              echo "::error::Environment '$1' does not limit deployments to selected branches (protected_branches custom_branch_policies: $policy). It must allow main only."
+              exit 1
+            fi
+            if ! branches=$(gh api "repos/$REPO/environments/$1/deployment-branch-policies" \
+                              --jq '[.branch_policies[] | "\(.type):\(.name)"] | join(" ")'); then
+              echo "::error::Could not read the deployment branch rules of environment '$1'."
+              exit 1
+            fi
+            if [ "$branches" != "branch:main" ]; then
+              echo "::error::Environment '$1' allows '$branches'. It must allow the branch main and nothing else."
+              exit 1
+            fi
+            echo "  environment $1: main only"
+          }
+
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            # Break-glass publishes main and nothing else, started by a maintainer. A failure, not
+            # a skip: somebody asked for a publish, and a refusal must show red.
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::Break-glass publishes only from main (got $GITHUB_REF)."
+              exit 1
+            fi
+            require_maintainer "start a break-glass publish"
+            sha="$GITHUB_SHA"
+            break_glass=true
+          else
+            # `branches: [ main ]` matched the triggering run's head branch by name only (see the
+            # header). Only a CI run for a push to main in this repository triggers a publish; a
+            # pull request's CI run — from this repository or a fork — never does.
+            if [ "$TRIGGER_EVENT" != "push" ] || [ "$TRIGGER_REPO" != "$REPO" ] || [ "$TRIGGER_BRANCH" != "main" ]; then
+              skip "$TRIGGER_NAME ran for a '$TRIGGER_EVENT' of $TRIGGER_REPO:$TRIGGER_BRANCH ($TRIGGER_URL), not for a push to main in $REPO. Only a push to main is published."
+            fi
+            sha="$HEAD_SHA"
+            break_glass=false
+          fi
+
+          # Whatever triggered the run, the commit must be on main. A failure, not a skip: a
+          # trigger that passed the checks above names a commit main does not contain only if
+          # main was rewritten.
+          main_sha=$(gh api "repos/$REPO/git/ref/heads/main" --jq .object.sha)
+          on_main=$(gh api "repos/$REPO/compare/$sha...$main_sha" --jq .status || echo "unknown")
+          case "$on_main" in
+            identical|ahead) ;;
+            *)
+              echo "::error::Commit $sha is not on main (main is $main_sha, compare says '$on_main'). Nothing is published from outside main."
+              exit 1 ;;
+          esac
+          {
+            echo "sha=$sha"
+            echo "version=$version"
+            echo "break_glass=$break_glass"
+          } >> "$GITHUB_OUTPUT"
+          echo "commit $sha → version $version (break-glass: $break_glass)"
+
+          # Already published? Two CI workflows finishing at the same instant, a re-run of a CI
+          # workflow on main and a break-glass on a published commit all land here.
+          existing=$(gh api "repos/$REPO/git/matching-refs/tags/v4.0." \
+                       --jq ".[] | select(.object.sha == \"$sha\") | .ref")
+          if [ -n "$existing" ]; then
+            skip "Commit $sha is already published as ${existing#refs/tags/}."
+          fi
+
+          if [ "$break_glass" = "true" ]; then
+            # Before any job enters them (here and before the normal path's publish=true below).
+            require_main_only publish
+            require_main_only harbor
+            echo "::warning::BREAK-GLASS publish from main after unit tests only — reason: $REASON"
+            {
+              echo "## ⚠️ BREAK-GLASS publish $version"
+              echo ""
+              echo "Commit \`$sha\` on main, unit tests only. Reason: $REASON"
+              echo ""
+              echo "Backend CI (with the integration tests) has been started separately and reports on its own."
+            } >> "$GITHUB_STEP_SUMMARY"
+            # The integration tests still run and report — asynchronously, on main.
+            # --repo is required: there is no checkout in this job for gh to infer it from.
+            gh workflow run be-ci.yml --repo "$REPO" --ref main -f run_integration_tests=true \
+              || echo "::warning::Could not start Backend CI for the integration tests; run it by hand."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$TRIGGER_CONCLUSION" != "success" ]; then
+            skip "$TRIGGER_NAME concluded '$TRIGGER_CONCLUSION' for $sha ($TRIGGER_URL). Nothing is published from a red main."
+          fi
+
+          # Every CI workflow with a push run for this commit must have concluded success. No run
+          # at all means its path filter skipped it (a backend-only, frontend-only or public-site-only
+          # merge).
+          backend_run=yes
+          for wf in be-ci.yml fe-ci.yml info-ci.yml; do
+            run=$(gh api "repos/$REPO/actions/workflows/$wf/runs?head_sha=$sha&event=push&per_page=20" \
+                    --jq '.workflow_runs | sort_by(.run_number) | last
+                          | if . == null then "none - -" else "\(.status) \(.conclusion // "-") \(.html_url)" end')
+            read -r status conclusion url <<< "$run"
+            case "$status" in
+              none)
+                echo "  $wf: no push run for this commit (path-filtered) — nothing to wait for"
+                if [ "$wf" = be-ci.yml ]; then backend_run=no; fi ;;
+              completed)
+                echo "  $wf: $conclusion ($url)"
+                if [ "$conclusion" != "success" ]; then
+                  skip "$wf concluded '$conclusion' for $sha ($url). Nothing is published from a red main."
+                fi ;;
+              *)
+                skip "$wf is still '$status' for $sha ($url); its completion starts another publish run." ;;
+            esac
+          done
+
+          # The build job runs no tests, so the backend it packages must have passed Backend CI.
+          # A frontend-only merge has no Backend CI run of its own; its backend is the one the
+          # nearest backend-changing ancestor carried — the newest Backend CI push run on main
+          # whose commit this one contains (compare `ahead`). That run must be green too.
+          if [ "$backend_run" = no ]; then
+            tested="none - -"
+            while read -r run_sha run_status run_conclusion run_url; do
+              if [ "$(gh api "repos/$REPO/compare/$run_sha...$sha" --jq .status)" = ahead ]; then
+                tested="$run_status $run_conclusion $run_url"
+                break
+              fi
+            done < <(gh api "repos/$REPO/actions/workflows/be-ci.yml/runs?branch=main&event=push&per_page=30" \
+                       --jq '.workflow_runs[] | "\(.head_sha) \(.status) \(.conclusion // "-") \(.html_url)"')
+            read -r status conclusion url <<< "$tested"
+            echo "  backend last tested by Backend CI $url: $status/$conclusion"
+            if [ "$status" != completed ] || [ "$conclusion" != success ]; then
+              skip "The backend in $sha was last run through Backend CI by $url ($status/$conclusion), not green. Nothing is published from a red main."
+            fi
+          fi
+
+          require_main_only publish
+          require_main_only harbor
+          {
+            echo "## Publish $version"
+            echo ""
+            echo "Commit \`$sha\` on main — Backend CI, Frontend CI and Info CI green (or not applicable)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # Build and check the frontend source zip and the kit package, build the
+  # reactor once as 4.0.<run>, deploy the library, the bootstrap, the image
+  # tools, the local-run zip, the source zip and the kit package to GitHub
+  # Packages, and hand the deployable jars to the Harbor job and the source zip
+  # and the kit package to the tag job (for the release).
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build jars, deploy niord-base
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # The publishing token lives on this environment (main only) and nowhere else.
+    environment: publish
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: be
+    env:
+      MAVEN_OPTS: "-Xmx2g"
+      VERSION: ${{ needs.gate.outputs.version }}
+      BREAK_GLASS: ${{ needs.gate.outputs.break_glass }}
+    outputs:
+      # The tag job checks each zip it receives against these before it makes the release.
+      fe_src_sha256: ${{ steps.fe-src.outputs.sha256 }}
+      kit_sha256: ${{ steps.kit.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Never the default: on workflow_run `github.sha` is the tip of main, which may already
+          # have moved past the commit CI tested.
+          ref: ${{ needs.gate.outputs.sha }}
+          # Everything but the guides' pictures (be-ci.yml's header, What a job checks out).
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+          # Nothing here pushes to git; the build runs Maven plugins with the publishing token in reach.
+          persist-credentials: false
+
+      # Node for the kit's zip build below. No npm cache and no `npm ci`: the kit is Node built-ins
+      # only, so no dependency's install script runs in a job that holds the publishing token.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+
+      # The base product's frontend source zip, built as kit:zip builds it (one implementation,
+      # shared with the example harness and ./verify-local): the files of fe/ that git lists and
+      # country-kit/zip-include.json selects and catalog.json at the root; the kit is
+      # org.niord:niord-country-kit, built by the next step, and nothing of it is in the zip.
+      # Written so that two builds of the same tree give the same bytes.
+      # `build` refuses a country word in any entry; `verify` reads the archive back as a
+      # country's set-up does and fails on any entry outside the include list; `guard` runs the
+      # country-word guard (country-kit/country-words.json) over the archive that is deployed and
+      # refuses a word. It checks words only: an allow-list entry that permits nothing fails
+      # test:guards, which runs the guard over fe/ and country-kit/ in Frontend CI and Info CI.
+      # The kit runs as ../country-kit/ from fe/, the step's working directory, and $out is
+      # absolute. Right after the checkout and before setup-java and the
+      # reactor build, so Maven has written nothing into the tree git lists, and a failure here
+      # publishes nothing. The sha256 goes to the tag job, which records it in the release notes.
+      - name: Build and check the source zip ${{ env.VERSION }}
+        id: fe-src
+        working-directory: fe
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/niord-fe-src-$VERSION.zip"
+          node ../country-kit/source-zip.mjs build --version "$VERSION" --out "$out"
+          node ../country-kit/source-zip.mjs verify "$out"
+          node ../country-kit/source-zip.mjs guard "$out"
+          sha=$(sha256sum "$out" | cut -d' ' -f1)
+          recorded=$(cut -d' ' -f1 "$out.sha256")
+          if [ "$sha" != "$recorded" ]; then
+            echo "::error::The zip's sha256 is $sha, but source-zip.mjs recorded $recorded."
+            exit 1
+          fi
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+      # The country kit's package, built as kit:package builds it, by the same source-zip.mjs with
+      # --package kit: the files of country-kit/ that git lists and country-kit/kit-include.json
+      # selects, rooted at the package's top (it unpacks to <root>/.niord/kit), plus
+      # docs/country-api.md from be/docs and the marker kit.json, two builds of a tree giving the
+      # same bytes. `verify` reads it back and fails on an entry outside the list, a missing or
+      # wrong kit.json, a missing docs/country-api.md and an import that leaves the package (the
+      # kit reaches the base product only through its resolved base); `guard` runs the
+      # country-word guard over its entries. Node built-ins only, as above: the job holds the
+      # publishing token. Before setup-java and the reactor build, so a failure publishes nothing.
+      # The sha256 goes to the tag job, which records it in the release notes beside the source
+      # zip's.
+      - name: Build and check the kit package ${{ env.VERSION }}
+        id: kit
+        working-directory: fe
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/niord-country-kit-$VERSION.zip"
+          node ../country-kit/source-zip.mjs build --package kit --version "$VERSION" --out "$out"
+          node ../country-kit/source-zip.mjs verify --package kit "$out"
+          node ../country-kit/source-zip.mjs guard --package kit "$out"
+          sha=$(sha256sum "$out" | cut -d' ' -f1)
+          recorded=$(cut -d' ' -f1 "$out.sha256")
+          if [ "$sha" != "$recorded" ]; then
+            echo "::error::The kit package's sha256 is $sha, but source-zip.mjs recorded $recorded."
+            exit 1
+          fi
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+      # server-id `github` matches be/pom.xml's distributionManagement; setup-java writes a
+      # settings.xml whose server reads the two named environment variables, set on the deploy step.
+      - name: Set up JDK 25 (Temurin) + GitHub Packages credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          server-id: github
+          server-username: NIORD_PUBLISH_USER
+          server-password: NIORD_PUBLISH_TOKEN
+
+      # The same cache as be-ci.yml (see its unit-tests job for why it has a fallback), so this job
+      # starts from what Backend CI on main just saved for the same poms.
+      - name: Maven repository cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+            setup-java-${{ runner.os }}-x64-maven-
+
+      # -DskipTests, not -Dmaven.test.skip: the test classes are still compiled, so niord-base's
+      # test-jar (the shared IT harness) is built for the deploy below. Break-glass runs the unit
+      # tests here instead, since it skipped the gate's Backend CI checks.
+      - name: Build reactor as ${{ env.VERSION }}
+        run: |
+          set -euo pipefail
+          if [ "$BREAK_GLASS" = "true" ]; then
+            echo "::warning::BREAK-GLASS: unit tests only (-DskipITs)"
+            ./mvnw $MVN_FLAGS clean verify -DskipITs -Drevision="$VERSION"
+          else
+            ./mvnw $MVN_FLAGS clean package -DskipTests -Drevision="$VERSION"
+          fi
+
+      # Each executable jar is unpacked into the thin jar, niord-base and the third-party jars
+      # (be/k8s/scripts/split-jar.sh): the pieces the Dockerfile puts into separate layers, so the
+      # dependency layer is the same bytes on every publish and Harbor stores it once. Before the
+      # deploy, so a split that fails publishes nothing. One deps/<hash>/ directory per distinct
+      # dependency set.
+      - name: Split the deployable jars
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          k8s/scripts/split-jar.sh "niord-app/target/niord-app-$VERSION.jar" dist niord-app
+          du -sh dist/*/ dist/deps/*/
+
+      # The sample (be/niord/sample/) is loaded only into the loopback database niord_sample and
+      # never travels in a jar or an image — the safety rule of docs/fe-country-split-plan.md P9
+      # (2026-10-19). The check Backend CI runs after its build (be/k8s/scripts/check-no-sample.sh),
+      # here over what this job deploys and hands on: niord-base and its test-jar, the base
+      # product's bootstrap zip, and dist/, the split jars the Harbor job builds the image from.
+      # Before the deploy, so a jar that carries the sample publishes nothing.
+      - name: No jar carries the sample
+        run: k8s/scripts/check-no-sample.sh niord/sample niord/target/*.jar niord-bootstrap/target/*.zip dist
+
+      # The local-run zip, org.niord:niord-local-run:4.0.<run> (be/scripts/local-run-zip.sh, header:
+      # its layout and why it is deterministic): the files a country's launcher takes for a local
+      # run. It carries the sample by design, the one carrier P9 allows, for a local run only, so
+      # the step above is not given it; it is deployed below and never handed to the web-publish or
+      # harbor job, nor uploaded as a run artifact. Built here, before the first deploy, so a
+      # failure publishes nothing. No token in reach: it only copies and zips files of the tree.
+      - name: Build the local-run zip ${{ env.VERSION }}
+        run: |
+          set -euo pipefail
+          bash scripts/local-run-zip.sh "$RUNNER_TEMP/niord-local-run.zip"
+          unzip -l "$RUNNER_TEMP/niord-local-run.zip"
+
+      # Only the parent pom, niord-base (with its test-jar) and the base product's bootstrap go out:
+      # the library is the one Maven artefact anyone builds on, and the bootstrap
+      # (org.niord:niord-bootstrap:4.0.<run>:zip, be/niord/bootstrap zipped by the be/niord-bootstrap
+      # module) is the data a new deployment, or a country's pipeline, applies once
+      # (docs/code-data-config-plan.md §7.1). Every deployable, niord-app included, ships as a
+      # container image and never as a jar (the executable fat jars are ~160 MB each).
+      - name: Deploy niord-parent, niord-base, niord-bootstrap ${{ env.VERSION }} to GitHub Packages of NiordOrg/niord
+        env:
+          NIORD_PUBLISH_USER: ${{ secrets.NIORDORG_PACKAGES_USER }}
+          NIORD_PUBLISH_TOKEN: ${{ secrets.NIORDORG_PACKAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Without -ntp on purpose: the "Uploaded to github:" transfer lines are the evidence of
+          # what was published, and they go into the summary. The registry is the pom's
+          # github.repository (NiordOrg/niord), not this repository's.
+          ./mvnw -B -e deploy -DskipTests \
+            -pl :niord-parent,:niord-base,:niord-bootstrap \
+            -Drevision="$VERSION" 2>&1 | tee deploy.log
+          {
+            echo "### GitHub Packages of NiordOrg/niord"
+            echo ""
+            echo '```'
+            grep -E "Uploaded to github: .*\.(jar|pom|zip) " deploy.log | sed -E 's/.*Uploaded to github: //; s/ \(.*//' || echo "(no upload lines found in deploy.log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The image tools, as org.niord:niord-image-tools:4.0.<run> (type zip) in the same registry:
+      # be/k8s/docker (the Dockerfile and its .dockerignore) and the scripts a country pipeline
+      # runs: the two it builds its image with, split-jar.sh and publish-images.sh, and the backend
+      # override check a country build runs over its jar, check-overrides.sh with the
+      # CheckOverrides.java it launches (docs/fe-country-split-plan.md §4.9). A country repository
+      # uses the tools of the base version it pins and copies nothing (docs/image-split-plan.md
+      # §7.2.1) — and it cannot check this private repository out, while a package of
+      # NiordOrg/niord needs no credential of it. The zip keeps the k8s/ layout, docker/ and
+      # scripts/ side by side, because publish-images.sh finds the Dockerfile at ../docker.
+      # deploy-file generates the pom.
+      - name: Deploy niord-image-tools ${{ env.VERSION }} to GitHub Packages of NiordOrg/niord
+        env:
+          NIORD_PUBLISH_USER: ${{ secrets.NIORDORG_PACKAGES_USER }}
+          NIORD_PUBLISH_TOKEN: ${{ secrets.NIORDORG_PACKAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          rm -f "$RUNNER_TEMP/niord-image-tools.zip"
+          (cd k8s && zip -q -X "$RUNNER_TEMP/niord-image-tools.zip" \
+             docker/Dockerfile docker/.dockerignore scripts/split-jar.sh scripts/publish-images.sh \
+             scripts/check-overrides.sh scripts/CheckOverrides.java)
+          ./mvnw -B -e -N deploy:deploy-file \
+            -Durl="https://maven.pkg.github.com/NiordOrg/niord" -DrepositoryId=github \
+            -DgroupId=org.niord -DartifactId=niord-image-tools -Dversion="$VERSION" \
+            -Dpackaging=zip -Dfile="$RUNNER_TEMP/niord-image-tools.zip" -DgeneratePom=true 2>&1 | tee tools.log
+          {
+            echo "### GitHub Packages of NiordOrg/niord (image tools)"
+            echo ""
+            echo '```'
+            grep -E "Uploaded to github: .*\.(zip|pom) " tools.log | sed -E 's/.*Uploaded to github: //; s/ \(.*//' || echo "(no upload lines found in tools.log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The local-run zip built above, as org.niord:niord-local-run:4.0.<run> (type zip) in the same
+      # registry: scripts/ with the launcher library local-run-lib.sh, bootstrap.sh beside it and
+      # load-sample.sh, sample/ with the sample's SQL and attachments, docker-compose.yml and the
+      # local realm keycloak/niord-realm-local.json. The backend contract, country-api.md, is not in
+      # it: its one published home is the kit package, org.niord:niord-country-kit, below. A
+      # country's launcher fetches it at the version it pins with `dependency:copy`, beside
+      # niord-bootstrap. For a local run only: it holds known passwords (the sample users',
+      # Keycloak's admin, the database's), and is never an image input. deploy-file generates the
+      # pom, as for the image tools.
+      - name: Deploy niord-local-run ${{ env.VERSION }} to GitHub Packages of NiordOrg/niord
+        env:
+          NIORD_PUBLISH_USER: ${{ secrets.NIORDORG_PACKAGES_USER }}
+          NIORD_PUBLISH_TOKEN: ${{ secrets.NIORDORG_PACKAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          ./mvnw -B -e -N deploy:deploy-file \
+            -Durl="https://maven.pkg.github.com/NiordOrg/niord" -DrepositoryId=github \
+            -DgroupId=org.niord -DartifactId=niord-local-run -Dversion="$VERSION" \
+            -Dpackaging=zip -Dfile="$RUNNER_TEMP/niord-local-run.zip" -DgeneratePom=true 2>&1 | tee local-run.log
+          {
+            echo "### GitHub Packages of NiordOrg/niord (local run)"
+            echo ""
+            echo '```'
+            grep -E "Uploaded to github: .*\.(zip|pom) " local-run.log | sed -E 's/.*Uploaded to github: //; s/ \(.*//' || echo "(no upload lines found in local-run.log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The source zip the first step built and checked, as org.niord.web:niord-fe-src:4.0.<run>
+      # (type zip) in the same registry: the base product's frontend sources — the files of fe/
+      # that the explicit include list country-kit/zip-include.json selects and catalog.json at
+      # the root; no entry outside the list and no country word (the guard above). A country's set-up fetches it at the version it pins with `dependency:copy`
+      # and verifies it by its sha256 (docs/fe-country-split-plan.md §3.1-§3.2). deploy-file
+      # generates the pom, as for the image tools; the sha256 line goes into the summary beside
+      # the upload lines.
+      - name: Deploy niord-fe-src ${{ env.VERSION }} to GitHub Packages of NiordOrg/niord
+        env:
+          NIORD_PUBLISH_USER: ${{ secrets.NIORDORG_PACKAGES_USER }}
+          NIORD_PUBLISH_TOKEN: ${{ secrets.NIORDORG_PACKAGES_TOKEN }}
+          FE_SRC_SHA256: ${{ steps.fe-src.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          ./mvnw -B -e -N deploy:deploy-file \
+            -Durl="https://maven.pkg.github.com/NiordOrg/niord" -DrepositoryId=github \
+            -DgroupId=org.niord.web -DartifactId=niord-fe-src -Dversion="$VERSION" \
+            -Dpackaging=zip -Dfile="$RUNNER_TEMP/niord-fe-src-$VERSION.zip" -DgeneratePom=true 2>&1 | tee fe-src.log
+          {
+            echo "### GitHub Packages of NiordOrg/niord (frontend source zip)"
+            echo ""
+            echo '```'
+            grep -E "Uploaded to github: .*\.(zip|pom) " fe-src.log | sed -E 's/.*Uploaded to github: //; s/ \(.*//' || echo "(no upload lines found in fe-src.log)"
+            echo ""
+            echo "$FE_SRC_SHA256  niord-fe-src-$VERSION.zip"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The kit package the second step built and checked, as org.niord:niord-country-kit:4.0.<run>
+      # (type zip) in the same registry, the groupId of the other whole-repository packages: the
+      # country kit (set-up, the guides, the templates and the example country) with the backend
+      # contract as docs/country-api.md and the marker kit.json, no entry outside
+      # country-kit/kit-include.json, no import leaving the package and no country word. Published
+      # beside niord-fe-src, which carries nothing of the kit. deploy-file generates the pom; the
+      # sha256 line goes into the summary beside the upload lines.
+      - name: Deploy niord-country-kit ${{ env.VERSION }} to GitHub Packages of NiordOrg/niord
+        env:
+          NIORD_PUBLISH_USER: ${{ secrets.NIORDORG_PACKAGES_USER }}
+          NIORD_PUBLISH_TOKEN: ${{ secrets.NIORDORG_PACKAGES_TOKEN }}
+          KIT_SHA256: ${{ steps.kit.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          ./mvnw -B -e -N deploy:deploy-file \
+            -Durl="https://maven.pkg.github.com/NiordOrg/niord" -DrepositoryId=github \
+            -DgroupId=org.niord -DartifactId=niord-country-kit -Dversion="$VERSION" \
+            -Dpackaging=zip -Dfile="$RUNNER_TEMP/niord-country-kit-$VERSION.zip" -DgeneratePom=true 2>&1 | tee kit.log
+          {
+            echo "### GitHub Packages of NiordOrg/niord (country kit)"
+            echo ""
+            echo '```'
+            grep -E "Uploaded to github: .*\.(zip|pom) " kit.log | sed -E 's/.*Uploaded to github: //; s/ \(.*//' || echo "(no upload lines found in kit.log)"
+            echo ""
+            echo "$KIT_SHA256  niord-country-kit-$VERSION.zip"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The split jars, ~185 MB (the third-party jars once, niord-base and a thin jar per module).
+      - name: Hand the jars to the Harbor job
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployable-jars
+          path: be/dist/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0   # jars are zip files already
+
+      # The source zip, ~4 MB, for the tag job: it attaches the zip to the release on the tag.
+      - name: Hand the source zip to the tag job
+        uses: actions/upload-artifact@v4
+        with:
+          name: niord-fe-src
+          path: ${{ runner.temp }}/niord-fe-src-*.zip
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0   # a zip already
+
+      # The kit package, for the tag job as well: the second zip attached to the release. An
+      # artifact of its own, so each upload names one zip and the by-hand texts keep their names.
+      - name: Hand the kit package to the tag job
+        uses: actions/upload-artifact@v4
+        with:
+          name: niord-country-kit
+          path: ${{ runner.temp }}/niord-country-kit-*.zip
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0   # a zip already
+
+  # ---------------------------------------------------------------------------
+  # The administration web app, the generic production build. The image
+  # carries it in web/ and the backend serves it at the root of its origin
+  # (WebAppConfig), next to /rest — the one origin the build's /rest and /auth
+  # addresses resolve against. No environment and no secret: npm ci runs the
+  # dependencies' install scripts here, so the publishing token is never in
+  # reach of them (web-publish deploys the bundle).
+  # ---------------------------------------------------------------------------
+  web:
+    name: Build the web app bundle
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      # Everything but the guides' pictures (be-ci.yml's header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+
+      # fe/.npmrc sets legacy-peer-deps=true, as in fe-ci.yml.
+      - name: Install dependencies
+        run: npm ci
+
+      # The build Frontend CI checks, into its own output path (<path>/browser is the app).
+      - name: Build the en bundle
+        run: |
+          set -euo pipefail
+          npm run -s build -- --output-path out/niord-app
+          mkdir -p web
+          test -f out/niord-app/browser/index.html
+          cp -R out/niord-app/browser web/niord-app
+          du -sh web/*
+
+      - name: Hand the bundle to the web-publish and Harbor jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-bundles
+          path: fe/web/
+          if-no-files-found: error
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # The same bundle, as one Maven artefact in GitHub Packages beside
+  # niord-base: org.niord.web:niord-web-admin:4.0.<run>, a pom and the zip
+  # under the classifier en, the suffix of the image name niord-app-en
+  # (be/k8s/scripts/publish-images.sh). The harbor job takes the bundle from
+  # the run artifact.
+  #
+  # A job of its own, apart from web: the publishing token is in the same job
+  # as Maven and zip only, never as npm's install scripts, which could read it
+  # and publish a poisoned version for every country. It waits for build as
+  # harbor does, so a version whose source zip or kit package check or reactor
+  # build fails gets no bundle either, and runs beside harbor, so a publish
+  # takes no longer.
+  # ---------------------------------------------------------------------------
+  web-publish:
+    name: Deploy the web app bundle
+    needs: [ gate, web, build ]
+    if: needs.gate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The publishing token lives on this environment (main only) and nowhere else.
+    environment: publish
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: fe
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      # be/ only, for the Maven wrapper and the reactor pom the deploy reads.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          sparse-checkout: be
+          persist-credentials: false
+
+      - name: Fetch the web app bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: web-bundles
+          path: fe/web
+
+      # The zip is made from inside the bundle, so index.html is at the root of the archive as it
+      # is at the root of WEB_DIR/niord-app. The pom is the artefact's main file; it has no content
+      # beyond the coordinates.
+      - name: Zip the bundle for GitHub Packages
+        run: |
+          set -euo pipefail
+          mkdir -p pkg
+          (cd web/niord-app && zip -qr -X ../../pkg/niord-web-admin-en.zip .)
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<project xmlns="http://maven.apache.org/POM/4.0.0">' \
+            '  <modelVersion>4.0.0</modelVersion>' \
+            '  <groupId>org.niord.web</groupId>' \
+            '  <artifactId>niord-web-admin</artifactId>' \
+            "  <version>$VERSION</version>" \
+            '  <packaging>pom</packaging>' \
+            '  <name>Niord administration app bundle</name>' \
+            '  <description>The production build of the administration web app: the generic build (niord-app) under classifier en. A deployable image serves it at the root of its origin.</description>' \
+            '</project>' > pkg/niord-web-admin.pom
+          ls -l pkg
+
+      # server-id `github` matches -DrepositoryId below; setup-java writes a settings.xml whose
+      # server reads the two named environment variables, set on the deploy step, as in the build job.
+      - name: Set up JDK 25 (Temurin) + GitHub Packages credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          server-id: github
+          server-username: NIORD_PUBLISH_USER
+          server-password: NIORD_PUBLISH_TOKEN
+
+      # deploy:deploy-file takes everything from its parameters; -N reads the reactor pom for the
+      # wrapper and the managed plugin version only. Without -ntp on purpose, as in the build job:
+      # the "Uploaded to github:" lines are the evidence of what was published and go into the
+      # summary.
+      - name: Deploy niord-web-admin ${{ env.VERSION }} to GitHub Packages of NiordOrg/niord
+        working-directory: be
+        env:
+          NIORD_PUBLISH_USER: ${{ secrets.NIORDORG_PACKAGES_USER }}
+          NIORD_PUBLISH_TOKEN: ${{ secrets.NIORDORG_PACKAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          pkg="$GITHUB_WORKSPACE/fe/pkg"
+          # The same registry as the build job's deploy: the reactor pom's github.repository.
+          ./mvnw -B -e -N deploy:deploy-file \
+            -Durl="https://maven.pkg.github.com/NiordOrg/niord" -DrepositoryId=github \
+            -DgroupId=org.niord.web -DartifactId=niord-web-admin -Dversion="$VERSION" \
+            -Dpackaging=pom -Dfile="$pkg/niord-web-admin.pom" -DpomFile="$pkg/niord-web-admin.pom" \
+            -Dfiles="$pkg/niord-web-admin-en.zip" \
+            -Dclassifiers=en -Dtypes=zip 2>&1 | tee deploy.log
+          {
+            echo "### GitHub Packages of NiordOrg/niord (web bundle)"
+            echo ""
+            echo '```'
+            grep -E "Uploaded to github: .*\.(zip|pom) " deploy.log | sed -E 's/.*Uploaded to github: //; s/ \(.*//' || echo "(no upload lines found in deploy.log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Everything Harbor receives, in one job — the only one under the environment
+  # that holds the robot credentials: the image, then the chart.
+  # ---------------------------------------------------------------------------
+  harbor:
+    name: Push images + chart to Harbor
+    needs: [ gate, build, web ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The Harbor robot credentials live on this environment and nowhere else.
+    environment: harbor
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+      SHA: ${{ needs.gate.outputs.sha }}
+    steps:
+      # be/k8s for the image scripts, the Dockerfile and the chart; be/niord/sample for the check
+      # below, which reads the sample's files to know what to look for.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          sparse-checkout: |
+            be/k8s
+            be/niord/sample
+          persist-credentials: false
+
+      - name: Fetch the deployable jars
+        uses: actions/download-artifact@v4
+        with:
+          name: deployable-jars
+          path: dist
+
+      - name: Fetch the web app bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: web-bundles
+          path: web
+
+      # For the check below: be/k8s/scripts/check-no-sample.sh runs CheckNoSample.java with the
+      # JDK's source launcher. No Maven, no cache, no credentials.
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      # The sample (be/niord/sample/) is loaded only into the loopback database niord_sample and
+      # never travels in an image — the safety rule of docs/fe-country-split-plan.md P9
+      # (2026-10-19). dist (the split jars) and web (the bundle) are all the image is built from,
+      # and publish-images.sh's content check proves /app holds exactly those jars, so a check of
+      # the two is a check of the image. Before the login and the build, so an input that carries
+      # the sample is neither built nor pushed.
+      - name: No image input carries the sample
+        run: be/k8s/scripts/check-no-sample.sh be/niord/sample dist web
+
+      # The docker CLI itself, not a third-party login action: the robot password reaches no
+      # action code, and goes in on stdin, never on a command line — as for the chart push below.
+      - name: Log in to Harbor
+        env:
+          HARBOR_ROBOT_USER: ${{ secrets.HARBOR_ROBOT_USER }}
+          HARBOR_ROBOT_PASSWORD: ${{ secrets.HARBOR_ROBOT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$HARBOR_ROBOT_PASSWORD" | docker login "$REGISTRY" --username "$HARBOR_ROBOT_USER" --password-stdin
+
+      # The script (header: what it does) builds each image from the split jars and the web
+      # bundle, checks that the dependency layer is reproducible and the image content right,
+      # pushes, and writes the images, their digests and the dependency layer to the summary.
+      # Plain `docker build` on the runner's default builder with --provenance=false: a single
+      # image manifest with no attestation index on either image store, which is what Harbor
+      # expects.
+      - name: Build + push the niord-app-en image ${{ env.VERSION }}
+        env:
+          DIST_DIR: dist
+          WEB_DIR: web
+          IMAGE_PREFIX: ${{ env.REGISTRY }}/${{ env.HARBOR_PROJECT }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: be/k8s/scripts/publish-images.sh niord-app
+
+      # After the images: the chart's default app image tag is its own version, so the chart must
+      # not appear in Harbor before the images it points at. It has no dependencies, so packaging
+      # is a pure local operation.
+      - name: Package chart as ${{ env.VERSION }}
+        run: |
+          set -euo pipefail
+          helm version --short
+          helm package be/k8s/helm/niord --version "$VERSION" --app-version "$VERSION" --destination dist
+          ls -l dist
+
+      - name: Push chart
+        env:
+          HARBOR_ROBOT_USER: ${{ secrets.HARBOR_ROBOT_USER }}
+          HARBOR_ROBOT_PASSWORD: ${{ secrets.HARBOR_ROBOT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          chart_oci="oci://$REGISTRY/$HARBOR_PROJECT/charts"
+          echo "$HARBOR_ROBOT_PASSWORD" | helm registry login "$REGISTRY" --username "$HARBOR_ROBOT_USER" --password-stdin
+          helm push "dist/niord-$VERSION.tgz" "$chart_oci" 2>&1 | tee push.log
+          {
+            echo "## Chart $VERSION"
+            echo ""
+            echo "Pushed \`$chart_oci/niord:$VERSION\`"
+            echo ""
+            echo '```'
+            cat push.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The robot credentials the two logins stored on the runner do not outlive their use, also
+      # when a step above failed.
+      - name: Log out of Harbor
+        if: always()
+        run: |
+          docker logout "$REGISTRY" || true
+          helm registry logout "$REGISTRY" || true
+
+  # ---------------------------------------------------------------------------
+  # The tag. Only after the library, the bundle, the image and the chart exist,
+  # so a tag never names a version whose artefact set is incomplete. Lightweight on
+  # purpose: the gate resolves a tag straight to its commit without dereferencing.
+  #
+  # GitHub refuses the GITHUB_TOKEN a new tag on a commit whose workflow files
+  # differ from main's by then: a PR changing .github/workflows merged while
+  # this run was in flight (it happened to 4.0.13). Neither `git push` nor the
+  # REST API gets around it (probed 2026-09-24), and a credential that may
+  # change workflows was declined. So the job then fails with the commands that
+  # push the tag by hand and then make the release. Everything else is already
+  # published; until the tag exists, the gate does not know this commit is.
+  #
+  # After the tag, the GitHub release on it: its notes carry two lines,
+  # `<sha256>  niord-fe-src-4.0.<run>.zip` and
+  # `<sha256>  niord-country-kit-4.0.<run>.zip` (sha256sum's form, which a
+  # country's pins and Frontend CI's upgrade test read, one line per zip) and,
+  # after them, a sentence naming the version's Maven packages (not of that
+  # form), and both zips are attached. A release made by hand from a failure
+  # summary below carries the two sha256 lines only, which is all any reader
+  # needs. The zips come from the build job as the run artifacts niord-fe-src
+  # and niord-country-kit and are each checked against the sha256 the build
+  # job computed; those artifacts are deleted only once the release exists, so
+  # after a refused tag the by-hand commands can still take them from this
+  # run, within its day.
+  #
+  # First, though, the jars and the bundle go. They reached the harbor job (and
+  # the bundle the web-publish job) as artifacts of this run, which GitHub
+  # keeps for at least a day (retention-days: 1 is its minimum). They are
+  # ~0.2 GB a run (~0.5 GB before the jars were
+  # split), and the Free plan gives the organisation 0.5 GB of Actions storage
+  # for a whole month across all its private repositories, billed by the hour:
+  # the five publish runs of 2026-09-29 held 2.5 GB at once, and 90 % of the
+  # month was gone in four days (a third of it spent by another repository). So they are deleted as
+  # soon as harbor and web-publish are done with them — here, because this job
+  # already runs only after both succeeded (after a failure they stay their
+  # day, so "Re-run failed jobs" still finds them), and runs nothing but gh
+  # and git, so the token that may delete artifacts never reaches a
+  # third-party CLI. Not the harbor job's token, for that reason, and not a
+  # job of its own: a job is billed a whole minute for two API calls that
+  # take seconds, on every publish run.
+  # ---------------------------------------------------------------------------
+  tag:
+    name: Tag
+    needs: [ gate, build, web-publish, harbor ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: write   # delete this run's artifacts
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+      SHA: ${{ needs.gate.outputs.sha }}
+    steps:
+      # A failure here costs storage, not the release: everything is published by now, so each
+      # artifact that could not be deleted is a warning annotation and the step goes red without
+      # the job (continue-on-error) — the tag is still pushed, and the artifacts expire in a day.
+      # No `set -e`: one failed call must not skip the other artifact.
+      - name: Delete deployable-jars and web-bundles
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          if ! artifacts=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
+                 --jq '.artifacts[] | select(.name == "deployable-jars" or .name == "web-bundles") | "\(.id) \(.name)"'); then
+            echo "::warning title=Artifacts not deleted::could not list this run's artifacts; deployable-jars and web-bundles stay until they expire"
+            exit 1
+          fi
+          failed=0
+          while read -r id name; do
+            [ -n "$id" ] || continue
+            if gh api -X DELETE "repos/$REPO/actions/artifacts/$id" > /dev/null; then
+              echo "Deleted $name (artifact $id)"
+            else
+              echo "::warning title=Artifact not deleted::$name (artifact $id) stays until it expires"
+              failed=1
+            fi
+          done <<< "$artifacts"
+          exit $failed
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          sparse-checkout: .github
+      - name: Tag v${{ env.VERSION }}
+        env:
+          FE_SRC_SHA256: ${{ needs.build.outputs.fe_src_sha256 }}
+          KIT_SHA256: ${{ needs.build.outputs.kit_sha256 }}
+        run: |
+          set -euo pipefail
+          git tag "v$VERSION" "$SHA"
+          if git push origin "refs/tags/v$VERSION" 2> push.err; then
+            echo "Tagged \`$SHA\` as **v$VERSION**" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cat push.err >&2
+          if ! grep -q "refusing to allow a GitHub App to create or update workflow" push.err; then
+            exit 1
+          fi
+          by_hand="git fetch origin $SHA && git tag v$VERSION $SHA && git push origin refs/tags/v$VERSION"
+          echo "::error title=v$VERSION published but not tagged::main changed workflow files after $SHA, so GitHub refuses this workflow's token the tag. Push it by hand from a login with the workflow scope: $by_hand — then make the release as the summary says"
+          {
+            echo "## ⚠️ v$VERSION published, but not tagged"
+            echo ""
+            echo "The library, the images and the chart for $VERSION are published. GitHub refused the"
+            echo "tag: \`main\` changed workflow files after \`$SHA\`, and it never lets this workflow's"
+            echo "token create a tag there. Push it by hand, from a login with the \`workflow\` scope:"
+            echo ""
+            echo '```bash'
+            echo "git fetch origin $SHA"
+            echo "git tag v$VERSION $SHA"
+            echo "git push origin refs/tags/v$VERSION"
+            echo '```'
+            echo ""
+            echo "Then make its release with the source zip and the kit package, from a login that may"
+            echo "create releases. They are this run's artifacts \`niord-fe-src\` and \`niord-country-kit\`"
+            echo "for a day; after that, fetch \`org.niord.web:niord-fe-src:$VERSION:zip\` and"
+            echo "\`org.niord:niord-country-kit:$VERSION:zip\` from the registry with \`dependency:copy\`."
+            echo "Their sha256 must be \`$FE_SRC_SHA256\` and \`$KIT_SHA256\`:"
+            echo ""
+            echo '```bash'
+            echo "gh run download $GITHUB_RUN_ID --repo $GITHUB_REPOSITORY -n niord-fe-src -D fe-src"
+            echo "gh run download $GITHUB_RUN_ID --repo $GITHUB_REPOSITORY -n niord-country-kit -D kit"
+            echo "sha256sum fe-src/niord-fe-src-$VERSION.zip"
+            echo "sha256sum kit/niord-country-kit-$VERSION.zip"
+            echo "gh release create v$VERSION fe-src/niord-fe-src-$VERSION.zip kit/niord-country-kit-$VERSION.zip --repo $GITHUB_REPOSITORY --verify-tag --title v$VERSION --notes \"\$(printf '%s  %s\\n' $FE_SRC_SHA256 niord-fe-src-$VERSION.zip $KIT_SHA256 niord-country-kit-$VERSION.zip)\""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - name: Fetch the source zip
+        uses: actions/download-artifact@v4
+        with:
+          name: niord-fe-src
+          path: fe-src
+
+      - name: Fetch the kit package
+        uses: actions/download-artifact@v4
+        with:
+          name: niord-country-kit
+          path: kit
+
+      # Each zip is checked against the sha256 the build job computed before the zip it deployed;
+      # the notes hold the two sha256s in sha256sum's form, one line per zip, and no other line of
+      # that shape, since Frontend CI's upgrade test and a country's pins read exactly one line for
+      # each zip's name. Then one sentence names the version's Maven packages, the ones the build
+      # and web-publish jobs deployed (release-workflows.test.mjs holds it to their deploys and to
+      # retract-version.yml's list). The by-hand command of a failure summary gives the two sha256
+      # lines only, which is all any reader needs. --verify-tag: the release is made on the tag
+      # pushed above, never a new one.
+      - name: Release v${{ env.VERSION }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          FE_SRC_SHA256: ${{ needs.build.outputs.fe_src_sha256 }}
+          KIT_SHA256: ${{ needs.build.outputs.kit_sha256 }}
+        run: |
+          set -euo pipefail
+          zip="fe-src/niord-fe-src-$VERSION.zip"
+          kit="kit/niord-country-kit-$VERSION.zip"
+          sha=$(sha256sum "$zip" | cut -d' ' -f1)
+          kit_sha=$(sha256sum "$kit" | cut -d' ' -f1)
+          for check in "$zip $sha $FE_SRC_SHA256" "$kit $kit_sha $KIT_SHA256"; do
+            read -r file actual built <<< "$check"
+            if [ -z "${built:-}" ] || [ "$actual" != "$built" ]; then
+              echo "::error::$file has sha256 $actual, but the build job built and deployed '${built:-}'."
+              exit 1
+            fi
+          done
+          {
+            echo "The base product's frontend sources for $VERSION, org.niord.web:niord-fe-src:$VERSION:zip, and its country kit, org.niord:niord-country-kit:$VERSION:zip, in the GitHub Packages registry of NiordOrg/niord, both attached here as well."
+            echo ""
+            echo "$sha  niord-fe-src-$VERSION.zip"
+            echo "$kit_sha  niord-country-kit-$VERSION.zip"
+            echo ""
+            echo "The same version's Maven packages in that registry: org.niord:niord-parent, org.niord.base:niord-base, org.niord:niord-bootstrap (zip), org.niord:niord-image-tools (zip), org.niord:niord-local-run (zip; a local run only, never an image input), org.niord.web:niord-web-admin, org.niord.web:niord-fe-src (zip) and org.niord:niord-country-kit (zip)."
+          } > notes.md
+          if ! gh release create "v$VERSION" "$zip" "$kit" --repo "$REPO" --verify-tag --title "v$VERSION" --notes-file notes.md; then
+            echo "::error title=v$VERSION tagged but not released::make the release by hand as the summary says"
+            {
+              echo "## ⚠️ v$VERSION tagged, but not released"
+              echo ""
+              echo "Make the release by hand within a day, while this run's artifacts \`niord-fe-src\` and \`niord-country-kit\` exist:"
+              echo ""
+              echo '```bash'
+              echo "gh run download $GITHUB_RUN_ID --repo $REPO -n niord-fe-src -D fe-src"
+              echo "gh run download $GITHUB_RUN_ID --repo $REPO -n niord-country-kit -D kit"
+              echo "sha256sum fe-src/niord-fe-src-$VERSION.zip   # $sha"
+              echo "sha256sum kit/niord-country-kit-$VERSION.zip   # $kit_sha"
+              echo "gh release create v$VERSION fe-src/niord-fe-src-$VERSION.zip kit/niord-country-kit-$VERSION.zip --repo $REPO --verify-tag --title v$VERSION --notes \"\$(printf '%s  %s\\n' $sha niord-fe-src-$VERSION.zip $kit_sha niord-country-kit-$VERSION.zip)\""
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          {
+            echo "Released **v$VERSION** with:"
+            echo ""
+            echo "- \`niord-fe-src-$VERSION.zip\`, sha256 \`$sha\`"
+            echo "- \`niord-country-kit-$VERSION.zip\`, sha256 \`$kit_sha\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # As the deletion of the jars and the bundle above: a failure costs storage for a day, not the
+      # release. Only now, since the by-hand path for a refused tag needs the two artifacts.
+      - name: Delete niord-fe-src and niord-country-kit
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          if ! artifacts=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
+                 --jq '.artifacts[] | select(.name == "niord-fe-src" or .name == "niord-country-kit") | "\(.id) \(.name)"'); then
+            echo "::warning title=Artifacts not deleted::could not list this run's artifacts; niord-fe-src and niord-country-kit stay until they expire"
+            exit 1
+          fi
+          failed=0
+          while read -r id name; do
+            [ -n "$id" ] || continue
+            if gh api -X DELETE "repos/$REPO/actions/artifacts/$id" > /dev/null; then
+              echo "Deleted $name (artifact $id)"
+            else
+              echo "::warning title=Artifact not deleted::$name (artifact $id) stays until it expires"
+              failed=1
+            fi
+          done <<< "$artifacts"
+          exit $failed
+
+  # ---------------------------------------------------------------------------
+  # Open the bump pull requests. Once the release exists, the Niord base bump
+  # app opens base-bump/4.0.<run> in each country repository it is installed
+  # on, or moves the bump pull request it has open there
+  # (fe/scripts/open-bump-pull-requests.mjs).
+  #
+  # A job of its own. The tag job's comment argues against one for two API
+  # calls that take seconds; here the separation is the point. The tag job
+  # holds a GITHUB_TOKEN with contents: write and actions: write and keeps a
+  # git credential. This job holds the app's key, has contents: read, keeps no
+  # git credential, and no step names the GITHUB_TOKEN: the checkout fetches
+  # with it and drops it (persist-credentials: false). The price is one billed
+  # minute a publish.
+  #
+  # GitHub's behaviour, stated from knowledge and not probed here:
+  # - needs without a status function implies success(): there is no bump after
+  #   a skipped gate, a failed tag or a missing release, and a break-glass
+  #   publish bumps like any other;
+  # - `environment: publish` gives the job the environment's secrets and
+  #   variables only on a ref that the environment's deployment branch rule
+  #   allows. That is main only, which the gate checks before any job runs
+  #   (require_main_only publish);
+  # - `continue-on-error: true` on a job: a failed job shows red and the run
+  #   still concludes success. "Re-run failed jobs" runs it alone, and a re-run
+  #   is safe because the script finds its own branch and pull request;
+  # - a job-level concurrency group with cancel-in-progress: false runs one
+  #   bump at a time across publish runs and keeps one pending, which a newer
+  #   one replaces. The newer version's bump covers the older. There is no
+  #   `queue: max`: this tree uses it at workflow level only.
+  # ---------------------------------------------------------------------------
+  bump:
+    name: Open the bump pull requests
+    needs: [ gate, tag ]
+    if: needs.gate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    environment: publish
+    permissions:
+      contents: read
+    concurrency:
+      group: niord-base-bump
+      cancel-in-progress: false
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      # fe/scripts at the published commit, with no git credential: nothing here runs git. In cone
+      # mode, the checkout's default, a sparse checkout also has the files directly in each parent
+      # folder, fe/.nvmrc among them (stated from knowledge).
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          sparse-checkout: fe/scripts
+          persist-credentials: false
+
+      # No npm cache and no `npm ci`: the script uses Node built-ins only, so no dependency's install
+      # script runs in a job that holds the app's key.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+
+      # The key and the id reach the script through env: only, never through its command line. The
+      # command carries neither the key nor --api, and the script takes the API base from
+      # GITHUB_API_URL, which the runner sets. A multi-line secret passed through env: keeps its
+      # newlines, and the runner masks each of its lines in the log (both stated from knowledge).
+      # The script masks each installation token before it uses it. An empty id or key (the app not
+      # set up on `publish`) gives a notice and a summary line, not a failure; a country then
+      # pushes its bump branch by hand.
+      - name: Open or move the bump pull request in each country
+        env:
+          NIORD_BUMP_APP_ID: ${{ vars.NIORD_BUMP_APP_ID }}
+          NIORD_BUMP_APP_PRIVATE_KEY: ${{ secrets.NIORD_BUMP_APP_PRIVATE_KEY }}
+          BASE_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NIORD_BUMP_APP_ID:-}" ] || [ -z "${NIORD_BUMP_APP_PRIVATE_KEY:-}" ]; then
+            echo "::notice::No bump pull requests: the publish environment has no NIORD_BUMP_APP_ID or NIORD_BUMP_APP_PRIVATE_KEY (the Niord base bump app). A country pushes base-bump/$VERSION by hand."
+            printf '## Bump pull requests for %s\n\nNot opened: the Niord base bump app is not set up on the publish environment.\n' "$VERSION" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node fe/scripts/open-bump-pull-requests.mjs --version "$VERSION"

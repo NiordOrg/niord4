@@ -1,0 +1,57 @@
+
+[#introduction]
+== Introduction
+
+Niord (Nautical Information Directory) is a system for producing and publishing Navigational
+Warnings (_NW_) and Notices to Mariners (_NM_). The Danish Emergency Management Agency is the
+organisation behind Niord.
+
+Niord has been rebuilt. The administration application that editors, administrators and system
+administrators work in has been written anew, the public site where mariners read the warnings and
+notices has been replaced, and the server behind both has been rebuilt as well. Most of what you
+did in the old Niord you can still do, in the same order and with the same words, but many screens
+look different, some functions have moved, a few are new and a few are gone.
+
+This guide is for you if you used the old Niord, the application the earlier user manuals
+describe, and now open the new one. It lists what you will notice, and for each change it says
+what it was, what it is now and where to find it. It does not repeat the manuals: each change
+links to the chapter of the
+link:../editor-manual/manual.html[editor manual],
+link:../admin-manual/manual.html[administrator manual] or
+link:../sysadmin-manual/manual.html[system administrator manual] that describes it in full.
+
+[#how-this-guide-is-organised]
+=== How This Guide Is Organised
+
+The chapters follow the roles a user can hold, and within a chapter the changes are grouped by
+task:
+
+* <<everyone,For everyone>>: the layout, signing in, domains, languages, help and links.
+* <<editors,For editors>>: finding messages, writing and publishing them, positions, the firing
+  schedule and publications seen from a message.
+* <<administrators,For administrators>>: the Admin area, base data, users, mailing lists and the
+  new publications model.
+* <<system-administrators,For system administrators>>: the Sysadmin area, where templates and
+  texts come from, imports, batch jobs, settings and integration.
+* <<mariners,For mariners using the public site>>: the new public site.
+
+The chapters about the administration application each end with a table of what is gone and what
+to use instead. A user with a higher role should read
+the chapters of the lower roles too: an administrator is usually also an editor.
+
+[#the-base-product-and-the-countries]
+=== The Base Product and the Countries
+
+Niord is now one _base product_ that every deployment shares. A country builds its own deployment
+on the base product and adds what only it needs: its domains, its languages, its texts and
+branding, and sometimes pages of its own. The deployments in Denmark and in Greenland are each such
+a country. This guide describes the base product. If your deployment shows a page or a field that
+this guide does not mention, it most likely belongs to your country's additions.
+
+[#the-technology-in-brief]
+=== The Technology in Brief
+
+You need nothing but a current web browser. The administration application and the public site are
+web applications built with Angular. The server is a Spring Boot application that keeps its data
+in a PostgreSQL database, with PostGIS for positions and areas, and signing in is handled by
+Keycloak.

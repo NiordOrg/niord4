@@ -1,0 +1,469 @@
+# niord-info — static site plus a method-and-path allow-list in front of the Niord backend.
+#
+# ${NIORD_SERVER_URL}, ${WMS_SERVER_URL} and ${NIORD_TEASER_FRAME_ANCESTORS} are substituted by
+# the image's entrypoint (/etc/nginx/templates/*.template -> /etc/nginx/http.d/*), which checks
+# the first and the last before it renders anything. Only names that exist in the environment are
+# substituted, so nginx's own $uri, $host and friends are safe to write.
+#
+# nginx runs as the unprivileged user nginx and writes under /tmp alone: the temporary files below,
+# the pid file (conf.d/niord-pid.conf in the image) and this file once rendered (the entrypoint).
+#
+# The backend's role checks are the real protection. This proxy makes the public host unable to
+# carry an administration request at all: only GET and HEAD are proxied, only six paths exist,
+# the two report PDFs take no query but the one this site composes and render no report but the
+# public one, and any credential that reaches this host — an Authorization or
+# Proxy-Authorization header, a cookie, a one-time `ticket` in the query — is dropped or refused
+# before the request leaves it.
+
+# ---------------------------------------------------------------------------------------------
+# Where nginx keeps its temporary files: under /tmp, which the unprivileged user can write, instead
+# of the package's /var/lib/nginx/tmp. This file is rendered into the http block, so these apply
+# to every location.
+# ---------------------------------------------------------------------------------------------
+client_body_temp_path /tmp/nginx-client-body;
+proxy_temp_path /tmp/nginx-proxy;
+fastcgi_temp_path /tmp/nginx-fastcgi;
+uwsgi_temp_path /tmp/nginx-uwsgi;
+scgi_temp_path /tmp/nginx-scgi;
+
+# ---------------------------------------------------------------------------------------------
+# The query strings the two report PDFs accept. This file is rendered into the http block, so
+# the two maps sit here, outside the server block that reads them.
+#
+# The report endpoint reads far more from its query than this site sends: a debug switch that
+# answers with the HTML the PDF is rendered from instead of the PDF, the page size and
+# orientation, free-form `param:<name>` values handed to the template, and the whole
+# administration search. None of that is an anonymous reader's to set, and on this host the query
+# is written by anyone, so it is checked here as one whole string, before anything reaches the
+# backend and whatever the backend would make of it:
+#
+#   - it is one or more `name=value` pairs joined by `&`, and nothing else — a `;` between two
+#     pairs, a doubled or trailing `&` and a name without `=` are refused;
+#   - a name is spelt exactly as listed below: another case or a percent-encoded letter is not the
+#     same name here, even where the backend would decode it to one;
+#   - a value is letters, digits, `.`, `_` and `-`: the shape of every id and code the site sends,
+#     and nothing in it can decode into another character, another pair or markup.
+#
+# The list takes exactly one `report=public`, anywhere in the query, and around it any number of
+# the reader's filter — `lang`, `mainType`, `area`, `messageSeries` — and a `publication`; the
+# filter names may repeat, because the filter's do. One message takes `lang` alone. Any other
+# query is refused with 403, and a parameter the site starts sending is added here in the same
+# change.
+#
+# The report is required, and is a constant rather than a shape. The endpoint renders whatever
+# report definition it is named, whichever domain the report belongs to, and it renders a list
+# that names no report in the standard one, whose front page is written for the editors: the
+# search criteria with their internal ids. The backend holds an anonymous caller to the public
+# report too; this host refuses anything else before it gets that far. `public` is the report
+# the backend defines for this site. It is named exactly once, as the site names it, so
+# the rule stays sound when a second report is allowed here: a query naming two would be one
+# that a reader of the first `report` and a reader of the last see differently. A second report
+# meant for the public is allowed deliberately, by name, here and in the backend alike, in the
+# change that makes the site ask for it.
+#
+# The whole string is matched rather than single arguments picked out of it: a check on
+# $arg_debug would read `debug` but not `%64ebug`, which the backend decodes to the same name.
+# ---------------------------------------------------------------------------------------------
+map $args $niord_list_pdf_query_ok {
+    default 0;
+    "~^(?:(?:lang|mainType|area|messageSeries|publication)=[A-Za-z0-9._-]*&)*report=public(?:&(?:lang|mainType|area|messageSeries|publication)=[A-Za-z0-9._-]*)*$" 1;
+}
+
+map $args $niord_message_pdf_query_ok {
+    default 0;
+    "~^lang=[A-Za-z0-9._-]*$" 1;
+}
+
+# ---------------------------------------------------------------------------------------------
+# The two locations that take a message id — one message from the public API, and its PDF — are
+# the only ones that forward the request line as it arrived (see the locations), so the raw line
+# is held to the shape this site writes: the id as encodeURIComponent spells it, as one path
+# segment, then `.pdf` for the PDF. Each location's own match reads nginx's normalised URI, in
+# which `//`, an encoded `%2e` and a `..;` have already been folded away or decoded; the backend
+# would see them all verbatim.
+#
+# A short id may hold a slash (`B/1 2026`), which encodeURIComponent writes as `%2F`, and the
+# backend reads `%2F` on these two paths, and on no other, as part of the id. So an encoded slash
+# is admitted in the id, in either case, and nothing else that names a path separator or folds
+# into one: the first line wins, so an encoded dot, backslash, percent (and with it a doubly
+# encoded slash), semicolon or NUL, an encoded double slash and a `..` are refused whatever
+# follows them. The public API's query is free and is not held here: only its path is checked.
+# ---------------------------------------------------------------------------------------------
+map $request_uri $niord_message_pdf_path_ok {
+    default 0;
+    "~*%(?:2e|5c|25|3b|00)|%2f%2f|\.\." 0;
+    "~^/rest/message-reports/message/(?:[A-Za-z0-9._~!*'()-]|%[0-9A-Fa-f]{2})+\.pdf(?:\?|$)" 1;
+}
+
+map $request_uri $niord_public_message_path_ok {
+    default 0;
+    "~*^[^?]*(?:%(?:2e|5c|25|3b|00)|%2f%2f|\.\.)" 0;
+    "~^/rest/public/v1/message/(?:[A-Za-z0-9._~!*'()-]|%[0-9A-Fa-f]{2})+(?:\?|$)" 1;
+}
+
+# ---------------------------------------------------------------------------------------------
+# A one-time `ticket` in the query authenticates any /rest/ request it reaches, and no address
+# this site writes carries one. Every name the backend would decode to `ticket` is matched,
+# a percent-encoded letter included, as for the report maps above.
+# ---------------------------------------------------------------------------------------------
+map $args $niord_query_has_ticket {
+    default 0;
+    "~(?:^|&)(?:t|%74)(?:i|%69)(?:c|%63)(?:k|%6[bB])(?:e|%65)(?:t|%74)(?:=|&|$)" 1;
+}
+
+# ---------------------------------------------------------------------------------------------
+# The scheme the reader used. A front that terminates TLS says so in X-Forwarded-Proto; this
+# container only ever listens on plain HTTP, so $scheme alone would tell the backend `http` on
+# every request. Only the two real values are passed on.
+# ---------------------------------------------------------------------------------------------
+map $http_x_forwarded_proto $niord_forwarded_proto {
+    default $scheme;
+    http http;
+    https https;
+}
+
+# ---------------------------------------------------------------------------------------------
+# Who may put this site in a frame. The teaser exists to be embedded in other sites' pages, so
+# it takes the deployment's NIORD_TEASER_FRAME_ANCESTORS (the image default `*` keeps every
+# embedding working); every other page may be framed by this site alone. The key is the request
+# line as it arrived, because the router's paths all end up as /index.html in $uri.
+#
+# The teaser is /teaser or /teaser/, with any query, and nothing below it: a path below it is no
+# page of the site, and the router moves it on to the message list, which a frame on another
+# site must not show. For the same reason the application never moves an address on the teaser
+# to another page by the fragment it carries.
+#
+# A page that embeds the teaser by the hash-routed site's address, /#/teaser?lang=da, asks for
+# the root: a browser never sends the fragment, so no policy can be chosen from what it names. A
+# frame that asks for the root is therefore given the teaser frame document instead of the
+# application (`location = /` below). That document shows nothing; its script moves the frame on
+# to /teaser when the fragment names the teaser, and leaves it empty when it names anything else,
+# so it may take the teaser's policy. A browser says a request is a frame's in Sec-Fetch-Dest,
+# which it sends to an https origin and to its own machine only; a frame whose browser does not
+# say so gets the application, with the policy that keeps it out of another site's frame.
+# ---------------------------------------------------------------------------------------------
+map "$http_sec_fetch_dest $request_uri" $niord_root_in_frame {
+    default 0;
+    "~^i?frame /(?:\?|$)" 1;
+}
+
+map "$niord_root_in_frame $request_uri" $niord_frame_ancestors {
+    default "'self'";
+    "~^1 " "${NIORD_TEASER_FRAME_ANCESTORS}";
+    "~^0 /teaser/?(?:\?|$)" "${NIORD_TEASER_FRAME_ANCESTORS}";
+}
+
+map $niord_root_in_frame $niord_root_document {
+    default /index.html;
+    1 /teaser-frame.html;
+}
+
+# ---------------------------------------------------------------------------------------------
+# A repository file is whatever an editor uploaded, served from this origin. An HTML or SVG file
+# opened on its own would otherwise run its script here, so every file is sandboxed: no script,
+# no same-origin access, whatever its type. A PDF is the exception: no browser runs a PDF's
+# script in the page's origin, so the sandbox would protect nothing there, and the attachments
+# readers open most would depend on every browser's PDF viewer accepting a sandboxed document.
+# So is a response without a type, a 304 above all, whose headers would otherwise overwrite those
+# of the file the browser already holds.
+# ---------------------------------------------------------------------------------------------
+map $upstream_http_content_type $niord_repo_file_csp {
+    default "sandbox";
+    "" "";
+    "~*^application/pdf(?:;|$)" "";
+}
+
+server {
+    # An unprivileged port: the server does not run as root.
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # A redirect names the path alone. An absolute one would be built from this server's own
+    # scheme, which is http behind a front that terminates TLS, and a browser refuses to follow
+    # an https page's frame onto http — the embedded teaser's old address would go blank.
+    absolute_redirect off;
+
+    # The security headers of every response. nginx hands a location the add_header directives
+    # of its server only when the location sets none of its own, so every location below that
+    # sets one includes this file again.
+    include /etc/nginx/niord-security-headers.conf;
+
+    # Every text file worth compressing was compressed twice in the image build. brotli_static
+    # answers a client that asks for brotli, gzip_static one that asks for gzip, and a client
+    # that asks for neither gets the original file. `gzip on` is the fallback for what has no
+    # pre-compressed twin — the proxied JSON above all.
+    brotli_static on;
+    gzip_static on;
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+    etag on;
+
+    # An upstream is never allowed to set a cookie on this origin. Nor does its own nosniff pass:
+    # every response carries this server's, and a second copy would make the header a list.
+    # nginx gives a location these only while it sets no proxy_hide_header of its own.
+    proxy_hide_header Set-Cookie;
+    proxy_hide_header X-Content-Type-Options;
+
+    # -----------------------------------------------------------------------------------------
+    # The Niord backend, six allow-listed paths. `^~` so no regex location below can steal them.
+    # The locations that take a free query refuse one that carries a ticket (see the map above);
+    # `return` is the one directive that is safe inside an `if` in a location.
+    # -----------------------------------------------------------------------------------------
+    location ^~ /rest/public/v1/ {
+        limit_except GET HEAD { deny all; }
+        if ($niord_query_has_ticket) {
+            return 403;
+        }
+        include /etc/nginx/niord-proxy.conf;
+        proxy_read_timeout 10s;
+        proxy_pass ${NIORD_SERVER_URL}/rest/public/v1/;
+        # No cache zone is defined, and no location names one with proxy_cache, so this caches
+        # nothing.
+        proxy_cache_valid 200 3m;
+    }
+
+    # One message by its id. The location above passes on nginx's normalised path, in which an
+    # encoded slash is already decoded, so a short id holding one (`B%2F1%202026`) would reach the
+    # backend split in two. Here the proxy_pass names no URI, so the request line is passed on as
+    # it arrived, which is why the raw line is held to the shape the site writes, by the map at
+    # the top, before anything is passed on. The longer prefix wins over the one above.
+    location ^~ /rest/public/v1/message/ {
+        limit_except GET HEAD { deny all; }
+        if ($niord_public_message_path_ok = 0) {
+            return 403;
+        }
+        if ($niord_query_has_ticket) {
+            return 403;
+        }
+        include /etc/nginx/niord-proxy.conf;
+        proxy_read_timeout 10s;
+        proxy_pass ${NIORD_SERVER_URL};
+        # Caches nothing, like the one on /rest/public/v1/.
+        proxy_cache_valid 200 3m;
+    }
+
+    location = /rest/settings/web {
+        limit_except GET HEAD { deny all; }
+        if ($niord_query_has_ticket) {
+            return 403;
+        }
+        include /etc/nginx/niord-proxy.conf;
+        proxy_read_timeout 10s;
+        proxy_pass ${NIORD_SERVER_URL}/rest/settings/web;
+    }
+
+    # Attachments and the images embedded in message HTML. The same path serves an editor-only
+    # DELETE on the backend, which is why the method allow-list is not optional.
+    #
+    # A file an editor uploaded is not this application, so it does not carry the application's
+    # policy: it gets the sandbox of the map above, and the two headers that apply to any
+    # response.
+    location ^~ /rest/repo/file/ {
+        limit_except GET HEAD { deny all; }
+        if ($niord_query_has_ticket) {
+            return 403;
+        }
+        include /etc/nginx/niord-proxy.conf;
+        proxy_read_timeout 10s;
+        proxy_pass ${NIORD_SERVER_URL}/rest/repo/file/;
+        # Caches nothing, like the one on /rest/public/v1/.
+        proxy_cache_valid 200 3m;
+        add_header Content-Security-Policy $niord_repo_file_csp always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    }
+
+    # The two PDFs the backend renders for this site: the filtered list the print button opens,
+    # and one message. Both answer anonymously. Two named paths rather than one prefix, because
+    # everything else under /rest/message-reports/ is an administration surface — the report
+    # catalogue, and the create, update and delete of a report definition.
+    #
+    # Rendering a list runs a search and a FreeMarker pass over up to a thousand messages and
+    # streams the result, which takes seconds on a full country; the ten seconds every other
+    # proxied location allows would cut the download off mid-file, so these two say 180.
+    #
+    # Each refuses a query it was not written for; the two maps at the top say what that is.
+    # `return` is the one directive that is safe inside an `if` in a location.
+    location = /rest/message-reports/report.pdf {
+        limit_except GET HEAD { deny all; }
+        if ($niord_list_pdf_query_ok = 0) {
+            return 403;
+        }
+        include /etc/nginx/niord-proxy.conf;
+        proxy_read_timeout 180s;
+        proxy_pass ${NIORD_SERVER_URL}/rest/message-reports/report.pdf;
+    }
+
+    # A regex location, because the message id is part of the path. nginx forbids a URI in a
+    # proxy_pass here, which is exactly what is wanted: the request line is passed on as it
+    # arrived, id and all, with no chance of re-encoding it — which is why the raw line is held
+    # to the shape the site writes, by the map above, before anything is passed on. The regex
+    # reads the normalised path, in which an id's encoded slash is already a `/`, so it takes
+    # more than one segment and leaves the shape to the map.
+    location ~ "^/rest/message-reports/message/.+\.pdf$" {
+        limit_except GET HEAD { deny all; }
+        if ($niord_message_pdf_path_ok = 0) {
+            return 403;
+        }
+        if ($niord_message_pdf_query_ok = 0) {
+            return 403;
+        }
+        include /etc/nginx/niord-proxy.conf;
+        proxy_read_timeout 180s;
+        proxy_pass ${NIORD_SERVER_URL};
+    }
+
+    # Everything else under /rest/ does not exist on this host: /rest/repo/list/,
+    # /rest/repo/upload/, /rest/messages/, /rest/settings/setting/,
+    # /rest/message-reports/reports, …
+    location /rest/ {
+        return 404;
+    }
+
+    # Keycloak is not reachable from the public site either, and must not fall through to the SPA.
+    location ^~ /auth/ {
+        return 404;
+    }
+
+    # -----------------------------------------------------------------------------------------
+    # The sea chart. Credentials stay server-side. An empty WMS_SERVER_URL answers 200 with an
+    # empty body, so a map that asks for the layer anyway draws nothing rather than an error; a
+    # country's `wmsLayer` decides whether the site asks for it at all.
+    #
+    # The chart server is treated as the Niord backend is: an https one is verified against the
+    # image's CA bundle, for the name in WMS_SERVER_URL, which is also sent as SNI, and the four
+    # credential headers a client may write are emptied. The lines are those of niord-proxy.conf,
+    # written out rather than included, because that file also sets Host and the forwarding
+    # headers for the backend. A chart server whose certificate a private CA signed is refused.
+    # -----------------------------------------------------------------------------------------
+    location ^~ /wms/ {
+        limit_except GET HEAD { deny all; }
+        set $wms_upstream "${WMS_SERVER_URL}";
+        if ($wms_upstream = "") {
+            return 200 "";
+        }
+        resolver 127.0.0.11 8.8.8.8 valid=30s;
+        proxy_pass $wms_upstream;
+        proxy_ssl_server_name on;
+        proxy_ssl_name $proxy_host;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 4;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_set_header Host $host;
+        proxy_set_header Authorization "";
+        proxy_set_header Proxy-Authorization "";
+        proxy_set_header Cookie "";
+        proxy_set_header NiordDomain "";
+        proxy_cache_valid 200 24h;
+    }
+
+    # -----------------------------------------------------------------------------------------
+    # The URLs of the public site this one replaces. Relative, like every redirect here (see
+    # absolute_redirect above).
+    # -----------------------------------------------------------------------------------------
+    rewrite ^/teaser\.html$ /teaser permanent;
+    rewrite ^/details\.html$ /messages/print permanent;
+
+    # -----------------------------------------------------------------------------------------
+    # Static files. Each location below sets its own Cache-Control, so each includes the security
+    # headers again.
+    # -----------------------------------------------------------------------------------------
+    # The builder's own output: the file name carries the content hash, so it can never go stale.
+    # The hash alphabet is the builder's business and has changed before — matching a shape rather
+    # than a list of names is what keeps a new chunk from silently losing `immutable`.
+    #
+    # The year-long lifetime belongs to the file and never to its absence, so it is set without
+    # `always` and a miss is answered by the named location below. During a rolling update a
+    # reader can be handed the new index.html by one pod and ask another for a chunk it does not
+    # have yet; that 404 must not be kept by the browser or a shared cache for a year.
+    location ~* "-[A-Za-z0-9_-]{8,}\.(js|css)$" {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        include /etc/nginx/niord-security-headers.conf;
+        error_page 404 = @niord_missing_build_file;
+        try_files $uri =404;
+    }
+
+    # Hashed fonts and images the builder emits.
+    location ^~ /media/ {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        include /etc/nginx/niord-security-headers.conf;
+        error_page 404 = @niord_missing_build_file;
+        try_files $uri =404;
+    }
+
+    location @niord_missing_build_file {
+        add_header Cache-Control "no-store" always;
+        include /etc/nginx/niord-security-headers.conf;
+        return 404;
+    }
+
+    # Everything under assets/ is copied verbatim and is NOT hashed: translation bundles, branding,
+    # legal documents, flags, logos (the two country folders are sandboxed in the two locations
+    # below, alike in everything else). It must revalidate, and a missing file must be a 404 — the
+    # legal dialog's language fallback depends on it, and the SPA fallback below would answer 200
+    # with index.html. That 404 is kept by nobody, for the same rolling-update reason as a
+    # missing build file's.
+    location ^~ /assets/ {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "public, max-age=300, must-revalidate";
+        include /etc/nginx/niord-security-headers.conf;
+        error_page 404 = @niord_missing_build_file;
+        try_files $uri =404;
+    }
+
+    # A legal document or a branding file is data a country supplies, never this application, so
+    # it gets the sandbox instead of the site's policy: opened on its own, an HTML file runs no
+    # script and has no access to this origin. The longer prefix wins over /assets/ above. An
+    # add_header here replaces the server's, so the common headers are included again and the
+    # site's policy deliberately not — a second policy would not replace the sandbox, the browser
+    # would enforce both. A missing one is the same no-store 404 as any asset.
+    location ^~ /assets/legal/ {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "public, max-age=300, must-revalidate";
+        add_header Content-Security-Policy "sandbox" always;
+        include /etc/nginx/niord-common-headers.conf;
+        error_page 404 = @niord_missing_build_file;
+        try_files $uri =404;
+    }
+
+    location ^~ /assets/branding/ {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "public, max-age=300, must-revalidate";
+        add_header Content-Security-Policy "sandbox" always;
+        include /etc/nginx/niord-common-headers.conf;
+        error_page 404 = @niord_missing_build_file;
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        include /etc/nginx/niord-security-headers.conf;
+        try_files $uri =404;
+    }
+
+    # The root: the application, or for a frame the teaser frame document (see the frame policy
+    # maps at the top). The answer depends on Sec-Fetch-Dest, and says so.
+    location = / {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Vary "Sec-Fetch-Dest" always;
+        include /etc/nginx/niord-security-headers.conf;
+        try_files $niord_root_document =404;
+    }
+
+    # The Angular router owns every remaining path.
+    location / {
+        limit_except GET HEAD { deny all; }
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        include /etc/nginx/niord-security-headers.conf;
+        try_files $uri $uri/ /index.html;
+    }
+}

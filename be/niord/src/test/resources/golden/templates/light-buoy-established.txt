@@ -1,0 +1,272 @@
+# Light buoy established  [templates/tmpl/light-buoy-established.ftl, templates/tmpl/compute-affected-radius.js]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=aton, type=light_buoy_by_type, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 56° 00.0'N - 012° 00.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 56-00.0N
+  | 012-00.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 56° 00.0'N - 012° 00.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 56-00.0N
+  | 012-00.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 61° 06.0'N - 045° 15.0'W. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 61-06.0N
+  | 045-15.0W.
+AUDIO:   A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. / A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 36.0'N - 010° 45.0'E. / A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 42.0'N - 011° 00.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-36.0N
+  | 010-45.0E.
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-42.0N
+  | 011-00.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East. A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: 
+NAVTEX:
+  | 
+  |     
+AUDIO:   null
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.type.light_buoy.black_yellow
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.yellow_black
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A yellow-black light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | YELLOW-BLACK LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A yellow-black light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.black_yellow_black
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow-black light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW-BLACK LIGHT BUOY HALS
+  | BARRE SHOWING FL.G.3S ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow-black light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.yellow_black_yellow
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A yellow-black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | YELLOW-BLACK-YELLOW LIGHT BUOY HALS
+  | BARRE SHOWING FL.G.3S ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A yellow-black-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.green
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A green light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | GREEN LIGHT BUOY HALS BARRE SHOWING
+  | FL.G.3S ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A green light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.red
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A red light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | RED LIGHT BUOY HALS BARRE SHOWING
+  | FL.G.3S ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A red light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A red-green-red light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | RED-GREEN-RED LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A red-green-red light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A green-red-green light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | GREEN-RED-GREEN LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A green-red-green light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.red_white
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A red-white bouy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | RED-WHITE BOUY HALS BARRE SHOWING
+  | FL.G.3S ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A red-white bouy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.yellow
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | YELLOW LIGHT BUOY HALS BARRE SHOWING
+  | FL.G.3S ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.black_red
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-red light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-RED LIGHT BUOY HALS BARRE SHOWING
+  | FL.G.3S ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A black-red light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.light_buoy.blue_yellow
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A blue-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLUE-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.3S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A blue-yellow light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A light buoy Hals Barre showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | A LIGHT BUOY HALS BARRE SHOWING FL.G.3S
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A light buoy Hals Barre showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY SHOWING FL.G.3S
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow light buoy showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy St. John's Point showing green flash every 3 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY ST. JOHN'S
+  | POINT SHOWING FL.G.3S ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow light buoy St. John's Point showing green flash every 3 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_light = Fl(2)R.10s 5M
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing 2 red flashes every 10 seconds, 5 nautical miles has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL(2)R.10S 5M ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing 2 red flashes every 10 seconds, 5 nautical miles has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_light = Q(6)+LFl.15s
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing 6 quick flashes followed by long flash every 15 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING Q(6)+LFL.15S ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing 6 quick flashes followed by long flash every 15 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_light = Iso.WRG.4s
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing white, red and green isophase light every 4 seconds has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING ISO.WRG.4S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing white, red and green isophase light every 4 seconds has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_light = Fl.G.1s
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing green flash every second has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING FL.G.1S ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing green flash every second has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_light = not a light character
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre showing nonsense has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | SHOWING NONSENSE ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre showing nonsense has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_light = empty
+TITLE:   Denmark. The Baltic Sea. Light buoy established.
+SUBJECT: Light buoy established
+DETAILS: A black-yellow light buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW LIGHT BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow light buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+

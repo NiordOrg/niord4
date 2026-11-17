@@ -1,0 +1,91 @@
+<app-admin-section-page [titleKey]="config().titleKey" [descriptionKey]="config().descriptionKey">
+  <div class="admin-toolbar">
+    <button type="button" class="btn-primary" [disabled]="addDisabled()" (click)="add.emit()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ (hasSelection() ? config().addSubLabelKey : config().addLabelKey) | transloco }}
+    </button>
+
+    <span
+      class="inline-flex overflow-hidden rounded border border-surface-300 dark:border-surface-600"
+    >
+      <button
+        type="button"
+        class="icon-button rounded-none text-xs"
+        [disabled]="moveDisabled()"
+        [attr.aria-label]="config().moveUpKey | transloco"
+        [title]="config().moveUpKey | transloco"
+        (click)="moveUp.emit()"
+      >
+        <app-icon name="lucideArrowUp" />
+      </button>
+      <button
+        type="button"
+        class="icon-button rounded-none border-l border-surface-300 text-xs dark:border-surface-600"
+        [disabled]="moveDisabled()"
+        [attr.aria-label]="config().moveDownKey | transloco"
+        [title]="config().moveDownKey | transloco"
+        (click)="moveDown.emit()"
+      >
+        <app-icon name="lucideArrowDown" />
+      </button>
+    </span>
+
+    <button
+      type="button"
+      class="btn-tertiary hover:text-danger"
+      [disabled]="!hasSelection()"
+      (click)="deleteRequested.emit()"
+    >
+      <app-icon name="lucideTrash2" class="mr-1 text-xs" />
+      {{ config().deleteKey | transloco }}
+    </button>
+
+    <span class="admin-toolbar-spacer"></span>
+    @if (modelLanguage(); as selection) {
+      <app-model-language-picker [selection]="selection" />
+    }
+
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="config().actionsAriaLabelKey | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="config().actionsAriaLabelKey | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="loading()" />
+
+  @if (error()) {
+    <app-error-banner
+      [title]="config().loadErrorKey | transloco"
+      [retryLabel]="config().retryKey | transloco"
+      (retry)="retry.emit()"
+    />
+  } @else {
+    <div class="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(18rem,24rem)_1fr]">
+      <!-- Master: the drag-to-re-parent tree. -->
+      <div class="admin-card flex min-h-0 flex-col overflow-hidden p-2">
+        <app-entity-tree
+          class="min-h-0 flex-1 overflow-auto"
+          [entities]="entities()"
+          [dnd]="dnd()"
+          [selectedIds]="selectedIds()"
+          [flagTemplate]="flagTemplate()"
+          [templatePredicate]="templatePredicate()"
+          [filterPlaceholder]="config().filterPlaceholderKey | transloco"
+          (entitySelected)="nodeSelected.emit($event)"
+          (nodeMoved)="nodeMoved.emit($event)"
+        />
+      </div>
+
+      <!-- Detail: the inline editor, projected by the host page (its own empty-state). -->
+      <div class="admin-card flex min-h-0 flex-col overflow-hidden">
+        <ng-content />
+      </div>
+    </div>
+  }
+</app-admin-section-page>

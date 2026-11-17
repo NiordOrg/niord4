@@ -1,0 +1,210 @@
+
+[#messages]
+== Reading the Messages
+
+The site has three views of the messages: _Details_, _List_ and _Map_ (the map has a chapter of its
+own, <<map>>). All three show the same messages, the ones you chose in the filter bar, so you can
+move between them without choosing again.
+
+[#choosing-messages]
+=== Choosing which messages you see
+
+The filter bar under the menu bar holds the buttons that choose the messages, and the button that
+prints them.
+
+.The filter bar
+image::PublicSiteFilterBar.png[The filter bar, 365]
+
+* _Navigational Warnings_ and _Notices to Mariners_ switch each kind of message on or off. A button
+  that is on is dark. Both are on when you first open the site. One of them is always on: the last
+  one that is on cannot be switched off, so to see only notices, switch the warnings off, and the
+  other way round. The site remembers your choice in your browser.
+* _Show Active Now_ is described in <<active-now>>.
+* _Print_ makes a document of the messages you are looking at, ready to print or save (see
+  <<printing>>).
+
+[#area-buttons]
+Some sites have a second row of buttons in the filter bar, one for each sea area. Click an area to
+see only its messages; click it again to see them all. You can choose several areas at once. On a
+site that covers more than one region, the row starts with a button for each region, and the site
+remembers the region you chose. The Niord base product has no area row of its own: it shows one
+only while you browse a publication (see <<browse-publication>>).
+
+[#active-now]
+==== Show Active Now, and the dates of a message
+
+_Show Active Now_ is there to keep only the messages that are in force at this moment. In this
+version of the site, pressing the button does not change the list: with it pressed or not, you see
+every published message of the kinds you chose. The site does not remember the button either: it is
+always off when the site opens.
+
+So read the dates in the message itself to know when it applies:
+
+* The text of the message says when the work, the exercise or the change takes place, for example
+  "In the period 1 October - 12 October 2026, dredging will be carried out". Some messages have a
+  part called _Time_ for this.
+* The line at the end of a message ends with the day the authority published it, for example
+  "Published 14 September 2026".
+
+Dates are given in the time zone of the authority that published the message.
+
+[#details-view]
+=== The Details view
+
+_Details_ is the view the site opens on. It shows the full text of every message, one under the
+other, under the name of the sea area it is in.
+
+.The Details view
+image::PublicSiteDetailsPage.png[The Details view, 800]
+
+Each message is a card with all its text (see <<reading-a-message>>). Click its title to open the
+message in a window of its own, with its map (see <<message-window>>). The small arrow after the
+title shows that it opens.
+
+[#list-view]
+=== The List view
+
+_List_ shows one line for each message, under the name of the sea area it is in: the message's
+number and its title. It is the quickest way to see what is published for an area.
+
+.The List view
+image::PublicSiteListPage.png[The List view, 800]
+
+Click a line to open the message in a window of its own (see <<message-window>>).
+
+[#reading-a-message]
+=== Reading a message
+
+A message has these parts, from the top. A part that the message does not have is left out.
+
+.A message in the Details view
+image::PublicSiteMessageCard.png[A message in the Details view, 510]
+
+Pictures above the text::
+An authority can place a picture or a short video above the text of a message, for example a
+section of a chart. It can also place one below the text.
+
+The star (★)::
+A star above the number marks a notice based on original information, as printed Notices to
+Mariners mark it.
+
+The number::
+The message's number, in a grey box, for example _NM-811-26_ or _NW-348-26_. A message without a
+number is named by its kind instead, for example _Coastal NW_ or _Temp. NM_. After the number, _(T)_
+marks a temporary notice and _(P)_ a preliminary one.
++
+A message that the authority has cancelled carries the mark _Cancelled_ beside its number, and one
+that has run out carries the mark _Expired_. A permanent notice that has run out has no mark: it
+has simply come to the end of its life. The site's own lists hold published messages only, so you
+meet cancelled and expired messages in a publication you browse (see <<browse-publication>>), when
+you follow a reference from another message, and when you open a link to one message (see
+<<message-links>>).
+
+The title::
+The title names the country, the sea area, the place and what has happened, for example
+_Denmark. Kattegat. Skagen. Light unlit._
+
+References::
+Other messages this message refers to, by their number, with what the reference is: _(repetition)_,
+_(repetition with new time)_, _(updated repetition)_ or _(cancelled)_. Click a number to open that
+message (see <<message-window>>).
+
+Details, Time, Positions, Note, Prohibition, Signals::
+The text of the message, in one or more parts. The name on the left says what kind of part it is,
+and is written only once for parts of the same kind that follow each other. A part may start with a
+short subject in bold.
++
+Positions are usually listed in a table, each with a number, for example
+`1) 55° 07.432'N - 012° 14.871'E`: degrees and minutes of latitude and longitude. The map in the
+message's window marks the same positions with the same numbers. A message may also give a
+position on a line of its own, without a number.
+
+Attachments::
+Files that belong to the message, such as a chart section or a document. Click _Show attachments_
+to list them, and a file's name to open it in a new tab. _Hide attachments_ folds the list away
+again.
+
+Charts::
+The numbers of the charts the message concerns. An international chart number follows in brackets,
+for example _103 (INT 1303)_.
+
+Publication::
+The nautical publications the message concerns, such as a list of lights.
+
+The source and the date::
+The last line, in brackets, says who reported the matter and when, and the day the authority
+published the message, for example
+_(Port of Kalundborg 14 August 2026. Published 14 August 2026)_.
+
+[#message-window]
+=== The message window
+
+A message opens in a window over the page when you click its title in the _Details_ view, its line
+in the _List_ view, or its symbol on the map.
+
+.A message opened from the list
+image::PublicSiteMessageDialog.png[A message opened from the list, 800]
+
+The window's title says which kind of message it is, _Navigational Warnings_ or _Notices to
+Mariners_. Under it:
+
+* A map of the message's positions, when the message has any (see <<message-map>>). A message with
+  a picture placed above its text shows the picture instead.
+* The whole text of the message, as described in <<reading-a-message>>.
+
+At the bottom of the window:
+
+* The two arrow buttons step to the previous and the next message of the list you opened the
+  window from, so you can read through the list without closing the window. They are not there when
+  the message is not in that list, for example when you followed a reference to it.
+* _back_ appears when you have followed a reference to another message, and takes you back to the
+  message you came from.
+* The printer button makes a document of this one message (see <<printing>>).
+* _Close_ closes the window. The cross in the top right corner and the kbd:[Esc] key do the same.
+
+[#message-links]
+==== Links to one message
+
+Each message has an address of its own, which opens the site with that message's window open, for
+example:
+
+----
+https://nautiskinformation.brs2.dk/messages/details/message/NM-811-26
+----
+
+The last part of the address is the message's number. Send such a link to someone who needs to
+read the message, or bookmark it. The link keeps working after the message has been cancelled or
+has expired: the window then shows the message with its mark, _Cancelled_ or _Expired_ (see
+<<reading-a-message>>), so check the mark before you rely on an old link. When the number is wrong,
+or the message has never been published, the window says so: _Message NM-811-26 is not available_.
+
+Closing the window leaves you on the _Details_ view.
+
+[#printing]
+=== Printing
+
+The site prints from documents in PDF that the Niord server makes. Each opens in a new tab of your
+browser, where you can print it or save it.
+
+* _Print_ in the filter bar makes a document of the list you are looking at: the kinds of message
+  you chose, and the areas you chose when the filter bar has area buttons. While you browse a
+  publication, it prints that publication's messages. _Show Active Now_ makes no difference to it.
+  The button is greyed out while the list is loading, and when the list is empty.
+* The printer button at the bottom of a message's window makes a document of that one message.
+
+.The printed list
+image::PublicSitePrintPdf.png[The printed list, 498]
+
+The printed list is grouped by sea area, as the _Details_ view is, and says at its top when it was
+made.
+
+The server makes only a few documents at a time for the public. When many readers print at the
+same moment, the new tab may show an error instead of the document: close it and try again a
+little later.
+
+[#when-the-list-does-not-load]
+=== When the list does not load
+
+While the site reads the messages, a turning circle shows where they will appear. If the site
+cannot read them, for example because the connection was lost, it says so in red: _Failed to load
+messages_. That does not mean that there are no messages: reload the page, or try again later.

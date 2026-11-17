@@ -1,0 +1,205 @@
+[#niord-publication-model]
+== Niord Publication Model
+
+Besides single messages, Niord publishes _publications_: documents a reader can download, such as
+a weekly Notices to Mariners issue, an annual summary or a list of lights. A publication is either
+a file kept in the producing system, a link to a document elsewhere, or a document the producing
+system makes from a set of messages. The public API lists the publications that are current, or
+that were current in a given period, and messages refer to publications in their `publication`
+field.
+
+A publication series, such as the weekly Notices to Mariners, is published as one publication per
+issue. Each published issue appears in the public API as a publication of its own, with the same
+fields as any other publication.
+
+[#publication-model-uml]
+=== Publication Model Class Diagram
+
+[[img-publication-uml]]
+.Publication model class diagram
+[plantuml, publication-model, svg]
+....
+@startuml
+left to right direction
+hide empty methods
+hide circle
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName sans-serif
+
+class Publication {
+  publicationId : String
+  created : DateTime [0..1]
+  updated : DateTime [0..1]
+  type : PublicationType [0..1]
+  publishDateFrom : DateTime [0..1]
+  publishDateTo : DateTime [0..1]
+}
+
+class PublicationDesc #LightYellow {
+  lang : String
+  title : String [0..1]
+  titleFormat : String [0..1]
+  link : String [0..1]
+  fileName : String [0..1]
+  messagePublicationFormat : String [0..1]
+}
+
+class PublicationCategory {
+  categoryId : String
+  priority : Integer [0..1]
+  publish : Boolean [0..1]
+}
+
+class PublicationCategoryDesc #LightYellow {
+  lang : String
+  name : String [0..1]
+  description : String [0..1]
+}
+
+enum PublicationType #LightGray {
+  NONE
+  LINK
+  REPOSITORY
+  MESSAGE_REPORT
+}
+
+Publication *-- "0..*" PublicationDesc : descs
+Publication o-- "0..1" PublicationCategory : category
+PublicationCategory *-- "0..*" PublicationCategoryDesc : descs
+Publication ..> PublicationType
+@enduml
+....
+
+The colours and lines mean the same as in the <<message-model-uml,message model class diagram>>.
+
+[#publication-model-classes]
+=== Publication Model Classes
+
+[#publication]
+==== Publication
+
+[cols="22,20,12,46",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|publicationId|String|Always|The id of the publication, a UUID. It is the id the public API looks
+a publication up by, and the id a message's citation carries (see
+<<publication-citations,Publication citations>>).
+
+|created|DateTime|Optional|When the publication was created in the producing system.
+
+|updated|DateTime|Optional|When the publication was last changed in the producing system.
+
+|category|PublicationCategory|Optional|The category the publication belongs to. See
+<<publicationcategory,PublicationCategory>>.
+
+|type|PublicationType|Optional|Where the document of the publication comes from: `LINK`, a link
+to a document elsewhere; `REPOSITORY`, a file kept in the producing system; `MESSAGE_REPORT`, a
+document the producing system made from a set of messages, such as a weekly Notices to Mariners
+issue; or `NONE`, no document at all.
+
+|publishDateFrom|DateTime|Optional|When the publication became current. For an issue of a
+publication series, this is when it became the current issue of the series.
+
+|publishDateTo|DateTime|Optional|When the publication stopped being current. For an issue of a
+publication series, this is just before the next issue became current. When it is missing, the
+publication is still current.
+
+|descs|PublicationDesc[]|Optional|The localized title and document. See
+<<publicationdesc,PublicationDesc>>.
+|===
+
+[#publicationdesc]
+==== PublicationDesc
+The localized fields of a publication. A publication may have a different document for each
+language.
+
+[cols="22,20,12,46",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|title|String|Optional|The title of the publication, for example `NtM Week 38 - 2026`.
+
+|titleFormat|String|Optional|The pattern the producing system made the title from. A client has no
+use for it.
+
+|link|String|Optional|The address of the document. When the public API rewrites links (its
+`externalize` parameter, on by default), this is a full address. Otherwise a file the producing
+system keeps has an address relative to its host, starting with `/rest/repo/file/`.
+
+|fileName|String|Optional|The file name of the document, for example `NtM-Week-38-2026.pdf`.
+
+|messagePublicationFormat|String|Optional|The text with which a message cites the publication in its
+`publication` field. `${parameters}` in it stands for what the editor adds when citing, such as a
+section or a page number. +
+Example: `Firing Practice Areas at Sea 2026, section ${parameters}`.
+|===
+
+[#publicationcategory]
+==== PublicationCategory
+Publications are grouped into categories, such as the weekly notices and their annexes.
+
+[cols="22,20,12,46",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|categoryId|String|Always|The id of the category in the producing system.
+
+|priority|Integer|Optional|The order of the categories: a category with a lower number comes
+first. The public API lists the publications in this order.
+
+|publish|Boolean|Optional|Whether the publications of the category are public. The public API only
+returns publications of categories where it is `true`.
+
+|descs|PublicationCategoryDesc[]|Optional|The localized name and description. See
+<<publicationcategorydesc,PublicationCategoryDesc>>.
+|===
+
+[#publicationcategorydesc]
+==== PublicationCategoryDesc
+The localized fields of a publication category.
+
+[cols="22,20,12,46",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|name|String|Optional|The name of the category, for example `Notices to Mariners`.
+
+|description|String|Optional|A description of the category.
+|===
+
+[#publication-citations]
+=== Publication citations
+The `publication` field of a message (see the <<messagedesc,MessageDesc>> class) is HTML. When a
+message cites a publication that Niord keeps, the citation is an element whose `publication`
+attribute holds the publication's id. It is one of two elements:
+
+* A link, `<a publication="..." href="..." target="_blank">`, when the citation has an address.
+  The address is the one the editor gave when citing the publication, which may lead to a
+  particular page or section; when the editor gave none, it is the address of the publication's
+  document (the `link` of its <<publicationdesc,PublicationDesc>>).
+* A `<span publication="...">`, when there is no address at all.
+
+A client that looks for citations must look for both. For example:
+
+[source,html]
+----
+<a publication="f3a2a685-fe2e-48f7-98de-f6459c6667bb"
+   href="https://www.example.org/pilot" target="_blank">Harbour pilot, section 4.</a>
+<span publication="0b6d3c52-6a8e-4f0e-9a3e-2d1c9f7b4e10">List of Lights 2026.</span>
+----
+
+A client can use the id to fetch the publication from the public API and, for a publication made
+from messages, to list its messages (see link:../public-api/api.html#messages[the messages
+endpoint] and its `publication` parameter). The publication endpoint answers only for a
+publication that is public now. The messages endpoint also accepts the id of a publication-series
+issue that has since been withdrawn from the public list, so the messages of an old citation can
+still be listed. A message may also cite a publication that is not public at all, such as one kept
+for the editors' own use, and the API then answers as it does for an unknown id. The `publication`
+attribute is not standard HTML, so a client that cleans the HTML before it shows it may drop the
+attribute; the link itself still works.

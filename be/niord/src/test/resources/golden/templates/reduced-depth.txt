@@ -1,0 +1,157 @@
+# Reduced depth  [templates/tmpl/reduced-depth.ftl]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=reduced_depth, type=reduced_depth, positionList=false]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in pos. 55° 30.0'N - 010° 30.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED
+  | 55-30.0N 010-30.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in pos. 56° 00.0'N - 012° 00.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED
+  | 56-00.0N 012-00.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in pos. 56° 00.0'N - 012° 00.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED
+  | 56-00.0N 012-00.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in pos. 61° 06.0'N - 045° 15.0'W in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED
+  | 61-06.0N 045-15.0W IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed between pos. 55° 30.0'N - 010° 30.0'E and 55° 36.0'N - 010° 45.0'E and 55° 42.0'N - 011° 00.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED
+  | 55-30.0N 010-30.0E AND 55-36.0N
+  | 010-45.0E AND 55-42.0N 011-00.0E IN
+  | ENTRANCE TO HALS BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 36.0 min. North - 010 degrees 45.0 min. East and 55 degrees 42.0 min. North - 011 degrees 00.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### geometry: an area (polygon)
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in the area between pos. 55° 30.0'N - 010° 30.0'E and 55° 30.0'N - 011° 00.0'E and 56° 00.0'N - 011° 00.0'E and 56° 00.0'N - 010° 30.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED IN
+  | AREA 55-30.0N 010-30.0E AND 55-30.0N
+  | 011-00.0E AND 56-00.0N 011-00.0E AND
+  | 56-00.0N 010-30.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in the area between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 30.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 010 degrees 30.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED IN
+  | ENTRANCE TO HALS BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### param water_depth = 0
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 0m have been observed in pos. 55° 30.0'N - 010° 30.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 0M OBSERVED
+  | 55-30.0N 010-30.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 0m have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### param water_depth = 1
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 1m have been observed in pos. 55° 30.0'N - 010° 30.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 1M OBSERVED
+  | 55-30.0N 010-30.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 1m have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### param water_depth = 2.5
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 2.5m have been observed in pos. 55° 30.0'N - 010° 30.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 2.5M OBSERVED
+  | 55-30.0N 010-30.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 2.5m have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### param water_depth = 1250
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 1250m have been observed in pos. 55° 30.0'N - 010° 30.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 1250M OBSERVED
+  | 55-30.0N 010-30.0E IN ENTRANCE TO HALS
+  | BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 1250m have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### param water_depth = empty
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Reduced water depths have been observed in pos. 55° 30.0'N - 010° 30.0'E in the entrance to Hals Barre. / Mariners are advised to keep well clear.
+NAVTEX:
+  | REDUCED WATER DEPTHS OBSERVED 55-30.0N
+  | 010-30.0E IN ENTRANCE TO HALS BARRE.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Reduced water depths have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East in the entrance to Hals Barre. Mariners are advised to keep well clear.
+
+### param locality = empty
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in pos. 55° 30.0'N - 010° 30.0'E. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED
+  | 55-30.0N 010-30.0E.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Mariners are advised to keep well clear.
+
+### param locality = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Reduced depth.
+SUBJECT: Reduced depth
+DETAILS: Water depths down to 12m have been observed in pos. 55° 30.0'N - 010° 30.0'E in the entrance to St. John's Point. / Mariners are advised to keep well clear.
+NAVTEX:
+  | WATER DEPTHS DOWN TO 12M OBSERVED
+  | 55-30.0N 010-30.0E IN ENTRANCE TO ST.
+  | JOHN'S POINT.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Water depths down to 12m have been observed in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East in the entrance to St. John's Point. Mariners are advised to keep well clear.
+

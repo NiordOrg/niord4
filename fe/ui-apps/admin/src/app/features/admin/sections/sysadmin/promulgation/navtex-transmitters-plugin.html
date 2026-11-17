@@ -1,0 +1,154 @@
+<!-- The in-drawer plugin row (the "Transmitters" form row in the type form). -->
+<div class="flex flex-col gap-1">
+  <span class="text-sm font-medium text-fg-title">
+    {{ 'admin.promulgation.navtex.row' | transloco }}
+  </span>
+  <div>
+    <button type="button" class="btn-secondary" (click)="openDialog()">
+      {{ 'admin.promulgation.navtex.manage' | transloco }}
+    </button>
+  </div>
+</div>
+
+<!-- The transmitters surface is a modal dialog ABOVE the drawer — never a second drawer. -->
+<app-dialog
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
+  [header]="headerText()"
+  [style]="{ width: '42rem', maxWidth: '92vw' }"
+>
+  @if (editing()) {
+    <!-- Edit view (in-dialog swap) -->
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-4">
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" class="checkbox" [formField]="form.active" />
+        <span class="font-medium text-fg">
+          {{ 'admin.promulgation.navtex.active' | transloco }}
+        </span>
+      </label>
+
+      <div class="flex flex-col gap-1">
+        <label for="navtex-transmitter-name" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.navtex.name' | transloco }}
+        </label>
+        <input
+          id="navtex-transmitter-name"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.name"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.navtex.areas' | transloco }}
+        </span>
+        <app-areas-field
+          [formField]="form.areas"
+          placeholder="admin.promulgation.navtex.areasPlaceholder"
+        />
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  } @else {
+    <!-- List view -->
+    @if (loadFailed()) {
+      <div class="flex flex-col items-start gap-2 text-sm text-fg-muted">
+        <span>{{ 'admin.promulgation.navtex.loadError' | transloco }}</span>
+        <button type="button" class="btn-secondary" (click)="load()">
+          {{ 'admin.promulgation.retry' | transloco }}
+        </button>
+      </div>
+    } @else if (transmitters(); as list) {
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-16">{{ 'admin.promulgation.navtex.active' | transloco }}</th>
+            <th>{{ 'admin.promulgation.navtex.name' | transloco }}</th>
+            <th>{{ 'admin.promulgation.navtex.areas' | transloco }}</th>
+            <th class="w-20">
+              <span class="sr-only">{{ 'admin.promulgation.navtex.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (transmitter of list; track transmitter.name) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="transmitter.active"
+                  [class.is-inactive]="!transmitter.active"
+                  [attr.aria-label]="
+                    (transmitter.active ? 'admin.promulgation.navtex.active' : 'common.inactive')
+                      | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td>{{ transmitter.name }}</td>
+              <td class="text-sm">
+                @for (name of areaNames(transmitter); track $index) {
+                  <div>{{ name }}</div>
+                }
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.promulgation.navtex.edit' | transloco"
+                  (click)="editTransmitter(transmitter)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.promulgation.navtex.delete' | transloco"
+                  (click)="deleteTransmitter(transmitter)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="text-fg-muted">
+                {{ 'admin.promulgation.navtex.empty' | transloco }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <app-progress-bar [visible]="true" />
+    }
+  }
+
+  <ng-template #footer>
+    @if (editing()) {
+      <!-- Cancel returns to the in-dialog list (refetching) — it never closes the dialog. -->
+      <button type="button" class="btn-tertiary" (click)="load()">
+        {{ 'admin.promulgation.navtex.cancel' | transloco }}
+      </button>
+      <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+        {{ 'admin.promulgation.navtex.save' | transloco }}
+      </button>
+    } @else {
+      <button type="button" class="btn-primary mr-auto" (click)="addTransmitter()">
+        {{ 'admin.promulgation.navtex.addTransmitter' | transloco }}
+      </button>
+      <button type="button" class="btn-tertiary" (click)="dialogVisible.set(false)">
+        {{ 'admin.promulgation.navtex.close' | transloco }}
+      </button>
+    }
+  </ng-template>
+</app-dialog>
+
+<app-confirm />

@@ -1,0 +1,171 @@
+<app-admin-section-page titleKey="admin.sections.charts.label" descriptionKey="admin.charts.intro">
+  <div class="flex flex-col gap-4 xl:flex-row">
+    <!-- List column: the toolbar aligns with the table (not the overview map). -->
+    <div class="flex min-w-0 flex-1 flex-col">
+      <div class="admin-toolbar">
+        <span class="relative">
+          <input
+            type="text"
+            class="w-64 text-input"
+            [value]="search()"
+            (input)="onSearch($any($event.target).value)"
+            [placeholder]="'admin.charts.filterPlaceholder' | transloco"
+            [attr.aria-label]="'admin.charts.filterPlaceholder' | transloco"
+          />
+          @if (search() !== '') {
+            <button
+              type="button"
+              class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+              [attr.aria-label]="'admin.charts.clearFilter' | transloco"
+              (click)="onSearch('')"
+            >
+              <app-icon name="lucideX" class="text-xs" />
+            </button>
+          }
+        </span>
+        <span class="admin-toolbar-spacer"></span>
+        <button type="button" class="btn-primary" (click)="addChart()">
+          <app-icon name="lucidePlus" class="mr-1 text-xs" />
+          {{ 'admin.charts.newChart' | transloco }}
+        </button>
+        <app-menu-trigger
+          icon="lucideSettings"
+          [ariaLabel]="'admin.charts.actionsAriaLabel' | transloco"
+          [menu]="cogMenu"
+        />
+        <app-menu
+          #cogMenu
+          [model]="cogItems()"
+          [ariaLabel]="'admin.charts.actionsAriaLabel' | transloco"
+        />
+      </div>
+
+      <app-progress-bar [visible]="facade.loading()" />
+
+      @if (facade.error()) {
+        <app-error-banner
+          [title]="'admin.charts.loadError' | transloco"
+          [retryLabel]="'admin.charts.retry' | transloco"
+          (retry)="facade.refresh()"
+        />
+      } @else if (!facade.loading() && filtered().length === 0) {
+        @if (facade.charts().length === 0) {
+          <app-empty-state icon="lucideInbox" [title]="'admin.charts.empty.none' | transloco" />
+        } @else {
+          <app-empty-state
+            icon="lucideFilterX"
+            [title]="'admin.charts.empty.noMatches' | transloco"
+          />
+        }
+      } @else if (!facade.loading()) {
+        <div class="admin-card">
+          <table class="niord-table">
+            <thead>
+              <tr>
+                <th class="w-16">
+                  <span class="sr-only">{{ 'admin.charts.column.active' | transloco }}</span>
+                </th>
+                <th>{{ 'admin.charts.column.number' | transloco }}</th>
+                <th>{{ 'admin.charts.column.intNumber' | transloco }}</th>
+                <th>{{ 'admin.charts.column.name' | transloco }}</th>
+                <th class="num">{{ 'admin.charts.column.scale' | transloco }}</th>
+                <th class="w-24">
+                  <span class="sr-only">{{ 'admin.charts.column.actions' | transloco }}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (chart of pager.paged(); track chart.chartNumber) {
+                <tr>
+                  <td>
+                    <span
+                      class="status-dot"
+                      [class.is-active]="chart.active"
+                      [class.is-inactive]="!chart.active"
+                      [attr.aria-label]="
+                        (chart.active ? 'admin.charts.column.active' : 'common.inactive')
+                          | transloco
+                      "
+                      [title]="
+                        (chart.active ? 'admin.charts.column.active' : 'common.inactive')
+                          | transloco
+                      "
+                      role="img"
+                    ></span>
+                  </td>
+                  <td class="font-mono">{{ chart.chartNumber }}</td>
+                  <td>{{ chart.internationalNumber }}</td>
+                  <td>{{ chart.name }}</td>
+                  <td class="num">
+                    @if (chart.scale) {
+                      <span>1:{{ formatScale(chart.scale) }}</span>
+                    }
+                  </td>
+                  <td class="text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      class="icon-button text-xs"
+                      [attr.aria-label]="'admin.charts.editChart' | transloco"
+                      (click)="editChart(chart)"
+                    >
+                      <app-icon name="lucidePencil" />
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-button text-xs hover:text-danger"
+                      [attr.aria-label]="'admin.charts.deleteChart' | transloco"
+                      (click)="deleteChart(chart)"
+                    >
+                      <app-icon name="lucideTrash2" />
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (pager.total() > pager.rows) {
+          <app-pager
+            [first]="pager.first()"
+            [rows]="pager.rows"
+            [total]="pager.total()"
+            (pageChange)="pager.setFirst($event)"
+          />
+        }
+      }
+    </div>
+
+    <!-- Pan/zoomable overview of the CURRENT page's chart extents (the page
+         slice, not the whole catalog; re-fits on page change, no persisted
+         view state). Shown only once the list has rendered. -->
+    @if (!facade.loading() && !facade.error() && facade.charts().length > 0) {
+      <div class="shrink-0 xl:w-96">
+        <div
+          class="h-80 overflow-hidden rounded border border-surface-200 xl:h-96 dark:border-surface-700"
+          role="region"
+          [attr.aria-label]="'admin.charts.map.ariaLabel' | transloco"
+        >
+          <app-ol-map class="block h-full w-full">
+            <app-ol-tile-layer source="OSM" />
+            <app-charts-extent-layer [charts]="pager.paged()" />
+          </app-ol-map>
+        </div>
+      </div>
+    }
+  </div>
+
+  <app-chart-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="editorModel.set(undefined)"
+  />
+
+  <app-json-import-dialog
+    titleKey="admin.charts.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.charts.label"
+    (closed)="onImportClosed()"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

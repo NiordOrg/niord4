@@ -1,0 +1,43 @@
+<!--
+  `<main>` is full-width: each area owns its own content width — messages/editor
+  center theirs at `max-w-screen-2xl`, admin/sysadmin run full-width to the gutter.
+  overflow-x-clip contains the full-bleed children that use `w-screen` (100vw) to
+  span the full viewport: the messages tab-menu + map view escape the centered
+  messages column, while the landing map sits directly under the full-width
+  `<main>` (its escape is redundant there but kept explicit). When a vertical
+  scrollbar is present, 100vw is wider than the visible content box by the
+  scrollbar width, so without this clip the page gains a spurious horizontal
+  scrollbar. `clip` (not `hidden`) keeps the y-axis `visible`, so sticky headers
+  and normal body scroll are unaffected.
+-->
+<div class="flex min-h-screen flex-col overflow-x-clip bg-bg">
+  <app-main-header />
+
+  @if (auth.authFallback(); as reason) {
+    <div
+      class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[var(--niord-notice-warn-bg)] px-4 py-2 text-center text-sm text-[var(--niord-notice-warn-fg)]"
+      role="status"
+    >
+      <span>
+        <app-icon name="lucideTriangleAlert" class="mr-1" />
+        {{
+          (reason === 'expired' ? 'shared.auth.sessionExpired' : 'shared.auth.loginUnavailable')
+            | transloco
+        }}
+      </span>
+      <button type="button" class="font-medium underline" (click)="auth.toggleAuthentication()">
+        {{ 'menu.login' | transloco }}
+      </button>
+    </div>
+  }
+
+  <app-update-banner />
+
+  <main class="flex w-full flex-1 flex-col">
+    <router-outlet />
+  </main>
+
+  <app-main-footer />
+</div>
+
+<app-toast />

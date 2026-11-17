@@ -1,0 +1,43 @@
+<ng-template #panel>
+  <!-- Naming: the element carrying `titleId` only exists in the default-header branch below, so a
+       dialog that projects its OWN header must be named by string instead. Pointing
+       aria-labelledby at an id that isn't in the DOM leaves the dialog with NO accessible name —
+       it announces as a bare "dialog" — and is an invalid IDREF besides. `|| null` rather than a
+       bare `header()`, because an empty aria-label is worse than none: it suppresses whatever the
+       browser might otherwise have fallen back to. -->
+  <div
+    class="dialog-panel"
+    [style]="style()"
+    [class]="panelClass()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="headerTpl() ? null : titleId"
+    [attr.aria-label]="headerTpl() ? header() || null : null"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true"
+  >
+    <header class="dialog-header">
+      @if (headerTpl()) {
+        <ng-container [ngTemplateOutlet]="headerTpl()!" />
+      } @else {
+        <h2 [id]="titleId" class="dialog-title">{{ header() }}</h2>
+      }
+      @if (closable()) {
+        <button
+          type="button"
+          class="icon-button"
+          (click)="requestClose()"
+          [attr.aria-label]="'term.close' | transloco"
+        >
+          <app-icon name="lucideX" />
+        </button>
+      }
+    </header>
+    <div class="dialog-body"><ng-content /></div>
+    @if (footerTpl()) {
+      <footer class="dialog-foot">
+        <ng-container [ngTemplateOutlet]="footerTpl()!" />
+      </footer>
+    }
+  </div>
+</ng-template>

@@ -1,0 +1,1068 @@
+
+:imagesdir: images
+
+[#editor]
+== Editor
+
+The _Editor_ is where you write a message: you create a new navigational warning (NW) or notice to
+mariners (NM), fill in its fields, and move it through its life from draft to published. It is
+also where you and your colleagues comment on a message and look up how it has changed.
+
+You open the editor in two ways:
+
+* Click _Editor_ in the main menu. This opens the <<blank-editor-page,start screen>>, where you
+  create a message. The menu item is shown to users with the editor role.
+* Open a message from the _Messages_ page: choose _Edit_ in the message's actions menu or in its
+  details (see <<messages,Messages>>). This opens the message on the editor's _Edit_ tab.
+
+A user without the editor role can still open a message in the editor from the Messages page, or by
+a link to it. The message's fields are then shown but cannot be changed, and the status actions are
+not offered; such a user can read and write comments.
+
+Across the top, the editor has four tabs, each a page of its own for the open message:
+
+[cols="20,80",options="header"]
+|===
+|Tab|What it is for
+
+|_Edit_
+|The message's fields, with a live preview beside them. See <<edit-editor-page>>.
+
+|_Status_
+|The message as it will be shown, and the buttons that move it from draft to published, cancel it
+or copy it. See <<status-editor-page>>.
+
+|_Comments_
+|The comments written on the message. The badge on the tab counts them. See
+<<comments-editor-page>>.
+
+|_History_
+|Every saved version of the message, and what changed between two of them. See
+<<history-editor-page>>.
+|===
+
+A message that has never been saved has only the _Edit_ tab. The _Actions_ menu at the right end of
+the tabs is described in <<editor-actions>>.
+
+A message belongs to the domain it was made in. Switching to another domain in the header reloads
+the page. If the message has unsaved changes, the browser first asks whether you want to leave the
+page; if you leave, the changes are lost.
+
+[#blank-editor-page]
+=== Create a Message
+
+When you click _Editor_ in the main menu, the start screen _Create a message_ opens.
+
+image::CreateMessage.png[The Create a message start screen, 430]
+
+It has one card for each kind of message you may create in the current domain: _Navigational
+Warning_ (NW) and _Notice to Mariners_ (NM). Which kinds a domain has is set up by a system
+administrator, so you may see one card or two.
+
+* *New blank NW* (or *New blank NM*) opens the _Edit_ tab with an empty message of that kind.
+* *Select NW template…* (or *Select NM template…*) lets you search the domain's message templates
+  and fill one in, which writes the message for you. A navigational warning in particular often
+  follows a strict template, so that it meets the standards for maritime safety information and
+  NAVTEX. Templates are described in <<message-template-execution,Message Template Execution>>.
+  The button is shown only when the domain has templates.
+
+Below the cards, _Recently edited drafts_ lists the drafts and verified messages of this domain
+that you have saved in the last month, at most 20, as in the picture above. Click a title to read
+the message, or the pencil to open it in the editor. The list is left out when there are none.
+
+A new message is not saved until you click *Save*. Until then it has only the _Edit_ tab.
+
+[#edit-editor-page]
+=== The Edit Page
+
+The _Edit_ tab is where you write the message. It opens when you create a message, and when you
+open an existing message in the editor.
+
+image::Editor.png[The Edit page of a notice to mariners, 800]
+
+The page has three parts:
+
+* the header, with the message's title and the buttons that save it or set it aside
+  (<<general-edit-page-controls>>);
+* on the left, the message's fields, grouped in the panels _Preamble_, _Message parts_ and
+  _Miscellaneous_ (<<editor-field-rows>>);
+* on the right, the live preview of the message with its status above it
+  (<<editor-live-preview>>).
+
+A message you may not change, such as a published message when you are not an administrator, is
+shown on the _Edit_ tab as the reader will see it, without its fields.
+
+[#general-edit-page-controls]
+==== The Header
+
+The header is on all four tabs, so you can save from any of them.
+
+image::EditorHeaderUnsaved.png[The editor header with unsaved changes, 800]
+
+From left to right:
+
+[cols="25,75",options="header"]
+|===
+|Control|What it does
+
+|*Back*
+|Returns to the Messages page as you left it: the same view, filter and sorting.
+
+|Reload message (the circular arrows)
+|Reads the message again from the server and throws away your changes. If you have unsaved
+changes, you are asked first: "Discard unsaved changes and reload?". Shown only for a message that
+has been saved.
+
+|The title
+|The message's title in the language you use Niord in, or "Untitled message". The question mark
+beside it opens this manual: on the _Edit_ tab at the start of this chapter, on the other tabs at
+the section that describes the tab.
+
+|_All changes saved_ / _Unsaved changes_
+|Whether the message has changes you have not saved. A new message, a copy or the result of a
+template that you have not saved yet has unsaved changes from the start, so you can save it at
+once. If you change a field of a saved message back to what it was, the message counts as
+unchanged again.
+
+|*Clear*
+|Closes the message and returns to the start screen. If you have unsaved changes, you are asked
+first.
+
+|*Save*
+|Saves the message. It is enabled when there are unsaved changes. See <<saving-a-message>>.
+|===
+
+On the _Edit_ tab, when the browser window is 1080 pixels wide or narrower, the header also has a
+*Preview* button, which opens the live preview in a panel from the right.
+
+[#editor-live-preview]
+==== Live Preview and Status
+
+To the right of the fields, the _Live preview_ shows the message as it will be printed and shown
+to readers, and it changes as you type. The language buttons above it (such as _EN_) choose which
+language version it shows. Click a part of the preview, such as its references or its details, to
+open the matching field on the left.
+
+image::EditorLivePreview.png[The live preview with the message's status above it, 279]
+
+You can make the preview wider or narrower by dragging its left edge. In a window 1080 pixels wide
+or narrower it is not beside the fields but opens with the *Preview* button in the header.
+
+[#editor-status-flow]
+Above the preview, the status steps show where the message is in its life: _Draft_, _Verified_
+and _Published_, followed by _Expired_ or _Cancelled_ once it has left the published state. The
+current step is in bold, and the steps already passed have a check mark. To the right is the
+next step you can take: *Verify* for a draft, *Publish* for a verified message, or the date a
+verified message will be published on by itself; these are shown to editors only. On a verified
+message, the _Draft_ step is a button, _Revert to draft_, that returns the message to draft after
+asking you. Only a user with the editor role can revert a message: for other users the step is a
+button too, but Niord refuses the change ("Could not revert to draft").
+
+The buttons are disabled while the message has unsaved changes: as soon as you change it, until it
+is saved or reloaded. If you change a field back to what it was, they are enabled again, as *Save*
+is disabled again. A message that has never been saved, or the result of a template that you have
+not saved yet, keeps them disabled until it is saved. The statuses are described in
+<<status-editor-page>>.
+
+image::EditorStatusFlow.png[The status steps of a verified message, 274]
+
+[#editor-field-rows]
+==== Fields
+
+Each field of the message is a row: its name on the left, its value to the right in the language
+you use Niord in. A field with no value says so in grey, such as "No references". An asterisk
+marks a field the message must have before it can be saved. A dot before the name marks a field
+you have changed since the message was opened.
+
+Click a row to open it. An open row says "editing…" and shows the field's editor below it; click
+the row again to close it. You can also work with the keyboard: with a row selected, the right
+arrow opens it, the left arrow closes it, Space or Enter opens or closes it, and the up and down
+arrows move to the previous or next row. Tab and Shift+Tab move between the inputs of an open row.
+*Expand all fields* and *Collapse all fields* in the _Actions_ menu open or close every row.
+
+image::EditorFieldAreasCollapsed.png[The Areas field when closed, 494]
+image::EditorFieldAreas.png[The Areas field when open, 494]
+
+The fields are grouped in three panels, each of which you can fold away with the arrow in its
+corner:
+
+* _Preamble_: the fields of the message as a whole, from its type to its categories.
+* _Message parts_: the parts of the message, each with its own time, place and text
+  (<<message-parts>>).
+* _Miscellaneous_: promulgation, charts, attachments, publications, sources and layout.
+
+Where a field has one input per language, such as the title, each input is marked with the flag of
+its language. Niord shows one input for each language the deployment writes messages in.
+
+[#optional-fields]
+==== Optional Fields
+
+[[more-fields-actions]]
+Not every field is shown for every message. _Type_, _ID_, _Title_, _Dates_, _Areas_ and
+_Categories_ are always shown. The others are shown or left out according to how a system
+administrator has set up the domain: a general set of fields, one set for NWs and one for NMs, and
+fields switched on or off by the message's areas, categories and message series. A message in a
+firing area, for example, also offers the part types _Prohibition_ and _Signals_. The fields that
+are shown can change while you work, for example when you choose another area. _References_ and
+_Charts_ are always shown on a message that has references or charts, and _Event dates_ on a part that has them.
+
+To use a field that is not shown, click *Manage optional fields…* below the panels. The menu lists
+the fields the domain's set-up leaves out; a dot marks the ones you have added (_Layout_ in the picture).
+Choose a field to show it, and choose it again to hide it. The menu stays open, so you can choose several.
+Your choice lasts while the message is open: when you open it again, the fields follow the domain's set-up again.
+
+Most entries are fields. Three of them are part types instead (<<message-parts>>): _Prohibition_
+and _Signals_ add a button for that part type to the head of each part, and _Part Types_ adds the
+buttons _Details_, _Time_, _Positions_ and _Note_.
+
+image::ManageOptionalFields.png[The Manage optional fields menu of a navigational warning, 136]
+
+The menu is shown to editors only, and only when there is a field to add.
+
+[#saving-a-message]
+==== Saving, Clearing and Leaving
+
+Click *Save* in the header to save the message. Before it saves, Niord checks that the message has
+a type and a message series, and that the publish-from date is not after the publish-to date. If
+something is missing, a message says what, such as "Please specify the message series", and
+nothing is saved.
+
+* Saving a _Verified_ message makes it a _Draft_ again, because it must be verified anew. Niord
+  asks you first: "Saving a verified message reverts it to Draft. Continue?".
+* The first time a message is saved, the _Status_, _Comments_ and _History_ tabs appear, as do the
+  Reload button and the print, compare and tag actions of the _Actions_ menu.
+* Saving from the _Status_, _Comments_ or _History_ tab keeps you on that tab.
+
+Your changes are kept when you switch between the four tabs. If you leave the editor, or open
+another message in it, while there are unsaved changes, Niord asks whether to leave without
+saving. A new message, a copy or the result of a template that you have not saved yet counts, even
+when you have not changed a field. Closing the browser tab asks too.
+
+If two editors change the same message at the same time, the one who saves last wins: the
+earlier save is overwritten without a warning. Agree with your colleagues who works on a message,
+or use <<comments-editor-page,comments>>.
+
+[#orig-information-editor-field]
+==== Org. Information Field
+
+image::EditorFieldOrigInfo.png[The Org. Information field, 494]
+
+The _Org. Information_ field says whether the message is based on original information. Click
+*Mark as original information* to set or clear the mark. A message with the mark shows a star and
+"Original information" in the closed field, and a star in the message lists. The field is usually
+shown for notices to mariners only.
+
+[#type-editor-field]
+==== Type Field
+
+image::EditorFieldType.png[The Type field of a notice to mariners, 494]
+
+The _Type_ field says what kind of NW or NM the message is. Click one of the buttons to choose it.
+
+* For navigational warnings the types are _Local_, _Coastal_, _Sub-area_ and _Navarea_.
+* For notices to mariners the types are _Temporary_, _Preliminary_, _Permanent_ and _Misc_
+  (miscellaneous).
+
+Only the types the domain's message series allow are offered. When exactly one message series
+allows the type you choose, that series is chosen for you in the _ID_ field. Changing the type
+also prepares the message's promulgations anew, so changes you made in the _Promulgation_ field
+are lost.
+
+[#id-editor-field]
+==== ID Field
+
+image::EditorFieldId.png[The ID field, 494]
+
+Every message belongs to a _message series_. A system administrator sets up the series of each
+domain (see link:../sysadmin-manual/manual.html#message-series[Message Series]); the series decides
+how the message's ID, its _short ID_ such as "NM-216-18", is made, and how it is numbered. There
+are four numbering schemes:
+
+[cols="20,80",options="header"]
+|===
+|Numbering|What happens
+
+|Yearly
+|The message gets the next number of the series when it is published. The numbers start again at
+1 every year.
+
+|Continuous
+|The message gets the next number of the series when it is published. The numbers never start
+again.
+
+|Manual
+|You give the message its number, or its whole ID, yourself in the _ID_ field.
+
+|None
+|The message gets no number and no ID.
+|===
+
+In the open _ID_ field:
+
+* *Message series* lists the domain's series for this kind of message. Often there is only one,
+  and it is already chosen.
+* *UID* is the message's unique system ID, given when the message is created. You can use it to
+  find a message before it has a short ID.
+* *Number* is shown for a series with manual numbering: type the number, and the ID is made from
+  it.
+* *ID* shows the short ID. For a series with manual numbering and no fixed format, you type the
+  whole ID here instead. For a series without numbering, it is left out.
+
+Until a message is published, its ID shows the message's type, such as "Preliminary NM".
+
+[#title-editor-field]
+==== Title Field
+
+image::EditorFieldTitle.png[The Title field, 494]
+
+The _Title_ field holds the message's title in each language.
+
+When *Auto-generate title* is ticked, as it is by default, Niord writes the title for you from the
+message's area (with the areas above it), its vicinity and the subjects of its parts, and the title
+inputs cannot be changed; a lock beside the title in the closed row shows this. Untick it to write
+the title yourself.
+
+[#references-editor-field]
+==== References Field
+
+image::EditorFieldReferences.png[The References field, 494]
+
+The _References_ field links the message to other messages. Notices to mariners use it the most,
+for example to cancel an earlier notice, but a navigational warning can use it too.
+
+Click *Add reference* to add a row. In each row:
+
+* *Message ID*: the short ID or the UID of the other message. As you type, matching messages are
+  suggested; you can also type an ID that is not suggested.
+* The type of the reference: _(reference)_, _(repetition)_, _(repetition with new time)_,
+  _(cancelled)_ or _(updated repetition)_. It says how the two messages relate.
+* *Description*: an optional text in each language.
+
+Drag a row by its handle to change the order, and click the bin to remove it. In the closed row,
+click a reference to read the message it points to. Readers of the message see the references as
+links.
+
+When you publish a message whose references cancel, repeat or update other messages, Niord offers
+to cancel those messages (<<publish-message>>).
+
+[#publish-date-editor-field]
+==== Dates Field
+
+image::EditorFieldPublishDate.png[The Dates field, 494]
+
+The _Dates_ field holds the dates that rule when the message is in force:
+
+* *Publish from*: when the message is published. A _Verified_ message with a publish-from date is
+  published by Niord at that time; see <<publish-message>>.
+* *Publish to*: when the message ends. A _Published_ message is expired by Niord at that time.
+* *Follow-up date*: a date by which someone should look at the message again. You can show the
+  follow-up dates in the Messages list, which marks a message whose follow-up date has passed (see
+  <<messages,Messages>>).
+
+The publish-from date can be changed only while the message is a draft or verified. The
+publish-to and follow-up dates can still be changed on a published message, by a user who may edit
+published messages.
+
+[#areas-editor-field]
+==== Areas Field
+
+The _Areas_ field places the message in one or more areas. Administrators keep the areas in a tree
+(see link:../admin-manual/manual.html#areas[Areas]): the firing area "EK D 371 Marstal Bugt", for
+example, lies in "The Baltic Sea", which lies in "Denmark". Type in the field to search the areas,
+or click the magnifier to pick from the tree. The title of the message names the area together
+with the areas above it.
+
+Below the areas:
+
+* *Copy locations* copies the positions of the chosen areas, with their names, into the first part
+  of the message (<<positions-editor-field>>). It is enabled when an area is chosen.
+* *Compute from locations* chooses the areas from the message's positions. It is enabled when the
+  message has positions.
+* *Vicinity*: the inputs below the buttons, one per language with its flag, for the precise place, such
+  as the name of a harbour. It is part of the title.
+
+[#categories-editor-field]
+==== Categories Field
+
+image::EditorFieldCategories.png[The Categories field of a navigational warning, 494]
+
+The _Categories_ field gives the message one or more categories, such as "Light unlit". System
+administrators keep the categories in a tree (see
+link:../sysadmin-manual/manual.html#categories[Categories]). Type to search, or click the magnifier
+to pick from the tree.
+
+Some categories are _message templates_. When the message has one, *Run template…* opens the
+template with the message filled in, so you can let the template write the message again; see
+<<message-template-execution,Message Template Execution>>.
+
+[#message-parts]
+==== Message Parts
+
+A message has the fields of the preamble and one or more _parts_. Each part describes a hazard:
+when it is, where it is and what it is. Notices to mariners often have several parts; a navigational
+warning usually has one.
+
+image::MessagePartType.png[The head of a message part, 498]
+
+Each part is a card with a head:
+
+* Drag the handle at the left to move the part, or use the up and down arrows.
+* The buttons after _Part 1_ choose the part's type. A domain may leave the buttons _Details_,
+  _Time_, _Positions_ and _Note_ out, as the base product does for navigational warnings; then a
+  new part is a _Details_ part. To show them, choose _Part Types_ in *Manage optional fields…*
+  (<<optional-fields>>).
+* The bin removes the part. A message always keeps at least one part: removing the last one leaves
+  an empty part.
+
+*Add part*, in the head of the _Message parts_ panel, adds a part at the end.
+
+The part's type decides which fields the part has, and gives the part its heading when the message
+is shown:
+
+[cols="20,80",options="header"]
+|===
+|Part type|Fields
+
+|_Details_|Event dates, positions, subject and description.
+|_Time_|Event dates and description.
+|_Positions_|Positions and description.
+|_Prohibition_|Description.
+|_Signals_|Positions and description.
+|_Note_|Description.
+|===
+
+Event dates are shown only when the domain uses them or you add them with *Manage optional
+fields…*; a part that already has event dates or positions always shows them. _Prohibition_ and
+_Signals_ are offered when the message lies in a firing area or when you add them as optional
+fields. The example below has a _Details_ part and a _Note_ part.
+
+image::SampleNM.png[A notice to mariners with a Details part and a Note part, 507]
+
+[#event-dates-editor-field]
+==== Event Dates Field
+
+image::EditorFieldEventDates.png[The Event dates field, 580]
+
+The _Event dates_ field gives a part the times of the hazard it describes, such as a firing
+exercise next week. The publish dates say when the message is in force; the event dates say when
+the hazard is there. Software that plans routes can use them.
+
+Each row is one time interval:
+
+* *All day*: tick it to give dates without a time. An all-day interval covers whole days in the
+  domain's time zone.
+* *From* and *To*: the start and the end.
+* The buttons at the end of the row: *Duplicate* adds a copy of the interval, *Duplicate (next
+  day)* adds a copy one day later, and the bin removes the interval.
+
+Click *Add date* to add an interval.
+
+For navigational warnings the event dates are usually the publish dates, so the field is often not
+shown for them; add it with *Manage optional fields…* when you need it. If no part of a message has
+event dates when it is published, Niord gives every _Details_ part an interval that starts at the
+publish date and has no end. When the message is cancelled or expires, an interval without an end
+is ended at the publish-to date, or removed if it starts after that date.
+
+[#positions-editor-field]
+==== Positions Field
+
+image::EditorFieldPositions.png[The Positions field, 480]
+
+The _Positions_ field gives a part its positions: points, lines and areas on the map. The open
+field shows them on a small map and lists the positions with their names.
+
+* *Edit positions* opens the position editor, where you draw on the map.
+* *Edit as text* opens the positions as text, to type or paste them.
+
+Both are described in <<position-editor,Position Editor>>.
+
+[#subject-editor-field]
+==== Subject Field
+
+image::EditorFieldSubject.png[The Subject field, 480]
+
+The _Subject_ field gives a details part a short title in each language, such as "Cable deployed".
+An auto-generated title is made from the area, the vicinity and the subjects of all parts.
+
+*Hide subject* decides whether the subject is shown as a heading of the part when the message is
+shown. A message with one part already has the subject in its title, so the first part of a new
+message has *Hide subject* ticked. With several parts, the subjects help the reader tell them
+apart; in the example below each part is headed by its subject.
+
+image::SampleNM2.png[A message whose parts are headed by their subjects, 264]
+
+[#description-editor-field]
+==== Description Field
+
+image::EditorFieldDescription.png[The Description field, 480]
+
+The _Description_ field holds the text of a part in each language. Every part has one. The editor
+is a text editor with a toolbar, like a word processor:
+
+[cols="30,70",options="header"]
+|===
+|Tool|What it does
+
+|Paragraph style (_Normal_)|Normal text or a heading.
+|Bold, Italic|Bold or italic text.
+|Text colour, Highlight|The colour of the text, or of its background.
+|Align left, Align centre, Align right, Justify|The alignment of a paragraph.
+|Bullet list, Numbered list|A list.
+|Decrease indent, Increase indent|Moves a paragraph or list item in or out.
+|Insert or edit link|A link; see <<insert-link-and-image,Insert or Edit Link and Insert Image>>.
+|Insert image|An image from the message's attachments; see <<insert-link-and-image,Insert or Edit Link and Insert Image>>.
+|Insert table|A table; see <<table,Table>>.
+|No-wrap text|Keeps the selected text on one line.
+|Edit HTML source|Shows the text as HTML, to change it there. *Format HTML source* then tidies it.
+|Fullscreen|See <<fullscreen,Fullscreen>>.
+|Insert locations|The positions of the part as text; see <<insert-locations,Insert Locations>>.
+|Insert time|The event dates of the part as text; see <<insert-time,Insert Time>>.
+|===
+
+[#fullscreen]
+===== image:TextEditorToolFullScreen.png[Fullscreen, 16] Fullscreen
+
+*Fullscreen* lets the editor fill the window, which is easier for a long text. Click *Exit
+fullscreen* to return.
+
+[#insert-link-and-image]
+===== image:TextEditorToolLinks.png[Insert or edit link, 16] Insert or Edit Link and image:TextEditorToolImage.png[Insert image, 16] Insert Image
+
+Links and images work together with the message's attachments (<<attachments-editor-field>>). If
+you attach a PDF or a photo to the message, you can link to the file in the text, or show the
+image in it.
+
+*Insert or edit link* opens the _Insert / edit link_ dialog for the selected text, or for the link
+the cursor is in.
+
+image::InsertLinkDialog.png[The Insert / edit link dialog, 320]
+
+Fill in the *URL*, the *Text to display* and, if you like, a *Title* shown when the reader points
+at the link, and choose whether the link opens in the *Same window* or a *New window*. *Save*
+inserts the link; *Remove link* removes a link the cursor is in.
+
+*Insert image* opens _Select an image_, which lists the message's attachments that are images.
+Click one to insert it at the cursor. A message without attachments says "This message has no
+attachments".
+
+image::ImagePickerDialog.png[The Select an image picker with the message's one image, 400]
+
+[#table]
+===== image:TextEditorToolTable.png[Insert table, 16] Table
+
+*Insert table* adds a table at the cursor. When the cursor is in a table, more tools appear in the
+toolbar:
+
+* three lists that set the table's appearance:
+** *Table style*: _Default table_, _No border_, _Condensed_, _No border, condensed_, _Positions_ or
+   _Position table_;
+** *Cell style*: _Default cell_, _Underline_, _Position column_ or _Position index_, for the
+   current or the selected cells;
+** *Row style*: _Default row_ or _Underline_, for the current or the selected rows;
+* buttons to insert a column before or after, delete the column, insert a row above or below,
+  delete the row, and delete the table.
+
+The position styles make a list of positions line up, as Niord's own position tables do.
+
+[#insert-locations]
+===== image:TextEditorToolLocations.png[Insert locations, 16] Insert Locations
+
+*Insert locations* writes the positions of the part (<<positions-editor-field>>) into the text, in
+the language of the description you are in. It opens the _Format Message Locations_ dialog:
+
+image::TextEditorToolLocationDialog.png[The Format Message Locations dialog, 500]
+
+* *Message Part*: which part's positions to use, when the message has several parts.
+* *Features*: the points, lines and areas of the part, each with its positions; tick the ones to
+  insert, or use _all_ and _none_. The map shows them. Only the positions that make sense in a text
+  are listed: for an area with a hole, only its outer edge. An affected area drawn around a
+  position is left out.
+* *Layout*: _List (numbered)_, _List (bullet)_, _Table_, _From-to Table_ or _Text_.
+* The list below the layouts sets the format of the coordinates: _3 Decimals_, _2 Decimals_,
+  _1 Decimal_, _Seconds_ or _Navtex_.
+* *Result*: a preview of what will be inserted.
+
+Click *Insert* to insert the result at the cursor. Niord remembers your layout and format for the
+next time.
+
+[#insert-time]
+===== image:TextEditorToolTime.png[Insert time, 16] Insert Time
+
+*Insert time* writes the event dates of the part (<<event-dates-editor-field>>) into the text, in
+the language of the description you are in. It opens the _Format Message Time_ dialog:
+
+image::TextEditorToolTimeDialog.png[The Format Message Time dialog, 320]
+
+* *Message Part*: which part's event dates to use, when the message has several parts.
+* *Time Intervals*: tick the intervals to insert, or use _all_ and _none_. With none ticked, the
+  result is "Until further notice".
+* *Include time zone*: whether the time zone is written after the times. Niord remembers your
+  choice.
+* *Result*: a preview of what will be inserted.
+
+Click *Insert* to insert the result at the cursor.
+
+[#attachments-editor-field]
+==== Attachments Field
+
+image::EditorFieldAttachments.png[The Attachments field with an image attached, 594]
+
+The _Attachments_ field attaches files to the message, such as PDFs and photos. When the message
+is shown, its attachments are listed behind the button *Show attachments*: click it to list them
+(the button then says *Hide attachments*), and click an attachment to open it. In the example below,
+the list is open:
+
+image::SampleNM3.png[A notice to mariners with its two attachments listed, 507]
+
+Click *Upload attachments* to choose files, or drop them on the field. Files chosen or dropped
+together are uploaded one after the other and added in the order you picked them. The message shows
+its attachments in the order of the rows. Each attachment is a row:
+
+* The grip at the start of the row changes the order: drag the row by it to another place, or
+  select the grip and press the up or down arrow key to move the row one place.
+* *Icon* and *File*: click either to open the file.
+* *Caption*: a caption in each language.
+* *Display*: for an image or a video, where it is shown: _<none>_ (only in the list of
+  attachments), _Above message_, _Below message_, or _Separate page (PDF)_, on a page of its own in
+  a PDF report.
+* *Size*: when the image or video is displayed, its *Width* and *Height*, each a number with a
+  unit: em, px, %, cm, mm, in, pt or pc, such as "50%" or "300px". Give one of them to scale it in
+  proportion.
+* The bin removes the attachment.
+
+You can also link to an attachment, or show an image attachment, in a description
+(<<insert-link-and-image,Insert or Edit Link and Insert Image>>).
+
+[#promulgation-editor-field]
+==== Promulgation Field
+
+image::EditorFieldPromulgation.png[The NAVTEX tab of the Promulgation field, 494]
+
+A message can be sent out, _promulgated_, through other channels than Niord itself: a NAVTEX text
+for the NAVTEX transmitters, a text to be read aloud on the radio, and others. Which channels a
+domain has, and their names, are set up by a system administrator (see
+link:../sysadmin-manual/manual.html#promulgation-types[Promulgation Types]); the field is shown
+when the message has a channel.
+
+Each channel is a tab. Tick the box on its tab to promulgate the message through that channel; the
+channel's text can be changed only while the box is ticked.
+
+A channel is _mandatory_, _optional_ or _on by default_. A mandatory channel that is not ticked has
+a warning sign on its tab, and the message cannot be verified or published until it is ticked; once
+ticked, it cannot be unticked.
+
+Messages made from a template usually get their promulgation texts from the template. Read them,
+and correct them where needed, before the message is published. For a message written by hand,
+*Generate* writes a first proposal of a channel's text from the message, which you then correct;
+*Generate All* does so for every ticked channel. Niord asks before it replaces a text.
+
+The channels of the base product:
+
+NAVTEX::
+  The upper, read-only box holds the message's NAVTEX heading. It contains placeholders, such as
+  `${publish-date}` and `${number-year-id}`, that are filled in when the message is published. In
+  the larger box below it, write the message's NAVTEX text as NAVTEX requires; a guide marks the
+  40th column. *Format* rearranges the text to NAVTEX's rules. Tick the *Transmitters* that send
+  the message, and choose its *Priority*: _None_, _Routine_, _Important_ or _Vital_.
+SafetyNET::
+  Write the SafetyNET text in the box on the left, and choose its *Area* and its *Priority*,
+  _Safety_ or _Urgency_. *Format* rearranges the text. Once the message is published, a *SafetyNET
+  ID* field holds the ID the SafetyNET authority gave the message, such as "130/17".
+Twitter::
+  The box holds the tweet, at most 140 characters.
+Audio::
+  The box holds the text to be broadcast: the message written out in full words, to be read aloud
+  on the radio by someone who is not a mariner, with positions as "57 degrees 44.1 min. North"
+  rather than in figures.
+
+A country can add channels of its own.
+
+[#charts-editor-field]
+==== Charts Field
+
+image::EditorFieldCharts.png[The Charts field, 494]
+
+The _Charts_ field lists the nautical charts the message concerns. Administrators keep the charts
+(see link:../admin-manual/manual.html#charts[Charts]). Type a chart number or name to add it.
+
+* *Sort by scale* sorts the charts by scale. It is enabled when there are two or more charts.
+* *Compute from locations* fills in every chart whose extent covers the message's positions,
+  sorted by scale. Check the result: a chart may cover a position without showing the light or
+  buoy the message is about.
+* *Horizontal datum*: the datum of the positions, usually WGS84.
+
+[#publication-editor-field]
+==== Publication Field
+
+image::EditorFieldPublication.png[The Publication field, 494]
+
+The _Publication_ field lists the publications that concern the message, such as the list of
+lights. For each language it has two texts:
+
+* *External*: the publications shown to the readers of the message.
+* *Internal*: publications meant for the users of Niord only, such as the number of an internal
+  case.
+
+The texts are small text editors, so a publication can be a link. Click the book,
+image:TextEditorToolPublication.png[Insert publications, 16] *Insert publications*, to cite one of
+the publications kept in Niord (see link:../admin-manual/manual.html#publications[Publications]).
+It opens _Update Message Publication_:
+
+image::MessagePublications.png[The Update Message Publication dialog, 360]
+
+* In the upper box, choose the publication; while the box is empty it says "Select publication".
+  Only released publications that may be cited from the current domain are offered. If the cursor
+  is in a publication already cited, that one is chosen, and you change it.
+* The box below it is shown when the publication takes parameters, such as the numbers of the
+  lights in the list of lights. Type them separated by commas; while the box is empty it says
+  "Comma-separated parameters".
+* *Link*: shown for a link publication that has no link of its own, to give the address.
+
+Click *Update all languages* to update the text of every language, or *Update English only*
+(named after the language you are in) to update only that language.
+
+[#source-editor-field]
+==== Source Field
+
+image::EditorFieldSource.png[The Source field, 494]
+
+The _Source_ field names where the information comes from, such as a harbour authority, and when
+it was received. Use the usual abbreviation of a source, to keep the text short. Type the source in
+each language, or click *Add sources…* to pick from the sources administrators keep (see
+link:../admin-manual/manual.html#sources[Sources]):
+
+image::MessageSourcesField.png[The Add message sources dialog, 400]
+
+*Filter* the list of sources and tick the ones to add. Each appears under *Selection*, where you
+give the *Date* of the information; the bin, *Remove*, takes it off again. *Add selection* writes the
+sources and their dates into the field, in every language.
+
+[#layout-editor-field]
+==== Layout Field
+
+image::EditorFieldLayout.png[The Layout field, 494]
+
+The _Layout_ field controls how the message looks in Niord's lists and in printed reports.
+
+In the Grid and Details views of the Messages page, and in some reports, each message has a small
+map, its _thumbnail_. Niord makes it from the message's positions, and the field says _No thumbnail_
+until you give the message one of your own:
+
+* *Upload thumbnail*: an image file (PNG, JPEG or GIF), chosen or dropped on the field.
+* *Select from map*: opens _Select thumbnail from map_. Pan and zoom the map, and switch its layers
+  on or off, then click *Snapshot* to use what the map shows.
+* *Clear thumbnail*: removes your thumbnail, so Niord makes one again. It is enabled while there is one.
+
+image::EditorFieldLayoutDialog.png[The Select thumbnail from map dialog, 340]
+
+Tick *Start on a new page in PDF reports* to make the message begin on a new page when a list of
+messages is printed as PDF. It helps with long notices to mariners.
+
+[#status-editor-page]
+=== The Status Page
+
+The _Status_ tab is where you move a message through its life: verify it, publish it, cancel it or
+delete it. It is there once the message has been saved.
+
+image::EditorStatusPage.png[The Status page of a verified message, 800]
+
+On the left, _Rendered message_ shows the message as readers will see it, with its promulgations.
+The language buttons in its corner choose the language it is shown in, whatever language you use
+Niord in.
+
+On the right, the status panel shows the message's status and the buttons for what can be done
+with it now, and the _Publications_ panel shows the publications the message is in
+(<<message-publications-panel>>). The buttons are shown to editors only. Like the buttons above
+the live preview, they are disabled while the message has unsaved changes, until it is saved or
+reloaded; changing a field back to what it was enables them again (see
+<<editor-status-flow,Live Preview and Status>>).
+
+[#message-statuses]
+==== Statuses
+
+A message is always in one of six statuses:
+
+[graphviz, message-lifecycle, svg]
+----
+digraph lifecycle {
+  rankdir=LR;
+  node [shape=box, style="rounded", fontname="sans-serif", fontsize=11];
+  edge [fontname="sans-serif", fontsize=9];
+  Draft -> Verified [label="Verify"];
+  Verified -> Draft [label="Revert to draft,\nor save"];
+  Verified -> Published [label="Publish, or the\npublish-from date"];
+  Published -> Cancelled [label="Cancel"];
+  Published -> Expired [label="the publish-to date"];
+  Draft -> Deleted [label="Delete"];
+  Verified -> Deleted [label="Delete"];
+}
+----
+
+[cols="20,80",options="header"]
+|===
+|Status|What it means
+
+|_Draft_
+|The message is being written. Readers do not see it.
+
+|_Verified_
+|The message has been read through and is ready to be published.
+
+|_Published_
+|The message is in force and readers see it.
+
+|_Cancelled_
+|The message was taken out of force by hand before it ended.
+
+|_Expired_
+|The message ended on its publish-to date.
+
+|_Deleted_
+|The message was thrown away before it was published. It can still be found with the Status filter
+of the Messages page.
+|===
+
+The changes and who makes them:
+
+[cols="18,18,64",options="header"]
+|===
+|From|To|How
+
+|Draft|Verified
+|An editor clicks *Verify message…* and confirms "Verify this message?".
+
+|Verified|Draft
+|An editor clicks the _Draft_ step above the live preview, _Revert to draft_, and confirms. Saving
+a verified message also makes it a draft again.
+
+|Verified|Published
+|An editor clicks *Publish message…* (<<publish-message>>), or Niord publishes it at its
+publish-from date.
+
+|Published|Cancelled
+|An editor clicks *Cancel message…* (<<cancel-message>>).
+
+|Published|Expired
+|Niord expires it at its publish-to date.
+
+|Draft or Verified|Deleted
+|An editor clicks *Delete draft…* and confirms "Delete this message?".
+|===
+
+Niord checks every minute for verified messages whose publish-from date has come, and for
+published messages whose publish-to date has passed.
+
+Verifying and publishing need the same things: a type, a message series, a title in at least one
+language, and every mandatory promulgation channel ticked. If something is missing, a message
+names it, such as "Cannot publish — missing: Title", and the status is not changed.
+
+What else happens when the status changes:
+
+* *Published*: if the publish-from date is empty or in the future, it becomes the moment of
+  publishing. The message gets its number and short ID from its series. If no part has event
+  dates, each _Details_ part gets an interval from the publish date
+  (<<event-dates-editor-field>>). The promulgation channels and mailing lists act on the new status
+  as a system administrator has set them up.
+* *Cancelled* or *Expired*: if the publish-to date is empty or has passed, it becomes the moment the
+  message ended. An event-date interval without an end is ended then, or removed if it starts
+  later.
+* *Cancelled*, for a navigational warning whose series numbers its messages by itself: Niord
+  publishes a cancellation warning (<<cancel-message>>).
+
+A user with the administrator role can edit a message in any status, published and cancelled
+included. Other editors can edit drafts and verified messages only.
+
+[#verify-message]
+==== Verifying a Message
+
+When a draft has been written and read through, click *Verify message…* on the Status page, or
+*Verify* above the live preview, and confirm. The message becomes _Verified_ and is ready to be
+published. Verifying is the sign that a colleague may publish the message; if anyone saves a change
+to it, it is a draft again.
+
+[#publish-message]
+==== Publishing a Message
+
+A verified message is published in one of two ways:
+
+* If it has no publish-from date, click *Publish message…* on the Status page, or *Publish* above
+  the live preview. The _Confirm publication_ dialog asks you to confirm.
+* If it has a publish-from date, there is no Publish button: the panel shows "Publish:" and the
+  date, and Niord publishes the message at that time. To publish it at once instead, clear its
+  publish-from date and save it, verify it again, and publish it.
+
+image::PublishConfirmDialog.png[The Confirm publication dialog, 320]
+
+If the message refers to published messages with the reference types _(cancelled)_, _(repetition)_,
+_(repetition with new time)_ or _(updated repetition)_, the dialog lists them with the option
+*Also cancel the referenced messages*, as in the picture above. Tick it to cancel them as this message is published. Click
+*Publish* to publish.
+
+The publication and the cancellations are one change: if one of the referenced messages cannot be
+cancelled, nothing is published or cancelled, and a message says why. A referenced message of another
+domain cannot be cancelled from your domain: publish without ticking the option, or ask that domain to
+cancel it.
+
+[#cancel-message]
+==== Cancelling a Message
+
+To take a published message out of force before it ends, click *Cancel message…*. The _Cancel
+message_ dialog asks you to confirm.
+
+image::CancelMessageDialog.png[The Cancel message dialog of a notice to mariners, 320]
+
+For a notice to mariners, tick *Create cancellation message* to write the notice that announces the
+cancellation: after cancelling, Niord opens a new, unsaved copy of the message with a _(cancelled)_
+reference to it.
+
+The dialog has two buttons named _Cancel_: the red one cancels the message; the other closes the
+dialog and leaves the message as it is.
+
+[#cancellation-warning]
+Cancelling a navigational warning can publish a second message. When the warning's message series
+numbers its messages by itself (yearly or continuous numbering, see <<id-editor-field>>), Niord at
+once publishes a _cancellation warning_ in the same series:
+
+* It takes the next number of the series.
+* Its title is "Cancellation of" followed by the ID of the cancelled warning, such as "Cancellation
+  of NW-012-26".
+* It has the cancelled warning's areas, categories and charts, no parts, and one reference: a
+  _(cancelled)_ reference to the cancelled warning.
+* It has no publish-to date, so it stays in force until it is cancelled in turn.
+
+You cannot turn this off, the dialog does not mention it, and the cancellation warning cannot be
+changed afterwards. Cancelling a cancellation warning publishes no further warning, nor does a
+message cancelled with *Also cancel the referenced messages* (<<publish-message>>). The Messages
+page does not list cancellation warnings.
+
+[#delete-message]
+==== Deleting a Message
+
+A draft or a verified message that should not be published can be deleted: click *Delete draft…*
+and confirm. The message becomes _Deleted_. A published message cannot be deleted; cancel it
+instead.
+
+[#copy-message]
+==== Copying a Message
+
+*Copy message…* makes a new message from this one, whatever its status. It is the quickest way to
+write a message like an earlier one, or to repeat a message. The _Copy Message?_ dialog asks you to
+confirm.
+
+image::CopyMessageDialog.png[The Copy Message dialog of a notice to mariners, 280]
+
+For a notice to mariners, tick *Include reference to copied message* to give the copy a reference
+to the original. Click *Copy Message*: the copy opens on the _Edit_ tab as a new draft that is not
+saved yet, with its promulgations prepared anew.
+
+[#message-publications-panel]
+==== Publications Panel
+
+The _Publications_ panel lists the publications the message appears in, such as the weekly notices
+to mariners, one row per publication series. A row names the issue, and below it the series, the
+issue's date and, when the message is in several issues of the series, how many. A series that
+lists all the messages in force names a message in every issue, so the number can be large. Each
+row has a label:
+
+* _Published_: the message is in a published issue. Click the issue's name to open its document.
+* _Withdrawn_: an issue with the message in it was published, and the issue has since been
+  withdrawn, so its document is no longer published. It is the issue that was withdrawn; the
+  message itself is unchanged.
+* _Pending_: the message will be in the issue now being prepared. A pending row is worked out as of
+  now and can still change before the issue's cut-off.
+* _Missed by a released issue_: the message's publish date lies in the period of an issue that was
+  published before the message was, so the issue went out without it and the message is in no
+  issue of that series. The date below is the start of that period. An administrator can amend the
+  issue to take the message in.
+
+A message in no publication says "Not in any publication". Publications are described in
+link:../admin-manual/manual.html#publications[Publications].
+
+image::MessagePublicationsPanel.png[The Publications panel of a published notice to mariners, 210]
+
+[#comments-editor-page]
+=== The Comments Page
+
+The _Comments_ tab is where you and your colleagues write comments on a message, for example when
+one person writes a message and another reads it through. Every user who can open the message can
+read and write comments, also users who cannot change the message. The badge on the tab counts the
+comments.
+
+image::EditorCommentsPage.png[The Comments page of a draft with two comments, 800]
+
+Each comment shows its author, when it was written, its text and whether it has been
+_Acknowledged_ or is still _Unacknowledged_. Below a comment:
+
+* *Acknowledge* marks the comment as dealt with, with your name and the time.
+* *Edit* changes the comment. You can edit your own comments; an administrator can edit any. A
+  changed comment is unacknowledged again.
+* *Reply* writes a new comment in answer.
+
+To write a comment, use _Add comment_ at the bottom. To send it by e-mail as well, add up to 20
+recipients under *E-mail notification*; as you type, matching users are suggested. The button then
+says *Send comment* instead of *Post comment*, and each recipient gets an e-mail with the comment
+and the message. When you edit a comment, the buttons are *Save* and *Save and Send*.
+
+You can find messages with comments, or with comments not yet acknowledged, with the Comments
+filter of the Messages page (see <<messages,Messages>>).
+
+[#history-editor-page]
+=== The History Page
+
+The _History_ tab lists every saved version of the message, so you can see what was changed, when
+and by whom.
+
+image::EditorHistoryPage.png[The History page comparing two versions, 800]
+
+The table lists the versions with their *Version* number, when they were *Created*, the *User* who
+saved them ("System" for a change Niord made itself, such as publishing at the publish-from date)
+and the *Status* the message had.
+
+Tick a version to see the message's data as it was saved then, and the attachments it had. Tick a
+second version to compare the two: the data is shown with what was _Added_, _Changed_ and
+_Removed_ in their own colours. You can tick at most two versions; untick one to choose another.
+
+[#editor-actions]
+=== Editor Actions
+
+The _Actions_ menu, at the right end of the editor's tabs, holds the actions on the open message.
+
+image::EditorActionMenu.png[The Actions menu of the editor, 130]
+
+[#print-message]
+==== Print
+
+*Print* opens the print dialog for this message: choose a report and its settings, and the message
+is printed as PDF. It prints the message as last saved. See <<print-messages>> for the settings.
+
+[#compare-message]
+==== Compare
+
+*Compare* opens the message comparison with this message filled in, to compare it with another
+message. See <<compare-messages>>.
+
+[#add-to-tag-action]
+==== Add to Tag
+
+*Add to tag…* adds the message to a message tag; *Add to* followed by a tag's name adds it to the
+tag you used last. See <<message-tags,Message Tags>>.
+
+[#remove-from-tag-name-actions]
+==== Remove From
+
+*Remove from…* lists the tags the message is in; choose one to take the message out of it. It is
+shown when the message is in a tag.
+
+[#expand-fields-action]
+==== Expand All Fields
+
+*Expand all fields* opens every field row of the _Edit_ tab.
+
+[#collapse-fields-action]
+==== Collapse All Fields
+
+*Collapse all fields* closes every field row of the _Edit_ tab.
+
+Print, Compare and the tag actions are offered once the message has been saved. Expand and
+collapse are offered to editors on the _Edit_ tab. To show a field that is not shown, use *Manage
+optional fields…* below the fields (<<optional-fields>>).

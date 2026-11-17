@@ -1,0 +1,11 @@
+/* The example country's text face: Lato, regular, Latin, vendored unmodified from the
+   @fontsource/lato package with its licence (fonts/lato/OFL.txt). The relative url() lets the
+   builder hash the file into this build's media/ folder, so no other build carries it and no
+   reader's browser asks a third party for it. */
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('./fonts/lato/lato-latin-400-normal.woff2') format('woff2');
+}

@@ -1,0 +1,116 @@
+@if (multiple()) {
+  <div class="flex flex-col gap-2">
+    <table class="niord-table min-w-80">
+      <tbody cdkDropList (cdkDropListDropped)="onDrop($event)">
+        @for (path of pathRows(); track $index; let index = $index) {
+          <tr cdkDrag [cdkDragDisabled]="disabled()">
+            <td class="w-8">
+              <button
+                type="button"
+                cdkDragHandle
+                class="icon-button cursor-grab text-fg-muted active:cursor-grabbing"
+                [disabled]="disabled()"
+                [attr.aria-label]="'admin.scriptResources.field.reorderHandle' | transloco"
+              >
+                <app-icon name="lucideGripVertical" />
+              </button>
+            </td>
+            <td>
+              <input
+                type="text"
+                class="w-full font-mono text-input"
+                [value]="path"
+                [disabled]="disabled()"
+                (input)="onPathInput(index, $any($event.target).value)"
+                [attr.aria-label]="'admin.scriptResources.field.path' | transloco"
+              />
+            </td>
+            <td class="w-40 text-right whitespace-nowrap">
+              <button
+                type="button"
+                class="icon-button"
+                [disabled]="index === 0"
+                (click)="moveUp(index)"
+                [attr.aria-label]="'admin.scriptResources.field.moveUp' | transloco"
+              >
+                <app-icon name="lucideArrowUp" />
+              </button>
+              <button
+                type="button"
+                class="icon-button"
+                [disabled]="index === pathRows().length - 1"
+                (click)="moveDown(index)"
+                [attr.aria-label]="'admin.scriptResources.field.moveDown' | transloco"
+              >
+                <app-icon name="lucideArrowDown" />
+              </button>
+              <button
+                type="button"
+                class="icon-button"
+                (click)="openPickerForRow(index, $event)"
+                [attr.aria-label]="'admin.scriptResources.field.pick' | transloco"
+              >
+                <app-icon name="lucideSearch" />
+              </button>
+              <a
+                class="icon-button"
+                [href]="deepLink(path)"
+                target="_blank"
+                rel="noopener"
+                [attr.aria-label]="'admin.scriptResources.field.edit' | transloco"
+              >
+                <app-icon name="lucidePencil" />
+              </a>
+              <button
+                type="button"
+                class="icon-button hover:text-danger"
+                (click)="removePath(index)"
+                [attr.aria-label]="'admin.scriptResources.field.remove' | transloco"
+              >
+                <app-icon name="lucideTrash2" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div>
+      <button type="button" class="btn-tertiary" (click)="addPath()" [disabled]="disabled()">
+        <app-icon name="lucidePlus" class="mr-1" />
+        {{ 'admin.scriptResources.field.add' | transloco }}
+      </button>
+    </div>
+  </div>
+} @else {
+  <div class="flex items-center gap-2">
+    <input
+      type="text"
+      class="w-full font-mono text-input"
+      [value]="single()"
+      [disabled]="disabled()"
+      (input)="onSingleInput($any($event.target).value)"
+      (blur)="touch.emit()"
+      [attr.aria-label]="'admin.scriptResources.field.path' | transloco"
+    />
+    <button
+      type="button"
+      class="icon-button"
+      [disabled]="disabled()"
+      (click)="openPickerForSingle($event)"
+      [attr.aria-label]="'admin.scriptResources.field.pick' | transloco"
+    >
+      <app-icon name="lucideSearch" />
+    </button>
+    <a
+      class="icon-button"
+      [href]="deepLink(single())"
+      target="_blank"
+      rel="noopener"
+      [attr.aria-label]="'admin.scriptResources.field.edit' | transloco"
+    >
+      <app-icon name="lucidePencil" />
+    </a>
+  </div>
+}
+
+<app-script-resource-picker-popover (picked)="onPicked($event)" />

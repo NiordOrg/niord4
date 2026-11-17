@@ -1,0 +1,32 @@
+apiVersion: v2
+name: niord
+description: |-
+  The Niord Spring Boot 4 port on Kubernetes: the application and its nginx proxy plus
+  the infrastructure it needs — PostgreSQL 18 + PostGIS, Keycloak and MailHog — and the
+  public site, as six components, each behind an enable flag. The defaults render the first
+  five in one release: the local OrbStack bundle (mirroring docker-compose.yml), and in a
+  cluster one country's complete stack in its own namespace, where the environment turns on
+  the public site with its country's image. The flags and the postgres.host / keycloak.host /
+  smtp.host values also allow app-only and infra-only releases wired together.
+type: application
+
+# One version for the chart and the app: both track the reactor's default `revision`
+# (be/pom.xml), and CI stamps both with the release's 4.0.<run> when it publishes the chart
+# (.github/workflows/publish.yml). There is no separate chart version to bump.
+version: 4.0.0-SNAPSHOT
+# The app image's default tag (app.image.tag "" in values.yaml): a published chart runs the
+# images published with it; locally, build-image.sh tags its image with this value.
+appVersion: "4.0.0-SNAPSHOT"
+
+# No chart dependencies.
+
+keywords:
+  - niord
+  - spring-boot
+  - keycloak
+  - postgis
+  - orbstack
+
+home: https://niord.org
+sources:
+  - https://github.com/NiordOrg

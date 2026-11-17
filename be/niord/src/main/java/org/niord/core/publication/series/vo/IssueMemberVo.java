@@ -1,0 +1,235 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series.vo;
+
+import java.util.Date;
+import java.util.List;
+import org.niord.model.IJsonSerializable;
+
+/**
+ * One frozen member, with the facts as they stood at freeze.
+ *
+ * And, where they have since moved, what they are now. Both halves are here
+ * because the interesting question about a published issue is not what it
+ * contains -- that is settled and printed -- but whether the world it described
+ * still looks like that. A row whose message was cancelled the week after
+ * release is the row an admin needs to find, and it is indistinguishable from
+ * every other row unless the list says so.
+ */
+public class IssueMemberVo implements IJsonSerializable {
+
+    private String messageUid;
+
+    private Integer sortIndex;
+
+    private String frozenShortId;
+
+    /**
+     * The LIVE title of the message, in the language the list was asked for.
+     *
+     * NEVER FROZEN, and that is the one thing to know about it. Every other
+     * `frozen*` field on this row records what was printed; this one records what
+     * the message is called today, because a row identified only by "NM-114-25"
+     * is unreadable to the person scanning a member list for the notice they
+     * meant to exclude. A title that were snapshotted here would be a second copy
+     * of something the message already owns, going stale silently and disagreeing
+     * with every other screen that names the same message.
+     *
+     * Null when the message no longer exists -- the `drift` entry `exists` is
+     * where that fact is stated -- and null when it carries no title at all.
+     */
+    private String title;
+
+    private String frozenType;
+
+    private String frozenStatus;
+
+    private Date frozenPublishDateFrom;
+
+    private Date frozenPublishDateTo;
+
+    private String source;
+
+    /** DERIVED from source and the snapshot relation, never stored. */
+    private String reasonCode;
+
+    /** Stored: an import note nothing can derive. */
+    private String reasonNote;
+
+    /**
+     * What has moved under this row since the document went out.
+     *
+     * Names of fields, not values -- `status`, `type`, and `exists` when the
+     * message is gone altogether. SURFACED, NEVER HEALED: the member row itself
+     * does not change, because it records what was published and the archived
+     * document is the proof of it. A row that drifted is still a member: it was
+     * published when the issue was decided at its cut-off, and what changed
+     * happened afterwards. Absent where nothing moved, and absent on a LIVE
+     * list, where "the frozen value" does not exist to disagree with anything.
+     */
+    private List<String> drift;
+
+    /**
+     * The live message, on every FROZEN row.
+     *
+     * The status a reader wants beside a frozen row is the one the message has
+     * now, not the one it had when the document went out -- that one is
+     * "published" for every member by construction -- so it travels on every
+     * row rather than only where something moved. Absent on a LIVE list, whose
+     * rows already carry today's values.
+     */
+    private LiveMessageStateVo current;
+
+    /**
+     * The curation decision behind this row, where a human took one.
+     *
+     * ADMIN TIER, and one hop in from the row itself, which is why the member
+     * carries a foreign key to the override rather than copies of its columns.
+     */
+    private MemberCurationVo curation;
+
+    /**
+     * Which issue of the source series printed this row, on a compilation.
+     *
+     * ABSENT EVERYWHERE ELSE, and absent on a compilation's manual includes: a
+     * row somebody added by hand came from no source issue, and inventing one for
+     * it would put it under a heading nobody chose. That is what the final
+     * "added by hand" group in the document and on the screen is for.
+     */
+    private SourceIssueRefVo sourceIssue;
+
+    public String getMessageUid() {
+        return messageUid;
+    }
+
+    public void setMessageUid(String messageUid) {
+        this.messageUid = messageUid;
+    }
+
+    public Integer getSortIndex() {
+        return sortIndex;
+    }
+
+    public void setSortIndex(Integer sortIndex) {
+        this.sortIndex = sortIndex;
+    }
+
+    public String getFrozenShortId() {
+        return frozenShortId;
+    }
+
+    public void setFrozenShortId(String frozenShortId) {
+        this.frozenShortId = frozenShortId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getFrozenType() {
+        return frozenType;
+    }
+
+    public void setFrozenType(String frozenType) {
+        this.frozenType = frozenType;
+    }
+
+    public String getFrozenStatus() {
+        return frozenStatus;
+    }
+
+    public void setFrozenStatus(String frozenStatus) {
+        this.frozenStatus = frozenStatus;
+    }
+
+    public Date getFrozenPublishDateFrom() {
+        return frozenPublishDateFrom;
+    }
+
+    public void setFrozenPublishDateFrom(Date frozenPublishDateFrom) {
+        this.frozenPublishDateFrom = frozenPublishDateFrom;
+    }
+
+    public Date getFrozenPublishDateTo() {
+        return frozenPublishDateTo;
+    }
+
+    public void setFrozenPublishDateTo(Date frozenPublishDateTo) {
+        this.frozenPublishDateTo = frozenPublishDateTo;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    public String getReasonCode() {
+        return reasonCode;
+    }
+
+    public void setReasonCode(String reasonCode) {
+        this.reasonCode = reasonCode;
+    }
+
+    public String getReasonNote() {
+        return reasonNote;
+    }
+
+    public void setReasonNote(String reasonNote) {
+        this.reasonNote = reasonNote;
+    }
+
+    public List<String> getDrift() {
+        return drift;
+    }
+
+    public void setDrift(List<String> drift) {
+        this.drift = drift;
+    }
+
+    public LiveMessageStateVo getCurrent() {
+        return current;
+    }
+
+    public void setCurrent(LiveMessageStateVo current) {
+        this.current = current;
+    }
+
+    public MemberCurationVo getCuration() {
+        return curation;
+    }
+
+    public void setCuration(MemberCurationVo curation) {
+        this.curation = curation;
+    }
+
+    public SourceIssueRefVo getSourceIssue() {
+        return sourceIssue;
+    }
+
+    public void setSourceIssue(SourceIssueRefVo sourceIssue) {
+        this.sourceIssue = sourceIssue;
+    }
+
+}

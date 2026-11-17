@@ -1,0 +1,58 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  size="xwide"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model(); as m) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="script-resource-path" class="text-sm font-medium text-fg-title">
+          {{ 'admin.scriptResources.field.path' | transloco }}
+        </label>
+        <input
+          id="script-resource-path"
+          type="text"
+          [formField]="form.path"
+          class="w-full font-mono text-input"
+          [placeholder]="
+            'admin.scriptResources.field.pathPlaceholder.' + m.resource.type | transloco
+          "
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.scriptResources.field.content' | transloco }}
+        </span>
+        <app-code-text-input
+          [formField]="form.content"
+          [language]="editorLanguage()"
+          [rows]="20"
+          [ariaLabel]="'admin.scriptResources.field.content' | transloco"
+        />
+      </div>
+
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <div drawerFooter class="flex w-full items-center gap-2">
+    @if (canShowHistory()) {
+      <button type="button" class="btn-tertiary" (click)="openHistory()">
+        {{ 'admin.scriptResources.editor.history' | transloco }}
+      </button>
+    }
+    <span class="flex-1"></span>
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.scriptResources.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.scriptResources.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>
+
+<app-script-resource-history-dialog />

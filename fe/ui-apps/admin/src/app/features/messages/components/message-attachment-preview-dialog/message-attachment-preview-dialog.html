@@ -1,0 +1,33 @@
+<app-dialog
+  [header]="dialogHeader()"
+  [visible]="visible()"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '80vw', maxWidth: '900px' }"
+  (closed)="onHide()"
+>
+  <div class="flex flex-col items-center gap-4">
+    @if (isImage()) {
+      <img [src]="fileUrl()" [alt]="dialogHeader()" class="max-w-full rounded" />
+    } @else if (isVideo()) {
+      <video [src]="fileUrl()" controls class="max-w-full rounded">
+        {{ 'messages.attachment.videoUnsupported' | transloco }}
+      </video>
+    } @else {
+      <div class="flex flex-col items-center gap-2 py-8">
+        <app-icon name="lucideFile" class="text-4xl text-surface-400" />
+        <span class="text-surface-600">{{ dialogHeader() }}</span>
+        <span class="text-sm text-surface-500">
+          {{ 'messages.attachment.noPreview' | transloco }}
+        </span>
+      </div>
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-secondary" (click)="openInNewTab()">
+      <app-icon name="lucideExternalLink" />
+      <span>{{ 'messages.attachment.openFile' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

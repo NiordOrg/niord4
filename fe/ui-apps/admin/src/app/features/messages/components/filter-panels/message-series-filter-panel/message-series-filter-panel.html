@@ -1,0 +1,14 @@
+<app-filter-panel
+  appFilterAutofocus="messageSeries"
+  label="messages.filter.messageSeries.label"
+  (clear)="clear()"
+>
+  <app-message-series-field
+    [multiple]="true"
+    placeholder="messages.filter.messageSeries.placeholder"
+    [domainId]="domainId()"
+    [initialIds]="initialIds()"
+    [value]="value()"
+    (valueChange)="onChange($any($event))"
+  />
+</app-filter-panel>

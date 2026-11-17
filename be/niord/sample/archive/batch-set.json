@@ -1,0 +1,50 @@
+[
+  {
+    "jobName": "script-resource-import",
+    "fileName": "templates"
+  },
+  {
+    "jobName": "domain-import",
+    "fileName": "domains.json"
+  },
+  {
+    "jobName": "dictionary-import",
+    "fileName": "aton-dict.json"
+  },
+  {
+    "jobName": "category-import",
+    "fileName": "categories.json"
+  },
+  {
+    "jobName": "param-type-import",
+    "fileName": "parameter-types.json"
+  },
+  {
+    "jobName": "mailing-list-import",
+    "fileName": "mailing-lists.json"
+  },
+  {
+    "jobName": "promulgation-type-import",
+    "fileName": "promulgation-types.json"
+  },
+  {
+    "jobName": "chart-import",
+    "fileName": "charts.json"
+  },
+  {
+    "jobName": "area-import",
+    "fileName": "areas.json"
+  },
+  {
+    "jobName": "source-import",
+    "fileName": "sources.json"
+  },
+  {
+    "jobName": "publication-category-import",
+    "fileName": "publication-categories.json"
+  },
+  {
+    "jobName": "publication-import",
+    "fileName": "publications.json"
+  }
+]

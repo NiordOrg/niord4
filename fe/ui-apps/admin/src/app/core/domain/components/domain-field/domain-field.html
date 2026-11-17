@@ -1,0 +1,10 @@
+<app-select
+  [options]="availableDomains()"
+  optionLabel="name"
+  [placeholder]="placeholder() | transloco"
+  [ariaLabel]="placeholder() | transloco"
+  [disabled]="disabled()"
+  [showClear]="true"
+  [value]="value()"
+  (valueChange)="onChangeValue($any($event))"
+/>

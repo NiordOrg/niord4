@@ -1,0 +1,173 @@
+<app-admin-section-page
+  titleKey="admin.sections.mailing-lists.label"
+  descriptionKey="admin.mailingLists.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.mailingLists.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.mailingLists.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.mailingLists.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    @if (canManage()) {
+      <button type="button" class="btn-primary" (click)="addMailingList()">
+        <app-icon name="lucidePlus" class="mr-1 text-xs" />
+        {{ 'admin.mailingLists.new' | transloco }}
+      </button>
+      <app-menu-trigger
+        icon="lucideSettings"
+        [ariaLabel]="'admin.mailingLists.actionsAriaLabel' | transloco"
+        [menu]="cogMenu"
+      />
+      <app-menu
+        #cogMenu
+        [model]="cogItems()"
+        [ariaLabel]="'admin.mailingLists.actionsAriaLabel' | transloco"
+      />
+    }
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.mailingLists.loadError' | transloco"
+      [retryLabel]="'admin.mailingLists.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.mailingLists().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.mailingLists.empty.none' | transloco" />
+    } @else {
+      <app-empty-state
+        icon="lucideFilterX"
+        [title]="'admin.mailingLists.empty.noMatches' | transloco"
+      />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-20">{{ 'admin.mailingLists.column.active' | transloco }}</th>
+            <th>{{ 'admin.mailingLists.column.id' | transloco }}</th>
+            <th>{{ 'admin.mailingLists.column.name' | transloco }}</th>
+            <th>{{ 'admin.mailingLists.column.description' | transloco }}</th>
+            <th class="w-28 text-right">
+              {{ 'admin.mailingLists.column.recipients' | transloco }}
+            </th>
+            @if (canManage()) {
+              <th class="w-24">
+                <span class="sr-only">{{ 'admin.mailingLists.column.actions' | transloco }}</span>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (list of pager.paged(); track list.mailingListId) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="list.active"
+                  [class.is-inactive]="!list.active"
+                  [attr.aria-label]="
+                    (list.active ? 'admin.mailingLists.column.active' : 'common.inactive')
+                      | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td class="font-medium">{{ list.mailingListId }}</td>
+              <td>{{ list.descs[0]?.name }}</td>
+              <td class="text-fg-muted">{{ list.descs[0]?.description }}</td>
+              <td class="text-right">
+                <button
+                  type="button"
+                  class="link-button is-subtle inline-flex items-center gap-1 tabular-nums"
+                  [attr.aria-label]="'admin.mailingLists.manageRecipients' | transloco"
+                  (click)="manageRecipients(list)"
+                >
+                  <app-icon name="lucideUsers" class="text-xs" />
+                  {{ list.recipientNo ?? 0 }}
+                </button>
+              </td>
+              @if (canManage()) {
+                <td class="text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    class="icon-button text-xs"
+                    [attr.aria-label]="'admin.mailingLists.editMailingList' | transloco"
+                    (click)="editMailingList(list)"
+                  >
+                    <app-icon name="lucidePencil" />
+                  </button>
+                  <button
+                    type="button"
+                    class="icon-button text-xs"
+                    [attr.aria-label]="'admin.mailingLists.copyMailingList' | transloco"
+                    (click)="copyMailingList(list)"
+                  >
+                    <app-icon name="lucideCopy" />
+                  </button>
+                  <button
+                    type="button"
+                    class="icon-button text-xs hover:text-danger"
+                    [attr.aria-label]="'admin.mailingLists.deleteMailingList' | transloco"
+                    (click)="deleteMailingList(list)"
+                  >
+                    <app-icon name="lucideTrash2" />
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-mailing-list-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="editorModel.set(undefined)"
+  />
+
+  <app-mailing-list-recipients-drawer
+    [mailingList]="recipientsModel()"
+    (saved)="onRecipientsSaved()"
+    (closed)="recipientsModel.set(undefined)"
+  />
+
+  <app-json-import-dialog
+    titleKey="admin.mailingLists.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.mailing-lists.label"
+    (closed)="onImportClosed()"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

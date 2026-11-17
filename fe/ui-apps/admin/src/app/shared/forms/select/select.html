@@ -1,0 +1,95 @@
+<div
+  #control
+  cdkOverlayOrigin
+  #trigger="cdkOverlayOrigin"
+  class="sel-control"
+  [class.sel-disabled]="disabled()"
+>
+  <button
+    type="button"
+    class="sel-trigger"
+    role="combobox"
+    aria-haspopup="listbox"
+    [id]="inputId() || null"
+    [attr.aria-label]="ariaLabel() || null"
+    [attr.aria-required]="ariaRequired() || null"
+    [attr.aria-expanded]="panelOpen()"
+    [attr.aria-controls]="panelOpen() ? listboxId : null"
+    [attr.aria-activedescendant]="activeId() ?? null"
+    [disabled]="disabled()"
+    (click)="onTriggerClick()"
+    (keydown)="onKeydown($event)"
+    (blur)="onBlur()"
+  >
+    <span class="sel-value">
+      @if (hasSelection()) {
+        @if (triggerTpl(); as tpl) {
+          <ng-container
+            [ngTemplateOutlet]="tpl"
+            [ngTemplateOutletContext]="{ $implicit: selectedOption() }"
+          />
+        } @else {
+          {{ triggerLabel() }}
+        }
+      } @else {
+        <span class="sel-placeholder">{{ placeholder() }}</span>
+      }
+    </span>
+    @if (loading()) {
+      <app-icon name="lucideLoaderCircle" [spin]="true" class="sel-chevron" aria-hidden="true" />
+    } @else {
+      <app-icon name="lucideChevronDown" class="sel-chevron" aria-hidden="true" />
+    }
+  </button>
+
+  @if (showClear() && !disabled() && !loading() && hasSelection()) {
+    <button
+      type="button"
+      class="sel-clear"
+      [attr.aria-label]="clearLabel() || null"
+      (mousedown)="onClearMousedown($event)"
+    >
+      <app-icon name="lucideCircleX" aria-hidden="true" />
+    </button>
+  }
+</div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayOpen]="panelOpen()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayMinWidth]="controlWidth()"
+  [cdkConnectedOverlayScrollStrategy]="scrollStrategy"
+  [cdkConnectedOverlayViewportMargin]="8"
+  [cdkConnectedOverlayHasBackdrop]="false"
+  [cdkConnectedOverlayPush]="false"
+  [cdkConnectedOverlayGrowAfterOpen]="false"
+  [cdkConnectedOverlayFlexibleDimensions]="false"
+  cdkConnectedOverlayPanelClass="sel-overlay"
+  (overlayOutsideClick)="onOutsideClick($event)"
+>
+  <ul
+    class="sel-panel"
+    role="listbox"
+    [id]="listboxId"
+    [style]="panelStyle()"
+    [attr.aria-label]="ariaLabel() || null"
+  >
+    @for (opt of options(); track $index) {
+      <li
+        class="sel-option"
+        [appSelectOption]="opt"
+        [selected]="isSelectedOption(opt)"
+        [disabledOption]="isOptionDisabled(opt)"
+        (mousedown)="onOptionMousedown($event, opt)"
+      >
+        @if (optionTpl(); as tpl) {
+          <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: opt }" />
+        } @else {
+          {{ optionLabelFor(opt) }}
+        }
+      </li>
+    }
+  </ul>
+</ng-template>

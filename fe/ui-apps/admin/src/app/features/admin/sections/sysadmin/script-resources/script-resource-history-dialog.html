@@ -1,0 +1,92 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="close()"
+  [modal]="true"
+  [dismissableMask]="true"
+  [closeOnEscape]="true"
+  [header]="'admin.scriptResources.history.title' | transloco"
+  [style]="{ width: '70rem', maxWidth: '95vw' }"
+>
+  @if (loading()) {
+    <app-progress-bar [visible]="true" />
+  } @else {
+    <div class="flex flex-col gap-4">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-surface-200 text-left dark:border-surface-700">
+            <th class="w-10 py-1"></th>
+            <th class="py-1">{{ 'admin.scriptResources.history.version' | transloco }}</th>
+            <th class="py-1">{{ 'admin.scriptResources.history.created' | transloco }}</th>
+            <th class="py-1">{{ 'admin.scriptResources.history.user' | transloco }}</th>
+            <th class="py-1">{{ 'admin.scriptResources.history.source' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.version) {
+            <tr class="border-b border-surface-100 dark:border-surface-800">
+              <td class="py-1">
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  [ngModel]="selected().includes(row.version)"
+                  [ngModelOptions]="{ standalone: true }"
+                  [disabled]="!isSelectable(row.version)"
+                  (ngModelChange)="toggle(row.version, $event)"
+                  [attr.aria-label]="'admin.scriptResources.history.select' | transloco"
+                />
+              </td>
+              <td class="py-1 font-mono">{{ row.version }}</td>
+              <td class="py-1">{{ formatTime(row.created) }}</td>
+              <td class="py-1">
+                {{ row.user ?? ('admin.scriptResources.history.system' | transloco) }}
+              </td>
+              <td class="py-1">
+                @switch (row.source) {
+                  @case ('import') {
+                    {{ 'admin.scriptResources.history.sourceImport' | transloco }}
+                  }
+                  @case ('editor') {
+                    {{ 'admin.scriptResources.history.sourceEditor' | transloco }}
+                  }
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="py-3 text-fg-muted">
+                {{ 'admin.scriptResources.history.empty' | transloco }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (singleContent(); as content) {
+        <app-code-text-input
+          [language]="editorLanguage()"
+          [readOnly]="true"
+          [rows]="16"
+          [ngModel]="content"
+          [ngModelOptions]="{ standalone: true }"
+          [ariaLabel]="'admin.scriptResources.history.snapshot' | transloco"
+        />
+      } @else if (diffPair(); as pair) {
+        <app-code-merge-view
+          [original]="pair.original"
+          [modified]="pair.modified"
+          [language]="editorLanguage()"
+        />
+      } @else {
+        <p class="text-sm text-fg-muted">
+          {{ 'admin.scriptResources.history.selectHint' | transloco }}
+        </p>
+      }
+    </div>
+  }
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="close()">
+      {{ 'admin.scriptResources.history.close' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

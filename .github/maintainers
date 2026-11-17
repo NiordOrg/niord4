@@ -1,0 +1,13 @@
+# The GitHub logins that may start the break-glass publish (.github/workflows/publish.yml, run by
+# hand) and retract a version (.github/workflows/retract-version.yml). One login per line; a `#`
+# starts a comment; case does not matter.
+#
+# Both workflows read this file from main, whatever ref they run from, and check it against the
+# run's triggering actor (so a re-run by someone else is checked too). Changing it is a change to
+# who may publish and delete a release: review it like a change to those two workflows.
+#
+# Until a rule on main requires a review (not available to a private repository on GitHub Free),
+# who may retract or break-glass is in effect who may write main: a writer of main can change this
+# list, or the two workflows, in the same push. What carries it is that only named maintainers
+# have write access to the repository.
+MadsenJensen

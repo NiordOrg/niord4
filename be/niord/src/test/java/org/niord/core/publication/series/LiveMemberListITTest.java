@@ -1,0 +1,405 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.junit.jupiter.api.Test;
+import org.niord.core.message.Message;
+import org.niord.core.message.MessageSeries;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.TestIds;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.criteria.MessageSeriesCriterionVo;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.series.vo.IssueMemberVo;
+import org.niord.core.publication.series.vo.IssueTimelineRowVo;
+import org.niord.core.publication.series.vo.SystemPublicationIssueVo;
+import org.niord.core.publication.vo.MessagePublication;
+import org.niord.core.user.User;
+import org.niord.model.message.MainType;
+import org.niord.model.message.Status;
+import org.niord.model.message.Type;
+import org.niord.test.ITTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * I10 for an issue that has not been frozen yet.
+ *
+ * An OPEN issue has no member rows -- the freeze writes them -- so a list built
+ * from the rows answered an empty array for every issue anybody is actually
+ * working on. That is the worst available answer: "nothing is in this issue" and
+ * "this issue has not been published yet" are indistinguishable on the wire, and
+ * only one of them is true.
+ *
+ * So an open issue is resolved LIVE, exactly as the publish would resolve it,
+ * and nothing is written.
+ */
+public class LiveMemberListITTest extends ITTest {
+
+    @Autowired
+    IssueMemberListService memberList;
+
+    @Autowired
+    IssueListService issueList;
+
+    @Autowired
+    IssueCurationService curation;
+
+    @Autowired
+    IssueLifecycleService lifecycle;
+
+    @PersistenceContext
+    EntityManager em;
+
+    private static final long WEEK = 7L * 24 * 3600 * 1000;
+    private static final Date OPENS = new Date(1_699_000_000_000L);
+
+    // ------------------------------------------------------------------ fixtures
+
+    private String seriesId;
+
+    private PublicationSeries series() {
+        PublicationCategory c = new PublicationCategory();
+        c.setCategoryId(TestIds.category());
+        c.setPriority(100);
+        em.persist(c);
+
+        // Its own message series, so the corpus cannot decide the member count.
+        seriesId = TestIds.id("ms-");
+        MessageSeries ms = new MessageSeries();
+        ms.setSeriesId(seriesId);
+        ms.setMainType(MainType.NM);
+        em.persist(ms);
+
+        PublicationSeries s = new PublicationSeries();
+        s.setSeriesId(TestIds.series());
+        s.setStatus(SeriesStatus.ACTIVE);
+        s.setContentMode(ContentMode.GENERATED_FROM_QUERY);
+        s.setReportId("some-report");
+        s.setCadence(SeriesCadence.WEEKLY);
+        s.setTimeRelation(TimeRelation.PUBLISHED_IN_INTERVAL);
+        s.setAliveAtCutoff(false);
+        s.setReleaseMode(ReleaseMode.MANUAL_GATE);
+        s.setNextIssueCreation(NextIssueCreation.MANUAL);
+        s.setMessagePublication(MessagePublication.NONE);
+        s.setNumberingScheme(NumberingScheme.ISO_WEEK_YEAR);
+        s.setCategory(c);
+        // Every publication names the desk that owns it: the column is NOT NULL and
+        // S-20a refuses a save without one, so a fixture that left it out no longer
+        // describes a state the system can be in.
+        s.setDomain(TestOwnerDomain.of(em));
+        s.getLanguages().add("da");
+
+        IssueCriteriaVo doc = new IssueCriteriaVo();
+        MessageSeriesCriterionVo node = new MessageSeriesCriterionVo();
+        node.setValues(new ArrayList<>(List.of(seriesId)));
+        doc.getCriteria().add(node);
+        s.setCriteria(doc);
+
+        s.createDesc("da").setName("Test series");
+        em.persist(s);
+        return s;
+    }
+
+    private Message message(String shortId) {
+        MessageSeries ms = em.createQuery(
+                        "SELECT ms FROM MessageSeries ms WHERE ms.seriesId = :id", MessageSeries.class)
+                .setParameter("id", seriesId).getSingleResult();
+
+        Message m = new Message();
+        m.setUid(UUID.randomUUID().toString());
+        m.setMessageSeries(ms);
+        m.setShortId(shortId);
+        m.setMainType(MainType.NM);
+        m.setType(Type.TEMPORARY_NOTICE);
+        m.setStatus(Status.PUBLISHED);
+        m.setPublishDateFrom(new Date(OPENS.getTime() + 3600_000L));
+        em.persist(m);
+        return m;
+    }
+
+    private User user() {
+        User u = new User();
+        u.setUsername(TestIds.user());
+        em.persist(u);
+        return u;
+    }
+
+    // -------------------------------------------------------------------- cases
+
+    /**
+     * An open issue answers with what the criteria select right now.
+     *
+     * The rows carry the LIVE values in the columns a published issue carries
+     * frozen ones -- that is what the row is for while the issue is open -- and
+     * they are in print order, so the list on screen is the list that would be
+     * printed.
+     */
+    @Test
+    @Transactional
+    public void anOpenIssueResolvesItsMembersLive() {
+        PublicationSeries s = series();
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        Message m = message("NM-001");
+        em.flush();
+
+        List<IssueMemberVo> rows = memberList.members(i);
+
+        assertEquals(1, rows.size(),
+                "an open issue answered " + rows.size() + " members; an empty list here is "
+                        + "indistinguishable from an issue that selects nothing");
+        IssueMemberVo row = rows.get(0);
+        assertEquals(m.getUid(), row.getMessageUid());
+        assertEquals("NM-001", row.getFrozenShortId(), "the live row carries no short id");
+        assertEquals(Status.PUBLISHED.name(), row.getFrozenStatus());
+        assertEquals(MemberSource.CRITERIA.name(), row.getSource());
+        assertEquals("IN_INTERVAL", row.getReasonCode());
+        assertEquals(0, row.getSortIndex(), "sortIndex is dense and 0-based over the whole union");
+        assertNull(row.getDrift(),
+                "a live list has no frozen value for anything to have drifted from");
+        assertNull(row.getCuration(), "nobody curated this row");
+
+        // And nothing was written: the list is a probe, not a freeze.
+        assertEquals(0L, em.createQuery("SELECT COUNT(x) FROM IssueMember x WHERE x.issue = :i", Long.class)
+                .setParameter("i", i).getSingleResult(),
+                "the live list froze member rows; it must write nothing at all");
+    }
+
+    /**
+     * A curated row says who put it there, and an exclusion takes it out.
+     *
+     * Curation is only legal while an issue is OPEN, so the live list is the ONLY
+     * list on which a curation decision can be seen taking effect at all.
+     */
+    @Test
+    @Transactional
+    public void curationIsVisibleOnTheLiveList() {
+        PublicationSeries s = series();
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        Message selected = message("NM-001");
+        em.flush();
+
+        curation.exclude(i, selected.getUid(), user(), "superseded before release");
+        em.flush();
+        assertTrue(memberList.members(i).isEmpty(), "an excluded message is still a member");
+
+        // An INCLUDE of something the criteria do NOT select: a different message
+        // series, which this issue's query has no way to reach.
+        MessageSeries other = new MessageSeries();
+        other.setSeriesId(TestIds.id("ms-"));
+        other.setMainType(MainType.NM);
+        em.persist(other);
+        Message named = new Message();
+        named.setUid(UUID.randomUUID().toString());
+        named.setMessageSeries(other);
+        named.setShortId("NM-999");
+        named.setMainType(MainType.NM);
+        named.setType(Type.TEMPORARY_NOTICE);
+        named.setStatus(Status.PUBLISHED);
+        named.setPublishDateFrom(new Date(OPENS.getTime() + 3600_000L));
+        em.persist(named);
+        em.flush();
+
+        curation.include(i, named.getUid(), user(), "named by hand for this edition");
+        em.flush();
+
+        List<IssueMemberVo> rows = memberList.members(i);
+        assertEquals(1, rows.size());
+        assertEquals(named.getUid(), rows.get(0).getMessageUid());
+        assertEquals(MemberSource.OVERRIDE_INCLUDE.name(), rows.get(0).getSource());
+        assertEquals("MANUAL_INCLUDE", rows.get(0).getReasonCode());
+        assertNotNull(rows.get(0).getCuration(), "a curated row does not say a human decided it");
+        assertEquals("named by hand for this edition", rows.get(0).getCuration().getReason());
+    }
+
+    /**
+     * O-4 is decided against the live resolution, because there is nothing else.
+     *
+     * Member rows are written by the freeze and curation is only legal while the
+     * issue is OPEN, so the two conditions never held at once: the rule counted
+     * rows, counted zero every time, and read as enforced while enforcing nothing.
+     */
+    @Test
+    @Transactional
+    public void includingAMessageTheCriteriaAlreadySelectIsRefused() {
+        PublicationSeries s = series();
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        Message selected = message("NM-001");
+        em.flush();
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> curation.include(i, selected.getUid(), user(), "adding it again"));
+        assertEquals("OVERRIDE_ALREADY_A_MEMBER", e.code());
+
+        assertEquals(0L, em.createQuery(
+                                "SELECT COUNT(o) FROM IssueOverride o WHERE o.issue = :i", Long.class)
+                        .setParameter("i", i).getSingleResult(),
+                "the refused override was written anyway");
+    }
+
+    /**
+     * An open issue's rows are titled too, in the language the list was asked for.
+     *
+     * The open list is the one a curator works on -- it is where messages are
+     * included and excluded by hand -- so it is the list where a row identified
+     * only by its short id costs the most. The title comes from the same live
+     * message on both lists; nothing about it is frozen on either.
+     */
+    @Test
+    @Transactional
+    public void aliveRowNamesItsMessageInTheRequestedLanguage() {
+        PublicationSeries s = series();
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        Message m = message("NM-001");
+        m.createDesc("da").setTitle("Hals Barre. Fyr slukket.");
+        m.createDesc("en").setTitle("Hals Barre. Light extinguished.");
+        em.merge(m);
+        em.flush();
+
+        assertEquals("Hals Barre. Light extinguished.",
+                memberList.members(i, "en").get(0).getTitle());
+        assertEquals("Hals Barre. Fyr slukket.",
+                memberList.members(i, "da").get(0).getTitle());
+        assertEquals("Hals Barre. Fyr slukket.",
+                memberList.members(i, "de").get(0).getTitle(),
+                "a language the message is not written in falls back to one it is");
+    }
+
+    /**
+     * The list reports the live count for an open issue, as the contract says.
+     *
+     * The column is what the freeze wrote or what the import copied off a legacy
+     * tag; an open issue has had neither happen to it yet. Left as the column, a
+     * native open issue read 0 while the week filled up and an imported one read
+     * the tag as it stood at the backup -- 9 on uge 36/2026 while the detail view
+     * beside it resolved 10 -- so the same screen gave two answers to one question.
+     */
+    @Test
+    @Transactional
+    public void theListReportsTheLiveCountForAnOpenIssue() {
+        PublicationSeries s = series();
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        message("NM-001");
+        message("NM-002");
+        // A stale column, as an import leaves it.
+        i.setMemberCount(9);
+        em.flush();
+
+        List<SystemPublicationIssueVo> rows = issueList.forSeries(s, new Date(OPENS.getTime() + WEEK)).getData();
+        SystemPublicationIssueVo open = rows.stream()
+                .filter(r -> i.getPublicId().equals(r.getPublicId())).findFirst().orElseThrow();
+        assertEquals(Integer.valueOf(2), open.getMemberCount(),
+                "the open row reported the column, not what the issue contains today");
+        assertEquals(Integer.valueOf(2), memberList.liveMemberCount(i));
+
+        IssueTimelineRowVo cell = issueList.recent(s, 4, new Date(OPENS.getTime() + WEEK), "da").getRows().stream()
+                .filter(r -> i.getPublicId().equals(r.getPublicId())).findFirst().orElseThrow();
+        assertEquals(Integer.valueOf(2), cell.getMemberCount(), "the timeline cell must agree with the list");
+
+        // Nothing was written by asking.
+        assertEquals(0L, em.createQuery("SELECT COUNT(x) FROM IssueMember x WHERE x.issue = :i", Long.class)
+                .setParameter("i", i).getSingleResult());
+    }
+
+    /**
+     * And it reports one for a COMPILATION, through the same rule.
+     *
+     * The count on the series list and the strip goes through the shared
+     * resolution, so it answers for whichever regime the series is in. Left to
+     * the criteria path a compilation would answer null -- there is no document
+     * to resolve -- and a running annual would show a blank where every other
+     * open issue shows how full it is.
+     */
+    @Test
+    @Transactional
+    public void thelistReportsTheLiveCountForACompilationToo() {
+        PublicationSeries source = series();
+        Message a = message("NM-001");
+        Message b = message("NM-002");
+
+        PublicationCategory c = new PublicationCategory();
+        c.setCategoryId(TestIds.category());
+        c.setPriority(100);
+        em.persist(c);
+
+        PublicationSeries annual = new PublicationSeries();
+        annual.setSeriesId(TestIds.series());
+        annual.setStatus(SeriesStatus.ACTIVE);
+        annual.setContentMode(ContentMode.GENERATED_FROM_QUERY);
+        annual.setReportId("some-report");
+        annual.setCadence(SeriesCadence.YEARLY);
+        annual.setTimeRelation(TimeRelation.COMPILED_FROM_SOURCE);
+        annual.setReleaseMode(ReleaseMode.MANUAL_GATE);
+        annual.setNextIssueCreation(NextIssueCreation.MANUAL);
+        annual.setMessagePublication(MessagePublication.NONE);
+        annual.setNumberingScheme(NumberingScheme.NONE);
+        annual.setCategory(c);
+        annual.setDomain(TestOwnerDomain.of(em));
+        annual.getLanguages().add("da");
+        annual.setSourceSeries(source);
+        annual.createDesc("da").setName("Akkumuleret");
+        em.persist(annual);
+
+        // One published week of the source, frozen by hand as its release left it.
+        PublicationIssue week = new PublicationIssue();
+        week.setSeries(source);
+        week.setPublicId(UUID.randomUUID().toString());
+        week.setRepoPath("publications/" + week.getPublicId());
+        week.setStatus(IssueStatus.PUBLISHED);
+        week.setIntervalFrom(OPENS);
+        week.setIntervalFromSource(IntervalBoundSource.STAMPED);
+        week.setCutoffStampedAt(new Date(OPENS.getTime() + WEEK));
+        week.createDesc("da").setName("EfS uge 44");
+        em.persist(week);
+        int sortIndex = 0;
+        for (Message m : List.of(a, b)) {
+            IssueMember row = new IssueMember();
+            row.setIssue(week);
+            row.setMessageUid(m.getUid());
+            row.setMessage(m);
+            row.setSortIndex(sortIndex++);
+            row.setFrozenShortId(m.getShortId());
+            row.setFrozenMainType(m.getMainType().name());
+            row.setFrozenType(m.getType().name());
+            row.setFrozenStatus(m.getStatus().name());
+            row.setSource(MemberSource.CRITERIA);
+            em.persist(row);
+        }
+
+        PublicationIssue i = lifecycle.create(annual, new Date(OPENS.getTime() - 3600_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        assertEquals(Integer.valueOf(2), memberList.liveMemberCount(i),
+                "the running annual reported no live count at all; the shared resolution has to "
+                        + "answer for the compiled regime as it does for a query");
+    }
+}

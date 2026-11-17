@@ -1,0 +1,493 @@
+# =============================================================================
+#  Niord — Helm values
+# =============================================================================
+# One chart, six components, each behind an `enabled` flag: the application
+# (`app`), its nginx proxy (`proxy`), PostgreSQL/PostGIS (`postgres`), Keycloak
+# (`keycloak`), MailHog (`mailhog`) and the public site (`info`). The defaults
+# below enable the first five in one release — the local OrbStack bundle
+# (https://docs.orbstack.dev/kubernetes/), intentionally NOT hardened for
+# production. The public site is off: its image is a country's.
+#
+# A cluster environment runs the same shape: one release per country, in that
+# country's own namespace, with every component (be/docs/cicd/design.md §6).
+# The flags also allow splitting a stack into an app-only release (app + proxy)
+# and an infra-only release (postgres + keycloak + mailhog) in one namespace:
+# the app release then finds the infra release's Services through the host
+# seams `postgres.host`, `keycloak.host` and `smtp.host`; an empty host means
+# "the Service this release renders itself", so the defaults need nothing set.
+# Services are named <fullname>-<component>, where <fullname> is the release name
+# with "-niord" appended unless it already contains "niord": an infra release
+# named staging-infra (its Argo Application name) renders staging-infra-niord-db,
+# -keycloak and -smtp; one named niord-infra renders niord-infra-db and so on.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# -----------------------------------------------------------------------------
+#  Images and registry
+# -----------------------------------------------------------------------------
+# Every image is <registry>/<repository>:<tag>, where <registry> is global.imageRegistry
+# when set, else the component's own image.registry (its upstream home). The repository
+# is always the UPSTREAM path with the registry host dropped, `library/` included — the
+# same convention the mirrored platform images use — so pointing global.imageRegistry at
+# the host's Harbor project makes every image resolve to its mirror there:
+#   quay.io/keycloak/keycloak:26.8.2  ->  reg.sitcloud.dk/cu3504-mssb-brs/keycloak/keycloak:26.8.2
+# A tag changed here is mirrored there before an environment pins the chart version that has
+# it (devops-shared, runbooks/bootstrap.md, the niord chart's own images). Left empty (the
+# local default) the upstream registries are used directly. The app image has no upstream
+# registry: locally it is the image scripts/build-image.sh builds, in a cluster the one
+# publish.yml pushed to the Harbor project under the same repository.
+global:
+  imageRegistry: ""
+  # Pull secrets added to every pod this chart renders (Harbor refuses anonymous pulls).
+  # The Secret itself is created outside the chart — in a cluster environment it ships as a
+  # SealedSecret next to the environment's values. Entries are {name: <secret>}.
+  imagePullSecrets: []
+
+# -----------------------------------------------------------------------------
+#  Browser-facing URLs (single origin via the bundled nginx reverse proxy)
+# -----------------------------------------------------------------------------
+# Browsers reach the app and Keycloak through ONE origin: an nginx reverse proxy
+# (exposed on the host's localhost via a LoadBalancer) routes `/auth/*` to Keycloak and
+# everything else to the app, which serves the REST API (/rest), its /img and
+# /css/templates files, and the administration web app its image carries, at / (which
+# redirects instead when the adminAppUrl setting names another origin). The app's own
+# Keycloak admin calls do not go through the proxy:
+# the chart sets its authServerUrl setting to the in-cluster Keycloak Service
+# (app/deployment.yaml).
+#
+# These URLs are the single public origin. They are also the OIDC token *issuer*
+# identity: Keycloak signs tokens with `iss = <externalKeycloakUrl>/realms/<realm>`
+# and the app validates exactly that. Change the proxy port → change both URLs.
+#
+# A SHARED KEYCLOAK. externalKeycloakUrl may also be another origin: the cluster's shared
+# Keycloak, one for every country, with a realm per deployment (keycloak.realm: niord-dk,
+# niord-gl). Then keycloak.enabled is false, keycloak.host and keycloak.service.port name its
+# in-cluster Service (keycloak-http.keycloak.svc, port 80), the proxy routes no /auth, and the
+# browser signs in at externalKeycloakUrl directly: the web app asks the backend for the
+# Keycloak URL, the realm and its client id at start (GET /rest/settings/keycloak), derived
+# from the token issuer below. The realm is created by hand on the shared Keycloak from this
+# chart's rendered realm (README, "A shared Keycloak outside the release").
+externalBaseUri: "http://localhost:18888"            # browser -> niord (via nginx)
+externalKeycloakUrl: "http://localhost:18888/auth"   # browser -> Keycloak (same origin, and token issuer)
+
+# =============================================================================
+#  nginx reverse proxy (the single public entry point)
+# =============================================================================
+proxy:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: library/nginx
+    # nginx's stable line, pinned to the patch release. A stable line gets fixes until the
+    # next one comes out, each April: 1.30 ends with 1.32, expected in April 2027. A minor tag
+    # (1.30-alpine) would not keep a cluster current either: the Harbor mirror keeps the
+    # build it copied.
+    tag: 1.30.6-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    # Host-published port (1xxxx range, to avoid clashing with docker-compose's 8888).
+    port: 18888
+  # An Ingress for externalBaseUri's host, pointing at the proxy's plain HTTP port. Off by
+  # default: locally, the proxy's LoadBalancer is the entry point. In a cluster with an
+  # ingress controller, turn it on and set externalBaseUri to https://<host>, with no port:
+  # the controller ends TLS and forwards to nginx over plain HTTP. nginx then passes on the
+  # controller's X-Forwarded-Proto and X-Forwarded-Port instead of its own, so the app and
+  # Keycloak see the scheme and port the browser used. Set service.type to ClusterIP with
+  # it, so those headers can only come from the controller. SECOM traffic (/api/secom)
+  # takes the same route as everything else.
+  ingress:
+    enabled: false
+    className: traefik        # the test cluster's controller (devops-shared, platform/test/traefik/)
+    annotations: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 500m
+      memory: 128Mi
+
+# =============================================================================
+#  niord application
+# =============================================================================
+app:
+  enabled: true
+  replicaCount: 1
+  image:
+    # "" = no registry prefix (unless global.imageRegistry is set): the locally built image.
+    # A cluster environment sets global.imageRegistry and the country's repository,
+    # niord/niord-app-dk or niord/niord-app-gl (built by the country repositories since
+    # 2026-10-06); the default is the generic English app this repository builds. (Until 4.0.49
+    # the images were niord/niord-dk-be, niord/niord-gl-be and niord/niord-app-be.)
+    registry: ""
+    repository: niord/niord-app-en
+    # "" = the chart's appVersion, so pinning the chart version pins the app image too:
+    # 4.0.<run> in a published chart; locally 4.0.0-SNAPSHOT, the tag build-image.sh gives
+    # its image (not ":latest", so OrbStack uses the local image instead of pulling).
+    # Set a tag only to run an image other than the one published with the chart.
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    # Internal: reached by the nginx proxy, not exposed to the host directly.
+    type: ClusterIP
+    port: 8888
+  # JAVA_TOOL_OPTIONS passed to the JVM. MaxRAMPercentage sizes the heap from the
+  # container memory limit. The backend fetches OpenStreetMap tiles for the message map
+  # images (the osmUrl setting's host, tile.openstreetmap.org by default): where the pod
+  # reaches the internet through a proxy, add -Dhttps.proxyHost=<host> -Dhttps.proxyPort=<port>
+  # and -Dhttp.nonProxyHosts=<in-cluster hosts>.
+  javaOpts: "-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC"
+  logLevel: "INFO"
+  # The Keycloak clients whose access tokens the API accepts: a token's azp claim (the client it
+  # was issued to) must be one of them, or the request is answered 401. "" = the application's
+  # default, niord-web (the admin application) and the base client niord-client-master. A
+  # comma-separated string or a list; a value replaces the default, so name niord-web too, e.g.
+  # "niord-web,niord-client-master,<script-client>". Rendered as niord.oidc.allowed-clients.
+  oidc:
+    allowedClients: ""
+  # NIORD_HOME — the app's volume, a cache: the repository files (attachments, publication files,
+  # the archive) are rows of the database, and the volume holds what is made again on a miss
+  # (cache/, the thumbnails and map images; tile-cache/, the map tile cache, which a nightly
+  # sweep keeps below 200 MB; aton-tiles/; wms-tiles/, the sea-chart tiles of a deployment
+  # that switches that cache on, kept below its wmsCacheMaxMb setting; message-index/, the
+  # Lucene index) and the batch jobs' files (batch-jobs/, swept after ten days). Nothing on
+  # it is backed up. During a
+  # cutover the old repo/ and publication-archive/ trees stay on it for the repo-import job.
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""        # "" = cluster default StorageClass (OrbStack provides one)
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  # Spring Boot start-up can take a while (GeoTools/Lucene/Artemis); give the
+  # startup probe a generous budget before liveness takes over.
+  startupProbe:
+    periodSeconds: 5
+    failureThreshold: 60    # ~5 min to become live
+  # Wait for DB (and Keycloak) before the app starts, to avoid CrashLoopBackOff churn.
+  waitForDependencies: true
+
+# =============================================================================
+#  The public site (fe/ui-apps/info): the anonymous site for mariners
+# =============================================================================
+# A country's image of the site, niord-<cc>-info, which its image pipeline builds and pushes
+# under the same version as its app image. The container is nginx serving the built files, and
+# the proxy for its own host: it passes only the allow-listed, read-only /rest/ paths on to the
+# app's Service, over the cluster's own network (fe/ui-apps/info/AGENTS.md says what it allows).
+# It runs as an unprivileged user and listens on 8080.
+#
+# Off by default: niord-ng publishes no image of the site for the generic deployable. An
+# environment turns it on with its country's repository. It needs app.enabled in the same
+# release, and is reached on a host of its own: an Ingress straight to its Service, not
+# behind the proxy above, which sends everything on its host to the app.
+info:
+  enabled: false
+  image:
+    # "" = no registry prefix, unless global.imageRegistry is set (in a cluster, Harbor's project).
+    registry: ""
+    # The country's image: niord-dk-info, niord-gl-info. Required when enabled.
+    repository: ""
+    # "" = the app image's tag (app.image.tag, or the chart's appVersion when that is ""), so the
+    # site and the backend it reads are always the same version. Set one only to run another.
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    # Internal: reached through the Ingress below, or locally by a port-forward.
+    type: ClusterIP
+    port: 8080
+  # An Ingress for the site's own host, pointing at its Service. Off by default: locally the
+  # site is reached by a port-forward. In a cluster the ingress controller ends TLS and forwards
+  # over plain HTTP; the container passes the controller's X-Forwarded-Proto on to the backend.
+  ingress:
+    enabled: false
+    className: traefik        # the test cluster's controller (devops-shared, platform/test/traefik/)
+    # The site's host, a name alone (no scheme or port). Required when the Ingress is enabled.
+    host: ""
+    annotations: {}
+  # NIORD_TEASER_FRAME_ANCESTORS: the pages allowed to embed the teaser, as a CSP frame-ancestors
+  # source list. The image's own default, *, keeps every page that embeds it working.
+  teaserFrameAncestors: "*"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 500m
+      memory: 128Mi
+
+# =============================================================================
+#  PostgreSQL 18 + PostGIS
+# =============================================================================
+postgres:
+  enabled: true
+  # In-cluster hostname of the database the app connects to. "" = the Postgres Service
+  # this release renders (<fullname>-db, see the header). An app-only release (enabled: false)
+  # must name the infra release's Service here, e.g. "staging-infra-niord-db"; the port is service.port
+  # and `database` and the credentials below are still the app's.
+  host: ""
+  # Multi-arch (arm64+amd64) PostGIS build — the official postgis/postgis:18-* is amd64-only.
+  image:
+    registry: docker.io
+    repository: imresamu/postgis
+    tag: 18-3.6
+    pullPolicy: IfNotPresent
+  database: niord
+  # The user the app connects as: the owner of `database`, and not a superuser. existingSecret
+  # names a Secret with the keys `username` and `password` — in a cluster environment a
+  # SealedSecret next to the values. "" = the chart renders one from username/password below,
+  # the local default.
+  #   A release that renders Postgres creates this user: an init container of the app pod, which
+  #   connects as the superuser below, makes the user when it is missing, sets its password to
+  #   the Secret's on every start, and sees to it that `database` and the tables in it belong to
+  #   the user (a database the superuser made or restored is handed over; no row is touched).
+  #   A release on a database of someone else's (enabled: false, `host` set — an infra release's,
+  #   or a hosted one) is given the user, its database and the PostGIS extension in it: the app
+  #   builds its schema and needs no more than ownership.
+  existingSecret: ""
+  username: niord_app
+  password: niord_app
+  # The superuser of the Postgres this release renders: the image creates it on first start, and
+  # the init container above and the databases Job connect as it. Nothing else does. Its
+  # existingSecret is a Secret with the keys `username` and `password`, like the app's; "" = the
+  # chart renders one from username/password here, the local default. An environment that names
+  # it names the app's too (postgres.existingSecret), and the two are different users.
+  #   One Secret for both, as every release had until November 2026: postgres.existingSecret set and
+  #   admin.existingSecret left "" keeps the app connecting as the superuser, with no init
+  #   container, so an environment changes when its values do. It moves to a user of its own by
+  #   sealing a second Secret and naming both (README, "The database users").
+  admin:
+    existingSecret: ""
+    username: niord
+    password: niord
+  # Further databases this release's Postgres holds, next to `database` (which the image creates
+  # on first start). One infra release serving several app releases lists one per app — e.g.
+  # [niord_dk, niord_gl] — and each app release names its own in `database`. A post-install /
+  # post-upgrade Job (after every sync under Argo CD) creates any that is missing, from the
+  # image's template_postgis so it carries the same extensions, owned by the superuser. It never
+  # drops or alters one. Plain lower-case names only.
+  databases: []
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# =============================================================================
+#  Keycloak
+# =============================================================================
+keycloak:
+  enabled: true
+  # How Keycloak runs, and which realm it imports.
+  #   dev         `start-dev`, keeping its data inside the container, so it starts afresh
+  #               on every restart, with the TEST realm (files/niord-realm.json): the
+  #               test users (sysadmin/sysadmin, testuser/test ...) and any redirect URI.
+  #               The local bundle and the test environments.
+  #   production  `start`, keeping its data in `database` on this release's Postgres (or
+  #               postgres.host), with the realm the chart derives from the test realm:
+  #               the same users, but no niord-web-admin client (unused, and its service
+  #               account could manage the realm) and no client secret (Keycloak
+  #               generates new ones). niord-web accepts only redirects to
+  #               externalBaseUri, requires PKCE (S256) and has no password grant. The
+  #               realm also turns on
+  #               brute-force protection and requires https from outside the private
+  #               networks. The bootstrap admin must come from keycloak.existingSecret.
+  #               Staging and production.
+  # Keycloak imports a realm only when its database does not hold it yet: in production the
+  # realm is imported on the first start only, and from then on the database is its record.
+  # A later chart or externalBaseUri change does not reach it, and a password changed in the
+  # admin console stays changed (README, "Keycloak in production mode").
+  mode: dev
+  # production: the database Keycloak keeps its data in. An init container creates it
+  # when it is missing.
+  database: keycloak
+  # production: the user Keycloak connects to that database as, its owner and not a superuser,
+  # made and kept by the init container as the app's is (postgres.existingSecret). existingSecret
+  # is a Secret with the keys `username` and `password`; "" = the chart renders one from
+  # username/password here, the local default, which an environment that names
+  # postgres.admin.existingSecret may not use. Where the app still shares the superuser's
+  # Secret (postgres.admin, above), Keycloak connects as that superuser too, as before.
+  db:
+    existingSecret: ""
+    username: keycloak
+    password: keycloak
+  # In-cluster hostname of the Keycloak the app validates tokens against and the proxy
+  # routes /auth to. "" = the Keycloak Service this release renders (<fullname>-keycloak).
+  # An app-only release (enabled: false) names the infra release's Service, e.g.
+  # "staging-infra-niord-keycloak", or the cluster's shared Keycloak in its own namespace,
+  # "keycloak-http.keycloak.svc" with service.port 80; the in-cluster URL is
+  # http://<host>:<port>/auth. The browser-facing URL is externalKeycloakUrl above.
+  host: ""
+  image:
+    registry: quay.io
+    repository: keycloak/keycloak
+    # The current patch release. The shared Keycloak of the test cluster runs the same one
+    # (devops-shared, platform/test/keycloak/values.yaml): move them together. From 26.8.2 the
+    # realm's niord-web needs the client scope kc-admin-api (README, "Keycloak in production mode").
+    tag: 26.8.2
+    pullPolicy: IfNotPresent
+  # The realm: the browser signs in to it, the backend validates its tokens and administers it,
+  # and production mode's rendered realm carries this name. One Keycloak per environment keeps
+  # the default; a deployment on the shared Keycloak has a realm of its own (niord-dk, niord-gl).
+  realm: niord
+  # The bootstrap admin Keycloak creates on first start. existingSecret names a Secret with the
+  # keys `username` and `password`; "" = the chart renders one from adminUser/adminPassword,
+  # the local default, which production mode refuses.
+  existingSecret: ""
+  adminUser: admin
+  adminPassword: admin
+  service:
+    # Internal: the browser reaches Keycloak through the nginx proxy at <baseUri>/auth.
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# =============================================================================
+#  MailHog (SMTP sink + web UI)
+# =============================================================================
+mailhog:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: mailhog/mailhog
+    tag: v1.0.1
+    pullPolicy: IfNotPresent
+  # Host-published ports (1xxxx range). smtpPort is also the in-cluster Service port the
+  # app connects to (niord-smtp:<smtpPort>); it is forwarded to the container's SMTP 1025.
+  smtpPort: 11025
+  uiPort: 18025
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# =============================================================================
+#  Outbound mail (the app's SMTP server)
+# =============================================================================
+# "" = this release's MailHog (<fullname>-smtp on mailhog.smtpPort). An app-only release
+# names the infra release's MailHog, e.g. "staging-infra-niord-smtp" + 11025; production
+# names the real relay (phase-0 H9 — the credential seam is a follow-up). Host AND port
+# are required whenever mailhog.enabled is false in a release that renders the app
+# (the render fails otherwise).
+smtp:
+  host: ""
+  port: ""
+
+# =============================================================================
+#  S-124
+# =============================================================================
+s124:
+  # Whether the deployment does S-124: rendered as niord.s124.enabled, only when set. Unset
+  # (null) = the image's own application.yml decides: true for a country image and the library
+  # default, false for the generic niord-app-en (the demo application, no producer code). true
+  # or false overrides the image. Off, the app serves no /rest/S-124 and neither uses nor
+  # checks the producer code; the automatic cancellation warning stays either way.
+  # secom.enabled needs it true: the render fails on secom.enabled with s124.enabled false, and
+  # the app refuses to start with SECOM on and S-124 off.
+  enabled: null
+  # The deployment's IHO S-62 producer code: agencyResponsibleForProduction and file
+  # identifier of every S-124 dataset, and the SECOM exchange-set file names + metadata.
+  # Rendered as niord.s124.producer-code, only when set. "" = the image's own code (DK and GL
+  # carry theirs in the jar). With S-124 on, a deployment without one cannot generate S-124,
+  # and SECOM refuses to start.
+  producerCode: ""
+
+# =============================================================================
+#  SECOM / S-124 (optional)
+# =============================================================================
+# Off by default: with secom.enabled=false the chart renders exactly as before.
+# When enabled, the app gets the MCP PKI stores + niord.secom.* config, and nginx
+# forwards /api/secom to it on the same plain listener as everything else. SECOM
+# Edition 2 (IEC CDV 63173-2, clause 4.3.3) takes a peer's identity from the
+# certificate in the signed envelope, not from a TLS client certificate: the TLS
+# layer is ordinary HTTPS with a certificate from a public CA, ended by whatever
+# fronts the proxy (an ingress controller in a cluster). Nothing in the proxy is
+# SECOM-specific. See docs/secom-design.md and the README's SECOM section.
+secom:
+  enabled: false
+  # Secret holding the MCP PKCS12 stores, mounted into the app at /run/secrets/secom.
+  # Keys: keystore.p12, truststore.p12 (raw binary or base64 text — auto-detected) and their
+  # passwords, keystore-password and truststore-password (passed to the app as environment
+  # variables, never rendered into its config). For a local test deployment
+  # scripts/secom-test-secrets.sh creates all the SECOM secrets; real deployments create them
+  # from the real MCP stores. NB: the truststore must hold the CA(s) that ISSUE peer client
+  # certificates, not just the MCP root.
+  storesSecret: niord-secom-stores
+  keystore:
+    alias: "1"
+  truststore:
+    rootAlias: ""               # "" = the first certificate entry in the truststore
+  # DB-backed runtime settings (sysadmin Settings page), overridable at deploy time.
+  # The keys are the EXACT setting names — SettingsService resolves overrides from
+  # env vars matched case-sensitively (sysprop > env > DB > default). An empty value
+  # is not injected, keeping the app/DB default. Restart-to-apply, like all SECOM knobs.
+  settings:
+    secomServiceRegistryUrl: ""     # MSR endpoint used to resolve peer endpoints
+    secomCallbackEndpoint: ""       # default in-app: the baseUri setting + /api/secom
+    secomSignatureAlgorithm: ""     # SHA2_384_WITH_ECDSA (default) | SHA3_384_WITH_ECDSA (legacy peers)
+    secomValidateClientChain: ""    # default true
+    secomRevocationCheck: ""        # default true (the test certs' OCSP AIA soft-fails instantly)
+    secomAlertEmails: ""            # comma-separated recipients for terminal delivery-failure alerts
+    secomMaxSubscriptionsPerNode: "" # max subscriptions one remote node may hold (default 50)
+    secomAllowInsecureEndpoints: ""  # "true" allows plain-http / non-public peer endpoints -
+                                    # test clusters only (deploy.sh --secom-client); default false
+    secomRenewalEnabled: ""         # "true" turns the unattended renewal job on (default false;
+                                    # also needs secom.renewal.enabled below for config + RBAC)
+    secomRenewalWindowDays: ""      # days before expiry at which certificates renew (default 60)
+  # Unattended certificate renewal against the MCP Identity Registry (identity plan T3b).
+  # Two switches by design: `secom.renewal.enabled` renders the renewal config, the robot
+  # credential mount and the ServiceAccount/Role that lets the app PATCH the SECOM secrets,
+  # while the DB-backed `secom.settings.secomRenewalEnabled` ("true") arms the daily job
+  # itself. The renewed stores are PATCHed into the secrets through the Kubernetes API (the
+  # mounted files are read-only) and the running pod picks them up via the kubelet sync +
+  # store watch within a couple of minutes. Nothing else holds certificate material, so
+  # nothing else needs a restart.
+  renewal:
+    enabled: false
+    mirUrl: ""                  # MIR base URL, e.g. https://api-x509.maritimeconnectivity.net (required)
+    orgMrn: ""                  # the MCP organisation MRN (required)
+    serviceMrn: ""              # "" = derived from the service certificate subject UID
+    userMrn: ""                 # "" = derived from the robot certificate subject UID
+    cron: ""                    # "" = the app default (daily 05:27); Spring cron expression
+    # Secret holding the renewal robot-user credential, mounted at /run/secrets/secom-renewal.
+    # Keys: robot.p12 (PKCS12; raw binary or base64 text) and its password, robot-password.
+    # Created outside Helm, like the stores secret — for a local test deployment
+    # scripts/secom-test-secrets.sh creates it.
+    robotSecret: niord-secom-renewal
+    robotKeystore:
+      alias: "1"
+
+# Image used by the init-container that waits for dependencies (TCP probe).
+busybox:
+  image:
+    registry: docker.io
+    repository: library/busybox
+    tag: "1.36"
+    pullPolicy: IfNotPresent

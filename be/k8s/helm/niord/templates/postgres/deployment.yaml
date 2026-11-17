@@ -1,0 +1,89 @@
+{{- if .Values.postgres.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "niord.componentName" (list . "db") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "db") | nindent 4 }}
+spec:
+  replicas: 1
+  # A database owns a single RWO volume; never run two pods against it at once.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "niord.componentSelectorLabels" (list . "db") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "niord.componentSelectorLabels" (list . "db") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # The image's `postgres` user (999) from the start, instead of root handing over to it:
+      # the entrypoint supports that, /var/run/postgresql belongs to 999, and data an earlier
+      # root-started pod initialised is already owned by 999. fsGroup makes the mounted volume
+      # writable for initdb, which creates PGDATA below it. Pod Security `restricted`.
+      securityContext:
+        {{- include "niord.podSecurityContext" 999 | nindent 8 }}
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: {{ include "niord.image" (list . "postgres") | quote }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          env:
+            # The superuser, created on first start only (the Secret: postgres.admin.existingSecret,
+            # or postgres.existingSecret where the app still shares it).
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.adminSecretName" . }}
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.adminSecretName" . }}
+                  key: password
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            # Keep PGDATA in a sub-directory of the mounted volume so initdb does not
+            # trip over the volume's lost+found / mount root.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          # pg_isready only asks whether the server accepts connections; the user comes from the
+          # container's environment, as it is a Secret value now.
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.postgres.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "niord.componentName" (list . "db") }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- end }}

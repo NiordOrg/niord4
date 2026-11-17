@@ -1,0 +1,12 @@
+<app-filter-panel
+  appFilterAutofocus="promulgationType"
+  label="messages.filter.promulgationType.label"
+  (clear)="clear()"
+>
+  <app-promulgation-type-field
+    placeholder="messages.filter.promulgationType.placeholder"
+    [initialIds]="initialIds()"
+    [value]="value()"
+    (valueChange)="onChange($event)"
+  />
+</app-filter-panel>

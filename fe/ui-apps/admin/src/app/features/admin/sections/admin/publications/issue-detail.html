@@ -1,0 +1,2367 @@
+<!--
+  The way back stands outside the fetch chain, and the strip reports the fetch
+  instead of replacing the workbench with it. Every publish, curation and edit
+  here refetches the issue, and a back button that existed only on the loaded
+  branch vanished with the screen each time. It names the series rather than a
+  direction: one header per level, and this one says which level is above.
+
+  The strip is an OVERLAY on the host's top edge, not a row of its own: a
+  refetch that finishes in a blink used to push the page down and back, which
+  read as a flicker on every save.
+-->
+<button type="button" class="btn-tertiary mb-2 self-start pl-0" (click)="close()">
+  <app-icon name="lucideArrowLeft" />
+  <span>{{ seriesName() || ('admin.publications.issue.back' | transloco) }}</span>
+</button>
+
+@if (!foreignOwnerDomainId()) {
+  <app-progress-bar [visible]="facade.loading()" [overlay]="true" />
+}
+
+<!--
+  An issue whose series another desk owns is refused, and the refusal is the
+  whole panel: an issue has no owner of its own, so there is exactly one answer
+  to give and every card below would otherwise describe work this desk is not
+  accountable for. Nothing is read for it either — the workbench answers
+  members, history, curation and the release rail, and none of that is shown.
+
+  A refusal replaces the screen only while there is no screen to keep. Once an
+  issue has been read, a failed refresh leaves that answer standing with the
+  banner over it (below, inside the issue) rather than taking it away: the panel
+  the reader was editing in, its date boxes and its Cancel button all live on
+  this branch, and dropping them made a mid-edit refusal unrecoverable — the
+  only way out was Back, which discards the edit without asking.
+-->
+@if (foreignOwnerDomainId(); as owner) {
+  <app-publication-foreign-domain [ownerDomainId]="owner" />
+} @else if (facade.error() && !facade.issue()) {
+  <app-error-banner
+    [title]="'admin.publications.issue.loadError' | transloco"
+    [retryLabel]="'admin.publications.retry' | transloco"
+    (retry)="facade.refresh()"
+  />
+} @else if (facade.issue(); as issue) {
+  @if (facade.error()) {
+    <!-- The same banner, over the answer from before the refusal. -->
+    <div class="mb-4">
+      <app-error-banner
+        [title]="'admin.publications.issue.loadError' | transloco"
+        [retryLabel]="'admin.publications.retry' | transloco"
+        (retry)="facade.refresh()"
+      />
+    </div>
+  }
+
+  <header class="mb-4 flex flex-wrap items-start justify-between gap-4">
+    <div class="flex min-w-0 flex-col gap-1">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="text-xl font-semibold text-fg">{{ issueName() }}</h2>
+        <span class="status-badge" [class]="badgeClass(issue)">
+          {{ statusKey(issue) | transloco }}
+        </span>
+        <!--
+          The edition, and only where it is not the first one. It says "this
+          period went out more than once", which is a fact about the issue rather
+          than about the numbering the series uses — so it is marked on every
+          series, including the weeklies whose names carry their own number and
+          whose archive holds exactly one such row. A fact about the issue, not a
+          lifecycle state, so the pill has no status dot.
+        -->
+        @if (headerEdition(); as edition) {
+          <span class="status-badge is-plain" data-testid="issue-edition">
+            {{ 'admin.publications.issue.editionMark' | transloco: { edition } }}
+          </span>
+        }
+        <!--
+          Said once beside the name, so a reader knows before scrolling that this
+          edition does not simply follow its series. The tailoring drawer names
+          WHICH fields; this only says that some are.
+        -->
+        @if (tailored()) {
+          <span class="status-badge is-plain is-tailored" data-testid="issue-tailored-mark">
+            {{ 'admin.publications.overrides.mark' | transloco }}
+          </span>
+        }
+      </div>
+
+      <!--
+        One muted line, in the order a reader asks: which series, what kind of
+        thing this is, and how it goes out. The release line replaces the mode
+        once the issue has gone out — by then HOW it was released is history and
+        WHEN it was is the fact somebody came for.
+      -->
+      <p class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-fg-muted">
+        <span>{{ seriesName() }}</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ 'admin.publications.issue.kind' | transloco }}</span>
+        <span aria-hidden="true">·</span>
+        @if (issue.status === 'PUBLISHED' && issue.publishedAt) {
+          <!--
+            Named where the record names somebody. An issue released by a job, or
+            one whose person did not survive the import, has no name to print —
+            and "by —" is a dash standing where a person would be, which reads as
+            a name that went missing rather than as a release nobody signed.
+          -->
+          <span>
+            {{
+              publishedLineKey(issue)
+                | transloco: { at: dateTime(issue.publishedAt), by: issue.publishedBy }
+            }}
+          </span>
+        } @else {
+          <span>{{ releaseModeKey() | transloco }}</span>
+        }
+      </p>
+    </div>
+
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
+      <!--
+        Offered only where it can be acted on: an OPEN issue this desk is
+        accountable for. A published issue's file names are the addresses its
+        citations resolve to, so the drawer is withheld there rather than opened
+        onto controls the server would refuse.
+      -->
+      @if (canTailor()) {
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="openOverrides()"
+          data-testid="issue-tailor"
+        >
+          <app-icon name="lucidePencil" class="text-xs" />
+          <span>{{ 'admin.publications.overrides.action' | transloco }}</span>
+        </button>
+      }
+
+      @if (editable()) {
+        <button type="button" class="btn-secondary" (click)="toggleEditing()">
+          <app-icon name="lucidePencil" class="text-xs" />
+          <span>
+            {{
+              (editing() ? 'admin.publications.issue.cancelEdit' : 'admin.publications.issue.edit')
+                | transloco
+            }}
+          </span>
+        </button>
+      }
+
+      @if (issue.status === 'PUBLISHED') {
+        <!--
+          The address handed to somebody else is the ISSUE's, and only once the
+          issue HAS one: nothing cites an issue that has not gone out, and a copy
+          control on an open one hands over a link to a page the recipient cannot
+          reach. Labelled rather than a glyph, because an unlabelled icon among
+          named buttons reads as a different KIND of control. The issue's own
+          identifier travels with it as the hover text rather than as a line of
+          its own: nobody reads a uuid, and the one person who needs it is
+          quoting it into a support mail.
+        -->
+        <span class="inline-flex" [attr.title]="issue.publicId">
+          <app-copy-link-button
+            [url]="issueLink()"
+            label="admin.publications.issue.copyLinkLabel"
+            variant="button"
+          />
+        </span>
+
+        <button
+          type="button"
+          class="btn-tertiary"
+          [disabled]="facade.working() || !writable()"
+          (click)="openRetire()"
+        >
+          {{ 'admin.publications.issue.retire' | transloco }}
+        </button>
+      }
+
+      <!-- Hidden when it would open onto nothing. -->
+      @if (menuItems().length > 0) {
+        <app-menu-trigger
+          icon="lucideSettings"
+          [ariaLabel]="'admin.publications.actionsAriaLabel' | transloco"
+          [menu]="issueMenu"
+          align="end"
+        />
+        <app-menu
+          #issueMenu
+          [model]="menuItems()"
+          [ariaLabel]="'admin.publications.actionsAriaLabel' | transloco"
+        />
+      }
+    </div>
+  </header>
+
+  <!--
+    A refusal in the section's own words where it has any, and the code beside
+    it either way: the sentence is what an admin acts on, and the code is what
+    they quote when they ask somebody about it. A live region, because the house
+    surface for a mutation's outcome is the toast, which announces.
+  -->
+  @if (facade.lastActionError(); as code) {
+    <p class="mb-3 text-sm text-danger" role="alert">
+      {{ actionErrorKey() ?? 'admin.publications.issue.actionFailed' | transloco }}
+      <span class="font-mono text-xs">{{ code }}</span>
+    </p>
+    <!--
+      What the refusal was actually about, where naming it is the whole answer.
+      A removal refused over citations says only that something points at the
+      issue; these are the messages, so the reader can go and change them rather
+      than go and look for them. The list is capped server-side, so the count
+      closes it rather than the rows running out.
+    -->
+    @if (facade.citingMessages().length > 0) {
+      <div class="mb-3 -mt-1 text-sm" data-testid="issue-citing-messages">
+        <ul class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          @for (message of facade.citingMessages(); track message.uid ?? message.messageId) {
+            <li class="text-xs">
+              <app-message-ref
+                [messageUid]="message.uid"
+                [messageId]="message.messageId"
+                [title]="message.title"
+              />
+            </li>
+          }
+        </ul>
+        @if (facade.citationsBounded()) {
+          <p class="mt-1 text-xs text-fg-subtle">
+            {{
+              'admin.publications.issue.citedMore'
+                | transloco: { count: facade.citingCount() - facade.citingMessages().length }
+            }}
+          </p>
+        }
+      </div>
+    }
+  }
+
+  <!--
+    What the release just did, and the one thing the screen behind it cannot
+    show: the successor is a different issue at a different address, so it is
+    offered as a way to follow rather than left to be found. No time: the one
+    the release answers with is the cut-off, not the moment of publication, and
+    the header line above prints the issue's own publication time.
+  -->
+  @if (publishOutcome(); as outcome) {
+    <div class="message message-success mb-4" data-testid="issue-published-banner">
+      <app-icon name="lucideCheck" class="message-icon" />
+      <span class="flex flex-wrap items-baseline gap-1">
+        <span class="font-medium">
+          {{ 'admin.publications.issue.publishedDone' | transloco }}
+        </span>
+        @if (outcome.successorId) {
+          <!--
+            Named only where the name is certain: the successor is read from the
+            row the publish created, and until that answers — and wherever it
+            fails — the sentences that name no period are the ones that are true.
+            The id is never a stand-in; an address is not a name.
+          -->
+          @if (openedSuccessorName(); as next) {
+            <span>
+              {{ 'admin.publications.issue.successorOpened' | transloco: { next } }}
+            </span>
+            <button type="button" class="link-button font-semibold" (click)="openSuccessor()">
+              {{ 'admin.publications.issue.openSuccessor' | transloco: { next } }}
+            </button>
+          } @else {
+            <span>
+              {{ 'admin.publications.issue.successorOpenedUnnamed' | transloco }}
+            </span>
+            <button type="button" class="link-button font-semibold" (click)="openSuccessor()">
+              {{ 'admin.publications.issue.openSuccessorUnnamed' | transloco }}
+            </button>
+          }
+        }
+      </span>
+    </div>
+  }
+
+  <!--
+    What the release went without: messages published into this period after
+    it went out. Their publish date files them here, so they are in no issue of
+    the series, and until this banner nothing said so. Amending runs the
+    selection again and takes them in, so the action is offered beside the list
+    where it can be taken.
+  -->
+  @if (issue.status === 'PUBLISHED' && facade.publishedSinceRelease().length > 0) {
+    <div class="message message-warn mb-4" role="status" data-testid="issue-missed-banner">
+      <app-icon name="lucideTriangleAlert" class="message-icon" />
+      <div class="flex min-w-0 flex-col gap-1">
+        <span class="font-medium">
+          @if (facade.publishedSinceRelease().length === 1) {
+            {{ 'admin.publications.issue.publishedSinceReleaseOne' | transloco }}
+          } @else {
+            {{
+              'admin.publications.issue.publishedSinceRelease'
+                | transloco: { count: facade.publishedSinceRelease().length }
+            }}
+          }
+        </span>
+        <ul class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          @for (message of facade.publishedSinceRelease(); track message.messageUid) {
+            <li class="text-xs">
+              <app-message-ref
+                [messageUid]="message.messageUid"
+                [messageId]="message.messageId"
+                [title]="message.title"
+              />
+            </li>
+          }
+        </ul>
+        @if (amendable()) {
+          <button type="button" class="link-button self-start font-semibold" (click)="openAmend()">
+            {{ 'admin.publications.amend.action' | transloco }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!--
+    Edition, interval and criteria, edited deliberately.
+
+    Closed by default: moving an interval re-resolves the member list and
+    re-renders every name the series suggested, which is not something to invite
+    on a screen people come to in order to read. The NAME is not here: what an
+    issue says differently from its series — its name, its printed numbering,
+    its file name, its report — is one decision and lives in the tailoring
+    drawer, because a name changed without the document that carries it is a
+    name that disagrees with the file.
+  -->
+  @if (editing()) {
+    <section
+      class="admin-panel admin-panel-body mb-4 flex flex-col gap-3"
+      data-testid="issue-edit-panel"
+    >
+      <!--
+        The edition, on every series.
+
+        Free text rather than a number, because the column is: the archive holds
+        editions written as a year and as words, and an integer box would refuse
+        to show what is already stored. The box starts at the issue's edition, or
+        at 1 where it records none — an issue always has a first edition, and a
+        blank box invites the empty value the server refuses.
+      -->
+      <label class="flex w-full min-w-0 flex-col gap-1 sm:w-72">
+        <span class="text-xs font-semibold text-fg-muted">
+          {{ 'admin.publications.issue.edition' | transloco }}
+        </span>
+        <input
+          type="text"
+          class="text-input"
+          [value]="editionInput()"
+          [attr.maxlength]="editionMaxLength"
+          [disabled]="facade.working()"
+          [attr.aria-invalid]="editionInvalid() ? 'true' : null"
+          (input)="onEditionInput($any($event.target).value)"
+          data-testid="issue-edition-input"
+        />
+        @if (editionInvalid()) {
+          <span class="text-xs text-danger" data-testid="issue-edition-error">
+            {{ 'admin.publications.issue.editionRequired' | transloco }}
+          </span>
+        } @else {
+          <span class="text-xs text-fg-subtle">
+            {{ 'admin.publications.issue.editionHint' | transloco }}
+          </span>
+        }
+      </label>
+
+      <!--
+        Each end takes the whole wrap line while the panel is narrower than the
+        pair, so a date field is never squeezed to fewer characters than a date
+        needs; from the small breakpoint up the two sit side by side at their own
+        width.
+      -->
+      <div class="flex flex-wrap gap-4">
+        <div class="flex w-full min-w-0 flex-col gap-1 text-sm sm:w-auto">
+          <span class="text-xs font-semibold text-fg-muted">
+            {{ 'admin.publications.issue.intervalFrom' | transloco }}
+          </span>
+          <app-date-time-field
+            class="w-full sm:w-72"
+            [formField]="intervalForm.from"
+            [ariaLabel]="'admin.publications.issue.intervalFrom' | transloco"
+          />
+        </div>
+        <div class="flex w-full min-w-0 flex-col gap-1 text-sm sm:w-auto">
+          <span class="text-xs font-semibold text-fg-muted">
+            {{ 'admin.publications.issue.intervalTo' | transloco }}
+          </span>
+          <app-date-time-field
+            class="w-full sm:w-72"
+            [formField]="intervalForm.to"
+            [ariaLabel]="'admin.publications.issue.intervalTo' | transloco"
+          />
+        </div>
+      </div>
+
+      <!--
+        Why the numbers below stopped moving, when they have.
+
+        Nothing can be read over a period that starts after it ends, or over one
+        that has not begun — the resolution would be refused — so the screen asks
+        nothing and holds the answer it has. Said here, beside the boxes that
+        caused it, rather than as a failure of the screen: the read that WAS
+        attempted took the panel down with it, and an admin who moved the start
+        date first (the natural way to carry a period forward) lost the edit to a
+        banner that offered them nothing but Retry.
+      -->
+      @if (periodNoteKey(); as noteKey) {
+        <p
+          class="text-xs"
+          [class]="periodUnsavable() ? 'text-danger' : 'text-fg-muted'"
+          data-testid="issue-period-note"
+        >
+          {{ noteKey | transloco }}
+        </p>
+      }
+
+      <p class="text-xs text-fg-subtle">
+        {{ 'admin.publications.issue.editNote' | transloco }}
+      </p>
+
+      <!--
+        What THIS issue selects, when that is not what its series selects.
+
+        Collapsed by default, because almost every issue inherits and an editor
+        open on a criteria document invites tailoring an issue that had no reason
+        to be tailored.
+
+        Absent on a compilation, which has no criteria to override: the server
+        refuses one, and a probe of a compiled regime has no predicate to
+        preview. Withheld rather than offered and refused, as everything else on
+        this screen that the server would turn down.
+      -->
+      @if (!compiled()) {
+        <div class="border-t border-surface-200 pt-3 dark:border-surface-700">
+          <button
+            type="button"
+            class="link-button is-subtle flex items-center gap-1 text-xs"
+            [attr.aria-expanded]="editingCriteria()"
+            (click)="editingCriteria.set(!editingCriteria())"
+          >
+            <app-icon
+              [name]="editingCriteria() ? 'lucideChevronDown' : 'lucideChevronRight'"
+              class="text-xs"
+            />
+            {{ 'admin.publications.issue.criteria' | transloco }}
+          </button>
+
+          @if (editingCriteria()) {
+            <div class="mt-3 flex flex-col gap-3">
+              <!--
+                Probed the way the SERIES selects, not the way an interval series
+                would. A hardcoded interval relation ran the preview of an in-force
+                publication as if it selected by publication date, so the count it
+                reported was of a different question than the one the issue asks.
+
+                Over the period IN THE BOXES ABOVE, not the one on file. The count
+                here and the member list below it are two readings of a single
+                question, and taking them over different windows put a count of the
+                saved period beside a list of the edited one — two numbers about
+                one issue, neither of them wrong and only one of them the answer.
+              -->
+              <app-series-criteria-editor
+                [criteria]="effectiveCriteria()"
+                [timeRelation]="series()?.timeRelation ?? 'PUBLISHED_IN_INTERVAL'"
+                [aliveAtCutoff]="series()?.aliveAtCutoff ?? false"
+                [intervalFrom]="criteriaIntervalFrom()"
+                [cutoff]="criteriaCutoff()"
+                [disabled]="facade.working()"
+                (criteriaChange)="onCriteriaChange($event)"
+              />
+
+              @if (criteriaOverridden()) {
+                <button
+                  type="button"
+                  class="link-button is-subtle self-start text-xs"
+                  [disabled]="facade.working()"
+                  (click)="resetCriteria()"
+                >
+                  {{ 'admin.publications.issue.criteriaReset' | transloco }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Cancel first and quiet, Save last and primary: the house order. -->
+      <div class="flex gap-2">
+        <button type="button" class="btn-tertiary" (click)="toggleEditing()">
+          {{ 'admin.publications.series.editor.cancel' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="facade.working() || !writable() || periodUnsavable() || editionInvalid()"
+          (click)="saveEdit()"
+        >
+          {{ 'admin.publications.series.editor.save' | transloco }}
+        </button>
+      </div>
+    </section>
+  }
+
+  <!--
+    The workbench. The members are the work and take the width; from the wide
+    breakpoint up the rail sits beside them and holds its width at 340px.
+
+    Below that breakpoint the rail comes FIRST and lays its cards out two-up. The
+    verdict is what a reader opens this screen for, and a member list they have to
+    scroll past to reach it buries the answer under the evidence — so the rail is
+    kept as short as its content allows before the table starts.
+
+    The main column is a container: the facts strip below sizes off THIS column's
+    width rather than the viewport's, because the rail takes 340px out of the
+    viewport at xl and a viewport-keyed grid would count width the column does not
+    have.
+  -->
+  <div class="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="@container order-2 flex min-w-0 flex-col gap-4 xl:order-1">
+      <!--
+        The facts an admin checks before deciding anything. Interval and cut-off
+        are separated from the public window on purpose: they are different
+        periods, and the imported archive spent its whole life with them
+        conflated.
+      -->
+      <app-card>
+        <dl
+          class="grid grid-cols-1 gap-x-6 gap-y-4 @sm:grid-cols-2 @3xl:grid-cols-4"
+          data-testid="issue-facts"
+        >
+          <div>
+            <dt class="text-xs font-semibold text-fg-muted">
+              {{ 'admin.publications.issue.interval' | transloco }}
+            </dt>
+            <!--
+              Each end judged on its own. This period always opens on an instant
+              that has already passed, so its two bounds are never in the same
+              state: only the end can still be a projection, and one marker over
+              the pair would say something untrue about the start.
+            -->
+            <dd class="mt-1 text-sm text-fg">
+              {{ intervalFrom(issue) }}
+              –
+              @if (expectedIntervalTo(issue)) {
+                <app-expected-date [value]="issue.intervalTo" />
+              } @else {
+                {{ intervalTo(issue) }}
+              }
+            </dd>
+            <!--
+              Where the bounds came from, under the period rather than inside it.
+              Standing between the two dates the provenance broke a two-date range
+              across three lines and read as part of the value; on its own line it
+              is the same sentence the cut-off beside it already carries, and the
+              period stays a period. Said once where both ends came from the same
+              place, which is the ordinary case for an issue read out of the
+              archive.
+            -->
+            @for (key of intervalSourceKeys(issue); track key) {
+              <dd class="text-xs text-fg-muted">{{ key | transloco }}</dd>
+            }
+          </div>
+
+          <div>
+            <dt class="text-xs font-semibold text-fg-muted">
+              {{ cutoffLabelKey(issue) | transloco }}
+            </dt>
+            @if (issue.status === 'OPEN') {
+              <dd class="mt-1 text-sm text-fg">
+                <app-expected-date [value]="expectedCutoff(issue)" format="weekday" />
+              </dd>
+              <!--
+                The one thing about a cut-off that surprises people: nothing
+                stamps it on a schedule. It happens because somebody publishes.
+              -->
+              <dd class="text-xs text-fg-muted">
+                {{ 'admin.publications.issue.cutoffStampedOnPublish' | transloco }}
+              </dd>
+            } @else {
+              <dd class="mt-1 text-sm text-fg">{{ dateTime(issue.cutoffStampedAt) }}</dd>
+              @if (cutoffSourceKey(issue); as key) {
+                <dd class="text-xs text-fg-muted">{{ key | transloco }}</dd>
+              }
+            }
+          </div>
+
+          <div>
+            <dt class="text-xs font-semibold text-fg-muted">
+              {{ 'admin.publications.column.publicWindow' | transloco }}
+            </dt>
+            <!--
+              One marker over the pair while neither end has happened. A window
+              that has not opened yet is expected at both ends, and a clock on
+              each reads as two projections that happen to sit beside each other
+              rather than as the one period it is. Once the window is open its
+              start is a fact and only the end is still a projection.
+            -->
+            <dd class="mt-1 text-sm text-fg">
+              @if (expectedPublicWindow(issue)) {
+                <app-expected-date [value]="issue.publicFrom" [to]="issue.publicTo" format="date" />
+              } @else {
+                {{ publicFrom(issue) }}
+                @if (issue.publicTo) {
+                  –
+                  @if (expected(issue.publicTo)) {
+                    <app-expected-date [value]="issue.publicTo" format="date" />
+                  } @else {
+                    {{ date(issue.publicTo) }}
+                  }
+                }
+              }
+            </dd>
+          </div>
+
+          <!--
+            What this issue selects. The pencil opens the same editor the panel
+            above holds, straight onto the criteria — the escape hatch for an
+            edition that has to differ.
+
+            Absent on a compilation, which selects by nothing: its members are
+            the source issues' own frozen lists, and each of those was decided by
+            criteria that belong to the source series rather than to this one. An
+            empty criteria strip here would read as a query that selects nothing.
+          -->
+          @if (!compiled()) {
+            <div>
+              <dt class="text-xs font-semibold text-fg-muted">
+                {{ 'admin.publications.issue.criteria' | transloco }}
+              </dt>
+              <dd class="mt-1 flex flex-wrap items-center gap-1.5" data-testid="issue-criteria">
+                <!--
+                  One string per chip, assembled where the words are.
+                  Interpolations broken across lines are joined with the
+                  whitespace between them, which put a space in front of the
+                  colon and read as a label that had lost its value.
+                -->
+                @for (chip of criteriaChips(); track $index) {
+                  <span class="chip">{{ chip.label }}</span>
+                } @empty {
+                  <span class="text-sm text-fg-subtle">
+                    {{ 'admin.publications.criteria.empty' | transloco }}
+                  </span>
+                }
+                @if (editable()) {
+                  <button
+                    type="button"
+                    class="icon-button"
+                    [attr.aria-label]="'admin.publications.issue.editCriteria' | transloco"
+                    (click)="openCriteriaEditor()"
+                  >
+                    <app-icon name="lucidePencil" class="text-xs" />
+                  </button>
+                }
+              </dd>
+            </div>
+          }
+        </dl>
+      </app-card>
+
+      <!--
+        What would go out.
+
+        Frozen once published: a published PDF lists what it listed, and
+        rendering the live message here would quietly rewrite history. The reason
+        column is why each row is in — derived server-side, never stored — and it
+        never disappears: every member always shows why, quietly for the rows the
+        query chose and at full weight for the ones somebody decided.
+      -->
+      <!--
+        The trailing column is pinned to the right on a narrow screen so row
+        actions stay reachable while the table scrolls. Without actions the last
+        column is the reason text, and pinning THAT would float it over the
+        column beside it — so the pin is turned off wherever the row buttons are
+        not drawn.
+      -->
+      <section
+        class="admin-card"
+        [class.is-unpinned]="!facade.curatable()"
+        data-testid="issue-members"
+      >
+        <div class="admin-panel-header flex-wrap gap-2">
+          <h4 class="flex flex-wrap items-baseline gap-1 text-sm font-semibold text-fg">
+            <span>{{ 'admin.publications.issue.members' | transloco }}</span>
+            <span class="font-normal text-fg-muted">· {{ facade.members().length }}</span>
+            <!--
+              What a reader needs to know about the list as a whole. While the
+              issue is open that is the one reason every row shares, said here
+              instead of repeated down the column; once it is published it is
+              that the list stopped moving — the reasons stay on the rows, but
+              the fact that answers "is this still being resolved" is the freeze.
+            -->
+            <!--
+              A compilation says where its rows came from instead. The reason
+              every one of them shares — "its source issue printed it" — is the
+              shape of the list rather than a fact about it, and it is already
+              said by the heading each run sits under; what a reader wants over
+              the whole table is how many issues went in, and of what.
+            -->
+            @if (compiled()) {
+              <span class="font-normal text-fg-muted" data-testid="issue-compiled-band">
+                · {{ compiledBandKey() | transloco: compiledBandParams() }}
+              </span>
+            } @else if (bandSuffixKey(issue); as key) {
+              <span class="font-normal text-fg-muted">· {{ key | transloco }}</span>
+            }
+          </h4>
+
+          <!--
+            Curation, offered only while the member set can still change. Both
+            decisions ask why before they are taken: an override without a reason
+            is unreviewable months later, which is the moment it matters.
+          -->
+          @if (facade.curatable()) {
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="btn-secondary text-xs"
+                [disabled]="facade.working() || !writable()"
+                (click)="openInclude()"
+              >
+                <app-icon name="lucidePlus" class="text-xs" />
+                <span>{{ 'admin.publications.curation.include' | transloco }}</span>
+              </button>
+              <!-- Absent until something is selected: a bulk button over an empty
+                   selection is a control with nothing to act on. -->
+              @if (selectedCount() > 0) {
+                <button
+                  type="button"
+                  class="btn-secondary text-xs"
+                  [disabled]="facade.working() || !writable()"
+                  (click)="openExcludeSelected()"
+                >
+                  {{
+                    'admin.publications.curation.excludeSelected'
+                      | transloco: { count: selectedCount() }
+                  }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!--
+          Which instant this list is read at.
+
+          Offered only where the two answers differ: with nothing published
+          after the planned cut-off, "as of now" and "as of the planned cut-off"
+          select the same messages, and a switch between two identical lists is
+          a control that does nothing. Every part of the screen follows it —
+          the table, the rail, what was left out and the count above — because
+          they are one resolution, taken again at the instant that is asked for.
+
+          Gone while the period is being edited. Both readings are about the
+          period ON FILE, and the boxes in the panel above name another one: a
+          switch offered there asks the reader to choose between two answers to
+          a question they have already replaced.
+
+          Gone on a compilation too, and there for good: a compiled member came
+          in because a source issue printed it, and when that message was
+          published says nothing about which side of this period's cut-off its
+          issue fell on. The two readings would select the same rows.
+        -->
+        @if (facade.switchAvailable() && !editing() && !compiled()) {
+          <div
+            class="flex flex-wrap items-center gap-2 border-b border-surface-200 px-3 py-2 dark:border-surface-700"
+            role="group"
+            [attr.aria-label]="'admin.publications.issue.viewSwitchLabel' | transloco"
+            data-testid="issue-view-switch"
+          >
+            <button
+              type="button"
+              [class]="'chip ' + (facade.viewInstant() === 'now' ? 'is-active' : '')"
+              [attr.aria-pressed]="facade.viewInstant() === 'now'"
+              (click)="setView('now')"
+            >
+              {{ 'admin.publications.issue.viewNow' | transloco }}
+            </button>
+            <button
+              type="button"
+              [class]="'chip ' + (facade.viewInstant() === 'planned' ? 'is-active' : '')"
+              [attr.aria-pressed]="facade.viewInstant() === 'planned'"
+              (click)="setView('planned')"
+            >
+              {{
+                'admin.publications.issue.viewPlanned' | transloco: { time: dateTime(lateAfter()) }
+              }}
+            </button>
+          </div>
+        }
+
+        <!--
+          What arrived after the planned cut-off, first and folded.
+
+          These are the rows the two readings disagree about, and they are the
+          reason anybody switches: read now they go out with the issue, read at
+          the planned cut-off they wait for the next one. Listed once, here,
+          rather than mixed into the table below — a reader deciding when to
+          close the period has to be able to see exactly which messages the
+          decision is about.
+
+          The heading says how many and what they mean, which is the answer for
+          everybody who is not about to act on them; the rows are the follow-up
+          question, and a second table opening by itself pushed the list this
+          screen exists for off the first screenful.
+        -->
+        @if (facade.lateMembers().length > 0 && !compiled()) {
+          <div
+            class="border-b border-surface-200 p-3 dark:border-surface-700"
+            data-testid="issue-late-section"
+          >
+            <button
+              type="button"
+              class="link-button is-quiet flex items-center gap-1 text-xs font-semibold"
+              [attr.aria-expanded]="showLate()"
+              (click)="toggleLate()"
+              data-testid="issue-late-toggle"
+            >
+              <app-icon
+                [name]="showLate() ? 'lucideChevronDown' : 'lucideChevronRight'"
+                class="text-xs"
+              />
+              <!--
+                The instant is named, because it is not always the one on file:
+                a period being typed is asked about at the cut-off in the box,
+                and these rows come back counted from there.
+              -->
+              {{
+                'admin.publications.issue.lateTitle'
+                  | transloco: { count: facade.lateMembers().length, time: dateTime(lateAfter()) }
+              }}
+            </button>
+            <p class="mt-0.5 text-xs text-fg-subtle" data-testid="issue-late-meaning">
+              {{ lateMeaningKey() | transloco }}
+            </p>
+
+            @if (showLate()) {
+              <!--
+                Unpinned: the card pins the last column of a table below `xl` so
+                row actions stay reachable while it scrolls, and this table ends
+                in the reason instead — pinned, that column would float over the
+                one beside it while the card is scrolled by the wider table.
+              -->
+              <table class="niord-table is-unpinned mt-2" data-testid="issue-late-table">
+                <thead>
+                  <tr>
+                    <th class="w-3/5">{{ 'admin.publications.issue.message' | transloco }}</th>
+                    <th>{{ 'admin.publications.column.status' | transloco }}</th>
+                    <th class="max-md:hidden">
+                      {{ 'admin.publications.issue.published' | transloco }}
+                    </th>
+                    <th class="w-2/5 md:min-w-36">
+                      {{ 'admin.publications.issue.reason' | transloco }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (member of facade.lateMembers(); track member.messageUid) {
+                    <tr>
+                      <ng-container
+                        [ngTemplateOutlet]="memberCells"
+                        [ngTemplateOutletContext]="{ $implicit: member }"
+                      />
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        }
+
+        <!--
+          Three answers, not two. Nothing in the issue at all is said in words;
+          a list is drawn wherever there is one; and an issue whose every member
+          arrived after the planned cut-off shows the section above and no empty
+          table under it — a header row over nothing reads as a list that failed
+          to load.
+        -->
+        @if (facade.members().length === 0 && exclusions().length === 0) {
+          <p class="p-3 text-sm text-fg-muted">
+            {{ 'admin.publications.issue.noMembers' | transloco }}
+          </p>
+        } @else if (facade.tableMembers().length > 0 || exclusions().length > 0) {
+          <table class="niord-table">
+            <thead>
+              <tr>
+                @if (facade.curatable()) {
+                  <th class="w-8">
+                    <input
+                      type="checkbox"
+                      class="checkbox"
+                      [checked]="allSelected()"
+                      [attr.aria-label]="'admin.publications.curation.selectAll' | transloco"
+                      (change)="toggleSelectAll()"
+                    />
+                  </th>
+                }
+                <!--
+                  The two text columns share whatever the fixed columns leave,
+                  three parts to two; everything else takes its content width.
+                  The floor under the reason keeps that column readable rather
+                  than letting it be crushed to a word per line.
+                -->
+                <th class="w-3/5">{{ 'admin.publications.issue.message' | transloco }}</th>
+                <!-- The status the message has NOW, on every row: the table has
+                     one shape whatever the issue's state, and the note under a
+                     badge says when the status changed. -->
+                <th>{{ 'admin.publications.column.status' | transloco }}</th>
+                <!-- Dropped on a phone, where the same date is carried under the
+                     message id instead. -->
+                <th class="max-md:hidden">
+                  {{ 'admin.publications.issue.published' | transloco }}
+                </th>
+                <th class="w-2/5 md:min-w-36">
+                  {{ 'admin.publications.issue.reason' | transloco }}
+                </th>
+                <!--
+                  Headed for a screen reader and blank on screen: the column
+                  holds one-word actions, and a heading above them reads as a
+                  value the rows carry rather than as what the buttons do.
+                -->
+                @if (facade.curatable()) {
+                  <th class="text-right">
+                    <span class="sr-only">
+                      {{ 'admin.publications.issue.actions' | transloco }}
+                    </span>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              <!--
+                A compilation's list is the source issues' own lists laid end to
+                end, and that is the only thing that makes a thousand rows
+                readable: a heading per source issue says which one printed the
+                run beneath it, and the hand-added rows follow every one of them.
+                The headings are the record of what the year covered, so a week
+                that printed nothing is one of them too, opening onto the
+                sentence rather than onto rows. The rows themselves are the same
+                rows — one template, one selection, one count — so the grouping
+                is a way of drawing the list and never a second list.
+              -->
+              @if (compiled()) {
+                @for (group of facade.groupedMembers(); track group.key) {
+                  @let groupOpen = groupExpanded(group.key);
+                  <!--
+                    What the toggle says it opens, named once: the issue that
+                    printed the run, or the hand-added run, which is a run with
+                    no issue to be named by.
+                  -->
+                  @let groupName =
+                    group.source
+                      ? sourceName(group.source)
+                      : ('admin.publications.issue.addedByHand' | transloco);
+                  <tr data-testid="issue-source-group">
+                    <th
+                      scope="colgroup"
+                      [attr.colspan]="memberColumns()"
+                      class="bg-surface-sunken px-4 py-3 text-left text-base font-semibold text-fg"
+                    >
+                      <span class="flex flex-wrap items-baseline gap-x-2">
+                        <!--
+                          Every run folded to begin with, and opened one at a
+                          time: a year is fifty-one weeks of rows, and a reader
+                          arriving at that list cannot see the weeks at all
+                          until the rows under them are out of the way. Named
+                          for what it opens rather than for the state it is in,
+                          which `aria-expanded` carries.
+                        -->
+                        <button
+                          type="button"
+                          class="link-button is-quiet flex items-center self-center"
+                          [attr.aria-expanded]="groupOpen"
+                          [attr.aria-label]="
+                            'admin.publications.issue.sourceGroupToggle'
+                              | transloco: { name: groupName }
+                          "
+                          (click)="toggleGroup(group.key)"
+                          data-testid="issue-source-group-toggle"
+                        >
+                          <app-icon
+                            [name]="groupOpen ? 'lucideChevronDown' : 'lucideChevronRight'"
+                            class="text-sm"
+                          />
+                        </button>
+                        @if (group.source; as source) {
+                          <!--
+                            The source issue's own screen, where the list under
+                            this heading can be checked against what actually
+                            went out. Plain text where the issue cannot be
+                            addressed — a deleted source leaves its id behind and
+                            nothing to open.
+                          -->
+                          @if (sourceRoute(source); as route) {
+                            <a
+                              class="link-button is-prose"
+                              [routerLink]="route"
+                              [queryParams]="sourceQueryParams(source)"
+                              >{{ sourceName(source) }}</a
+                            >
+                          } @else {
+                            <span>{{ sourceName(source) }}</span>
+                          }
+                          @if (sourceWeekKey(source); as key) {
+                            <span class="text-xs font-normal text-fg-muted">
+                              {{ key | transloco: sourceWeekParams(source) }}
+                            </span>
+                          }
+                          <span class="text-xs font-normal text-fg-muted">
+                            {{ sourcePeriodKey(source) | transloco: sourcePeriodParams(source) }}
+                          </span>
+                        } @else {
+                          <span>{{ 'admin.publications.issue.addedByHand' | transloco }}</span>
+                        }
+                        <span class="text-xs font-normal text-fg-muted">
+                          ·
+                          {{
+                            memberCountKey(group.members.length)
+                              | transloco: { count: group.members.length }
+                          }}
+                        </span>
+                      </span>
+                    </th>
+                  </tr>
+                  @if (groupOpen) {
+                    @for (member of group.members; track member.messageUid) {
+                      <ng-container
+                        [ngTemplateOutlet]="memberRow"
+                        [ngTemplateOutletContext]="{ $implicit: member }"
+                      />
+                    } @empty {
+                      <!--
+                        A source issue that printed nothing, saying so.
+
+                        The heading is there because the compilation covered that
+                        period, and opening it onto nothing at all would read as
+                        a run that failed to draw. The same sentence the whole
+                        table says when it is empty, because it is the same fact
+                        about a smaller list.
+                      -->
+                      <tr data-testid="issue-source-group-empty">
+                        <td
+                          [attr.colspan]="memberColumns()"
+                          class="px-4 py-3 text-sm text-fg-muted"
+                        >
+                          {{ 'admin.publications.issue.noMembers' | transloco }}
+                        </td>
+                      </tr>
+                    }
+                  }
+                }
+              } @else {
+                @for (member of facade.tableMembers(); track member.messageUid) {
+                  <ng-container
+                    [ngTemplateOutlet]="memberRow"
+                    [ngTemplateOutletContext]="{ $implicit: member }"
+                  />
+                }
+              }
+
+              <!--
+                What was kept OUT, in the same list.
+
+                An excluded message is not a member, so it is in no member list —
+                which would leave a curator who excluded the wrong one with
+                nothing to undo. These are the decisions the server reports as
+                still standing, not the entries the history recorded: an
+                exclusion that was later withdrawn is in the trail and is not in
+                force. Struck through and dimmed, because "in this issue" and
+                "taken out of it" are one list to anybody checking a document.
+              -->
+              @for (exclusion of exclusions(); track exclusion.messageUid) {
+                <tr class="opacity-60" data-testid="issue-exclusion">
+                  <td></td>
+                  <td class="max-w-0">
+                    <!-- Named exactly as a member row names its message, so the
+                         two halves of one list read alike, and struck through
+                         because this one is the half that was taken out. -->
+                    <span class="block truncate">
+                      <app-message-ref
+                        [messageUid]="exclusion.messageUid"
+                        [messageId]="exclusion.messageId"
+                        [title]="exclusion.title"
+                        [struck]="true"
+                      />
+                    </span>
+                    @if (subtitle(exclusion.messageId, exclusion.title); as title) {
+                      <span
+                        class="block truncate text-xs text-fg-muted line-through"
+                        [title]="title"
+                        >{{ title }}</span
+                      >
+                    }
+                  </td>
+                  <td></td>
+                  <td class="max-md:hidden"></td>
+                  <td class="text-fg-muted">
+                    <span class="text-sm">
+                      <span aria-hidden="true">✗</span>
+                      {{ 'admin.publications.curation.excludedBy' | transloco }}
+                    </span>
+                    <span class="block text-xs text-fg-subtle">{{ exclusionLine(exclusion) }}</span>
+                  </td>
+                  <td class="text-right">
+                    <button
+                      type="button"
+                      class="link-button is-quiet text-xs"
+                      [disabled]="facade.working() || !writable()"
+                      (click)="openClearOverride(exclusion.messageUid)"
+                    >
+                      {{ 'admin.publications.curation.reinclude' | transloco }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        <!--
+          A whole member row of the main table, drawn from one place.
+
+          The table lists its rows flat or cut into the runs they were compiled
+          from, and the two are the same rows: a second copy of this markup would
+          be two tables drifting apart a column at a time, and a selection box
+          that exists in one of them and not the other.
+        -->
+        <ng-template #memberRow let-member>
+          <tr>
+            @if (facade.curatable()) {
+              <td>
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  [checked]="isSelected(member.messageUid)"
+                  [attr.aria-label]="
+                    'admin.publications.curation.selectRow'
+                      | transloco: { message: memberName(member) }
+                  "
+                  (change)="toggleSelected(member.messageUid)"
+                />
+              </td>
+            }
+            <!--
+              The three cells every member row carries, from the one template
+              both tables draw: the late section above lists the same kind of
+              row, and two copies of this markup would be two tables that drift
+              apart a column at a time.
+            -->
+            <ng-container
+              [ngTemplateOutlet]="memberCells"
+              [ngTemplateOutletContext]="{ $implicit: member }"
+            />
+            @if (facade.curatable()) {
+              <td class="whitespace-nowrap text-right">
+                <!--
+                  Quiet rather than branded: these sit at the end of every row,
+                  and in the brand colour a column of them is the loudest thing
+                  in the table — ahead of the messages the reader came to check.
+
+                  Side by side once there is room for the pair; they stack on a
+                  phone, where the column takes width the two text columns need
+                  more.
+                -->
+                <div class="flex flex-wrap justify-end gap-3 md:flex-nowrap">
+                  @if (isOverride(member)) {
+                    <button
+                      type="button"
+                      class="link-button is-quiet text-xs"
+                      [disabled]="facade.working() || !writable()"
+                      (click)="openClearOverride(member.messageUid)"
+                    >
+                      {{ 'admin.publications.curation.clear' | transloco }}
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="link-button is-quiet text-xs"
+                    [disabled]="facade.working() || !writable()"
+                    (click)="openExclude(member)"
+                  >
+                    {{ 'admin.publications.issue.exclude' | transloco }}
+                  </button>
+                </div>
+              </td>
+            }
+          </tr>
+        </ng-template>
+
+        <!--
+          The cells a member row carries in either table: what the message is,
+          what it was when the list was taken, when it was published and why it
+          is in. The selection box and the row actions are NOT here — they
+          belong to the table that can act on its rows.
+        -->
+        <ng-template #memberCells let-member>
+          <!-- Zero-basis width: without it the nowrap title below sizes
+               the column and never ellipsises. -->
+          <td class="max-w-0">
+            <span class="block truncate">
+              <!--
+                The one way this section names a message: the short id where the
+                message has one, its title where it has not, and never the uid.
+                The (P)/(T) suffix beside it is the same one the message lists
+                print, and the drift marks say what has moved under a frozen row
+                since it was frozen — the row itself is never rewritten from the
+                live message, because a published document lists what it listed.
+
+                Both are spaced from the name by a margin: Angular drops the
+                whitespace-only text node between them, and a suffix glued to the
+                number reads as part of it.
+              -->
+              <app-message-ref
+                [messageUid]="member.messageUid"
+                [messageId]="member.frozenShortId"
+                [title]="member.title"
+              >
+                @if (typeSuffix(member); as suffix) {
+                  <span class="ml-1 text-fg-muted">{{ suffix }}</span>
+                }
+              </app-message-ref>
+            </span>
+            <!--
+              What the message is called, under the id that addresses it.
+
+              The live title, not a frozen one: an id names a row only to
+              somebody who already knows which message it is, and this is the
+              line that lets everybody else read the list. Absent where the
+              message is gone, and absent on an unnumbered row — there the title
+              is already the name above, and repeating it says it twice.
+            -->
+            @if (subtitle(member.frozenShortId, member.title); as title) {
+              <span class="block truncate text-xs text-fg-muted" [title]="title">{{ title }}</span>
+            }
+            <!-- The publication date, where the column that carries it is
+                 dropped for want of room. -->
+            <span class="block text-xs text-fg-muted md:hidden">
+              {{ date(member.frozenPublishDateFrom) }}
+            </span>
+          </td>
+          <!--
+            The status the message has NOW, in the colours it wears everywhere
+            else. A row whose message changed after the issue went out wears a
+            mark to the RIGHT of the badge — its tooltip says what changed and
+            that the message is still in the issue, which is the one question a
+            cancelled row in a published list raises. The cell never wraps, so
+            the column grows to fit the badge and its mark rather than pushing
+            the mark onto a second line.
+          -->
+          <td class="whitespace-nowrap">
+            <span class="inline-flex items-center">
+              <span class="status-badge" [class]="memberStatusClass(member)">
+                {{ memberStatusKey(member) | transloco }}
+              </span>
+              <app-member-change-note [member]="member" />
+            </span>
+          </td>
+          <td class="max-md:hidden whitespace-nowrap">
+            {{ date(member.frozenPublishDateFrom) }}
+          </td>
+          <td [class]="reasonLoud(member) ? 'font-medium text-fg' : 'text-fg-muted'">
+            <!--
+              Why this row is here. The code says what kind of membership it is;
+              on a row somebody decided by hand the line beneath says who decided
+              it, when and why — read from the curation record where the server
+              sends one, and from the stored note otherwise.
+            -->
+            <span class="text-sm">
+              {{ 'admin.publications.reason.' + (member.reasonCode ?? 'UNKNOWN') | transloco }}
+            </span>
+            @if (curationLine(member); as line) {
+              <span class="block text-xs text-fg-subtle">
+                <span aria-hidden="true">✎</span>
+                {{ 'admin.publications.curation.addedBy' | transloco }} {{ line }}
+              </span>
+            } @else if (member.reasonNote) {
+              <span class="block text-xs text-fg-subtle">{{ member.reasonNote }}</span>
+            }
+          </td>
+        </ng-template>
+
+        <!--
+          What the criteria SAW and did not take.
+
+          A different question from the rows above: those are decisions somebody
+          recorded, these are candidates the query dropped and the reason it
+          dropped them. It is the answer to "why is this message not in the
+          issue", which is otherwise unanswerable from the screen — a member list
+          can only show what it contains, and an empty one looks equally like a
+          wrong query and like a quiet week.
+
+          Collapsed, and inert rather than absent when nothing was dropped: the
+          count IS the answer to "what did the criteria leave out", and a foot
+          that disappears at zero leaves the question unanswered — a reader
+          cannot tell a query that dropped nothing from a screen that never
+          asked. The hint beside it says what the section holds, because a
+          disclosure nobody opens is a disclosure nobody knows the use of.
+
+          Absent on a compilation, which has no candidates: nothing was offered
+          to a query and rejected — the union is what the source issues printed,
+          and the question "what was left out" is answered by the sources card in
+          the rail, which names the periods that contributed nothing.
+        -->
+        @if (facade.curatable() && !compiled()) {
+          <div class="border-t border-surface-200 p-3 dark:border-surface-700">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                class="link-button is-quiet flex items-center gap-1 text-xs font-semibold disabled:cursor-default disabled:hover:text-fg-muted"
+                [disabled]="facade.omissionCount() === 0"
+                [attr.aria-expanded]="facade.omissionCount() > 0 ? showOmissions() : null"
+                (click)="toggleOmissions()"
+                data-testid="issue-omissions-toggle"
+              >
+                <app-icon
+                  [name]="showOmissions() ? 'lucideChevronDown' : 'lucideChevronRight'"
+                  class="text-xs"
+                />
+                {{ 'admin.publications.issue.omitted' | transloco }}
+                <span class="text-fg-subtle">({{ facade.omissionCount() }})</span>
+              </button>
+              <span class="text-xs text-fg-subtle">
+                {{ 'admin.publications.issue.omittedHint' | transloco }}
+              </span>
+            </div>
+
+            @if (showOmissions() && facade.omissionCount() > 0) {
+              <ul class="mt-2 flex flex-col gap-2" data-testid="issue-omissions">
+                @for (miss of facade.omissions(); track miss.messageUid) {
+                  <li class="flex flex-wrap items-baseline gap-2 text-sm">
+                    <!--
+                      The short id, and the message behind it, exactly as a
+                      member row offers them. A uid answers "which row is this"
+                      and nothing else: the question the panel exists for is
+                      "why is THAT notice not in the issue", and it is asked
+                      about a message somebody can name — so the row names it
+                      and opens it.
+                    -->
+                    <app-message-ref
+                      [messageUid]="miss.messageUid"
+                      [messageId]="miss.messageId"
+                      [title]="miss.title"
+                    />
+                    <span class="text-xs text-fg-subtle">{{ missKey(miss) | transloco }}</span>
+                  </li>
+                }
+              </ul>
+              <!--
+                The rows are a capped sample and the count is the real number, so
+                a reader is told which of the two they are looking at rather than
+                left to conclude that fifty is all there was.
+              -->
+              @if (facade.omissionsBounded()) {
+                <p class="mt-2 text-xs text-fg-muted">
+                  {{
+                    'admin.publications.issue.omittedTruncated'
+                      | transloco
+                        : { shown: facade.omissions().length, total: facade.omissionCount() }
+                  }}
+                </p>
+              }
+            }
+          </div>
+        }
+      </section>
+    </div>
+
+    <!--
+      The rail. From the wide breakpoint up it is a single 340px column, sticky,
+      so the verdict stays beside the list it is about however far the list runs.
+
+      Stacked above the members it lays its two answer cards out side by side
+      instead: full width each, they push the list a card-height further down a
+      screen that has room for both across. The trail spans the pair, because it
+      is a reading list rather than an answer.
+    -->
+    <aside
+      class="order-1 grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:sticky xl:top-4 xl:order-2 xl:w-[340px] xl:grid-cols-1"
+    >
+      @if (documentFirst()) {
+        <ng-container [ngTemplateOutlet]="documentCard" />
+        <ng-container [ngTemplateOutlet]="checklistCard" />
+      } @else {
+        <ng-container [ngTemplateOutlet]="checklistCard" />
+        <ng-container [ngTemplateOutlet]="documentCard" />
+      }
+
+      <!--
+        What the compilation is made of — the counterpart of the left-out panel
+        on every other regime.
+
+        A member list can only show what it contains, so on a roll-up of a whole
+        year the question that matters is which of the source series' periods are
+        actually in it. Every period in the window is listed, not only the ones
+        that contributed: a week still open, and a stretch nobody published at
+        all, are exactly what the fifteenth checklist row warns about, and this
+        is where a reader finds out which weeks they are.
+
+        The OPEN issue's card, and only the open one's. What it answers is what
+        is still open or missing, which is a question about a release that has
+        not happened: once the year is out, every source issue it covered — the
+        ones that printed nothing included — is a heading of the grouped table,
+        and a card repeating those weeks beside it would be the same list drawn
+        twice. Drawn from the survey's PRESENCE, never from the regime, because
+        an empty list is a different answer and keeps its line: a compilation
+        whose period holds no source issue at all.
+      -->
+      @if (compiled() && issueOpen() && facade.sources(); as sources) {
+        <app-card [header]="'admin.publications.issue.sources' | transloco">
+          @if (sources.length === 0) {
+            <p class="text-sm text-fg-muted">
+              {{ 'admin.publications.issue.noSources' | transloco }}
+            </p>
+          } @else {
+            <ul class="flex flex-col gap-2" data-testid="issue-sources">
+              @for (source of sources; track $index) {
+                <li class="flex flex-col gap-0.5 text-sm">
+                  <span class="flex flex-wrap items-baseline gap-x-2">
+                    <!--
+                        A published or open source issue is named and opens; an
+                        uncovered stretch has no issue to name, so the period it
+                        spans stands in its place — which is the only thing that
+                        identifies it.
+                      -->
+                    @if (source.status === 'MISSING') {
+                      <span class="text-fg">{{ sourceGap(source) }}</span>
+                    } @else if (sourceRoute(source); as route) {
+                      <a
+                        class="link-button is-prose"
+                        [routerLink]="route"
+                        [queryParams]="sourceQueryParams(source)"
+                        >{{ sourceName(source) }}</a
+                      >
+                    } @else {
+                      <span class="text-fg">{{ sourceName(source) }}</span>
+                    }
+                    <span class="status-badge" [class]="sourceStatusClass(source)">
+                      {{ sourceStatusKey(source) | transloco }}
+                    </span>
+                  </span>
+                  <span class="flex flex-wrap items-baseline gap-x-2 text-xs text-fg-muted">
+                    @if (sourceWeekKey(source); as key) {
+                      <span>{{ key | transloco: sourceWeekParams(source) }}</span>
+                    }
+                    @if (source.status !== 'MISSING') {
+                      <span>
+                        {{ sourcePeriodKey(source) | transloco: sourcePeriodParams(source) }}
+                      </span>
+                    }
+                    @if (source.memberCount !== undefined) {
+                      <span>
+                        {{
+                          memberCountKey(source.memberCount)
+                            | transloco: { count: source.memberCount }
+                        }}
+                      </span>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </app-card>
+      }
+
+      <!--
+        What has already happened to it — folded.
+
+        The trail is the longest thing in the rail and the one nobody opens the
+        screen to read: it answers "who did this, and when", which is a question
+        asked after something looks wrong, not before. Left open it pushed the
+        two cards that DO carry an answer — the document and the checklist — off
+        a rail somebody is reading top-down. The count on the line is what makes
+        the fold safe: a reader can see there is a trail, and how much of one,
+        without opening it.
+      -->
+      <app-card
+        [header]="'admin.publications.issue.history' | transloco"
+        sectionClass="md:col-span-2 xl:col-span-1"
+      >
+        @if (facade.audit().length === 0) {
+          <p class="text-sm text-fg-muted">
+            {{ 'admin.publications.issue.noHistory' | transloco }}
+          </p>
+        } @else {
+          <button
+            type="button"
+            class="link-button is-quiet flex items-center gap-1 text-xs font-semibold"
+            [attr.aria-expanded]="showHistory()"
+            (click)="toggleHistory()"
+            data-testid="issue-history-toggle"
+          >
+            <app-icon
+              [name]="showHistory() ? 'lucideChevronDown' : 'lucideChevronRight'"
+              class="text-xs"
+            />
+            {{
+              'admin.publications.issue.historyCount' | transloco: { count: facade.audit().length }
+            }}
+          </button>
+
+          @if (showHistory()) {
+            <ol class="mt-2 flex flex-col gap-2.5" data-testid="issue-history">
+              @for (entry of facade.audit(); track entry.id ?? entry.created) {
+                <li class="text-sm">
+                  <!--
+                    The action in words, and the action itself where this build
+                    has no words for it. Built blind, an entry the backend writes
+                    and this screen has never heard of rendered as its own
+                    translation key — which is what the panel showed for a public
+                    window closed by a neighbour's release, on every routine
+                    weekly publish.
+                  -->
+                  <span class="flex flex-wrap items-baseline gap-x-2">
+                    @if (importedEntry(entry)) {
+                      <!--
+                        One sentence, because the action and the actor are the
+                        same fact here: an issue that arrived from the previous
+                        system was imported BY the import. Said twice it read as
+                        two things having happened to the issue.
+                      -->
+                      <span class="font-medium text-fg">
+                        {{ 'admin.publications.actor.IMPORT' | transloco }}
+                      </span>
+                    } @else {
+                      @if (actionKey(entry); as key) {
+                        <span class="font-medium text-fg">{{ key | transloco }}</span>
+                      } @else {
+                        <span class="font-mono text-xs font-medium text-fg">{{
+                          entry.action
+                        }}</span>
+                      }
+                      <!--
+                        A machine actor has no name and gets a label saying which
+                        kind of machine it was; a person is shown by name. An entry
+                        whose person did not survive is neither, and must not fall
+                        through to a machine label -- reading "imported" over a
+                        change somebody made by hand rewrites the record.
+                      -->
+                      @if (actorKey(entry); as key) {
+                        <span class="text-xs text-fg-muted">{{ key | transloco }}</span>
+                      } @else {
+                        <span class="text-xs text-fg-muted">{{ entry.actorLabel }}</span>
+                      }
+                    }
+                  </span>
+                  <span class="block text-xs text-fg-muted" [attr.title]="entryTitle(entry)">
+                    {{ dateTime(entry.created) }}
+                  </span>
+                  <!--
+                    Where a transfer moved the publication. The action names what
+                    happened and this names the two desks it happened between,
+                    which is the only thing anybody opens this line to find out.
+                  -->
+                  @if (ownerMove(entry); as move) {
+                    <span class="block text-xs text-fg-muted">
+                      {{ 'admin.publications.issue.ownerMoved' | transloco: move }}
+                    </span>
+                  }
+                  <!--
+                    The reason somebody recorded, which is the half of the line
+                    worth reading. An import records an identifier from the
+                    system the issue came out of instead: nobody reads a uuid off
+                    a history panel, and the one person who needs it is matching
+                    it against a record elsewhere — so it travels as the hover
+                    text of the entry rather than as a line of its own.
+                  -->
+                  @if (entry.reason && !importedEntry(entry)) {
+                    <span class="block text-xs text-fg-subtle">{{ entry.reason }}</span>
+                  }
+                  <!--
+                    The documents this line replaced, one per language. Only the
+                    lines that archived carry any, which is what makes the row
+                    worth showing at all. Opened in its own tab behind a one-time
+                    ticket — the endpoint is shaped for a navigation rather than a
+                    fetch, so the browser's own viewer shows the document.
+                  -->
+                  @if (archivedFiles(entry); as files) {
+                    @if (files.length > 0) {
+                      <span class="flex flex-wrap items-baseline gap-2">
+                        <span class="text-xs text-fg-subtle">
+                          {{ 'admin.publications.issue.archived' | transloco }}
+                        </span>
+                        @for (file of files; track file.lang) {
+                          <button
+                            type="button"
+                            class="link-button is-subtle inline-flex min-w-0 items-center gap-1 text-xs"
+                            [attr.aria-label]="
+                              'admin.publications.issue.openArchived'
+                                | transloco: { lang: file.lang }
+                            "
+                            (click)="openArchivedFile(entry, file)"
+                          >
+                            <app-icon name="lucideDownload" />
+                            <span class="font-semibold uppercase">{{ file.lang }}</span>
+                            @if (file.fileName) {
+                              <span class="truncate">{{ file.fileName }}</span>
+                            }
+                          </button>
+                        }
+                      </span>
+                    }
+                  }
+                  <!--
+                    What the release was actually checked against, behind one
+                    line. The rail answers "can this go out" and is not drawn at
+                    all once the issue is published, so this is the only place
+                    the answers that were true in the release — and the warnings
+                    somebody ticked to get past — can still be read. Closed:
+                    the ordinary visit is not asking.
+                  -->
+                  @let checks = releaseChecks(entry);
+                  @if (checks.length > 0) {
+                    <button
+                      type="button"
+                      class="link-button is-quiet flex items-center gap-1 text-xs"
+                      [attr.aria-expanded]="releaseChecksOpen(entry)"
+                      (click)="toggleReleaseChecks(entry)"
+                      data-testid="issue-release-checks-toggle"
+                    >
+                      <app-icon
+                        [name]="
+                          releaseChecksOpen(entry) ? 'lucideChevronDown' : 'lucideChevronRight'
+                        "
+                        class="text-xs"
+                      />
+                      {{ 'admin.publications.issue.checklistAtPublish' | transloco }}
+                    </button>
+                    @if (releaseChecksOpen(entry)) {
+                      <ul class="mt-1 flex flex-col gap-1" data-testid="issue-release-checks">
+                        @for (row of checks; track row.code) {
+                          <li class="flex items-start gap-2 text-xs text-fg-muted">
+                            <!--
+                              The rail's own marks: a tick for an answered
+                              question, and for a failure the round mark whose
+                              colour carries the severity.
+                            -->
+                            @if (row.passed) {
+                              <app-icon name="lucideCheck" class="mt-0.5 shrink-0 text-fg-subtle" />
+                            } @else {
+                              <span
+                                class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[0.625rem] font-bold"
+                                [class]="
+                                  row.severity === 'BLOCK'
+                                    ? 'bg-[var(--niord-notice-error-bg)] text-[var(--niord-notice-error-fg)]'
+                                    : 'bg-[var(--niord-notice-warn-bg)] text-[var(--niord-notice-warn-fg)]'
+                                "
+                                aria-hidden="true"
+                                >{{ row.severity === 'BLOCK' ? '✕' : '!' }}</span
+                              >
+                            }
+                            <span class="min-w-0 flex-1">
+                              @if (checkKey(row.code); as key) {
+                                {{ key | transloco }}
+                              } @else {
+                                <span class="font-mono">{{ row.code }}</span>
+                              }
+                              <!--
+                                Said only where somebody was offered the choice:
+                                a row that passed was never waved through, and a
+                                blocker cannot be.
+                              -->
+                              @if (acknowledgeable(row)) {
+                                <span class="text-fg-subtle">
+                                  · {{ acknowledgedKey(row) | transloco }}
+                                </span>
+                              }
+                            </span>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  }
+                </li>
+              }
+            </ol>
+          }
+        }
+      </app-card>
+    </aside>
+  </div>
+
+  <!--
+    The release rail's verdict.
+
+    canPublish is the server's verdict and is never re-derived here: a button
+    that disagrees with the backend about the same issue is worse than no button.
+    Rows the server marked as not applicable never appear — a question that was
+    never asked has no answer, and a rail padded with them is one nobody reads to
+    the end.
+  -->
+  <ng-template #checklistCard>
+    <app-card [header]="'admin.publications.issue.checklist' | transloco">
+      <!--
+        Top-level, unconditionally: content inside a control-flow block projects
+        to the DEFAULT slot, so a conditional here would drop the line into the
+        card body instead of the band.
+      -->
+      <span cardActions class="text-xs font-normal text-fg-muted normal-case">
+        @if (facade.checklist()) {
+          {{ 'admin.publications.issue.checkedAt' | transloco }}
+          {{ checkedAt() | relativeTime }}
+        }
+      </span>
+
+      <div class="flex flex-col gap-3" data-testid="issue-release">
+        @if (issue.status === 'OPEN' && facade.checklist(); as checklist) {
+          <!--
+            A line, not a notice. A tinted box at the top of the card reads as
+            something that just happened; the verdict is the standing state of
+            the issue the card is about, and it is the first thing on the card
+            either way — so weight and colour carry it without a frame competing
+            with the rows underneath.
+          -->
+          @let v = verdict();
+          <p
+            class="checklist-verdict"
+            [class]="
+              v.state === 'blocked' ? 'is-blocked' : v.state === 'warnings' ? 'is-warn' : 'is-ok'
+            "
+            data-testid="issue-verdict"
+          >
+            <app-icon
+              [name]="
+                v.state === 'blocked'
+                  ? 'lucideCircleX'
+                  : v.state === 'warnings'
+                    ? 'lucideTriangleAlert'
+                    : 'lucideCheck'
+              "
+              class="shrink-0 text-sm"
+            />
+            <span>
+              {{ v.key | transloco: { n: v.state === 'blocked' ? v.blocking : v.warnings } }}
+            </span>
+          </p>
+
+          @if (checklist.rows.length === 0) {
+            <p class="text-sm text-fg-muted">
+              {{ 'admin.publications.issue.noChecks' | transloco }}
+            </p>
+          }
+
+          <!--
+            The rows that need something done, blockers first, each said as a
+            sentence rather than as the question it answers. What the check found
+            is said UNDER each sentence, in the reader's own language — not as a
+            hover carrying the server's English, which is a second answer to the
+            same question in a language the reader did not choose.
+          -->
+          @if (attentionRows().length > 0) {
+            <ul class="flex flex-col gap-3">
+              @for (row of attentionRows(); track row.code) {
+                <li class="flex items-start gap-2 text-sm">
+                  <!--
+                    A round mark rather than the verdict's triangle. The triangle
+                    is the sentence above these rows; repeated down the list it
+                    turned the rail into a column of the same glyph, and a reader
+                    scanning for the one row that stops the release had nothing to
+                    scan by. The mark carries the severity in its own colour and
+                    says nothing on its own — the sentence beside it is the row.
+                  -->
+                  @if (row.severity === 'BLOCK') {
+                    <span
+                      class="mt-0.5 inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-[var(--niord-notice-error-bg)] text-xs font-bold text-[var(--niord-notice-error-fg)]"
+                      aria-hidden="true"
+                      data-testid="issue-check-mark"
+                      >✕</span
+                    >
+                  } @else {
+                    <span
+                      class="mt-0.5 inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-[var(--niord-notice-warn-bg)] text-xs font-bold text-[var(--niord-notice-warn-fg)]"
+                      aria-hidden="true"
+                      data-testid="issue-check-mark"
+                      >!</span
+                    >
+                  }
+                  <span class="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <span>
+                      @if (checkDetailKey(row.code); as key) {
+                        {{ key | transloco: checkParams(row) }}
+                      } @else if (checkKey(row.code); as key) {
+                        {{ key | transloco }}
+                      } @else {
+                        <span class="font-mono text-xs">{{ row.code }}</span>
+                      }
+                    </span>
+
+                    <!--
+                      What the check actually found, under the sentence that says
+                      what it means. The server sends the values apart from its
+                      own English wording, so the numbers are read in the same
+                      language as the row above them; where this build has no
+                      words for the answer, that English stands rather than a key
+                      path.
+                    -->
+                    @if (checkDetail(row); as detail) {
+                      <span class="text-xs text-fg-muted" data-testid="issue-check-detail">
+                        @if (detail.key; as key) {
+                          {{ key | transloco: detail.params }}
+                        } @else {
+                          {{ detail.text }}
+                        }
+                      </span>
+                    }
+
+                    <!-- The remedy where the row has one, on the row itself. -->
+                    @if (row.code === 'FILE_PRESENT_PER_LANGUAGE') {
+                      <button
+                        type="button"
+                        class="link-button is-subtle self-start text-xs"
+                        (click)="showDocumentControls.set(true)"
+                      >
+                        {{ 'admin.publications.issue.goToDocument' | transloco }}
+                      </button>
+                    }
+
+                    @if (row.acknowledgeable) {
+                      <span class="text-xs text-fg-muted">
+                        {{ 'admin.publications.issue.acknowledgeInDialog' | transloco }}
+                      </span>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+
+          <!--
+            What passed, behind one line. A check that passed is a question
+            already answered, and thirteen of them above the button is a rail
+            nobody reads to the end.
+          -->
+          @if (passedRows().length > 0) {
+            <button
+              type="button"
+              class="link-button is-quiet flex items-center gap-1 self-start text-xs"
+              [attr.aria-expanded]="showPassed()"
+              (click)="togglePassed()"
+              data-testid="issue-passed-toggle"
+            >
+              <app-icon
+                [name]="showPassed() ? 'lucideChevronDown' : 'lucideChevronRight'"
+                class="text-xs"
+              />
+              {{
+                'admin.publications.checklist.passedCount' | transloco: { n: passedRows().length }
+              }}
+            </button>
+            @if (showPassed()) {
+              <ul class="flex flex-col gap-1" data-testid="issue-passed">
+                @for (row of passedRows(); track row.code) {
+                  <li class="flex items-start gap-2 text-sm text-fg-muted">
+                    <app-icon name="lucideCheck" class="mt-0.5 text-xs text-fg-subtle" />
+                    <span class="min-w-0 flex-1">
+                      @if (checkKey(row.code); as key) {
+                        {{ key | transloco }}
+                      } @else {
+                        <span class="font-mono text-xs">{{ row.code }}</span>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+          }
+
+          <!--
+            The release itself, and what pressing it actually does. The cut-off
+            is the surprise worth spending a line on: nothing stamps it on a
+            schedule.
+          -->
+          <div
+            class="mt-1 flex flex-col gap-2 border-t border-surface-200 pt-3 dark:border-surface-700"
+          >
+            <!--
+              A release renders the whole document again, per language, and that
+              is tens of seconds on a compiled annual. The dialog it was pressed
+              from may well be closed by then — the request lives in the facade,
+              not in the dialog — so the control that started it is what carries
+              the indicator. The label stays put: the button says what it does
+              whether or not it is doing it.
+            -->
+            <button
+              type="button"
+              class="btn-primary w-full justify-center max-xl:mx-auto max-xl:max-w-xs"
+              [disabled]="!publishable() || facade.publishing()"
+              [attr.aria-busy]="facade.publishing() ? 'true' : null"
+              (click)="openPublish()"
+            >
+              @if (facade.publishing()) {
+                <app-icon name="lucideLoaderCircle" [spin]="true" />
+              }
+              <span>{{ 'admin.publications.issue.publish' | transloco }}</span>
+            </button>
+            <p class="text-center text-xs text-fg-subtle">
+              @if (autoNextIssue() && successorName(); as next) {
+                {{ 'admin.publications.issue.publishFootNext' | transloco: { next } }}
+              } @else {
+                {{ 'admin.publications.issue.publishFoot' | transloco }}
+              }
+            </p>
+          </div>
+        } @else if (issue.status !== 'OPEN') {
+          <!--
+            A frozen issue is not re-checked. The rail re-resolves the criteria
+            as they stand NOW, and on a frozen issue that answers a question
+            nobody asked — it reported "26 members" for an issue that published
+            20, and failed a check BECAUSE the issue is published. What stands
+            instead is the record of the release.
+
+            The branch is on the STATUS, not on "no checklist". An open issue can
+            reach this card without one — a reader who may curate an issue but
+            not administer one is sent no rail — and the record below would then
+            report a release that has not happened, in green, on an issue still
+            being worked on. That reader gets no verdict at all: whether the
+            issue may go out is not their decision to be told about.
+          -->
+          <p class="checklist-verdict is-ok" data-testid="issue-verdict">
+            <app-icon name="lucideCheck" class="shrink-0 text-sm" />
+            <span>{{ statusKey(issue) | transloco }}</span>
+          </p>
+          <p class="flex flex-wrap items-baseline gap-1 text-xs text-fg-muted">
+            <span>{{ dateTime(issue.cutoffStampedAt ?? issue.publishedAt) }}</span>
+            @if (issue.publicFrom) {
+              <span aria-hidden="true">·</span>
+              <span>{{ 'admin.publications.issue.publicFrom' | transloco }}</span>
+              <span>{{ publicFrom(issue) }}</span>
+              @if (issue.publicTo) {
+                <span aria-hidden="true">–</span>
+                @if (expected(issue.publicTo)) {
+                  <app-expected-date [value]="issue.publicTo" format="date" />
+                } @else {
+                  <span>{{ date(issue.publicTo) }}</span>
+                }
+              }
+            }
+            <span aria-hidden="true">·</span>
+            @let members = issue.memberCount ?? facade.members().length;
+            <span>{{ memberCountKey(members) | transloco: { count: members } }}</span>
+          </p>
+        }
+      </div>
+    </app-card>
+  </ng-template>
+
+  <!--
+    The document itself, read first.
+
+    One row per configured language, whether or not the issue has a desc for it:
+    a language with no document is exactly what this card exists to show, and
+    listing only the descs that exist renders a half-published issue as complete.
+
+    Upload is offered on a published issue as well as an open one. That is the
+    post-publish correction path — the server archives what it replaces — and
+    retiring the issue to fix a wrong PDF would change what the record says
+    happened. Clearing is open-only for the mirror reason: it would leave a dead
+    link where a cited document was.
+  -->
+  <ng-template #documentCard>
+    <app-card [header]="'admin.publications.issue.document' | transloco">
+      <div class="flex flex-col gap-3" data-testid="issue-document">
+        <!--
+          The report parameters this edition answers differently, stated before
+          the rows that say whether the document exists yet. Each wears the
+          tailoring mark, and the sentence under them is a plain line rather than
+          a filled notice: nothing is wrong, and a coloured box would say it was.
+        -->
+        @if (documentFacts().length > 0) {
+          <!-- One column, whatever the viewport. This card spends most of its
+               life in the 340px rail beside the member list, where two columns
+               truncate every value to an ellipsis — and the value is the whole
+               of what the fact says. -->
+          <div class="grid gap-3" data-testid="issue-document-facts">
+            @for (fact of documentFacts(); track fact.key) {
+              <div class="flex min-w-0 flex-col gap-1">
+                <div class="flex items-center gap-1.5 text-xs font-semibold text-fg-muted">
+                  <span>{{ fact.labelKey | transloco }}</span>
+                  <span class="font-mono font-normal">{{ fact.param }}</span>
+                </div>
+                <div class="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                  <span class="min-w-0 truncate">{{ fact.value }}</span>
+                  <span class="status-badge is-plain is-tailored">
+                    {{ 'admin.publications.overrides.mark' | transloco }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <p
+            class="flex flex-wrap items-center gap-2 text-sm text-fg-muted"
+            data-testid="issue-tailored-note"
+          >
+            <span>
+              {{ tailoredSentenceKey() | transloco: { count: tailoredFactCount() } }}
+            </span>
+            <!-- Offered only where it opens onto something: the drawer is not
+                 available on a published issue, and a link that opens nothing
+                 is worse than no link. -->
+            @if (canTailor()) {
+              <button
+                type="button"
+                class="link-button is-quiet"
+                (click)="openOverrides()"
+                data-testid="issue-see-tailoring"
+              >
+                {{ 'admin.publications.overrides.see' | transloco }}
+              </button>
+            }
+          </p>
+        }
+
+        <!--
+          While the documents are being written, the card says so instead of
+          listing them. The rows it would list are the files that are about to be
+          replaced: offering an admin a download of the outgoing document, beside
+          a preview control that would render a second one and a replace control
+          that would collide with the write, hands them the version the work in
+          flight exists to supersede. The header stays, so the card keeps its
+          place in the rail.
+        -->
+        @if (documentsPendingKey(); as key) {
+          <p
+            class="flex items-center gap-2 text-sm text-fg-muted"
+            data-testid="issue-document-regenerating"
+          >
+            <app-icon name="lucideLoaderCircle" [spin]="true" />
+            <span>{{ key | transloco }}</span>
+          </p>
+        } @else {
+          @for (row of documentRows(); track row.lang) {
+            <div class="flex flex-wrap items-center gap-2 text-sm" data-testid="issue-document-row">
+              <app-language-flag
+                class="h-3 w-[1.125rem] rounded-xs"
+                [lang]="row.lang"
+                [flagPath]="row.flagPath"
+              />
+              @if (row.href) {
+                <a
+                  class="min-w-0 flex-1 truncate text-primary hover:underline"
+                  [href]="row.href"
+                  target="_blank"
+                  rel="noopener"
+                  >{{ row.fileName ?? row.href }}</a
+                >
+                <!--
+                Where the file came from is a fact about it, not a state it
+                moves through, so the pill carries no lifecycle dot and no
+                status tint. It reads after the name it describes, and the
+                control that hands the document on comes last: the row is a
+                statement first and a pair of buttons second.
+              -->
+                <span class="status-badge is-plain ml-auto">
+                  {{
+                    (row.uploaded
+                      ? 'admin.publications.issue.fileUploaded'
+                      : 'admin.publications.issue.fileGenerated'
+                    ) | transloco
+                  }}
+                </span>
+                <!--
+                The address, handed over rather than opened. The link's label is
+                a file name, so passing the document on otherwise means
+                right-clicking it — the step that produces the wrong URL.
+              -->
+                <app-copy-link-button [url]="row.href" />
+              } @else if (issue.status === 'OPEN' && generatesDocument() && row.editable) {
+                <span class="flex-1 text-xs text-fg-muted">
+                  {{ 'admin.publications.issue.fileOnPublish' | transloco }}
+                </span>
+              } @else {
+                <span class="flex-1 text-xs text-fg-subtle">
+                  {{ 'admin.publications.issue.noDocument' | transloco }}
+                </span>
+              }
+            </div>
+          }
+
+          <!-- A failed render, said on the card that offers one. -->
+          @if (previewErrorKey(); as key) {
+            <p class="text-sm text-danger" role="alert">{{ key | transloco }}</p>
+          }
+
+          <!--
+          The preview: the document as it would come out, without releasing it.
+          Rendered from the member list as it stands at the moment it is asked
+          for, and asked for from here — one place on the screen produces a
+          preview, and it is the card that holds the documents.
+
+          The control stands whether or not a render already exists: a preview is
+          a look at the current members, so wanting a fresh one is the ordinary
+          case rather than a remedy to anything.
+        -->
+          @if (showPreviewSection()) {
+            <div
+              class="flex flex-col gap-2 border-t border-surface-200 pt-3 dark:border-surface-700"
+            >
+              @if (canGeneratePreview()) {
+                <button
+                  type="button"
+                  class="btn-secondary self-start text-xs"
+                  [disabled]="facade.previewWorking()"
+                  [attr.aria-busy]="facade.previewWorking() ? 'true' : null"
+                  (click)="generatePreview()"
+                >
+                  <!--
+                  A render takes seconds on a large issue, and the button
+                  disabling itself says only that the click landed. The label
+                  stays put so the control does not change size or meaning while
+                  it works.
+                -->
+                  @if (facade.previewWorking()) {
+                    <app-icon name="lucideLoaderCircle" [spin]="true" />
+                  }
+                  <span>{{ 'admin.publications.preview.generate' | transloco }}</span>
+                </button>
+              } @else if (writable() && series()) {
+                <!-- Why there is no control here, for the reader who would have used it. -->
+                <span class="text-xs text-fg-subtle">
+                  {{ 'admin.publications.preview.noReport' | transloco }}
+                </span>
+              }
+
+              @if (facade.previewRows().length > 0) {
+                <ul class="flex flex-col gap-2">
+                  @for (row of facade.previewRows(); track row.lang) {
+                    <li class="flex flex-wrap items-center gap-2 text-sm">
+                      <span class="text-xs font-semibold text-fg-muted">
+                        {{ row.lang.toUpperCase() }}
+                      </span>
+                      <!--
+                      Fetched, not linked: the preview endpoint answers only to a
+                      request carrying the bearer, and reports its address
+                      relative to a host that is not the API's.
+                    -->
+                      <button
+                        type="button"
+                        class="link-button is-subtle min-w-0 truncate text-sm"
+                        [disabled]="facade.previewWorking()"
+                        (click)="openPreview(row)"
+                      >
+                        {{ 'admin.publications.preview.download' | transloco }}
+                      </button>
+                      <span class="text-xs text-fg-subtle">
+                        {{ 'admin.publications.preview.renderedAt' | transloco }}
+                        {{ renderedAt(row.renderedAt) }}
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <!--
+          The replace controls, behind one line. The ordinary visit is somebody
+          checking which file is attached; an upload box under every language
+          turns reading into a form.
+
+          The line carries no chevron: it is the last thing on the card and the
+          only opener there, so a glyph pointing at the controls it opens is one
+          mark more than the sentence needs. The state stays announced through
+          `aria-expanded`.
+        -->
+          <button
+            type="button"
+            class="link-button is-quiet self-start text-xs"
+            [attr.aria-expanded]="showDocumentControls()"
+            (click)="toggleDocumentControls()"
+            data-testid="issue-document-toggle"
+          >
+            {{ 'admin.publications.issue.replaceDocument' | transloco }}
+          </button>
+
+          @if (showDocumentControls()) {
+            <div class="flex flex-col gap-3" data-testid="issue-document-controls">
+              @for (row of documentRows(); track row.lang) {
+                <div
+                  class="flex flex-col gap-2 border-t border-surface-200 pt-3 first:border-0 first:pt-0 dark:border-surface-700"
+                >
+                  <span class="flex items-center gap-2 text-xs font-semibold text-fg-muted">
+                    <app-language-flag
+                      class="h-3 w-[1.125rem] rounded-xs"
+                      [lang]="row.lang"
+                      [flagPath]="row.flagPath"
+                      [codeFallback]="false"
+                    />
+                    {{ row.lang.toUpperCase() }}
+                  </span>
+
+                  @if (row.editable) {
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label class="btn-secondary cursor-pointer text-xs">
+                        <input
+                          type="file"
+                          class="sr-only"
+                          [disabled]="facade.working() || !writable()"
+                          (change)="onFileChosen(row.lang, $event)"
+                        />
+                        {{ 'admin.publications.issue.uploadFile' | transloco }}
+                      </label>
+
+                      @if (row.uploaded && facade.curatable()) {
+                        <button
+                          type="button"
+                          class="link-button is-subtle text-xs"
+                          [disabled]="facade.working() || !writable()"
+                          (click)="clearFile(row.lang)"
+                        >
+                          {{ 'admin.publications.issue.clearFile' | transloco }}
+                        </button>
+                      }
+                    </div>
+
+                    <!--
+                    Refused before it was sent. The issue's languages share one
+                    folder, so the same file name in two of them is one document
+                    — and the server writes the bytes before it notices, which
+                    means the refusal arrives after the other language's file is
+                    already gone.
+                  -->
+                    @if (fileNameConflict(row.lang); as name) {
+                      <p class="text-xs text-danger">
+                        {{ 'admin.publications.issue.fileNameNotDistinct' | transloco }}
+                        <span class="ml-1 font-mono">{{ name }}</span>
+                      </p>
+                    }
+
+                    <div class="flex flex-wrap items-center gap-2">
+                      <input
+                        type="url"
+                        class="text-input min-w-0 flex-1"
+                        [value]="linkDraft(row.lang)"
+                        [disabled]="facade.working() || !writable()"
+                        [attr.aria-label]="'admin.publications.issue.externalLink' | transloco"
+                        [placeholder]="'admin.publications.issue.externalLinkHint' | transloco"
+                        (input)="onLinkInput(row.lang, $any($event.target).value)"
+                      />
+                      <button
+                        type="button"
+                        class="btn-secondary text-xs"
+                        [disabled]="facade.working() || !writable()"
+                        (click)="saveLink(row.lang)"
+                      >
+                        {{ 'admin.publications.issue.saveLink' | transloco }}
+                      </button>
+                    </div>
+                  } @else {
+                    <p class="text-xs text-fg-subtle">
+                      {{ 'admin.publications.issue.languageNotConfigured' | transloco }}
+                    </p>
+                  }
+                </div>
+              }
+
+              @if (anySticky()) {
+                <p class="text-xs text-fg-subtle">
+                  {{ 'admin.publications.issue.stickyNote' | transloco }}
+                </p>
+              }
+            </div>
+          }
+        }
+      </div>
+    </app-card>
+  </ng-template>
+
+  <!--
+    The release decision, asked in full rather than on a click. Kept mounted
+    beside the issue so a refusal can re-list what it is still waiting for
+    without losing anything the admin typed.
+  -->
+  <app-publish-dialog
+    [(visible)]="publishDialogOpen"
+    [issue]="issue"
+    [viewInstant]="facade.viewInstant()"
+    [memberCount]="publishMemberCount()"
+    [opensSuccessor]="autoNextIssue()"
+    [warnings]="facade.acknowledgeableWarnings()"
+    [informational]="facade.informationalWarnings()"
+    [unacknowledged]="facade.unacknowledgedWarnings()"
+    [working]="facade.working()"
+    [errorKey]="publishErrorKey()"
+    (submitted)="submitPublish($event)"
+    (plannedCutoffChanged)="changePlannedCutoff($event)"
+  />
+
+  <!--
+    Withdrawal asks why, because the reason is the only part of it that survives
+    into the history for whoever reads the record next.
+  -->
+  <app-publication-reason-dialog
+    [(visible)]="retireDialogOpen"
+    headerKey="admin.publications.retire.title"
+    effectKey="admin.publications.retire.effect"
+    confirmKey="admin.publications.issue.retire"
+    [working]="facade.working()"
+    (submitted)="submitRetire($event)"
+  />
+
+  <!--
+    The amend decision. Same shape as publishing, because it does the same work at
+    the same address: re-resolve, re-render, replace — behind the same warning
+    gate, and asking why, because this one changes something people have read.
+  -->
+  <app-publication-amend-dialog
+    [(visible)]="amendDialogOpen"
+    [warnings]="facade.acknowledgeableWarnings()"
+    [unacknowledged]="facade.unacknowledgedWarnings()"
+    [working]="facade.working()"
+    [errorKey]="amendErrorKey()"
+    (submitted)="submitAmend($event)"
+  />
+
+  <!--
+    Curation. One reason dialog for both withdrawals — excluding a message and
+    withdrawing the decision behind a row — because the question and its bounds
+    are the same and only the subject differs.
+  -->
+  <app-publication-reason-dialog
+    [(visible)]="curationDialogOpen"
+    [headerKey]="curationHeaderKey()"
+    [effectKey]="curationEffectKey()"
+    [confirmKey]="curationConfirmKey()"
+    [working]="facade.working()"
+    [errorKey]="actionErrorKey()"
+    [errorDetail]="facade.lastActionMessage()"
+    (submitted)="submitCuration($event)"
+  />
+
+  <app-publication-include-dialog
+    [(visible)]="includeDialogOpen"
+    [issueName]="issueName()"
+    [domainId]="series()?.domainId"
+    [domainName]="ownerDomainName()"
+    [intervalFrom]="issue.intervalFrom"
+    [intervalTo]="issue.intervalTo"
+    [working]="facade.working()"
+    [errorKey]="actionErrorKey()"
+    [errorDetail]="facade.lastActionMessage()"
+    (submitted)="submitInclude($event)"
+  />
+
+  <!--
+    Mounted only while it is open, so nothing about this edition is held once the
+    reader is done with it. `hidden` arrives when the pane has finished sliding
+    out and clears the mount, which destroys the component; reopening mid-slide
+    finds it still there, so the drawer slides back in and `hidden` never comes.
+  -->
+  @if (overridesMounted()) {
+    <app-issue-overrides-drawer
+      [open]="overridesOpen()"
+      [issue]="issue"
+      [series]="series()"
+      [saving]="facade.working()"
+      [errorKey]="actionErrorKey()"
+      (closed)="overridesOpen.set(false)"
+      (hidden)="overridesMounted.set(false)"
+      (save)="saveOverrides($event)"
+    />
+  }
+}
+
+<!-- The confirm surface for reinstating, scoped to this screen. -->
+<app-confirm />

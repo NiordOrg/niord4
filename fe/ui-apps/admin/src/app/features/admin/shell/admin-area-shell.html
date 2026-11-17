@@ -1,0 +1,64 @@
+<!-- Below `lg` the section nav is a single-row tab strip pinned to the top of the
+     scroll container: the sections stay on one line (`w-max`) and the strip pans
+     horizontally instead of stacking into a tall block that pushes the content
+     off-screen. At lg+ it becomes the left sidebar. Switches at lg — NOT md — so
+     it matches the header, which burgers below lg because the full chrome doesn't
+     fit the md–lg band (iPad portrait); otherwise the sidebar reappears while the
+     header is still collapsed, cramping the content in that band. The strip's own
+     horizontal padding repeats the app gutter so its first tab lines up with the
+     header, main and footer content edge. -->
+<div class="flex min-w-0 flex-1 flex-col lg:flex-row">
+  <nav
+    #nav
+    class="shrink-0 border-b border-surface-200 bg-surface-0 max-lg:sticky max-lg:top-0 max-lg:z-30 max-lg:overflow-x-auto max-lg:overscroll-x-contain max-lg:px-4 md:max-lg:px-6 lg:w-56 lg:border-r lg:border-b-0 lg:p-2 dark:border-surface-700"
+    [attr.aria-label]="area.titleKey | transloco"
+  >
+    <ul class="flex gap-0.5 max-lg:w-max lg:flex-col">
+      <li>
+        <a
+          routerLink="overview"
+          routerLinkActive="toolbar-tab-active text-fg font-semibold"
+          ariaCurrentWhenActive="page"
+          class="relative flex items-center gap-2 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-fg-muted hover:text-fg max-lg:min-h-11"
+        >
+          <app-icon name="lucideHouse" class="w-4 text-center text-fg-subtle" />
+          {{ 'admin.shell.overview' | transloco }}
+        </a>
+      </li>
+      @for (section of area.sections; track section.path) {
+        @if (gates.isVisible(section)) {
+          <li>
+            <a
+              [routerLink]="section.path"
+              routerLinkActive="toolbar-tab-active text-fg font-semibold"
+              ariaCurrentWhenActive="page"
+              class="relative flex items-center gap-2 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-fg-muted hover:text-fg max-lg:min-h-11"
+            >
+              <app-icon [name]="section.icon" class="w-4 text-center text-fg-subtle" />
+              {{ section.labelKey | transloco }}
+              @if (section.hasBatchBadge) {
+                <!-- Deliberately always visible, including a "0" count. -->
+                <span
+                  class="bg-primary text-white inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium"
+                  [title]="
+                    'admin.shell.batchBadgeTooltip'
+                      | transloco: { count: batchStatus.runningExecutions() }
+                  "
+                  [attr.aria-label]="
+                    'admin.shell.batchBadgeTooltip'
+                      | transloco: { count: batchStatus.runningExecutions() }
+                  "
+                >
+                  {{ batchStatus.runningExecutions() }}
+                </span>
+              }
+            </a>
+          </li>
+        }
+      }
+    </ul>
+  </nav>
+  <main class="app-shell-gutter flex min-w-0 flex-1 flex-col py-4 lg:py-6">
+    <router-outlet />
+  </main>
+</div>

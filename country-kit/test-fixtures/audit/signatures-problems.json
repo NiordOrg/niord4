@@ -1,0 +1,22 @@
+{
+  "invalid": [
+    {
+      "name": "left-pad",
+      "version": "1.3.0",
+      "location": "node_modules/left-pad",
+      "resolved": "https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz",
+      "integrity": "sha512-left-pad",
+      "signature": "MEUCIQ-not-the-registry-s",
+      "keyid": "SHA256:jl3bwswu80PjjokCgh0o2w5c2U4LhQAE57gj9cz1kzA"
+    }
+  ],
+  "missing": [
+    {
+      "name": "@zz/berths",
+      "version": "1.0.0",
+      "location": "node_modules/@zz/berths",
+      "resolved": "https://registry.npmjs.org/@zz/berths/-/berths-1.0.0.tgz",
+      "integrity": "sha512-berths"
+    }
+  ]
+}

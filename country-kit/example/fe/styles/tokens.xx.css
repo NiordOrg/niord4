@@ -1,0 +1,219 @@
+/* ============================================================
+   tokens.xx.css — the example country's brand tokens
+   ============================================================
+
+   The example country keeps the base product's default values
+   (tokens.default.css) and sets one of its own: its vendored text
+   face, Lato, first in the text font, declared in fonts.xx.css.
+   Values only, as every country's token file.
+   ============================================================ */
+
+:root {
+  /* --------------------------------------------------------
+     BRAND COLORS — primary palette (50–950)
+     Deep maritime navy — the country-agnostic Default brand,
+     base #0f3d66. The `@theme` primary utilities reference these
+     via var(...), so this scale is the source of truth for Default
+     primary color.
+     -------------------------------------------------------- */
+  --niord-primary-50: #e8f0f8;
+  --niord-primary-100: #cadcec;
+  --niord-primary-200: #97b7d6;
+  --niord-primary-300: #6492c0;
+  --niord-primary-400: #3d74a9;
+  --niord-primary-500: #0f3d66; /* brand primary base */
+  --niord-primary-600: #0c3253;
+  --niord-primary-700: #092641;
+  --niord-primary-800: #061b2e;
+  --niord-primary-900: #03101c;
+  --niord-primary-950: #02080f;
+
+  /* --------------------------------------------------------
+     BRAND COLORS — accent palette (50–950)
+     Sea-glass teal — chart water color, country-agnostic.
+     Custom semantic scale — the project's own accent family.
+     -------------------------------------------------------- */
+  --niord-accent-50: #e2f1f4;
+  --niord-accent-100: #bae0e5;
+  --niord-accent-200: #7ac4ce;
+  --niord-accent-300: #3fa8b6;
+  --niord-accent-400: #2497a7;
+  --niord-accent-500: #1a8a9c; /* brand accent base */
+  --niord-accent-600: #157282;
+  --niord-accent-700: #115b68;
+  --niord-accent-800: #0d454f;
+  --niord-accent-900: #082e36;
+  --niord-accent-950: #04171b;
+
+  /* Convenience aliases — derive from the palette. Used by
+     hand-written CSS that doesn't need a specific shade. */
+  --niord-primary: var(--niord-primary-500);
+  --niord-primary-hover: var(--niord-primary-600);
+  --niord-primary-soft: var(--niord-primary-100);
+
+  --niord-accent: var(--niord-accent-500);
+  --niord-accent-hover: var(--niord-accent-600);
+  --niord-accent-soft: var(--niord-accent-100);
+
+  /* --------------------------------------------------------
+     ACTION BUTTON ALIASES
+     The indirection that lets the same `.btn-primary` class
+     render in a different brand color per country. Default
+     aliases to primary (navy); the accent is reserved for state
+     and wayfinding, not action surfaces. The mechanism stays
+     country-flippable: a country re-points the alias, the
+     button classes never change.
+     -------------------------------------------------------- */
+  --niord-action-primary-bg: var(--niord-primary);
+  --niord-action-primary-bg-hover: var(--niord-primary-hover);
+  --niord-action-primary-fg: #ffffff;
+
+  /* Destructive action (delete / irreversible) — the `.btn-danger` primitive
+     and the destructive confirm accept. Universal red (not brand); the white
+     label measures 6.25:1 on it and 7.96:1 on its hover. */
+  --niord-action-danger-bg: #b52d20;
+  --niord-action-danger-bg-hover: #9a2418;
+  --niord-action-danger-fg: #ffffff;
+
+  /* --------------------------------------------------------
+     SURFACES — chart-paper cool
+     -------------------------------------------------------- */
+  --niord-bg: #f4f6f8;
+  --niord-surface: #ffffff;
+  --niord-surface-sunken: #f7f9fb;
+  /* Header band — the ONE shared fill for every header strip: card header
+     bands, the messages table header and the admin/sysadmin list-table
+     headers. Retint them all here (+ the country overrides). */
+  --niord-header-band: #f7f9fb;
+
+  /* --------------------------------------------------------
+     SURFACE SCALE — feeds the `bg-surface-*` / `border-surface-*` /
+     `text-surface-*` utilities (via the `@theme` `--color-surface-*`
+     mappings), so surface utilities resolve to brand values and flip
+     per country. Default is a cool slate scale; a country may
+     override it (a warm-paper scale, say).
+     -------------------------------------------------------- */
+  --niord-surface-0: #ffffff;
+  --niord-surface-50: #f8fafc;
+  --niord-surface-100: #f1f5f9;
+  --niord-surface-200: #e2e8f0;
+  --niord-surface-300: #cbd5e1;
+  --niord-surface-400: #94a3b8;
+  /* Also the border of every form field: 4.76:1 on --niord-surface, 4.39:1 on --niord-bg. */
+  --niord-surface-500: #64748b;
+  --niord-surface-600: #475569;
+  --niord-surface-700: #334155;
+  --niord-surface-800: #1e293b;
+  --niord-surface-900: #0f172a;
+  --niord-surface-950: #020617;
+
+  /* --------------------------------------------------------
+     BORDERS / DIVIDERS
+     -------------------------------------------------------- */
+  --niord-divider: #eef1f5;
+  --niord-border: #e6ebf0;
+  --niord-border-strong: #cfd8e0;
+
+  /* --------------------------------------------------------
+     TEXT — deep ocean
+     -------------------------------------------------------- */
+  --niord-fg: #0e2033;
+  --niord-fg-muted: #516074;
+  /* fg-subtle is held at an AA-passing cool-slate (#667589 ≈ 4.70:1 on
+     --niord-surface). A lighter tone (e.g. #8493a4) renders at ~3.1:1 — below
+     WCAG AA (4.5:1) for body-sized text — and subtle is used for
+     placeholders/captions that often render at body sizes. */
+  --niord-fg-subtle: #667589;
+  --niord-fg-on-primary: #ffffff;
+  /* Field / section TITLE color — the deliberate step above body text. Body is --niord-fg
+     (near-black), titles wear the brand primary, so the hierarchy comes from HUE rather than
+     from how far this brand's --niord-fg happens to sit from the UA black default. Resolves to
+     #0f3d66: 11.17:1 on --niord-surface, 10.20:1 on --niord-surface-100 (AAA). Country-tunable —
+     point it at any step of the brand's own primary scale. */
+  --niord-fg-title: var(--niord-primary);
+
+  /* --------------------------------------------------------
+     HEADER / CHROME
+     -------------------------------------------------------- */
+  --niord-header-bg: #0d1f31;
+  --niord-header-fg: #ffffff;
+  --niord-header-muted: #91a4b8;
+  --niord-header-active: var(--niord-accent); /* brand bar color */
+
+  /* --------------------------------------------------------
+     STATUS COLORS — country-tunable palette, locked semantics
+     The 6 statuses are independent variables even though
+     Default reuses values for Draft+Verified and
+     Cancelled+Expired: a country may need to tell any two of
+     them apart, so never collapse them into shared aliases.
+     State colors stay separate from widget chrome. Each -fg
+     line gives its ratios: on its solid -bg, then on the status
+     badge's 65 % wash of that -bg over --niord-bg and over
+     --niord-surface.
+     -------------------------------------------------------- */
+  --niord-status-published-bg: #e7f3ec;
+  --niord-status-published-fg: #1b7a44; /* 4.71:1 on -bg; wash 4.79:1 over bg, 4.93:1 over surface */
+  --niord-status-published-bd: #1b7a44;
+
+  --niord-status-draft-bg: #e8f0f8;
+  --niord-status-draft-fg: #1a5a97; /* 6.18:1 on -bg; wash 6.31:1 over bg, 6.50:1 over surface */
+  --niord-status-draft-bd: #1a5a97;
+
+  --niord-status-verified-bg: #e8f0f8;
+  --niord-status-verified-fg: #1a5a97; /* 6.18:1 on -bg; wash 6.31:1 over bg, 6.50:1 over surface */
+  --niord-status-verified-bd: #1a5a97;
+
+  /* Cancelled and Expired are text on their own tint, so -fg is held at AA against it: #5f6b7b
+     measures 4.78:1 on the solid -bg of the id badge, 4.86:1 on the status badge's wash over
+     --niord-bg and 5.00:1 over --niord-surface. */
+  --niord-status-cancelled-bg: #eef1f4;
+  --niord-status-cancelled-fg: #5f6b7b; /* 4.78:1 on -bg; wash 4.86:1 over bg, 5.00:1 over surface */
+  --niord-status-cancelled-bd: #5f6b7b;
+
+  --niord-status-expired-bg: #eef1f4;
+  --niord-status-expired-fg: #5f6b7b; /* 4.78:1 on -bg; wash 4.86:1 over bg, 5.00:1 over surface */
+  --niord-status-expired-bd: #5f6b7b;
+
+  --niord-status-deleted-bg: #1a1a1a;
+  --niord-status-deleted-fg: #ffffff; /* 17.40:1 on -bg; wash 5.66:1 over bg, 5.40:1 over surface */
+  --niord-status-deleted-bd: #1a1a1a;
+
+  /* --------------------------------------------------------
+     MAP OVERLAYS — area & chart layer colors (themeable)
+     Functional overlay colors for the area/chart map layers,
+     read by the OL layers via readCssVar (canvas can't consume
+     CSS vars directly). Country-overridable — these are not part
+     of the locked marine-warning marker language. A country may
+     retune them in its own tokens.<cc>.css without code changes.
+     -------------------------------------------------------- */
+  --niord-area-fill: rgba(100, 100, 255, 0.4);
+  --niord-area-stroke: rgba(40, 40, 100, 1);
+  --niord-area-label-fill: rgba(40, 40, 100, 1);
+  --niord-area-label-stroke: rgba(255, 255, 255, 0.9);
+  --niord-chart-stroke: rgba(0, 102, 204, 0.9);
+  --niord-chart-label-fill: rgba(0, 51, 102, 1);
+  --niord-chart-label-stroke: rgba(255, 255, 255, 0.9);
+
+  /* --------------------------------------------------------
+     RADII
+     -------------------------------------------------------- */
+  --niord-radius-sm: 5px;
+  --niord-radius: 8px;
+  --niord-radius-lg: 12px;
+
+  /* --------------------------------------------------------
+     SHADOWS — tinted to the primary scale
+     -------------------------------------------------------- */
+  --niord-shadow-sm: 0 1px 2px rgba(14, 32, 51, 0.05);
+  --niord-shadow: 0 6px 20px -6px rgba(14, 32, 51, 0.14), 0 2px 6px -2px rgba(14, 32, 51, 0.08);
+  --niord-shadow-lg:
+    0 24px 60px -12px rgba(14, 32, 51, 0.22), 0 6px 16px -8px rgba(14, 32, 51, 0.12);
+
+  /* --------------------------------------------------------
+     TYPOGRAPHY — the vendored Lato first (fonts.xx.css), then the
+     system stack
+     -------------------------------------------------------- */
+  --niord-font-family:
+    Lato, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --niord-font-size-adjust: none;
+}

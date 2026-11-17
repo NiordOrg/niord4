@@ -1,0 +1,113 @@
+# The backend, built where no credential beyond the workflow's own token is: set-up, the jar, the
+# image tools' override check over it, and the split the image is built from. Set-up stages each
+# pack the country takes, pinned or its own, into fe/.niord/packs/<lang>/; the country's pom
+# copies each pack's backend half and flag from there into the jar, and the pom's check refuses a
+# build in which one of them is missing, so set-up runs before Maven. The split jar and the image
+# tools leave this job only as backend-dist.tar with its SHA-256 (a tar keeps the scripts' modes,
+# which an Actions artifact does not), which the push job verifies. The jar's name is the MODULE
+# of this workflow's env, the artifactId of the country's deployable, which the country sets.
+backend:
+  name: Backend (set-up, jar, override check, split)
+  runs-on: ubuntu-latest
+  timeout-minutes: 30
+  permissions:
+    contents: read
+    packages: read
+  outputs:
+    version: ${{ steps.base.outputs.version }}
+  defaults:
+    run:
+      working-directory: be
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Set up JDK 25 (Temurin) + GitHub Packages credentials
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '25'
+        server-id: github
+        server-username: GITHUB_ACTOR
+        server-password: GITHUB_TOKEN
+    - name: Maven repository cache
+      uses: actions/cache@v4
+      with:
+        path: /home/runner/.m2/repository
+        key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          maven-${{ runner.os }}-
+    # The pin is the <parent> version of be/pom.xml; nothing else names it. It reaches the later
+    # steps through $GITHUB_ENV and this step's outputs, after the pattern check, and never as an
+    # expression in a run block. An empty MODULE fails here, before anything is fetched.
+    - name: Read the base version
+      id: base
+      run: |
+        set -euo pipefail
+        if [ -z "${MODULE:-}" ]; then
+          echo "::error::MODULE is not set in this workflow's env: the jar has no name"
+          exit 1
+        fi
+        base=$(grep -A2 '<artifactId>niord-parent</artifactId>' pom.xml | sed -n 's|.*<version>\(.*\)</version>.*|\1|p' | head -1)
+        [[ "$base" =~ ^4\.0\.[0-9]+$ ]] || { echo "::error::no 4.0.<run> base version in be/pom.xml (got '$base')"; exit 1; }
+        echo "BASE=$base" >> "$GITHUB_ENV"
+        echo "base=$base" >> "$GITHUB_OUTPUT"
+        echo "version=$base.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+        echo "base $base → image tag $base.$GITHUB_RUN_NUMBER"
+    # Set-up is a Node script. This job runs no npm, so there is no npm cache: it would have
+    # nothing to save.
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    # Set-up runs Maven (../be/mvnw dependency:copy) for the pinned zip, so it holds the workflow
+    # token, which is bound on each step that runs Maven and nowhere else, as in the frontend job.
+    # It stages the packs whose backend halves the jar's build copies, so it runs before the jar.
+    - name: Set up the workspace
+      working-directory: fe
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        node setup.mjs
+    # Tests run in the country's CI; this is a packaging build.
+    - name: Build the jar
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        ./mvnw $MVN_FLAGS package -DskipTests
+        ls -l "target/$MODULE-$BASE.jar"
+    # -N: the pom is read for its repositories and credentials only; the artefact is named here.
+    - name: Fetch the image tools
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        ./mvnw $MVN_FLAGS -N org.apache.maven.plugins:maven-dependency-plugin:unpack \
+          -Dartifact="org.niord:niord-image-tools:$BASE:zip" \
+          -DoutputDirectory="target/k8s"
+        test -f target/k8s/docker/Dockerfile
+        chmod +x target/k8s/scripts/*.sh
+        ls target/k8s/docker target/k8s/scripts
+    # The image tools' check over the jar before it is split: exit 1 on a shadow of a niord-base
+    # file that be/overrides.json does not allow.
+    - name: Override check
+      run: |
+        set -euo pipefail
+        target/k8s/scripts/check-overrides.sh "target/$MODULE-$BASE.jar" .
+    - name: Split the jar
+      run: |
+        set -euo pipefail
+        target/k8s/scripts/split-jar.sh "target/$MODULE-$BASE.jar" target/dist "$MODULE"
+    - name: Pack the split jar and the image tools with their SHA-256
+      run: |
+        set -euo pipefail
+        tar -cf backend-dist.tar target/dist target/k8s
+        sha256sum backend-dist.tar | tee backend-dist.tar.sha256
+    - uses: actions/upload-artifact@v4
+      with:
+        name: backend-dist
+        path: |
+          be/backend-dist.tar
+          be/backend-dist.tar.sha256
+        retention-days: 5

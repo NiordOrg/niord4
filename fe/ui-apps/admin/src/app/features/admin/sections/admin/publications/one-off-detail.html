@@ -1,0 +1,511 @@
+<!--
+  Outside the loading/error chain on purpose: whatever went wrong with the read,
+  the way back to the list has to stay on the screen.
+-->
+<button type="button" class="btn-tertiary mb-3 self-start" (click)="back()">
+  <app-icon name="lucideArrowLeft" class="mr-1 text-xs" />
+  <span>{{ 'admin.publications.oneOff.detail.back' | transloco }}</span>
+</button>
+
+@if (!foreignOwnerDomainId()) {
+  <app-progress-bar [visible]="facade.loading() || facade.working()" />
+}
+
+<!--
+  A publication another desk owns is refused, and the refusal is the whole page:
+  the document, the public standing and the history all describe work this desk
+  is not accountable for, and nothing below the first read is asked for at all.
+-->
+@if (foreignOwnerDomainId(); as owner) {
+  <app-publication-foreign-domain [ownerDomainId]="owner" />
+} @else if (facade.error()) {
+  <app-error-banner
+    [title]="loadErrorKey() | transloco"
+    [retryLabel]="facade.notFound() ? undefined : ('admin.publications.retry' | transloco)"
+    (retry)="facade.refresh()"
+  />
+} @else if (facade.publication()) {
+  <!-- ============================================== the header cluster ===== -->
+  <header class="mb-4 flex flex-wrap items-start justify-between gap-4">
+    <div class="flex min-w-0 flex-col gap-1">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="text-xl font-semibold text-fg">{{ name() }}</h2>
+      </div>
+      <p
+        class="flex flex-wrap items-center gap-2 text-sm text-fg-muted max-sm:flex-col max-sm:items-start max-sm:gap-0.5"
+      >
+        <span>{{ 'admin.publications.oneOff.detail.kind' | transloco }}</span>
+        <!-- Each separator travels with the term it introduces, so a wrap breaks
+             before the dot instead of leaving one at the start of a line. On a
+             phone the terms stack one per line and the dots go. -->
+        <span class="flex items-center gap-2">
+          <span aria-hidden="true" class="max-sm:hidden">·</span>{{ typeKey() | transloco }}
+        </span>
+        <span class="flex items-center gap-2">
+          <span aria-hidden="true" class="max-sm:hidden">·</span>{{ availabilityKey() | transloco }}
+        </span>
+      </p>
+    </div>
+
+    <div class="flex shrink-0 items-center gap-2">
+      <button type="button" class="btn-secondary" [disabled]="!writable()" (click)="edit()">
+        <app-icon name="lucidePencil" class="mr-1 text-xs" />
+        {{ 'admin.publications.oneOff.edit' | transloco }}
+      </button>
+      @if (menuItems().length > 0) {
+        <app-menu-trigger
+          icon="lucideSettings"
+          [ariaLabel]="'admin.publications.oneOff.detail.actionsAriaLabel' | transloco"
+          [menu]="actionsMenu"
+          align="end"
+        />
+        <app-menu
+          #actionsMenu
+          [model]="menuItems()"
+          [ariaLabel]="'admin.publications.oneOff.detail.actionsAriaLabel' | transloco"
+        />
+      }
+    </div>
+  </header>
+
+  <!--
+    The refusal, where nothing else is already showing it. A dialog that is open
+    carries the sentence itself, beside the control that was refused; repeating
+    it on the page behind reads as two separate failures.
+  -->
+  @if (pageErrorKey(); as key) {
+    <div class="message message-error mb-4" role="alert">
+      <app-icon name="lucideTriangleAlert" class="message-icon" />
+      <span>{{ key | transloco }}</span>
+    </div>
+  }
+
+  <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+    <div class="flex min-w-0 flex-col gap-4">
+      <!-- =========================================== the document ========== -->
+      <app-card [header]="'admin.publications.oneOff.detail.document' | transloco">
+        @if (uploaded() && writable() && primaryLang()) {
+          <!-- The band's action, so replacing the file is where the file is.
+               Tightened to the band's own height only where the page is already
+               two columns; below that it keeps the standard button height, so it
+               stays a comfortable target on touch. -->
+          <label cardActions class="btn-secondary px-3 text-sm xl:h-7 xl:text-xs">
+            <input
+              type="file"
+              class="sr-only"
+              [disabled]="facade.working()"
+              (change)="onFileChosen(primaryLang(), $event)"
+            />
+            <app-icon name="lucideUpload" class="mr-1 text-xs" />
+            {{
+              (hasFile()
+                ? 'admin.publications.oneOff.detail.replaceFile'
+                : 'admin.publications.oneOff.detail.uploadFile'
+              ) | transloco
+            }}
+          </label>
+        }
+
+        <div class="flex flex-col gap-3">
+          @if (referenceOnly()) {
+            <p class="text-sm text-fg">
+              {{ 'admin.publications.oneOff.detail.referenceOnly' | transloco }}
+            </p>
+            <p class="text-sm text-fg-muted">
+              {{ 'admin.publications.oneOff.detail.referenceOnlyBody' | transloco }}
+            </p>
+          } @else if (linkBacked()) {
+            @for (row of linkRows(); track row.lang) {
+              <div class="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                <span class="shrink-0 text-xs font-semibold text-fg-muted">
+                  {{ row.lang.toUpperCase() }}
+                </span>
+                <a
+                  class="min-w-0 flex-1 break-all font-semibold text-primary hover:underline sm:truncate"
+                  [href]="row.link"
+                  target="_blank"
+                  rel="noopener"
+                  >{{ row.link }}</a
+                >
+                <app-copy-link-button [url]="row.link" />
+              </div>
+            } @empty {
+              <p class="text-sm text-fg-subtle">
+                {{ 'admin.publications.oneOff.detail.noLink' | transloco }}
+              </p>
+            }
+          } @else {
+            @for (row of fileRows(); track row.lang) {
+              <div class="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                <app-icon name="lucideFile" class="shrink-0 text-fg-muted" />
+                <!-- The language only where the publication keeps one file per
+                     language. On one file for all of them the tag names a
+                     distinction the document does not make. -->
+                @if (perLanguageFiles()) {
+                  <span class="shrink-0 text-xs font-semibold text-fg-muted">
+                    {{ row.lang.toUpperCase() }}
+                  </span>
+                }
+                @if (row.href) {
+                  <!-- The name keeps its own box on every width and wraps inside
+                       it, so a long file name never pushes the copy action off
+                       the row; from sm up there is room to truncate instead. -->
+                  <a
+                    class="min-w-0 flex-1 break-words font-semibold text-primary hover:underline sm:truncate"
+                    [href]="row.href"
+                    target="_blank"
+                    rel="noopener"
+                    >{{ row.fileName ?? row.href }}</a
+                  >
+                  @if (uploadedAt(); as at) {
+                    <!-- The one item that takes a line of its own on a narrow
+                         screen, and the last one, so the copy action stays
+                         beside the name it copies. -->
+                    <span
+                      class="basis-full text-xs text-fg-muted max-sm:order-last sm:basis-auto sm:shrink-0"
+                    >
+                      {{
+                        'admin.publications.oneOff.detail.uploadedAt'
+                          | transloco: { date: dateTime(at) }
+                      }}
+                    </span>
+                  }
+                  <app-copy-link-button [url]="row.href" />
+                } @else {
+                  <span class="text-sm text-fg-subtle">
+                    {{ 'admin.publications.oneOff.detail.noFile' | transloco }}
+                  </span>
+                }
+              </div>
+            }
+          }
+
+          <!--
+            How many files there are, and what a message will print. Both are
+            properties of the document rather than of any one row, so they sit
+            under the rows rather than being repeated in each — and on one line,
+            because two lines of small grey type under a single file row read as
+            a paragraph nobody finishes.
+          -->
+          @if (uploaded() || (citable() && referenceFormat())) {
+            <p class="flex flex-wrap items-center gap-x-1 text-xs text-fg-muted">
+              @if (uploaded()) {
+                <span>{{ fileCountKey() | transloco }}</span>
+              }
+              @if (citable() && referenceFormat(); as format) {
+                <span>{{ 'admin.publications.oneOff.detail.citation' | transloco }}</span>
+                <code
+                  class="rounded border border-surface-200 bg-surface-sunken px-1.5 py-0.5 font-mono dark:border-surface-700"
+                  >{{ format }}</code
+                >
+              }
+            </p>
+          }
+        </div>
+      </app-card>
+
+      <!-- ====================================== the public listing ========= -->
+      <!--
+        The title follows the answer. "On the public site" over a card saying
+        the publication is not on it, and never will be while its category is
+        unpublished, reads as a contradiction rather than as a heading.
+      -->
+      <app-card [header]="publicHeaderKey() | transloco">
+        <div class="flex flex-col gap-4">
+          <!--
+            THE ANSWER FIRST, then the three facts it follows from.
+
+            A publication's public standing is a status, a period and its
+            category's own publish flag, and every one of them is invisible from
+            the other two — so the line at the top says what they add up to, and
+            the rows beneath it say which fact is which. The word "active" is
+            deliberately nowhere on this screen: it named all three at once and
+            therefore none of them.
+          -->
+          <p class="text-base font-medium text-fg" data-testid="one-off-visibility-line">
+            {{ visibility().key | transloco: visibility().params }}
+          </p>
+
+          <dl class="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-sm">
+            <dt class="font-medium text-fg-title">
+              {{ 'admin.publications.column.status' | transloco }}
+            </dt>
+            <dd>
+              <span [class]="'status-badge ' + statusClass()" data-testid="one-off-status-badge">{{
+                statusKey() | transloco
+              }}</span>
+            </dd>
+
+            <dt class="font-medium text-fg-title">
+              {{ 'admin.publications.column.publicWindow' | transloco }}
+            </dt>
+            <dd class="text-fg" data-testid="one-off-period">
+              {{ periodLine().key | transloco: periodLine().params }}
+            </dd>
+
+            <dt class="font-medium text-fg-title">
+              {{ 'admin.publications.oneOff.category' | transloco }}
+            </dt>
+            <dd
+              class="flex flex-wrap items-baseline gap-x-2 text-fg"
+              data-testid="one-off-category"
+            >
+              <span>{{ categoryName() }}</span>
+              <!--
+                The category's own publish flag, said only where the server
+                actually reports it: absent is a server that does not send it
+                yet, and reading absence as "not public" would label a public
+                category as hidden.
+              -->
+              @if (categoryPublish() !== undefined) {
+                <span class="text-xs text-fg-muted">
+                  {{
+                    (categoryPublish()
+                      ? 'admin.publications.oneOff.detail.categoryPublic'
+                      : 'admin.publications.oneOff.detail.categoryNotPublic'
+                    ) | transloco
+                  }}
+                </span>
+              }
+            </dd>
+          </dl>
+
+          <!--
+            The part that surprises people, and it is the same fact from either
+            side: the citations already written into messages keep resolving
+            whether or not the publication is on the public site. Said from the
+            side it is actually on — advice about withdrawing a publication is
+            not advice for one that already is.
+          -->
+          <!--
+            Chosen by the STATUS rather than by what this reader may do: the note
+            describes the publication, and a reader at another desk is looking at
+            the same withdrawn document as its owner is.
+          -->
+          <p class="text-sm text-fg-muted">
+            {{
+              (status() === 'WITHDRAWN'
+                ? 'admin.publications.oneOff.detail.withdrawnNote'
+                : 'admin.publications.oneOff.detail.citationNote'
+              ) | transloco
+            }}
+          </p>
+
+          <!--
+            The actions, beside what they change. A status transition and a
+            period are answers to what this card says, and an admin who has just
+            read "Withdrawn" should not have to go looking in a menu for the way
+            back. Every one is gated on owner equality, like every other write on
+            this page.
+          -->
+          @if (canPublish() || canEditPeriod() || canWithdraw() || canRepublish()) {
+            <div class="flex flex-wrap items-center gap-2">
+              @if (canPublish()) {
+                <button
+                  type="button"
+                  class="btn-primary"
+                  [disabled]="facade.working()"
+                  (click)="publish()"
+                  data-testid="one-off-publish"
+                >
+                  {{ 'admin.publications.oneOff.detail.publish' | transloco }}
+                </button>
+              }
+              @if (canEditPeriod()) {
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  [disabled]="facade.working()"
+                  (click)="openPeriod()"
+                  data-testid="one-off-edit-period"
+                >
+                  <app-icon name="lucideCalendar" class="mr-1 text-xs" />
+                  {{ 'admin.publications.oneOff.publicWindow.action' | transloco }}
+                </button>
+              }
+              @if (canWithdraw()) {
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  [disabled]="facade.working()"
+                  (click)="openWithdraw()"
+                  data-testid="one-off-withdraw"
+                >
+                  {{ 'admin.publications.oneOff.detail.withdraw' | transloco }}
+                </button>
+              }
+              @if (canRepublish()) {
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  [disabled]="facade.working()"
+                  (click)="republish()"
+                  data-testid="one-off-republish"
+                >
+                  {{ 'admin.publications.oneOff.detail.republish' | transloco }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </app-card>
+    </div>
+
+    <!-- ================================================= the history ======= -->
+    <app-card [header]="'admin.publications.oneOff.detail.history' | transloco">
+      @if (facade.audit().length === 0) {
+        <p class="text-sm text-fg-muted">
+          {{ 'admin.publications.oneOff.detail.noHistory' | transloco }}
+        </p>
+      } @else {
+        <ol class="flex flex-col gap-2.5">
+          @for (entry of facade.audit(); track entry.id ?? entry.created) {
+            <li class="text-sm">
+              <span class="flex flex-wrap items-baseline gap-x-2">
+                @if (importedEntry(entry)) {
+                  <!--
+                    One sentence, because the action and the actor are the same
+                    fact here: a publication that arrived from the previous
+                    system was imported BY the import. Said twice it reads as
+                    two things having happened to it.
+                  -->
+                  <span class="font-medium text-fg">
+                    {{ 'admin.publications.actor.IMPORT' | transloco }}
+                  </span>
+                } @else {
+                  @if (actionKey(entry); as key) {
+                    <span class="font-medium text-fg">{{ key | transloco }}</span>
+                  } @else {
+                    <span class="font-mono text-xs font-medium text-fg">{{ entry.action }}</span>
+                  }
+                  <!--
+                    A machine actor has no name and gets a label saying which
+                    kind of machine it was; a person is named, and named as the
+                    person who did it. An entry whose person did not survive is
+                    neither, and must not fall through to a machine label.
+                  -->
+                  @if (actorKey(entry); as key) {
+                    <span class="text-xs text-fg-muted">{{ key | transloco }}</span>
+                  } @else {
+                    <span class="text-xs text-fg-muted">
+                      {{
+                        'admin.publications.oneOff.detail.by'
+                          | transloco: { actor: entry.actorLabel }
+                      }}
+                    </span>
+                  }
+                }
+              </span>
+              <span class="block text-xs text-fg-muted" [attr.title]="entryTitle(entry)">
+                {{ dateTime(entry.created) }}
+              </span>
+              <!--
+                The same identifier the date line carries as hover text, behind a
+                line anybody can open. Hover is not a gesture a touch screen has,
+                and the one person who needs the id is matching it against a
+                record elsewhere — so it is reachable, and still closed by
+                default, because the ordinary visit is not asking.
+              -->
+              @if (entryTitle(entry); as identifier) {
+                <button
+                  type="button"
+                  class="link-button is-quiet flex items-center gap-1 text-xs"
+                  [attr.aria-expanded]="identifierOpen(entry)"
+                  (click)="toggleIdentifier(entry)"
+                  data-testid="one-off-entry-identifier-toggle"
+                >
+                  <app-icon
+                    [name]="identifierOpen(entry) ? 'lucideChevronDown' : 'lucideChevronRight'"
+                    class="text-xs"
+                  />
+                  {{ 'admin.publications.history.identifier' | transloco }}
+                </button>
+                @if (identifierOpen(entry)) {
+                  <span
+                    class="block font-mono text-xs break-words text-fg-subtle"
+                    data-testid="one-off-entry-identifier"
+                    >{{ identifier }}</span
+                  >
+                }
+              }
+              @if (ownerMove(entry); as move) {
+                <span class="block text-xs text-fg-muted">
+                  {{ 'admin.publications.issue.ownerMoved' | transloco: move }}
+                </span>
+              }
+              <!--
+                The reason somebody recorded. An import records an identifier
+                from the system the publication came out of instead: nobody
+                reads a uuid off a history panel, so it travels with the date
+                line rather than as a line of running text.
+              -->
+              @if (entry.reason && !importedEntry(entry)) {
+                <span class="block text-xs text-fg-subtle">{{ entry.reason }}</span>
+              }
+            </li>
+          }
+        </ol>
+      }
+    </app-card>
+  </div>
+}
+
+<!-- The settings, one drawer away from the page they describe. -->
+<!--
+  The editor exists only while its drawer does: it reads the lists its pickers
+  offer as it is built, and this page is read far more often than it is edited
+  from. `closed` starts the slide-out, `hidden` says the pane is gone and the
+  component can be destroyed.
+-->
+@if (editorMounted()) {
+  <app-one-off-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="onEditorClosed()"
+    (hidden)="onEditorHidden()"
+  />
+}
+
+<!--
+  Taking a publication off the public site records a new fact about it, so it
+  asks why. The file stays where it is: what changes is that the publication
+  leaves the site, history included, and the citation in older messages keeps
+  resolving.
+-->
+<app-publication-reason-dialog
+  [(visible)]="withdrawDialogOpen"
+  headerKey="admin.publications.oneOff.withdrawTitle"
+  effectKey="admin.publications.oneOff.withdrawEffect"
+  confirmKey="admin.publications.oneOff.withdraw"
+  [working]="facade.working()"
+  [errorKey]="facade.errorKey()"
+  (submitted)="submitWithdraw($event)"
+/>
+
+<!--
+  The public period, both ends at once: it is one decision — from when, until
+  when — and a start still to come is as ordinary an answer as an end.
+-->
+<app-publication-public-window-dialog
+  [(visible)]="periodDialogOpen"
+  [publicFrom]="publicFrom()"
+  [publicTo]="publicTo()"
+  [startRequired]="startRequired()"
+  [working]="facade.working()"
+  [errorKey]="facade.errorKey()"
+  (submitted)="submitPeriod($event)"
+/>
+
+<!--
+  Moving the publication to another desk: a change of who is accountable for it,
+  so it asks which desk and why.
+-->
+<app-publication-transfer-dialog
+  [(visible)]="transferDialogOpen"
+  [ownerId]="ownerDomainId()"
+  [working]="facade.working()"
+  [errorKey]="facade.errorKey()"
+  (submitted)="submitTransfer($event)"
+/>
+
+<app-confirm />

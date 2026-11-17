@@ -1,0 +1,12 @@
+# Test-side stand-in for a deployable's application.yml (the niord-base library ships none;
+# the generic framework defaults come from config/niord-core-defaults.yml via the
+# NiordCoreDefaultsEnvironmentPostProcessor, exactly as they do for a real deployment).
+# Excluded from the niord-base test-jar so it can never shadow a deployable's real
+# application.yml on a downstream test classpath (see the maven-jar-plugin note in pom.xml).
+niord:
+  s124:
+    # The IHO S-62 producer code every S-124 dataset carries (agencyResponsibleForProduction,
+    # datasetFileIdentifier) and the SECOM exchange sets name their files with; required to
+    # generate S-124 (the core library ships no default). Kept as the Danish DK00 the suite has
+    # always run with, so the 124DK00... file-name oracles are unchanged.
+    producer-code: DK00

@@ -1,0 +1,21 @@
+<div class="message message-error" role="alert">
+  <app-icon name="lucideCircleX" class="message-icon" />
+  <div class="flex flex-1 items-center gap-3">
+    <div class="flex flex-col">
+      <strong>{{ title() }}</strong>
+      @if (message()) {
+        <span class="text-sm">{{ message() }}</span>
+      }
+    </div>
+    @if (retryLabel()) {
+      <button
+        type="button"
+        class="btn-secondary text-sm ml-auto"
+        [attr.aria-label]="retryLabel()"
+        (click)="onRetry()"
+      >
+        {{ retryLabel() }}
+      </button>
+    }
+  </div>
+</div>

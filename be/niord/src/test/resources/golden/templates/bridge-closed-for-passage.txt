@@ -1,0 +1,94 @@
+# Bridge closed for passage  [templates/tmpl/bridge-closed.ftl]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=bridge_name, type=text, positionList=false]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;Hals Barre&laquo; in pos. 55° 30.0'N - 010° 30.0'E is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE HALS BARRE 55-30.0N 010-30.0E
+  | CLOSED FOR PASSAGE THAT REQUIRES
+  | OPENING OF BRIDGE.
+AUDIO:   The bridge »Hals Barre« in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is closed for passage that requires opening of the bridge.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;Hals Barre&laquo; in pos. 56° 00.0'N - 012° 00.0'E is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE HALS BARRE 56-00.0N 012-00.0E
+  | CLOSED FOR PASSAGE THAT REQUIRES
+  | OPENING OF BRIDGE.
+AUDIO:   The bridge »Hals Barre« in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is closed for passage that requires opening of the bridge.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;Hals Barre&laquo; in pos. 56° 00.0'N - 012° 00.0'E is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE HALS BARRE 56-00.0N 012-00.0E
+  | CLOSED FOR PASSAGE THAT REQUIRES
+  | OPENING OF BRIDGE.
+AUDIO:   The bridge »Hals Barre« in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is closed for passage that requires opening of the bridge.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;Hals Barre&laquo; in pos. 61° 06.0'N - 045° 15.0'W is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE HALS BARRE 61-06.0N 045-15.0W
+  | CLOSED FOR PASSAGE THAT REQUIRES
+  | OPENING OF BRIDGE.
+AUDIO:   The bridge »Hals Barre« in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West is closed for passage that requires opening of the bridge.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;Hals Barre&laquo; between pos. 55° 30.0'N - 010° 30.0'E and 55° 36.0'N - 010° 45.0'E and 55° 42.0'N - 011° 00.0'E is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE HALS BARRE 55-30.0N 010-30.0E
+  | AND 55-36.0N 010-45.0E AND 55-42.0N
+  | 011-00.0E CLOSED FOR PASSAGE THAT
+  | REQUIRES OPENING OF BRIDGE.
+AUDIO:   The bridge »Hals Barre« between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 36.0 min. North - 010 degrees 45.0 min. East and 55 degrees 42.0 min. North - 011 degrees 00.0 min. East is closed for passage that requires opening of the bridge.
+
+### geometry: an area (polygon)
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;Hals Barre&laquo; in the area between pos. 55° 30.0'N - 010° 30.0'E and 55° 30.0'N - 011° 00.0'E and 56° 00.0'N - 011° 00.0'E and 56° 00.0'N - 010° 30.0'E is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE HALS BARRE IN AREA 55-30.0N
+  | 010-30.0E AND 55-30.0N 011-00.0E AND
+  | 56-00.0N 011-00.0E AND 56-00.0N
+  | 010-30.0E CLOSED FOR PASSAGE THAT
+  | REQUIRES OPENING OF BRIDGE.
+AUDIO:   The bridge »Hals Barre« in the area between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 30.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 010 degrees 30.0 min. East is closed for passage that requires opening of the bridge.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;Hals Barre&laquo; is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE HALS BARRE CLOSED FOR PASSAGE
+  | THAT REQUIRES OPENING OF BRIDGE.
+AUDIO:   The bridge »Hals Barre« is closed for passage that requires opening of the bridge.
+
+### param bridge_name = empty
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge in pos. 55° 30.0'N - 010° 30.0'E is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE 55-30.0N 010-30.0E CLOSED FOR
+  | PASSAGE THAT REQUIRES OPENING OF BRIDGE.
+AUDIO:   The bridge in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is closed for passage that requires opening of the bridge.
+
+### param bridge_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Bridge closed for passage.
+SUBJECT: Bridge closed for passage
+DETAILS: The bridge &raquo;St. John's Point&laquo; in pos. 55° 30.0'N - 010° 30.0'E is closed for passage that requires opening of the bridge.
+NAVTEX:
+  | BRIDGE ST. JOHN'S POINT 55-30.0N
+  | 010-30.0E CLOSED FOR PASSAGE THAT
+  | REQUIRES OPENING OF BRIDGE.
+AUDIO:   The bridge »St. John's Point« in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is closed for passage that requires opening of the bridge.
+

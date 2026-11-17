@@ -1,0 +1,647 @@
+{
+  "AreaTree.png": {
+    "cssWidth": 402,
+    "cssHeight": 366,
+    "printWidth": 251
+  },
+  "CancelMessageDialog.png": {
+    "cssWidth": 512,
+    "cssHeight": 203,
+    "printWidth": 320
+  },
+  "ComparisonDialog.png": {
+    "cssWidth": 896,
+    "cssHeight": 558,
+    "printWidth": 560
+  },
+  "ComparisonDialogChanges.png": {
+    "cssWidth": 896,
+    "cssHeight": 507,
+    "printWidth": 560
+  },
+  "ComparisonDialogData.png": {
+    "cssWidth": 896,
+    "cssHeight": 720,
+    "printWidth": 560
+  },
+  "CopyMessageDialog.png": {
+    "cssWidth": 448,
+    "cssHeight": 167,
+    "printWidth": 280
+  },
+  "CreateMessage.png": {
+    "cssWidth": 688,
+    "cssHeight": 459,
+    "printWidth": 430
+  },
+  "DatesColumnMenu.png": {
+    "cssWidth": 305,
+    "cssHeight": 174,
+    "printWidth": 191
+  },
+  "DeploymentBadge.png": {
+    "cssWidth": 78,
+    "cssHeight": 79,
+    "printWidth": 49
+  },
+  "DetailsViewMode.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "DomainMenu.png": {
+    "cssWidth": 267,
+    "cssHeight": 378,
+    "printWidth": 167
+  },
+  "DragHandle.png": {
+    "cssWidth": 18,
+    "cssHeight": 18,
+    "printWidth": 11
+  },
+  "Editor.png": {
+    "cssWidth": 1280,
+    "cssHeight": 986,
+    "printWidth": 800
+  },
+  "EditorActionMenu.png": {
+    "cssWidth": 208,
+    "cssHeight": 276,
+    "printWidth": 130
+  },
+  "EditorCommentsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 903,
+    "printWidth": 800
+  },
+  "EditorFieldAreas.png": {
+    "cssWidth": 790,
+    "cssHeight": 205,
+    "printWidth": 494
+  },
+  "EditorFieldAreasCollapsed.png": {
+    "cssWidth": 790,
+    "cssHeight": 55,
+    "printWidth": 494
+  },
+  "EditorFieldAttachments.png": {
+    "cssWidth": 950,
+    "cssHeight": 236,
+    "printWidth": 594
+  },
+  "EditorFieldCategories.png": {
+    "cssWidth": 790,
+    "cssHeight": 125,
+    "printWidth": 494
+  },
+  "EditorFieldCharts.png": {
+    "cssWidth": 790,
+    "cssHeight": 228,
+    "printWidth": 494
+  },
+  "EditorFieldDescription.png": {
+    "cssWidth": 768,
+    "cssHeight": 429,
+    "printWidth": 480
+  },
+  "EditorFieldEventDates.png": {
+    "cssWidth": 928,
+    "cssHeight": 187,
+    "printWidth": 580
+  },
+  "EditorFieldId.png": {
+    "cssWidth": 790,
+    "cssHeight": 248,
+    "printWidth": 494
+  },
+  "EditorFieldLayout.png": {
+    "cssWidth": 790,
+    "cssHeight": 470,
+    "printWidth": 494
+  },
+  "EditorFieldLayoutDialog.png": {
+    "cssWidth": 544,
+    "cssHeight": 689,
+    "printWidth": 340
+  },
+  "EditorFieldOrigInfo.png": {
+    "cssWidth": 790,
+    "cssHeight": 110,
+    "printWidth": 494
+  },
+  "EditorFieldPositions.png": {
+    "cssWidth": 768,
+    "cssHeight": 353,
+    "printWidth": 480
+  },
+  "EditorFieldPromulgation.png": {
+    "cssWidth": 790,
+    "cssHeight": 349,
+    "printWidth": 494
+  },
+  "EditorFieldPublication.png": {
+    "cssWidth": 790,
+    "cssHeight": 314,
+    "printWidth": 494
+  },
+  "EditorFieldPublishDate.png": {
+    "cssWidth": 790,
+    "cssHeight": 272,
+    "printWidth": 494
+  },
+  "EditorFieldReferences.png": {
+    "cssWidth": 790,
+    "cssHeight": 223,
+    "printWidth": 494
+  },
+  "EditorFieldSource.png": {
+    "cssWidth": 790,
+    "cssHeight": 147,
+    "printWidth": 494
+  },
+  "EditorFieldSubject.png": {
+    "cssWidth": 768,
+    "cssHeight": 133,
+    "printWidth": 480
+  },
+  "EditorFieldTitle.png": {
+    "cssWidth": 790,
+    "cssHeight": 140,
+    "printWidth": 494
+  },
+  "EditorFieldType.png": {
+    "cssWidth": 790,
+    "cssHeight": 111,
+    "printWidth": 494
+  },
+  "EditorHeaderUnsaved.png": {
+    "cssWidth": 1280,
+    "cssHeight": 53,
+    "printWidth": 800
+  },
+  "EditorHistoryPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 786,
+    "printWidth": 800
+  },
+  "EditorLivePreview.png": {
+    "cssWidth": 447,
+    "cssHeight": 686,
+    "printWidth": 279
+  },
+  "EditorStatusFlow.png": {
+    "cssWidth": 439,
+    "cssHeight": 57,
+    "printWidth": 274
+  },
+  "EditorStatusPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 498,
+    "printWidth": 800
+  },
+  "FiringAreaSchedule.png": {
+    "cssWidth": 1280,
+    "cssHeight": 764,
+    "printWidth": 800
+  },
+  "FiringAreaScheduleEdit.png": {
+    "cssWidth": 736,
+    "cssHeight": 157,
+    "printWidth": 460
+  },
+  "FiringAreaScheduleUpdate.png": {
+    "cssWidth": 448,
+    "cssHeight": 180,
+    "printWidth": 280
+  },
+  "FollowUpOverdue.png": {
+    "cssWidth": 1254,
+    "cssHeight": 155,
+    "printWidth": 784
+  },
+  "GridViewMode.png": {
+    "cssWidth": 1280,
+    "cssHeight": 615,
+    "printWidth": 800
+  },
+  "GuestBanner.png": {
+    "cssWidth": 1280,
+    "cssHeight": 95,
+    "printWidth": 800
+  },
+  "HeaderHelpLink.png": {
+    "cssWidth": 16,
+    "cssHeight": 16,
+    "printWidth": 10
+  },
+  "Home.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "ImagePickerDialog.png": {
+    "cssWidth": 640,
+    "cssHeight": 230,
+    "printWidth": 400
+  },
+  "ImportDialog.png": {
+    "cssWidth": 704,
+    "cssHeight": 692,
+    "printWidth": 440
+  },
+  "InsertLinkDialog.png": {
+    "cssWidth": 512,
+    "cssHeight": 423,
+    "printWidth": 320
+  },
+  "LoadMore.png": {
+    "cssWidth": 1238,
+    "cssHeight": 116,
+    "printWidth": 774
+  },
+  "Log-In.png": {
+    "cssWidth": 560,
+    "cssHeight": 373,
+    "printWidth": 350
+  },
+  "MailDialog.png": {
+    "cssWidth": 576,
+    "cssHeight": 402,
+    "printWidth": 360
+  },
+  "MailingListReportDialog.png": {
+    "cssWidth": 832,
+    "cssHeight": 704,
+    "printWidth": 520
+  },
+  "ManageOptionalFields.png": {
+    "cssWidth": 217,
+    "cssHeight": 385,
+    "printWidth": 136
+  },
+  "MapViewMode.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "MessageActions.png": {
+    "cssWidth": 267,
+    "cssHeight": 881,
+    "printWidth": 167
+  },
+  "MessageDetailsDialog.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "MessageDetailsMenu.png": {
+    "cssWidth": 192,
+    "cssHeight": 228,
+    "printWidth": 120
+  },
+  "MessageFilterArea.png": {
+    "cssWidth": 463,
+    "cssHeight": 72,
+    "printWidth": 289
+  },
+  "MessageFilterCategory.png": {
+    "cssWidth": 502,
+    "cssHeight": 72,
+    "printWidth": 314
+  },
+  "MessageFilterChart.png": {
+    "cssWidth": 447,
+    "cssHeight": 72,
+    "printWidth": 279
+  },
+  "MessageFilterComments.png": {
+    "cssWidth": 671,
+    "cssHeight": 72,
+    "printWidth": 419
+  },
+  "MessageFilterDate.png": {
+    "cssWidth": 554,
+    "cssHeight": 72,
+    "printWidth": 346
+  },
+  "MessageFilterDomain.png": {
+    "cssWidth": 220,
+    "cssHeight": 72,
+    "printWidth": 138
+  },
+  "MessageFiltering.png": {
+    "cssWidth": 1280,
+    "cssHeight": 850,
+    "printWidth": 800
+  },
+  "MessageFilterPromulgation.png": {
+    "cssWidth": 491,
+    "cssHeight": 72,
+    "printWidth": 307
+  },
+  "MessageFilterPublication.png": {
+    "cssWidth": 514,
+    "cssHeight": 72,
+    "printWidth": 321
+  },
+  "MessageFilterReference.png": {
+    "cssWidth": 356,
+    "cssHeight": 72,
+    "printWidth": 223
+  },
+  "MessageFilterSeries.png": {
+    "cssWidth": 500,
+    "cssHeight": 72,
+    "printWidth": 313
+  },
+  "MessageFilterStatus.png": {
+    "cssWidth": 589,
+    "cssHeight": 72,
+    "printWidth": 368
+  },
+  "MessageFilterTag.png": {
+    "cssWidth": 495,
+    "cssHeight": 72,
+    "printWidth": 309
+  },
+  "MessageFilterText.png": {
+    "cssWidth": 300,
+    "cssHeight": 72,
+    "printWidth": 188
+  },
+  "MessageFilterType.png": {
+    "cssWidth": 298,
+    "cssHeight": 72,
+    "printWidth": 186
+  },
+  "MessageFilterUser.png": {
+    "cssWidth": 814,
+    "cssHeight": 72,
+    "printWidth": 509
+  },
+  "MessagePartType.png": {
+    "cssWidth": 796,
+    "cssHeight": 59,
+    "printWidth": 498
+  },
+  "MessagePublications.png": {
+    "cssWidth": 576,
+    "cssHeight": 241,
+    "printWidth": 360
+  },
+  "MessagePublicationsPanel.png": {
+    "cssWidth": 336,
+    "cssHeight": 230,
+    "printWidth": 210
+  },
+  "Messages.png": {
+    "cssWidth": 1280,
+    "cssHeight": 774,
+    "printWidth": 800
+  },
+  "MessageSelection.png": {
+    "cssWidth": 1280,
+    "cssHeight": 787,
+    "printWidth": 800
+  },
+  "MessageSourcesField.png": {
+    "cssWidth": 640,
+    "cssHeight": 604,
+    "printWidth": 400
+  },
+  "MessageTagsDialog.png": {
+    "cssWidth": 1280,
+    "cssHeight": 774,
+    "printWidth": 800
+  },
+  "PositionEditor.png": {
+    "cssWidth": 1214,
+    "cssHeight": 709,
+    "printWidth": 759
+  },
+  "PositionEditorActionMenu.png": {
+    "cssWidth": 208,
+    "cssHeight": 379,
+    "printWidth": 130
+  },
+  "PositionEditorAffectedArea.png": {
+    "cssWidth": 620,
+    "cssHeight": 656,
+    "printWidth": 388
+  },
+  "PositionEditorAffectedPath.png": {
+    "cssWidth": 620,
+    "cssHeight": 656,
+    "printWidth": 388
+  },
+  "PositionEditorAffectedRadius.png": {
+    "cssWidth": 620,
+    "cssHeight": 656,
+    "printWidth": 388
+  },
+  "PositionEditorCollapse.png": {
+    "cssWidth": 19,
+    "cssHeight": 19,
+    "printWidth": 12
+  },
+  "PositionEditorDeleteTool.png": {
+    "cssWidth": 18,
+    "cssHeight": 18,
+    "printWidth": 11
+  },
+  "PositionEditorFeaturePanel.png": {
+    "cssWidth": 320,
+    "cssHeight": 574,
+    "printWidth": 200
+  },
+  "PositionEditorImportGeometry.png": {
+    "cssWidth": 672,
+    "cssHeight": 720,
+    "printWidth": 420
+  },
+  "PositionEditorMeasurement.png": {
+    "cssWidth": 1214,
+    "cssHeight": 656,
+    "printWidth": 759
+  },
+  "PositionEditorMeasureTool.png": {
+    "cssWidth": 18,
+    "cssHeight": 18,
+    "printWidth": 11
+  },
+  "PositionEditorModifyTool.png": {
+    "cssWidth": 18,
+    "cssHeight": 18,
+    "printWidth": 11
+  },
+  "PositionEditorPathTool.png": {
+    "cssWidth": 18,
+    "cssHeight": 18,
+    "printWidth": 11
+  },
+  "PositionEditorPointTool.png": {
+    "cssWidth": 18,
+    "cssHeight": 18,
+    "printWidth": 11
+  },
+  "PositionEditorPolygonTool.png": {
+    "cssWidth": 18,
+    "cssHeight": 18,
+    "printWidth": 11
+  },
+  "PositionEditorUndoRedo.png": {
+    "cssWidth": 50,
+    "cssHeight": 19,
+    "printWidth": 31
+  },
+  "PositionGraphicalEditor.png": {
+    "cssWidth": 1214,
+    "cssHeight": 709,
+    "printWidth": 759
+  },
+  "PositionTextEditor.png": {
+    "cssWidth": 896,
+    "cssHeight": 556,
+    "printWidth": 560
+  },
+  "PrintDialog.png": {
+    "cssWidth": 576,
+    "cssHeight": 377,
+    "printWidth": 360
+  },
+  "ProfileMenu.png": {
+    "cssWidth": 267,
+    "cssHeight": 134,
+    "printWidth": 167
+  },
+  "PublishConfirmDialog.png": {
+    "cssWidth": 512,
+    "cssHeight": 233,
+    "printWidth": 320
+  },
+  "SampleNM.png": {
+    "cssWidth": 811,
+    "cssHeight": 344,
+    "printWidth": 507
+  },
+  "SampleNM2.png": {
+    "cssWidth": 423,
+    "cssHeight": 869,
+    "printWidth": 264
+  },
+  "SampleNM3.png": {
+    "cssWidth": 811,
+    "cssHeight": 630,
+    "printWidth": 507
+  },
+  "SaveFilterDialog.png": {
+    "cssWidth": 384,
+    "cssHeight": 183,
+    "printWidth": 240
+  },
+  "SelectionButton.png": {
+    "cssWidth": 25,
+    "cssHeight": 25,
+    "printWidth": 16
+  },
+  "SortAreaLink.png": {
+    "cssWidth": 245,
+    "cssHeight": 37,
+    "printWidth": 153
+  },
+  "SortMessagesDialog.png": {
+    "cssWidth": 768,
+    "cssHeight": 446,
+    "printWidth": 480
+  },
+  "StatusUpdateDialog.png": {
+    "cssWidth": 832,
+    "cssHeight": 404,
+    "printWidth": 520
+  },
+  "TagButton.png": {
+    "cssWidth": 19,
+    "cssHeight": 19,
+    "printWidth": 12
+  },
+  "TagPicker.png": {
+    "cssWidth": 432,
+    "cssHeight": 502,
+    "printWidth": 270
+  },
+  "TemplateExecution.png": {
+    "cssWidth": 1280,
+    "cssHeight": 1290,
+    "printWidth": 800
+  },
+  "TemplateExecutionDialog.png": {
+    "cssWidth": 1048,
+    "cssHeight": 651,
+    "printWidth": 655
+  },
+  "TemplateSearchPopover.png": {
+    "cssWidth": 737,
+    "cssHeight": 572,
+    "printWidth": 461
+  },
+  "TemplateSelectionDrawer.png": {
+    "cssWidth": 1099,
+    "cssHeight": 800,
+    "printWidth": 687
+  },
+  "TextEditorToolFullScreen.png": {
+    "cssWidth": 26,
+    "cssHeight": 26,
+    "printWidth": 16
+  },
+  "TextEditorToolImage.png": {
+    "cssWidth": 26,
+    "cssHeight": 26,
+    "printWidth": 16
+  },
+  "TextEditorToolLinks.png": {
+    "cssWidth": 26,
+    "cssHeight": 26,
+    "printWidth": 16
+  },
+  "TextEditorToolLocationDialog.png": {
+    "cssWidth": 800,
+    "cssHeight": 836,
+    "printWidth": 500
+  },
+  "TextEditorToolLocations.png": {
+    "cssWidth": 26,
+    "cssHeight": 26,
+    "printWidth": 16
+  },
+  "TextEditorToolPublication.png": {
+    "cssWidth": 26,
+    "cssHeight": 26,
+    "printWidth": 16
+  },
+  "TextEditorToolTable.png": {
+    "cssWidth": 26,
+    "cssHeight": 26,
+    "printWidth": 16
+  },
+  "TextEditorToolTime.png": {
+    "cssWidth": 26,
+    "cssHeight": 26,
+    "printWidth": 16
+  },
+  "TextEditorToolTimeDialog.png": {
+    "cssWidth": 512,
+    "cssHeight": 327,
+    "printWidth": 320
+  },
+  "UpdateBanner.png": {
+    "cssWidth": 1280,
+    "cssHeight": 95,
+    "printWidth": 800
+  },
+  "ViewModes.png": {
+    "cssWidth": 518,
+    "cssHeight": 36,
+    "printWidth": 324
+  }
+}

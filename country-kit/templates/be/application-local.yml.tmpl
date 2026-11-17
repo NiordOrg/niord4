@@ -1,0 +1,29 @@
+# The local profile: the local realm's issuer, the local database with its user and password, and
+# the local mail catcher on port 1025. ./start-local.sh activates it and passes its own database
+# URL, port and Niord home, so the URL here serves only a backend started by hand. Such a start
+# passes -Dserver.port=8888 itself: the profile sets no port, and Spring's default, 8080, is the
+# local Keycloak's.
+server:
+  address: 127.0.0.1
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/niord_{{cc}}
+    username: niord
+    password: niord
+  mail:
+    host: localhost
+    port: 1025
+  jpa:
+    properties:
+      jakarta.persistence.validation.mode: none
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/auth/realms/niord
+
+niord:
+  smtp:
+    host: localhost
+    port: 1025

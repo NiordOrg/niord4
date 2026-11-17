@@ -1,0 +1,79 @@
+<app-drawer
+  #drawerRef
+  size="wide"
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model(); as m) {
+    <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))">
+      <app-tab-list>
+        <app-tab value="details">{{
+          'admin.users.contacts.editor.tab.details' | transloco
+        }}</app-tab>
+        @if (isEdit()) {
+          <app-tab value="lists">{{ 'admin.users.editor.tab.mailingLists' | transloco }}</app-tab>
+        }
+      </app-tab-list>
+      <app-tab-panels>
+        <app-tab-panel value="details">
+          <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5 pt-2">
+            <div class="flex flex-col gap-1">
+              <label for="contact-email" class="text-sm font-medium text-fg-title">
+                {{ 'admin.users.contacts.field.email' | transloco }}
+              </label>
+              <input class="text-input" id="contact-email" type="email" [formField]="form.email" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="contact-name" class="text-sm font-medium text-fg-title">
+                {{ 'admin.users.contacts.field.name' | transloco }}
+              </label>
+              <input class="text-input" id="contact-name" type="text" [formField]="form.name" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="contact-language" class="text-sm font-medium text-fg-title">
+                {{ 'admin.users.field.language' | transloco }}
+              </label>
+              <!-- Blank option ⇒ the language is OMITTED from the save payload. -->
+              <select id="contact-language" [formField]="form.language" class="w-full text-input">
+                <option value=""></option>
+                @for (lang of languages; track lang.value) {
+                  <option [value]="lang.value">{{ lang.label }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Hidden submit makes Enter in any field submit (validity-gated in save()). -->
+            <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+          </form>
+        </app-tab-panel>
+
+        @if (isEdit()) {
+          <app-tab-panel value="lists">
+            <div class="pt-2">
+              <app-mailing-list-membership-panel
+                [lists]="facade.mailingLists()"
+                [memberIds]="memberIds()"
+                (toggled)="onMembershipToggle($event)"
+              />
+            </div>
+          </app-tab-panel>
+        }
+      </app-tab-panels>
+    </app-tabs>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.users.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.users.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

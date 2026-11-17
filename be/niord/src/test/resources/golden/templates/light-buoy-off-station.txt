@@ -1,0 +1,218 @@
+# Light buoy off station  [templates/tmpl/light-buoy-off-station.ftl, templates/tmpl/compute-affected-radius.js]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=aton, type=light_buoy_by_function, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 56-00.0N 012-00.0E OFF STATION.
+AUDIO:   The north cardinal light buoy Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is off station.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 56-00.0N 012-00.0E OFF STATION.
+AUDIO:   The north cardinal light buoy Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is off station.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy Hals Barre in pos. 61° 06.0'N - 045° 15.0'W is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 61-06.0N 045-15.0W OFF STATION.
+AUDIO:   The north cardinal light buoy Hals Barre in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West is off station.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. / The north cardinal light buoy Hals Barre in pos. 55° 36.0'N - 010° 45.0'E is off station. / The north cardinal light buoy Hals Barre in pos. 55° 42.0'N - 011° 00.0'E is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-36.0N 010-45.0E OFF STATION.
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-42.0N 011-00.0E OFF STATION.
+AUDIO:   The north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station. The north cardinal light buoy Hals Barre in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East is off station. The north cardinal light buoy Hals Barre in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East is off station.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: 
+NAVTEX:
+  | 
+  |         
+AUDIO:   null
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.function.light_buoy.north_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.south_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The south cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | SOUTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The south cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.east_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The east cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | EAST CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The east cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.west_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The west cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | WEST CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The west cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.port_hand
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | PORT HAND LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.starboard_hand
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | STARBOARD HAND LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The preferred channel to port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | PREFERRED CHANNEL TO PORT HAND LIGHT
+  | BUOY HALS BARRE 55-30.0N 010-30.0E OFF
+  | STATION.
+AUDIO:   The preferred channel to port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The preferred channel to starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | PREFERRED CHANNEL TO STARBOARD HAND
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E OFF STATION.
+AUDIO:   The preferred channel to starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.safe_water
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The safe water light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | SAFE WATER LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The safe water light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.special
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The special light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | SPECIAL LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E OFF STATION.
+AUDIO:   The special light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.isolated_danger
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The isolated danger light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | ISOLATED DANGER LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The isolated danger light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy.emergency_wreck
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The emergency wreck light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | EMERGENCY WRECK LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The emergency wreck light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.light_buoy
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E OFF STATION.
+AUDIO:   The light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = aton.function.aton
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | BUOY HALS BARRE 55-30.0N 010-30.0E OFF
+  | STATION.
+AUDIO:   The buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E OFF STATION.
+AUDIO:   The light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY 55-30.0N
+  | 010-30.0E OFF STATION.
+AUDIO:   The north cardinal light buoy in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Light buoy off station.
+SUBJECT: Light buoy off station
+DETAILS: The north cardinal light buoy St. John's Point in pos. 55° 30.0'N - 010° 30.0'E is off station. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY ST. JOHN'S
+  | POINT 55-30.0N 010-30.0E OFF STATION.
+AUDIO:   The north cardinal light buoy St. John's Point in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is off station.
+

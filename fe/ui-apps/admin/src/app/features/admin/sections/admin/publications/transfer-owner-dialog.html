@@ -1,0 +1,74 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [header]="'admin.publications.transfer.title' | transloco"
+  [style]="{ width: '32rem', maxWidth: '95vw' }"
+>
+  <div class="flex flex-col gap-4">
+    <!-- What moving the owner actually does, said before it happens. -->
+    <p class="text-sm text-fg-muted">{{ 'admin.publications.transfer.effect' | transloco }}</p>
+
+    <div class="flex flex-col gap-1">
+      <label for="publication-transfer-domain" class="text-sm font-medium text-fg-title">
+        {{ 'admin.publications.transfer.target' | transloco }}
+      </label>
+      <!--
+        Bound one way with `[selected]` per option rather than through the field:
+        a native select takes its value from the options, and binding the element
+        instead leaves the picked domain in the DOM and out of the model.
+      -->
+      <select
+        id="publication-transfer-domain"
+        class="w-full text-input"
+        (change)="setDomain($event)"
+      >
+        <option value="" [selected]="value().domainId === ''">
+          {{ 'admin.publications.transfer.targetUnset' | transloco }}
+        </option>
+        <!--
+          A domain that is switched off is still a real desk, so it is offered
+          and marked rather than hidden: hiding it makes a publication filed
+          there unreachable from every screen.
+        -->
+        @for (domain of domains(); track domain.domainId) {
+          <option [value]="domain.domainId" [selected]="value().domainId === domain.domainId">
+            {{ domain.name || domain.domainId
+            }}{{ domain.active === false ? ' — ' + ('common.inactive' | transloco) : '' }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="publication-transfer-reason" class="text-sm font-medium text-fg-title">
+        {{ 'admin.publications.transfer.reason' | transloco }}
+      </label>
+      <textarea
+        id="publication-transfer-reason"
+        class="text-input min-h-24 w-full"
+        rows="3"
+        [formField]="transferForm.reason"
+      ></textarea>
+      <p class="text-xs text-fg-subtle">
+        {{ 'admin.publications.transfer.reasonHint' | transloco }}
+      </p>
+    </div>
+
+    @if (errorKey(); as key) {
+      <p class="text-sm text-danger">{{ key | transloco }}</p>
+      <!-- The server's own words, where they carry what no key can: which domain. -->
+      @if (errorDetail(); as detail) {
+        <p class="text-xs text-fg-subtle">{{ detail }}</p>
+      }
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.publications.transfer.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="submitDisabled()" (click)="submit()">
+      {{ 'admin.publications.transfer.confirm' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

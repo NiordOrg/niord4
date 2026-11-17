@@ -1,0 +1,19 @@
+{{- if .Values.app.enabled -}}
+{{- if .Values.app.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "niord.componentName" (list . "app") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "app") | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.app.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.app.persistence.size }}
+  {{- with .Values.app.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

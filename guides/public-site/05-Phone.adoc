@@ -1,0 +1,43 @@
+
+[#phone]
+== On a Phone
+
+The site works on a phone or a tablet the same way as on a computer, in the phone's own browser.
+Nothing has to be installed. On a narrow screen a few things look different.
+
+[#phone-messages]
+=== The menu bar and the messages
+
+.The Details view on a phone
+image::PublicSiteDetailsPagePhone.png[The Details view on a phone, 244]
+
+* The menu bar shows only the symbols of the four views, without their names: a list beside boxes
+  for _Details_, a list for _List_, a globe for _Map_ and a downward arrow for _Downloads_. The flags
+  of the languages follow them.
+* The buttons of the filter bar take two rows.
+* In a message, the name of each part (_Details_, _Charts_ and so on) stands above its text instead
+  of beside it.
+* A table of positions that is wider than the screen keeps each position on one line, and scrolls
+  sideways inside the message: swipe the table to see the rest of it.
+
+[#phone-message-window]
+=== A message's window
+
+A message's window takes most of the screen, with the map at the top and the text under it. Scroll
+the window to read the whole message; the buttons are at the bottom.
+
+.A message on a phone
+image::PublicSiteMessageDialogPhone.png[A message on a phone, 244]
+
+[#phone-map]
+=== The map
+
+On a phone the panel _Additional Messages_ lies across the top of the map. Click _Minimize_ to fold
+it up to its title, which leaves the map free; _Maximize_ opens it again. Move the map with one
+finger and zoom with two. Even folded up, the panel lies over the map's _+_ button, so zoom with
+your fingers.
+
+.The Map view on a phone
+image::PublicSiteMapPagePhone.png[The Map view on a phone, 244]
+
+On a phone there is no mouse pointer to rest on a symbol: tap the symbol to open its message.

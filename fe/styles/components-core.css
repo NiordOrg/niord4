@@ -1,0 +1,993 @@
+/* ============================================================
+   components-core.css — Layer 3 semantic classes, shared
+   ============================================================
+
+   Tailwind `@layer components` named classes that wrap repeated
+   utility combos. Classes are named by INTENT (.status-badge,
+   .btn-primary), not by appearance, so a token change re-skins
+   every site without a codebase sweep.
+
+   Shared: both applications load this file. A class belongs here
+   only when both of them use it; one that only the administration
+   application renders belongs in its components-admin.css, and
+   nothing here may name an application.
+
+   Country overlays do NOT override classes here. If a country
+   needs a tweak that no token can express, the answer is to
+   add a new token to Layer 2 and parameterize the class via
+   that token. Goal: countries touch tokens, not classes.
+   ============================================================ */
+
+@layer components {
+  /* --------------------------------------------------------
+     HEADER / CHROME — interactive item hover state
+     Repeated across nav links, dropdown triggers, the help
+     link, and the mobile burger. RouterLinkActive on `<a>`
+     elements provides the active state separately via
+     `routerLinkActive="bg-white/10 font-semibold"`; this
+     class owns the hover affordance.
+     -------------------------------------------------------- */
+  .nav-item-states {
+    @apply hover:bg-white/10;
+  }
+
+  /* --------------------------------------------------------
+     APP SHELL GUTTER — single source for the horizontal inset
+     of every FULL-WIDTH shell surface: the header items, the
+     footer items, and the full-width admin/sysadmin content.
+     Messages/editor instead CENTER their content at
+     `max-w-screen-2xl`, so they do not use this. Everything that
+     reaches toward the viewport edge shares this one inset, so
+     the chrome stays aligned across areas. Change it in one place.
+     -------------------------------------------------------- */
+  .app-shell-gutter {
+    @apply px-4 md:px-6;
+  }
+
+  /* --------------------------------------------------------
+     STATUS — state classes (orthogonal to widgets)
+     Apply ANY of these to an element to expose the active
+     status's tokens as locally-scoped custom properties.
+     Widgets below read --status-bg / --status-fg / --status-bd.
+     Use via `StatusClassPipe`:
+       <span class="status-badge" [class]="msg.status | statusClass">…</span>
+     -------------------------------------------------------- */
+  .is-published {
+    --status-bg: var(--niord-status-published-bg);
+    --status-fg: var(--niord-status-published-fg);
+    --status-bd: var(--niord-status-published-bd);
+  }
+  .is-draft {
+    --status-bg: var(--niord-status-draft-bg);
+    --status-fg: var(--niord-status-draft-fg);
+    --status-bd: var(--niord-status-draft-bd);
+  }
+  .is-verified {
+    --status-bg: var(--niord-status-verified-bg);
+    --status-fg: var(--niord-status-verified-fg);
+    --status-bd: var(--niord-status-verified-bd);
+  }
+  .is-cancelled {
+    --status-bg: var(--niord-status-cancelled-bg);
+    --status-fg: var(--niord-status-cancelled-fg);
+    --status-bd: var(--niord-status-cancelled-bd);
+  }
+  .is-expired {
+    --status-bg: var(--niord-status-expired-bg);
+    --status-fg: var(--niord-status-expired-fg);
+    --status-bd: var(--niord-status-expired-bd);
+  }
+  .is-deleted {
+    --status-bg: var(--niord-status-deleted-bg);
+    --status-fg: var(--niord-status-deleted-fg);
+    --status-bd: var(--niord-status-deleted-bd);
+  }
+
+  /* --------------------------------------------------------
+     STATUS — widget classes
+     Each reads --status-bg/fg/bd locally. Adding a new widget
+     here makes it available across all 6 statuses for free.
+
+     Fallbacks: when no `.is-*` state class is applied (e.g. a
+     message that lacks a status field), the widget renders in a
+     neutral muted treatment via the var(..., fallback) chain —
+     surface-sunken background, fg-muted text, border — the
+     standard secondary look for an undefined status.
+     -------------------------------------------------------- */
+  /* Dot-led, soft-tinted, hairline. A leading status dot precedes the label; the
+     background is a faint wash (color-mix) rather than a heavy filled pill.
+     `.mono-id` squares the corners for the message-id badge, `.is-plain` drops
+     the dot for badges that are not a lifecycle state.
+
+     The wash interpolates in SRGB, never in OKLCH. Chrome treats a very pale
+     colour (OKLCH chroma below ~0.02 — which every status tint is, being a pale
+     wash by design) as achromatic INSIDE color-mix and drops its hue; when the
+     other side carries no hue either (transparent, white, black) nothing
+     supplies one, and the hue-less result renders its leftover chroma as PINK.
+     Measured: color-mix(in oklch, #e8f0f8, transparent 35%) computes to
+     oklch(0.951 0.0137 none / 0.65) and paints rgb(247 235 238) — pink, from a
+     blue. SRGB has no separate hue channel to lose, so every mix that touches a
+     status tint or an achromatic colour uses it. */
+  .status-badge {
+    @apply inline-flex items-center text-xs font-semibold;
+    gap: 6px;
+    padding: 2px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--status-bg, var(--niord-surface-sunken)), transparent 35%);
+    color: var(--status-fg, var(--niord-fg-muted));
+  }
+  .status-badge::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--status-fg, var(--niord-fg-subtle));
+    flex-shrink: 0;
+  }
+  /* The message-id badge uses a FILLED treatment: a solid status-tint background +
+     status border, squared corners, and NO leading dot — so a published id reads as
+     a filled green box, not dot-led text. Only the id badge opts out of the dot-led
+     wash; true status badges keep it. */
+  .status-badge.mono-id {
+    border-radius: var(--niord-radius-sm);
+    background: var(--status-bg, var(--niord-surface-sunken));
+    border-color: var(--status-bd, var(--niord-border));
+  }
+  .status-badge.mono-id::before {
+    display: none;
+  }
+  /* A plain pill: the badge shape without the leading dot. The dot is the mark of
+     a LIFECYCLE state — something that moves from one value to the next — so a
+     badge that only labels a fact ("from the series", "generated") wears the same
+     pill without claiming to be a status. */
+  .status-badge.is-plain::before {
+    display: none;
+  }
+
+  /* --------------------------------------------------------
+     SELECTION
+     Applied to table rows in the user's selection set.
+
+     Plain table view (rows with NO .details-row card): the original
+     full-accent fill + white text. The colour rules are scoped
+     `:not(:has(.details-row))` so ONLY this view gets the fill —
+     keeping the message-list table exactly as it was.
+
+     Details / selected views (rows that DO contain a .details-row
+     card): no fill — the row keeps the normal background and shows
+     selection as a full-accent FRAME around the card. The frame is a
+     box-shadow on .details-row, NOT the <tr>/<td>: under the table's
+     border-collapse:separate, box-shadow doesn't paint on table
+     rows/cells, but does on the inner card div. (The grid view shows
+     selection via the enlarged accent star only — see
+     `.selection-star-overlay`.)
+
+     Reads --niord-accent(-hover) so the country swap flips it too.
+     -------------------------------------------------------- */
+  /* Selection: a calm accent-soft wash + an inset left accent rail, with normal
+     (dark) text — not a heavy accent fill. The wash keeps the row's own text
+     colours readable, so no white-on-accent descendant overrides are needed.
+     (The rail is an inset box-shadow; under the message table's
+     border-collapse:separate box-shadow doesn't paint on the <tr>/<td>, so the
+     wash carries the cue for plain rows — the details view shows the rail on its
+     inner card div.) */
+  .row-selected {
+    background: var(--niord-accent-soft);
+    color: var(--niord-fg);
+    box-shadow: inset 3px 0 0 var(--niord-accent);
+  }
+  .row-interactive.row-selected:hover {
+    background: color-mix(in oklch, var(--niord-accent-soft), var(--niord-fg) 5%);
+  }
+  /* Details / selected card view: keep the accent frame on the card as the
+     selection cue for that layout (complements the row wash + rail). */
+  .row-selected .details-row {
+    box-shadow: inset 0 0 0 2px var(--niord-accent);
+    border-radius: var(--niord-radius);
+  }
+
+  /* Attention: a row that needs looking at — e.g. a message whose follow-up date has
+     passed. A left rail only, no row wash: the row keeps its ordinary background (and
+     hover). It stays apart from the selection rail by HUE (red vs the brand accent).
+     Selection still outranks attention outright rather than relying on source order, so a
+     row the user has just picked reads as selected — its rail switches to the accent, and
+     the hover title continues to explain why the row was flagged. */
+  .row-attention:not(.row-selected) {
+    box-shadow: inset 3px 0 0 var(--niord-attention-rail);
+  }
+
+  /* --------------------------------------------------------
+     ROW INTERACTIVE
+     Cursor + hover-tint + focus-outline combo for clickable
+     rows (table rows, inline details rows, etc.). Hover uses the
+     surface-sunken token. Focus outline uses primary-500 — visible on every chrome
+     except where overridden. Must be `:focus-visible`, not
+     `:focus`: rows regain focus programmatically when an
+     overlay closes (drawer focus-restore), and a plain
+     `:focus` outline would linger after mouse interactions.
+     -------------------------------------------------------- */
+  .row-interactive {
+    @apply cursor-pointer hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-primary-500;
+  }
+
+  /* --------------------------------------------------------
+     ROW LINK
+     The real anchor inside a clickable row — the name or title
+     cell, and the row's only tab stop. It exists so the row can
+     be opened in a new tab, not to be spotted as a link, so it
+     takes the row's own colour and underlines on hover only.
+     The focus ring matches `.row-interactive`'s, because it is
+     the ring the row used to draw for itself.
+
+     Distinct from `.reference-link` (dashed, primary-coloured),
+     which marks an inline cross-reference inside running text.
+     -------------------------------------------------------- */
+  .row-link {
+    @apply text-left text-inherit no-underline hover:underline focus-visible:outline-2 focus-visible:outline-primary-500;
+  }
+
+  /* --------------------------------------------------------
+     CARD INTERACTIVE
+     Applied to clickable cards (grid view, future AToN cards,
+     etc.). Provides a subtle base shadow + smooth hover
+     elevation that lifts the card 1px — reads as "this is
+     pickable." Pairs with the chrome-level border/radius from
+     Tailwind utilities and the focus-outline for keyboard
+     navigation.
+
+     Sibling to `.row-interactive` (rows get a hover-tint
+     instead of a lift, because rows live inside scrolling
+     tables where a lift would feel out of place).
+     -------------------------------------------------------- */
+  .card-interactive {
+    cursor: pointer;
+    box-shadow: var(--niord-shadow-sm);
+    transition:
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  .card-interactive:hover {
+    box-shadow: var(--niord-shadow);
+    transform: translateY(-1px);
+  }
+
+  /* --------------------------------------------------------
+     ATTACH LINK (pill)
+     Attachments-toggle button in message-details. Reads as a
+     small surface-sunken pill with a border and paperclip icon
+     — visually distinct from inline text-link references. On
+     hover the pill takes on the same accent treatment as other
+     link-style affordances (accent-soft fill, accent border,
+     accent text); the base stays neutral so the pill at rest
+     reads as "an action you can take," not as a permanent
+     branded chip.
+     -------------------------------------------------------- */
+  .attach-link {
+    @apply inline-flex items-center gap-1.5 cursor-pointer;
+    padding: 4px 10px 4px 8px;
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius-sm);
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg);
+    font-weight: 500;
+    transition:
+      background 0.12s ease,
+      border-color 0.12s ease,
+      color 0.12s ease;
+  }
+  .attach-link:hover {
+    background: var(--niord-accent-soft);
+    border-color: var(--niord-accent);
+    color: var(--niord-accent);
+  }
+
+  /* --------------------------------------------------------
+     LINK BUTTON (plain inline text link)
+     Canonical class for a <button> that should read as a plain
+     text link (in-app actions are buttons, not <a href>, per
+     project standard). Encapsulates the link-color convention so
+     components don't repeat the utility stack:
+       base  → --niord-primary
+       hover → --niord-accent   (text + underline track currentColor)
+     Specialized link affordances live alongside: `.reference-link`
+     (dashed underline that solidifies on hover) and `.attach-link`
+     (surface-sunken pill). Reach for `.link-button` for everything
+     else that should look like an underlined text link.
+
+     Modifiers: `.is-subtle` / `.is-quiet` (below) change the skin;
+     `.is-prose` changes nothing visually and marks a link that sits
+     INSIDE running text — it opts out of the below-`lg` touch hit box
+     (see TOUCH FLOORS at the end of the file), which on a link mid
+     sentence would reach over the words around it.
+     -------------------------------------------------------- */
+  .link-button {
+    color: var(--niord-primary);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.12s ease;
+  }
+  .link-button:hover {
+    color: var(--niord-accent);
+  }
+  /* Subtle variant — for compact secondary affordances (e.g. the
+     "All / Reset" mini-links in filter rows). Keeps the
+     primary→accent color convention but drops the underline and
+     reverts to regular weight so dense control rows stay light. */
+  .link-button.is-subtle {
+    font-weight: 400;
+    text-decoration: none;
+  }
+  /* Quiet variant — the same light shape as `.is-subtle`, but muted instead of
+     branded. For a disclosure toggle or a row-level secondary action that sits
+     beside the content it acts on: there the brand colour makes the affordance
+     the loudest thing in the row, ahead of the value the reader came for.
+     Keep `.is-subtle` where the link IS the point (a name, a count, an "Add"). */
+  .link-button.is-quiet {
+    font-weight: 400;
+    text-decoration: none;
+    color: var(--niord-fg-muted);
+  }
+  .link-button.is-quiet:hover {
+    color: var(--niord-fg);
+  }
+
+  /* --------------------------------------------------------
+     CHIP (generic accent toggle)
+     Pill-shaped toggle button for filter rows (type, comments,
+     user roles, etc.). Outlined neutral at rest, accent-tinted
+     when `.is-active`. Shares the 26px chip height recipe used
+     across the filter panels: text-xs line-height (1rem = 16px)
+     + 4px vertical padding + 1px border. Horizontal padding is
+     asymmetric (12px right / 10px left).
+
+     Sibling to `.status-chip` (which uses per-status colors).
+     Use `.chip` when the toggle's "on" state should read as
+     "selected / brand-active," not as a domain status.
+     -------------------------------------------------------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--niord-border);
+    color: var(--niord-fg-muted);
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1rem;
+    cursor: pointer;
+    transition:
+      background 0.12s ease,
+      color 0.12s ease,
+      border-color 0.12s ease;
+  }
+  button.chip:hover,
+  button.chip:focus-visible {
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg);
+  }
+  /* Active = full primary fill with on-primary text. Reuses
+     --niord-fg-on-primary so the "text-on-brand-surface" color flips
+     together everywhere. Action/selection surfaces use primary;
+     accent is reserved for state/wayfinding cues. */
+  .chip.is-active {
+    background: var(--niord-primary);
+    color: var(--niord-fg-on-primary);
+    border-color: var(--niord-primary);
+  }
+  button.chip.is-active:hover,
+  button.chip.is-active:focus-visible {
+    background: var(--niord-primary-hover);
+    color: var(--niord-fg-on-primary);
+  }
+  /* A chip whose action has nothing to act on — dimmed and inert, with the hover treatment
+     neutralized, the same way the button primitives read when disabled. */
+  button.chip:disabled,
+  button.chip:disabled:hover {
+    @apply cursor-not-allowed opacity-45;
+    background: transparent;
+    color: var(--niord-fg-muted);
+  }
+
+  /* --------------------------------------------------------
+     BUTTON HIERARCHY
+     The role-level classes that every action button in the
+     app routes through. Brand color comes from Layer 2
+     tokens via the --niord-action-primary-* alias — flips per
+     country (navy in Default; the accent is reserved for
+     state/wayfinding, not action surfaces).
+
+     Use `.btn-primary` for affirmative-action buttons (Save,
+     Create, Publish, "+ New Tag"); `.btn-secondary` /
+     `.btn-tertiary` for lower-emphasis actions; `.btn-danger`
+     for destructive ones.
+
+     Tailwind v4 note: each variant inlines the base shape
+     because `@apply` does not accept custom classes — only
+     Tailwind utilities — so a shared `.btn-base` referenced
+     via `@apply btn-base` won't compile. The duplication
+     is intentional and bounded to these classes; the
+     shared transition + border-radius rules live in plain
+     CSS below to avoid repetition.
+     -------------------------------------------------------- */
+  .btn-primary,
+  .btn-secondary,
+  .btn-tertiary,
+  .btn-danger {
+    border-radius: var(--niord-radius);
+    transition:
+      background 0.1s ease,
+      border-color 0.1s ease,
+      color 0.1s ease;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 h-9 px-4 text-sm font-semibold border border-transparent cursor-pointer whitespace-nowrap;
+    background: var(--niord-action-primary-bg);
+    color: var(--niord-action-primary-fg);
+  }
+  .btn-primary:hover {
+    background: var(--niord-action-primary-bg-hover);
+  }
+
+  /* Destructive affirmative action (delete / irreversible) — same weight as
+     .btn-primary but on the danger token. Used by the confirm accept and any
+     inline destructive Save-tier button. */
+  .btn-danger {
+    @apply inline-flex items-center gap-1.5 h-9 px-4 text-sm font-semibold border border-transparent cursor-pointer whitespace-nowrap;
+    background: var(--niord-action-danger-bg);
+    color: var(--niord-action-danger-fg);
+  }
+  .btn-danger:hover {
+    background: var(--niord-action-danger-bg-hover);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium border cursor-pointer whitespace-nowrap;
+    background: var(--niord-surface);
+    border-color: var(--niord-border);
+    color: var(--niord-fg);
+  }
+  .btn-secondary:hover {
+    background: var(--niord-surface-sunken);
+    border-color: var(--niord-border-strong);
+  }
+
+  .btn-tertiary {
+    @apply inline-flex items-center gap-1.5 h-9 px-4 text-sm font-medium border border-transparent cursor-pointer whitespace-nowrap;
+    background: transparent;
+    color: var(--niord-fg-muted);
+  }
+  .btn-tertiary:hover {
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg);
+  }
+
+  /* Disabled state for all three button primitives — visibly inert (dimmed,
+     no pointer affordance) with the hover treatments neutralized. */
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-tertiary:disabled,
+  .btn-danger:disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+  .btn-primary:disabled:hover {
+    background: var(--niord-action-primary-bg);
+  }
+  .btn-danger:disabled:hover {
+    background: var(--niord-action-danger-bg);
+  }
+  .btn-secondary:disabled:hover {
+    background: var(--niord-surface);
+    border-color: var(--niord-border);
+  }
+  .btn-tertiary:disabled:hover {
+    background: transparent;
+    color: var(--niord-fg-muted);
+  }
+
+  /* --------------------------------------------------------
+     ICON BUTTON (borderless square icon action)
+     The standard low-emphasis icon button: transparent at rest,
+     muted glyph, surface-sunken fill + full-strength glyph on
+     hover. Consolidates the repeated
+     `rounded p-1 hover:bg-surface-100 dark:hover:bg-surface-800`
+     recipe (geometry tree/sidebar toggles, map-result-list) so the
+     hover tint is token-driven — and dark-mode-correct — in one
+     place. Pair with a `hover:text-*` utility for an accent/danger
+     hover glyph (Tailwind's utilities layer wins over this on
+     hover); add `text-xs` / positioning utilities as needed.
+     -------------------------------------------------------- */
+  .icon-button {
+    @apply inline-flex cursor-pointer items-center justify-center border-0 p-0.5;
+    border-radius: var(--niord-radius-sm);
+    background: transparent;
+    color: var(--niord-fg-muted);
+    transition:
+      background 0.12s ease,
+      color 0.12s ease;
+  }
+  /* Enlarge the glyph so it fills the button. The default 1em icon left a ~4px
+     ring of empty padding that read as an undersized icon; trimming the button
+     padding (p-0.5) and scaling the glyph keeps the same button footprint. */
+  .icon-button app-icon {
+    font-size: 1.25em;
+  }
+  .icon-button:hover:not(:disabled) {
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg);
+  }
+  .icon-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  /* Breathing room between directly-adjacent icon-buttons (e.g. edit/delete in a
+     table-row action cell). Group dividers and component boundaries break the
+     adjacency, so tightly-grouped toolbars are unaffected. */
+  .icon-button + .icon-button {
+    margin-left: 0.25rem;
+  }
+
+  /* --------------------------------------------------------
+     FORM CONTROLS — native inputs/checkboxes/radios/segmented.
+     Native elements bind directly with Signal Forms' `[formField]`,
+     so they need no wrapper component.
+
+     A field's border is the only thing that shows where it is — its
+     fill is the surface it stands on — so it draws from the neutral
+     ramp's 500 step, which each brand holds at the 3:1 a control's
+     boundary needs on the page ground and on a surface alike (the
+     measurements are in the brand files). The hairline
+     --niord-border measures 1.2:1 and would leave the field unseen.
+     -------------------------------------------------------- */
+  .text-input {
+    @apply w-full;
+    height: 36px;
+    padding: 0 0.625rem;
+    font-size: 0.875rem;
+    color: var(--niord-fg);
+    background: var(--niord-surface);
+    border: 1px solid var(--niord-surface-500);
+    border-radius: var(--niord-radius-sm);
+    transition:
+      border-color 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+  textarea.text-input {
+    height: auto;
+    padding: 0.5rem 0.625rem;
+    line-height: 1.4;
+  }
+  .text-input::placeholder {
+    color: var(--niord-fg-subtle);
+  }
+  .text-input:focus,
+  .text-input:focus-visible {
+    outline: none;
+    border-color: var(--niord-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--niord-primary), transparent 80%);
+  }
+  .text-input:disabled {
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg-subtle);
+    cursor: not-allowed;
+  }
+  /* Native constraint validation (the Signal Forms field directive reflects the schema's
+     required/min/max/pattern onto the input): once the USER has produced an invalid value,
+     mark the field in the danger color. `:user-invalid` (unlike `:invalid`) never fires on
+     pristine forms, so seeded/empty drawers open clean. */
+  .text-input:user-invalid {
+    border-color: var(--color-danger);
+  }
+  .text-input:user-invalid:focus,
+  .text-input:user-invalid:focus-visible {
+    border-color: var(--color-danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger), transparent 80%);
+  }
+
+  /* `flex: none` because these sit next to a label inside a flex row: a wrapping
+     label would otherwise squeeze the box off square (13x16 and rising) the
+     moment its text needs a second line. */
+  .checkbox,
+  .radio {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    accent-color: var(--niord-primary);
+    cursor: pointer;
+  }
+  .checkbox:disabled,
+  .radio:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* A checkbox/radio + label row. Replaces the repeated
+     `flex items-center gap-2 text-sm` label recipe and carries the tablet
+     minimum height (see TOUCH FLOORS at the end of the file). Consumers that
+     need top alignment keep `items-start` as a utility. */
+  .check-row {
+    @apply flex items-center gap-2 text-sm;
+  }
+
+  /* Segmented toggle — a button row; the active segment fills with
+     the primary tint. */
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius-sm);
+    overflow: hidden;
+  }
+  .seg-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    background: var(--niord-surface);
+    color: var(--niord-fg-muted);
+    cursor: pointer;
+    border: 0;
+    border-right: 1px solid var(--niord-border);
+  }
+  .seg-btn:last-child {
+    border-right: 0;
+  }
+  .seg-btn:hover:not(.is-active) {
+    background: var(--niord-surface-sunken);
+  }
+  .seg-btn.is-active {
+    background: var(--niord-primary);
+    color: var(--niord-fg-on-primary);
+  }
+  /* Soft variant — the active segment reads as a tint rather than a solid brand
+     block. For a control standing INSIDE a form among ordinary fields, where a
+     saturated fill is the heaviest thing on the panel and outweighs the field
+     titles around it. Weight carries the selection instead of the fill.
+     A modifier on the row: `.seg` itself is untouched. */
+  .seg.is-soft .seg-btn.is-active {
+    background: var(--niord-primary-50);
+    color: var(--niord-primary);
+    font-weight: 600;
+  }
+  /* Stacked variant — a row of four segments cannot fit a phone, so below `sm`
+     the row becomes a 2x2 grid. The hairlines are redrawn per cell so the grid
+     still reads as one control; the outer border and radius stay on `.seg`.
+     A modifier on the row, inert from `sm` up. */
+  @media (width < 40rem) {
+    .seg.is-stack-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .seg.is-stack-2 .seg-btn {
+      border-right: 1px solid var(--niord-border);
+      border-bottom: 1px solid var(--niord-border);
+    }
+    .seg.is-stack-2 .seg-btn:nth-child(2n) {
+      border-right: 0;
+    }
+    .seg.is-stack-2 .seg-btn:nth-last-child(-n + 2) {
+      border-bottom: 0;
+    }
+  }
+
+  /* --------------------------------------------------------
+     DIALOG (app-dialog) — centered modal card + backdrop.
+     The CDK overlay pane is transparent, so these own the card
+     chrome. Token-driven.
+     -------------------------------------------------------- */
+  .dialog-backdrop {
+    background: color-mix(in srgb, var(--niord-fg), transparent 55%);
+  }
+  .dialog-panel {
+    display: flex;
+    flex-direction: column;
+    max-width: min(92vw, 64rem);
+    max-height: 90vh;
+    background: var(--niord-surface);
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius-lg);
+    box-shadow: var(--niord-shadow-lg);
+    overflow: hidden;
+  }
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--niord-border);
+    padding: 0.75rem 1rem;
+  }
+  .dialog-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--niord-fg);
+  }
+  .dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+  .dialog-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    border-top: 1px solid var(--niord-border);
+    padding: 0.75rem 1rem;
+  }
+
+  /* --------------------------------------------------------
+     NIORD TABLE — plain semantic table chrome for the admin/
+     sysadmin list sections. Hairline header, hover rows, tabular
+     numerals. Interactive rows add `.row-interactive`; numeric
+     cells add `.num`; a sortable header wraps its label in
+     `.th-sort`.
+     -------------------------------------------------------- */
+  .niord-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .niord-table thead th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--niord-fg-muted);
+    /* The shared header-band fill (card headers + messages table + the
+       narrow-screen pinned actions column) — one token retints them all. */
+    background: var(--niord-header-band);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--niord-border);
+    white-space: nowrap;
+  }
+  .niord-table tbody td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--niord-divider);
+    color: var(--niord-fg);
+    vertical-align: middle;
+  }
+  .niord-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .niord-table tbody tr.row-interactive:hover {
+    background: var(--niord-surface-sunken);
+  }
+  .niord-table th .th-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    color: inherit;
+    background: none;
+    border: 0;
+    font: inherit;
+  }
+  .niord-table th .th-sort:hover {
+    color: var(--niord-fg);
+  }
+  /* The header is a real button, so it is tab-reachable — and a keyboard reader
+     has nothing else to go on about which column is focused, since the sort
+     arrow only marks the ACTIVE one. */
+  .niord-table th .th-sort:focus-visible {
+    outline: 2px solid var(--niord-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--niord-radius-sm);
+  }
+  .niord-table td.num,
+  .niord-table th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* --------------------------------------------------------
+     TABS — @angular/aria tabs pattern (app-tabs family).
+     The aria directives own the roles + roving focus; these
+     classes are the skin. The active tab reuses the toolbar
+     underline treatment (a 2px accent `::after`), sitting on
+     the list's bottom border.
+     -------------------------------------------------------- */
+  .tabs {
+    display: block;
+  }
+  .tabs-list {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--niord-border);
+    margin-bottom: 0.75rem;
+  }
+  .tabs-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--niord-fg-muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .tabs-tab:hover {
+    color: var(--niord-fg);
+  }
+  .tabs-tab[aria-selected='true'] {
+    color: var(--niord-fg);
+    font-weight: 600;
+  }
+  .tabs-tab[aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    background: var(--niord-accent);
+    border-radius: 2px 2px 0 0;
+  }
+  /* Narrow screens: a strip wider than its box pans inside itself instead of
+     widening the surface around it. Desktop is untouched from `lg` up. */
+  @media (width < 64rem) {
+    .tabs-list {
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+    }
+    .tabs-list::-webkit-scrollbar {
+      display: none;
+    }
+    /* A scroll container clips at its padding edge, so the accent moves from
+       -1px onto the border line. */
+    .tabs-tab[aria-selected='true']::after {
+      bottom: 0;
+    }
+  }
+  .tabs-tab[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  /* The ring is the primary, as on a row, a row link and a sortable header. The accent is a
+     brand colour chosen for its hue, not its contrast: an orange accent such as a country may
+     choose can measure 2.3:1 against the page and would leave a keyboard user a faint ring. */
+  .tabs-tab:focus-visible {
+    outline: 2px solid var(--niord-primary);
+    outline-offset: -2px;
+    border-radius: var(--niord-radius-sm);
+  }
+  /* Inactive panels get the `inert` attribute from aria; hide them (panels are
+     mounted eagerly — see Tabs component doc). */
+  .tabs-panel[inert] {
+    display: none;
+  }
+
+  /* --------------------------------------------------------
+     INLINE NOTICE (.message) — severity-tinted inline block.
+     `--message-accent` drives the leading icon + the left border;
+     the tint is the severity `-bg` token; body text stays default fg.
+     -------------------------------------------------------- */
+  .message {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: var(--niord-radius);
+    border: 1px solid var(--niord-border);
+    border-left: 3px solid var(--message-accent, var(--niord-border));
+    background: var(--niord-surface);
+    font-size: 0.875rem;
+    color: var(--niord-fg);
+  }
+  .message-icon {
+    flex: none;
+    margin-top: 0.0625rem;
+    color: var(--message-accent);
+  }
+  .message-success {
+    --message-accent: var(--niord-notice-success-fg);
+    background: var(--niord-notice-success-bg);
+  }
+  .message-info {
+    --message-accent: var(--niord-notice-info-fg);
+    background: var(--niord-notice-info-bg);
+  }
+  .message-warn {
+    --message-accent: var(--niord-notice-warn-fg);
+    background: var(--niord-notice-warn-bg);
+  }
+  .message-error {
+    --message-accent: var(--niord-notice-error-fg);
+    background: var(--niord-notice-error-bg);
+  }
+}
+
+/* --------------------------------------------------------
+   TABLET / PHONE TOUCH FLOORS (below lg)
+   Below the shell's `lg` collapse the shared controls take a
+   40px hit target. Same boundary as Tailwind's `max-lg:`, so
+   these flip in sync with the header. Utilities on a template
+   (`h-7`, `h-8`, `text-xs`) still win; 64rem and up is untouched.
+   -------------------------------------------------------- */
+@layer components {
+  @media (width < 64rem) {
+    .btn-primary,
+    .btn-secondary,
+    .btn-tertiary,
+    .btn-danger {
+      height: 2.5rem;
+    }
+    .seg-btn {
+      min-height: 2.5rem;
+    }
+    /* A filter row of chips is the main control of a list on a phone, and its chips sit 4px
+       apart: at the chip's own 26px a finger on a moving deck lands on the neighbour. A chip
+       that only labels a value — the tokens inside an autocomplete — is a span and keeps its
+       size. */
+    button.chip {
+      min-height: 2.5rem;
+    }
+    .checkbox,
+    .radio {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    .check-row {
+      min-height: 2.5rem;
+    }
+    /* Glyph-sized controls keep their footprint (dense table rows, card bands)
+       and grow only their hit box. */
+    .icon-button,
+    .link-button:not(.is-prose) {
+      position: relative;
+    }
+    .icon-button::after,
+    .link-button:not(.is-prose)::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 2.5rem);
+      height: 2.5rem;
+      transform: translate(-50%, -50%);
+    }
+    /* Two 24px icon-buttons with 40px hit boxes need 16px between them so the
+       later box does not cover the earlier glyph's edge (0.25rem at lg+). */
+    .icon-button + .icon-button {
+      margin-left: 1rem;
+    }
+  }
+}
+
+/* --------------------------------------------------------
+   FORCED COLOURS (a high-contrast theme)
+   The browser paints every colour from the reader's system
+   palette, so a pressed toggle whose only mark is its fill
+   looks exactly like one that is not — `aria-pressed` tells a
+   screen reader, and nothing tells the eye. The pressed state
+   takes the pair the reader's theme reserves for "this one is
+   chosen", Highlight and HighlightText, instead. The hover and
+   focus states of a pressed chip and the soft segment are
+   named because they outrank the plain `.is-active` rule.
+   -------------------------------------------------------- */
+@layer components {
+  @media (forced-colors: active) {
+    button.chip.is-active,
+    button.chip.is-active:hover,
+    button.chip.is-active:focus-visible,
+    .seg-btn.is-active,
+    .seg.is-soft .seg-btn.is-active {
+      forced-color-adjust: none;
+      background: Highlight;
+      color: HighlightText;
+      border-color: Highlight;
+    }
+  }
+}

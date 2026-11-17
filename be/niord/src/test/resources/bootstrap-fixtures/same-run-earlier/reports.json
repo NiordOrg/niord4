@@ -1,0 +1,26 @@
+[
+  {
+    "reportId": "it-report",
+    "name": "It report",
+    "sortOrder": 0,
+    "templatePath": "templates/it/same-run-a.ftl",
+    "properties": {
+      "a": "1",
+      "b": "2"
+    },
+    "domains": [
+      {
+        "domainId": "it-earlier"
+      }
+    ]
+  },
+  {
+    "reportId": "it-report-changes",
+    "name": "It report changes",
+    "sortOrder": 1,
+    "templatePath": "templates/it/same-run-a.ftl",
+    "params": {
+      "p": "1"
+    }
+  }
+]

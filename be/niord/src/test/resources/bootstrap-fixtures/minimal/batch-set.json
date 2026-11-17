@@ -1,0 +1,4 @@
+[
+  {"jobName": "script-resource-import", "fileName": "templates"},
+  {"jobName": "domain-import", "fileName": "domains.json"}
+]

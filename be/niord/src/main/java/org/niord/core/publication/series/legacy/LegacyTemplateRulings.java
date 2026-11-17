@@ -1,0 +1,463 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series.legacy;
+
+import org.niord.core.publication.series.ContentMode;
+import org.niord.core.publication.series.CutoffDefault;
+import org.niord.core.publication.series.PageOrientation;
+import org.niord.core.publication.series.PageSize;
+import org.niord.core.publication.series.SeriesAvailability;
+import org.niord.core.publication.series.resolve.IssueNaming;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * What the legacy TEMPLATES do not say, supplied as a ruling rather than a guess.
+ *
+ * The sibling of {@link LegacyOrphanGrouping}, and it exists for the same reason:
+ * some answers are not in the legacy data at all, so the importer either invents
+ * one or records the one Rasmus gave. This records them, so a fresh
+ * prod-to-test restore and a re-run produce the same corrected estate rather
+ * than needing the same corrections applied by hand again.
+ *
+ * That is the whole point of putting them here. Both of the rulings below were
+ * first applied to a deployed database directly, which fixes one dataset and
+ * nothing else -- the next import would have reproduced the same two defects.
+ *
+ * TWO KINDS OF ANSWER, and they are separate maps because they are separate
+ * questions.
+ *
+ * AN OWNER, for every series whose template names none. The owner is the desk
+ * that lists a publication, administers it, and supplies the timezone its
+ * cut-offs are read in, and every publication has exactly one.
+ *
+ * THE SCOPE OF THIS RULING HAS MOVED TWICE, and the reason is worth keeping. It
+ * once covered the cadenced series only, because assigning a domain also NARROWED
+ * where a publication could be cited -- so filling the "gap" on a publication
+ * that had none hid it from every desk but one, and six rulings were withdrawn
+ * for exactly that. Availability answers the citing question now, so an owner
+ * costs a publication nothing and the ruling covers everything again.
+ *
+ * A DESTINATION, because a legacy template is not always a series. Some are one
+ * edition that needed to differ, cloned out of a real series because legacy had
+ * no way to vary a single issue -- the `dont-use-` templates are named for it.
+ * Imported as series they put an edition of one publication under a heading of
+ * its own, so the archive it belongs to does not contain it.
+ *
+ * IT IS A HISTORY FIX, NOT A GAP FIX, and an earlier version of this comment had
+ * it wrong. The six `dont-use-` clones do NOT fill any of the nine periods gap
+ * detection reports on weekly-ntm: measured, the gap count is nine with the
+ * clones and nine without. The apparent match was a name coincidence -- a MISSING
+ * pseudo-row is NAMED from the ISO week of its interval end, and
+ * "EfS uge 2 - 2025" names both a gap and a clone whose window is a week later.
+ *
+ * What the clones actually are is the OTHER half of a withdrawal. FOUR of the six
+ * carry a member set identical to an issue already in the destination -- 27 of 27
+ * uids for "EfS uge 2 - 2025", 228 of 228 for "Aktive P&T uge 2 - 2025" -- and in
+ * all four the twin is ALREADY INACTIVE, retired by legacy when the replacement
+ * was swapped in. The two 2026 clones have no twin at all.
+ *
+ * So filing them in reunites a withdrawal with its replacement inside one series.
+ * It recovers no missing week, and it creates no live duplicate, because the
+ * superseded half is already the retired one. Ordering such a pair by age would
+ * not work in any case: clone and twin carry the IDENTICAL created timestamp, a
+ * 2017 bulk-import artifact.
+ */
+public final class LegacyTemplateRulings {
+
+    private LegacyTemplateRulings() {
+    }
+
+    /**
+     * The domain a template's series belongs to, where the template names none.
+     *
+     * Keyed on the AUTHORED seriesId rather than the legacy template id, because
+     * that is the key a human can check against the estate -- and these are
+     * decisions a human made and will want to re-read. The ids are stable: S-16
+     * makes seriesId immutable after create, and it is the import/export key.
+     *
+     * Rasmus, 2026-08-26: "accumulated-yearly-ntm = NM. The rest is NM Annex."
+     *
+     * SIX OF THESE WERE WITHDRAWN ON 2026-08-26 AND REINSTATED ON 2026-08-29,
+     * and the round trip is worth reading rather than tidying away. They were
+     * added because a validator rule demanded a domain, withdrawn when it turned
+     * out that assigning one NARROWED where a publication could be cited, and
+     * reinstated once the two questions were separated: a domain now says who
+     * ADMINISTERS a publication, and a separate availability setting says who may
+     * cite it. The six get an owner AND availability everywhere, so they keep the
+     * reach they had and gain a desk that is responsible for them.
+     *
+     * Rasmus, 2026-08-29: "I only want each series or one-off shown and
+     * administrated in ONE domain. However, some of them should be available in
+     * other domains as well, e.g. the Journal Number one-off that should be
+     * available in every domain."
+     */
+    private static final Map<String, String> DOMAIN_BY_SERIES = new LinkedHashMap<>();
+
+    /**
+     * The owner for a series no template and no ruling names.
+     *
+     * NM Annex, because that is where the publications nobody else claims already
+     * live: the annexes, the reference lists, the one-offs. It is a real desk with
+     * a real timezone rather than a placeholder, which matters because the owner
+     * is the only source of the zone a cut-off is read in.
+     */
+    public static final String DEFAULT_DOMAIN = "niord-annex";
+
+    /**
+     * The six publications every domain cites and none of them owns.
+     *
+     * Each is a reference document rather than an edition of anything: the journal
+     * number, the list of lights, the wreck list, the harbour pilot link, the aids
+     * to navigation, the navigation guide. An editor in any domain reaches for
+     * them, so narrowing them to the desk that maintains them would empty the
+     * citation dialog everywhere else -- which is exactly what happened the first
+     * time they were given a domain.
+     *
+     * Named here rather than derived from "carried no domain in legacy", because
+     * that property is about the old data and this is a decision about the new
+     * model. A future import of an estate that happens to have filled the column in
+     * must not silently make them private.
+     */
+    private static final List<String> SHARED_EVERYWHERE = List.of(
+            "journal-number",
+            "aids-to-navigation",
+            "list-of-wrecks",
+            "www-danskehavnelods-dk",
+            "danish-list-of-lights",
+            "navigation-through-danish-waters");
+
+    static {
+        // YEARLY, so it has real cut-offs and needs a zone to read them in. It is
+        // the weekly series' own annual roll-up, so it belongs where that does.
+        DOMAIN_BY_SERIES.put("accumulated-yearly-ntm", "niord-nm");
+
+        // Cadence-less but unmistakably annex series -- eleven NCAGS editions and
+        // eight ice-service notices -- and their legacy publications carry the
+        // annex domain already. The ruling fills the gap for the handful that do
+        // not, so a series is not split across two answers.
+        DOMAIN_BY_SERIES.put("nm-annex-ice-service", "niord-annex");
+        DOMAIN_BY_SERIES.put("nm-annex-ncags", "niord-annex");
+
+        // The six that carried no domain in legacy. Owned by the annex desk,
+        // available everywhere -- which is what the null used to express, now said
+        // in the field that means it.
+        for (String seriesId : SHARED_EVERYWHERE) {
+            DOMAIN_BY_SERIES.put(seriesId, DEFAULT_DOMAIN);
+        }
+    }
+
+    /**
+     * Templates that are NOT a series, and the series their editions belong to.
+     *
+     * Keyed on the legacy template id and valued with the authored seriesId of the
+     * destination. The destination must be a series the import also creates, so
+     * the ordering is not free -- see LegacyImportService, which plans every
+     * series before it files any issue.
+     *
+     * `ncags-2021` is Rasmus's ruling of 2026-08-26: "this is not a series itself
+     * and should not be imported/migrated as one. It's a template in the legacy
+     * yes, but the series is the NCAGS that hold all the ncags publications."
+     *
+     * It is the same judgement LegacyOrphanGrouping already records for the
+     * template-LESS NCAGS annexes -- eleven of them are one series. The template
+     * path simply never asked the question, so one more NCAGS edition became its
+     * own series beside the eleven.
+     */
+    private static final Map<String, String> DESTINATION_BY_TEMPLATE = new LinkedHashMap<>();
+
+    static {
+        // NCAGS 2021. SER-019's one-language template; its publications belong to
+        // the NCAGS series that already holds the rest.
+        DESTINATION_BY_TEMPLATE.put("ebf7e99d-7914-48bf-8919-7525c2f2aee8", "nm-annex-ncags");
+
+        // The six "DONT USE" templates, and the name is the ruling. Legacy had no
+        // way to vary a single issue, so a week that needed to differ -- a double
+        // week over a year turnover, a re-issue -- was made by cloning the whole
+        // template. Each clone then published one edition and was abandoned, which
+        // is what the title warns the next person about.
+        //
+        // Rasmus, 2026-08-26: "All dont-use templates should not be imported/
+        // migrated to their own series. They are a fluke. The issues belonging to
+        // these are indeed issues of another series - either NTM or NTM P&T."
+        //
+        // It is the same judgement LegacyOrphanGrouping already records for the
+        // template-LESS half of this problem: "the double-week issues belong to the
+        // weekly series they were hacked out of."
+        DESTINATION_BY_TEMPLATE.put("6c5018df-26ec-4b35-8570-ee3f0c7ca891", "weekly-ntm");
+        DESTINATION_BY_TEMPLATE.put("b0fe5e0f-75b1-4a36-9dd7-b941a92df039", "weekly-ntm");
+        DESTINATION_BY_TEMPLATE.put("aed6002d-99e2-49b0-9d72-8a9efe92f412", "weekly-ntm");
+        DESTINATION_BY_TEMPLATE.put("1776882d-07be-43dc-85a9-8c024348dd2e", "weekly-ntm-p-t");
+        DESTINATION_BY_TEMPLATE.put("5dbe9e77-89db-4c27-ab7f-0a40014a1b98", "weekly-ntm-p-t");
+        DESTINATION_BY_TEMPLATE.put("0462f851-d27b-4d64-9f58-84f21f92bf59", "weekly-ntm-p-t");
+    }
+
+    /** The ruled domain for a series, or null when the template's own answer stands. */
+    public static String domainFor(String seriesId) {
+        return seriesId == null ? null : DOMAIN_BY_SERIES.get(seriesId);
+    }
+
+    /**
+     * Who besides the owner may cite an imported series, BY NAME.
+     *
+     * A TABLE, NOT A DERIVATION, and that distinction is the whole of this fix.
+     * This used to answer from the content mode -- generated is the owner's,
+     * everything else is everybody's -- which reads as a principle and is wrong on
+     * the estate. Three of the ruled series are UPLOADED_FILE: the accumulated
+     * yearly NTM and the two NM annexes are documents, so the derivation shared
+     * all three with every domain, when each belongs to exactly one desk. Nothing
+     * in the data distinguishes them from the six reference lists, which are ALSO
+     * uploaded files and genuinely are everybody's. The difference is editorial,
+     * so it is recorded rather than computed.
+     *
+     * A series the table does not name falls back to the model's own default,
+     * which is the rule an admin creating a publication by hand gets. That keeps
+     * the unnamed tail -- the dont-use-* clones, the ncags-2021 family -- behaving
+     * as an authored publication of the same kind would.
+     *
+     * A GENERATED SERIES IS NOT AUTOMATICALLY ITS OWN DESK'S, which is the second
+     * thing a derivation gets wrong. The firing-practice-areas list is generated
+     * from the firing desk's own messages, so the default makes it OWNER_ONLY --
+     * and it is cited from every desk, exactly as the six reference lists are.
+     * Being generated says how a publication is BUILT; it does not say who reaches
+     * for it.
+     */
+    private static final Map<String, SeriesAvailability> AVAILABILITY_BY_SERIES =
+            new LinkedHashMap<>();
+
+    static {
+        // The three the weekly desks own outright. Each is an UPLOADED_FILE, so
+        // the content mode would have shared all three with every domain.
+        AVAILABILITY_BY_SERIES.put("accumulated-yearly-ntm", SeriesAvailability.OWNER_ONLY);
+        AVAILABILITY_BY_SERIES.put("nm-annex-ice-service", SeriesAvailability.OWNER_ONLY);
+        AVAILABILITY_BY_SERIES.put("nm-annex-ncags", SeriesAvailability.OWNER_ONLY);
+
+        // And the six reference lists, which every desk cites and none owns. Also
+        // uploaded files and links, and that is exactly why the content mode
+        // cannot tell them from the three above.
+        for (String seriesId : SHARED_EVERYWHERE) {
+            AVAILABILITY_BY_SERIES.put(seriesId, SeriesAvailability.ALL_DOMAINS);
+        }
+
+        // The firing practice areas, owned by the firing desk and cited by all of
+        // them. It is the one row where the two questions genuinely pull apart:
+        // the list is GENERATED from niord-fa's own messages, so the default
+        // answers OWNER_ONLY -- and the annual "Skydeområder på søterritoriet" is
+        // referenced from notices written at every desk, which is what an editor
+        // outside niord-fa loses when the default stands.
+        AVAILABILITY_BY_SERIES.put("firing-practice-areas", SeriesAvailability.ALL_DOMAINS);
+    }
+
+    /**
+     * The ruled availability for a series, or the default for its content mode.
+     *
+     * The seriesId comes first because it is the ruling; the content mode is only
+     * consulted for a series nobody has ruled on.
+     */
+    public static SeriesAvailability availabilityFor(String seriesId, ContentMode contentMode) {
+        SeriesAvailability ruled = seriesId == null ? null : AVAILABILITY_BY_SERIES.get(seriesId);
+        return ruled != null ? ruled : SeriesAvailability.defaultFor(contentMode);
+    }
+
+    /** Every availability ruling, so a report shows what was applied rather than only what it did. */
+    public static Map<String, SeriesAvailability> availabilities() {
+        return Map.copyOf(AVAILABILITY_BY_SERIES);
+    }
+
+    /** The six the ruling shares with every domain, for a report that shows what was applied. */
+    public static List<String> sharedEverywhere() {
+        return SHARED_EVERYWHERE;
+    }
+
+    /**
+     * A series legacy produced by hand that this system produces by compiling.
+     *
+     * Everything a compilation needs and the legacy template cannot say, because
+     * legacy had no such concept: the annual accumulated NtM was an uploaded PDF
+     * somebody assembled from the year's weeklies, and there is nothing in the
+     * template to read the source series, the report or the year the practice
+     * starts from off.
+     *
+     * AND TWO THE TEMPLATE ANSWERS ABOUT THE WRONG ARTEFACT. Whether the
+     * publication is language specific, and what each language's document is
+     * called, are recorded in legacy -- about a PDF somebody assembled by hand and
+     * uploaded once. A compiled series renders one document per language, and the
+     * file name it renders to is the last segment of the public link the edition
+     * is cited by, so both answers are re-ruled here rather than copied.
+     *
+     * @param firstIssueStartsAt where the compilation's chain opens. Not the first
+     *                           imported issue's date: the uploaded years before
+     *                           it were made by hand and are kept as they are, and
+     *                           the compiled chain starts where the source series'
+     *                           frozen rows are trustworthy
+     * @param languageSpecific   whether the compilation produces one document per
+     *                           language. A compilation always does: the report is
+     *                           rendered per language, and the legacy row said
+     *                           otherwise only because the hand-assembled PDF was
+     *                           one file somebody uploaded once and both languages
+     *                           were served it
+     * @param fileNamePatterns   the file-name pattern per language. A compilation
+     *                           renders one document per language, and the file
+     *                           name is the last segment of the public link the
+     *                           edition is cited by -- so without a pattern per
+     *                           language both languages are written to the same
+     *                           path, named by the issue's public id, and the
+     *                           second render overwrites the first
+     */
+    public record CompilationShape(String sourceSeriesId, String reportId, PageSize pageSize,
+                                   PageOrientation pageOrientation, boolean mapThumbnails,
+                                   CutoffDefault cutoffDefault, Date firstIssueStartsAt,
+                                   boolean languageSpecific, Map<String, String> fileNamePatterns) {
+
+        /**
+         * The file-name patterns are held to the rules the series editor is held to.
+         *
+         * VALIDATED HERE AND NOT ONLY AT THE SERIES, because a ruling is authored
+         * in source and applied by an import that runs once under a clock. A
+         * pattern with a token nobody declared passes every plan, reaches a
+         * published file name and then a public URL -- production already serves a
+         * real PDF at .../Skydeomraader-%24%7Byear%7D.pdf because one did. Refusing
+         * at class load turns that into a failing test on the machine of whoever
+         * writes the ruling.
+         *
+         * The two rules that apply to a file pattern, both from SeriesValidator:
+         * S-14, no token outside the naming vocabulary, and S-15, one path per
+         * language -- a compilation is query-backed and multi-language, so two
+         * languages sharing a pattern write one file twice and the last language
+         * wins.
+         */
+        public CompilationShape {
+            fileNamePatterns = fileNamePatterns == null
+                    ? Map.of()
+                    : Map.copyOf(fileNamePatterns);
+
+            Map<String, String> langByPattern = new LinkedHashMap<>();
+            for (Map.Entry<String, String> e : fileNamePatterns.entrySet()) {
+                String lang = e.getKey();
+                String pattern = e.getValue();
+                if (lang == null || lang.isBlank() || pattern == null || pattern.isBlank()) {
+                    throw new IllegalArgumentException("compilation ruling for source '"
+                            + sourceSeriesId + "' carries a blank language or file-name pattern");
+                }
+                if (!IssueNaming.isExpandable(pattern)) {
+                    throw new IllegalArgumentException("compilation ruling for source '"
+                            + sourceSeriesId + "' names file-name pattern '" + pattern + "' for "
+                            + lang + ", which carries a token outside the vocabulary "
+                            + IssueNaming.TOKENS + " (S-14)");
+                }
+                String other = langByPattern.put(pattern, lang);
+                if (other != null) {
+                    throw new IllegalArgumentException("compilation ruling for source '"
+                            + sourceSeriesId + "' names the same file-name pattern '" + pattern
+                            + "' for " + other + " and " + lang + "; every language must generate "
+                            + "to its own path or the last one written wins (S-15)");
+                }
+            }
+        }
+    }
+
+    /**
+     * The compilation rulings, by the seriesId they convert.
+     *
+     * A RULING, NOT A DERIVATION, for the same reason the availability table is
+     * one: nothing in the legacy estate distinguishes "a yearly PDF somebody
+     * assembled out of the weeklies" from "a yearly PDF somebody wrote", and the
+     * difference is editorial. Recorded here so a fresh restore and a re-run
+     * produce the converted series again rather than needing the conversion
+     * applied to a deployed database by hand.
+     */
+    private static final Map<String, CompilationShape> COMPILATION_BY_SERIES = new LinkedHashMap<>();
+
+    static {
+        // The accumulated annual NtM, converted IN PLACE: same seriesId, same
+        // category, and the sixteen uploaded issues from 2002 to 2016 keep their
+        // files and their NO_MEMBERSHIP headers untouched. What changes is what
+        // the series produces from here on -- the union of the year's weekly
+        // issues, printed as those weeks printed it.
+        //
+        // 2017 is where the chain opens because that is where the source series'
+        // frozen rows begin to be a complete record of what went out: every
+        // weekly issue from 2017 on is PUBLISHED, and the years before it were
+        // assembled by hand from documents rather than member lists.
+        COMPILATION_BY_SERIES.put("accumulated-yearly-ntm", new CompilationShape(
+                "weekly-ntm",
+                "nm-accumulated",
+                PageSize.A4,
+                PageOrientation.PORTRAIT,
+                // Off, because the document is a thousand notices long and a map
+                // thumbnail per notice is what turns it from large into unusable.
+                false,
+                // Yearly and not in-force, so the period's own end is the cut-off:
+                // the annual closes when the year does.
+                CutoffDefault.PERIOD_END,
+                Date.from(ZonedDateTime.of(2017, 1, 1, 0, 0, 0, 0,
+                        ZoneId.of("Europe/Copenhagen")).toInstant()),
+                // One document per language, which the legacy row denied. What it
+                // recorded was true of the uploaded PDF -- somebody assembled one
+                // file and both languages were served it -- and it stops being
+                // true the moment the series is compiled: the report is rendered
+                // per language, so a Danish reader given the English document is
+                // the only other outcome.
+                true,
+                // And a name per language, because the file name is the last
+                // segment of the link the edition is cited by. Without one, both
+                // languages fall back to the issue's public id, write to the same
+                // path, and the second render overwrites the first -- which is not
+                // even visible as a failure, only as an English annual under a
+                // Danish link.
+                Map.of("da", "Akkumuleret-EfS-${year}.pdf",
+                        "en", "Accumulated-NtM-${year}.pdf")));
+    }
+
+    /**
+     * The compilation ruling for a series, or null where there is none.
+     *
+     * Applied by the importer AFTER every series is persisted, because the ruling
+     * names another series as an operand and a foreign key cannot point at a row
+     * that does not exist yet.
+     */
+    public static CompilationShape compilationFor(String seriesId) {
+        return seriesId == null ? null : COMPILATION_BY_SERIES.get(seriesId);
+    }
+
+    /** Every compilation ruling, so a report shows what was applied. */
+    public static Map<String, CompilationShape> compilations() {
+        return Map.copyOf(COMPILATION_BY_SERIES);
+    }
+
+    /**
+     * The series a template's editions belong to, or null when the template IS a
+     * series.
+     */
+    public static String destinationFor(String legacyTemplateId) {
+        return legacyTemplateId == null ? null : DESTINATION_BY_TEMPLATE.get(legacyTemplateId);
+    }
+
+    /** Every ruling, so a report can show what the import applied rather than only what it did. */
+    public static Map<String, String> domains() {
+        return Map.copyOf(DOMAIN_BY_SERIES);
+    }
+
+    public static Map<String, String> destinations() {
+        return Map.copyOf(DESTINATION_BY_TEMPLATE);
+    }
+}

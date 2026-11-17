@@ -1,0 +1,99 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [header]="'admin.publications.oneOff.publicWindow.title' | transloco"
+  [style]="{ width: '38rem' }"
+>
+  <div class="flex flex-col gap-4">
+    <p class="text-sm text-fg-muted">
+      {{ 'admin.publications.oneOff.publicWindow.intro' | transloco }}
+    </p>
+
+    <!--
+      Two columns only where each end actually has room for a date and a time
+      beside each other; the panel decides, not the viewport, so a narrow screen
+      drops the pair into one column instead of squeezing both.
+    -->
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(17rem,1fr))] gap-3">
+      <div class="flex flex-col gap-1">
+        <label for="public-window-from" class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.oneOff.publicWindow.from' | transloco }}
+        </label>
+        <app-date-time-field
+          inputId="public-window-from"
+          [formField]="periodForm.from"
+          [showClear]="!startRequired()"
+          [clearLabel]="'admin.publications.oneOff.publicWindow.clearFrom' | transloco"
+          [ariaLabel]="'admin.publications.oneOff.publicWindow.from' | transloco"
+        />
+        @if (startMissing()) {
+          <span class="text-xs text-danger" data-testid="public-window-start-required">
+            {{ 'admin.publications.oneOff.publicWindow.startRequired' | transloco }}
+          </span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="public-window-to" class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.oneOff.publicWindow.to' | transloco }}
+        </label>
+        <app-date-time-field
+          inputId="public-window-to"
+          [formField]="periodForm.to"
+          [showClear]="true"
+          [clearLabel]="'admin.publications.oneOff.publicWindow.clearTo' | transloco"
+          [ariaLabel]="'admin.publications.oneOff.publicWindow.to' | transloco"
+        />
+        <!--
+          What an empty end MEANS, said where it is empty: a period with no end
+          runs until somebody ends it, which is the shape most one-offs carry and
+          is not the same as a period nobody has set.
+        -->
+        @if (to() === null) {
+          <span class="text-xs text-fg-subtle">
+            {{ 'admin.publications.oneOff.publicWindow.noEnd' | transloco }}
+          </span>
+        }
+      </div>
+    </div>
+
+    <!--
+      A start that has not arrived yet is the point of this dialog as much as the
+      end is — but it looks exactly like a date somebody mistyped, so it is
+      named while it is on the screen rather than discovered afterwards.
+    -->
+    @if (scheduled()) {
+      <p class="text-sm text-fg-muted" data-testid="public-window-scheduled">
+        {{
+          'admin.publications.oneOff.publicWindow.scheduledHint'
+            | transloco: { date: scheduledFrom() }
+        }}
+      </p>
+    }
+
+    @if (inverted()) {
+      <p class="text-sm text-danger" data-testid="public-window-inverted">
+        {{ 'admin.publications.oneOff.publicWindow.inverted' | transloco }}
+      </p>
+    }
+
+    @if (errorKey(); as key) {
+      <p class="text-sm text-danger">{{ key | transloco }}</p>
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.publications.oneOff.publicWindow.cancel' | transloco }}
+    </button>
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="submitDisabled()"
+      (click)="submit()"
+      data-testid="public-window-save"
+    >
+      {{ 'admin.publications.oneOff.publicWindow.save' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

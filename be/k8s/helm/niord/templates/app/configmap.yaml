@@ -1,0 +1,121 @@
+{{- if .Values.app.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "niord.componentName" (list . "app-config") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "app") | nindent 4 }}
+data:
+  # Mounted at /config/application.yaml and loaded via SPRING_CONFIG_ADDITIONAL_LOCATION,
+  # which takes precedence over the packaged application.yml: a key rendered here wins over the
+  # jar's, and a key left out keeps the jar's. This is how the deployment is configured
+  # WITHOUT editing src/main (no application-k8s.yml is added to the jar).
+  application.yaml: |-
+    server:
+      port: {{ .Values.app.service.port }}
+
+    spring:
+      datasource:
+        url: jdbc:postgresql://{{ include "niord.db.host" . }}:{{ .Values.postgres.service.port }}/{{ .Values.postgres.database }}
+        # username and password come from a Secret, as SPRING_DATASOURCE_USERNAME / _PASSWORD
+        # in the deployment — no credential is rendered into this ConfigMap.
+      # Liquibase always builds the schema on startup (enabled by default — no flag) with the bare
+      # master changelog, and Hibernate validates against it (ddl-auto=validate, the packaged
+      # application.yml default). A new database holds no data until it is bootstrapped once with
+      # be/scripts/bootstrap.sh (be/k8s/README.md).
+      jpa:
+        properties:
+          # The original Quarkus build had no Hibernate Validator — do not enforce
+          # JPA @NotNull/@Size on persist (a documented quirk the tests pin).
+          jakarta.persistence.validation.mode: none
+      security:
+        oauth2:
+          resourceserver:
+            jwt:
+              # issuer-uri = the EXTERNAL Keycloak URL: it is the token `iss` the resource
+              # server validates (browser obtains tokens from externalKeycloakUrl).
+              issuer-uri: {{ .Values.externalKeycloakUrl }}/realms/{{ .Values.keycloak.realm }}
+              # jwk-set-uri = the INTERNAL Keycloak URL: keys are fetched from inside the
+              # cluster, so the app never tries to reach the (host-only) external issuer.
+              # Setting both makes Spring build the decoder from jwk-set-uri AND add an
+              # issuer validator — full validation, reachable keys.
+              jwk-set-uri: {{ include "niord.keycloak.internalUrl" . }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/certs
+      mail:
+        host: {{ include "niord.smtp.host" . }}
+        port: {{ include "niord.smtp.port" . }}
+
+    niord:
+      # The server's home folder is the setting niord.home, which follows NIORD_HOME (deployment.yaml;
+      # SettingsService.override); no Spring property names it.
+      smtp:
+        host: {{ include "niord.smtp.host" . }}
+        port: {{ include "niord.smtp.port" . }}
+      {{- with (dig "oidc" "allowedClients" "" .Values.app) }}
+      # The Keycloak clients whose tokens the API accepts (SecurityConfig). The application reads
+      # ONE comma-separated string, so a list in the values is joined into one: rendered as a YAML
+      # list it would not resolve, and the default would apply without a warning.
+      oidc:
+        allowed-clients: {{ join "," . | quote }}
+      {{- end }}
+      {{- if or (not (kindIs "invalid" .Values.s124.enabled)) .Values.s124.producerCode }}
+      # S-124 (values.yaml s124). Each key is rendered only when the values set it: one left
+      # out keeps the image's own value (a country image's producer code, niord-app's switch).
+      s124:
+        {{- if not (kindIs "invalid" .Values.s124.enabled) }}
+        enabled: {{ .Values.s124.enabled }}
+        {{- end }}
+        {{- with .Values.s124.producerCode }}
+        producer-code: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+    {{- if .Values.secom.enabled }}
+      # SECOM / S-124 (docs/secom-design.md). The PKCS12 stores come from the mounted
+      # secret; base64-encoded store files are auto-detected. Their passwords come from keys of
+      # the same secrets, as NIORD_SECOM_*_PASSWORD in the deployment. The runtime tunables
+      # (registry URL, callback, algorithm, chain/revocation toggles, alert recipients)
+      # are DB-backed settings injected as env vars in the deployment, NOT Spring
+      # properties — see values.yaml secom.settings.
+      secom:
+        enabled: true
+        keystore:
+          location: file:/run/secrets/secom/keystore.p12
+          alias: {{ .Values.secom.keystore.alias | quote }}
+        truststore:
+          location: file:/run/secrets/secom/truststore.p12
+          {{- with .Values.secom.truststore.rootAlias }}
+          root-alias: {{ . | quote }}
+          {{- end }}
+    {{- if .Values.secom.renewal.enabled }}
+        # Unattended renewal (identity plan T3b). The job PATCHes the renewed stores into
+        # their secrets through the Kubernetes API (the pod ServiceAccount from
+        # app/rbac.yaml) — the mounted files above are read-only and converge via the
+        # kubelet + store watch. Armed by the secomRenewalEnabled DB setting (env-injected
+        # from secom.settings), not by this config alone.
+        {{- with .Values.secom.renewal.cron }}
+        renewal-cron: {{ . | quote }}
+        {{- end }}
+        renewal:
+          mir-url: {{ required "secom.renewal.mirUrl is required when secom.renewal.enabled" .Values.secom.renewal.mirUrl | quote }}
+          org-mrn: {{ required "secom.renewal.orgMrn is required when secom.renewal.enabled" .Values.secom.renewal.orgMrn | quote }}
+          {{- with .Values.secom.renewal.serviceMrn }}
+          service-mrn: {{ . | quote }}
+          {{- end }}
+          {{- with .Values.secom.renewal.userMrn }}
+          user-mrn: {{ . | quote }}
+          {{- end }}
+          keystore:
+            location: file:/run/secrets/secom-renewal/robot.p12
+            alias: {{ .Values.secom.renewal.robotKeystore.alias | quote }}
+          k8s:
+            enabled: true
+            secret-mounts: "/run/secrets/secom={{ .Values.secom.storesSecret }},/run/secrets/secom-renewal={{ .Values.secom.renewal.robotSecret }}"
+    {{- end }}
+    {{- end }}
+
+    # The probe groups the startup/liveness/readiness probes call (/rest/actuator/health/{liveness,
+    # readiness}) and the mail health opt-out ship in the image (config/niord-core-defaults.yml).
+
+    logging:
+      level:
+        org.niord: {{ .Values.app.logLevel }}
+{{- end }}

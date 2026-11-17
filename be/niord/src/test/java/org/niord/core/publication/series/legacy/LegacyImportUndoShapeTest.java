@@ -1,0 +1,173 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series.legacy;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * What the import undo deletes, asserted over the source.
+ *
+ * The undo is the go-live window's only escape hatch: if the estate imports
+ * wrongly there is one way back, and it runs once, under time pressure, on a
+ * production database. Its failure mode is not a wrong answer -- it is a foreign
+ * key violation part way through, naming a table nobody was thinking about, at
+ * the moment somebody most needs it to work.
+ *
+ * WHY THIS IS A SOURCE ASSERTION AND NOT AN EXECUTION. Undo is scoped by
+ * importSource across the whole estate, so calling it deletes every imported
+ * series a shared database holds -- including the fixtures of whatever else is
+ * running against it. A test that destroys its neighbours' data to prove a
+ * delete list is complete is a worse trade than one that reads the delete list.
+ * What is checked here is precisely what was missing: a child table with a
+ * foreign key into what the undo removes, and no delete for it.
+ *
+ * THE TWO NATIVE STATEMENTS ARE MATCHED AS THEY ARE SPELLED IN THE SOURCE, escapes
+ * and all. Hibernate runs with globally quoted identifiers here, so the collection
+ * and join tables really are named {@code "PublicationSeries_languages"} and
+ * {@code "PublicationSeries_AvailableDomain"} in mixed case, and an unquoted name
+ * folds to lower case and resolves to nothing. The expected strings below therefore
+ * carry the {@code \"} the source file carries -- what this test reads is Java
+ * source text, not the SQL the JVM ends up sending.
+ */
+public class LegacyImportUndoShapeTest {
+
+    private static final Path SERVICE = Paths.get(
+            "src/main/java/org/niord/core/publication/series/legacy/LegacyImportService.java");
+
+    /** As it appears in the source: {@code DELETE FROM public.\"PublicationSeries_languages\"}. */
+    private static final String DELETE_LANGUAGES =
+            "DELETE FROM public.\\\"PublicationSeries_languages\\\"";
+
+    /** As it appears in the source: {@code DELETE FROM public.\"PublicationSeries_AvailableDomain\"}. */
+    private static final String DELETE_AVAILABLE_DOMAINS =
+            "DELETE FROM public.\\\"PublicationSeries_AvailableDomain\\\"";
+
+    @Test
+    public void theUndoDeletesTheCurationDecisions() throws IOException {
+        String src = read();
+        assertTrue(src.contains("DELETE FROM IssueOverride"),
+                "the undo does not delete IssueOverride. An override holds a foreign key to the "
+                        + "issue, so a single curation decision taken on an imported issue makes the "
+                        + "issue delete fail with a constraint violation -- and this is the only way "
+                        + "back out of a bad import.");
+    }
+
+    @Test
+    public void theUndoDeletesTheSeriesLanguageRows() throws IOException {
+        String src = read();
+        assertTrue(src.contains(DELETE_LANGUAGES),
+                "the undo does not delete the series language rows. The configured language list "
+                        + "is an element collection in its own table with a foreign key back to the "
+                        + "series; JPQL cannot address it because it is not an entity, and a bulk "
+                        + "delete of the owner does not cascade the way remove() would -- so the "
+                        + "rows survive and the series delete fails on the constraint.");
+        assertTrue(src.contains("WHERE \\\"PublicationSeries_id\\\" IN (:ids)"),
+                "the language delete no longer scopes itself by the quoted owner column. An "
+                        + "unquoted PublicationSeries_id folds to lower case and resolves to "
+                        + "nothing, which is a missing-column error inside the one operation a "
+                        + "go-live window cannot do without.");
+    }
+
+    @Test
+    public void theUndoDeletesTheAvailabilityRows() throws IOException {
+        String src = read();
+        assertTrue(src.contains(DELETE_AVAILABLE_DOMAINS),
+                "the undo does not delete the availability rows. The domains a publication is "
+                        + "shared with live in a join table with a foreign key back to the series; "
+                        + "JPQL cannot address it, and a bulk delete of the owner does not cascade "
+                        + "the way remove() would -- so the rows survive and the series delete fails "
+                        + "on the constraint, in the one operation a go-live window cannot do "
+                        + "without.");
+        assertTrue(src.contains("WHERE \\\"series_id\\\" IN (:ids)"),
+                "the availability delete no longer scopes itself by the quoted owner column; see "
+                        + "the language rows above for what an unquoted identifier does here.");
+    }
+
+    @Test
+    public void theUndoClearsTheCompiledSourceBeforeDeletingTheSeries() throws IOException {
+        String src = read();
+        assertTrue(src.contains("UPDATE PublicationSeries s SET s.sourceSeries = NULL"),
+                "the undo does not clear sourceSeries. A series that compiles another one holds a "
+                        + "foreign key into the very table the undo empties, and the import writes "
+                        + "both ends of that pairing -- so the single bulk delete over them fails "
+                        + "or succeeds depending on which row the database reaches first, because "
+                        + "foreign keys are checked per row and not per statement.");
+    }
+
+    /**
+     * The issue delete is scoped by SERIES, not by a legacy publication id.
+     *
+     * The import does not only copy issues; it opens the annuals a compiled series
+     * was missing, and those came from no legacy row and carry no legacy id. An
+     * undo that deleted "the issues that were imported" by looking for that id
+     * would leave them behind -- in a series it had just deleted, so the delete
+     * would fail on the constraint, in the one operation a go-live window cannot
+     * do without.
+     */
+    @Test
+    public void theUndoDeletesEveryIssueOfAnImportedSeriesAndNotOnlyTheImportedOnes()
+            throws IOException {
+        String src = read();
+        assertTrue(src.contains("DELETE FROM PublicationIssue i WHERE i.series.id IN :ids"),
+                "the undo no longer deletes issues by their series. Anything narrower strands the "
+                        + "annuals the import opened itself, which carry no legacyPublicationId.");
+        assertFalse(src.contains("DELETE FROM PublicationIssue i WHERE i.legacyPublicationId"),
+                "the undo deletes issues by their legacy id, which is not what the import wrote: "
+                        + "the backfilled annuals of a compiled series have none.");
+    }
+
+    /** The order is children first, and the parents last. */
+    @Test
+    public void theDeletesAreOrderedChildrenFirst() throws IOException {
+        String src = read();
+        int overrides = src.indexOf("DELETE FROM IssueOverride");
+        int languages = src.indexOf(DELETE_LANGUAGES);
+        int available = src.indexOf(DELETE_AVAILABLE_DOMAINS);
+        int issues = src.indexOf("DELETE FROM PublicationIssue i WHERE i.series.id IN :ids");
+        int sourceCleared = src.indexOf("UPDATE PublicationSeries s SET s.sourceSeries = NULL");
+        int series = src.indexOf("DELETE FROM PublicationSeries s WHERE s.id IN :ids");
+
+        assertTrue(overrides > 0 && languages > 0 && available > 0 && issues > 0
+                        && sourceCleared > 0 && series > 0,
+                "one of the six statements the ordering is about has moved or been renamed");
+        assertTrue(overrides < issues,
+                "the overrides must go before the issues they point at");
+        assertTrue(languages < series,
+                "the language rows must go before the series they point at");
+        assertTrue(available < series,
+                "and so must the availability rows");
+        assertTrue(sourceCleared < series,
+                "the compiled-source column must be cleared before the series that hold it are "
+                        + "deleted, or the delete fails on its own table's foreign key");
+    }
+
+    private static String read() throws IOException {
+        assertTrue(Files.isRegularFile(SERVICE),
+                "missing " + SERVICE + " -- this test reads source, so a move breaks it silently "
+                        + "otherwise");
+        return Files.readString(SERVICE, StandardCharsets.UTF_8);
+    }
+}

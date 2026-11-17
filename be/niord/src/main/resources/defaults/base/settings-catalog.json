@@ -1,0 +1,1238 @@
+{
+  "settings": [
+    {
+      "key": "adminAppUrl",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": "",
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "URL of the administration web app. Message links in mails and tweets point here, and the backend redirects its root (/) here. Empty: the links use baseUri.",
+      "declaredIn": [
+        "org.niord.core.NiordApp"
+      ]
+    },
+    {
+      "key": "adminIntegrationPageEnabled",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Shows the Integration section of the administration app",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "areaLastUpdate",
+      "type": "Date",
+      "codeDefault": null,
+      "baseValue": null,
+      "scope": "state",
+      "web": false,
+      "editable": false,
+      "required": false,
+      "cached": false,
+      "introducedIn": "4.0.74",
+      "description": "When the area tree's sort order was last recomputed",
+      "declaredIn": [
+        "org.niord.core.area.AreaService"
+      ]
+    },
+    {
+      "key": "authServerTrustAllCertificates",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": false,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Development only: trust any TLS certificate and host name on the Keycloak admin connection",
+      "declaredIn": [
+        "org.niord.core.keycloak.KeycloakIntegrationService"
+      ]
+    },
+    {
+      "key": "authServerUrl",
+      "type": "String",
+      "codeDefault": "/auth",
+      "baseValue": "http://localhost:8080/auth",
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The Keycloak URL. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.keycloak.KeycloakIntegrationService"
+      ]
+    },
+    {
+      "key": "baseUri",
+      "type": "String",
+      "codeDefault": "http://localhost:8080",
+      "baseValue": "http://localhost:8888",
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The base application server URI",
+      "declaredIn": [
+        "org.niord.core.NiordApp"
+      ]
+    },
+    {
+      "key": "batchFileExpiryDays",
+      "type": "Integer",
+      "codeDefault": 10,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Number of days after which batch job files are deleted. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.batch.BatchService"
+      ]
+    },
+    {
+      "key": "batchJobRootPath",
+      "type": "String",
+      "codeDefault": "${niord.home}/batch-jobs",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The root directory of the Niord batch jobs. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.batch.BatchService"
+      ]
+    },
+    {
+      "key": "batchMessageSeriesId",
+      "type": "String",
+      "codeDefault": null,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Default message series ID to use for imported messages",
+      "declaredIn": [
+        "org.niord.core.message.batch.BatchMessageImportProcessor"
+      ]
+    },
+    {
+      "key": "categoryLastUpdate",
+      "type": "Date",
+      "codeDefault": null,
+      "baseValue": null,
+      "scope": "state",
+      "web": false,
+      "editable": false,
+      "required": false,
+      "cached": false,
+      "introducedIn": "4.0.74",
+      "description": "When the category tree's sort order was last recomputed",
+      "declaredIn": [
+        "org.niord.core.category.CategoryService"
+      ]
+    },
+    {
+      "key": "country",
+      "type": "String",
+      "codeDefault": null,
+      "baseValue": "XX",
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": true,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The country",
+      "declaredIn": [
+        "org.niord.core.NiordApp"
+      ]
+    },
+    {
+      "key": "defaultLanguage",
+      "type": "String",
+      "codeDefault": "en",
+      "baseValue": "en",
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The default UI and model text language",
+      "declaredIn": [
+        "org.niord.core.NiordApp"
+      ]
+    },
+    {
+      "key": "disableLucene",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": false,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Use the experimental PostgreSQL free-text message search instead of the Lucene index",
+      "declaredIn": [
+        "org.niord.core.message.MessagePostgresIndex"
+      ]
+    },
+    {
+      "key": "documentationUrl",
+      "type": "String",
+      "codeDefault": "https://docs.niord.org",
+      "baseValue": "https://docs.niord.org",
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The URL template to the documentation site",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "editorFieldsBase",
+      "type": "json",
+      "codeDefault": null,
+      "baseValue": {
+        "type": true,
+        "orig_info": false,
+        "id": true,
+        "title": true,
+        "references": true,
+        "publish_date": true,
+        "areas": true,
+        "categories": true,
+        "positions": true,
+        "charts": false,
+        "event_dates": false,
+        "subject": true,
+        "description": true,
+        "attachments": false,
+        "publication": true,
+        "source": false,
+        "part_types": false,
+        "prohibition": false,
+        "signals": false,
+        "layout": false
+      },
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The base set of editor fields to display in the message editor",
+      "declaredIn": [
+        "org.niord.core.message.EditorFieldsService"
+      ]
+    },
+    {
+      "key": "editorFieldsNm",
+      "type": "json",
+      "codeDefault": null,
+      "baseValue": {
+        "orig_info": true,
+        "references": true,
+        "attachments": true,
+        "charts": true,
+        "event_dates": true,
+        "source": true,
+        "part_types": true,
+        "layout": true
+      },
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The additional set of editor fields to display for NM messages",
+      "declaredIn": [
+        "org.niord.core.message.EditorFieldsService"
+      ]
+    },
+    {
+      "key": "editorFieldsNw",
+      "type": "json",
+      "codeDefault": null,
+      "baseValue": { },
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The additional set of editor fields to display for NW messages",
+      "declaredIn": [
+        "org.niord.core.message.EditorFieldsService"
+      ]
+    },
+    {
+      "key": "firingExerciseScheduleDays",
+      "type": "Integer",
+      "codeDefault": 30,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Default number of scheduled days to include in generated firing exercises. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.schedule.FiringExerciseService"
+      ]
+    },
+    {
+      "key": "infoDefaultLanguage",
+      "type": "String",
+      "codeDefault": "en",
+      "baseValue": "en",
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The default language of the public niord-info website",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "infoSiteLanguages",
+      "type": "json",
+      "codeDefault": [
+        "en"
+      ],
+      "baseValue": [
+        "en"
+      ],
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The languages of the public niord-info website",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "mailDeleteAfterDays",
+      "type": "Integer",
+      "codeDefault": 30,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Delete scheduled mails older than the given value. A non-positive value means never.",
+      "declaredIn": [
+        "org.niord.core.mail.ScheduledMailService"
+      ]
+    },
+    {
+      "key": "mailMaxPerMinute",
+      "type": "Integer",
+      "codeDefault": 10,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The max number of mails to send per minute. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.mail.ScheduledMailService"
+      ]
+    },
+    {
+      "key": "mailSender",
+      "type": "String",
+      "codeDefault": "niord@e-navigation.net",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The sender e-mail address. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.mail.MailService"
+      ]
+    },
+    {
+      "key": "mailValidRecipients",
+      "type": "String",
+      "codeDefault": "LOG",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Comma-separated list of valid mail recipients, or 'ALL' for all recipients, or 'LOG' for simulation",
+      "declaredIn": [
+        "org.niord.core.mail.MailService"
+      ]
+    },
+    {
+      "key": "mapDefaultLatitude",
+      "type": "Integer",
+      "codeDefault": 56,
+      "baseValue": 56,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Default latitude to use for maps",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "mapDefaultLongitude",
+      "type": "Integer",
+      "codeDefault": 11,
+      "baseValue": 11,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Default longitude to use for maps",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "mapDefaultZoomLevel",
+      "type": "Integer",
+      "codeDefault": 6,
+      "baseValue": 6,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Default zoom level to use for maps",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "mapImageSize",
+      "type": "Integer",
+      "codeDefault": 256,
+      "baseValue": null,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Size of map thumbnails. Read at start-up.",
+      "declaredIn": [
+        "org.niord.web.map.MessageMapImageGenerator"
+      ]
+    },
+    {
+      "key": "mapImageZoomLevel",
+      "type": "Integer",
+      "codeDefault": 8,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The map thumbnail zoom level used for single-position messages. Read at start-up.",
+      "declaredIn": [
+        "org.niord.web.map.MessageMapImageGenerator"
+      ]
+    },
+    {
+      "key": "mapTileCachePath",
+      "type": "String",
+      "codeDefault": "${niord.home}/tile-cache",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": false,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Folder of the backend's map tile cache, outside the repository: the tiles must never be served from it.",
+      "declaredIn": [
+        "org.niord.web.map.MapTileSettings"
+      ]
+    },
+    {
+      "key": "mapTileContact",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": "",
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "E-mail address or URL that the backend names in the User-Agent of its map tile requests, so that the tile server can reach this deployment. Empty: the baseUri.",
+      "declaredIn": [
+        "org.niord.web.map.MapTileSettings"
+      ]
+    },
+    {
+      "key": "messageIndexDeleteOnStartup",
+      "type": "Boolean",
+      "codeDefault": true,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Whether the message lucene index is re-created for each restart or not. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.message.MessageLuceneIndex"
+      ]
+    },
+    {
+      "key": "messageIndexIncludeDeletedMessages",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Whether the message index should include deleted messages or not. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.message.MessageLuceneIndex",
+        "org.niord.core.message.MessagePostgresIndex"
+      ]
+    },
+    {
+      "key": "messageIndexPath",
+      "type": "String",
+      "codeDefault": "${niord.home}/message-index",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The message Lucene index directory. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.message.MessageLuceneIndex"
+      ]
+    },
+    {
+      "key": "mode",
+      "type": "String",
+      "codeDefault": "production",
+      "baseValue": "test",
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The Niord execution mode, either 'development', 'test' or 'production'.",
+      "declaredIn": [
+        "org.niord.core.NiordApp"
+      ]
+    },
+    {
+      "key": "modelLanguages",
+      "type": "json",
+      "codeDefault": [
+        "en"
+      ],
+      "baseValue": [
+        "en"
+      ],
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The default message model languages",
+      "declaredIn": [
+        "org.niord.core.NiordApp"
+      ]
+    },
+    {
+      "key": "niord.home",
+      "type": "String",
+      "codeDefault": null,
+      "baseValue": "${user.home}/.niord",
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The root directory for the Niord application",
+      "declaredIn": [
+        "org.niord.core.settings.SettingsService"
+      ]
+    },
+    {
+      "key": "niordIntegrationAllowPrivateHosts",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Allow the Niord integration import to fetch from private/loopback addresses. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.integration.NiordIntegrationExecutionService"
+      ]
+    },
+    {
+      "key": "openSeaMapLayerEnabled",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": false,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Whether or not to display the OpenSeaMap layer in maps",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "openSeaMapUrl",
+      "type": "String",
+      "codeDefault": "https://t1.openseamap.org/seamark/{z}/{x}/{y}.png",
+      "baseValue": "https://t1.openseamap.org/seamark/{z}/{x}/{y}.png",
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Tile URL of the OpenSeaMap sea-mark layer of the web maps, with {z}, {x} and {y}. Use https from a host that sends CORS headers; a range such as {a-c} only in the first host label.",
+      "declaredIn": [
+        "org.niord.web.map.MapTileSettings"
+      ]
+    },
+    {
+      "key": "organisation",
+      "type": "String",
+      "codeDefault": null,
+      "baseValue": "Niord",
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": true,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The organisation of the service",
+      "declaredIn": [
+        "org.niord.core.NiordApp"
+      ]
+    },
+    {
+      "key": "osmUrl",
+      "type": "String",
+      "codeDefault": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "baseValue": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Base map tile URL with {z}, {x} and {y}: the web maps and, without a range such as {a-c}, the message map images. Use https from a host that sends CORS headers; a range only in the first host label. Another host: update the public site's cookie statement.",
+      "declaredIn": [
+        "org.niord.web.map.MapTileSettings"
+      ]
+    },
+    {
+      "key": "pdfEncryptionEnabled",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Whether PDF reports should be encrypted or not. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.script.FmTemplateService"
+      ]
+    },
+    {
+      "key": "pdfEncryptionPassword",
+      "type": "Password",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The PDF reports encryption password. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.script.FmTemplateService"
+      ]
+    },
+    {
+      "key": "publicationPreviewRootPath",
+      "type": "String",
+      "codeDefault": "${niord.home}/publication-preview",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Root directory for publication previews: a cache on the application's volume, swept after seven days. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.publication.series.PublicationPathService"
+      ]
+    },
+    {
+      "key": "repoCacheTimeout",
+      "type": "Integer",
+      "codeDefault": 5,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Cache timeout of repo files in minutes. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.repo.RepositoryService"
+      ]
+    },
+    {
+      "key": "secomAlertEmails",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally (empty = no alerts). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomCertificateAlertService",
+        "org.niord.secom.service.SecomCertificateRenewalService",
+        "org.niord.secom.service.SecomOutboxService",
+        "org.niord.secom.service.SecomStoreWatchService"
+      ]
+    },
+    {
+      "key": "secomAllowInsecureEndpoints",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Allow SECOM deliveries to http:// peer endpoints and to peers on loopback, link-local or private addresses (test environments only). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomOutboundClient"
+      ]
+    },
+    {
+      "key": "secomCallbackEndpoint",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Overrides the SECOM callback endpoint sent with uploads (default: baseUri + /api/secom). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomOutboxDispatcher"
+      ]
+    },
+    {
+      "key": "secomCertExpiryWarnDays",
+      "type": "Integer",
+      "codeDefault": 60,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Days before SECOM service certificate expiry at which warning mails to the secomAlertEmails recipients begin. Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomCertificateAlertService"
+      ]
+    },
+    {
+      "key": "secomEnabled",
+      "type": "Boolean",
+      "codeDefault": true,
+      "baseValue": null,
+      "scope": "operator",
+      "web": true,
+      "editable": false,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Not read: /rest/settings/web reports SECOM from niord.secom.enabled; kept because settings are add-only",
+      "declaredIn": [
+        "org.niord.secom.web.SecomAdminRestService"
+      ]
+    },
+    {
+      "key": "secomMaxSubscriptionsPerNode",
+      "type": "Integer",
+      "codeDefault": 50,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The max number of SECOM subscriptions one remote node may hold; further (non-identical) subscription requests are rejected. Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomSubscriptionService"
+      ]
+    },
+    {
+      "key": "secomMirPortalUrl",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "URL of the MCP Identity Registry management-portal page holding this node's certificates, linked from the SECOM admin page (empty = no link)",
+      "declaredIn": [
+        "org.niord.secom.web.SecomAdminRestService"
+      ]
+    },
+    {
+      "key": "secomOutboxBackoffMinutes",
+      "type": "String",
+      "codeDefault": "1,5,30,120,720",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Comma-separated backoff delays (minutes) between SECOM delivery attempts; the last value repeats. Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomOutboxService"
+      ]
+    },
+    {
+      "key": "secomOutboxMaxAttempts",
+      "type": "Integer",
+      "codeDefault": 8,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Max delivery attempts for a SECOM outbox entry before it is marked FAILED. Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomOutboxService"
+      ]
+    },
+    {
+      "key": "secomOutboxMaxPerRun",
+      "type": "Integer",
+      "codeDefault": 20,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The max number of SECOM outbox entries dispatched per scheduler run (one run per minute). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomOutboxDispatcher"
+      ]
+    },
+    {
+      "key": "secomRenewalEnabled",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Enables unattended SECOM certificate renewal via the MCP Identity Registry. Needs niord.secom.renewal.mir-url, .org-mrn, .keystore.location and .keystore.password (optional .service-mrn/.user-mrn default to the certificate UIDs). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomCertificateRenewalService"
+      ]
+    },
+    {
+      "key": "secomRenewalWindowDays",
+      "type": "Integer",
+      "codeDefault": 60,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Days before expiry at which the SECOM service and renewal-robot certificates are renewed automatically. Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomCertificateRenewalService"
+      ]
+    },
+    {
+      "key": "secomRevocationCheck",
+      "type": "Boolean",
+      "codeDefault": true,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Check SECOM peer certificates for revocation, inbound and outbound (OCSP falling back to CRL; soft-fail). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.SecomConfiguration"
+      ]
+    },
+    {
+      "key": "secomServiceRegistryInsecure",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Skip TLS validation towards the SECOM service registry (test environments only). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomOutboundClient"
+      ]
+    },
+    {
+      "key": "secomServiceRegistryUrl",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "URL of the SECOM service registry used to resolve peer endpoints. Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.service.SecomOutboundClient"
+      ]
+    },
+    {
+      "key": "secomSignatureAlgorithm",
+      "type": "String",
+      "codeDefault": "SHA2_384_WITH_ECDSA",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "SECOM signature algorithm for outgoing signatures (SHA2_384_WITH_ECDSA or SHA3_384_WITH_ECDSA). Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.SecomConfiguration"
+      ]
+    },
+    {
+      "key": "secomValidateClientChain",
+      "type": "Boolean",
+      "codeDefault": true,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Validate SECOM client certificate chains against the MCP truststore. Read at start-up.",
+      "declaredIn": [
+        "org.niord.secom.SecomConfiguration"
+      ]
+    },
+    {
+      "key": "siteLanguages",
+      "type": "json",
+      "codeDefault": [
+        "en"
+      ],
+      "baseValue": [
+        "en"
+      ],
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The languages of the website",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "stdTemplateFields",
+      "type": "json",
+      "codeDefault": [
+        "type",
+        "promulgation",
+        "id",
+        "publish_date",
+        "areas",
+        "positions",
+        "event_dates",
+        "work_vessel",
+        "markings"
+      ],
+      "baseValue": [
+        "type",
+        "promulgation",
+        "id",
+        "publish_date",
+        "areas",
+        "positions",
+        "event_dates",
+        "work_vessel",
+        "markings"
+      ],
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The possible set of standard message fields to display when executing a template",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "vipsPath",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Path to vips command on Linux. Use for faster thumbnail generation. Read at start-up.",
+      "declaredIn": [
+        "org.niord.core.repo.ThumbnailService"
+      ]
+    },
+    {
+      "key": "wmsCacheDays",
+      "type": "Integer",
+      "codeDefault": 0,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.153",
+      "description": "Days the backend keeps a sea-chart (WMS) tile on its volume before it asks the provider again; cached tiles go to logged-in users only. 0: no cache. Set it only when the provider's licence allows a cache. Read at start-up.",
+      "declaredIn": [
+        "org.niord.web.wms.WmsTileCache"
+      ]
+    },
+    {
+      "key": "wmsCacheMaxMb",
+      "type": "Integer",
+      "codeDefault": 200,
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.153",
+      "description": "The most space, in MB, the sea-chart (WMS) tile cache takes on the application's volume; a tile counts for at least 16 KB, and the oldest go first. Read at start-up.",
+      "declaredIn": [
+        "org.niord.web.wms.WmsTileCache"
+      ]
+    },
+    {
+      "key": "wmsLayerEnabled",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": false,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Whether or not to display the WMS layer in maps",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
+      "key": "wmsLayers",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The WMS layers. Read at start-up.",
+      "declaredIn": [
+        "org.niord.web.wms.WmsProxyServlet"
+      ]
+    },
+    {
+      "key": "wmsPassword",
+      "type": "Password",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The WMS Token. Read at start-up.",
+      "declaredIn": [
+        "org.niord.web.wms.WmsProxyServlet"
+      ]
+    },
+    {
+      "key": "wmsProtected",
+      "type": "Boolean",
+      "codeDefault": true,
+      "baseValue": null,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "Whether the WMS map tiles (/wms/*) require a signed-in user",
+      "declaredIn": [
+        "org.niord.web.wms.WmsProxyServlet"
+      ]
+    },
+    {
+      "key": "wmsProvider",
+      "type": "String",
+      "codeDefault": "",
+      "baseValue": null,
+      "scope": "operator",
+      "web": false,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.74",
+      "description": "The WMS provider. Read at start-up.",
+      "declaredIn": [
+        "org.niord.web.wms.WmsProxyServlet"
+      ]
+    }
+  ]
+}

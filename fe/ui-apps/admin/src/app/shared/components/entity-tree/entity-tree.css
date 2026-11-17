@@ -1,0 +1,45 @@
+/* Inactive rows (entities flagged inactive) are dimmed + italicised. The row
+ * markup lives inside this component's own template, so it is reachable by
+ * ordinary view-encapsulated styles — no `::ng-deep` needed. The layout, hover,
+ * and "already-picked" tint are shared Layer-3 classes in
+ * src/styles/components.css (.tree-row + .row-selected). */
+.tree-row.is-inactive {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* Template-node marker (opt-in `flagTemplate`): a small badge after the label. */
+.tree-row-template-badge {
+  flex: none;
+  margin-left: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--niord-primary, var(--niord-fg-subtle));
+}
+
+/* Drag-to-re-parent affordance (opt-in `dnd` mode): drag starts from the grip only,
+ * so the row's toggle/select clicks are never swallowed by the row-level cdkDrag. */
+.tree-row-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0 0.25rem;
+  color: var(--niord-fg-subtle);
+  cursor: grab;
+}
+.tree-row-drag-handle:active,
+.tree-row-drag-handle.cdk-drag-dragging {
+  cursor: grabbing;
+}
+.tree-row-drag-handle:hover {
+  color: var(--niord-fg);
+}
+
+/* The whole row lifts while dragging (cdkDrag is on the row; the grip is just the handle). */
+.tree-row.cdk-drag-dragging {
+  border-radius: var(--niord-radius-sm);
+  background: var(--niord-surface-0);
+  box-shadow: var(--niord-shadow-md, 0 4px 12px rgb(0 0 0 / 0.15));
+}
+.cdk-drag-preview .tree-row-drag-handle {
+  cursor: grabbing;
+}

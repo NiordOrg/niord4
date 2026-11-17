@@ -1,0 +1,23 @@
+<app-filter-panel label="messages.filter.status.label" (clear)="clear()">
+  <div class="flex items-center gap-1.5 flex-wrap">
+    @for (status of visibleStatuses(); track status) {
+      <button
+        type="button"
+        [class]="'status-chip ' + (status | statusClass) + (isChecked(status) ? ' is-active' : '')"
+        [attr.aria-pressed]="isChecked(status)"
+        (click)="onToggle(status, !isChecked(status))"
+      >
+        {{ 'msg.status.' + status | transloco }}
+      </button>
+    }
+    <span class="text-xs flex gap-2 ml-2">
+      <button type="button" class="link-button is-subtle" (click)="selectAll()">
+        {{ 'msg.filter.all' | transloco }}
+      </button>
+      <span class="text-surface-300">/</span>
+      <button type="button" class="link-button is-subtle" (click)="reset()">
+        {{ 'msg.filter.reset' | transloco }}
+      </button>
+    </span>
+  </div>
+</app-filter-panel>

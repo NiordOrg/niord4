@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "note": "What the country kit's package, org.niord:niord-country-kit, holds: a path relative to the kit's folder (country-kit/ in niord-ng's tree, <root>/.niord/kit in a country) that an include glob matches and no exclude glob does, plus docs/country-api.md (copied from be/docs/country-api.md) and kit.json (the marker, lib/where.mjs markerText), which the build adds at the top, and the six backend files under backend/ that init copies (lib/where.mjs KIT_BACKEND: the Maven wrapper's mvnw, mvnw.cmd and maven-wrapper.properties, the base settings file and its catalog, the PDF logo, copied from be/); the list selects no backend/ path. Everything the kit runs or reads: its scripts and lib/, every data file and both include lists (zip-include.json describes the niord-fe-src of the same version, and set-up's override check and the NIORD_BASE copy read it), the guides, API-CHANGES.md, the README, the templates and the example country, example/fe/ and example/be/, which the upgrade test reads. Never the kit's tests or fixtures, its country-word list (country-words.json, the base product's own guard; a country never runs the guard), source-zip.mjs (niord-ng's publish tool), the example harness example/*.mjs (it runs only in niord-ng's tree, beside source-zip.mjs), or niord-ng's tooling for the kit's folder at the repository root (.gitattributes, .prettierrc, eslint.config.mjs). No shipped script imports a file the package leaves out, and verify checks it.",
+  "include": [
+    "{README.md,API-CHANGES.md}",
+    "*.{mjs,json}",
+    "docs/**",
+    "lib/**",
+    "templates/**",
+    "example/{fe,be}/**"
+  ],
+  "exclude": [
+    "**/*.test.mjs",
+    "**/{fixtures,test-fixtures}/**",
+    "country-words.json",
+    "source-zip.mjs",
+    "eslint.config.mjs",
+    "**/{node_modules,.niord,dist,.angular,coverage}/**"
+  ]
+}

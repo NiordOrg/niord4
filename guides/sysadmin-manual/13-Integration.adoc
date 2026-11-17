@@ -1,0 +1,100 @@
+
+:imagesdir: images
+
+[#integration]
+== Integration
+
+Niord can take the published messages of another Niord server into one of its own message series. Each such
+link is a _Niord integration point_: the address of the other server, and which of its message series go into
+which of yours. The _Niord Integration_ page lets a system administrator manage the integration points.
+
+A country built on the base product may add integration pages of its own, for its own systems; they are
+described in that country's documentation.
+
+[#niord-integration-page]
+=== The Niord Integration Page
+
+The page is shown in the *Sysadmin* menu, as *Niord Integration*, only when the setting
+`adminIntegrationPageEnabled` is on (see <<settings,Settings>>); a deployment that does not use the function does
+not see it. The page itself is always at the address `/sysadmin/niord-integration` of the administration
+application, whatever the setting.
+
+image::NiordIntegrationsPage.png[Niord Integration, 800]
+
+Each row shows whether the integration point is active, the address of the other server, and its message series
+mappings, each written as _source series_ -> _target series_. Type in the _Filter_ field to show only the rows
+whose address or series contain the text. The buttons at the end of a row:
+
+* *Edit Niord Integration* (the pencil) opens the integration point in the editor.
+* *Delete Niord Integration* (the bin) deletes it, after you confirm. The messages it has imported stay.
+* *Execute Niord Integration* (the gear) fetches the messages now, instead of waiting for the next scheduled time.
+  Niord answers "Integration pull started"; an error during the fetch is written to the server's log only, so
+  look at the target series to see the result.
+
+[#niord-integration-editor]
+=== Adding or Editing an Integration Point
+
+Click *New Niord Integration* to add an integration point, or the pencil of a row to change one:
+
+image::NiordIntegrationEditPage.png[Niord Integration Editor, 325]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| ID
+| The number Niord gave the integration point when it was saved.
+
+| Active
+| Only an active integration point fetches messages, on its schedule or with *Execute*. A new integration point is
+  active.
+
+| Assign new UIDs
+| Assigns a new underlying unique id (UID) to each imported message. On for a new integration point.
+
+| Create base data
+| Creates the areas, categories and charts an imported message names that this server does not have. When it is
+  off, an imported message keeps only those this server already has. Off for a new integration point.
+
+| Niord URL
+| The address of the other Niord server, such as `https://niord.example.org`: an `http` or `https` address with a
+  host name, without a user name or password, and without a query (`?...`) or a fragment (`#...`). Niord fetches
+  the messages from the other server's public interface at this address.
+
+| Message Series
+| The mappings. In each row, _Source Message Series_ is the id of a message series on the other server, and _Target
+  Message Series_ the series of this server its messages go into. *Add* adds a row, and the bin removes one. An
+  integration point without mappings fetches nothing.
+
+|===
+
+*Save Niord Integration* saves the integration point, and *Cancel* closes the editor without saving.
+
+[#niord-integration-fetch]
+=== How Messages Are Fetched
+
+Niord looks for integration points to run every minute, and runs an active integration point about once an hour:
+60 minutes after its last run, plus up to a minute more, so that integration points do not all run at the same
+time. A new integration point first runs an hour after it is saved, unless you click *Execute*.
+
+On each run, Niord fetches the published messages of the source series from the other server, and for each target
+series:
+
+* imports, as published messages, the messages it has not imported before;
+* imports again a message the other server has changed since it was imported, and then cancels the old copy;
+* cancels a message it imported earlier that the other server no longer publishes.
+
+Niord keeps the other server's id of each message it imports as the message's _legacy id_, and recognises its
+copies by it: a published message of the target series that has a legacy id the other server no longer
+publishes is cancelled. So give each integration point target series of its own, which no other import fills.
+
+[#niord-integration-security]
+=== Private Addresses
+
+Niord does not fetch from an address on a private network (such as `10.x.x.x` or `192.168.x.x`) or from the
+server itself, so that an integration point cannot be used to reach into the network the server runs in. When the
+other Niord server really is on a private network, turn on the setting `niordIntegrationAllowPrivateHosts`. Niord
+reads this setting when the server starts, so restart the server after you change it.
+
+The other server's certificate must be one this server trusts, and must match its host name.

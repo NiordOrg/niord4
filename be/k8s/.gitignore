@@ -1,0 +1,10 @@
+# Former output of secom-test-secrets.sh (throwaway listener + client keys), still on
+# machines that ran it before SECOM Edition 2; the script deletes it, this keeps it out of git
+secom-test-out/
+# Derived trust artifacts (secom-truststore.sh)
+secom-truststore-out/
+# Derived renewal-rehearsal materials (secom-renewal-rehearsal.sh)
+secom-rehearsal-out/
+# Stale subchart archives from before chart 0.4.0 (helm dependency build); the chart has no
+# dependencies now and its .helmignore keeps any leftover out of the render.
+helm/niord/charts/

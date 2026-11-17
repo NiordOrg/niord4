@@ -1,0 +1,80 @@
+# Local-run profile for the generic English application. Activate with:
+#
+#   ./mvnw -pl niord-app spring-boot:run
+#
+# (the module pom defaults spring-boot.run.profiles to `local`, so no -D is needed).
+#
+# This profile starts from an EMPTY database, so start-up adds every setting from niord-base's own
+# defaults/base/settings.json: niord.home follows NIORD_HOME when it is set, else the base product's
+# ${user.home}/.niord (../start-local.sh passes -Dniord.home, which wins over both), and authServerUrl is the
+# absolute http://localhost:8080/auth, so no authServerUrl override is needed.
+#
+# A new database holds no data until it is bootstrapped once: ../start-local.sh does that by itself, or run
+# scripts/bootstrap.sh with the base product's bootstrap (niord/bootstrap/, zipped) yourself.
+server:
+  port: 8888
+  # Loopback only, like the docker-compose ports: a local run is not reachable from the network.
+  address: 127.0.0.1
+
+spring:
+  # spring-boot-devtools' LiveReload server listens on all interfaces (:35729) and nothing here uses
+  # it — ./reload.sh restarts rely on the classpath watcher, not LiveReload.
+  devtools:
+    livereload:
+      enabled: false
+
+  # Dev-time only (spring-boot-docker-compose, an <optional> dependency that deactivates itself
+  # when running from a packaged jar): `mvn spring-boot:run` runs `docker compose up` on the file
+  # below and blocks until every published port accepts connections, so the app cannot race
+  # Postgres or Keycloak. No manual `docker compose up -d` step. It runs `up` only when none of the
+  # services runs, and that `up` needs the realm at ~/.niord-local/keycloak/, which ./run.sh and
+  # ../start-local.sh copy there.
+  #
+  # start-only: the containers are NOT torn down when the app stops, so a restart is fast and the
+  # database survives. Stop them yourself with `docker compose down` from be/.
+  #
+  # No service-connection labels are set on the compose services, so this manages lifecycle and
+  # readiness only — the datasource below stays the single, readable source of truth and the app
+  # works unchanged against a database you started yourself (add
+  # -Dspring-boot.run.jvmArguments=-Dspring.docker.compose.enabled=false to skip compose entirely).
+  docker:
+    compose:
+      file: ../docker-compose.yml
+      lifecycle-management: start-only
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/niord
+    username: niord
+    password: niord
+
+  # No spring.liquibase.change-log override: this profile keeps the niord-base default
+  # (db/changelog/db.changelog-master.yaml), which builds the schema and stops there. A fresh
+  # database therefore comes up EMPTY: start-up adds the texts and the settings from niord-base's
+  # English-only defaults (modelLanguages / siteLanguages = ["en"]), and everything else, the
+  # "niord-client-master" domain included, comes from the bootstrap (docs/code-data-config-plan.md §7).
+
+  jpa:
+    properties:
+      # The original Quarkus build had no Hibernate Validator — don't enforce JPA constraints on persist.
+      jakarta.persistence.validation.mode: none
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Validate bearer tokens against the docker-compose Keycloak's niord realm
+          # (realm source: keycloak/niord-realm-local.json; users sysadmin, admin, editor, user — password = name).
+          issuer-uri: http://localhost:8080/auth/realms/niord
+
+  mail:
+    host: localhost
+    port: 1025
+
+niord:
+  smtp:
+    host: localhost
+    port: 1025
+
+logging:
+  level:
+    org.niord: INFO

@@ -1,0 +1,182 @@
+<!-- Chrome bg/fg live in header.css (Layer 4 — reads --niord-header-bg / -fg
+     tokens). Color inherits to descendants so nav links / dropdown triggers /
+     burger don't need `text-white` repeated. The 3px brand bar at the bottom
+     of the chrome is a `header::after` pseudo-element (see header.css).
+     The session-domain affordance is shown as a colored badge wrapped
+     around the domain dropdown's icon (see domain-menu.service.ts). -->
+<header>
+  <div class="app-shell-gutter flex items-center gap-2 py-2">
+    <!-- Logo (always visible) -->
+    <div class="relative mr-4 shrink-0">
+      <a
+        routerLink="/"
+        class="outline-offset-2"
+        [attr.aria-label]="'main.header.home.ariaLabel' | transloco"
+      >
+        <img
+          ngSrc="assets/img/niord_white.png"
+          [alt]="'menu.brand' | transloco"
+          width="62"
+          height="40"
+          priority
+        />
+      </a>
+      @if (showTestBadge) {
+        <!-- Decorative: `pointer-events-none` so it never intercepts a tap on the
+             content it overhangs; sits 1px under the logo so the logo's drop stays
+             uncovered; crosses the brand bar so it reads as attached to the logo. -->
+        <span
+          class="pointer-events-none absolute left-1/2 top-full z-40 mt-px -translate-x-1/2 rounded-md bg-gradient-to-b from-red-500 to-red-700 px-2 py-0.5 text-xs font-bold lg:px-3 lg:py-1 lg:text-sm leading-none tracking-wider text-white shadow-md ring-1 ring-red-900/60 select-none ring-inset [text-shadow:0_-1px_0_rgba(0,0,0,0.35)]"
+          [attr.aria-label]="'main.header.testBadge.ariaLabel' | transloco"
+        >
+          {{ testBadgeLabel ?? ('main.header.testBadge.label' | transloco) }}
+        </span>
+      }
+    </div>
+
+    <!-- Desktop layout (lg+): nav links left, action triggers right. Each
+         dropdown trigger toggles its own popup menu on click — no hover
+         activation, matching the rest of the app (Actions menu, per-row cog, etc.).
+         Switches at lg (not md): the full nav + domain + account + language set
+         doesn't fit the md–lg band (e.g. iPad portrait), so the burger covers it. -->
+    <nav
+      class="flex flex-1 items-center gap-1 max-lg:hidden"
+      [attr.aria-label]="'main.header.navigation.ariaLabel' | transloco"
+    >
+      @for (item of navItems(); track item.label) {
+        <a
+          [routerLink]="item.routerLink"
+          routerLinkActive="bg-white/10 font-semibold"
+          class="nav-item-states inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 no-underline"
+        >
+          <app-icon [name]="item.icon ?? ''" />
+          <span>{{ item.label }}</span>
+        </a>
+      }
+
+      <div class="ml-auto flex items-center gap-1">
+        @if (helpItem(); as h) {
+          <a
+            [href]="h.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="nav-item-states inline-flex cursor-pointer items-center rounded-md px-3 py-2 no-underline"
+            [attr.aria-label]="h.label"
+            [title]="h.label"
+          >
+            <app-icon [name]="h.icon ?? ''" />
+          </a>
+        }
+
+        @if (domainItem(); as d) {
+          <button
+            type="button"
+            class="nav-item-states inline-flex cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-current"
+            [appMenuTriggerFor]="domainMenu"
+            [attr.aria-label]="d.label"
+          >
+            <!-- Session-domain colour disc: iconClass ("rounded-full p-1") + iconStyle
+                 (domain background-colour + contrasting glyph colour) wrap the sitemap glyph. -->
+            <app-icon [name]="d.icon ?? ''" [class]="d.iconClass" [style]="d.iconStyle" />
+            <span>{{ d.label }}</span>
+            <app-icon name="lucideChevronDown" class="text-xs opacity-70" />
+          </button>
+          <app-menu #domainMenu [model]="d.items ?? []" [itemDef]="headerItem" />
+        }
+
+        @if (accountItem().items?.length) {
+          <button
+            type="button"
+            class="nav-item-states inline-flex cursor-pointer items-center gap-1 rounded-md border-0 bg-transparent px-3 py-2 text-current"
+            [appMenuTriggerFor]="accountMenu"
+            [attr.aria-label]="accountItem().label"
+            [title]="accountItem().label"
+          >
+            <app-icon [name]="accountItem().icon ?? ''" />
+            <app-icon name="lucideChevronDown" class="text-xs opacity-70" />
+          </button>
+          <app-menu #accountMenu [model]="accountItem().items ?? []" [itemDef]="headerItem" />
+        } @else {
+          <button
+            type="button"
+            class="nav-item-states inline-flex cursor-pointer items-center gap-1 rounded-md border-0 bg-transparent px-3 py-2 text-current"
+            (click)="onAccountLogin($event)"
+            [attr.aria-label]="accountItem().label"
+            [title]="accountItem().label"
+          >
+            <app-icon [name]="accountItem().icon ?? ''" />
+          </button>
+        }
+
+        @if (languageItem(); as l) {
+          <button
+            type="button"
+            class="nav-item-states inline-flex cursor-pointer items-center gap-1 rounded-md border-0 bg-transparent px-3 py-2 text-current"
+            [appMenuTriggerFor]="languageMenu"
+            [attr.aria-label]="l.label"
+            [title]="l.label"
+          >
+            <!-- The flag, or the language's name where the build ships no flag for it. -->
+            @if (l.icon) {
+              <i [class]="l.icon" [style]="l.iconStyle"></i>
+            } @else {
+              <span>{{ l.label }}</span>
+            }
+            <app-icon name="lucideChevronDown" class="text-xs opacity-70" />
+          </button>
+          <app-menu #languageMenu [model]="l.items ?? []" [itemDef]="headerItem" />
+        }
+      </div>
+    </nav>
+
+    <!-- Mobile/tablet cluster (below lg): the session domain keeps a trigger of its
+         own beside the burger — it is the one piece of chrome that says which data
+         set is being edited, so it must stay readable without opening a menu; a long
+         domain name ellipsizes rather than pushing the burger off the row. The burger
+         is a single popup combining nav, help, account and language entries with
+         separators between sections. Each entry keeps its own icon so the section is
+         identifiable without nested submenus (the sections are flattened rather than
+         nested). -->
+    <div class="ml-auto flex min-w-0 items-center gap-1 lg:hidden">
+      @if (domainItem(); as d) {
+        <button
+          type="button"
+          class="nav-item-states inline-flex min-w-0 cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-current"
+          [appMenuTriggerFor]="domainMenuMobile"
+          [attr.aria-label]="d.label"
+        >
+          <app-icon [name]="d.icon ?? ''" [class]="d.iconClass" [style]="d.iconStyle" />
+          <span class="truncate">{{ d.label }}</span>
+          <app-icon name="lucideChevronDown" class="text-xs opacity-70" />
+        </button>
+        <app-menu #domainMenuMobile [model]="d.items ?? []" [itemDef]="headerItem" />
+      }
+      <button
+        type="button"
+        class="nav-item-states inline-flex cursor-pointer items-center rounded-md border-0 bg-transparent px-3 py-2 text-current"
+        [appMenuTriggerFor]="mobileMenu"
+        [attr.aria-label]="'main.header.menuToggle.ariaLabel' | transloco"
+      >
+        <app-icon name="lucideMenu" class="text-xl" />
+      </button>
+      <app-menu #mobileMenu [model]="mobileItems()" [itemDef]="headerItem" />
+    </div>
+  </div>
+
+  <!-- Shared row body for all four header menus: the icon slot renders an
+       icon glyph, a language-flag background, or a domain-colour disc
+       (icon = CSS classes, iconStyle = inline style), then the label. -->
+  <ng-template #headerItem let-item>
+    @if (item.icon) {
+      @if (isGlyphIcon(item.icon)) {
+        <app-icon [name]="item.icon" [class]="item.iconClass" [style]="item.iconStyle" />
+      } @else {
+        <span
+          [class]="(item.icon ?? '') + ' ' + (item.iconClass ?? '')"
+          [style]="item.iconStyle"
+        ></span>
+      }
+    }
+    <span class="flex-1">{{ item.label }}</span>
+  </ng-template>
+</header>

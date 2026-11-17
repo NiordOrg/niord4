@@ -1,0 +1,48 @@
+<app-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [style]="{ width: '52rem', maxWidth: '94vw' }"
+  [header]="'admin.batch.log.title' | transloco"
+>
+  <div class="flex flex-col gap-3">
+    @if (fileNames().length > 0) {
+      <div
+        class="flex flex-wrap gap-2"
+        role="radiogroup"
+        [attr.aria-label]="'admin.batch.log.title' | transloco"
+      >
+        @for (name of fileNames(); track name) {
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="name === selectedFile()"
+            class="rounded-niord-md border px-3 py-1 text-xs"
+            [class.border-surface-300]="name !== selectedFile()"
+            [class.border-primary]="name === selectedFile()"
+            [class.bg-primary-50]="name === selectedFile()"
+            (click)="selectFile(name)"
+          >
+            {{ name }}
+          </button>
+        }
+      </div>
+    } @else {
+      <p class="text-sm text-fg-muted">{{ 'admin.batch.log.empty' | transloco }}</p>
+    }
+
+    <textarea
+      class="text-viewer"
+      readonly
+      [attr.aria-label]="'admin.batch.log.contentLabel' | transloco"
+      [value]="content()"
+    ></textarea>
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary text-sm" (click)="close()">
+      <span>{{ 'admin.batch.log.close' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

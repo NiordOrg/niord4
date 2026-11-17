@@ -1,0 +1,241 @@
+{{- if .Values.keycloak.enabled -}}
+{{- $production := eq .Values.keycloak.mode "production" -}}
+{{- /* Who the init container connects as: the superuser of this release's Postgres where this release makes the
+       database users, else the one user there is (on someone else's database too, whatever postgres.admin names). */ -}}
+{{- $initSecret := include "niord.postgres.secretName" . }}
+{{- if include "niord.postgres.ownUser" . }}{{- $initSecret = include "niord.postgres.adminSecretName" . }}{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "niord.componentName" (list . "keycloak") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "keycloak") | nindent 4 }}
+spec:
+  replicas: 1
+  # One Keycloak at a time: the old pod is told to stop before the new one is created. It may
+  # still be shutting down when the new pod starts, so in production mode the init container
+  # waits until the old one has left the database.
+  # Not `Recreate`: a Deployment created with the default strategy keeps its defaulted
+  # rollingUpdate under server-side apply (Helm 4), and `Recreate` next to it is invalid.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "niord.componentSelectorLabels" (list . "keycloak") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "niord.componentSelectorLabels" (list . "keycloak") | nindent 8 }}
+      annotations:
+        checksum/realm: {{ include "niord.keycloak.realmJson" . | sha256sum }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # The image's own user (1000), which owns /opt/keycloak/data. Pod Security `restricted`.
+      securityContext:
+        {{- include "niord.podSecurityContext" 1000 | nindent 8 }}
+      {{- if $production }}
+      initContainers:
+        # Creates keycloak.database when it is missing. Not the postgres.databases Job: Argo CD
+        # runs that hook after the sync, once every resource is healthy, and Keycloak cannot be
+        # healthy without its database.
+        # Where this release makes the database users (postgres.admin, values.yaml), it connects
+        # as the superuser and gives the database to Keycloak's own user (keycloak.db), as the
+        # app's init container does for the app's (niord.postgres.userScript, _helpers.tpl).
+        # Otherwise it connects as the one user there is, which Keycloak connects as too.
+        # Then waits until no session is left on that database: the previous pod's Keycloak
+        # holds some until it has stopped, and the new version must not migrate the schema
+        # under it. After 60 seconds (the old pod's grace period is 30) the sessions left are
+        # someone else's, and Keycloak starts.
+        - name: create-database
+          # The Postgres image itself: it brings psql and pg_isready.
+          image: {{ include "niord.image" (list . "postgres") | quote }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+            # The image's own postgres user, as the databases Job runs.
+            runAsUser: 999
+            runAsGroup: 999
+          env:
+            - name: PGHOST
+              value: {{ include "niord.db.host" . | quote }}
+            - name: PGPORT
+              value: {{ .Values.postgres.service.port | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $initSecret }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $initSecret }}
+                  key: password
+            - name: PGDATABASE
+              value: postgres
+            - name: DATABASE
+              value: {{ .Values.keycloak.database | quote }}
+            {{- if include "niord.postgres.ownUser" . }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.keycloak.dbSecretName" . }}
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.keycloak.dbSecretName" . }}
+                  key: password
+            # Keycloak needs no extension: a missing database is made from Postgres' own template.
+            - name: TEMPLATE
+              value: template1
+            {{- end }}
+          command:
+            - sh
+            - -c
+            - |
+              {{- if include "niord.postgres.ownUser" . }}
+              {{- include "niord.postgres.userScript" . | nindent 14 }}
+              {{- else }}
+              set -eu
+              until pg_isready -q; do echo "waiting for $PGHOST:$PGPORT ..."; sleep 2; done
+              if [ "$(psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$DATABASE'")" = 1 ]; then
+                echo "database $DATABASE exists"
+              else
+                psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$DATABASE\" OWNER \"$PGUSER\""
+                echo "database $DATABASE created"
+              fi
+              {{- end }}
+              i=0
+              while [ "$i" -lt 30 ] && [ "$(psql -tAc "SELECT count(*) FROM pg_stat_activity WHERE datname = '$DATABASE'")" != 0 ]; do
+                echo "waiting for the sessions on $DATABASE to end ..."
+                i=$((i + 1))
+                sleep 2
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+      {{- end }}
+      containers:
+        - name: keycloak
+          image: {{ include "niord.image" (list . "keycloak") | quote }}
+          imagePullPolicy: {{ .Values.keycloak.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          args:
+            {{- if $production }}
+            - start
+            {{- else }}
+            - start-dev
+            {{- end }}
+            - --import-realm
+            - --http-relative-path=/auth
+            # Keycloak 26 hostname v2: --hostname is the FULL public frontend URL and must
+            # INCLUDE the path (unlike v1's split hostname/relative-path). Setting it to
+            # externalKeycloakUrl (http://localhost:18888/auth) makes the issuer
+            # http://localhost:18888/auth/realms/niord — matching the app's issuer-uri and the
+            # proxy's /auth route. --http-relative-path=/auth keeps Keycloak serving under /auth.
+            # The in-cluster app reaches Keycloak by its Service name for the backchannel (JWKS,
+            # admin calls): hostname v2 serves any host, and only the URLs it hands out use
+            # this one.
+            - --hostname={{ .Values.externalKeycloakUrl }}
+            {{- if $production }}
+            # Plain HTTP behind the proxy, which (or the Ingress before it) ends TLS; the
+            # proxy's X-Forwarded-* headers give the browser's scheme and address.
+            - --http-enabled=true
+            - --proxy-headers=xforwarded
+            # One replica: no cluster to discover. `start` first builds Keycloak for its
+            # build-time options (the database, the cache, the /auth path) on every start,
+            # which adds some seconds.
+            - --cache=local
+            - --db=postgres
+            - --db-url-host={{ include "niord.db.host" . }}
+            - --db-url-port={{ .Values.postgres.service.port }}
+            - --db-url-database={{ .Values.keycloak.database }}
+            {{- else }}
+            # The start-dev default, set explicitly.
+            - --hostname-strict=false
+            {{- end }}
+          env:
+            # Keycloak 26 renamed the temporary-admin bootstrap variables (was KEYCLOAK_ADMIN[_PASSWORD]).
+            # From the Secret keycloak.existingSecret names, or the chart's local default. Keycloak
+            # creates this admin only when its master realm has none, so in production mode on
+            # the first start only.
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.keycloak.secretName" . }}
+                  key: username
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.keycloak.secretName" . }}
+                  key: password
+            # Log every successful user event (LOGIN, LOGOUT, CODE_TO_TOKEN, ...) at INFO.
+            # The realm's jboss-logging event listener (files/niord-realm.json, eventsListeners)
+            # writes failed events at WARN by default but successful ones at DEBUG, below the
+            # console log level, so a successful login never reached the log. The logging
+            # requirement wants logins kept: with this the line reaches stdout, where the
+            # cluster's log collector keeps it. Keycloak 26 option spelling, with the double
+            # dashes (spi-events-listener--jboss-logging--success-level).
+            - name: KC_SPI_EVENTS_LISTENER__JBOSS_LOGGING__SUCCESS_LEVEL
+              value: info
+            {{- if $production }}
+            # Keycloak's database user: keycloak.db's where this release makes the users, else
+            # the one user there is (niord.keycloak.dbSecretName).
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.keycloak.dbSecretName" . }}
+                  key: username
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.keycloak.dbSecretName" . }}
+                  key: password
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+          # The first start in production mode builds, creates the schema and imports the
+          # realm before it listens: up to 5 minutes before liveness takes over.
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            # The niord realm endpoint returns 200 once the realm is imported.
+            httpGet:
+              path: /auth/realms/{{ .Values.keycloak.realm }}
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 40
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.keycloak.resources | nindent 12 }}
+      volumes:
+        - name: realm
+          configMap:
+            name: {{ include "niord.componentName" (list . "keycloak-realm") }}
+{{- end }}

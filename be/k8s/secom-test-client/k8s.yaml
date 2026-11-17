@@ -1,0 +1,72 @@
+# SECOM test client: a minimal in-cluster SECOM consumer for rehearsing the S-124
+# publish -> push -> acknowledge round trip against the Niord SECOM endpoint.
+# Deployed by k8s/scripts/secom-test-client.sh, which also creates the
+# niord-secom-test-client secret (client-one.p12 + truststore.p12 from the committed
+# test PKI) and points Niord's secomServiceRegistryUrl at this Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secom-test-client
+  labels:
+    app.kubernetes.io/name: secom-test-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: secom-test-client
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: secom-test-client
+    spec:
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: secom-test-client
+          image: secom-test-client:dev
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NIORD_SECOM_URL
+              value: http://niord-proxy:18888/api/secom
+            - name: OWN_ENDPOINT
+              value: http://secom-test-client:8080
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          volumeMounts:
+            - name: pki
+              mountPath: /run/secrets/secom-client
+              readOnly: true
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: pki
+          secret:
+            secretName: niord-secom-test-client
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secom-test-client
+  labels:
+    app.kubernetes.io/name: secom-test-client
+spec:
+  selector:
+    app.kubernetes.io/name: secom-test-client
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

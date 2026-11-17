@@ -1,0 +1,55 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [size]="kind() === 'LIST' ? 'xwide' : 'wide'"
+  [dirty]="dirty()"
+  (closed)="closed.emit()"
+>
+  @if (model()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex h-full flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="param-type-name" class="text-sm font-medium text-fg-title">
+          {{ 'admin.paramTypes.field.name' | transloco }}
+        </label>
+        <input id="param-type-name" type="text" [formField]="form.name" class="w-full text-input" />
+      </div>
+
+      @if (kind() === 'LIST') {
+        <div class="flex min-h-0 flex-1 flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.paramTypes.field.values' | transloco }}
+          </span>
+          <app-list-values-editor
+            [values]="listValues()"
+            (valuesChange)="listValues.set($event)"
+            (valuesChanged)="onValueChanged()"
+          />
+        </div>
+      } @else if (kind() === 'COMPOSITE') {
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.paramTypes.field.params' | transloco }}
+          </span>
+          <app-template-params-field
+            [templateParams]="compositeParams()"
+            (templateParamsChange)="compositeParams.set($event)"
+            types="STANDARD,LIST"
+            (paramsChanged)="onValueChanged()"
+          />
+        </div>
+      }
+
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.paramTypes.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.paramTypes.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

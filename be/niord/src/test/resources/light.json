@@ -1,0 +1,39 @@
+  {
+    "type": "Feature",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -52.1226806640625,
+        70.67587280273438
+      ]
+    },
+    "properties": {
+      "aton": {
+        "id": 69995,
+        "lat": 70.67587280273438,
+        "lon": -52.1226806640625,
+        "user": "sysadmin",
+        "uid": 765,
+        "visible": true,
+        "version": 1,
+        "changeset": 7,
+        "timestamp": "2007-07-10T22:00:00Z",
+        "tags": {
+          "seamark:ref": "3810-13-76",
+          "seamark:light:ref": "7772b",
+          "seamark:locality": "Ca. 22 m fra bagfyret",
+          "seamark:name": "Umanak Havn Forfyr.",
+          "seamark:type": "beacon_special_purpose",
+          "seamark:beacon_special_purpose:colour": "amber",
+          "seamark:light:int_ref": "L5951",
+          "seamark:light:information": "Gittermast med rød trekant med opadvendt spids",
+          "seamark:light:elevation": "22.0",
+          "seamark:light:colour": "green",
+          "seamark:light:character": "Iso",
+          "seamark:light:height": "4.5",
+          "seamark:light:range": "3.5",
+          "seamark:light:period": "2.0"
+        }
+      }
+    }
+  }

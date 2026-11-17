@@ -1,0 +1,11 @@
+/* TypeScript project config for the Playwright e2e suite. The Angular
+   app and unit-test configs deliberately scope to src/**; this one
+   covers the e2e/ folder so the IDE resolves imports and types. */
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../../out-tsc/e2e",
+    "types": []
+  },
+  "include": ["**/*.ts"]
+}

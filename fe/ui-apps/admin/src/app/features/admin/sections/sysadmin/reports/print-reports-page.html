@@ -1,0 +1,131 @@
+<app-admin-section-page
+  titleKey="admin.sections.reports.label"
+  descriptionKey="admin.reports.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.reports.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.reports.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.reports.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <button type="button" class="btn-primary" (click)="addReport()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.reports.new' | transloco }}
+    </button>
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.reports.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.reports.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.reports.loadError' | transloco"
+      [retryLabel]="'admin.reports.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.reports().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.reports.empty.none' | transloco" />
+    } @else {
+      <app-empty-state icon="lucideFilterX" [title]="'admin.reports.empty.noMatches' | transloco" />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-48">{{ 'admin.reports.column.reportId' | transloco }}</th>
+            <th>{{ 'admin.reports.column.name' | transloco }}</th>
+            <th class="w-24">{{ 'admin.reports.column.sortOrder' | transloco }}</th>
+            <th>{{ 'admin.reports.column.templatePath' | transloco }}</th>
+            <th>{{ 'admin.reports.column.domains' | transloco }}</th>
+            <th class="w-24">
+              <span class="sr-only">{{ 'admin.reports.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (report of pageRows(); track report.reportId) {
+            <tr>
+              <td class="font-mono text-xs">{{ report.reportId }}</td>
+              <td>{{ report.name }}</td>
+              <td>{{ report.sortOrder }}</td>
+              <td class="font-mono text-xs">{{ report.templatePath }}</td>
+              <td class="text-sm">{{ domainNames(report) }}</td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.reports.editReport' | transloco"
+                  (click)="editReport(report)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.reports.deleteReport' | transloco"
+                  (click)="deleteReport(report)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-report-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="onEditorClosed()"
+  />
+
+  <app-json-import-dialog
+    titleKey="admin.reports.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.reports.label"
+    (closed)="onImportClosed()"
+  />
+
+  <!-- Host for the test-print dialog (the print service is a root singleton; the
+       dialog component must be mounted in this area to render here). -->
+  <app-message-print-dialog />
+
+  <app-confirm />
+</app-admin-section-page>

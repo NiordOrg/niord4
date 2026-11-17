@@ -1,0 +1,106 @@
+
+[#code-data-and-configuration]
+== Code, data and configuration
+
+A running deployment's data belongs to its operators. Niord 4 therefore keeps three things
+apart, and the rules of this chapter decide what a change to the repository may do to a
+deployment. The rules in full are in `be/AGENTS.md` (_Code, data and configuration_); the
+reasoning behind them is in `docs/code-data-config-plan.md`.
+
+[#three-kinds]
+=== Three kinds of thing
+
+* *Data* is everything an operator can see and edit in the administration application: domains,
+  message series, areas, categories, and also every template, script and report, the built-in
+  ones included. Data lives in the database.
+* *Code* is everything else that the repository ships: the Java and TypeScript code, the default
+  texts and the default settings files.
+* *Configuration* is the Spring properties a deployment sets. They are read at start-up and never
+  written to the database.
+
+The templates are data, not code: no jar or image holds one, and the backend reads every template
+and script from the database only.
+
+[#what-a-change-may-do]
+=== What a change to the repository may do to a deployment
+
+* A change never changes or deletes a deployment's rows. It may only add keys a deployment never
+  had: new text keys and new setting keys. Start-up adds such a key where it is missing, and never
+  touches it again; an operator's value stays.
+* Nothing is reloaded and nothing is reset. A read never writes a row, there is no reload of a
+  template from a jar and no reset to a default, and what an operator deleted stays deleted. The
+  backend remembers which default texts it added and which an operator deleted (`DefaultsLedger`),
+  so a deleted text does not come back at the next start.
+* A Liquibase changeset changes the schema, and changes values only as far as a schema change
+  requires. It never inserts content, deletes rows or changes what a value says.
+* A template path the code relies on is listed in `RequiredTemplates`; a template a deployment does
+  not have is reported by the missing-path report at start-up and at
+  `GET /rest/script-resources/missing-paths`, never created silently.
+
+Data reaches a deployment in two ways only: by the bootstrap of a new database, and by a system
+administrator's import.
+
+[#the-bootstrap]
+=== The bootstrap of a new deployment
+
+A new database holds no data at all, not even a domain. The backend builds the schema and adds the
+default settings and English texts at its first start, and nothing else. The database is then
+_bootstrapped_ once, with the base product's bootstrap:
+
+* The bootstrap is the folder `be/niord/bootstrap/`, published with every version as
+  `org.niord:niord-bootstrap:<version>:zip`. It holds the active master domain, all the templates
+  and scripts, the base categories (among them `Firing Exercises`, whose English name the firing
+  schedule depends on), the parameter types that are not standard, the built-in reports, the
+  promulgation types and a data dictionary. The standard parameter types are part of the code and
+  held in memory, so the bootstrap may not contain them. Its data is in English only. Its
+  `README.md` lists the files.
+* A country's own bootstrap follows the base product's in the same run and adds the country's
+  domains, series, languages and templates. Within that run a later archive's values win.
+* The bootstrap command is `POST /rest/bootstrap`, which `be/scripts/bootstrap.sh` wraps; it needs
+  a system administrator's token. `./start-local.sh` runs it by itself on a new local database.
+* A bootstrap runs once, on an empty database. The command refuses a database that holds data,
+  naming the first table that holds a row, and a database bootstrapped before. `GET /rest/bootstrap`
+  tells the state: `pending`, `existing`, `in-progress`, `applied` or `failed`. A failed bootstrap
+  is not retried: the remedy is a database recreated empty and the same command with the same
+  archives.
+
+Data a new deployment needs, such as a template the code names or a built-in report, goes into the
+bootstrap, never into code that writes it at start-up.
+
+[#release-folders]
+=== Release folders and a system administrator's import
+
+A deployment that already runs gets a new or changed template only when its system administrator
+imports it. A version that changes a template ships the change in a _release folder_,
+`be/niord/bootstrap/releases/<yyyy-mm-dd>-<topic>/`, which holds:
+
+* `script-resources.json`, the templates and scripts at that release, for the import on the
+  Script resources page;
+* `texts.json`, the base product's English texts at that release, for the import on the
+  Dictionaries page;
+* `missing-paths.sql`, the missing-path report as a read-only query;
+* a `README.md` that says what changed and which overwrites to tick.
+
+The generated files are written by `ReleaseFilesGenerator` (`be/niord/bootstrap/README.md` gives the
+command), and a release folder never changes once it is merged into the main branch. A change in
+Java that a template depends on stays compatible with the templates deployments already hold.
+
+The imports on the Script resources and Dictionaries pages show a preview first. They add what is
+missing and overwrite only what the system administrator ticks, and they record who imported
+what. Whether to import at all is the system administrator's decision; nothing applies a release
+folder by itself. How a system administrator does it is described in the
+link:../sysadmin-manual/manual.html[User Manual for Sysadmins].
+
+[#defaults-and-sample]
+=== Defaults, the sample and the repository files
+
+* The base product's default texts and settings are under
+  `be/niord/src/main/resources/defaults/base/`, a country's under `defaults/country/`. Texts are
+  layered key by key, and a key is added only where it is missing. A text key Java reads is listed
+  in `RequiredTexts`.
+* The sample content of `be/niord/sample/` is loaded only into the local database `niord_sample`
+  (<<running-niord-locally>>). It is never in a jar or an image; a check in the publication run
+  makes sure of that.
+* The files of the repository (attachments, publication files) are rows of the database. The
+  folder `niord.home` on a server is a cache that nothing backs up: everything on it can be made
+  again. The database is the one thing to back up.

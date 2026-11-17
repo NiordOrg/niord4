@@ -1,0 +1,184 @@
+<app-admin-section-page titleKey="admin.sections.batch.label" descriptionKey="admin.batch.intro">
+  @if (canSysadmin()) {
+    <div class="admin-toolbar">
+      <span class="admin-toolbar-spacer"></span>
+      <button type="button" class="btn-secondary" (click)="openUpload()">
+        {{ 'admin.batch.uploadBatchSet' | transloco }}
+      </button>
+      <button type="button" class="btn-secondary" (click)="openExecuteJavaScript()">
+        {{ 'admin.batch.executeJavaScript' | transloco }}
+      </button>
+    </div>
+  }
+
+  <div class="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row">
+    <!-- Master: job-type list -->
+    <div class="flex w-full shrink-0 flex-col gap-2 lg:w-72">
+      @if (facade.types().length === 0) {
+        <app-empty-state icon="lucideInbox" [title]="'admin.batch.empty.noTypes' | transloco" />
+      } @else {
+        @for (type of facade.types(); track type.name) {
+          <button
+            type="button"
+            class="batch-type-card"
+            [class.is-selected]="type.name === facade.selectedType()"
+            [attr.aria-pressed]="type.name === facade.selectedType()"
+            (click)="selectType(type.name)"
+          >
+            <span class="flex flex-col gap-0.5">
+              <span class="font-medium text-fg">{{ type.name }}</span>
+              <span class="batch-type-count">
+                {{ 'admin.batch.executionsCount' | transloco: { count: type.instanceCount } }}
+              </span>
+            </span>
+            @if (type.runningExecutions > 0) {
+              <span class="batch-type-running">
+                {{ 'admin.batch.runningCount' | transloco: { count: type.runningExecutions } }}
+              </span>
+            }
+          </button>
+        }
+      }
+    </div>
+
+    <!-- Detail: executions table for the selected type -->
+    <div class="flex min-w-0 flex-1 flex-col">
+      @if (!facade.selectedType()) {
+        <app-empty-state icon="lucideList" [title]="'admin.batch.empty.noSelection' | transloco" />
+      } @else {
+        <app-progress-bar [visible]="facade.instancesLoading()" />
+
+        @if (!facade.instancesLoading() && facade.rows().length === 0) {
+          <app-empty-state
+            icon="lucideInbox"
+            [title]="'admin.batch.empty.noInstances' | transloco"
+          />
+        } @else if (!facade.instancesLoading()) {
+          <div class="admin-card">
+            <table class="niord-table">
+              <thead>
+                <tr>
+                  <th>{{ 'admin.batch.column.job' | transloco }}</th>
+                  <th>{{ 'admin.batch.column.started' | transloco }}</th>
+                  <th>{{ 'admin.batch.column.ended' | transloco }}</th>
+                  <th>{{ 'admin.batch.column.status' | transloco }}</th>
+                  <th class="text-right">
+                    <span class="sr-only">{{ 'admin.batch.column.actions' | transloco }}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of pageRows(); track $index) {
+                  @if (row.kind === 'instance-header') {
+                    <tr class="batch-instance-row">
+                      <td colspan="5">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <span class="font-medium text-fg">
+                            {{ 'admin.batch.jobNo' | transloco: { no: row.instance.jobNo ?? '' } }}
+                          </span>
+                          @if (row.instance.user) {
+                            <span class="text-xs text-fg-muted">{{ row.instance.user }}</span>
+                          }
+                          @if (row.instance.fileName) {
+                            <button
+                              type="button"
+                              class="link-button inline-flex items-center gap-1 text-sm"
+                              (click)="download(row.instance)"
+                            >
+                              <img [src]="thumbnailUrl(row.instance)" alt="" class="h-4 w-4" />
+                              {{ row.instance.fileName }}
+                            </button>
+                          }
+                          <button
+                            type="button"
+                            class="link-button text-sm"
+                            (click)="openLogs(row.instance)"
+                          >
+                            {{ 'admin.batch.logsLink' | transloco }}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @else {
+                    <tr>
+                      <td></td>
+                      <td class="whitespace-nowrap">{{ formatTime(row.execution.startTime) }}</td>
+                      <td class="whitespace-nowrap">
+                        @if (!isStarted(row.execution)) {
+                          {{ formatTime(row.execution.endTime) }}
+                        } @else if (showProgress(row)) {
+                          <div class="w-32">
+                            <app-progress-bar
+                              [visible]="true"
+                              mode="determinate"
+                              [value]="row.instance.progress ?? 0"
+                            />
+                          </div>
+                        }
+                      </td>
+                      <td>
+                        <span class="status-badge" [class]="statusClass(row.execution)">
+                          {{ statusKey(row.execution) | transloco }}
+                        </span>
+                      </td>
+                      <td class="text-right whitespace-nowrap">
+                        @if (row.execution.stoppable) {
+                          <button
+                            type="button"
+                            class="text-sm text-danger hover:underline"
+                            (click)="stop(row.execution)"
+                          >
+                            {{ 'admin.batch.action.stop' | transloco }}
+                          </button>
+                        }
+                        @if (row.execution.restartable) {
+                          <button
+                            type="button"
+                            class="link-button ml-2 text-sm"
+                            (click)="restart(row.execution)"
+                          >
+                            {{ 'admin.batch.action.restart' | transloco }}
+                          </button>
+                        }
+                        @if (row.execution.abandonable) {
+                          <button
+                            type="button"
+                            class="ml-2 text-sm text-fg-muted hover:underline"
+                            (click)="abandon(row.execution)"
+                          >
+                            {{ 'admin.batch.action.abandon' | transloco }}
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (facade.total() > facade.pageSize) {
+            <app-pager
+              [first]="facade.first()"
+              [rows]="facade.pageSize"
+              [total]="facade.total()"
+              (pageChange)="facade.setFirst($event)"
+            />
+          }
+        }
+      }
+    </div>
+  </div>
+
+  <app-batch-log-file-dialog />
+  <app-batch-javascript-dialog />
+  <!-- jobLink: a batch-set upload has no single job name to deep-link (the result is
+       free text), so fall back to the param-less monitor when no type is selected. -->
+  <app-json-import-dialog
+    titleKey="admin.batch.import.title"
+    [uploadUrl]="uploadUrl"
+    entityKey="admin.sections.batch.label"
+    accept=".zip"
+    [jobLink]="facade.selectedType() ? jobLinkFor(facade.selectedType()!) : '/sysadmin/batch'"
+  />
+</app-admin-section-page>

@@ -1,0 +1,182 @@
+<section>
+  <h3 class="text-base font-semibold text-fg">
+    {{ 'admin.secom.datasets.seriesTitle' | transloco }}
+  </h3>
+  <p class="mt-1 text-sm text-fg-muted">
+    {{ 'admin.secom.datasets.seriesHelpPrefix' | transloco }}
+    <a routerLink="/sysadmin/series" class="font-medium text-primary hover:underline">{{
+      'admin.sections.series.label' | transloco
+    }}</a
+    >{{ 'admin.secom.datasets.seriesHelpSuffix' | transloco }}
+  </p>
+  <p class="mt-1 mb-3 text-sm text-fg-muted">
+    {{ 'admin.secom.datasets.languagesHelp' | transloco }}
+  </p>
+
+  <app-progress-bar [visible]="facade.seriesLoading()" />
+
+  @if (facade.seriesError()) {
+    <app-error-banner
+      [title]="'admin.secom.datasets.seriesLoadError' | transloco"
+      [retryLabel]="'admin.secom.retry' | transloco"
+      (retry)="facade.refreshSeriesExposure()"
+    />
+  } @else if (!facade.seriesLoading() && seriesRows().length === 0) {
+    <app-empty-state
+      icon="lucideList"
+      [title]="'admin.secom.datasets.noSeries' | transloco"
+      [body]="'admin.secom.datasets.noSeriesBody' | transloco"
+    />
+  } @else if (!facade.seriesLoading()) {
+    <div class="admin-card max-w-2xl">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th>{{ 'admin.secom.datasets.column.series' | transloco }}</th>
+            <th class="w-40">{{ 'admin.secom.datasets.column.expose' | transloco }}</th>
+            <th class="w-56" [title]="'admin.secom.datasets.languagesHelp' | transloco">
+              {{ 'admin.secom.datasets.column.languages' | transloco }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of seriesRows(); track row.seriesId) {
+            <tr>
+              <td>
+                <label [for]="'secom-series-' + row.seriesId">{{ row.seriesId }}</label>
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  [id]="'secom-series-' + row.seriesId"
+                  [checked]="row.exposeOverSecom"
+                  [disabled]="isSavingSeries(row.seriesId)"
+                  (change)="toggleSeries(row, $any($event.target).checked)"
+                />
+              </td>
+              <td>
+                <!-- One checkbox per model language; none ticked = no restriction. -->
+                <div class="flex flex-wrap gap-x-4 gap-y-1">
+                  @for (lang of languages; track lang.value) {
+                    <label
+                      class="inline-flex items-center gap-1.5 whitespace-nowrap"
+                      [for]="'secom-series-' + row.seriesId + '-' + lang.value"
+                    >
+                      <input
+                        type="checkbox"
+                        class="checkbox"
+                        [id]="'secom-series-' + row.seriesId + '-' + lang.value"
+                        [checked]="hasLanguage(row, lang.value)"
+                        [disabled]="isSavingSeries(row.seriesId)"
+                        (change)="toggleLanguage(row, lang.value, $any($event.target).checked)"
+                      />
+                      {{ lang.label }}
+                    </label>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<section class="mt-8">
+  <h3 class="text-base font-semibold text-fg">
+    {{ 'admin.secom.datasets.datasetsTitle' | transloco }}
+  </h3>
+
+  <div class="admin-toolbar mt-3">
+    <button
+      type="button"
+      class="btn-secondary"
+      [disabled]="reconciling()"
+      [title]="'admin.secom.datasets.reconcileHelp' | transloco"
+      (click)="reconcile()"
+    >
+      <app-icon name="lucideRefreshCw" class="mr-1 text-xs" [spin]="reconciling()" />
+      {{ 'admin.secom.datasets.reconcile' | transloco }}
+    </button>
+  </div>
+
+  <app-progress-bar [visible]="facade.datasetsLoading()" />
+
+  @if (facade.datasetsError()) {
+    <app-error-banner
+      [title]="'admin.secom.datasets.loadError' | transloco"
+      [retryLabel]="'admin.secom.retry' | transloco"
+      (retry)="facade.refreshDatasets()"
+    />
+  } @else if (!facade.datasetsLoading() && facade.datasets().length === 0) {
+    <app-empty-state icon="lucideInbox" [title]="'admin.secom.datasets.empty' | transloco" />
+  } @else if (!facade.datasetsLoading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-40">{{ 'admin.secom.datasets.column.message' | transloco }}</th>
+            <th>{{ 'admin.secom.datasets.column.mrn' | transloco }}</th>
+            <th class="w-28">{{ 'admin.secom.datasets.column.status' | transloco }}</th>
+            <th class="w-56">{{ 'admin.secom.datasets.column.valid' | transloco }}</th>
+            <th class="w-44">{{ 'admin.secom.datasets.column.updated' | transloco }}</th>
+            <th class="w-24">
+              <span class="sr-only">{{ 'admin.secom.datasets.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (dataset of datasetRows(); track dataset.uuid) {
+            <tr>
+              <td class="whitespace-nowrap">{{ dataset.messageShortId || dataset.messageUid }}</td>
+              <td class="break-all">{{ dataset.mrn }}</td>
+              <td>
+                <span class="status-badge" [class]="datasetStatusClass(dataset.status)">
+                  {{ datasetStatusKey(dataset.status) | transloco }}
+                </span>
+              </td>
+              <td class="whitespace-nowrap">
+                {{ dataset.validFrom | localeDate: 'date' }} &ndash;
+                {{ dataset.validTo | localeDate: 'date' }}
+              </td>
+              <td class="whitespace-nowrap">{{ dataset.updated | localeDate }}</td>
+              <td class="whitespace-nowrap text-right">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.secom.datasets.viewGml' | transloco"
+                  [title]="'admin.secom.datasets.viewGml' | transloco"
+                  (click)="viewGml(dataset)"
+                >
+                  <app-icon name="lucideEye" />
+                </button>
+                <!-- Disabled while its POST is in flight: republish is not
+                     idempotent, so a second click duplicates every delivery. -->
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [disabled]="isRepublishing(dataset.uuid)"
+                  [attr.aria-label]="'admin.secom.datasets.republish' | transloco"
+                  [title]="'admin.secom.datasets.republishHelp' | transloco"
+                  (click)="republish(dataset)"
+                >
+                  <app-icon name="lucideSend" [spin]="isRepublishing(dataset.uuid)" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-pager
+      [first]="datasetPager.first()"
+      [rows]="datasetPager.rows"
+      [total]="datasetPager.total()"
+      (pageChange)="datasetPager.setFirst($event)"
+    />
+  }
+</section>
+
+<app-secom-gml-dialog />

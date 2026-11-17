@@ -1,0 +1,43 @@
+<app-dialog
+  [visible]="dialog.visible()"
+  (visibleChange)="dialog.onVisibleChange($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '36rem' }"
+  [header]="title().key | transloco: title().params"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2">
+      <span class="font-semibold">{{ title().key | transloco: title().params }}</span>
+      <app-help-anchor section="print-messages" />
+    </div>
+  </ng-template>
+
+  <app-message-print-settings
+    [list]="listMode()"
+    [report]="hardcodedReport()"
+    [printSettings]="printSettings()"
+    (printSettingsChange)="printSettings.set($event)"
+    [reportParams]="reportParams()"
+    (reportParamsChange)="reportParams.set($event)"
+  />
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary text-sm" (click)="dialog.dismiss()">
+      <span>{{ 'messages.print.dialog.close' | transloco }}</span>
+    </button>
+    <button
+      type="button"
+      class="btn-primary text-sm"
+      [disabled]="submitting() || !canPrint()"
+      (click)="onPrint()"
+    >
+      @if (submitting()) {
+        <app-icon name="lucideLoaderCircle" [spin]="true" />
+      } @else {
+        <app-icon name="lucidePrinter" />
+      }
+      <span>{{ 'messages.print.dialog.print' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

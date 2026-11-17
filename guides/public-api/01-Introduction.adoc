@@ -1,0 +1,19 @@
+[#introduction]
+== Introduction
+
+Niord is a system for writing, publishing and archiving Navigational Warnings (NW) and Notices to
+Mariners (NM). It is developed and run by the Danish Emergency Management Agency.
+
+This document describes the public REST API of Niord: a small, read-only interface that other
+systems, such as websites, apps and navigation systems, use to fetch the messages that are in
+force, the publications that can be downloaded, and the areas the messages are filed under. It does
+not describe the much larger interface that the Niord administration application uses internally;
+that interface may change at any time and is not meant for other systems.
+
+The public site that Niord comes with is a client of this API. It can be seen at
+https://nautiskinformation.brs2.dk/messages/map[nautiskinformation.brs2.dk^], and the
+link:../presentation/presentation.html[Niord Message Presentation] document uses it as its example.
+
+The API answers in the format that the link:../model/model.html[Niord Message Model] document
+describes. In the source code, which is published under https://github.com/NiordOrg, the API is
+the class `ApiRestService` in `be/niord/src/main/java/org/niord/web/api/ApiRestService.java`.

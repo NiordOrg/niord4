@@ -1,0 +1,84 @@
+<app-editor-field-row
+  fieldId="layout"
+  label="msg.field.layout"
+  [edited]="fields.edited('layout')"
+  [empty]="!control().value() && !thumbnailUrl()"
+  emptyLabel="editor.field.layout.empty"
+>
+  <span fieldViewer class="flex items-center gap-3">
+    @if (thumbnailUrl()) {
+      <img
+        [src]="thumbnailUrl()"
+        [alt]="'editor.layout.thumbnailAlt' | transloco"
+        class="h-8 w-8 rounded border border-surface-300 object-cover"
+      />
+    }
+    @if (control().value()) {
+      <span>{{ 'editor.field.layout.separatePage' | transloco }}</span>
+    }
+  </span>
+
+  <div fieldEditor class="flex flex-col gap-3">
+    @if (thumbnailUrl()) {
+      <img
+        [src]="thumbnailUrl()"
+        [alt]="'editor.layout.thumbnailAlt' | transloco"
+        class="max-h-64 max-w-64 rounded border border-surface-300 object-contain"
+      />
+    } @else {
+      <div
+        class="flex h-64 w-64 flex-col items-center justify-center gap-2 rounded border border-dashed border-surface-300 text-sm text-fg-muted"
+      >
+        <app-icon name="lucideImage" class="text-2xl" />
+        <span>{{ 'editor.layout.noThumbnail' | transloco }}</span>
+      </div>
+    }
+
+    <app-file-upload
+      [url]="uploadUrl()"
+      accept="image/png,image/jpeg,image/gif"
+      responseType="text"
+      [disabled]="!facade.editableNow() || !uploadUrl()"
+      browseLabel="editor.layout.upload"
+      (uploaded)="onUploaded($event)"
+    />
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        class="btn-secondary"
+        [disabled]="!facade.editableNow() || !thumbnailUrl()"
+        (click)="facade.clearThumbnail()"
+      >
+        <app-icon name="lucideEraser" />
+        <span>{{ 'editor.layout.clear' | transloco }}</span>
+      </button>
+      <button
+        type="button"
+        class="btn-secondary"
+        [disabled]="!facade.editableNow() || !uploadUrl()"
+        (click)="mapDialogVisible.set(true)"
+      >
+        <app-icon name="lucideMap" />
+        <span>{{ 'editor.layout.selectFromMap' | transloco }}</span>
+      </button>
+    </div>
+
+    <app-thumbnail-map-dialog
+      [(visible)]="mapDialogVisible"
+      [message]="facade.message()"
+      (thumbnailCaptured)="onThumbnailCaptured($event)"
+    />
+
+    <label class="inline-flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        class="h-4 w-4"
+        [checked]="control().value()"
+        [disabled]="!facade.editableNow()"
+        (change)="onToggle($event)"
+      />
+      <span>{{ 'editor.field.layout.separatePage' | transloco }}</span>
+    </label>
+  </div>
+</app-editor-field-row>

@@ -1,0 +1,86 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series.vo;
+
+import org.niord.model.IJsonSerializable;
+
+/**
+ * What a frozen member's message looks like TODAY.
+ *
+ * Carried beside every frozen row: the status a reader wants to see is the one
+ * the message has now, and a client shown it only where something moved would
+ * have to invent it for the rows where nothing did. Whether anything moved is
+ * said separately, by the row's `drift`. The frozen row is never rewritten from
+ * this -- the snapshot is the record of what was published, and healing it
+ * would erase the very divergence somebody needs to see before deciding
+ * whether to amend.
+ *
+ * `exists` is separate from the two values because a deleted message has no type
+ * and no status to report, and reporting nulls for them would be indistinguishable
+ * from a message whose fields happen to be empty.
+ */
+public class LiveMessageStateVo implements IJsonSerializable {
+
+    /** Whether the message is still in the database at all. */
+    private boolean exists;
+
+    /**
+     * Whether the message is still one the public may read.
+     *
+     * Derived from the live status rather than stored. A member that has been
+     * withdrawn since the issue went out is the case an admin most wants
+     * flagged, and it is not visible from the status name alone unless the
+     * reader knows which statuses are public.
+     */
+    private boolean publiclyVisible;
+
+    private String type;
+
+    private String status;
+
+    public boolean isExists() {
+        return exists;
+    }
+
+    public void setExists(boolean exists) {
+        this.exists = exists;
+    }
+
+    public boolean isPubliclyVisible() {
+        return publiclyVisible;
+    }
+
+    public void setPubliclyVisible(boolean publiclyVisible) {
+        this.publiclyVisible = publiclyVisible;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+}

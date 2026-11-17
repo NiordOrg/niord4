@@ -1,0 +1,3 @@
+# The build context is this directory and holds nothing the image needs: the jars and the
+# web app come in as named build contexts (../scripts/publish-images.sh). Keep everything out.
+*

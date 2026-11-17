@@ -1,0 +1,111 @@
+<!--
+  Full-bleed bar: `left-1/2 w-screen -translate-x-1/2` breaks the border/background
+  out of the messages section's centered `max-w-screen-2xl` column so the bottom
+  border runs edge-to-edge like the main header. The inner wrapper re-centers the nav content
+  at content width. `relative` on the inner wrapper makes it the containing block
+  for the absolutely-positioned burger panel (so the panel binds to content width,
+  not the full viewport). `z-30`: the `-translate-x-1/2` transform makes this bar its
+  own stacking context, so the open burger panel would otherwise render beneath the
+  message list's sticky table header; lifting the bar keeps the panel above it.
+-->
+<div
+  class="relative z-30 left-1/2 w-screen -translate-x-1/2 border-b border-surface-200 bg-surface-0"
+>
+  <div
+    class="relative mx-auto w-full max-w-screen-2xl"
+    [attr.aria-label]="'messages.shell.tab.ariaLabel' | transloco"
+  >
+    <!-- Mobile burger bar (<md). Hidden at md+ where the desktop grid takes over. -->
+    <div class="flex items-center gap-2 px-4 py-1 md:hidden">
+      <button
+        type="button"
+        class="icon-button text-xs"
+        (click)="toggleBurger()"
+        [attr.aria-expanded]="burgerOpen()"
+        [attr.aria-label]="'messages.shell.tab.ariaLabel' | transloco"
+      >
+        <app-icon name="lucideMenu" />
+      </button>
+      @if (currentTab(); as tab) {
+        <span class="inline-flex items-center gap-2 text-sm font-medium text-fg-title">
+          <app-icon [name]="tab.icon" />
+          <span>{{ tab.labelKey | transloco }}</span>
+          @if (tab.id === 'selected' && hasSelection()) {
+            <span class="badge-accent">{{ selectionSizeLabel() }}</span>
+          }
+        </span>
+      }
+    </div>
+
+    <!-- Mobile burger panel. Positioned absolutely so it overlays page content
+       instead of pushing the layout. Contains all 7 nav surfaces: tab links
+       plus the Filter and Action dropdowns (those keep their own popups). -->
+    @if (burgerOpen()) {
+      <div
+        class="absolute top-full right-0 left-0 z-20 flex flex-col gap-1 border-b border-surface-200 bg-surface-0 p-2 shadow-lg md:hidden"
+      >
+        @for (tab of tabs; track tab.id) {
+          <a
+            [routerLink]="['/messages', tab.id]"
+            queryParamsHandling="preserve"
+            [class.bg-surface-100]="shownTab() === tab.id"
+            [class.text-primary-700]="shownTab() === tab.id"
+            [class.font-semibold]="shownTab() === tab.id"
+            class="inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-fg-title hover:bg-surface-50"
+            (click)="closeBurger()"
+          >
+            <app-icon [name]="tab.icon" />
+            <span class="flex-1">{{ tab.labelKey | transloco }}</span>
+            @if (tab.id === 'selected' && hasSelection()) {
+              <span class="badge-accent">{{ selectionSizeLabel() }}</span>
+            }
+          </a>
+        }
+        <div class="mt-1 flex flex-wrap gap-1 border-t border-surface-200 pt-1">
+          <app-messages-filter-dropdown />
+          <app-messages-action-menu />
+        </div>
+      </div>
+    }
+
+    <!-- Desktop layout (md+). 3-column grid keeps tabs centred regardless of
+       right-column width. Hidden below md where the burger takes over. -->
+    <nav class="hidden grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2 md:grid">
+      <span></span>
+
+      <div class="flex flex-wrap items-center justify-center gap-1">
+        @for (tab of tabs; track tab.id) {
+          <div class="inline-flex items-center">
+            <a
+              [routerLink]="['/messages', tab.id]"
+              queryParamsHandling="preserve"
+              [class.toolbar-tab-active]="shownTab() === tab.id"
+              [class.text-fg]="shownTab() === tab.id"
+              [class.font-semibold]="shownTab() === tab.id"
+              class="relative inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg-muted hover:text-fg"
+            >
+              <app-icon [name]="tab.icon" />
+              <span>{{ tab.labelKey | transloco }}</span>
+            </a>
+            @if (tab.id === 'selected' && hasSelection()) {
+              <span class="badge-accent ml-1">{{ selectionSizeLabel() }}</span>
+              <button
+                type="button"
+                class="icon-button hover:text-danger rounded-full text-xs"
+                [attr.aria-label]="'messages.shell.tab.clearSelection' | transloco"
+                (click)="onClearSelection($event)"
+              >
+                <app-icon name="lucideX" />
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="flex items-center justify-end gap-1">
+        <app-messages-filter-dropdown />
+        <app-messages-action-menu />
+      </div>
+    </nav>
+  </div>
+</div>

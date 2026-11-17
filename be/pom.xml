@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ==================================================================== -->
+    <!--  Spring Boot 4 port of Niord (POC).                                   -->
+    <!--                                                                        -->
+    <!--  This is a *faithful port* of the Quarkus niord + niord-dk reactor    -->
+    <!--  (see ../pom.xml). Goals:                                             -->
+    <!--    * Retain the niord (base library) + niord-dk (application) split.  -->
+    <!--    * Change as few third-party dependencies as possible — every       -->
+    <!--      non-Quarkus library (JBeret, qpid-jms, Freemarker, Batik,        -->
+    <!--      GeoTools, Hibernate Search, MicroProfile OpenAPI annotations,    -->
+    <!--      Flying Saucer, Twitter4J, …) is kept at its original version.    -->
+    <!--    * Replace only the Quarkus *framework* extensions with their       -->
+    <!--      Spring Boot 4 equivalents (CDI->Spring DI, JAX-RS->Spring MVC,   -->
+    <!--      quarkus-oidc->spring-security-oauth2-resource-server, …).        -->
+    <!--                                                                        -->
+    <!--  See MIGRATION.md for the full dependency map and staged roadmap.     -->
+    <!--  Dependencies are added to the module POMs package-by-package as the  -->
+    <!--  port advances, so every committed stage keeps `mvn test` green.      -->
+    <!-- ==================================================================== -->
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.7</version>
+        <relativePath/>
+    </parent>
+
+    <!-- Country-neutral reactor identity. The reactor was imported as org.niord.dk:niord-dk-parent
+         (the Quarkus niord-dk reactor's coordinates); it is renamed here because this parent is the
+         generic `niord` repository's parent after the repository split (docs/cicd/design.md §2.1),
+         and the country deployables leave it for parents of their own. -->
+    <groupId>org.niord</groupId>
+    <artifactId>niord-parent</artifactId>
+    <!-- Maven CI-friendly versioning (docs/cicd/design.md §3): the version is the `revision`
+         property, so a local build is 4.0.0-SNAPSHOT with nothing typed, and CI publishes a real
+         version with `-Drevision=4.0.<run>` — no pom edit, no release plugin. The child poms name
+         the parent as ${revision} and their sibling dependencies as ${project.version}. The
+         flatten-maven-plugin below writes the resolved value into the INSTALLED/deployed poms;
+         without it a consumer outside the reactor (a country repository resolving niord-base from a registry)
+         reads `${revision}` back as a literal and fails to resolve the parent. -->
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+    <name>Niord Parent</name>
+
+    <properties>
+        <revision>4.0.0-SNAPSHOT</revision>
+        <!-- OWNER/REPO of the GitHub Packages Maven registry the publish workflow deploys to
+             (distributionManagement below): NiordOrg/niord, the open source product's public home
+             and the repository this one becomes at the move (docs/cicd/design.md §11). Decided
+             2026-10-06: the Maven registry is repository-scoped, so packages published from this
+             private repository could be read by no other repository's workflow token, while
+             packages of a public repository are readable with any token and cost no storage. The
+             publish workflow writes with the repository secrets NIORDORG_PACKAGES_USER /
+             NIORDORG_PACKAGES_TOKEN until the country split (owner, 2026-10-22), then with a
+             NiordOrg machine user's publish-only token, NIORD_PUBLISH_TOKEN (the login in the
+             variable NIORD_PUBLISH_USER), of the main-only `publish` environment, and
+             retract-version.yml deletes with its NIORD_DELETE_TOKEN of the `retract` environment;
+             up to 4.0.54 the registry was this repository's own. Nobody deploys by hand. -->
+        <github.repository>NiordOrg/niord</github.repository>
+
+        <!-- Spring Boot 4 / Spring Framework 7 baseline is Java 17 and supports
+             up to Java 25 (LTS). The port targets Java 25; the original Quarkus
+             build (under quarkus/) remains on Java 21. -->
+        <java.version>25</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- A property, not a literal in the plugin config, so a run can opt out with
+             -Dniord.test.redirectOutput=false; a literal `true` would silently win over any -D.
+             Not named after Surefire's own maven.test.redirectTestOutputToFile: that expression is
+             shared with Failsafe, so defining it here would redirect the integration suite too. -->
+        <niord.test.redirectOutput>true</niord.test.redirectOutput>
+
+        <!-- The country build group (the two niord-country-build executions below): false here, so a
+             country that takes this pom as its <parent> runs the group. Only niord-base, niord-app and
+             niord-bootstrap set it true: niord-base runs the same tests in its own suites, niord-app
+             builds on the same code without the IT test dependencies, and niord-bootstrap has no tests.
+             This root pom itself switches it off through the profile niord-base-reactor (below). -->
+        <niord.countryGroup.skip>false</niord.countryGroup.skip>
+
+        <!-- Jackson patch releases ahead of Spring Boot. Boot 4.0.7 manages jackson-bom 3.1.4 and
+             jackson-2-bom 2.21.4, whose jackson-core checks whether a string looks like a number with
+             a regular expression that backtracks quadratically on a long malformed number
+             (GHSA-p6pp-m3f8-5c89, CVE-2026-89407). Request bodies are parsed before method security
+             runs, so an anonymous caller reaches that check on any endpoint whose body has a float or
+             BigDecimal field. 3.1.7 and 2.21.7 fix it, and also GHSA-649p-m576-vr99 and
+             GHSA-7hhh-6rmp-j9qf (parser limits) and GHSA-5gvw-p9qm-jgwh (databind @JsonView).
+             Overriding the two BOM properties moves every Jackson module of the reactor, the
+             deployables included: Jackson 3 (tools.jackson, the Spring MVC mapper) and Jackson 2
+             (com.fasterxml.jackson, RESTEasy/SECOM, the Keycloak admin client, the criteria
+             canonical bytes). Remove both once spring-boot-starter-parent manages these versions or
+             later ones; JacksonPatchLevelTest fails if a change brings an affected version back. -->
+        <jackson-bom.version>3.1.7</jackson-bom.version>
+        <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+
+        <!-- ===== Retained third-party library versions (unchanged from the   -->
+        <!-- ===== Quarkus build). These are framework-neutral and survive     -->
+        <!-- ===== the migration verbatim. ==================================== -->
+
+        <!-- Annotations-only jar: the model VOs are annotated with
+             @org.eclipse.microprofile.openapi.annotations.media.Schema. Keeping
+             this (instead of rewriting to springdoc annotations) is the minimal
+             change. springdoc can read these, or they can be swapped later. -->
+        <microprofile-openapi-api.version>4.1</microprofile-openapi-api.version>
+
+        <freemarker.version>2.3.35</freemarker.version>
+        <flying-saucer.version>9.7.2</flying-saucer.version>
+        <cssparser.version>0.9.30</cssparser.version>
+        <jtidy.version>r938</jtidy.version>
+        <!-- BouncyCastle: artifact moved from the EOL bcprov-jdk15on coordinate (frozen
+             at 1.70, multiple unpatched CVEs) to bcprov-jdk18on; same org.bouncycastle.*
+             package, runtime crypto provider behind iText5 PDF — no source impact. -->
+        <bouncycastle.version>1.85</bouncycastle.version>
+        <jsoup.version>1.23.2</jsoup.version>
+        <twitter4j.version>4.0.6</twitter4j.version>
+        <batik.version>1.19</batik.version>
+        <xmlgraphics-commons.version>2.11</xmlgraphics-commons.version>
+        <geotools.version>26.2</geotools.version>
+        <nashorn.version>15.7</nashorn.version>
+        <josm-seachart.version>0.1.0</josm-seachart.version>
+        <!-- JBeret 3.x implements jakarta.batch 2.1 (Jakarta EE 11), matching Spring Boot 4. -->
+        <jberet.version>3.1.0.Final</jberet.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Retained, framework-neutral libraries. Versions pinned here so
+                 the module POMs stay version-free. Spring Boot 4's
+                 spring-boot-dependencies BOM (inherited via the parent) manages
+                 Jackson, JAXB runtime, Hibernate ORM, Jakarta APIs, JUnit 5,
+                 Mockito, Testcontainers, etc. — we only pin what it does not. -->
+            <dependency>
+                <groupId>org.eclipse.microprofile.openapi</groupId>
+                <artifactId>microprofile-openapi-api</artifactId>
+                <version>${microprofile-openapi-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.freemarker</groupId>
+                <artifactId>freemarker</artifactId>
+                <version>${freemarker.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xhtmlrenderer</groupId>
+                <artifactId>flying-saucer-core</artifactId>
+                <version>${flying-saucer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xhtmlrenderer</groupId>
+                <artifactId>flying-saucer-pdf-itext5</artifactId>
+                <version>${flying-saucer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.sourceforge.cssparser</groupId>
+                <artifactId>cssparser</artifactId>
+                <version>${cssparser.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.sf.jtidy</groupId>
+                <artifactId>jtidy</artifactId>
+                <version>${jtidy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <!-- PKCS#10 CSR builder + certificate utilities used by the SECOM
+                     certificate renewal (identity plan T3); pulls bcutil transitively. -->
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>${jsoup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.twitter4j</groupId>
+                <artifactId>twitter4j-core</artifactId>
+                <version>${twitter4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-transcoder</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-svggen</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>xmlgraphics-commons</artifactId>
+                <version>${xmlgraphics-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.NiordOrg</groupId>
+                <artifactId>josm-seachart</artifactId>
+                <version>${josm-seachart.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjdk.nashorn</groupId>
+                <artifactId>nashorn-core</artifactId>
+                <version>${nashorn.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!-- Resolves ${revision} in the poms Maven installs and deploys (see <version> above).
+                 resolveCiFriendliesOnly keeps everything else in the pom verbatim — parent, properties,
+                 dependency management — so the installed pom is the source pom with one literal
+                 version. The flattened copy is written next to each pom as .flattened-pom.xml
+                 (gitignored) and removed by `clean`. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.8.0</version>
+                <configuration>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    <updatePomFile>true</updatePomFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Mirror the original unit/integration split convention:
+                   Unit tests        (Surefire, `mvn test`):   *Test
+                   Integration tests (Failsafe, `mvn verify`): *ITTest
+                 Surefire/Failsafe versions are inherited from spring-boot-starter-parent. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/*ITTest.java</exclude>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                    <!-- Unit-test stdout/stderr goes to target/surefire-reports/<Class>-output.txt
+                         instead of the terminal: the suite emits ~3 400 lines of *expected* output on
+                         a green run (print-style legacy tests, plus error-path tests whose rejected
+                         input is logged with a full stack trace), which is what a real failure used to
+                         get lost in. Failure reporting is a separate path and is unaffected.
+                         Deliberately not applied to Failsafe below — the IT suite's live output is the
+                         only progress signal while containers boot.
+                         See docs/test-infrastructure.md, "Where test output goes". -->
+                    <redirectTestOutputToFile>${niord.test.redirectOutput}</redirectTestOutputToFile>
+                </configuration>
+                <executions>
+                    <!-- The country build group (docs/fe-country-split-plan.md §4.11 rule 3): niord-base's
+                         security tests and the country checks, tagged @CountryBuildGroup (the JUnit tag
+                         niord-country-build) and shipped in its test-jar, run in every country build. A
+                         country inherits this execution with the parent, so it cannot leave the group out;
+                         it scans only niord-base's test-jar and runs only the tagged classes there, never
+                         niord-base's other tests, and the country's own tests carry no such tag. The
+                         default execution is unchanged. failIfNoSpecifiedTests is off so that a country's
+                         -Dtest=<its own test> does not fail here, and the output is not redirected so the
+                         settings report reaches the Maven log (docs/code-data-config-plan.md §5.5). A
+                         country declares niord-base's test-jar and the test dependencies of
+                         be/docs/country-api.md. -->
+                    <execution>
+                        <id>niord-country-build</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${niord.countryGroup.skip}</skip>
+                            <dependenciesToScan>
+                                <dependency>org.niord.base:niord-base:test-jar:tests</dependency>
+                            </dependenciesToScan>
+                            <groups>niord-country-build</groups>
+                            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                            <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*ITTest.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                    <!-- The integration tests of the country build group (see the Surefire execution
+                         above). Its own summary file, on both goals, so that it does not overwrite the
+                         default execution's and verify reads each run's result. -->
+                    <execution>
+                        <id>niord-country-build-it</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${niord.countryGroup.skip}</skip>
+                            <dependenciesToScan>
+                                <dependency>org.niord.base:niord-base:test-jar:tests</dependency>
+                            </dependenciesToScan>
+                            <groups>niord-country-build</groups>
+                            <includes>
+                                <include>**/*ITTest.java</include>
+                            </includes>
+                            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                            <summaryFile>${project.build.directory}/failsafe-reports/failsafe-summary-niord-country-build.xml</summaryFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <!-- Maven Central, declared explicitly and FIRST so it is consulted ahead of the
+             osgeo/jitpack repositories below. Repositories are queried in declaration order,
+             and JitPack is a catch-all proxy that answers for arbitrary coordinates: on a cold
+             cache it otherwise resolves Central artifacts (e.g. xml-apis:xml-apis-ext:1.3.04)
+             from https://jitpack.io, which serves a corrupt/empty jar with no checksum. javac
+             then fails to read it, cascading into misleading "cannot access org.niord.core.*"
+             errors and breaking every clean-cache build (CI, fresh Docker/dev machine). Putting
+             Central first makes it authoritative for everything it hosts; osgeo (GeoTools), grad
+             (org.grad.secom) and jitpack (com.github.NiordOrg) are only reached for what Central
+             lacks. See docs/potential-errors.md, CI-BUILD-1.
+             JitPack comes LAST for the same reason: it builds whatever coordinates it is asked
+             for, so it is only offered what no repository above it has, and SECOMLib is found on
+             grad before JitPack is ever asked for org.grad.secom. -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <snapshots><enabled>false</enabled></snapshots>
+            <releases><enabled>true</enabled></releases>
+        </repository>
+        <repository>
+            <id>osgeo</id>
+            <name>OSGeo Release Repository</name>
+            <url>https://repo.osgeo.org/repository/release/</url>
+            <snapshots><enabled>false</enabled></snapshots>
+            <releases><enabled>true</enabled></releases>
+        </repository>
+        <!-- GRAD SECOMLib (org.grad.secom:secom-v2-core-jakarta) for the SECOM/S-124
+             integration (docs/secom-design.md). Before jitpack.io, per the ordering rule above. -->
+        <repository>
+            <id>grad</id>
+            <name>GRAD e-Navigation Repository</name>
+            <url>https://rnavlab.gla-rad.org/mvn/repository/grad/</url>
+            <snapshots><enabled>false</enabled></snapshots>
+            <releases><enabled>true</enabled></releases>
+        </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <name>JitPack</name>
+            <url>https://jitpack.io</url>
+            <snapshots><enabled>false</enabled></snapshots>
+            <releases><enabled>true</enabled></releases>
+        </repository>
+    </repositories>
+
+    <!-- Where `mvn deploy` publishes (design.md §3): the GitHub Packages Maven registry of
+         NiordOrg/niord (github.repository above), server id `github` — the publish workflow writes
+         that server's credentials into its settings.xml. Only the parent, niord-base and the
+         base product's bootstrap zip (niord-bootstrap) are deployed; every deployable (niord-app here, niord-dk and niord-gl in their repositories) is image-only — their poms set
+         maven.deploy.skip. Snapshots have no repository on purpose. -->
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/${github.repository}</url>
+        </repository>
+    </distributionManagement>
+
+    <profiles>
+        <!-- This root pom is also the base product's reactor, and its packaging pom has no test class path:
+             Surefire refuses `groups` there, so the country build group's executions are switched off for it.
+             The profile is active only in the base product's own tree (where niord-bootstrap's assembly lies
+             beside this pom), never in a country, whose build inherits the group on. -->
+        <profile>
+            <id>niord-base-reactor</id>
+            <activation>
+                <file>
+                    <exists>${basedir}/niord-bootstrap/src/assembly/bootstrap.xml</exists>
+                </file>
+            </activation>
+            <properties>
+                <niord.countryGroup.skip>true</niord.countryGroup.skip>
+            </properties>
+        </profile>
+    </profiles>
+
+    <modules>
+        <module>niord</module>
+        <!-- The base product's bootstrap (niord/bootstrap/) as org.niord:niord-bootstrap:<version>:zip
+             (docs/code-data-config-plan.md §7.1), deployed with niord-parent and niord-base. -->
+        <module>niord-bootstrap</module>
+        <!-- The generic, English-language reference deployable of niord-base. The two country
+             deployables, niord-dk and niord-gl, left this reactor on 2026-10-06 for repositories of
+             their own (SIFA-DK/niord-dk, SIFA-DK/niord-gl), where they build on the published
+             niord-parent and niord-base of a pinned version (docs/cicd/design.md §2.1). -->
+        <module>niord-app</module>
+    </modules>
+
+</project>

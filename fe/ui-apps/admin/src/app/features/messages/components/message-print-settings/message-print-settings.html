@@ -1,0 +1,95 @@
+<div class="flex flex-col gap-3">
+  <div class="flex items-center gap-3">
+    <label for="printLanguage" class="w-32">{{ 'messages.outputLanguage' | transloco }}</label>
+    <app-select
+      inputId="printLanguage"
+      class="flex-1"
+      [options]="language.modelLanguages"
+      optionLabel="label"
+      optionValue="value"
+      [value]="printSettings().language ?? language.selectedLanguage()"
+      (valueChange)="updatePrintSettings('language', $any($event))"
+    />
+  </div>
+  @if (offersReports()) {
+    <div class="flex items-center gap-3">
+      <label for="printReport" class="w-32">{{
+        'messages.print.settings.report' | transloco
+      }}</label>
+      <app-select
+        inputId="printReport"
+        class="flex-1"
+        [options]="reportOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [loading]="loading()"
+        [value]="printSettings().report"
+        (valueChange)="updatePrintSettings('report', $any($event))"
+      />
+    </div>
+  }
+
+  <div class="flex items-center gap-3">
+    <span class="w-32">{{ 'messages.print.settings.layout' | transloco }}</span>
+    <div class="seg" role="group">
+      @for (option of orientationOptions(); track option.value) {
+        <button
+          type="button"
+          class="seg-btn"
+          [class.is-active]="printSettings().pageOrientation === option.value"
+          (click)="updatePrintSettings('pageOrientation', option.value)"
+        >
+          <span class="inline-flex items-center gap-2">
+            @if (option.icon) {
+              <app-icon [name]="option.icon" [class]="option.iconClass" />
+            }
+            <span>{{ option.label }}</span>
+          </span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <label for="printPaperSize" class="w-32">{{
+      'messages.print.settings.paperSize' | transloco
+    }}</label>
+    <app-select
+      inputId="printPaperSize"
+      [options]="paperSizeOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [value]="printSettings().pageSize"
+      (valueChange)="updatePrintSettings('pageSize', $any($event))"
+    />
+  </div>
+
+  @if (showMapThumbnails()) {
+    <div class="flex items-center gap-3">
+      <span class="w-32"></span>
+      <input
+        type="checkbox"
+        id="printThumbnails"
+        class="checkbox"
+        [ngModel]="printSettings().mapThumbnails"
+        (ngModelChange)="updatePrintSettings('mapThumbnails', $event)"
+      />
+      <label for="printThumbnails">{{
+        'messages.print.settings.includeThumbnails' | transloco
+      }}</label>
+    </div>
+  }
+
+  @for (key of reportParamKeys(); track key) {
+    <div class="flex items-center gap-3">
+      <label [for]="'printParam_' + key" class="w-32">{{ key }}</label>
+      <input
+        [id]="'printParam_' + key"
+        type="text"
+        class="flex-1 text-input"
+        [ngModel]="reportParams()[key]"
+        (ngModelChange)="updateReportParam(key, $event)"
+      />
+    </div>
+  }
+</div>

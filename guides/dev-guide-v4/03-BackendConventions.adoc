@@ -1,0 +1,283 @@
+
+[#backend-conventions]
+== Backend conventions
+
+The backend is consistent about its names and its idioms, and knowing them makes the code much
+easier to read. This chapter carries the conventions of the earlier guides forward where the code
+still follows them, with today's module, package and framework names. The working rules in full
+are in `be/AGENTS.md`, section _Idioms that matter_.
+
+[#modules-and-packages]
+=== Modules and packages
+
+All backend code is in one library, `be/niord/` (`org.niord.base:niord-base`). What earlier
+versions split into the three projects niord-model, niord-core and niord-web are now three
+packages of that library:
+
+[cols="25,75",options="header"]
+|===
+|Package |What it holds
+
+|`org.niord.model`
+|The link:../model/model.html[Niord message model]: the value objects the public REST API returns,
+ such as `MessageVo`, `AreaVo` and the GeoJSON classes, and the helpers they use (`DataFilter`,
+ `ILocalizable`). It is not published as a separate artifact.
+
+|`org.niord.core`
+|The JPA entities, the services with the business logic, the batch jobs, the settings, the
+ templates and scripts engine, and the system model value objects that extend the public ones.
+ One sub-package per entity, such as `org.niord.core.area`.
+
+|`org.niord.web`
+|The REST controllers used by the two web applications and by the public REST API
+ (`org.niord.web.api`).
+|===
+
+The generic application, `be/niord-app/`, holds only its application class
+(`org.niord.app.NiordApplication`) and the dependencies a deployable needs and a library does not
+ship, such as the JDBC driver, Liquibase and the message broker. A country's application is built
+the same way on the same library.
+
+The test harness the integration tests share (`org.niord.test`, <<testing-the-backend>>) is
+published with the library as its test-jar, so that a country's tests can use it too.
+
+[#naming-conventions]
+=== Classes and naming conventions
+
+Each _logical entity_ of Niord, such as an area, a chart, a message or a publication, is
+implemented by a JPA entity, value objects that can be serialised to JSON, a service with the
+business logic, a REST controller and, for most entities, a batch job that imports them. Take the
+_Area_ entity, one area in the tree of areas:
+
+[cols="35,65",options="header"]
+|===
+|Class |Description
+
+|`AreaVo` (`org.niord.model.message`)
+|The message model's representation of an area. The `Vo` suffix marks every _value object_: a
+ version of an entity that can be serialised to JSON.
+
+|`AreaDescVo` (`org.niord.model.message`)
+|A language code and all localisable attributes of `AreaVo`. Such classes carry the `Desc` suffix.
+
+|`Area` (`org.niord.core.area`)
+|The JPA entity. Its attributes correspond closely to those of `AreaVo`, but the entity may hold
+ more, which are not part of the public model; the entity classes thus make up a _system model_.
+
+|`AreaDesc` (`org.niord.core.area`)
+|The JPA entity for the localisable attributes of an area.
+
+|`SystemAreaVo` (`org.niord.core.area.vo`)
+|When an entity holds attributes the public message model leaves out, a value object with the
+ `System` prefix carries them. `SystemAreaVo` extends `AreaVo` with them, and it is what the
+ administration application reads and writes.
+
+|`AreaService` (`org.niord.core.area`)
+|The business logic and the life cycle of the entity: a Spring `@Service` with the `Service`
+ suffix.
+
+|`BatchAreaImportReader`, +
+ `BatchAreaImportProcessor`, +
+ `BatchAreaImportWriter` (`org.niord.core.area.batch`)
+|The three steps of the batch job that imports areas. The classes carry the `Batch` prefix and the
+ `Reader`, `Processor` and `Writer` suffixes. The job itself is declared in
+ `META-INF/batch-jobs/area-import.xml` and run by JBeret; each step is a Spring bean annotated
+ `@Component`, `@Scope("prototype")` and `@Named`, by which name the job's XML refers to it.
+
+|`AreaRestService` (`org.niord.web`)
+|The REST controller, a `@RestController` with the `RestService` suffix, mapped under
+ `/rest/areas`. It is usually a thin layer over the service and decides which value object to
+ return. Every one of its handler methods is covered by a security annotation, on the method or on
+ the class: the class is annotated `@PermitAll`, which its `GET` handlers rely on, and every other
+ handler carries a `@RolesAllowed` of its own (<<backend-security>>).
+|===
+
+A few classes keep a name from before these conventions: `RepositoryService`, for instance, is a
+REST controller (`/rest/repo`). Follow the code around you when you add a class.
+
+[#localisation]
+=== Localisation
+
+Almost every entity can be localised to any number of languages. An entity is associated with a
+list of objects, each holding a language code and all the localisable attributes in that
+language. An area has one localisable attribute, its name:
+
+[source,java]
+----
+public class AreaVo implements ILocalizable<AreaDescVo>, IJsonSerializable {
+    List<AreaDescVo> descs;
+}
+
+public class AreaDescVo implements ILocalizedDesc, IJsonSerializable {
+    String lang;
+    String name;
+}
+----
+
+[#serialisation]
+=== Converting between entities and value objects
+
+Every entity converts to and from its value object. In the simplest form, the entity has a
+constructor that takes the value object, and a `toVo()` method that returns it:
+
+[source,java]
+----
+@Entity
+public class Domain extends BaseEntity<Integer> {
+    public Domain() {}
+    public Domain(DomainVo domain) {
+        // the entity from the value object
+    }
+    public DomainVo toVo() {
+        // the value object from the entity
+    }
+}
+----
+
+`Area` is more involved. It has two value objects, `AreaVo` and `SystemAreaVo`: a message returned
+by the public API carries the first, and the administration application's area editor reads and
+writes the second. So `Area.toVo()` takes the class of the value object it returns as a
+parameter, and the REST controller decides which one to ask for.
+
+The controller also decides which fields to fill in. Most calls return the localised attributes of
+one language only, which saves bandwidth and keeps the clients simple. And the tree of areas is
+returned in different shapes: an area attached to a message carries its _parent_ ("Kattegat" with
+its parent "Denmark"), while the areas page of the administration application asks for the root
+areas with their _children_. The helper class `DataFilter` (`org.niord.model`) says which fields
+and which language to include. A field may be prefixed with the entity it applies to, so one
+filter controls the conversion of a whole tree of related entities:
+
+[source,java]
+----
+DataFilter filter = DataFilter.get()
+    .fields("Message.details", "Message.geometry", "Area.parent", "Category.parent")
+    .lang("en");
+----
+
+The conversion code of `Area` then reads:
+
+[source,java]
+----
+@Entity
+public class Area extends TreeBaseEntity<Area> implements ILocalizable<AreaDesc> {
+    public Area() {}
+    public Area(AreaVo area, DataFilter filter) {
+        // the entity from the value object
+    }
+    public <A extends AreaVo> A toVo(Class<A> clz, DataFilter filter) {
+        // the value object of the given class from the entity
+    }
+}
+----
+
+[#services-and-injection]
+=== Services, controllers and injection
+
+* A service is a Spring `@Service`. Most extend `BaseService` (or `TreeBaseService` for a tree,
+  such as areas), which gives them the entity manager and common queries.
+* A controller is a `@RestController` whose dependencies are `private final` fields set by a
+  package-private constructor, as in `AreaRestService`. Newer services are written the same way;
+  older ones inject their fields with `jakarta.inject.Inject`. Spring's `@Autowired` is not used in
+  the main code.
+* Loggers are static fields.
+* Work at start-up that touches the database runs in a method annotated
+  `@EventListener(ApplicationReadyEvent.class)` and `@Transactional`, never in a `@PostConstruct`
+  method; pin its `@Order` when other start-up work reads the rows it writes.
+
+[#transactions]
+=== Transactions
+
+Transactions are Spring's: `org.springframework.transaction.annotation.Transactional`. `BaseService`
+is transactional at class level, and many controllers are too. Because Spring applies a
+transaction through a proxy, a method that calls another method of its own class does not get the
+other method's transaction settings. When a piece of work needs a transaction of its own, it goes
+through a separate bean that runs it, as `PublicationTxRunner` does for publications.
+
+[#backend-security]
+=== Security
+
+Sign-in is Keycloak's. The backend accepts a bearer token Keycloak issued, and a request names the
+domain the user works in with the `NiordDomain` header; the user's roles in that domain are added
+to the request by `NiordDomainFilter`. The roles are `user`, `editor`, `admin` and `sysadmin`
+(`org.niord.core.user.Roles`), plus `publication-curate`, the right to add or remove the members
+of a publication issue by hand.
+
+The HTTP layer lets every request through (`SecurityConfig`); method security is the whole guard.
+So every handler method of every controller resolves to exactly one of the JSR-250 annotations,
+on the method or its class:
+
+* `@RolesAllowed({ Roles.EDITOR })` and the like, with the role names without a `ROLE_` prefix;
+* `@PermitAll` for an endpoint that is public on purpose;
+* `@DenyAll` for an endpoint that nobody may call.
+
+An annotation on the method takes precedence over one on its class, and a method or class that
+carries two of them fails.
+
+A handler without one would be public by omission. The unit test
+`RestControllerSecurityAnnotationTest` fails the build when one exists, and at start-up
+`CountryContractGuard` refuses to start an application with such a handler, as it refuses any CORS
+configuration. The frontends reach the backend on their own origin, so none is needed.
+
+[#errors]
+=== Errors
+
+A controller signals an HTTP error by throwing `NiordWebException`
+(`org.niord.core.web`), with a status and a message for the reader:
+
+[source,java]
+----
+throw new NiordWebException("No area with the id " + id, 404);
+----
+
+The exception is a Spring `ResponseStatusException`, so the response is an RFC 9457 problem
+detail (`application/problem+json`) with the message as its `detail`.
+
+[#settings]
+=== Settings and Spring properties
+
+Niord has two kinds of configuration, and they never mix:
+
+* *Spring properties* (`application.yml` and its overrides) configure the application as it
+  starts: the database connection, the token issuer, the mail host. They are read at start-up and
+  never written to the database.
+* *Settings* are Niord's own. They are stored in the database, and a system administrator edits
+  them on the Settings page. A system property or an environment variable with the same name as a
+  setting takes precedence over the stored value, which is how a deployment fixes one.
+
+A setting is declared in code, never as a bare key string: either as a field annotated `@Setting`
+(`org.niord.core.settings.annotation.Setting`), which is then injected with its value, or as a
+static `Setting` constant. The declaration gives the type, the default, the description and
+whether the setting is shown to the web applications (`web`), editable on the Settings page
+(`editable`), an operator's value or one the system writes itself (`scope`), and whether every
+deployment must set it (`required`):
+
+[source,java]
+----
+@Setting(value = "repoCacheTimeout", defaultValue = "5", type = Type.Integer,
+         description = "Cache timeout of repo files in minutes")
+Integer cacheTimeout;
+----
+
+The declared settings are listed in `be/niord/src/main/resources/defaults/base/settings-catalog.json`,
+which is regenerated after a declaration changes; `SettingsCatalogCurrentTest` fails when it is
+stale. A setting only the frontends read goes into `FrontendSettings`. Start-up adds a setting a
+database lacks and never changes one that exists (<<code-data-and-configuration>>). A settings file
+in the repository never holds a real secret: a password setting is empty there.
+
+[#database-json-time]
+=== Database, JSON and time
+
+* *Schema.* Liquibase builds the schema at start-up
+  (`be/niord/src/main/resources/db/changelog/db.changelog-master.yaml`), and Hibernate then
+  validates the entities against it. A schema change is a new changeset; a changeset that has been
+  applied is never edited, not even in a comment (`ChangelogChecksumPinTest` pins their checksums).
+* *Native SQL.* Identifiers are quoted and in mixed case, as in `public."PublicationSeries"`;
+  write native SQL that way.
+* *JSON.* Jackson 3 (`tools.jackson.*`). Jackson 2 is on the class path only for a few libraries
+  that need it; do not use it in new code.
+* *Files.* The files of the repository, such as attachments and publication files, are rows of the
+  database, read and written through `RepoStore`. The folder `niord.home` holds only what can be
+  made again: thumbnails, map images, map tiles, the message index and the files of batch jobs.
+  Nothing writes a durable file to disk.
+* *Time.* The JVM runs in UTC, and the time zone of the domain formats a time for display. No code
+  may depend on the JVM's default time zone.

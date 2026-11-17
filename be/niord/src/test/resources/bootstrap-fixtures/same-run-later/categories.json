@@ -1,0 +1,259 @@
+[
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It root",
+        "lang": "en"
+      },
+      {
+        "name": "RACINE",
+        "lang": "fr"
+      },
+      {
+        "name": "It rod",
+        "lang": "da"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 7.0,
+    "domains": [
+      {
+        "domainId": "it-later"
+      }
+    ],
+    "children": [
+      {
+        "active": true,
+        "descs": [
+          {
+            "name": "It child",
+            "lang": "en"
+          },
+          {
+            "name": "It barn",
+            "lang": "da"
+          }
+        ],
+        "type": "TEMPLATE",
+        "siblingSortOrder": 0.0,
+        "templateParams": [
+          {
+            "paramId": "it_p",
+            "type": "text",
+            "mandatory": false,
+            "positionList": false,
+            "descs": [
+              {
+                "name": "It PARAMETER",
+                "lang": "en"
+              },
+              {
+                "name": "It parameter da",
+                "lang": "da"
+              }
+            ]
+          },
+          {
+            "paramId": "it_q",
+            "type": "text",
+            "mandatory": false,
+            "positionList": false,
+            "descs": [
+              {
+                "name": "Another",
+                "lang": "en"
+              },
+              {
+                "name": "En anden",
+                "lang": "da"
+              }
+            ]
+          }
+        ],
+        "scriptResourcePaths": [
+          "templates/it/same-run-c.ftl"
+        ]
+      },
+      {
+        "active": true,
+        "descs": [
+          {
+            "name": "It sibling",
+            "lang": "en"
+          }
+        ],
+        "type": "CATEGORY",
+        "siblingSortOrder": 1.0
+      }
+    ]
+  },
+  {
+    "active": false,
+    "descs": [
+      {
+        "name": "It inactive",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 3.0,
+    "children": [
+      {
+        "active": true,
+        "descs": [
+          {
+            "name": "It new child",
+            "lang": "en"
+          }
+        ],
+        "type": "CATEGORY",
+        "siblingSortOrder": 0.0
+      }
+    ]
+  },
+  {
+    "descs": [
+      {
+        "name": "It flags",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "templateParams": [
+      {
+        "paramId": "it_m",
+        "descs": [
+          {
+            "name": "It mandatory",
+            "lang": "en"
+          }
+        ]
+      },
+      {
+        "paramId": "it_n",
+        "positionList": false,
+        "descs": [
+          {
+            "name": "It position list",
+            "lang": "en"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "active": false,
+    "descs": [
+      {
+        "name": "It deactivated",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 5.0
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It equal",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "siblingSortOrder": 6.0,
+    "templateParams": [
+      {
+        "paramId": "it_e",
+        "type": "text",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [
+          {
+            "name": "It equal parameter",
+            "lang": "en"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "descs": [
+      {
+        "name": "It changes",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "atonFilter": "it-filter-b",
+    "mrn": "urn:mrn:iho:category:xx:it-changes",
+    "editorFields": [
+      "it-b",
+      "it-c"
+    ],
+    "stdTemplateFields": [
+      "it-y"
+    ]
+  },
+  {
+    "mrn": "urn:mrn:iho:category:xx:it-mrn-b",
+    "descs": [
+      {
+        "name": "It mrn",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY"
+  },
+  {
+    "descs": [
+      {
+        "name": "It emptied",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "editorFields": []
+  },
+  {
+    "descs": [
+      {
+        "name": "It inactive kept",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY"
+  },
+  {
+    "active": false,
+    "descs": [
+      {
+        "name": "It parent",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY"
+  },
+  {
+    "descs": [
+      {
+        "name": "It inactive parent",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "children": [
+      {
+        "active": true,
+        "descs": [
+          {
+            "name": "It activated child",
+            "lang": "en"
+          }
+        ],
+        "type": "CATEGORY"
+      }
+    ]
+  }
+]

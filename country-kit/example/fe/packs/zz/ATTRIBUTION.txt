@@ -1,0 +1,16 @@
+img/flags/zz.png
+The flag of Zedish, the example country's invented language, 64x64 with transparent margins: the
+flag at 60x40 from (2,12), the size and place every pack's flag shares. Drawn for the example from
+img/flags/zz.svg in this pack: a navy field (#0F3D66), a teal band (#1A8A9C) across its middle, 10
+high from y 15, and a white upright (#FFFFFF), 8 wide from x 16 — the base product's default brand
+colours, so the flag names no real place.
+
+Every edge of the drawing lies on a whole pixel at 60x40, so the PNG is the drawing's rectangles
+filled pixel for pixel, with no antialiasing: an RGBA PNG of the 64x64 square, transparent but for
+the rectangles offset by (2,12), written with Node's zlib (deflate level 9, filter 0 on every row).
+
+The pack's bundles, its backend half and status/fingerprints.json are not kept here: the example's
+harness generates them from the base product's English text with country-kit/example/pseudo-localise.mjs
+each time it runs, so a base product change that adds an English key never needs a new commit here.
+
+Licence: none. Drawn here, no third-party work.

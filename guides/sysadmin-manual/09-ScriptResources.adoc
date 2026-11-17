@@ -1,0 +1,360 @@
+
+:imagesdir: images
+
+[#script-resources]
+== Script Resources
+
+A _script resource_ is a small program that Niord keeps in its database and runs on the server: a
+_Freemarker template_ (a path ending in ".ftl"), which turns data into text such as HTML, or a server-side
+_JavaScript_ file (a path ending in ".js"), which looks up or changes data. Message templates, print reports,
+mails and several smaller functions are made of them.
+
+The _Script Resources_ page lists them and lets you add, change, copy, delete, export and import them. You
+open it as a system administrator from *Sysadmin* -> *Script Resources*.
+
+image::ScriptResourcesPage.png[Script Resources, 800]
+
+Each row shows the type of the script resource, "fm" for a Freemarker template or "js" for a JavaScript file,
+and its path. Type a part of a path in the _Filter_ field above the list to show only the paths that contain it.
+The list shows 20 rows at a time, with a pager below it when there are more. The buttons at the end of a row
+edit, copy and delete the script resource.
+
+If you want to write script resources, you should know the two technologies, which the
+<<server-side-javascript,Server-Side JavaScript>> and <<freemarker-templates,Freemarker Templates>> sections
+introduce.
+
+[#script-resource-usage]
+=== Script Resource Usage
+
+The table below lists the functions of Niord that use script resources, and the folders their script
+resources are usually kept in:
+
+[cols="30,70",options="header"]
+|===
+| Function
+| Description
+
+| Print Reports
+| A print report makes a PDF from a list of messages: a Freemarker template turns the messages into HTML, and
+  Niord turns the HTML into a PDF. The reports are set up on the <<print-reports,Print Reports>> page, and their
+  templates are usually under "templates/messages/".
+
+| Message Templates
+| A message template (an executable category) generates a message from what an editor enters. JavaScript files
+  prepare the data and Freemarker templates write the message's fields in an intermediate format, described in
+  <<intermediate-message-template-format,Intermediate Message Template Format>>. Their script resources are
+  usually under "templates/tmpl/".
+
+| Mailing Lists
+| A mailing list trigger writes its mails with Freemarker templates, and may run JavaScript files to select or
+  prepare the messages. See the <<mailing-lists,Mailing Lists>> chapter. Their script resources are usually under
+  "templates/mailinglist/".
+
+| Promulgation Types
+| Some promulgation types use script resources to write their text, as the
+  <<promulgation-types,Promulgation Types>> chapter describes.
+
+| Miscellaneous
+| Freemarker templates also do smaller jobs, such as writing a light character (e.g. "Al.Bu.Y 3s") as text, and
+  formatting message positions in different ways, as in the
+  link:../editor-manual/manual.html#insert-locations[Insert Locations] function of the editor.
+
+|===
+
+[#script-resource-extensions]
+=== Where Script Resources Come From
+
+Niord reads a script resource from its database, and from nothing else. A new deployment gets the base
+product's script resources once, from its _bootstrap_; after that, a new or changed script resource reaches the
+deployment only when you add or change it on this page, or when you import it from a release file. Niord never
+copies a script resource from its own program files into the database, and it never puts back or resets one you
+changed or deleted. The <<data-and-releases,Bootstrap, Releases and Imports>> chapter describes how this works.
+
+A path that has no row in the database resolves to nothing: a report, a mail or a template that names it does
+not work. The _missing-path report_ lists every path that something names but the database lacks: a path named by
+a category, a mailing list trigger, a promulgation type or a print report, a path included or loaded by another
+script resource, a path the Niord program itself needs, and a language variant of a path that is named (see
+<<language-specific-freemarker-templates,Language-Specific Freemarker Templates>>). It also lists a built-in print
+report (`standard`, `draft` or `public`) that the deployment lacks. Niord writes the report to its log every time
+it starts, except on a new database whose bootstrap has not been applied (while it waits, runs or has failed), and a
+system administrator can ask for it at any time at the address `/rest/script-resources/missing-paths` of the
+server; it only reads. When you import a release file, its preview marks the paths the report lists (see
+<<importing-and-exporting-script-resource,Importing and Exporting Script Resources>>).
+
+Script resources may include each other, so that common code is written once: a Freemarker template can include
+other templates, and a JavaScript file can load other JavaScript files from the database. The sections below show
+how.
+
+[#server-side-javascript]
+=== Server-Side JavaScript
+
+Niord runs JavaScript on the server with the Nashorn engine (https://openjdk.org/projects/nashorn/). A
+script can call Niord's services to look up and change data.
+
+WARNING: A script that runs on the server can do anything Niord can do, delete data included. Only a system
+administrator can add or change a script resource, or run a script of their own (see
+<<execute-javascript,Execute JavaScript>>), and the role is meant for the few people who set up and run the whole
+system. The stored script resources themselves run for every user whose work calls them: when an editor runs a
+message template or prints, and when a mailing list sends its mails.
+
+The following example searches for published messages of a firing exercises message series (here with the
+invented series id "example-fe"):
+
+[source,javascript]
+----
+var searchService = CdiUtils.getBean(org.niord.core.message.MessageSearchService.class);
+var seriesIds = java.util.Collections.singleton('example-fe');
+var searchParams = new org.niord.core.message.MessageSearchParams();
+searchParams.seriesIds(seriesIds)
+    .statuses(org.niord.model.message.Status.PUBLISHED);
+var searchResult = searchService.search(searchParams);
+----
+
+[#inclusion-in-javascript]
+==== Inclusion in JavaScript
+
+A JavaScript file can load another JavaScript file from the database. For example, "templates/tmpl/common.js"
+holds functions that many other scripts load:
+
+[source,javascript]
+----
+/** Always load using the full path and a "niord:" prefix **/
+load('niord:templates/tmpl/common.js');
+----
+
+[#freemarker-templates]
+=== Freemarker Templates
+
+The documentation of Freemarker is at https://freemarker.apache.org.
+
+A Freemarker template turns data, such as a list of messages, into text: usually HTML, sometimes plain text or
+XML. The following template, "templates/geometry/text.ftl", is given a "geometry" (a list of positions) and a
+"format", and writes the positions as a comma-separated list:
+
+[source,xml]
+----
+<#assign formatPos = "org.niord.core.script.directive.LatLonDirective"?new()>
+
+<#if geometry?has_content>
+    <#list geometry as feature>
+        <#if feature.coordinates?has_content>
+            <#list feature.coordinates as coord>
+                <@formatPos lat=coord.coordinates[1] lon=coord.coordinates[0]
+                            format=format />
+                <#if coord?has_next>,&nbsp;</#if>
+            </#list>
+        </#if>
+        <#if feature?has_next>,&nbsp;</#if>
+    </#list>
+</#if>
+----
+
+A template may create, with `?new()`, only Niord's own directives, such as the `LatLonDirective` above: a template
+that names another class does not run.
+
+[#inclusion-in-freemarker-templates]
+==== Inclusion in Freemarker Templates
+
+A Freemarker template can include other templates from the database. For example,
+"templates/tmpl/common.ftl" and "templates/messages/message-support.ftl" hold functions and macros that many
+other templates include:
+
+[source,xml]
+----
+<!-- From the same folder -->
+<#include "common.ftl"/>
+
+<!-- From another folder -->
+<#include "../tmpl/common.ftl"/>
+----
+
+[#language-specific-freemarker-templates]
+==== Language-Specific Freemarker Templates
+
+When Niord loads a template, or a template it includes, it first looks for a variant for the language it
+writes in. If, for example, "templates/aton/light-character.ftl" is loaded to write French, Niord uses
+"templates/aton/light-character_fr.ftl" when that path exists, and the template without a language otherwise.
+
+[#dictionaries-in-freemarker-templates]
+==== Dictionaries in Freemarker Templates
+
+A template writes fixed texts from the dictionaries described in the <<dictionaries,Dictionaries>> chapter, so
+that one template serves every language. A mail template can use the "message" and "mail" dictionaries, a print
+report template the "message" and "pdf" dictionaries, and so on. For example:
+
+[source,xml]
+----
+<!-- Writes the dictionary entry "pdf.toc" -->
+<h2>${text("pdf.toc")}</h2>
+
+<!-- Writes an entry whose text holds a {0} placeholder -->
+${text('cancellation.this_message', cancelDate)}
+----
+
+[#intermediate-message-template-format]
+=== Intermediate Message Template Format
+
+A message template does not write a message directly. Its Freemarker templates write an intermediate XML
+format, which says which field of the message to fill in and with what. See also the
+<<categories,Categories>> chapter and the
+link:../editor-manual/manual.html#message-template-execution[Message Template Execution] chapter of the
+editors' manual.
+
+A template is given this data:
+
+[cols="30,70",options="header"]
+|===
+| Data
+| Description
+
+| message
+| The message the template fills in, made from the fields the editor filled in on the template execution page.
+
+| params
+| The template's parameters, as the editor entered them.
+
+| template
+| The message template (the executable category) being run.
+
+| languages
+| The languages to write the message in.
+
+|===
+
+The template writes a list of `<field-template>` elements, one for each field of the message it fills in. For
+example:
+
+[source,xml]
+----
+<field-template field="part.getDesc('en').subject" format="text">
+    Denmark. Kattegat. Randers Fiord. Light unlit.
+</field-template>
+
+<field-template field="part.getDesc('en').details" format="html">
+    <p>The light Voer Brohoved in pos. 56&deg; 31.2'N - 010&deg; 13.8'E is unlit.</p>
+</field-template>
+
+<field-template field="message.promulgation('audio').text" update="append">
+    The light Voer Brohoved in position 56 degrees 31.2 minutes north 10 degrees 13.8 minutes east is unlit.
+</field-template>
+
+<field-template field="message.promulgation('navtex').text" update="append">
+    LIGHT VOER BROHOVED 56-31.2N 010-13.8E
+    UNLIT.
+</field-template>
+----
+
+The "field" attribute (a JavaScript expression) names the field of the message to fill in. The "update"
+attribute says whether to replace the field or append to it. The "format" attribute says what the content is: with
+"text", for example, the content is tidied into a single line of text.
+
+Most script resources are run for one language. The templates of a message template must handle every language
+of the message themselves, and change the language they write in with:
+
+[source,xml]
+----
+<#setting locale=lang>
+----
+
+[#adding-or-editing-a-script-resource]
+=== Adding or Editing a Script Resource
+
+To add a script resource, click *Add Script Resource* and choose *Freemarker Template* or *JavaScript File*:
+
+image::ScriptResourcesAddBtn.png[Add Script Resource Button, 140]
+
+To change one, click its *Edit* button (the pencil). The editor opens beside the list:
+
+image::ScriptResourceEditor.png[Script Resource Editor, 690]
+
+* *Path*: the path of the script resource, which must end in ".ftl" for a Freemarker template and in ".js" for a
+  JavaScript file. The type is chosen when the script resource is made and cannot be changed.
+* *Content*: the template or script, in an editor that colours its syntax.
+
+*Save* is enabled when you have changed something and the path is valid. *Cancel* closes the editor; if you have
+unsaved changes, Niord asks first.
+
+The *Copy* button of a row opens a new script resource with the same type and content, and the path cut back to
+its folder, so you only have to give the copy its file name.
+
+Other pages open a script resource for you: the pencil beside a script resource path in the
+<<categories,Categories>>, <<print-reports,Print Reports>> and <<promulgation-types,Promulgation Types>> editors and
+in a mailing list's triggers opens this page, in a new browser tab, with
+that script resource in the editor. The editor you came from stays open in its own tab, with any changes you have
+not saved yet. If no script resource is stored at the path, Niord says so ("No script resource is stored at ...")
+and opens nothing.
+
+[#script-resource-revisions]
+=== Script Resource Revisions
+
+Niord keeps every revision of a script resource: each time it is saved or imported, the new content is kept as
+a revision. Click *History...* in the editor to open the _Revision History_ dialog:
+
+image::ScriptResourceHistory.png[Script Resource History Dialog, 700]
+
+Each revision shows a version number, when it was made, the user who made it and its source: _Editor_ for a save
+on this page, _Import_ for an import, the bootstrap of a new deployment included. Revisions made before Niord
+recorded the source show none. Two revisions can have the same version number, as the two in the picture do; when
+each was made tells them apart. Tick one revision to see its content, or two to see their differences side by
+side. In the picture, a template that the import of a release changed is compared with its revision from before
+that import.
+
+[#deleting-a-script-resource]
+=== Deleting a Script Resource
+
+Click the *Delete* button (the bin) of a row, and confirm. Before you delete a script resource, check that no
+mailing list, print report, message template, promulgation type or other script resource uses it: Niord deletes
+it all the same, and from then on the missing-path report lists the path wherever something still names it.
+
+[#importing-and-exporting-script-resource]
+=== Importing and Exporting Script Resources
+
+The menu of the gear button (_Script resource actions_) has *Export...* and *Import...*.
+
+*Export...* downloads every script resource as one JSON file, a list of entries such as:
+
+[source,json]
+----
+[
+  {
+    "content": "\n<#macro formatLightCharacterPhase phase multiple=false >\n   ...",
+    "path": "templates/aton/light-character.ftl",
+    "type": "FM"
+  },
+  ...
+]
+----
+
+*Import...* opens the _Upload Script Resources File_ dialog. Choose a file in this format, for example a release
+file. Niord first shows what the import would do, and writes nothing until you click *Import ticked*:
+
+image::ScriptResourceImportPreview.png[Script Resource Import Preview, 600]
+
+* *Would add*: the paths this deployment does not have. They are ticked, and only the ticked paths are added.
+  A path the missing-path report lists is marked _In the missing-path report_, and the button *Only the paths the
+  missing-path report lists* unticks all the others in one go.
+* *Would overwrite*: the paths this deployment has with other content. None is ticked: a path keeps this
+  deployment's content unless you tick it. *Show diff* shows this deployment's content (left) beside the file's
+  (right). If someone changes a ticked path between the preview and the import, the import keeps that change, and
+  the job's log names the path as changed since the preview.
+* *Unchanged*: the number of paths whose content is already the file's.
+* *Refused*: the files the import will not take, each with the reason.
+
+Niord finds a script resource by its path without regard to upper and lower case: a path in the file that
+differs from a stored one only in case is that one, shown under _Would overwrite_ or _Unchanged_, never added.
+
+Every file is checked before it is imported, and refused when it breaks a rule. The path must be a plain ".ftl" or
+".js" path of at most 255 characters, without "..", without a backslash and without a leading "/". A template must
+be valid Freemarker, and may create (`?new`) only Niord's own directives, named in quotes. A script must not reach
+beyond what Niord's own scripts need: it must not use `Packages`, `Java.type` or `Java.extend`, Java packages
+other than `java.util`, `java.time`, `java.text`, `java.math` and Niord's own, processes, reflection, `eval` or
+`Function(`, a `load()` of anything but a "niord:" path, writes through the entity manager or update queries, or
+`CdiUtils.getBean` of other services than `MessageService`, `MessageSearchService`, `NavtexPromulgationService`,
+`SafetyNetPromulgationService` and `AreaService`. The check catches mistakes; it is not a security boundary,
+which is that only a system administrator imports, and that every import is recorded. The bootstrap of a new
+deployment runs the same check. A script resource saved in the editor is not checked.
+
+*Import ticked* starts the _script-resource-import_ batch job, and the dialog links to it. The job's log names
+each refused file and counts what was added, overwritten, kept and left unchanged, and every write is recorded in
+the script resource's revisions with your name and the source _Import_. You follow the job on the
+<<batch-jobs,Batch Jobs>> page. A batch set uploaded there cannot run this import (see <<batch-sets,Batch Sets>>).

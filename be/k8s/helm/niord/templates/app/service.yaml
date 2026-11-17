@@ -1,0 +1,19 @@
+{{- if .Values.app.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "niord.componentName" (list . "app") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "app") | nindent 4 }}
+spec:
+  # ClusterIP behind the nginx proxy by default; set app.service.type=LoadBalancer to reach
+  # the REST API from the host directly. On OrbStack it is then published at
+  # http://localhost:<port> and http://<name>.k8s.orb.local.
+  type: {{ .Values.app.service.type }}
+  selector:
+    {{- include "niord.componentSelectorLabels" (list . "app") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.app.service.port }}
+      targetPort: http
+{{- end }}

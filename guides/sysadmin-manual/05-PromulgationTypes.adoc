@@ -1,0 +1,222 @@
+
+:imagesdir: images
+
+[#promulgation-types]
+== Promulgation Types
+
+Besides the message itself, a navigational warning often has to reach mariners through other
+channels, each in a version of its own: a NAVTEX text for the NAVTEX stations, a SafetyNET text, a
+text to be read out on the radio, a short post on a social network. Each such channel is a
+_promulgation type_. In the message editor, the editor ticks the promulgation types a message is sent
+through and edits the text of each; see the
+link:../editor-manual/manual.html#promulgation-editor-field[Promulgation Editor Field] in the
+Editors Manual.
+
+A promulgation type is an instance of a _promulgation service_, the part of Niord that knows the
+channel. The base product has four services:
+
+* *NAVTEX mailing list*: a NAVTEX text, with the NAVTEX transmitters it is to be sent from.
+* *SafetyNET mailing list*: a SafetyNET text, with the SafetyNET area it covers.
+* *Audio mailing list*: a fuller text of the message, worded to be read out on the radio.
+* *Twitter*: a post on X (formerly Twitter), sent when the message is published.
+
+The first three are delivered by mailing lists (see the
+link:../admin-manual/manual.html#mailing-lists[Mailing Lists] chapter of the Administrators Manual).
+A country's Niord can add services of its own. One service can have several promulgation types, for
+instance one NAVTEX type for each region.
+
+The _Promulgation Types_ page lists the types. To open it, click *Sysadmin* in the main menu, then
+*Promulgation Types*.
+
+image::PromulgationTypesPage.png[The Promulgation Types page, 800]
+
+The columns are *Active*, *Service ID*, *Type ID*, *Name*, *Requirement*, *Priority*, *Language*,
+the *Domains* the type is used in, and the message *Types* it is restricted to. The *Filter* field
+matches the type ID, the name and the service ID.
+
+[#adding-or-editing-a-promulgation-type]
+=== Adding or Editing a Promulgation Type
+
+To add a type, click *Add Promulgation Type* and choose its service from the menu, which lists the
+services of your Niord:
+
+image::PromulgationTypesAddBtn.png[The Add Promulgation Type menu, 137]
+
+To edit a type, click the pencil of its row (*Edit Promulgation Type*). Both open the editor drawer:
+
+image::PromulgationTypeEditPage.png[The Edit Promulgation Type drawer, 512]
+
+The fields are the same for every service:
+
+[cols="30,70", options="header"]
+|===
+| Field
+| Description
+
+| Service ID
+| The service of the type, chosen when the type was added. It cannot be changed.
+
+| Active
+| Only active types are offered when a message is created or edited.
+
+| Requirement
+a| Whether the type is ticked for a message:
+
+  * _Optional_: not ticked; the editor ticks it for a message that needs it.
+  * _Default_: ticked when the message is created; the editor can untick it.
+  * _Mandatory_: always ticked; the editor cannot untick it.
+
+| Type ID
+| A unique identifier. It cannot be changed once the type is saved.
+
+| Name
+| The name editors see in the message editor.
+
+| Priority
+| The type's place among the promulgation types in the message editor: lower numbers come first.
+
+| Language
+| The language the type's texts are written in, or _Any language_. A NAVTEX type, for instance,
+  is tied to English.
+
+| Domains
+| The domains in whose message editor the type is offered.
+
+| Restrict Types
+| The message types the type is offered for, in two groups. The _NW types_ (_Local_, _Coastal_,
+  _Sub-area_ and _Navarea_) show when one of the chosen domains has a message series of navigational
+  warnings, and the _NM types_ (_Temporary_, _Preliminary_, _Permanent_ and _Misc_) when one has a
+  series of notices to mariners; with no domain chosen, both groups show. A group shows whole: the
+  types a series is itself restricted to do not narrow it. A ticked type of a group that no longer
+  shows is dropped when you save. With none ticked, the type is offered for every type. A NAVTEX
+  type, for instance, is restricted to _Coastal_ warnings.
+
+| Script Resource Paths
+| Optional. Script resources, such as Freemarker templates, that Niord runs to write the type's
+  text: when an editor clicks *Generate* in the type's part of the message editor (or *Generate
+  All*, which does it for every ticked type), and when an editor creates a message from a message
+  template. A NAVTEX template can, for instance, begin the text with the message's area. *Add path*
+  adds a row; each row has buttons to move it up
+  or down, to pick a script resource from a list, to open it, and to remove the row. Script
+  resources are described in the <<script-resources,Script Resources>> chapter.
+|===
+
+Below these fields, a saved NAVTEX, SafetyNET or Twitter type shows the settings of its service,
+described next. An Audio type has no settings of its own, so nothing follows its Script Resource
+Paths. For a type that is not saved yet, the drawer says "Save the promulgation type first to manage
+its service-specific settings." Click *Save* to save the type.
+
+[#promulgation-type-specific-editor-fields]
+==== Settings of a Service
+
+[#navtex]
+===== NAVTEX
+
+A NAVTEX type has a *Transmitters* row with a *Manage...* button, which opens the _Transmitters_
+dialog of the type:
+
+image::NavtexTransmitterDialog.png[The Transmitters dialog of a NAVTEX type, 420]
+
+It lists the type's NAVTEX transmitters with the areas each covers. *Add transmitter...* adds one,
+the pencil edits one and the bin deletes one; the form of a transmitter has *Active*, *Name* and
+*Areas*, and *Save* stores it and returns to the list. *Close* closes the dialog.
+
+When an editor ticks the NAVTEX type for a message, Niord offers every active transmitter of the
+type and ticks those whose areas contain the message's areas. The NAVTEX text starts with the
+NAVTEX preamble of the message's series (see <<message-series,Message Series>>).
+
+[#safetynet]
+===== SafetyNET
+
+A SafetyNET type has an *Areas* row with a *Manage...* button, which opens the _Areas_ dialog of the
+type: its SafetyNET distribution areas, with *Active*, *Name*, *Type* (the shape of the area) and
+*Sort Order*.
+
+// Picture to take: SafetyNetAreaDialog.png (manifest/sysadmin-manual.json)
+
+*Add Area* adds an area of one of the four shapes of the IMO International SafetyNET Manual, and the
+shape cannot be changed afterwards:
+
+* _Circular_: a *Center*, written "Lat Lon": the latitude and the longitude in whole degrees,
+  separated by a space, each of which may start with a minus sign. Add a *Radius* in nautical miles,
+  a whole number.
+* _Rectangular_: the *SW Corner*, written "Lat Lon" in the same way, and the *Northings* and
+  *Eastings*, the extent north and east in whole degrees.
+* _Coastal_: a *NAVAREA* and a coastal warning *Area*, a letter from A to Z.
+* _NAVAREA_: a *NAVAREA*, I to XXI.
+
+Niord does not read the positions of a circular or rectangular area: it copies them as written into
+the SafetyNET mail of the area, so write them the way the receiving SafetyNET service expects.
+
+Every area also has *Active*, a *Name*, a *Repetition* (_Transmit once_, _Two transmissions, 6 min.
+interval_, _Every 12 hours_ or _Every 4 hours_), a *Main Area Prefix* that starts the message's area
+line (such as "GULF OF GUINEA") and a *Sort Order*. The active areas are offered when an editor
+writes the SafetyNET text of a message.
+
+[#twitter-settings]
+===== Twitter
+
+A Twitter type has a *Settings* row with an *Update Settings...* button, which opens the _OAuth
+Settings_ dialog: the format of the posts and the credentials Niord posts with.
+
+image::TwitterSettingsDialog.png[The OAuth Settings dialog of a Twitter type, 360]
+
+* *Format*: the text of a post, with tokens Niord replaces when the message is published:
+  `${short-id}` (the message's short ID), `${tweet}` (the text the editor wrote for the post,
+  which by default is the message's title), `${uid}` (the message's unique identifier),
+  `${admin-app-url}` (the address of the administration application) and `${base-uri}` (the
+  address of the Niord server). Left empty, the format is
+  `${short-id} ${tweet} ${admin-app-url}/messages?messageId=${uid}`.
+* *Include thumbnail*: a map of the message's position goes with the post, when the message has a
+  position.
+* *API Key*, *API Secret*, *Access Token* and *Access Token Secret*: the credentials of the app
+  registered for your account in the developer portal of X. All four are required.
+
+*Save Settings* stores them and closes the dialog; *Close* closes it without saving.
+
+[#deleting-a-promulgation-type]
+=== Deleting a Promulgation Type
+
+Click the bin of a row (*Delete Promulgation Type*) and confirm with *Yes*. Niord deletes only the
+type itself, so it refuses a type that something still refers to, and answers "Error deleting
+promulgation type":
+
+* a type that messages have been promulgated with. Untick *Active* instead.
+* a NAVTEX type that still has transmitters, or a SafetyNET type that still has areas. Delete them
+  in the type's _Transmitters_ or _Areas_ dialog first.
+* a Twitter type whose settings have been saved. The settings cannot be deleted in the application,
+  so untick *Active* instead.
+
+[#importing-and-exporting-promulgation-types]
+=== Importing and Exporting Promulgation Types
+
+The action menu (the cog) has *Export...*, which downloads every promulgation type as a JSON file,
+and *Import...*, which uploads such a file and runs the _promulgation-type-import_ batch job (see
+<<sysadmin-lists,Working with the Sysadmin Lists>>).
+
+The import adds the types Niord lacks. A type that exists already, by its type ID, is overwritten by
+the file: its name, active flag, requirement, priority, language, domains, restrict types and script
+resource paths become the file's. The settings of the services (NAVTEX transmitters, SafetyNET areas
+and Twitter settings) are not part of the file and are set up by hand.
+
+The file is a list of types, for example:
+
+[source,json]
+----
+[
+  {
+    "typeId": "navtex",
+    "serviceId": "navtex",
+    "name": "NAVTEX",
+    "active": true,
+    "requirement": "OPTIONAL",
+    "priority": 11,
+    "language": "en",
+    "domains": [
+      { "domainId": "niord-nw" }
+    ],
+    "messageTypes": [ "COASTAL_WARNING" ],
+    "scriptResourcePaths": [ "templates/tmpl/navtex.ftl" ]
+  }
+]
+----

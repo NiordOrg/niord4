@@ -1,0 +1,22 @@
+@let p = promulgation();
+<div class="text-xs my-1">
+  <span>{{ 'messages.promulgation.priority' | transloco }}</span
+  >: {{ p.priority }}
+  @if (transmittersOn().length > 0) {
+    <span class="ml-2">{{ 'messages.promulgation.transmitters' | transloco }}:</span>
+    @for (name of transmittersOn(); track name; let isLast = $last) {
+      <span class="ml-1">{{ name }}{{ isLast ? '' : ',' }}</span>
+    }
+  }
+</div>
+
+@if (p.preamble || p.text) {
+  <div class="font-mono text-sm">
+    @if (p.preamble) {
+      <div [innerHTML]="p.preamble | plainTextToHtml"></div>
+    }
+    @if (p.text) {
+      <div [innerHTML]="p.text | plainTextToHtml"></div>
+    }
+  </div>
+}

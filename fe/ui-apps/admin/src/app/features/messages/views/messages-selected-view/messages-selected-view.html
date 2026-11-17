@@ -1,0 +1,35 @@
+@if (facade.selection.isEmpty()) {
+  <app-empty-selection />
+} @else {
+  <!--
+    Same surface-chrome pattern as the details view, minus area headings
+    (the selected list isn't area-grouped — every visible row is a message
+    the user has explicitly marked).
+  -->
+  <table class="message-table">
+    <tbody>
+      @for (message of painted() ? facade.selection.selectedMessages() : []; track message.id) {
+        <!--
+          Same link shape as the details view: the thumb inside the row carries
+          the `?messageId=` href, the row body opens it in a new tab on a
+          ctrl/cmd/shift or middle click, and a plain click still runs
+          `onActivate` with the selection as the prev/next context.
+        -->
+        <tr
+          class="row-interactive group"
+          tabindex="-1"
+          [appRowAttention]="message"
+          [class.row-selected]="facade.selection.isSelected(message.id)"
+          [appRowLink]="[]"
+          [rowLinkQueryParams]="{ messageId: message.id }"
+          rowLinkQueryParamsHandling="merge"
+          (appRowLinkActivate)="onActivate(message)"
+        >
+          <td class="p-0">
+            <app-message-details-row [message]="message" (openRequested)="onOpenDialog($event)" />
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}

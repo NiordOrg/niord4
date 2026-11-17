@@ -1,0 +1,38 @@
+<app-master-detail-tree-admin
+  [config]="config"
+  [modelLanguage]="modelLanguage"
+  [entities]="facade.categories()"
+  [loading]="facade.loading()"
+  [error]="facade.error()"
+  [hasSelection]="hasSelection()"
+  [moveDisabled]="moveDisabled()"
+  [addDisabled]="addDisabled()"
+  [selectedIds]="selectedIds()"
+  [cogItems]="cogItems()"
+  [flagTemplate]="true"
+  [templatePredicate]="isTemplateNode"
+  (nodeSelected)="select($event)"
+  (add)="add()"
+  (moveUp)="moveSibling(true)"
+  (moveDown)="moveSibling(false)"
+  (deleteRequested)="deleteSelected()"
+  (nodeMoved)="onNodeMoved($event)"
+  (retry)="facade.refresh()"
+>
+  <app-category-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (cancelled)="onEditorCancel()"
+    (dirtyChange)="editorDirty.set($event)"
+    (typeChange)="liveType.set($event)"
+  />
+</app-master-detail-tree-admin>
+
+<app-json-import-dialog
+  titleKey="admin.categories.import.title"
+  [uploadUrl]="api.uploadUrl()"
+  entityKey="admin.sections.categories.label"
+  (closed)="onImportClosed()"
+/>
+
+<app-confirm />

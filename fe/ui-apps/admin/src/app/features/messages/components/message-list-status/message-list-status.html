@@ -1,0 +1,4 @@
+<app-progress-bar [visible]="loading()" [overlay]="true" />
+@if (hasError()) {
+  <app-error-banner [title]="errorTitle()" [retryLabel]="retryLabel()" (retry)="onRetry()" />
+}

@@ -1,0 +1,43 @@
+<app-picker-popover #shell>
+  <header>
+    <h3 class="m-0 text-base font-semibold">
+      {{ 'admin.scriptResources.picker.title' | transloco }}
+    </h3>
+  </header>
+
+  <input
+    #searchInput
+    type="text"
+    class="w-full text-input"
+    [placeholder]="'admin.scriptResources.picker.filterPlaceholder' | transloco"
+    [attr.aria-label]="'admin.scriptResources.picker.filterPlaceholder' | transloco"
+    [value]="filter()"
+    (input)="filter.set(searchInput.value)"
+  />
+
+  <!-- Fixed, viewport-bounded scroll region keeps the popover box stable (see PickerPopover). -->
+  <div class="h-[min(18rem,45vh)] overflow-y-auto">
+    @if (loading()) {
+      <app-progress-bar [visible]="true" />
+    } @else {
+      <ul class="m-0 list-none divide-y divide-surface-100 p-0 dark:divide-surface-800">
+        @for (resource of filtered(); track resource.path) {
+          <li>
+            <button
+              type="button"
+              class="flex w-full items-center gap-2 px-1 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+              (click)="select(resource)"
+            >
+              <app-script-resource-type-badge [type]="resource.type" />
+              <span class="min-w-0 flex-1 truncate font-mono">{{ resource.path }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="py-3 text-center text-sm text-fg-muted">
+            {{ 'admin.scriptResources.picker.empty' | transloco }}
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</app-picker-popover>

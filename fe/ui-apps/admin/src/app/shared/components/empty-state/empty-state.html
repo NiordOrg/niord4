@@ -1,0 +1,9 @@
+<div [class]="rootClass()">
+  @if (glyph(); as g) {
+    <app-icon [name]="g" size="1.875rem" class="text-fg-subtle" />
+  }
+  <p [class]="titleClass()">{{ title() }}</p>
+  @if (body()) {
+    <small [class]="bodyClass()">{{ body() }}</small>
+  }
+</div>

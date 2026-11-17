@@ -1,0 +1,66 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex items-center gap-2 text-sm">
+        <input type="checkbox" id="source-active" class="checkbox" [formField]="form.active" />
+        <label for="source-active">{{ 'admin.sources.field.active' | transloco }}</label>
+      </div>
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.sources.field.name' | transloco }}
+        </legend>
+        <div class="flex flex-col gap-2">
+          @for (desc of form.descs().value(); track desc.lang; let i = $index) {
+            <div class="flex flex-col gap-1">
+              <app-localized-text-input
+                [formField]="form.descs[i].name"
+                [lang]="desc.lang"
+                ariaLabelKey="admin.sources.field.name"
+              />
+              <app-length-counter [text]="desc.name" [limit]="textMax" />
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.sources.field.abbreviation' | transloco }}
+        </legend>
+        <div class="flex flex-col gap-2">
+          @for (desc of form.descs().value(); track desc.lang; let i = $index) {
+            <div class="flex flex-col gap-1">
+              <app-localized-text-input
+                [formField]="form.descs[i].abbreviation"
+                [lang]="desc.lang"
+                ariaLabelKey="admin.sources.field.abbreviation"
+              />
+              <app-length-counter [text]="desc.abbreviation" [limit]="textMax" />
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.sources.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.sources.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

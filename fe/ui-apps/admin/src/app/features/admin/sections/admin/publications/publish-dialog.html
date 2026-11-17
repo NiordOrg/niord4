@@ -1,0 +1,317 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [header]="'admin.publications.publish.title' | transloco: { name: issueName() }"
+  [style]="{ width: '40rem' }"
+>
+  <div class="flex flex-col gap-4">
+    <!--
+      What pressing Publish will do, said before anything is asked. The cut-off
+      is the part people do not expect: it is a fact about the content period,
+      not about the click, and an admin who thinks it already happened publishes
+      a period that closes somewhere else.
+
+      The three facts that differ from release to release — how many messages,
+      which instant, what opens next — carry the emphasis, and the emphasis is in
+      the sentence rather than around it: which words those are is a fact about
+      each language's word order, so it cannot be applied from the template.
+    -->
+    <p
+      class="text-sm text-fg"
+      data-testid="publish-summary"
+      [innerHTML]="summaryKey() | transloco: summaryParams()"
+    ></p>
+
+    <!--
+      The warnings, ticked one by one. Not a gate on the button: the checklist was
+      fetched before this attempt and the server re-resolves at publish time, so
+      the refusal below is the authority on what is still owed.
+
+      The rows follow the cut-off. Membership resolves as of it, so the page's own
+      rail can describe the other release -- these are the ones the server will
+      actually judge.
+    -->
+    @if (railLoading()) {
+      <p class="text-xs text-fg-subtle">
+        {{ 'admin.publications.publish.warningsForCutoff' | transloco }}
+      </p>
+    } @else if (railFailed()) {
+      <!--
+        Said out loud rather than shown as an empty rail: "no warnings" and "we
+        could not find out" must not read alike above a button that publishes.
+      -->
+      <p class="text-xs text-warning">
+        {{ 'admin.publications.publish.warningsForCutoffFailed' | transloco }}
+      </p>
+    }
+
+    @if (warningRows().length > 0 || informationalRows().length > 0) {
+      <fieldset class="message message-warn flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.publications.publish.warnings' | transloco }}
+          <span class="font-normal text-fg-muted">({{ warningCount() }})</span>
+        </legend>
+        @for (row of warningRows(); track row.code) {
+          <label class="check-row items-start">
+            <input
+              [id]="'publish-ack-' + row.code"
+              type="checkbox"
+              class="checkbox mt-0.5"
+              [checked]="isAcknowledged(row.code)"
+              (change)="toggleAcknowledged(row.code)"
+            />
+            <span>
+              <!--
+                The code itself where there is no sentence for it: a warning the
+                server grew after this screen was written is still a warning, and
+                an unresolved key reads as a broken translation rather than as
+                something to go and look up.
+              -->
+              @if (row.labelKey; as key) {
+                <span>{{ key | transloco }}</span>
+              } @else {
+                <span class="font-mono text-xs">{{ row.code }}</span>
+              }
+              <!--
+                What the check found, under the warning it belongs to. The
+                server states the answer as a code plus its values rather than
+                only as a sentence, so the numbers are read in the same language
+                as the line above them; its own English stands where this build
+                has no words for the answer.
+              -->
+              @if (row.detail; as detail) {
+                <span class="block text-xs text-fg-subtle" data-testid="publish-check-detail">
+                  @if (detail.key; as key) {
+                    {{ key | transloco: detail.params }}
+                  } @else {
+                    {{ detail.text }}
+                  }
+                </span>
+              }
+            </span>
+          </label>
+        }
+
+        <!--
+          The warnings that carry no tickbox: the gate does not ask about them,
+          and they still describe the release about to be made. Left off this
+          dialog they were said only on the screen behind it, so the decision was
+          taken in front of a shorter list than the one it was reached from —
+          with the admin holding the difference in their head.
+
+          Marked rather than ticked, and beneath the boxes: nothing here is
+          answerable, so a row that looked answerable would be a control that
+          does nothing.
+        -->
+        @for (row of informationalRows(); track row.code) {
+          <p class="flex items-start gap-2 text-sm" data-testid="publish-informational">
+            <!--
+              Filled in the severity's own colour rather than tinted with it:
+              the panel around it IS the warn tint, and a mark washed in the
+              same colour is a circle nobody can see.
+            -->
+            <span
+              class="mt-0.5 inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-[var(--niord-notice-warn-fg)] text-xs font-bold text-[var(--niord-notice-warn-bg)]"
+              aria-hidden="true"
+              >!</span
+            >
+            <span>
+              @if (row.detailKey; as key) {
+                <span>{{ key | transloco: { detail: row.detail?.text ?? '' } }}</span>
+              } @else {
+                <span class="font-mono text-xs">{{ row.code }}</span>
+              }
+              <!-- And what it was measured to be, in the same language. -->
+              @if (row.detail; as detail) {
+                <span class="block text-xs text-fg-subtle" data-testid="publish-check-detail">
+                  @if (detail.key; as key) {
+                    {{ key | transloco: detail.params }}
+                  } @else {
+                    {{ detail.text }}
+                  }
+                </span>
+              }
+            </span>
+          </p>
+        }
+      </fieldset>
+    }
+
+    <!--
+      The one question the release still asks, in the open.
+
+      The cut-off: the end of the CONTENT period, not the moment of the click.
+      Two instants and no third -- the one the issue is planned to close at, and
+      right now -- because every further instant is a number that appears nowhere
+      else on the screen this dialog was opened from. It used to sit behind an
+      "Other choices" line beside the name boxes; with the name gone to the
+      tailoring drawer it was one choice behind a fold, which is a fold for
+      nothing.
+
+      No rule above it: the dialog's own gaps already separate the questions, and
+      a hairline drawn across a form this short reads as a section boundary where
+      there is only one section.
+    -->
+    <div data-testid="publish-options">
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.publications.publish.cutoff' | transloco }}
+        </legend>
+
+        <!--
+          The instant the issue is planned to close at, named in full. A
+          radio labelled only "the planned cut-off" asks the reader to hold
+          a date in their head that the screen already knows.
+        -->
+        <label class="check-row">
+          <input
+            id="publish-cutoff-planned"
+            type="radio"
+            name="publish-cutoff"
+            class="radio"
+            [checked]="mode() === 'PLANNED'"
+            [disabled]="!plannedAvailable()"
+            (change)="setMode('PLANNED')"
+          />
+          {{ 'admin.publications.publish.cutoffPlanned' | transloco: { at: plannedAt() } }}
+        </label>
+
+        <!--
+          Why it cannot be taken, where it cannot. An option that is simply
+          dead leaves the reader to work out whether the issue is wrong or
+          they are.
+        -->
+        @if (plannedUnavailableKey(); as key) {
+          <p class="ml-6 text-xs text-warning" data-testid="publish-planned-unavailable">
+            {{ key | transloco }}
+          </p>
+        }
+
+        <!--
+          Changing it is not a third cut-off: it MOVES the planned one,
+          through the same edit the issue's own panel saves through. So the
+          number this dialog shows afterwards is the number that screen
+          shows, rather than a private instant that agrees with nothing.
+        -->
+        <div class="ml-6">
+          @if (changingCutoff()) {
+            <div class="flex flex-col gap-2" data-testid="publish-cutoff-change">
+              <app-date-time-field
+                class="max-w-72"
+                [formField]="cutoffForm.cutoff"
+                [ariaLabel]="'admin.publications.publish.newPlannedCutoff' | transloco"
+              />
+              @if (typedNotAfterStart()) {
+                <p class="text-xs text-danger">
+                  {{ 'admin.publications.publish.cutoffNotAfterStart' | transloco }}
+                </p>
+              }
+              <p class="text-xs text-fg-subtle">
+                {{ 'admin.publications.publish.changeCutoffHint' | transloco }}
+              </p>
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  class="btn-secondary text-xs"
+                  [disabled]="cutoffChangeDisabled()"
+                  (click)="confirmCutoffChange()"
+                  data-testid="publish-cutoff-change-confirm"
+                >
+                  {{ 'admin.publications.publish.changeCutoffConfirm' | transloco }}
+                </button>
+                <button type="button" class="btn-tertiary text-xs" (click)="cancelCutoffChange()">
+                  {{ 'admin.publications.publish.cancel' | transloco }}
+                </button>
+              </div>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="link-button is-subtle text-xs"
+              (click)="startCutoffChange()"
+              data-testid="publish-change-cutoff"
+            >
+              {{ 'admin.publications.publish.changeCutoff' | transloco }}
+            </button>
+          }
+        </div>
+
+        <label class="check-row">
+          <input
+            id="publish-cutoff-now"
+            type="radio"
+            name="publish-cutoff"
+            class="radio"
+            [checked]="mode() === 'NOW'"
+            (change)="setMode('NOW')"
+          />
+          {{ 'admin.publications.publish.cutoffNow' | transloco: { at: nowAt() } }}
+        </label>
+
+        <p class="text-xs text-fg-subtle">
+          {{ 'admin.publications.publish.cutoffHint' | transloco }}
+        </p>
+      </fieldset>
+    </div>
+
+    <!--
+      What the server refused this attempt over, re-listed rather than replacing
+      the form: nothing typed is lost, and the codes named here are the ones that
+      were not ticked when the release was actually attempted.
+    -->
+    @if (refused()) {
+      <div class="publish-unacknowledged message message-warn flex-col">
+        <p class="text-sm text-fg">
+          {{ 'admin.publications.publish.acknowledgeToContinue' | transloco }}
+        </p>
+        <ul class="mt-2 flex flex-col gap-2">
+          @for (row of unacknowledgedRows(); track row.code) {
+            <li>
+              <label class="check-row items-start">
+                <input
+                  [id]="'publish-unack-' + row.code"
+                  type="checkbox"
+                  class="checkbox mt-0.5"
+                  [checked]="isAcknowledged(row.code)"
+                  (change)="toggleAcknowledged(row.code)"
+                />
+                @if (row.labelKey; as key) {
+                  <span>{{ key | transloco }}</span>
+                } @else {
+                  <span class="font-mono text-xs">{{ row.code }}</span>
+                }
+              </label>
+            </li>
+          }
+        </ul>
+      </div>
+    } @else if (liveErrorKey(); as key) {
+      <p class="text-sm text-danger">{{ key | transloco }}</p>
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.publications.publish.cancel' | transloco }}
+    </button>
+    <!--
+      A release freezes the membership and renders the document again, per
+      language — tens of seconds on a large issue, and the dialog stays open over
+      all of it. The button is already disabled while that runs; the spinner is
+      what says the press landed rather than that something is wrong with the
+      form.
+    -->
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="submitDisabled()"
+      [attr.aria-busy]="working() ? 'true' : null"
+      (click)="submit()"
+    >
+      @if (working()) {
+        <app-icon name="lucideLoaderCircle" [spin]="true" />
+      }
+      <span>{{ 'admin.publications.publish.confirm' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

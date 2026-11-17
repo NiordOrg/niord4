@@ -1,0 +1,644 @@
+[#niord-message-model]
+== Niord Message Model
+The Niord message model is one model for both Navigational Warnings (NW) and Notices to Mariners
+(NM). Other systems receive messages in this model from the public API, which a test system serves
+at https://niord.staging.brs2.dk/rest/public/v1/messages[niord.staging.brs2.dk^]. The API is
+documented in the link:../public-api/api.html[Niord Public API] document, and the
+link:../presentation/presentation.html[Niord Message Presentation] document gives guidelines for how
+a client should show a message to a reader.
+
+[[img-sample-nm]]
+.Sample NM
+image::Sample-NM.png[Sample NM, 563]
+
+[#background]
+=== Background
+The structured data of the model caters for the requirements that the specifications for Maritime
+Safety Information (MSI) and for Notices to Mariners set out, that is, the relevant parts of:
+
+* The joint IHO-IMO-WMO standard S-53 on Maritime Safety Information.
+* The IHO standard S-4, which covers Notices to Mariners.
+* The revised NAVTEX Manual (an IMO MSC circular).
+* The IMO International SafetyNET Manual.
+
+The model is a further development of the work done in the EU-funded _ACCSEAS_ project, documented
+in the _ACCSEAS WP6 MSI/NM (T&P) Service Description_.
+
+[#message-model-uml]
+=== Message Model Class Diagram
+The class diagram below shows the classes of the message model, their fields and how they are
+related. A field marked `[0..1]` is optional; the tables further down say the same for every field.
+
+[[img-message-uml]]
+.Message model class diagram
+[plantuml, message-model, svg]
+....
+@startuml
+left to right direction
+hide empty methods
+hide circle
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName sans-serif
+
+class Message {
+  id : String
+  created : DateTime
+  updated : DateTime
+  number : Integer [0..1]
+  shortId : String [0..1]
+  mainType : MainType
+  type : Type
+  status : Status
+  horizontalDatum : String [0..1]
+  publishDateFrom : DateTime [0..1]
+  publishDateTo : DateTime [0..1]
+  followUpDate : DateTime [0..1]
+  originalInformation : Boolean [0..1]
+}
+
+class MessageDesc #LightYellow {
+  lang : String
+  title : String [0..1]
+  vicinity : String [0..1]
+  publication : String [0..1]
+  internalPublication : String [0..1]
+  source : String [0..1]
+}
+
+class MessagePart {
+  indexNo : int
+  type : MessagePartType [0..1]
+  hideSubject : Boolean [0..1]
+}
+
+class MessagePartDesc #LightYellow {
+  lang : String
+  subject : String [0..1]
+  details : String [0..1]
+}
+
+class DateInterval {
+  allDay : Boolean [0..1]
+  fromDate : DateTime [0..1]
+  toDate : DateTime [0..1]
+}
+
+class FeatureCollection #PaleGreen
+
+class MessageSeries {
+  seriesId : String
+  mainType : MainType [0..1]
+}
+
+class Area {
+  id : Integer
+  mrn : String [0..1]
+  active : boolean
+}
+
+class AreaDesc #LightYellow {
+  lang : String
+  name : String [0..1]
+}
+
+class Category {
+  id : Integer
+  mrn : String [0..1]
+  active : boolean
+}
+
+class CategoryDesc #LightYellow {
+  lang : String
+  name : String [0..1]
+}
+
+class Chart {
+  chartNumber : String
+  internationalNumber : Integer [0..1]
+  active : boolean
+  scale : Integer [0..1]
+  name : String [0..1]
+}
+
+class Reference {
+  messageId : String
+  type : ReferenceType [0..1]
+}
+
+class ReferenceDesc #LightYellow {
+  lang : String
+  description : String [0..1]
+}
+
+class Attachment {
+  type : String [0..1]
+  path : String [0..1]
+  fileName : String [0..1]
+  fileSize : Long [0..1]
+  display : AttachmentDisplayType [0..1]
+  width : String [0..1]
+  height : String [0..1]
+}
+
+class AttachmentDesc #LightYellow {
+  lang : String
+  caption : String [0..1]
+}
+
+enum MainType #LightGray {
+  NW
+  NM
+}
+
+enum Type #LightGray {
+  PERMANENT_NOTICE
+  TEMPORARY_NOTICE
+  PRELIMINARY_NOTICE
+  MISCELLANEOUS_NOTICE
+  COASTAL_WARNING
+  SUBAREA_WARNING
+  NAVAREA_WARNING
+  LOCAL_WARNING
+}
+
+enum Status #LightGray {
+  DRAFT
+  VERIFIED
+  PUBLISHED
+  EXPIRED
+  CANCELLED
+  DELETED
+}
+
+enum MessagePartType #LightGray {
+  DETAILS
+  TIME
+  POSITIONS
+  NOTE
+  PROHIBITION
+  SIGNALS
+}
+
+enum ReferenceType #LightGray {
+  REFERENCE
+  REPETITION
+  REPETITION_NEW_TIME
+  CANCELLATION
+  UPDATE
+}
+
+enum AttachmentDisplayType #LightGray {
+  ABOVE
+  BELOW
+  SEPARATE_PAGE
+}
+
+Message *-- "0..*" MessageDesc : descs
+Message *-- "0..*" MessagePart : parts
+Message *-- "0..*" Reference : references
+Message *-- "0..*" Attachment : attachments
+Message o-- "0..1" MessageSeries : messageSeries
+Message o-- "0..*" Area : areas
+Message o-- "0..*" Category : categories
+Message o-- "0..*" Chart : charts
+
+MessagePart *-- "0..*" MessagePartDesc : descs
+MessagePart *-- "0..*" DateInterval : eventDates
+MessagePart *-- "0..1" FeatureCollection : geometry
+
+Area *-- "0..*" AreaDesc : descs
+Area o-- "0..1" Area : parent
+Category *-- "0..*" CategoryDesc : descs
+Category o-- "0..1" Category : parent
+Reference *-- "0..*" ReferenceDesc : descs
+Attachment *-- "0..*" AttachmentDesc : descs
+
+Message ..> MainType
+Message ..> Type
+Message ..> Status
+MessagePart ..> MessagePartType
+Reference ..> ReferenceType
+Attachment ..> AttachmentDisplayType
+@enduml
+....
+
+The diagram uses the following colours:
+
+* Grey: an enumeration, a closed list of values.
+* Yellow: a localized description class, one entry per language (see <<design-patterns,Design
+  Patterns>> below).
+* Green: the geometry, which follows the <<niord-geojson-model,Niord GeoJSON Model>> of the next
+  chapter.
+
+A line with a filled diamond means that the class belongs to the message and exists only as part of
+it. A line with an open diamond means that the class is base data that the producing system
+maintains on its own (areas, categories, charts and message series), and that the message only
+refers to it.
+
+[#design-patterns]
+=== Design Patterns
+The model generalizes the parts and fields of NW and NM messages, and adds support for:
+
+* *Several languages.* A message can be written in any number of languages, and so can the base
+  data it refers to (an area's name, for example). Every class with texts that depend on the
+  language has a list of _description_ entries, `descs`, each with an ISO 639-1 language code
+  (`lang`) and the texts in that language. The description classes are yellow in the diagram.
+* *Rich text.* A Notice to Mariners in particular can hold tables, links and pictures. The details
+  of a message part are therefore HTML.
+* *Message series.* The S-4 and S-53 standards loosely describe a numbering scheme for NW and NM.
+  The scheme does not make a number unique in a combined NW and NM model, nor in a system holding
+  the messages of several authorities, so the model groups messages into _message series_, each
+  with its own numbering.
+* *Base data.* Areas and categories are trees of any depth, maintained in the producing system,
+  rather than a fixed number of levels with fixed values.
+
+The remainder of the chapter describes the classes one by one.
+
+[#message-model-classes]
+=== Message Model Classes
+
+[#messageseries]
+==== MessageSeries
+According to the IHO, NW and NM must be numbered. For NW, for example, the standard says:
+
+[quote]
+Navigational warnings in each series should be consecutively numbered throughout the calendar year,
+commencing with 1/YY at 0000 UTC on 1 January.
+
+A number alone is not unique in a combined NW and NM model, nor in a system that holds the messages
+of several countries and authorities. The model therefore groups messages into message series. A
+country may have one series for NW and one for NM, but it may also give, say, a local harbour
+authority a series of its own for local warnings, or divide the country into regions, each with
+its own series.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|seriesId|String|Always|The id of the message series in the producing system, for example
+`dma-nm`. It should be unique across systems.
+
+|mainType|MainType|Optional|Either `NW` or `NM`. +
+The public API does not send this field; the message's own `mainType` says the same.
+|===
+
+[#chart]
+==== Chart
+A message can name a list of sea charts. The charts are base data, maintained in the producing
+system.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|chartNumber|String|Always|The national chart number, which identifies the chart.
+
+|internationalNumber|Integer|Optional|The international (INT) chart number, for example `1336`.
+
+|active|Boolean|Always|Whether the chart is still in use in the producing system.
+
+|scale|Integer|Optional|The scale of the chart, written as the denominator: `100000` means
+1:100,000.
+
+|name|String|Optional|The name of the chart. +
+The public API does not send this field.
+|===
+
+[#area]
+==== Area
+The IHO standards for NW and NM both name places on several levels (_general area_ and _locality_
+for NW; _general region_, _sub-region_ and _specific location_ for NM). Niord generalizes this
+into a tree of areas of any depth, with a localized name for each area, maintained in the producing
+system. A message names a list of these areas, and with each area its parent areas.
+
+A message can also have a localized _vicinity_ text (a field of <<messagedesc,MessageDesc>>) for a
+place that the area tree does not hold.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|id|Integer|Always|The id of the area in the producing system.
+
+|mrn|String|Optional|A globally unique Maritime Resource Name (MRN) of the area, for example
+`urn:mrn:iho:country:dk`. MRNs make it easier to exchange messages between two systems.
+
+|active|Boolean|Always|Whether the area is still in use in the producing system.
+
+|parent|Area|Optional|The parent area. Every area except the top of the tree has one, so a
+client can follow the line of parents to group and sort messages by area. +
+Example: The Baltic Sea -> Denmark.
+
+|descs|AreaDesc[]|Optional|The localized names of the area. See <<areadesc,AreaDesc>>.
+|===
+
+TIP: A client may use the areas of a message to group or filter messages, but has no need to show
+them to the reader: the areas are usually part of the message title already.
+
+[#areadesc]
+==== AreaDesc
+The localized fields of an area.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|name|String|Optional|The name of the area in this language.
+|===
+
+[#category]
+==== Category
+Categories form a tree of any depth, with a localized name for each category, maintained in the
+producing system. A message names a list of categories, and with each category its parent
+categories.
+
+At the top of the tree are categories such as _Aids to Navigation_, _Drifting Objects_ and
+_Obstruction_, which is the grouping the IHO standards use. The categories below them name the
+kinds of hazard within the parent category. Examples, from the top down:
+
+* Aids to Navigation -> Floating Aids to Navigation -> Buoy -> Buoy Established
+* Aids to Navigation -> Light -> Light Unlit
+* Obstruction -> Diving Operation
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|id|Integer|Always|The id of the category in the producing system.
+
+|mrn|String|Optional|A globally unique Maritime Resource Name (MRN) of the category.
+
+|active|Boolean|Always|Whether the category is still in use in the producing system.
+
+|parent|Category|Optional|The parent category. Every category except the top of the tree has
+one.
+
+|descs|CategoryDesc[]|Optional|The localized names of the category. See
+<<categorydesc,CategoryDesc>>.
+|===
+
+TIP: Categories are mainly for filtering and for choosing how to draw a message, for example with
+a special symbol. There is no need to show them to the reader on their own.
+
+[#categorydesc]
+==== CategoryDesc
+The localized fields of a category.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|name|String|Optional|The name of the category in this language.
+|===
+
+[#reference]
+==== Reference
+A reference from one message to another.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|messageId|String|Always|The id of the message referred to. It is usually the short id of the
+other message (see <<message,Message>>), and a client can then link to it; the public API resolves a
+short id as well as a message id. The model does not require any format, however.
+
+|type|ReferenceType|Optional|The kind of reference: `REFERENCE` (a plain reference),
+`REPETITION` (this message repeats the other), `REPETITION_NEW_TIME` (it repeats the other with a
+new time), `CANCELLATION` (it cancels the other) or `UPDATE` (it updates the other).
+
+|descs|ReferenceDesc[]|Optional|The localized description of the reference. See
+<<referencedesc,ReferenceDesc>>.
+|===
+
+[#referencedesc]
+==== ReferenceDesc
+The localized fields of a reference.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|description|String|Optional|A text about the reference, for example `Positions 1) - 6)`.
+|===
+
+[#attachment]
+==== Attachment
+A message can have a list of attachments, such as pictures and PDF files. The files are kept in a
+public repository of the producing system.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|type|String|Optional|The media type of the file, for example `image/png`.
+
+|path|String|Optional|Where the file is. When the public API rewrites links (its `externalize`
+parameter, on by default), this is a full address, such as
+pass:[<code>https://niord.brs2.dk/rest/repo/file/&#8203;messages/...</code>]. Otherwise it is the path of the file inside the
+repository, `messages/...`, which the producing system serves under `/rest/repo/file/`.
+
+|fileName|String|Optional|The file name.
+
+|fileSize|Long|Optional|The size of the file in bytes.
+
+|display|AttachmentDisplayType|Optional|How the editor meant a picture or video to be shown with
+the message: `ABOVE` or `BELOW` the message text, or `SEPARATE_PAGE`, on a page of its own in
+printed output such as a PDF. When the field is missing, the attachment is only listed.
+
+|width|String|Optional|The width to show a picture or video in, with its unit (`em`, `px`, `%`,
+`cm`, `mm`, `in`, `pt` or `pc`). When only one of width and height is given, the other follows
+the proportions of the picture.
+
+|height|String|Optional|The height to show a picture or video in, written like `width`.
+
+|descs|AttachmentDesc[]|Optional|The localized caption. See <<attachmentdesc,AttachmentDesc>>.
+|===
+
+TIP: A client that works offline should download the attachments and rewrite their paths. Since the
+HTML of a message part (see <<messagepartdesc,MessagePartDesc>>) may show a picture or link to a
+file in the same repository, that HTML has to be rewritten too.
+
+[#attachmentdesc]
+==== AttachmentDesc
+The localized fields of an attachment.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|caption|String|Optional|A caption to show with the attachment.
+|===
+
+[#dateinterval]
+==== DateInterval
+A message part has a list of event date intervals, each of which may be open at one end. Together
+they give the time in which the hazard or event of the part applies.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|allDay|Boolean|Optional|When `true`, the producing system treats `fromDate` and `toDate` as dates
+without a time of day.
+
+|fromDate|DateTime|Optional|The start of the interval.
+
+|toDate|DateTime|Optional|The end of the interval. When it is missing, the interval has no end.
+|===
+
+TIP: A client may use the event dates to filter messages, for example for relevance to a planned
+route. It should not show them to the reader as they are: the details text of the part already
+states the dates in words (see <<messagepartdesc,MessagePartDesc>>).
+
+[#messagepart]
+==== MessagePart
+A message has an ordered list of _message parts_, which can be thought of as sub-stories. Each part
+gives the time, the positions, a subject and a description of one hazard or event.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|indexNo|Integer|Always|The part's place in the message: `0` for the first part, `1` for the
+second and so on, the same as the order of the list.
+
+|type|MessagePartType|Optional|The kind of part, which a client may use as a heading: `DETAILS`,
+`TIME`, `POSITIONS`, `NOTE`, `PROHIBITION` or `SIGNALS`.
+
+|eventDates|DateInterval[]|Optional|The time in which the hazard or event of the part applies. See
+<<dateinterval,DateInterval>>.
+
+|geometry|FeatureCollection|Optional|The positions of the part, as a GeoJSON _FeatureCollection_.
+The <<niord-geojson-model,Niord GeoJSON Model>> chapter describes it.
+
+|descs|MessagePartDesc[]|Optional|The localized subject and details. See
+<<messagepartdesc,MessagePartDesc>>.
+
+|hideSubject|Boolean|Optional|When `true`, the subject is not to be shown to the reader: it only
+helped the editor build the title. The details are shown as usual.
+|===
+
+[#messagepartdesc]
+==== MessagePartDesc
+The localized fields of a message part.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|subject|String|Optional|The subject of the hazard or event, in a few words, for example
+`Construction works`.
+
+|details|String|Optional|The full description of the hazard or event, as HTML. It can hold
+paragraphs, tables (position tables among them), lists, links and pictures. The
+link:../presentation/presentation.html#message-details[presentation guidelines] say which HTML
+classes it uses.
+|===
+
+[#message]
+==== Message
+The _Message_ class is one complete Navigational Warning (NW) or Notice to Mariners (NM).
+
+NW and NM share the one _Message_ class on purpose, rather than having a class each. The reason is
+that the two are expected to grow together once they are promulgated by electronic means only.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|id|String|Always|The id of the message in the producing system: a UUID that never changes, for
+example `5489fde1-d067-46be-9212-363337046587`.
+
+|created|DateTime|Always|When the message was created in the producing system.
+
+|updated|DateTime|Always|When the message was last changed in the producing system.
+
+|messageSeries|MessageSeries|Optional|The message series of the message. See
+<<messageseries,MessageSeries>>.
+
+|number|Integer|Optional|The number of the message within its message series. A message in a
+series without numbering has none.
+
+|shortId|String|Optional|The short id that readers know the message by, built from the series and
+the number, for example `NM-775-26`. A message without a number usually has none.
+
+|mainType|MainType|Always|The main type of the message, `NW` or `NM`. The type below implies it;
+it is given for convenience.
+
+|type|Type|Always|The type of the message: `PERMANENT_NOTICE`, `TEMPORARY_NOTICE`,
+`PRELIMINARY_NOTICE` or `MISCELLANEOUS_NOTICE` for an NM; `COASTAL_WARNING`, `SUBAREA_WARNING`,
+`NAVAREA_WARNING` or `LOCAL_WARNING` for an NW.
+
+|status|Status|Always|The status of the message. The model has `DRAFT`, `VERIFIED`, `PUBLISHED`,
+`EXPIRED`, `CANCELLED` and `DELETED`. The public API only ever returns a message that is
+`PUBLISHED`, `EXPIRED` or `CANCELLED`.
+
+|areas|Area[]|Optional|The areas of the message, each with its parent areas. See <<area,Area>>.
+
+|categories|Category[]|Optional|The categories of the message, each with its parent categories.
+See <<category,Category>>.
+
+|charts|Chart[]|Optional|The sea charts the message concerns. See <<chart,Chart>>.
+
+|horizontalDatum|String|Optional|The horizontal datum of the positions. When it is missing,
+assume WGS 84.
+
+|publishDateFrom|DateTime|Optional|When the message was published, or is to be published.
+
+|publishDateTo|DateTime|Optional|When the message was cancelled or expired, or is to expire.
+
+|followUpDate|DateTime|Optional|A date on which the editors mean to look at the message again. It
+is an aid for the editors and says nothing to the reader.
+
+|references|Reference[]|Optional|The references to other messages. See <<reference,Reference>>.
+
+|originalInformation|Boolean|Optional|Whether the message is based on original information. Notices
+to Mariners traditionally mark such a message with a star (*).
+
+|parts|MessagePart[]|Optional|The message parts. See <<messagepart,MessagePart>>.
+
+|descs|MessageDesc[]|Optional|The localized title and texts. See <<messagedesc,MessageDesc>>.
+
+|attachments|Attachment[]|Optional|The attachments. See <<attachment,Attachment>>.
+|===
+
+[#messagedesc]
+==== MessageDesc
+The localized fields of a message.
+
+[cols="20,20,12,48",options="header"]
+|===
+|Attribute Name|Type|Present|Description
+
+|lang|String|Always|The ISO 639-1 language code.
+
+|title|String|Optional|The full title line of the message, usually made by joining the area
+lineage, the vicinity and the subject of each message part. +
+Example: `Denmark. The Baltic Sea. Rønne. Vesthavnen. Construction works.`
+
+|vicinity|String|Optional|A place that the area tree does not hold, for example
+`Rønne. Vesthavnen.` See <<area,Area>>.
+
+|publication|String|Optional|The publications the message refers to or is published in, as HTML,
+since it can link to the publications themselves. The citation of a publication that Niord keeps, a
+link or, without an address, a `<span>`, carries the publication's id in an attribute of its own
+(see <<publication-citations,Publication citations>>).
+
+|internalPublication|String|Optional|The same as `publication`, for publications meant for the
+editors only. The public API never sends this field.
+
+|source|String|Optional|Where the information came from and when, for example
+`Port authority 18 August 2026`.
+|===

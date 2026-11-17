@@ -1,0 +1,25 @@
+:host {
+  display: block;
+}
+
+/* Layer 4 (per-component): chrome bg + fg. Reads Layer 2 tokens so a country
+   overlay re-skinning the header is a tokens.<country>.css edit, not a
+   component-code change. `color` cascades so descendant nav links / buttons /
+   icons inherit the chrome foreground without needing `text-white` repeated
+   per element. */
+header {
+  background: var(--niord-header-bg);
+  color: var(--niord-header-fg);
+  position: relative;
+}
+
+/* Layer 4 pseudo-element: 3px brand bar under the chrome.
+   Reads --niord-header-active, which is aliased to the accent color per country
+   (sea-glass teal in Default, a country's own accent in its brand), so the bar
+   re-colors with the brand without a change here. */
+header::after {
+  content: '';
+  display: block;
+  height: 3px;
+  background: var(--niord-header-active);
+}

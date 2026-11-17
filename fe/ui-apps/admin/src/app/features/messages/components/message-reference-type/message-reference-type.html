@@ -1,0 +1,11 @@
+<span class="inline-flex flex-wrap items-baseline gap-1">
+  <button type="button" class="reference-link" (click)="onReferenceClick($event)">
+    {{ reference().messageId }}
+  </button>
+  @if (suffix()) {
+    <span class="text-xs text-surface-500">{{ suffix() }}</span>
+  }
+  @if (description()) {
+    <span>- {{ description() }}</span>
+  }
+</span>

@@ -1,0 +1,51 @@
+<ng-template #panel>
+  @if (req(); as r) {
+    <div
+      class="confirm-panel"
+      role="alertdialog"
+      aria-modal="true"
+      [attr.aria-label]="r.header || r.message"
+      [attr.aria-describedby]="r.details?.length ? bodyId + ' ' + detailsId : bodyId"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+      [style.width]="width()"
+    >
+      @if (r.header) {
+        <div class="confirm-head">
+          <h2 class="confirm-title">{{ r.header }}</h2>
+          <button
+            type="button"
+            class="icon-button"
+            (click)="reject()"
+            [attr.aria-label]="'shared.confirm.reject' | transloco"
+          >
+            <app-icon name="lucideX" />
+          </button>
+        </div>
+      }
+      <p class="confirm-body" [id]="bodyId">{{ r.message }}</p>
+      @if (r.details?.length) {
+        <ul class="confirm-details" [id]="detailsId">
+          @for (line of r.details; track $index) {
+            <li>{{ line }}</li>
+          }
+        </ul>
+      }
+      <div class="confirm-foot">
+        <button type="button" class="btn-tertiary" (click)="reject()">
+          {{ rejectLabel() }}
+        </button>
+        <!-- Accept holds the initial focus so Enter confirms and Esc cancels — the native
+             confirm() semantics every one of these dialogs replaced. -->
+        <button
+          type="button"
+          [class]="r.intent === 'destructive' ? 'btn-danger' : 'btn-primary'"
+          cdkFocusInitial
+          (click)="accept()"
+        >
+          {{ acceptLabel() }}
+        </button>
+      </div>
+    </div>
+  }
+</ng-template>

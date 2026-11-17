@@ -1,0 +1,7 @@
+# A country jar that names its own key set for the tokens: refused (CountryContractGuard).
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8080/auth/realms/country/protocol/openid-connect/certs

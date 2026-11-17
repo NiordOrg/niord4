@@ -1,0 +1,166 @@
+{{- /*
+Renders nothing; fails the render when the values predate the per-component enable flags
+(chart 0.3.0, published as 4.0.10 and earlier). `helm upgrade --reuse-values` from such a
+release replaces this chart's defaults with the old chart's, which have no
+<component>.enabled keys: every component would render as disabled and Helm would delete
+the release's Deployments, Services and PVCs (the database included).
+*/ -}}
+{{- range $component := list "app" "proxy" "postgres" "keycloak" "mailhog" }}
+{{- if not (hasKey (index $.Values $component) "enabled") }}
+{{- fail (printf "%s.enabled is missing or null: set it to true or false. Values without it predate the per-component enable flags — helm upgrade --reuse-values keeps the old chart's defaults, which would render nothing and delete the release's PVCs; upgrade with --reset-then-reuse-values or be/k8s/scripts/deploy.sh instead." $component) }}
+{{- end }}
+{{- end }}
+{{- /*
+The same for the public site's component, which is younger: values from a release on an earlier
+chart have no info at all. Its templates render nothing then, so that this message is the one the
+render fails with.
+*/ -}}
+{{- if not (and (kindIs "map" .Values.info) (hasKey .Values.info "enabled")) }}
+{{- fail "info.enabled is missing: the values predate the public site's component — helm upgrade --reuse-values keeps the previous release's values without this chart's new defaults; upgrade with --reset-then-reuse-values or be/k8s/scripts/deploy.sh instead." }}
+{{- end }}
+{{- /*
+The database users (values.yaml, postgres.admin and keycloak.db), which are younger still. The same
+message for values without them: a render that fell back to one account, or to the chart's default
+password for a user that was never created, would stop the app at its next start.
+*/ -}}
+{{- if not (and (kindIs "map" .Values.postgres.admin) (kindIs "map" .Values.keycloak.db)) }}
+{{- fail "postgres.admin or keycloak.db is missing: the values predate the app's own database user — helm upgrade --reuse-values keeps the previous release's values without this chart's new defaults; upgrade with --reset-then-reuse-values or be/k8s/scripts/deploy.sh instead." }}
+{{- end }}
+{{- /*
+The superuser's Secret is this release's Postgres' own, and an environment that names it names the
+app's too: the chart's default user and password are for local runs. One Secret under both names
+would make the app the superuser again without saying so. Without Secrets the two default users
+must differ for the same reason. The database's name reaches the init container's psql, so where
+that container runs it is a plain name, as postgres.databases are.
+*/ -}}
+{{- $pgAdmin := .Values.postgres.admin }}
+{{- if and $pgAdmin.existingSecret (not .Values.postgres.enabled) }}
+{{- fail "postgres.admin.existingSecret is set with postgres.enabled false: it is the superuser of the Postgres this release renders, and this release renders none. A database of someone else's takes postgres.existingSecret, the app's user, alone" }}
+{{- end }}
+{{- if and $pgAdmin.existingSecret (not .Values.postgres.existingSecret) }}
+{{- fail "postgres.admin.existingSecret needs postgres.existingSecret: an environment that names the superuser's Secret names the app's user too, never the chart's default user and password" }}
+{{- end }}
+{{- if and $pgAdmin.existingSecret (eq (toString $pgAdmin.existingSecret) (toString .Values.postgres.existingSecret)) }}
+{{- fail (printf "postgres.admin.existingSecret and postgres.existingSecret both name %q: the app's user is another user than the superuser, in a Secret of its own. To keep one account for both, leave postgres.admin.existingSecret empty" (toString $pgAdmin.existingSecret)) }}
+{{- end }}
+{{- if and (include "niord.postgres.separateAdmin" .) (not $pgAdmin.existingSecret) (eq (toString .Values.postgres.username) (toString $pgAdmin.username)) }}
+{{- fail (printf "postgres.username and postgres.admin.username are both %q: the app's user (postgres.username) is another user than the superuser (postgres.admin.username)" (toString .Values.postgres.username)) }}
+{{- end }}
+{{- if and (include "niord.postgres.ownUser" .) .Values.app.enabled (not (regexMatch "^[a-z_][a-z0-9_]{0,62}$" (toString .Values.postgres.database))) }}
+{{- fail (printf "postgres.database: %q is not a plain database name (lower-case letters, digits and _, at most 63 characters, not starting with a digit)" (toString .Values.postgres.database)) }}
+{{- end }}
+{{- /*
+Keycloak's database user (keycloak.db) exists where this release makes the users. Its Secret
+without the superuser's would be ignored, so it fails the render instead; and where the superuser
+comes from a Secret, Keycloak's user does too. It is neither the superuser nor the app's user: the
+first would be refused by the init container, the second would own both databases.
+*/ -}}
+{{- $kcDb := .Values.keycloak.db }}
+{{- if and $kcDb.existingSecret (not (and $pgAdmin.existingSecret (include "niord.postgres.ownUser" .))) }}
+{{- fail "keycloak.db.existingSecret is set, but this release does not make the database users: it needs postgres.enabled, no postgres.host, and postgres.admin.existingSecret with postgres.existingSecret. Without them Keycloak connects as the user of postgres.existingSecret" }}
+{{- end }}
+{{- if and .Values.keycloak.enabled (eq (toString .Values.keycloak.mode) "production") (include "niord.postgres.ownUser" .) }}
+{{- if and $pgAdmin.existingSecret (not $kcDb.existingSecret) }}
+{{- fail "keycloak.mode production with postgres.admin.existingSecret needs keycloak.db.existingSecret: Keycloak's database user comes from the environment's Secret, never from keycloak.db.username/password" }}
+{{- end }}
+{{- if and $kcDb.existingSecret (has (toString $kcDb.existingSecret) (list (toString $pgAdmin.existingSecret) (toString .Values.postgres.existingSecret))) }}
+{{- fail (printf "keycloak.db.existingSecret names %q, the Secret of the superuser or of the app's user: Keycloak's database user is a third user, in a Secret of its own" (toString $kcDb.existingSecret)) }}
+{{- end }}
+{{- if and (not $kcDb.existingSecret) (has (toString $kcDb.username) (list (toString $pgAdmin.username) (toString .Values.postgres.username))) }}
+{{- fail (printf "keycloak.db.username is %q, the superuser's name or the app's user's: Keycloak's database user is a third user" (toString $kcDb.username)) }}
+{{- end }}
+{{- end }}
+{{- /*
+The SECOM store passwords moved out of the values into keys of the SECOM secrets. A value still
+set would be silently ignored, so it fails the render instead.
+*/ -}}
+{{- range $old := list (list "secom.keystore.password" .Values.secom.keystore.password "keystore-password" .Values.secom.storesSecret) (list "secom.truststore.password" .Values.secom.truststore.password "truststore-password" .Values.secom.storesSecret) (list "secom.renewal.robotKeystore.password" .Values.secom.renewal.robotKeystore.password "robot-password" .Values.secom.renewal.robotSecret) }}
+{{- if index $old 1 }}
+{{- fail (printf "%s is no longer a value: put the password under the key %s of the Secret %s" (index $old 0) (index $old 2) (index $old 3)) }}
+{{- end }}
+{{- end }}
+{{- /*
+The proxy no longer has a TLS listener for SECOM (Edition 2 takes identity from the signed
+envelope). A value for it would be silently ignored, so it fails the render instead.
+*/ -}}
+{{- range $old := list "proxyTlsSecret" "proxyPort" }}
+{{- if hasKey $.Values.secom $old }}
+{{- fail (printf "secom.%s is no longer a value: the proxy has no SECOM TLS listener, SECOM is served on the plain listener like everything else (docs/secom-design.md D3)" $old) }}
+{{- end }}
+{{- end }}
+{{- /*
+keycloak.mode (values.yaml). Production mode takes its bootstrap admin from a Secret of the
+environment's: the chart's admin/admin default must never administer a production realm.
+*/ -}}
+{{- if not (has .Values.keycloak.mode (list "dev" "production")) }}
+{{- fail (printf "keycloak.mode is %q: it is dev or production" (toString .Values.keycloak.mode)) }}
+{{- end }}
+{{- /*
+Dev mode imports files/niord-realm.json as it is, realm "niord": another keycloak.realm would make
+the app validate tokens of a realm that does not exist and the readiness probe wait for it forever.
+*/ -}}
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "dev") (ne (toString .Values.keycloak.realm) "niord") }}
+{{- fail (printf "keycloak.realm is %q: dev mode imports the test realm, which is named niord; another name needs keycloak.mode production" (toString .Values.keycloak.realm)) }}
+{{- end }}
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "production") (not .Values.keycloak.existingSecret) }}
+{{- fail "keycloak.mode production needs keycloak.existingSecret: the bootstrap admin comes from the environment's Secret, never from keycloak.adminUser/adminPassword" }}
+{{- end }}
+{{- /*
+keycloak.database goes into the init container's SQL and Keycloak's JDBC URL, so it is a plain
+name, as postgres.databases are. It is never the app's database: Keycloak would put its tables,
+and its own Liquibase bookkeeping, into the app's schema.
+*/ -}}
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "production") }}
+{{- if not (regexMatch "^[a-z_][a-z0-9_]{0,62}$" (toString .Values.keycloak.database)) }}
+{{- fail (printf "keycloak.database: %q is not a plain database name (lower-case letters, digits and _, at most 63 characters, not starting with a digit)" (toString .Values.keycloak.database)) }}
+{{- end }}
+{{- if or (eq (toString .Values.keycloak.database) (toString .Values.postgres.database)) (has (toString .Values.keycloak.database) (list "postgres" "template0" "template1")) }}
+{{- fail (printf "keycloak.database: %q is the app's database (postgres.database) or one of Postgres' own: Keycloak needs a database of its own" (toString .Values.keycloak.database)) }}
+{{- end }}
+{{- end }}
+{{- /*
+s124.enabled (values.yaml) is rendered as niord.s124.enabled only when set. It is a boolean or
+unset: the application's switch reads only "true" as on, so a string such as "yes" would switch
+S-124 off without a word. SECOM exchanges S-124 datasets, so secom.enabled with s124.enabled
+false is refused here; with s124.enabled unset the image decides, and the app refuses that start
+itself. Nothing checks the producer code: an image may carry its own, and the app refuses a SECOM
+start without one.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.s124.enabled) (kindIs "bool" .Values.s124.enabled)) }}
+{{- fail (printf "s124.enabled is %q: it is true, false or unset (the image decides)" (toString .Values.s124.enabled)) }}
+{{- end }}
+{{- if and .Values.secom.enabled (kindIs "bool" .Values.s124.enabled) (not .Values.s124.enabled) }}
+{{- fail "secom.enabled needs S-124: s124.enabled is false. SECOM exchanges S-124 datasets; set s124.enabled to true (or leave it unset for a country image), or secom.enabled to false" }}
+{{- end }}
+{{- /*
+The public site (info, values.yaml). Its container reads the backend through the app's Service,
+whose name nginx resolves when it starts, so it needs the app in the same release: without it the
+container would never start. The image is a country's (niord-<cc>-info): the chart names none. An
+Ingress needs the site's own host, a plain DNS name, and never externalBaseUri's: two Ingresses for
+one host at / leave either the administration app or the site unreachable. The teaser's frame
+ancestors are held to what the container's entrypoint accepts, which otherwise stops the container
+and leaves the pod restarting.
+*/ -}}
+{{- if .Values.info.enabled }}
+{{- if not .Values.app.enabled }}
+{{- fail "info.enabled needs app.enabled: the public site reads the backend through the app's Service in the same release, and its container does not start without it" }}
+{{- end }}
+{{- if not .Values.info.image.repository }}
+{{- fail "info.image.repository is empty: name the country's image of the public site, e.g. niord-dk-info (niord-ng publishes none)" }}
+{{- end }}
+{{- if .Values.info.ingress.enabled }}
+{{- if not .Values.info.ingress.host }}
+{{- fail "info.ingress.host is empty: the Ingress needs the public site's own host" }}
+{{- end }}
+{{- if not (regexMatch "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$" (toString .Values.info.ingress.host)) }}
+{{- fail (printf "info.ingress.host is %q: it is a host name alone, lower case, with no scheme, port or path" (toString .Values.info.ingress.host)) }}
+{{- end }}
+{{- $baseHost := regexReplaceAll ":[0-9]+$" (lower (index (urlParse (toString .Values.externalBaseUri)) "host")) "" }}
+{{- if eq (toString .Values.info.ingress.host) $baseHost }}
+{{- fail (printf "info.ingress.host is %q, the host of externalBaseUri, where the proxy serves the administration app: the public site needs a host of its own, or the two Ingresses claim / on one host" (toString .Values.info.ingress.host)) }}
+{{- end }}
+{{- end }}
+{{- if not (regexMatch "^[A-Za-z0-9 .:/*'_-]+$" (toString .Values.info.teaserFrameAncestors)) }}
+{{- fail (printf "info.teaserFrameAncestors is %q: it is a CSP frame-ancestors source list — *, 'self', 'none' or origins such as https://www.example.org, separated by spaces, not commas — and not empty; the container refuses to start with any other value" (toString .Values.info.teaserFrameAncestors)) }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,31 @@
+{{- if and (.Values.info | default dict).enabled .Values.info.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "niord.componentName" (list . "info") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "info") | nindent 4 }}
+  {{- with .Values.info.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  # Only the controller of this class serves the Ingress. On the test cluster, Traefik
+  # serves the traefik class only, ends TLS with its own certificate, and admits only the
+  # hosts its admission policy allows the namespace (devops-shared, platform/test/traefik/).
+  ingressClassName: {{ .Values.info.ingress.className }}
+  rules:
+    # The site's own host, straight to its container, which is the proxy for that host: it
+    # serves the built files and passes the allow-listed /rest/ paths on to the app. The
+    # chart's proxy is not in the way; it sends everything on its host to the app.
+    - host: {{ .Values.info.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "niord.componentName" (list . "info") }}
+                port:
+                  name: http
+{{- end }}

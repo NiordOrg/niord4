@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Standalone SECOM test client used to rehearse the SECOM go-live flow on the
+  local OrbStack Kubernetes deployment (docs/secom-go-live.md, gate 6):
+  subscribe -> receive pushed S-124 uploads -> verify signatures -> send signed
+  acknowledgements. Deliberately NOT part of the Niord Maven reactor - it is deployment
+  tooling, built and containerized by k8s/scripts/secom-test-client.sh.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.niord.tools</groupId>
+    <artifactId>secom-test-client</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>Niord SECOM test client</name>
+
+    <properties>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Same SECOMLib line as the Niord app (niord/pom.xml, secomlib.version) -->
+        <secomlib.version>0.1.0</secomlib.version>
+        <!-- SECOM wire JSON is Jackson 2 (the SECOMLib models carry Jackson 2 annotations) -->
+        <jackson2.version>2.21.7</jackson2.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.grad.secom</groupId>
+            <artifactId>secom-v2-core-jakarta</artifactId>
+            <version>${secomlib.version}</version>
+            <exclusions>
+                <!-- Legacy javax bean-validation API; the jakarta one is added below. -->
+                <exclusion>
+                    <groupId>javax.validation</groupId>
+                    <artifactId>validation-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Marked provided by SECOMLib; the model annotations reference it. -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <version>3.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <!-- Central first (authoritative), then the GRAD repository for SECOMLib -
+             the same ordering rule as the root pom (docs/potential-errors.md, CI-BUILD-1). -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <snapshots><enabled>false</enabled></snapshots>
+            <releases><enabled>true</enabled></releases>
+        </repository>
+        <repository>
+            <id>grad</id>
+            <name>GRAD e-Navigation Repository</name>
+            <url>https://rnavlab.gla-rad.org/mvn/repository/grad/</url>
+            <snapshots><enabled>false</enabled></snapshots>
+            <releases><enabled>true</enabled></releases>
+        </repository>
+    </repositories>
+
+    <build>
+        <finalName>secom-test-client</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>org.niord.secom.testclient.SecomTestClient</mainClass>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

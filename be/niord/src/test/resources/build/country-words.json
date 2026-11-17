@@ -1,0 +1,198 @@
+{
+  "format": 1,
+  "note": "The base product guard's backend half (fe-country-split-plan §4.8, code-data-config-plan §11 C5), read by CountryWordsTest: no file in its scope names one of these words, a Danish locale chosen in a template or a Danish or Faroese place name, unless an entry of `allowed` permits that word or pattern in that file, with its reason: on every line of the file, or, when the entry gives a `text`, only on a line that holds that text (literally); an entry that has to stay file-wide says why in its reason. The rule (C5's): each file decoded as strict UTF-8 (a file that does not decode fails the test, unless its type is a binary one: png, jpg, jpeg, gif, ico, webp, pdf, zip, jar, class, ttf, otf, woff, woff2), normalised to NFC, line by line; the leading block comment skipped, and after it a comment line (one starting with *, /*, //, #, --, <!-- or <#--) with `Copyright` (the licence header), while a data line with the word is read; the `strip` patterns removed from the line; then each word, matched case-insensitively with a word boundary before it and none after (so `Søfart` matches `Søfartsstyrelsens`, and `DMA` matches neither `landmark` nor `scheduledMail`), and each pattern, with a word boundary before it; one finding per line, however many hits it holds. An entry that permits nothing fails, so the list shrinks with the code. Scope: niord-base's `niord/bootstrap/**` and `niord/src/main/**`, and niord-app's `niord-app/src/main/**` (paths relative to `be/`). Out of scope: `niord/sample/**`, which is Danish sample content (R11), and `niord/src/test/**`, which is test data and the IT fixture; this file stays outside the scope, because it names every word. C5's categories that permit nothing today have no entry: V001's comment, the S-62 'DK00' example, the country-repository link and Danish as a language hold no word. Neither 'EfS A' nor the 56/11 map centre is a word or pattern hit, and both stay (P7's D34). From 2026-11-03 (decision 141) the base English value is the neutral 'NtM Almanac', which is no hit either; the map centre stays.",
+  "words": [
+    "Beredskab",
+    "Søfart",
+    "Soefart",
+    "brs.dk",
+    "dma.dk",
+    "t-dma",
+    "kl-GL",
+    "da-DK",
+    "Nuuk",
+    "Danish Emergency Management",
+    "Danish Maritime Authority",
+    "DMA",
+    "Denmark",
+    "Danmark",
+    "Greenland",
+    "Grønland",
+    ".dk"
+  ],
+  "patterns": [
+    {
+      "name": "da-locale",
+      "pattern": "(lang|locale)\\s*=\\s*(\\\\?[\"'])?da(\\\\?[\"'])?(?!\\p{L})",
+      "reason": "a Danish locale chosen in a template (lang=\"da\", locale='da', locale=da, and the Java spelling locale=\"da_DK\"), also in the JSON-escaped form, with a backslash before each quote, that bootstrap JSON carries; no letter may follow, so locale = data is not one"
+    },
+    {
+      "name": "place",
+      "pattern": "Skagen|Blåvand|Hammer\\s+Odde|Tórshavn|Torshavn",
+      "reason": "Danish and Faroese place names in base product data (the DGPS stations removed after #179)"
+    }
+  ],
+  "strip": [
+    {
+      "pattern": "dk\\.dma\\.niord\\.s100",
+      "reason": "the third-party S-100/S-124 bindings' package: their imports and fully qualified names in S124Mapper, S124StandardMappings, S124ExchangeSetService, S124RestService and S124Service"
+    }
+  ],
+  "allowed": [
+    {
+      "path": "niord/bootstrap/releases/2026-10-21-templates-from-database/script-resources.json",
+      "pattern": "da-locale",
+      "reason": "a frozen release record, never rewritten (§4.6): its copy of tmpl/object-adrift.ftl from before #179; file-wide, as the record is frozen and never gains a line"
+    },
+    {
+      "path": "niord/bootstrap/releases/2026-10-21-templates-from-database/script-resources.json",
+      "word": "Danish Maritime Authority",
+      "text": "Copyright 2017 Danish Maritime Authority",
+      "reason": "a frozen release record, never rewritten (§4.6): the scripts it holds carry their licence header inside their JSON string"
+    },
+    {
+      "path": "niord/bootstrap/releases/2026-11-02-accumulated-period/script-resources.json",
+      "word": "Danish Maritime Authority",
+      "text": "Copyright 2017 Danish Maritime Authority",
+      "reason": "a frozen release record, never rewritten (§4.6): the scripts it holds carry their licence header inside their JSON string"
+    },
+    {
+      "path": "niord/bootstrap/releases/2026-11-12-error-hunt-templates/script-resources.json",
+      "word": "Danish Maritime Authority",
+      "text": "Copyright 2017 Danish Maritime Authority",
+      "reason": "a frozen release record, never rewritten (§4.6): the scripts it holds carry their licence header inside their JSON string"
+    },
+    {
+      "path": "niord/bootstrap/releases/2026-11-16-error-hunt-phase-2-templates/script-resources.json",
+      "word": "Danish Maritime Authority",
+      "text": "Copyright 2017 Danish Maritime Authority",
+      "reason": "a frozen release record, never rewritten (§4.6): the scripts it holds carry their licence header inside their JSON string"
+    },
+    {
+      "path": "niord/bootstrap/releases/2026-10-21-templates-from-database/texts.json",
+      "word": "Greenland",
+      "text": "Danish, Greenlandic and Faroe waters",
+      "reason": "a frozen release record, never rewritten (§4.6): the old pdf.nm_almanac.desc"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/series/legacy/LegacyOrphanGrouping.java",
+      "word": "DMA",
+      "text": "dk-dma-nm-annex",
+      "reason": "the listed exception: the legacy publication converter, by DK's own rulings, until DK's cutover (C5)"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/series/legacy/LegacySeriesTranslation.java",
+      "word": "Greenland",
+      "text": "UTC for Greenland",
+      "reason": "the listed exception: the legacy publication converter, by DK's own rulings, until DK's cutover (C5)"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/message/batch/BatchMessageImportReader.java",
+      "word": "Danmark",
+      "text": "\"Danmark",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/message/batch/BatchMessageImportReader.java",
+      "word": "Denmark",
+      "text": "\"Denmark",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/message/batch/BatchMessageImportReader.java",
+      "word": ".dk",
+      "text": "www.danskehavnelods.dk",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/message/batch/BatchMsgArchiveImportReader.java",
+      "word": "DMA",
+      "text": "dma-nm",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/batch/BatchPublicationCategoryImportReader.java",
+      "word": "DMA",
+      "text": "\"dk-dma-publications\"",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/batch/BatchPublicationCategoryImportReader.java",
+      "word": "Søfart",
+      "text": "\"Søfartsstyrelsens publikationer\"",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/batch/BatchPublicationCategoryImportReader.java",
+      "word": "Danish Maritime Authority",
+      "text": "\"Danish Maritime Authority publications\"",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/batch/BatchPublicationImportReader.java",
+      "word": "DMA",
+      "text": "\"dk-dma-publications\"",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/batch/BatchPublicationImportReader.java",
+      "word": ".dk",
+      "text": "www.danskehavnelods.dk",
+      "reason": "a Javadoc example of the import format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/mailinglist/MailingListTrigger.java",
+      "word": "DMA",
+      "text": "messageSeries=dma-nw",
+      "reason": "a Javadoc example of the filter format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/series/vo/PublicationIssuePickerVo.java",
+      "word": "DMA",
+      "text": "\"dk-dma-nm-weekly\"",
+      "reason": "a Javadoc example of the slug format"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/web/api/ApiRestService.java",
+      "word": "DMA",
+      "text": "example = \"dma-nw\"",
+      "reason": "an OpenAPI example (dma-nw) that matches the public API manual"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/area/AreaService.java",
+      "word": "DMA",
+      "text": "the DMA MSIadmin web application",
+      "reason": "a comment naming where the algorithm came from"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/geojson/PlainTextConverter.java",
+      "word": "DMA",
+      "text": "from DMA NtM PDF",
+      "reason": "a comment naming where the workaround came from"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/area/Area.java",
+      "word": "Danmark",
+      "text": "Tyskland",
+      "reason": "an explanatory example of the area lineage"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/script/directive/AreaLineageDirective.java",
+      "word": "Danmark",
+      "text": "Tyskland",
+      "reason": "an explanatory example of the area lineage"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/series/PublicationSeries.java",
+      "word": "Greenland",
+      "text": "UTC for Greenland",
+      "reason": "an explanatory example: the time zones of domains"
+    },
+    {
+      "path": "niord/src/main/java/org/niord/core/publication/series/SeriesValidator.java",
+      "word": "Greenland",
+      "text": "UTC for Greenland",
+      "reason": "an explanatory example: the time zones of domains"
+    }
+  ]
+}

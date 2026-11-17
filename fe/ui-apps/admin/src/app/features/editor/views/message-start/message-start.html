@@ -1,0 +1,52 @@
+<div class="mx-auto max-w-[45rem] px-6 py-10">
+  <h1 class="text-center text-2xl font-bold text-fg">{{ 'editor.start.title' | transloco }}</h1>
+  <p class="mt-1 text-center text-sm text-fg-muted">
+    {{ subtitleKey() | transloco }}
+  </p>
+
+  <!-- A lone card keeps the width it has beside a second one, centred under the heading. -->
+  <div
+    class="mt-6 mb-7 grid grid-cols-1 gap-4"
+    [class]="creatableCards().length > 1 ? 'md:grid-cols-2' : 'mx-auto md:max-w-[calc(50%-0.5rem)]'"
+  >
+    @for (card of creatableCards(); track card.mainType) {
+      <app-card sectionClass="shadow-sm">
+        <div class="mb-3.5 flex items-center gap-2 text-sm font-bold text-fg">
+          <span>{{ card.nameKey | transloco }}</span>
+          <span
+            class="rounded border border-surface-200 bg-surface-100 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-fg-muted dark:border-surface-700 dark:bg-surface-800"
+          >
+            {{ card.mainType }}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          class="btn-primary w-full justify-center"
+          (click)="createBlank(card.mainType)"
+        >
+          <app-icon name="lucidePlus" />
+          <span>{{ card.blankKey | transloco }}</span>
+        </button>
+
+        @if (hasTemplates()) {
+          <p class="my-2.5 text-center text-xs text-fg-subtle">
+            {{ 'editor.start.orFromTemplate' | transloco }}
+          </p>
+          <button
+            type="button"
+            class="btn-secondary w-full justify-center"
+            (click)="openTemplateSearch(card.mainType, $event)"
+          >
+            <app-icon name="lucideLayoutTemplate" />
+            <span>{{ card.templateKey | transloco }}</span>
+          </button>
+        }
+      </app-card>
+    }
+  </div>
+
+  <app-recently-edited-drafts />
+</div>
+
+<app-template-search-popover (picked)="onTemplatePicked($event)" />

@@ -1,0 +1,148 @@
+<app-drawer
+  [visible]="dialog.isOpen()"
+  (closed)="dialog.close()"
+  size="wide"
+  header="messages.dialog.header"
+>
+  <!-- min-h-full lets the column fill the drawer body so the map can grow into
+       the blank space below short content; it scrolls when content is tall. -->
+  <div class="flex min-h-full flex-col gap-4">
+    <!-- The map is the ONLY thing on any /messages/* route that reaches OpenLayers, so deferring
+         it here keeps ~423 kB of OL out of every one of those route chunks. The block wraps the
+         @if rather than sitting inside it: a defer block cannot prefetch before it is
+         instantiated, so nesting it under the @if (which is false until the drawer opens on a
+         geometry message) would leave no window for `on idle` to do anything. Hoisted, the chunk
+         is fetched once the messages route settles and the drawer opens instantly.
+
+         Hoisting is why @placeholder and @error repeat the `showMap()` guard instead of being
+         unconditional: this block is live for EVERY message, so an unguarded placeholder would
+         reserve 16rem above the body of messages that will never show a map (no geometry, or an
+         ABOVE attachment claiming the slot). Guarded, the reserved box appears in the same tick
+         as the body it sits above — the map area and the message content resolve together
+         instead of the map being spliced in later and shoving the text the user is reading.
+
+         @error matters because Angular marks the failure on the TView and never retries: one
+         rejected chunk fetch would otherwise leave every drawer in the session silently
+         mapless. -->
+    @defer (on idle) {
+      @if (showMap() && message(); as m) {
+        <!-- Map grows to fill leftover height (app-ol-map resizes its canvas via
+             ResizeObserver) but never shrinks below today's 16rem. The inner
+             absolute layer gives app-ol-map (height:100%) a definite-height
+             parent — a percentage height won't resolve against a flex-grown box
+             inside a min-h-full column. -->
+        <div class="relative min-h-64 flex-1 overflow-hidden rounded">
+          <div class="absolute inset-0">
+            <app-ol-map>
+              <app-base-map-layers />
+              <app-ol-message-details-layer [message]="m" [fitExtent]="true" />
+              <app-ol-message-labels-layer
+                [message]="m"
+                [name]="labelsName()"
+                [showInLayerSwitcher]="true"
+              />
+              <!--
+              Absolute positioning is added on the switcher host so it floats
+              above the OL canvas at bottom-left instead of rendering in normal
+              flow at the host's top edge (which previously covered the message
+              labels and pushed them out of view).
+            -->
+              <app-ol-layer-switcher
+                class="absolute bottom-2 left-2 z-10"
+                [title]="'messages.map.layerSwitcher.title' | transloco"
+              />
+            </app-ol-map>
+          </div>
+        </div>
+      }
+    } @placeholder {
+      @if (showMap()) {
+        <div class="relative min-h-64 flex-1 overflow-hidden rounded bg-surface-100"></div>
+      }
+    } @error {
+      @if (showMap()) {
+        <div
+          class="flex min-h-64 flex-1 items-center justify-center overflow-hidden rounded bg-surface-100 p-4 text-center text-sm text-fg-muted"
+          role="alert"
+        >
+          {{ 'common.mapLoadError' | transloco }}
+        </div>
+      }
+    }
+
+    @if (warning(); as msg) {
+      <div class="text-center py-6 text-surface-500">{{ msg }}</div>
+    }
+
+    @if (message(); as m) {
+      <app-message-details-renderer [message]="m" (referenceClicked)="onReferenceClicked($event)" />
+
+      @if (hasVisiblePromulgations()) {
+        <section class="mt-2">
+          <h3 class="text-sm font-medium mb-2">
+            {{ 'messages.promulgation.heading' | transloco }}
+          </h3>
+          <app-promulgation-list [msg]="m" />
+        </section>
+      }
+    }
+  </div>
+
+  <div drawerFooter class="flex items-center justify-between gap-2 w-full">
+    <div class="flex items-center gap-2">
+      @if (showNavigation()) {
+        <button
+          type="button"
+          class="icon-button text-xs"
+          [disabled]="prevDisabled()"
+          (click)="dialog.selectPrev()"
+          [attr.aria-label]="'messages.dialog.previous' | transloco"
+        >
+          <app-icon name="lucideChevronLeft" />
+        </button>
+        <button
+          type="button"
+          class="icon-button text-xs"
+          [disabled]="nextDisabled()"
+          (click)="dialog.selectNext()"
+          [attr.aria-label]="'messages.dialog.next' | transloco"
+        >
+          <app-icon name="lucideChevronRight" />
+        </button>
+      } @else if (showBack()) {
+        <button
+          type="button"
+          class="icon-button text-xs"
+          (click)="dialog.back()"
+          [attr.aria-label]="'messages.dialog.back' | transloco"
+        >
+          <app-icon name="lucideArrowLeft" />
+        </button>
+      }
+
+      @if (message(); as m) {
+        <button
+          type="button"
+          class="icon-button text-xs"
+          (click)="toggleSelectMessage()"
+          [attr.aria-label]="'messages.dialog.toggleSelection' | transloco"
+        >
+          @if (isSelected()) {
+            <app-icon name="lucideStar" [filled]="true" class="text-accent" />
+          } @else {
+            <app-icon name="lucideStar" />
+          }
+        </button>
+
+        <app-message-details-menu [messageId]="m.id" [message]="m" size="sm" />
+      }
+    </div>
+
+    <div class="flex items-center gap-2">
+      <app-help-anchor section="message-details" />
+      <button type="button" class="btn-tertiary text-sm" (click)="dialog.close()">
+        <span>{{ 'messages.dialog.close' | transloco }}</span>
+      </button>
+    </div>
+  </div>
+</app-drawer>

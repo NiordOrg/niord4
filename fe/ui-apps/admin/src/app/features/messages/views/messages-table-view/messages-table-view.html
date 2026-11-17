@@ -1,0 +1,140 @@
+<!-- Until the view has been painted once, it shows what a search in progress shows: no rows, the bar. -->
+<app-message-list-status [pending]="!painted()" />
+
+@if (facade.list.messages().length === 0 && !facade.list.loading()) {
+  <app-empty-search-result />
+} @else {
+  <table class="message-table">
+    <thead>
+      <tr>
+        <th [attr.aria-sort]="idAriaSort()">
+          <button
+            type="button"
+            (click)="onSortById()"
+            class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0"
+          >
+            {{ headers.id() }}
+            @if (idSortIcon()) {
+              <app-icon [name]="idSortIcon()!" aria-hidden="true" />
+            }
+          </button>
+        </th>
+        <th>
+          <app-message-date-column-header
+            [dateColumnType]="dateColumnType()"
+            [sortBy]="facade.filter.sortBy()"
+            [sortOrder]="facade.filter.sortOrder()"
+            (sortClicked)="onSortByDateColumn()"
+            (typeChanged)="onDateTypeChange($event)"
+          />
+        </th>
+        <th>{{ headers.title() }}</th>
+        <th [attr.aria-sort]="areaAriaSort()">
+          <button
+            type="button"
+            (click)="onSortByArea()"
+            class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0"
+          >
+            {{ headers.areas() }}
+            @if (areaSortIcon()) {
+              <app-icon [name]="areaSortIcon()!" aria-hidden="true" />
+            }
+          </button>
+        </th>
+        <th class="text-center">
+          <app-icon name="lucideSettings" [attr.aria-label]="headers.actions()" />
+        </th>
+        <th class="text-center">
+          <button
+            type="button"
+            (click)="onToggleSelectAll()"
+            [attr.aria-label]="headers.selection()"
+            class="border-0 bg-transparent cursor-pointer"
+          >
+            <app-icon
+              name="lucideStar"
+              [filled]="!facade.selection.isEmpty()"
+              [class.text-accent]="!facade.selection.isEmpty()"
+            />
+          </button>
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (entry of painted() ? facade.list.groupedMessages() : []; track entry.message.id) {
+        @if (entry.areaHeading) {
+          <tr>
+            <th
+              colspan="6"
+              scope="colgroup"
+              class="bg-surface-sunken text-left text-base font-semibold px-4 py-3"
+            >
+              <span class="area-dot" aria-hidden="true"></span>
+              <app-message-area-heading [areaHeading]="entry.areaHeading" />
+            </th>
+          </tr>
+        }
+        <!--
+          The row's target is a URL — `?messageId=` on the current search — so
+          the title is a real link and the row opens it in a new tab when
+          ctrl/cmd/shift- or middle-clicked. A plain click still goes through
+          `openDialogFor`, which freezes the prev/next list and honours the
+          hold-E edit shortcut. `tabindex="-1"` keeps the row programmatically
+          focusable (the dialog restores focus to it on close) without making it
+          a second tab stop beside its own link.
+        -->
+        <tr
+          class="row-interactive"
+          tabindex="-1"
+          [appRowAttention]="entry.message"
+          [class.row-selected]="facade.selection.isSelected(entry.message.id)"
+          [appRowLink]="[]"
+          [rowLinkQueryParams]="{ messageId: entry.message.id }"
+          rowLinkQueryParamsHandling="merge"
+          (appRowLinkActivate)="openDialogFor(entry.message)"
+        >
+          <!-- leading-[0]: drop the line-height strut so the inline-flex badge+suffix
+               group centers on the cell middle (aligned with the row's text). -->
+          <td class="leading-[0]"><app-message-id-badge [message]="entry.message" /></td>
+          <td>
+            <app-message-event-dates
+              [message]="entry.message"
+              [type]="dateColumnType()"
+              [firstLine]="true"
+            />
+          </td>
+          <!--
+            The row's one tab stop. Named after the message where the title is
+            empty, so the link still says what it opens.
+          -->
+          <td>
+            <a
+              appRowLinkAnchor
+              class="row-link block"
+              [attr.aria-label]="title(entry.message) || entry.message.shortId"
+              >{{ title(entry.message) }}</a
+            >
+          </td>
+          <td><app-message-areas [areas]="entry.message.areas" /></td>
+          <!-- leading-[0] removes the cell's line-height strut so the inline-flex
+               icon centers on the cell middle instead of the text baseline. -->
+          <td class="text-center leading-[0]">
+            <app-message-row-menu
+              [messageId]="entry.message.id"
+              [message]="entry.message"
+              size="xs"
+            />
+          </td>
+          <td class="text-center leading-[0]">
+            <app-message-selection-toggle [message]="entry.message" />
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  @if (painted()) {
+    <app-load-more-messages />
+  }
+}

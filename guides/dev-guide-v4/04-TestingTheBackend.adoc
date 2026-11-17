@@ -1,0 +1,107 @@
+
+[#testing-the-backend]
+== Testing the backend
+
+The backend has two test suites, told apart by the class name. How they run, which containers
+they start and how the test database is built is described in `be/docs/test-infrastructure.md`;
+how tests are written here is in `be/docs/test-authoring-guide.md`. This chapter is the overview.
+
+[#unit-and-integration-tests]
+=== Unit tests and integration tests
+
+[cols="20,20,20,40",options="header"]
+|===
+|Kind |Class name |Maven plugin |Needs
+
+|Unit test
+|`*Test`
+|Surefire
+|nothing but the JDK
+
+|Integration test
+|`*ITTest`
+|Failsafe
+|Docker, for the containers the tests start
+|===
+
+A class whose name ends in neither is never run. An integration test extends the abstract class
+`org.niord.test.ITTest`, which boots the Spring application against containers that Testcontainers
+starts on dynamic ports, so a test never depends on the local stack of <<running-niord-locally>>:
+
+* PostgreSQL with PostGIS, for the database,
+* Keycloak, with the test realm, which issues the tokens the tests sign in with,
+* MailHog, which receives the mails the application sends.
+
+The message broker is not a container: the application under test uses its embedded ActiveMQ
+Artemis broker, as a deployment does, and a test that reads the messages it sends connects to that
+embedded broker (`org.niord.test.JmsTestClient`).
+
+The test database is built the way a deployment's is: Liquibase builds the schema, and then a
+fixture is loaded on top of it, a dump of a database that holds the base product's bootstrap and
+the sample content (`be/niord/src/test/resources/db/niord-base-data.sql`). The fixture is never
+edited by hand; `be/niord/scripts/regen-test-seed-postgres.sh` makes it again after the schema,
+the bootstrap or the sample changed.
+
+[#running-the-tests]
+=== Running the tests
+
+From `be/`:
+
+[source,bash]
+----
+./mvnw clean test                                     # the unit tests, no Docker
+./test-it                                             # unit and integration tests
+./test-it --its-only -pl niord -Dit.test=KeycloakITTest   # one integration test class
+./mvnw -pl niord test -Dtest=AreaToVoTest             # one unit test class
+----
+
+Run the integration tests with `./test-it`, not with a bare `./mvnw verify`. When the tests cannot
+reach Docker, every integration test skips itself, and Maven still reports BUILD SUCCESS with
+"Tests run: 0". `./test-it` reads the test reports afterwards and fails such a run; it is the same
+check the continuous integration runs. When a suite skips, `./dev doctor` tells you which Docker
+endpoint is missing.
+
+A green unit run prints only Maven's own lines: what the tests write to the console goes to
+`<module>/target/surefire-reports/<class>-output.txt`. A failure is printed in full.
+
+[#writing-tests]
+=== Writing tests
+
+* In a test, Spring's `@Autowired` and `@PersistenceContext` are the way to inject.
+* A test annotated `@Transactional` is rolled back at its end. Data a test needs committed goes
+  through `org.niord.test.Tx.requiringNew()`.
+* A test that must also run in every country's build carries `@CountryBuildGroup`. The security
+  tests and the checks of the country contract are in that group, and a country runs them from
+  the library's test-jar.
+
+[#guard-tests]
+=== The tests that guard the rules
+
+Several unit tests do not test a feature but hold the code to the rules of the earlier chapters.
+When one of them fails, its message says what to change. Among them:
+
+[cols="40,60",options="header"]
+|===
+|Test |Fails when
+
+|`RestControllerSecurityAnnotationTest`
+|a REST handler has no security annotation, or names an unknown role
+
+|`ChangelogChecksumPinTest`
+|a Liquibase changeset that has been applied was edited
+
+|`RequiredTemplatesTest`
+|a template the code names is missing from the base product's bootstrap
+
+|`SettingsCatalogCurrentTest`
+|the catalogue of settings no longer matches their declarations
+
+|`ReleaseFilesCurrentTest`
+|the generated files of the bootstrap or of a release folder are stale
+ (<<code-data-and-configuration>>)
+
+|`CountryWordsTest`
+|the base product's main code, its bootstrap or the generic application names a country word, a
+ Danish locale in a template, or a Danish or Faroese place name, outside the exceptions its list
+ allows with a reason
+|===

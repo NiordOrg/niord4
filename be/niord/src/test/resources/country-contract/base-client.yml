@@ -1,0 +1,4 @@
+# A country jar that changes the client whose roles form every caller's identity: refused (CountryContractGuard).
+niord:
+  oidc:
+    base-client: niord-client-country

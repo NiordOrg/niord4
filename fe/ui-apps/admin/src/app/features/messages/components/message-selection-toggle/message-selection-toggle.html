@@ -1,0 +1,16 @@
+<label class="selection-star cursor-pointer">
+  <input
+    type="checkbox"
+    class="sr-only"
+    [id]="inputId()"
+    [attr.aria-label]="ariaLabel()"
+    [ngModel]="checked()"
+    (ngModelChange)="onToggle()"
+  />
+  <app-icon
+    name="lucideStar"
+    [filled]="checked()"
+    [class.text-accent]="checked()"
+    [class.text-surface-400]="!checked()"
+  />
+</label>

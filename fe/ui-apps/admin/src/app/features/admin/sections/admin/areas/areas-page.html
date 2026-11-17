@@ -1,0 +1,40 @@
+<app-master-detail-tree-admin
+  [config]="config"
+  [modelLanguage]="modelLanguage"
+  [entities]="facade.areas()"
+  [loading]="facade.loading()"
+  [error]="facade.error()"
+  [hasSelection]="hasSelection()"
+  [moveDisabled]="moveDisabled()"
+  [addDisabled]="addDisabled()"
+  [selectedIds]="selectedIds()"
+  [cogItems]="cogItems()"
+  (nodeSelected)="select($event)"
+  (add)="add()"
+  (moveUp)="moveSibling(true)"
+  (moveDown)="moveSibling(false)"
+  (deleteRequested)="deleteSelected()"
+  (nodeMoved)="onNodeMoved($event)"
+  (retry)="facade.refresh()"
+>
+  <app-area-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (cancelled)="onEditorCancel()"
+    (dirtyChange)="editorDirty.set($event)"
+  />
+</app-master-detail-tree-admin>
+
+<app-json-import-dialog
+  titleKey="admin.areas.import.title"
+  [uploadUrl]="api.uploadUrl()"
+  entityKey="admin.sections.areas.label"
+  (closed)="onImportClosed()"
+/>
+
+<app-firing-generate-dialog
+  [visible]="firingVisible()"
+  (visibleChange)="firingVisible.set($event)"
+/>
+
+<app-confirm />

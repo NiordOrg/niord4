@@ -1,0 +1,101 @@
+/* The utility scan is pinned to this application's own sources. Without `source(…)` the
+   compiler's base is the directory the build runs from — the whole workspace — so it would
+   read the other application's templates and every class name written in prose in the
+   documentation, and emit a utility for each. `source(none)` turns the automatic scan off and
+   the `@source` lines below say what to read instead. They belong in this file because a
+   relative `@source` inside an imported stylesheet is rewritten against the entry file
+   anyway, and they resolve against this file's own directory.
+
+   The shared map kit is scanned too: its components carry their own utilities, and they have
+   to survive in both applications' builds. `../../../styles` is deliberately NOT scanned —
+   `@apply` resolves utilities directly, and scanning a stylesheet only invites phantom
+   candidates.
+
+   The specs are not scanned either, and that one is load-bearing rather than tidy: a spec
+   that quotes a class name from the message HTML — `class="underline"` — would otherwise
+   emit a utility of that name into the shipped stylesheet, and a utility outranks the
+   message-HTML rule of the same name, so a position table would start underlining its
+   rows because something asserted on them. */
+@import 'tailwindcss' source(none);
+@source '../../../ui-apps/info/src';
+@source not '../../../ui-apps/info/src/**/*.spec.ts';
+@source '../../../shared-map';
+@source not '../../../shared-map/**/*.spec.ts';
+
+/* OpenLayers' own chrome — the zoom buttons, the scale line, the attribution — for the three
+   places a map is drawn: the map view, the message dialog and the teaser. It arrives with the
+   global stylesheet, so a first visit carries it although the route it lands on, the message
+   list, draws no map; the bundle report counts it in the styles group. */
+@import 'ol/ol.css';
+
+/* The overlay the CDK portals a dialog into: the fixed container, the centring wrapper and
+   the pane. It is the mechanism, not the look — the panel inside it wears the shared
+   `.dialog-*` classes — so it sits in `base`, below both the components and the utilities. */
+@import '@angular/cdk/overlay-prebuilt.css' layer(base);
+
+/* Cascade-layer order: Tailwind base (preflight) → components → utilities. The names are
+   Tailwind v4's own, so the Layer-3 component classes sit below the utilities and a utility
+   written on a call site always wins over a semantic class. */
+@layer base, components, utilities;
+
+/* The brand vocabulary, shared with the administration application: the Layer-2 tokens, the
+   Tailwind @theme bridge that re-exports them as utilities, and the Layer-3 classes both
+   applications render. The ACTIVE brand token file (styles/tokens.active*.css) arrives
+   through the angular.json `styles[]` array instead of an @import here, because Angular's
+   fileReplacements accepts only JS, TS and JSON; custom properties are unlayered and resolve
+   at use time, so the cascade order holds either way. */
+@import '../../../styles/tokens.base.css';
+@import '../../../styles/theme.css';
+@import '../../../styles/components-core.css';
+
+/* The theme values only this site draws with, beside the shared bridge — which names no
+   application. The sea behind the map tiles is a token of the site's own (`styles/chrome.css`),
+   and a message's title is set a step above the text around it, relative to it, in every list
+   and dialog it appears in. */
+@theme {
+  --color-map-sea: var(--niord-map-sea);
+  --text-message-title: 1.2em;
+}
+
+/* The rich text a message carries. The details of a message part arrive as HTML written by an
+   editor, so no template can put a class on any of it — element-level rules under one wrapper
+   are the carve-out, and both applications render the same content through the same file. It
+   is deliberately unlayered, as it is in the administration application: the markup carries no
+   utility of its own, and a layered rule would lose to the preflight reset it undoes. */
+@import '../../../styles/message-html.css';
+
+@layer base {
+  /* Tailwind v4 leaves <button> on the UA default (arrow) cursor. */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Preflight sets no colour and no background on the document, so anything without a
+     utility would fall back to black on white — in neither brand's palette. */
+  body {
+    color: var(--niord-fg);
+    background: var(--niord-bg);
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+/* Angular renders a routed component as a SIBLING of the outlet, so the element itself is
+   always an empty box; `display: contents` keeps it out of a flex or grid parent's layout. */
+router-outlet {
+  display: contents;
+}
+
+/* A country's brand may swap the family (to Verdana, say), and font-size-adjust normalises the
+   x-height so the swap renders at the same optical size. Unlike the administration app this
+   site does not reserve a scrollbar gutter: its map view is a full-bleed map, and a permanent
+   gutter would show as a stripe beside it. */
+html {
+  font-size-adjust: var(--niord-font-size-adjust, none);
+}
+
+/* This site's own Layer 4. */
+@import './styles/chrome.css';
+@import './styles/print.css';

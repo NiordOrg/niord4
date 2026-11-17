@@ -1,0 +1,20 @@
+{
+  "name": "niord-zz-country",
+  "private": true,
+  "description": "The packages Zedland's own files use, beside the base product's.",
+  "dependencies": {
+    "ngx-harbour": "3.1.0",
+    "pretty-bytes": "7.1.0",
+    "rxjs": "7.8.2"
+  },
+  "niord": {
+    "dependencies": {
+      "ngx-harbour": { "app": "admin", "reason": "The harbour page's berth map." },
+      "pretty-bytes": { "app": "both", "reason": "Shows the notes' sizes." },
+      "rxjs": {
+        "app": "admin",
+        "reason": "The harbour page's streams, at the base product's version."
+      }
+    }
+  }
+}

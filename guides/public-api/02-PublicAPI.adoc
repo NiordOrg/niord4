@@ -1,0 +1,611 @@
+[#niord-public-api]
+== Niord Public API
+The Niord Public API is a read-only REST interface for fetching nautical information from a Niord
+system: Navigational Warnings (NW), Notices to Mariners (NM), the publications that can be
+downloaded, and the areas the messages are filed under.
+
+The API needs no login and no key, because it only ever returns public data: messages that are
+published, or that were published and have since expired or been cancelled, and publications in
+the categories a system makes public.
+
+[#niord-systems]
+=== Niord Systems
+The API can be used on the following systems.
+
+[cols="20,30,50",options="header"]
+|===
+|System |Base URL |Description
+
+|Production
+|https://niord.brs2.dk[niord.brs2.dk^]
+|The production system of the Danish Emergency Management Agency.
+
+|Staging
+|https://niord.staging.brs2.dk[niord.staging.brs2.dk^]
+|A test system, used to try out new versions before they reach production. It may hold test
+messages besides copies of real ones, so it is not a source of nautical information.
+|===
+
+The public site of each system, https://nautiskinformation.brs2.dk[nautiskinformation.brs2.dk^]
+and https://nautiskinformation.staging.brs2.dk[nautiskinformation.staging.brs2.dk^], passes
+requests for `/rest/public/v1/` on to its system, so the API can be reached under either host.
+
+[#using-the-api]
+=== Using the API
+All endpoints are below the path `/rest/public/v1` of a system, for example
+`https://niord.brs2.dk/rest/public/v1/messages`. Some general rules:
+
+* Every endpoint answers `GET` requests (and `HEAD`). There is nothing to create, change or delete.
+* The answers are JSON in UTF-8, written as the link:../model/model.html#json-conventions[message
+  model] describes: a field without a value is left out, and dates are numbers unless the request
+  asks for text (see the `dateFormat` parameter below).
+* A list endpoint returns every match in one answer. There is no paging.
+* The API sends no CORS headers (Cross-Origin Resource Sharing), so a script in a web page on
+  another site cannot read its answers in the browser. A website that shows Niord data fetches it
+  from its own server, as the public site does.
+* A parameter that can be repeated is given once for each value, for example
+  `mainType=NW&mainType=NM`.
+* There is no interactive API page (such as Swagger UI) on the systems. This document, the
+  link:../model/model.html[message model] and the <<xsd,XML Schema>> are the reference.
+
+[#endpoints]
+=== Endpoints
+The API has seven endpoints:
+
+[cols="40,60",options="header"]
+|===
+|Endpoint |Description
+
+|<<messages,/rest/public/v1/messages>>
+|Searches the messages, by default those in force now.
+
+|<<message,/rest/public/v1/message/{messageId}>>
+|Returns one message by its id or its short id, the id readers know it by, such as `NM-775-26`
+(see link:../model/model.html#message[Message] in the message model).
+
+|<<publications,/rest/public/v1/publications>>
+|Lists the publications that are current, or that were current in a given period.
+
+|<<publication,/rest/public/v1/publication/{publicationId}>>
+|Returns one publication by its id.
+
+|<<area,/rest/public/v1/area/{areaId}>>
+|Returns one area by its id or its MRN (Maritime Resource Name, a globally unique name such as
+`urn:mrn:iho:country:dk`; see link:../model/model.html#area[Area] in the message model), with its
+parent areas.
+
+|<<sub-areas,/rest/public/v1/area/{areaId}/sub-areas>>
+|Lists the areas directly below an area.
+
+|<<xsd,/rest/public/v1/xsd/{schemaFile}>>
+|Returns the XML Schema of the message model.
+|===
+
+[#common-parameters]
+==== Common parameters
+Most endpoints take some of the following parameters. Each endpoint's table says which.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Default |Description
+
+|lang
+|String
+|none
+|A two-letter ISO 639-1 language code, for example `en`. +
+With it, every list of localized texts (`descs`) in the answer holds only the entry in that
+language. Where a message, area or publication has no text in that language, the list holds the
+first entry it has instead, with that entry's own language code, so a client can tell. +
+The names in the GeoJSON properties of a message are not filtered; the `language` property of each
+feature says which language was asked for. +
+Without `lang`, every language is returned.
+
+|externalize
+|Boolean
+|`true`
+|Whether to turn the links in the answer into full addresses on the system's own host. +
+For a message, this covers the attachment paths and the links in the HTML of the message parts
+that point at the message's own files. Without it, an attachment path is the path of the file in
+the system's repository (`messages/...`), served under `/rest/repo/file/`. +
+For a publication, this covers the `link` of each description that is not already a full address.
+
+|dateFormat
+|String
+|`UNIX_EPOCH`
+|How dates are written: `UNIX_EPOCH`, a number of milliseconds since 1 January 1970 UTC, or
+`ISO_8601`, a text such as `"2026-08-18T08:13:26.000+00:00"`. +
+The ISO form is there for clients generated from a schema, which often cannot read the numbers.
+|===
+
+[#messages]
+==== /rest/public/v1/messages
+Searches the messages. Without any parameter, it returns the messages in force now (status
+`PUBLISHED`) in the domains the system publishes by default. A _domain_ is the producing system's
+grouping of message series, for example one domain for the navigational warnings and one for the
+notices to mariners.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Example |Description
+
+|lang
+|String
+|`en`
+|See <<common-parameters,Common parameters>>.
+
+|domain
+|String, repeatable
+|`niord-nm`
+|The domains to return messages from. The messages of every message series of the domains are
+returned. When every domain named is limited to certain areas, only messages in those areas are
+returned; the same holds for categories. +
+An unknown domain gives no messages.
+
+|messageSeries
+|String, repeatable
+|`dma-nm`
+|The message series to return messages from, in addition to those of the domains named. +
+When neither `domain`, `messageSeries` nor `publication` is given, the domains the system
+publishes by default are used.
+
+|publication
+|String, repeatable
+|`baed1efd-7e10-4b22-a2ee-e5ae2a6d6381`
+|The ids of publications whose messages to return, such as one issue of the weekly Notices to
+Mariners. The answer then holds the messages of the publications, whether they are still in force,
+expired or cancelled. +
+The id must be that of a publication that <<publication,/publication/{publicationId}>> returns.
+One more kind is accepted here: an issue of a publication series that has since been withdrawn
+from the public list. That endpoint answers `404` for a withdrawn issue, but its messages can still
+be fetched here, so a citation of it keeps working. Any other id is refused (see
+<<errors,Error answers>>).
+
+|areaId
+|String, repeatable
+|`urn:mrn:iho:country:dk`
+|Only messages in these areas or their sub-areas. An area is named by its id (a number) or its
+MRN, as for <<area,/area/{areaId}>>. An area that does not exist matches no message. +
+When every domain searched, those named or else those the system publishes by default, is itself
+limited to areas (see `domain`), the areas of the domains are added to the ones named here, and a
+message in any of them is returned. `areaId` then widens the answer rather than narrowing it.
+
+|mainType
+|String, repeatable
+|`NM`
+|Only messages of this main type, `NW` or `NM`.
+
+|wkt
+|String
+|`POLYGON((10 54, 13 54, 13 56, 10 56, 10 54))`
+|Only messages whose geometry crosses or lies inside this area, written as
+https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry[Well-Known Text^] with
+longitude before latitude. Messages without a geometry are returned as well, since they may
+concern the area. A text that is not valid WKT is ignored.
+
+|externalize
+|Boolean
+|`true`
+|See <<common-parameters,Common parameters>>.
+
+|dateFormat
+|String
+|`UNIX_EPOCH`
+|See <<common-parameters,Common parameters>>.
+|===
+
+The messages come in the order the first domain named keeps its messages in, which is usually the
+order of the area tree. The search lists only messages written by an editor; a message the system
+made by itself is left out.
+
+The answer is a list of messages, each one as described in the
+link:../model/model.html#message[message model]. An example, taken from a test system and
+shortened (one message, one chart, and the position table cut), with the publication and the
+source replaced by invented ones:
+
+[source,bash]
+----
+curl 'https://niord.staging.brs2.dk/rest/public/v1/messages?lang=en&mainType=NM'
+----
+
+[source,json]
+----
+[
+  {
+    "id": "5489fde1-d067-46be-9212-363337046587",
+    "created": 1787053480000,
+    "updated": 1787115206000,
+    "messageSeries": { "seriesId": "dma-nm" },
+    "number": 775,
+    "shortId": "NM-775-26",
+    "mainType": "NM",
+    "type": "TEMPORARY_NOTICE",
+    "status": "PUBLISHED",
+    "areas": [
+      {
+        "id": 466,
+        "active": true,
+        "parent": {
+          "id": 453,
+          "mrn": "urn:mrn:iho:country:dk",
+          "active": true,
+          "descs": [ { "lang": "en", "name": "Denmark" } ]
+        },
+        "descs": [ { "lang": "en", "name": "The Baltic Sea" } ]
+      }
+    ],
+    "charts": [
+      { "chartNumber": "189", "internationalNumber": 1336, "active": true, "scale": 100000 }
+    ],
+    "publishDateFrom": 1787115206000,
+    "followUpDate": 1792360800000,
+    "references": [ { "messageId": "NM-497-26", "type": "REPETITION_NEW_TIME" } ],
+    "originalInformation": true,
+    "parts": [
+      {
+        "indexNo": 0,
+        "type": "DETAILS",
+        "eventDates": [ { "allDay": false, "fromDate": 1787115206000 } ],
+        "geometry": {
+          "type": "FeatureCollection",
+          "id": "79e867af-9831-42ef-8f6c-7313d46953c0",
+          "features": [
+            {
+              "type": "Feature",
+              "id": "9f67fa3f-921f-4c25-b107-98b99ecbea14",
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [ [ [14.689933333333334, 55.09811666666667],
+                                   [14.689733333333333, 55.09968333333333],
+                                   [14.688, 55.09961666666667],
+                                   [14.687316666666666, 55.09721666666667],
+                                   [14.689933333333334, 55.09811666666667] ] ]
+              },
+              "properties": { "language": "en", "startCoordIndex": 1 }
+            }
+          ]
+        },
+        "descs": [
+          {
+            "lang": "en",
+            "subject": "Construction works",
+            "details": "<p><strong>In the period 31 August - 16 October 2026,</strong> construction works&nbsp;will be carried out in an area bounded by a line through positions 1) - 4).</p>\n<table class=\"position-table\">\n<tbody>\n<tr>\n<td class=\"pos-index\">1)</td>\n<td class=\"pos-col\">55&deg; 05.887'N - 014&deg; 41.396'E</td>\n</tr>\n...</tbody>\n</table>\n<p><span>Rafts and divers&nbsp;will be used.</span></p>\n<p>Mariners are requested to pass with caution.</p>"
+          }
+        ],
+        "hideSubject": true
+      }
+    ],
+    "descs": [
+      {
+        "lang": "en",
+        "title": "Denmark. The Baltic Sea. Rønne. Vesthavnen. Construction works.",
+        "vicinity": "Rønne. Vesthavnen.",
+        "publication": "<a publication=\"f3a2a685-fe2e-48f7-98de-f6459c6667bb\" href=\"https://www.example.org/pilot\" target=\"_blank\">Harbour pilot, section 4.</a>",
+        "source": "Port authority 18 August 2026"
+      }
+    ]
+  }
+]
+----
+
+[#message]
+==== /rest/public/v1/message/{messageId}
+Returns one message that is public, that is, published, expired or cancelled.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Example |Description
+
+|messageId
+|String, in the path
+|`NM-775-26`
+|The id of the message (a UUID) or its short id.
+
+|lang
+|String
+|`en`
+|See <<common-parameters,Common parameters>>.
+
+|externalize
+|Boolean
+|`true`
+|See <<common-parameters,Common parameters>>.
+
+|dateFormat
+|String
+|`UNIX_EPOCH`
+|See <<common-parameters,Common parameters>>.
+|===
+
+The answer is one message, in the same form as in the list of <<messages,/messages>>. When no
+public message has the id, the answer is `404` with the text `No message found with ID: <id>`.
+
+[source,bash]
+----
+curl 'https://niord.staging.brs2.dk/rest/public/v1/message/NM-775-26?lang=en'
+----
+
+[#publications]
+==== /rest/public/v1/publications
+Lists the publications in the categories the system makes public: published issues of publication
+series, such as the weekly Notices to Mariners, and the other publications in use.
+Without `from` and `to`, the answer holds the publications that are current now.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Example |Description
+
+|lang
+|String
+|`en`
+|See <<common-parameters,Common parameters>>.
+
+|from
+|Number
+|`1735689600000`
+|The start of a period, in milliseconds since 1 January 1970 UTC. Only publications that were
+still current at or after this time are returned.
+
+|to
+|Number
+|`1767225599999`
+|The end of a period, in milliseconds since 1 January 1970 UTC. Only publications that were
+current at or before this time are returned. +
+With both `from` and `to`, the answer holds the publications that were current at some time in
+the period. With only one of them, the period has no limit on the other side.
+
+|externalize
+|Boolean
+|`true`
+|See <<common-parameters,Common parameters>>.
+
+|dateFormat
+|String
+|`UNIX_EPOCH`
+|See <<common-parameters,Common parameters>>.
+|===
+
+The publications come ordered by category (the category's `priority`, lowest first), then with the
+newest first, as described in the link:../model/model.html#publication[publication model]. An
+example, taken from a test system and shortened to one publication:
+
+[source,bash]
+----
+curl 'https://niord.staging.brs2.dk/rest/public/v1/publications?lang=en'
+----
+
+[source,json]
+----
+[
+  {
+    "publicationId": "baed1efd-7e10-4b22-a2ee-e5ae2a6d6381",
+    "created": 1789479119721,
+    "updated": 1789479184590,
+    "category": {
+      "categoryId": "dk-dma-weekly-nm-publications",
+      "priority": 10,
+      "publish": true,
+      "descs": [ { "lang": "en", "name": "Notices to Mariners" } ]
+    },
+    "type": "MESSAGE_REPORT",
+    "publishDateFrom": 1789479184379,
+    "descs": [
+      {
+        "lang": "en",
+        "title": "NtM Week 38 - 2026",
+        "link": "https://niord.staging.brs2.dk/rest/repo/file/publications/baed1efd-7e10-4b22-a2ee-e5ae2a6d6381/NtM-Week-38-2026.pdf",
+        "fileName": "NtM-Week-38-2026.pdf"
+      }
+    ]
+  }
+]
+----
+
+[#publication]
+==== /rest/public/v1/publication/{publicationId}
+Returns one public publication: a published issue of a publication series, or another publication
+in use, in a category the system makes public.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Example |Description
+
+|publicationId
+|String, in the path
+|`baed1efd-7e10-4b22-a2ee-e5ae2a6d6381`
+|The id of the publication.
+
+|lang
+|String
+|`en`
+|See <<common-parameters,Common parameters>>.
+
+|externalize
+|Boolean
+|`true`
+|See <<common-parameters,Common parameters>>.
+
+|dateFormat
+|String
+|`UNIX_EPOCH`
+|See <<common-parameters,Common parameters>>.
+|===
+
+The answer is one publication, in the same form as in the list of <<publications,/publications>>.
+When no public publication has the id, the answer is `404` with the text
+`No publication found with ID: <id>`. The answer is the same for an id that never existed and for
+a publication that is not public, so it reveals nothing about publications that are not public.
+
+[#area]
+==== /rest/public/v1/area/{areaId}
+Returns one area with its parent areas, up to the top of the area tree.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Example |Description
+
+|areaId
+|String, in the path
+|`urn:mrn:iho:country:dk`
+|The id of the area (a number) or its MRN.
+
+|lang
+|String
+|`en`
+|See <<common-parameters,Common parameters>>.
+|===
+
+The answer is one area as described in the link:../model/model.html#area[message model]. When no
+area has the id, the answer is `404` with the text `No area found with ID: <id>`. An example from a
+test system:
+
+[source,bash]
+----
+curl 'https://niord.staging.brs2.dk/rest/public/v1/area/urn:mrn:iho:country:dk?lang=en'
+----
+
+[source,json]
+----
+{ "id": 453, "mrn": "urn:mrn:iho:country:dk", "active": true,
+  "descs": [ { "lang": "en", "name": "Denmark" } ] }
+----
+
+[#sub-areas]
+==== /rest/public/v1/area/{areaId}/sub-areas
+Lists the areas directly below an area, in the order of the area tree. Only areas in use
+(`"active": true`) are listed, and the areas are given without their parents.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Example |Description
+
+|areaId
+|String, in the path
+|`urn:mrn:iho:country:dk`
+|The id of the area (a number) or its MRN.
+
+|lang
+|String
+|`en`
+|See <<common-parameters,Common parameters>>.
+|===
+
+When no area has the id, the answer is `404` with the text `No area found with ID: <id>`. An
+example from a test system, shortened to three areas:
+
+[source,bash]
+----
+curl 'https://niord.staging.brs2.dk/rest/public/v1/area/urn:mrn:iho:country:dk/sub-areas?lang=en'
+----
+
+[source,json]
+----
+[
+  { "id": 466, "active": true, "descs": [ { "lang": "en", "name": "The Baltic Sea" } ] },
+  { "id": 473, "active": true, "descs": [ { "lang": "en", "name": "The Sound" } ] },
+  { "id": 479, "active": true, "descs": [ { "lang": "en", "name": "The Waters South of Zealand" } ] }
+]
+----
+
+[#xsd]
+==== /rest/public/v1/xsd/{schemaFile}
+Returns the XML Schema (XSD) of the message model, made from the same classes as the JSON
+answers. It describes the structure of a message and the classes it holds, including the GeoJSON
+classes; the publication model is not part of it.
+
+[cols="16,12,14,58",options="header"]
+|===
+|Parameter |Type |Example |Description
+
+|schemaFile
+|String, in the path
+|`schema2.xsd`
+|`schema2.xsd` is the main schema. It imports `schema1.xsd`, which defines the nested lists of
+numbers that coordinates are made of.
+|===
+
+The answer is XML (`application/xml`). Any other file name is refused with `400` (see
+<<errors,Error answers>>).
+
+[#errors]
+=== Error answers
+The API answers an error with one of the following.
+
+[cols="12,30,58",options="header"]
+|===
+|Status |Body |When
+
+|400
+|A JSON problem description (`application/problem+json`), for example
+pass:[<code>{"title":"Bad Request","status":400,&#8203;"detail":"Failed to convert 'mainType' with value: 'XX'",&#8203;"instance":&#8203;"/rest/public/v1/messages"}</code>]
+|A parameter has a value of the wrong kind: a `mainType` other than `NW` or `NM`, a `dateFormat`
+other than the two allowed, a `from` or `to` that is not a number, or an XSD file name other than
+`schema1.xsd` and `schema2.xsd`.
+
+|400
+|A JSON object with a code and a text, for example
+pass:[<code>{"code":"PUBLICATION_UNRESOLVABLE",&#8203;"message":"Unresolvable publication id(s): &lt;id&gt;"}</code>]
+|The `publication` parameter of <<messages,/messages>> names an id it does not accept: one that
+does not exist, or a publication that is not public (see the parameter). The text is the same
+whatever the reason. If one id of several is refused, the whole request is.
+
+|404
+|A line of plain text, for example `No message found with ID: <id>`
+|The message, publication or area asked for does not exist or is not public. The answer's
+`Content-Type` header says `application/json` all the same, so a client should check the status
+before it reads the body as JSON.
+
+|500
+|An error description
+|Something went wrong in the system. Try again later.
+|===
+
+[#examples]
+=== Examples
+Each Niord system chooses its own ids for domains, message series and areas. The ids in the
+parameter tables above are those of the sample data the base product comes with. It has five
+domains, of which two are published by default: `niord-nw` (navigational warnings, with the message
+series `dma-nw` and `dma-nw-local`) and `niord-nm` (notices to mariners, with the series `dma-nm`).
+The other three are `niord-fa` (firing areas), `niord-almanac` and `niord-annex`. These ids work
+only on a system that runs the sample data: a production system has ids of its own, and a domain
+it does not know gives an empty answer. A client can learn the ids a system uses from its messages
+(`messageSeries.seriesId`, and the `id` and `mrn` of the areas), or ask the operator of the
+system. The examples below therefore write a domain id as `<domainId>`.
+
+Fetch the messages in force in the domains the system publishes by default, in English only:
+
+[source,bash]
+----
+curl 'https://niord.brs2.dk/rest/public/v1/messages?lang=en'
+----
+
+Fetch the messages in force in one domain, for example `niord-nm` on a system with the sample
+data, in English only:
+
+[source,bash]
+----
+curl 'https://niord.brs2.dk/rest/public/v1/messages?lang=en&domain=<domainId>'
+----
+
+Fetch the navigational warnings in force, in every language the system has:
+
+[source,bash]
+----
+curl 'https://niord.brs2.dk/rest/public/v1/messages?mainType=NW'
+----
+
+Fetch the messages in force in and around a sea area, with dates as text:
+
+[source,bash]
+----
+curl -G 'https://niord.brs2.dk/rest/public/v1/messages' \
+     --data-urlencode 'wkt=POLYGON((10 54, 13 54, 13 56, 10 56, 10 54))' \
+     --data-urlencode 'lang=en' --data-urlencode 'dateFormat=ISO_8601'
+----
+
+Fetch the publications that were current in 2025, then the messages of one of them:
+
+[source,bash]
+----
+curl 'https://niord.brs2.dk/rest/public/v1/publications?lang=en&from=1735689600000&to=1767225599999'
+curl 'https://niord.brs2.dk/rest/public/v1/messages?lang=en&publication=<publicationId>'
+----

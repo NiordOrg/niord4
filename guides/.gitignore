@@ -1,0 +1,12 @@
+# The built site (build.sh): never committed
+_site/
+# The country kit's guides on their way to the site (build.sh, build-tools.mjs)
+_kit/
+target/
+.settings
+.project
+.classpath
+*~
+.DS_Store
+.idea
+*.iml

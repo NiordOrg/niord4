@@ -1,0 +1,52 @@
+[#introduction]
+== Introduction
+
+Niord is a system for writing, publishing and archiving Navigational Warnings (NW) and Notices to
+Mariners (NM). It is developed and run by the Danish Emergency Management Agency. A country builds
+its own deployment on the base product described here, with its own areas, message series and
+texts.
+
+This document describes the data model in which Niord hands messages and publications to other
+systems. It is the model the link:../public-api/api.html[Niord Public API] returns, and the
+link:../presentation/presentation.html[Niord Message Presentation] guidelines describe how a client
+shows it to a reader. The administration application works on a richer internal model, which is not
+described here.
+
+The model consists of three parts, each with a chapter of its own:
+
+* <<niord-message-model,The message model>>: a message, its parts, and the base data it refers to
+  (areas, categories, charts and message series).
+* <<niord-geojson-model,The GeoJSON model>>: the geometry of a message part, with the feature
+  properties Niord adds.
+* <<niord-publication-model,The publication model>>: the publications, such as a weekly Notices to
+  Mariners issue, that the public API lists and that messages cite.
+
+The model is defined by the Java classes of the package `org.niord.model` in the Niord backend. In
+the source code, which is published under https://github.com/NiordOrg, they are in the folder
+`be/niord/src/main/java/org/niord/model`.
+
+[#json-conventions]
+=== How the model is written in JSON
+
+The public API answers in JSON. The following rules hold for every class in this document:
+
+* A field without a value is left out: the API never sends `null`. A list that has no entries is
+  usually left out as well, but not always; a publication without descriptions, for example, is
+  sent with `"descs": []`. The tables say for each field whether it is _always_ sent or
+  _optional_; a client must be prepared for an optional field to be missing, and for a list to be
+  empty.
+* A date and time (the type _DateTime_ in the tables) is by default a number: the milliseconds
+  since 1 January 1970 00:00 UTC, for example `1787115206000`. When the request asks for
+  `dateFormat=ISO_8601`, it is a text in the ISO 8601 format instead, for example
+  `"2026-08-18T08:13:26.000+00:00"`.
+* An enumerated value, such as a message type, is written in capital letters, for example
+  `"TEMPORARY_NOTICE"`.
+* A language is a two-letter ISO 639-1 code, such as `"en"`.
+* A type written `X[]` in the tables is a list (a JSON array) of `X`.
+* A client should ignore fields it does not know. Niord ignores unknown fields itself, and a later
+  version may add fields.
+
+The message model is also published as an XML Schema, which the public API serves (see
+link:../public-api/api.html#xsd[the XSD endpoint]). The schema describes the structure of the
+message model; the API itself answers in JSON only. The publication model is not part of the
+schema.

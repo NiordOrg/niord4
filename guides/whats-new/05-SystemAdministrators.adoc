@@ -1,0 +1,229 @@
+
+[#system-administrators]
+== For System Administrators
+
+These changes meet users with the _Sysadmin_ role, who set up and configure Niord. The biggest one
+is not a screen but a rule: a deployment's data is changed only by the people who run it. A new
+version of Niord may add texts and settings the deployment never had, but it never changes or
+deletes what is there.
+
+[#sysadmin-area]
+=== The Sysadmin Area
+
+[#sysadmin-rail-and-overview]
+==== A list of sections and an overview
+
+Like the _Admin_ area, the _Sysadmin_ area has its sections down the left side and an _Overview_
+page with a card for each. The _Sysadmin_ role counts in the domain you are working in, so
+switching to a domain where you do not hold it takes the area out of the menu. See
+link:../sysadmin-manual/manual.html#sysadmin-page[Sysadmin Page] in the system administrator
+manual.
+
+[#sysadmin-copy]
+==== Copy, and editing in a side panel
+
+Most lists are edited in a side panel instead of on an edit page. Message series, domains,
+dictionary entries, parameter types, script resources and mailing lists have a _Copy_ action,
+which opens a new record filled in from the one you copied.
+
+[#sysadmin-data]
+=== Where Templates, Texts and Reports Come From
+
+[#sysadmin-database-only]
+==== The database is the only source
+
+In the old Niord, templates and standard texts came with the application and could be loaded again
+from it with a reload. Now every template, script, text and report is read from the database and
+nowhere else. Templates, scripts and reports arrive once, when a new deployment is set up, and after
+that only when a system administrator imports them. Texts and settings are added at start-up
+instead: a new version of Niord can bring new text keys and new settings, which are added the first
+time it starts. A new version never changes or deletes what a deployment holds, and it never adds
+again a text or a setting that an operator deleted. Something an operator deleted stays deleted
+until somebody imports it again. See
+link:../sysadmin-manual/manual.html#script-resources[Script Resources] in the system administrator
+manual.
+
+[#sysadmin-release-files]
+==== New templates arrive as files to import
+
+When a new version of Niord brings a new or changed template, it comes as a release file that a
+system administrator imports on the _Script Resources_ page. Nothing reaches a running deployment
+until it is imported. A list of template paths that the data names but the database lacks, the
+_missing-path report_, is written to the server log at start-up and marks those paths in the
+import.
+
+[#sysadmin-import-preview]
+==== Imports show what they would change
+
+The imports of _Script Resources_ and _Dictionaries_ now show what the file would do before
+anything is written: what it would add, what it would overwrite, what is unchanged and what it
+refuses, with the reason. New entries are ticked and changed ones are not; for a changed script
+you see the two versions side by side. Only what you tick is imported. See
+link:../sysadmin-manual/manual.html#dictionaries[Dictionaries] in the system administrator manual.
+
+[#sysadmin-dictionary-delete]
+==== Deleting a dictionary entry
+
+Before you delete a dictionary entry, the confirmation lists what uses it: parameter types,
+scripts and the parts of Niord that read it. An entry that a parameter type lists cannot be
+deleted. An entry that you delete stays deleted after a restart; to restore it, import it again,
+and the import offers it unticked as _Deleted by an operator_.
+
+[#sysadmin-print-reports]
+==== The built-in print reports
+
+The old manual said that Niord always ensures two standard reports. A new deployment now gets three
+built-in reports when it is set up, _standard_, _draft_ and _public_, the last one used by the
+public site's print. Niord does not create them again, so a report you delete stays deleted until
+you import it again on the _Print Reports_ page. See
+link:../sysadmin-manual/manual.html#print-reports[Print Reports] in the system administrator
+manual.
+
+[#sysadmin-jobs-and-imports]
+=== Batch Jobs and Imports
+
+[#sysadmin-no-folders]
+==== No more folders that start an import
+
+The old manuals said that an import could be started by copying a file into a folder under
+`$NIORD_HOME/batch-jobs/`. No folder on the server starts a job any more. Every import is started
+from its page, with _Import..._ in the cog menu, or from the _Batch Jobs_ page. See
+link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] in the system administrator manual.
+
+[#sysadmin-batch-sets]
+==== Batch sets
+
+A batch set, a zip file that starts several imports at once, is uploaded on the _Batch Jobs_ page.
+A set that names the script resource, dictionary or settings import, or the JavaScript job, is
+refused whole and starts nothing; those run from their own pages.
+
+[#sysadmin-execute-javascript]
+==== Execute JavaScript
+
+The _Batch Jobs_ page has _Execute JavaScript_, which runs a script on the server as a batch job,
+with full access to the system. It asks for confirmation first, and the script's output appears
+only in that job's log files.
+
+[#sysadmin-setup-jobs]
+==== The jobs that set up a deployment
+
+The jobs that loaded a new deployment's first data are listed on the _Batch Jobs_ page like any
+other job, but they cannot be restarted from there. The first set of data is loaded once; if that
+fails, the deployment is set up again on an empty database.
+
+[#sysadmin-configuration]
+=== Configuration
+
+[#sysadmin-settings]
+==== Settings
+
+The _Settings_ page lists only the settings that Niord's code declares as editable; values the
+system keeps for itself, such as the time the areas were last changed, are not listed. A setting row left over from
+an older version, which no code reads, stays in the database but is neither listed nor exported. A
+few settings worth knowing: `documentationUrl` decides where every _Help_ link goes,
+`adminIntegrationPageEnabled` shows the _Niord Integration_ page, and `mailValidRecipients` decides
+whether mails are really sent. See link:../sysadmin-manual/manual.html#settings[Settings] in the
+system administrator manual.
+
+[#sysadmin-message-series]
+==== Message series
+
+A series has a new field, _Exclude messages from free-text search index_. An _Insert_ menu beside
+the short format lists the tokens you can use, among them `${week}`, `${week-2-digits}` and, for an
+NM series, `${t-or-p}`. The next number is changed in a small window with _Compute_ and _Update_,
+and series have no import or export. See
+link:../sysadmin-manual/manual.html#message-series[Message Series] in the system administrator
+manual.
+
+[#sysadmin-domains]
+==== Domains
+
+A domain must have a time zone; it cannot be saved without one, because every date in that domain
+is shown in it. A domain's client in the sign-in service is still created with the domain, and if
+that failed, the domain's panel shows it and offers _Create in Keycloak_. See
+link:../sysadmin-manual/manual.html#domains[Domains] in the system administrator manual.
+
+[#sysadmin-promulgation]
+==== Promulgation types
+
+Audio is now part of the base product, not of one country's version, and a new deployment starts
+with the promulgation types NAVTEX, Twitter and Audio. A type's own settings, such as the NAVTEX
+transmitters, can be edited once the type has been saved. See
+link:../sysadmin-manual/manual.html#promulgation-types[Promulgation Types] in the system
+administrator manual.
+
+[#sysadmin-categories]
+==== Categories and templates
+
+A template category has a _Test…_ button that runs the template on its example message and shows
+the result in each language. The cog menu has _Re-index categories_, which recomputes the order of
+the whole category tree. See link:../sysadmin-manual/manual.html#categories[Categories] in the
+system administrator manual.
+
+[#sysadmin-firing-schedules]
+==== Firing schedules
+
+The _Firing Schedules_ page still configures the generator of firing exercise messages. The
+generator runs every hour, and _Update firing exercises..._ in the page's cog menu runs it at once.
+Editors maintain the schedule itself from the _Schedule_ item in the main menu, and the firing area
+messages are generated from the _Areas_ page. See
+link:../sysadmin-manual/manual.html#firing-schedules[Firing Schedules] in the system administrator
+manual.
+
+[#sysadmin-roles]
+==== A new role for publications
+
+Besides _user_, _editor_, _admin_ and _sysadmin_, the server knows a new client role,
+_publication-curate_, which allows a user to add a message to a publication issue by hand or leave
+one out. An administrator may do the same without it. Two things limit the role for now. Niord
+does not create it: when Niord creates a domain's client in the sign-in service, together with
+the domain or with _Create in Keycloak_ on the _Domains_ page, the client gets only _user_, _editor_, _admin_ and _sysadmin_, so the
+role exists only where the realm's set-up file has it or a system administrator has added it to the
+client by hand. And the pages for publications are in the _Admin_ area, which needs the _admin_ or
+_sysadmin_ role, so a user who holds only _publication-curate_ has no page to work from. A role
+counts only when it is held as a client role for the domain; a realm role with the same name gives
+nothing.
+
+[#sysadmin-integration]
+=== Integration With Other Systems
+
+[#sysadmin-niord-integration]
+==== The Niord Integration page
+
+The old _Integration_ chapter described import panels that belonged to one country's deployment.
+The base product has the page _Niord Integration_ instead, which pulls the published messages of
+chosen message series from another Niord server into series of this one, about once an hour, and
+on demand from the row's action. It is shown only when the setting `adminIntegrationPageEnabled` is
+on. A country may add integration pages of its own. See
+link:../sysadmin-manual/manual.html#integration[Integration] in the system administrator manual.
+
+[#sysadmin-gone]
+=== Gone, and What to Use Instead
+
+[cols="35,65",options="header"]
+|===
+| Gone
+| Use instead
+
+| Reloading script resources and standard dictionaries from the application
+| Import the release file or the texts file, with the preview. See <<sysadmin-import-preview>>.
+
+| Copying a file into a `batch-jobs` folder on the server to start an import
+| _Import..._ on the section's page, or a batch set on the _Batch Jobs_ page. See
+  <<sysadmin-no-folders>>.
+
+| Standard reports that Niord re-created by itself
+| The built-in reports come once with a new deployment; import them again if they were deleted.
+  See <<sysadmin-print-reports>>.
+
+| Settings rows that no code reads, on the _Settings_ page
+| Nothing: they are kept in the database but no longer shown. See <<sysadmin-settings>>.
+
+| The import panels of the old _Integration_ chapter
+| _Niord Integration_ for another Niord server; a country's own pages for anything else. See
+  <<sysadmin-niord-integration>>.
+
+| The AtoN module page
+| The new application has no AtoN page. A domain's _AtoNs_ flag and a category's AtoN filter are
+  kept with the data.
+|===

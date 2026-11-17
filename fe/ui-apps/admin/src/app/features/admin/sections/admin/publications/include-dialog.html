@@ -1,0 +1,126 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [header]="headerKey() | transloco: { issue: issueName() ?? '' }"
+  [style]="{ width: '40rem' }"
+>
+  <div class="flex flex-col gap-4">
+    <!--
+      No preamble. What an include does is what the two fields already say — pick
+      a message, say why — and the sentence stood between the header and the
+      first field on every visit, including the hundredth.
+    -->
+    <div class="flex flex-col gap-1">
+      <label for="publication-include-message" class="text-sm font-medium text-fg-title">
+        {{ 'admin.publications.curation.messageId' | transloco }}
+      </label>
+
+      <!--
+        Searched, not recalled. An id is what is printed on the message, but a
+        box that takes only an id refuses a typo without saying which message was
+        meant — and free text still goes through, so an id pasted from elsewhere
+        resolves server-side even when the search cannot reach it.
+      -->
+      <app-autocomplete
+        inputId="publication-include-message"
+        leadingIcon="lucideSearch"
+        [allowFreeText]="true"
+        [multiple]="false"
+        [text]="messageId()"
+        [suggestions]="suggestions()"
+        [itemLabel]="hitLabel"
+        [ariaLabel]="'admin.publications.curation.messageId' | transloco"
+        [emptyMessage]="'admin.publications.curation.noMatches' | transloco"
+        [clearLabel]="'admin.publications.curation.clearMessage' | transloco"
+        [minLength]="2"
+        (query)="onQuery($event)"
+        (selectionChange)="onPick($event)"
+        (clear)="onClear()"
+      >
+        <!--
+          The date it went out and where that falls relative to this issue's
+          period: the commonest reason to add a message by hand is precisely that
+          it falls outside, and two editions can carry near-identical titles.
+        -->
+        <!--
+          One line per fact, in scanning order: the identity never wraps, so the
+          id stays whole and column-aligned down the list even in a narrow
+          panel; the title is allowed two lines and then clamps; and the date
+          line is only drawn when there is a date to draw.
+        -->
+        <ng-template #option let-hit>
+          <span class="flex flex-col gap-0.5">
+            <span class="flex items-baseline gap-1">
+              <span class="font-semibold whitespace-nowrap">{{ hit.label }}</span>
+              @if (hit.typeSuffix) {
+                <span class="whitespace-nowrap text-fg-muted">{{ hit.typeSuffix }}</span>
+              }
+            </span>
+            @if (hit.title) {
+              <span class="line-clamp-2">{{ hit.title }}</span>
+            }
+            @if (hit.published) {
+              <span class="text-xs text-fg-muted">
+                {{ 'admin.publications.issue.published' | transloco }} {{ hit.published }}
+                @if (hit.relationKey; as key) {
+                  <span aria-hidden="true">·</span>
+                  {{ key | transloco }}
+                }
+              </span>
+            }
+          </span>
+        </ng-template>
+      </app-autocomplete>
+
+      <!--
+        Which corpus the box is searching, named. The list is the owning desk's
+        published messages, and an admin who does not find the message they are
+        looking for is otherwise left deciding between "it is not published" and
+        "it is not ours". A publication no desk owns is searched across all of
+        them, and says so instead of naming one.
+      -->
+      <p class="text-xs text-fg-subtle">
+        {{ hintKey() | transloco: { domain: domainLabel() } }}
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="publication-include-reason" class="text-sm font-medium text-fg-title">
+        {{ 'admin.publications.retire.reason' | transloco }}
+      </label>
+      <textarea
+        id="publication-include-reason"
+        class="text-input min-h-16 w-full max-lg:min-h-24"
+        rows="3"
+        [placeholder]="'admin.publications.curation.reasonPlaceholder' | transloco"
+        [formField]="includeForm.reason"
+      ></textarea>
+      <p class="text-xs text-fg-subtle">
+        {{ 'admin.publications.curation.reasonShownHint' | transloco }}
+      </p>
+    </div>
+
+    @if (errorKey(); as key) {
+      <!--
+        The refusal and its detail are one block, so the stack gap separates
+        them from the fields above rather than splitting the two sentences.
+      -->
+      <div class="flex flex-col gap-1" role="alert">
+        <p class="text-sm text-danger">{{ key | transloco }}</p>
+        <!-- The server's own words: this is where the ids it could not resolve are named. -->
+        @if (errorDetail(); as detail) {
+          <p class="text-xs text-fg-subtle">{{ detail }}</p>
+        }
+      </div>
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.publications.retire.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="submitDisabled()" (click)="submit()">
+      {{ 'admin.publications.curation.includeConfirm' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

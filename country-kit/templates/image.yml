@@ -1,0 +1,126 @@
+name: Image
+
+# Builds this country's images and pushes them, in three jobs: `frontend` builds the frontend and
+# the public site's image with no secret, and checks the image (the container test in a browser,
+# the layout check and the separation check against it); `backend` runs set-up, then builds the
+# jar, runs the image tools' override check over it and splits it, with no secret; `push`, in the
+# `harbor` environment and on main only, verifies the three artifacts by their SHA-256, checks that
+# the backend job's version is 4.0.<base>.<run> and that the public site's image carries that tag,
+# loads that image and pushes it, and runs no npm, no Maven and no kit code. Runs on demand
+# (Actions → Image → Run workflow); a country adds the trigger it builds on, such as a green CI
+# run of a push to main.
+#
+# The push job trusts nothing from the build jobs but the bytes it verifies: it logs in to the
+# REGISTRY of this workflow's env and to nothing else, and pushes only a reference of the expected
+# shape, <REGISTRY>/<HARBOR_PROJECT>/<repository>-info:<base>.<run number> with the repository's
+# name in lower case. The build jobs run npm, Maven and the country's code; a reference or a
+# version they hand on could name any host, and the robot's credential would go there.
+#
+# The push job's last step is a placeholder that fails until the country replaces it with its
+# administration bundle's image step (niord-dk's image.yml is the model); the public site's image is
+# pushed by then.
+#
+# Secrets: the Harbor robot of this repository as HARBOR_ROBOT_USER / HARBOR_ROBOT_PASSWORD on the
+# `harbor` environment, whose deployment-branch policy allows main only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The country sets REGISTRY and HARBOR_PROJECT as for its other images (its registry's host and its
+# Harbor project); while either is empty the frontend job fails before it builds the image and the
+# push job before it logs in. MODULE is the artifactId of the country's deployable, the jar's
+# name; while it is empty the backend job fails before set-up. MVN_FLAGS and MAVEN_OPTS are the
+# backend job's Maven options.
+env:
+  REGISTRY: ''
+  HARBOR_PROJECT: ''
+  MODULE: ''
+  MVN_FLAGS: '-B -ntp -e'
+  MAVEN_OPTS: '-Xmx2g'
+
+jobs:
+  # The frontend job: written here by init from image-frontend-job.yml.
+
+  # The backend job: written here by init from image-backend-job.yml.
+
+  push:
+    name: Verify + push
+    needs: [frontend, backend]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: harbor
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: info-image
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-dist
+      - name: Verify the three artifacts' SHA-256
+        run: |
+          set -euo pipefail
+          sha256sum -c frontend-dist.tar.sha256
+          sha256sum -c info-image.tar.sha256
+          sha256sum -c backend-dist.tar.sha256
+      # VERSION and IMAGE are the build jobs' outputs, so they are checked before anything uses them:
+      # a version's shape, and the public site's image tagged with that same version.
+      - name: Check the version
+        env:
+          VERSION: ${{ needs.backend.outputs.version }}
+          IMAGE: ${{ needs.frontend.outputs.info-image }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^4\.0\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::The backend job's version '$VERSION' is not 4.0.<base>.<run>: nothing is pushed"
+            exit 1
+          fi
+          if [ "${IMAGE##*:}" != "$VERSION" ]; then
+            echo "::error::The public-site image '$IMAGE' is not tagged $VERSION: nothing is pushed"
+            exit 1
+          fi
+      # IMAGE is the frontend job's output, so it is checked whole before anything uses it: this
+      # workflow's registry and project, this repository's name and a version's tag. The login
+      # goes to REGISTRY, never to a host read from IMAGE.
+      - name: Push the public-site image
+        env:
+          IMAGE: ${{ needs.frontend.outputs.info-image }}
+          HARBOR_ROBOT_USER: ${{ secrets.HARBOR_ROBOT_USER }}
+          HARBOR_ROBOT_PASSWORD: ${{ secrets.HARBOR_ROBOT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REGISTRY:-}" ] || [ -z "${HARBOR_PROJECT:-}" ]; then
+            echo "::error::REGISTRY and HARBOR_PROJECT are not set in this workflow's env: nothing is pushed"
+            exit 1
+          fi
+          name="${GITHUB_REPOSITORY##*/}"
+          expected="$REGISTRY/$HARBOR_PROJECT/${name,,}-info:"
+          case "$IMAGE" in
+            "$expected"*) tag="${IMAGE#"$expected"}" ;;
+            *) echo "::error::The frontend job's image '$IMAGE' is not $expected<version>: nothing is pushed"; exit 1 ;;
+          esac
+          if ! [[ "$tag" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::error::The frontend job's image '$IMAGE' has the tag '$tag', not a version: nothing is pushed"
+            exit 1
+          fi
+          docker load -i info-image.tar
+          printf '%s' "$HARBOR_ROBOT_PASSWORD" | docker login "$REGISTRY" -u "$HARBOR_ROBOT_USER" --password-stdin
+          docker push "$IMAGE"
+      # This repository's image of the administration bundle: the split jar and the image tools from
+      # backend-dist.tar, the administration bundle (dist/niord-app/browser) from frontend-dist.tar,
+      # put into the image as the base product's image tools do, and pushed with the same login.
+      # Until the country writes it (niord-dk's image.yml is the model) this step fails every run,
+      # after the public site's image is pushed.
+      - name: Build and push the administration bundle's image
+        run: |
+          set -euo pipefail
+          echo "::error::This repository's image of the administration bundle is not written yet: see the comment above this step."
+          exit 1

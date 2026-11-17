@@ -1,0 +1,27 @@
+# Maven build output
+target/
+# flatten-maven-plugin's resolved copy of each pom (be/pom.xml); `mvnw clean` removes it too
+.flattened-pom.xml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Logs / local run
+*.log
+
+# Niord runtime-generated state
+.lucene/
+${niord.home}/
+**/message-index/
+**/.niord-hsearch/
+
+# Workspace-local scratch dir (isolated java.io.tmpdir for IT runs)
+.tmp/
+
+# Claude Code scheduled tasks lock
+.claude/scheduled_tasks.lock
+
+# macOS Finder metadata
+.DS_Store

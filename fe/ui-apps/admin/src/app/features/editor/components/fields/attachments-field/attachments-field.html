@@ -1,0 +1,170 @@
+<app-editor-field-row
+  fieldId="attachments"
+  label="msg.field.attachments"
+  [edited]="fields.edited('attachments')"
+  [empty]="attachments().length === 0"
+  emptyLabel="editor.attachments.empty"
+>
+  <span fieldViewer class="inline-flex items-center gap-1.5">
+    <app-icon name="lucidePaperclip" class="text-fg-subtle" aria-hidden="true" />
+    <span class="text-fg-subtle">{{ attachments().length }}:</span>
+    <span>{{ fileNames() }}</span>
+  </span>
+
+  <div fieldEditor class="flex flex-col gap-3">
+    <app-file-upload
+      [url]="uploadUrl()"
+      [multiple]="true"
+      responseType="json"
+      [disabled]="!facade.editableNow()"
+      browseLabel="editor.attachments.upload"
+      hint="editor.attachments.dropHint"
+      ariaLabel="editor.attachments.dropZoneLabel"
+      (uploaded)="onUploaded($event)"
+    />
+
+    @if (attachments().length > 0) {
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-surface-200 text-left text-xs text-fg-subtle">
+              <th class="py-1 pr-1 font-medium"></th>
+              <th class="py-1 pr-2 font-medium">
+                {{ 'editor.attachments.column.icon' | transloco }}
+              </th>
+              <th class="py-1 pr-2 font-medium">
+                {{ 'editor.attachments.column.file' | transloco }}
+              </th>
+              <th class="py-1 pr-2 font-medium">
+                {{ 'editor.attachments.column.caption' | transloco }}
+              </th>
+              <th class="py-1 pr-2 font-medium">
+                {{ 'editor.attachments.column.display' | transloco }}
+              </th>
+              <th class="py-1 pr-2 font-medium">
+                {{ 'editor.attachments.column.size' | transloco }}
+              </th>
+              <th class="py-1 font-medium"></th>
+            </tr>
+          </thead>
+          <tbody cdkDropList (cdkDropListDropped)="onDrop($event)">
+            @for (att of attachments(); track $index; let attIndex = $index) {
+              <tr
+                cdkDrag
+                cdkDragLockAxis="y"
+                [cdkDragDisabled]="!facade.editableNow()"
+                class="border-b border-surface-200 bg-surface-0 align-top last:border-b-0 dark:bg-surface-900"
+              >
+                <td class="py-2 pr-1">
+                  <button
+                    type="button"
+                    cdkDragHandle
+                    data-reorder
+                    class="icon-button cursor-grab text-fg-subtle disabled:cursor-not-allowed disabled:opacity-40"
+                    [attr.aria-label]="'editor.attachments.reorder' | transloco"
+                    [title]="'editor.attachments.reorder' | transloco"
+                    [disabled]="!facade.editableNow()"
+                    (keydown)="onGripKeydown($event, attIndex)"
+                  >
+                    <app-icon name="lucideGripVertical" />
+                  </button>
+                </td>
+                <td class="py-2 pr-2">
+                  <app-message-attachment
+                    [attachment]="att"
+                    [size]="32"
+                    (clicked)="onShowAttachment($event)"
+                  />
+                </td>
+                <td class="py-2 pr-2">
+                  <div class="flex flex-col">
+                    <button
+                      type="button"
+                      class="link-button break-all text-left"
+                      [attr.aria-label]="
+                        'editor.attachments.showAria' | transloco: { file: att.fileName }
+                      "
+                      (click)="onShowAttachment(att)"
+                    >
+                      {{ att.fileName }}
+                    </button>
+                    @if (att.fileSize !== undefined) {
+                      <span class="text-xs text-fg-subtle">{{ formatSize(att.fileSize) }}</span>
+                    }
+                  </div>
+                </td>
+                <td class="py-2 pr-2">
+                  <app-localized-inputs
+                    [value]="captionRecord(att)"
+                    [disabled]="!facade.editableNow()"
+                    placeholderKey="editor.attachments.captionPlaceholder"
+                    [stacked]="true"
+                    (valueInput)="onCaptionInput(attIndex, $event)"
+                  />
+                </td>
+                <td class="py-2 pr-2">
+                  @if (canDisplay(att)) {
+                    <select
+                      class="text-input min-w-40 text-sm"
+                      [disabled]="!facade.editableNow()"
+                      [attr.aria-label]="'editor.attachments.column.display' | transloco"
+                      (change)="onDisplayChange(attIndex, $any($event.target).value)"
+                    >
+                      @for (option of displayOptions; track option.value) {
+                        <option
+                          [value]="option.value"
+                          [selected]="(att.display ?? '') === option.value"
+                        >
+                          {{ option.labelKey | transloco }}
+                        </option>
+                      }
+                    </select>
+                  }
+                </td>
+                <td class="py-2 pr-2">
+                  @if (canDisplay(att) && att.display) {
+                    <div class="flex flex-col gap-1">
+                      <input
+                        type="text"
+                        class="text-input w-24 text-sm"
+                        pattern="\d+(\.\d*)?(em|px|%|cm|mm|in|pt|pc)"
+                        [value]="att.width ?? ''"
+                        [disabled]="!facade.editableNow()"
+                        [placeholder]="'editor.attachments.widthPlaceholder' | transloco"
+                        [attr.aria-label]="'editor.attachments.widthPlaceholder' | transloco"
+                        (input)="onWidthChange(attIndex, $any($event.target).value)"
+                      />
+                      <input
+                        type="text"
+                        class="text-input w-24 text-sm"
+                        pattern="\d+(\.\d*)?(em|px|%|cm|mm|in|pt|pc)"
+                        [value]="att.height ?? ''"
+                        [disabled]="!facade.editableNow()"
+                        [placeholder]="'editor.attachments.heightPlaceholder' | transloco"
+                        [attr.aria-label]="'editor.attachments.heightPlaceholder' | transloco"
+                        (input)="onHeightChange(attIndex, $any($event.target).value)"
+                      />
+                    </div>
+                  }
+                </td>
+                <td class="py-2">
+                  <button
+                    type="button"
+                    class="icon-button text-fg-subtle hover:text-danger disabled:opacity-50"
+                    data-delete
+                    [disabled]="!facade.editableNow()"
+                    [attr.aria-label]="'editor.attachments.deleteAction' | transloco"
+                    [title]="'editor.attachments.deleteAction' | transloco"
+                    (click)="onDelete(attIndex)"
+                  >
+                    <app-icon name="lucideTrash2" />
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</app-editor-field-row>

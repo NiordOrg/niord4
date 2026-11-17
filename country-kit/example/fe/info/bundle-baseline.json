@@ -1,0 +1,96 @@
+{
+  "_comment": "What a first visit to the public site transfers, measured from the build named under source. Written to info/bundle-baseline.json by --update-baseline, and then the gate every later build is held to.",
+  "generatedAt": "2026-10-22",
+  "source": {
+    "measuredFrom": "dist/niord-info/browser + dist/niord-info/browser-stats.json",
+    "angular": "^22.2.2",
+    "build": "ng build niord-info --stats-json (production, outputHashing all)"
+  },
+  "tolerancePercent": 2,
+  "toleranceBytes": 64,
+  "transferRule": "per file: min(raw, brotli). brotli = quality 11 with SIZE_HINT; gzip = level 9, recorded for information only. A .woff2 is already compressed, so its transfer is its raw size.",
+  "landingRoute": "/messages/details",
+  "landingEntryPoints": [
+    "ui-apps/info/src/app/features/messages/messages.routes.ts",
+    "ui-apps/info/src/app/features/messages/components/message-details-view/message-details-view.component.ts"
+  ],
+  "groups": {
+    "index": {
+      "files": 1,
+      "raw": 742,
+      "brotli": 273,
+      "gzip": 436,
+      "transfer": 273
+    },
+    "styles": {
+      "files": 1,
+      "raw": 51662,
+      "brotli": 9725,
+      "gzip": 10924,
+      "transfer": 9725
+    },
+    "initialJs": {
+      "files": 2,
+      "raw": 346578,
+      "brotli": 96720,
+      "gzip": 109480,
+      "transfer": 96720
+    },
+    "landingLazyJs": {
+      "files": 11,
+      "raw": 39378,
+      "brotli": 14525,
+      "gzip": 16093,
+      "transfer": 14525
+    },
+    "fonts": {
+      "files": 1,
+      "raw": 23580,
+      "brotli": 23539,
+      "gzip": 23577,
+      "transfer": 23539
+    }
+  },
+  "totals": {
+    "firstVisit": {
+      "files": 16,
+      "raw": 461940,
+      "transfer": 144782
+    },
+    "initial": {
+      "raw": 398982,
+      "transfer": 106718
+    }
+  },
+  "reference": {
+    "_comment": "Not gated. Recorded so a later piece of work can see what moved and where.",
+    "largestScript": {
+      "file": "chunk-BRqP4-P2.js",
+      "raw": 347427,
+      "brotli": 85788
+    },
+    "largestComponentStyle": {
+      "file": "message-print-view.component-OKGXIAM5.css",
+      "raw": 969
+    },
+    "allJs": {
+      "files": 30,
+      "raw": 885121,
+      "brotli": 242635,
+      "gzip": 277849,
+      "transfer": 242635
+    },
+    "notFirstVisit": {
+      "files": 31,
+      "raw": 512173,
+      "brotli": 136908,
+      "gzip": 158765,
+      "transfer": 136896
+    }
+  },
+  "targets": {
+    "_comment": "Not gated. The transfer the site aims for; the gate is the groups and the first-visit total above.",
+    "firstVisitTransfer": 235520,
+    "initialTransfer": 112640
+  }
+}

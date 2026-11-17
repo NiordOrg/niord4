@@ -1,0 +1,13 @@
+<app-filter-panel
+  label="messages.filter.category.label"
+  appFilterAutofocus="category"
+  (clear)="clear()"
+>
+  <app-categories-field
+    placeholder="messages.filter.category.placeholder"
+    [domainId]="domainId()"
+    [initialIds]="initialIds()"
+    [value]="value()"
+    (valueChange)="onChange($event)"
+  />
+</app-filter-panel>

@@ -1,0 +1,20 @@
+{{- if .Values.keycloak.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "niord.componentName" (list . "keycloak") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "keycloak") | nindent 4 }}
+spec:
+  # ClusterIP by default: the browser reaches Keycloak through the nginx proxy at
+  # <externalBaseUri>/auth, and the app and the proxy reach this Service by its DNS name.
+  # Set keycloak.service.type=LoadBalancer to reach it from the host directly (on OrbStack
+  # http://localhost:<port>/auth and <name>.k8s.orb.local).
+  type: {{ .Values.keycloak.service.type }}
+  selector:
+    {{- include "niord.componentSelectorLabels" (list . "keycloak") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.keycloak.service.port }}
+      targetPort: http
+{{- end }}

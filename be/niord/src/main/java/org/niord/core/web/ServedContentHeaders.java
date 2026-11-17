@@ -1,0 +1,42 @@
+/*
+ * Copyright 2026 Danish Maritime Authority.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.niord.core.web;
+
+/**
+ * The response headers that keep content the backend serves - an uploaded file, a report of editors' texts,
+ * the HTML behind a PDF - from running as active content on the backend's origin, which the administration
+ * application may share. Spring's {@code HttpHeaders} names neither header.
+ */
+public final class ServedContentHeaders {
+
+    /** The header that stops a browser from reading a response as another type than the one it is sent with */
+    public static final String X_CONTENT_TYPE_OPTIONS = "X-Content-Type-Options";
+
+    /** The {@link #X_CONTENT_TYPE_OPTIONS} value: no content-type sniffing */
+    public static final String NOSNIFF = "nosniff";
+
+    /** The Content Security Policy header */
+    public static final String CONTENT_SECURITY_POLICY = "Content-Security-Policy";
+
+    /**
+     * The {@link #CONTENT_SECURITY_POLICY} value that puts a document in an origin of its own, where it runs
+     * no script and submits no form
+     */
+    public static final String SANDBOX = "sandbox";
+
+    private ServedContentHeaders() {
+    }
+}

@@ -1,0 +1,9 @@
+# The go-live runbooks are operational documents kept verbatim — reformatting them
+# would change wording that is followed step by step during the go-live window.
+docs/publications/go-live/
+# The publications specifications: scripts/publications hashes their sections against the backend exports.
+docs/publications/DATA-MODEL.md
+docs/publications/API-CONTRACT.md
+docs/publications/COMPILATION-SERIES-PLAN.md
+# Vendored verbatim from angular/skills; see the VENDORED.md inside.
+.claude/skills/angular-developer/

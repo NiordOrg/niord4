@@ -1,0 +1,259 @@
+# Known-good positions for PositionFormatterRoundingTest (POS1): language|format|lat|lon|printed.
+# Printed by PositionFormatter before the POS1 fix (2026-11-12), for positions not near a rounding boundary;
+# the fix must print every line the same. Never regenerate this file from the code under test.
+en|SEC|55.2211|12.5|55° 13' 15"N 012° 30' 00"E
+en|DEC_1|55.2211|12.5|55° 13.3'N 012° 30.0'E
+en|DEC_2|55.2211|12.5|55° 13.27'N 012° 30.00'E
+en|DEC_3|55.2211|12.5|55° 13.266'N 012° 30.000'E
+en|NAVTEX_1|55.2211|12.5|55-13.3N 012-30.0E
+en|NAVTEX_2|55.2211|12.5|55-13.27N 012-30.00E
+en|NAVTEX_3|55.2211|12.5|55-13.266N 012-30.000E
+en|AUDIO_0|55.2211|12.5|55 degrees 13 min. North 12 degrees 30 min. East
+en|AUDIO_1|55.2211|12.5|55 degrees 13.3 min. North 12 degrees 30.0 min. East
+en|AUDIO_2|55.2211|12.5|55 degrees 13.27 min. North 12 degrees 30.00 min. East
+en|SEC|57.123456|10.654321|57° 07' 24"N 010° 39' 15"E
+en|DEC_1|57.123456|10.654321|57° 07.4'N 010° 39.3'E
+en|DEC_2|57.123456|10.654321|57° 07.41'N 010° 39.26'E
+en|DEC_3|57.123456|10.654321|57° 07.407'N 010° 39.259'E
+en|NAVTEX_1|57.123456|10.654321|57-07.4N 010-39.3E
+en|NAVTEX_2|57.123456|10.654321|57-07.41N 010-39.26E
+en|NAVTEX_3|57.123456|10.654321|57-07.407N 010-39.259E
+en|AUDIO_0|57.123456|10.654321|57 degrees 7 min. North 10 degrees 39 min. East
+en|AUDIO_1|57.123456|10.654321|57 degrees 7.4 min. North 10 degrees 39.3 min. East
+en|AUDIO_2|57.123456|10.654321|57 degrees 7.41 min. North 10 degrees 39.26 min. East
+en|SEC|-33.865143|151.2099|33° 51' 54"S 151° 12' 35"E
+en|DEC_1|-33.865143|151.2099|33° 51.9'S 151° 12.6'E
+en|DEC_2|-33.865143|151.2099|33° 51.91'S 151° 12.59'E
+en|DEC_3|-33.865143|151.2099|33° 51.909'S 151° 12.594'E
+en|NAVTEX_1|-33.865143|151.2099|33-51.9S 151-12.6E
+en|NAVTEX_2|-33.865143|151.2099|33-51.91S 151-12.59E
+en|NAVTEX_3|-33.865143|151.2099|33-51.909S 151-12.594E
+en|AUDIO_0|-33.865143|151.2099|33 degrees 52 min. South 151 degrees 13 min. East
+en|AUDIO_1|-33.865143|151.2099|33 degrees 51.9 min. South 151 degrees 12.6 min. East
+en|AUDIO_2|-33.865143|151.2099|33 degrees 51.91 min. South 151 degrees 12.59 min. East
+en|SEC|40.689247|-74.044502|40° 41' 21"N 074° 02' 40"W
+en|DEC_1|40.689247|-74.044502|40° 41.4'N 074° 02.7'W
+en|DEC_2|40.689247|-74.044502|40° 41.35'N 074° 02.67'W
+en|DEC_3|40.689247|-74.044502|40° 41.355'N 074° 02.670'W
+en|NAVTEX_1|40.689247|-74.044502|40-41.4N 074-02.7W
+en|NAVTEX_2|40.689247|-74.044502|40-41.35N 074-02.67W
+en|NAVTEX_3|40.689247|-74.044502|40-41.355N 074-02.670W
+en|AUDIO_0|40.689247|-74.044502|40 degrees 41 min. North 74 degrees 3 min. West
+en|AUDIO_1|40.689247|-74.044502|40 degrees 41.4 min. North 74 degrees 2.7 min. West
+en|AUDIO_2|40.689247|-74.044502|40 degrees 41.35 min. North 74 degrees 2.67 min. West
+en|SEC|-22.9068|-43.1729|22° 54' 24"S 043° 10' 22"W
+en|DEC_1|-22.9068|-43.1729|22° 54.4'S 043° 10.4'W
+en|DEC_2|-22.9068|-43.1729|22° 54.41'S 043° 10.37'W
+en|DEC_3|-22.9068|-43.1729|22° 54.408'S 043° 10.374'W
+en|NAVTEX_1|-22.9068|-43.1729|22-54.4S 043-10.4W
+en|NAVTEX_2|-22.9068|-43.1729|22-54.41S 043-10.37W
+en|NAVTEX_3|-22.9068|-43.1729|22-54.408S 043-10.374W
+en|AUDIO_0|-22.9068|-43.1729|22 degrees 54 min. South 43 degrees 10 min. West
+en|AUDIO_1|-22.9068|-43.1729|22 degrees 54.4 min. South 43 degrees 10.4 min. West
+en|AUDIO_2|-22.9068|-43.1729|22 degrees 54.41 min. South 43 degrees 10.37 min. West
+en|SEC|0.5|-0.25|00° 30' 00"N 000° 15' 00"W
+en|DEC_1|0.5|-0.25|00° 30.0'N 000° 15.0'W
+en|DEC_2|0.5|-0.25|00° 30.00'N 000° 15.00'W
+en|DEC_3|0.5|-0.25|00° 30.000'N 000° 15.000'W
+en|NAVTEX_1|0.5|-0.25|00-30.0N 000-15.0W
+en|NAVTEX_2|0.5|-0.25|00-30.00N 000-15.00W
+en|NAVTEX_3|0.5|-0.25|00-30.000N 000-15.000W
+en|AUDIO_0|0.5|-0.25|0 degrees 30 min. North 0 degrees 15 min. West
+en|AUDIO_1|0.5|-0.25|0 degrees 30.0 min. North 0 degrees 15.0 min. West
+en|AUDIO_2|0.5|-0.25|0 degrees 30.00 min. North 0 degrees 15.00 min. West
+en|SEC|64.1814|-51.6941|64° 10' 53"N 051° 41' 38"W
+en|DEC_1|64.1814|-51.6941|64° 10.9'N 051° 41.6'W
+en|DEC_2|64.1814|-51.6941|64° 10.88'N 051° 41.65'W
+en|DEC_3|64.1814|-51.6941|64° 10.884'N 051° 41.646'W
+en|NAVTEX_1|64.1814|-51.6941|64-10.9N 051-41.6W
+en|NAVTEX_2|64.1814|-51.6941|64-10.88N 051-41.65W
+en|NAVTEX_3|64.1814|-51.6941|64-10.884N 051-41.646W
+en|AUDIO_0|64.1814|-51.6941|64 degrees 11 min. North 51 degrees 42 min. West
+en|AUDIO_1|64.1814|-51.6941|64 degrees 10.9 min. North 51 degrees 41.6 min. West
+en|AUDIO_2|64.1814|-51.6941|64 degrees 10.88 min. North 51 degrees 41.65 min. West
+en|SEC|78.2232|15.6267|78° 13' 23"N 015° 37' 36"E
+en|DEC_1|78.2232|15.6267|78° 13.4'N 015° 37.6'E
+en|DEC_2|78.2232|15.6267|78° 13.39'N 015° 37.60'E
+en|DEC_3|78.2232|15.6267|78° 13.392'N 015° 37.602'E
+en|NAVTEX_1|78.2232|15.6267|78-13.4N 015-37.6E
+en|NAVTEX_2|78.2232|15.6267|78-13.39N 015-37.60E
+en|NAVTEX_3|78.2232|15.6267|78-13.392N 015-37.602E
+en|AUDIO_0|78.2232|15.6267|78 degrees 13 min. North 15 degrees 38 min. East
+en|AUDIO_1|78.2232|15.6267|78 degrees 13.4 min. North 15 degrees 37.6 min. East
+en|AUDIO_2|78.2232|15.6267|78 degrees 13.39 min. North 15 degrees 37.60 min. East
+en|SEC|54.75|10.48333|54° 45' 00"N 010° 28' 59"E
+en|DEC_1|54.75|10.48333|54° 45.0'N 010° 29.0'E
+en|DEC_2|54.75|10.48333|54° 45.00'N 010° 29.00'E
+en|DEC_3|54.75|10.48333|54° 45.000'N 010° 29.000'E
+en|NAVTEX_1|54.75|10.48333|54-45.0N 010-29.0E
+en|NAVTEX_2|54.75|10.48333|54-45.00N 010-29.00E
+en|NAVTEX_3|54.75|10.48333|54-45.000N 010-29.000E
+en|AUDIO_0|54.75|10.48333|54 degrees 45 min. North 10 degrees 29 min. East
+en|AUDIO_1|54.75|10.48333|54 degrees 45.0 min. North 10 degrees 29.0 min. East
+en|AUDIO_2|54.75|10.48333|54 degrees 45.00 min. North 10 degrees 29.00 min. East
+en|SEC|56.1|8.2|56° 06' 00"N 008° 11' 59"E
+en|DEC_1|56.1|8.2|56° 06.0'N 008° 12.0'E
+en|DEC_2|56.1|8.2|56° 06.00'N 008° 12.00'E
+en|DEC_3|56.1|8.2|56° 06.000'N 008° 12.000'E
+en|NAVTEX_1|56.1|8.2|56-06.0N 008-12.0E
+en|NAVTEX_2|56.1|8.2|56-06.00N 008-12.00E
+en|NAVTEX_3|56.1|8.2|56-06.000N 008-12.000E
+en|AUDIO_0|56.1|8.2|56 degrees 6 min. North 8 degrees 12 min. East
+en|AUDIO_1|56.1|8.2|56 degrees 6.0 min. North 8 degrees 12.0 min. East
+en|AUDIO_2|56.1|8.2|56 degrees 6.00 min. North 8 degrees 12.00 min. East
+en|SEC|-0.3|0.7|00° 18' 00"S 000° 42' 00"E
+en|DEC_1|-0.3|0.7|00° 18.0'S 000° 42.0'E
+en|DEC_2|-0.3|0.7|00° 18.00'S 000° 42.00'E
+en|DEC_3|-0.3|0.7|00° 18.000'S 000° 42.000'E
+en|NAVTEX_1|-0.3|0.7|00-18.0S 000-42.0E
+en|NAVTEX_2|-0.3|0.7|00-18.00S 000-42.00E
+en|NAVTEX_3|-0.3|0.7|00-18.000S 000-42.000E
+en|AUDIO_0|-0.3|0.7|0 degrees 18 min. South 0 degrees 42 min. East
+en|AUDIO_1|-0.3|0.7|0 degrees 18.0 min. South 0 degrees 42.0 min. East
+en|AUDIO_2|-0.3|0.7|0 degrees 18.00 min. South 0 degrees 42.00 min. East
+en|SEC|89.1|179.2|89° 05' 59"N 179° 11' 59"E
+en|DEC_1|89.1|179.2|89° 06.0'N 179° 12.0'E
+en|DEC_2|89.1|179.2|89° 06.00'N 179° 12.00'E
+en|DEC_3|89.1|179.2|89° 06.000'N 179° 12.000'E
+en|NAVTEX_1|89.1|179.2|89-06.0N 179-12.0E
+en|NAVTEX_2|89.1|179.2|89-06.00N 179-12.00E
+en|NAVTEX_3|89.1|179.2|89-06.000N 179-12.000E
+en|AUDIO_0|89.1|179.2|89 degrees 6 min. North 179 degrees 12 min. East
+en|AUDIO_1|89.1|179.2|89 degrees 6.0 min. North 179 degrees 12.0 min. East
+en|AUDIO_2|89.1|179.2|89 degrees 6.00 min. North 179 degrees 12.00 min. East
+en|SEC|-89.4|-179.6|89° 24' 00"S 179° 35' 59"W
+en|DEC_1|-89.4|-179.6|89° 24.0'S 179° 36.0'W
+en|DEC_2|-89.4|-179.6|89° 24.00'S 179° 36.00'W
+en|DEC_3|-89.4|-179.6|89° 24.000'S 179° 36.000'W
+en|NAVTEX_1|-89.4|-179.6|89-24.0S 179-36.0W
+en|NAVTEX_2|-89.4|-179.6|89-24.00S 179-36.00W
+en|NAVTEX_3|-89.4|-179.6|89-24.000S 179-36.000W
+en|AUDIO_0|-89.4|-179.6|89 degrees 24 min. South 179 degrees 36 min. West
+en|AUDIO_1|-89.4|-179.6|89 degrees 24.0 min. South 179 degrees 36.0 min. West
+en|AUDIO_2|-89.4|-179.6|89 degrees 24.00 min. South 179 degrees 36.00 min. West
+en|SEC|55.0|12.0|55° 00' 00"N 012° 00' 00"E
+en|DEC_1|55.0|12.0|55° 00.0'N 012° 00.0'E
+en|DEC_2|55.0|12.0|55° 00.00'N 012° 00.00'E
+en|DEC_3|55.0|12.0|55° 00.000'N 012° 00.000'E
+en|NAVTEX_1|55.0|12.0|55-00.0N 012-00.0E
+en|NAVTEX_2|55.0|12.0|55-00.00N 012-00.00E
+en|NAVTEX_3|55.0|12.0|55-00.000N 012-00.000E
+en|AUDIO_0|55.0|12.0|55 degrees 0 min. North 12 degrees 0 min. East
+en|AUDIO_1|55.0|12.0|55 degrees 0.0 min. North 12 degrees 0.0 min. East
+en|AUDIO_2|55.0|12.0|55 degrees 0.00 min. North 12 degrees 0.00 min. East
+en|SEC|56.99|9.29|56° 59' 24"N 009° 17' 23"E
+en|DEC_1|56.99|9.29|56° 59.4'N 009° 17.4'E
+en|DEC_2|56.99|9.29|56° 59.40'N 009° 17.40'E
+en|DEC_3|56.99|9.29|56° 59.400'N 009° 17.400'E
+en|NAVTEX_1|56.99|9.29|56-59.4N 009-17.4E
+en|NAVTEX_2|56.99|9.29|56-59.40N 009-17.40E
+en|NAVTEX_3|56.99|9.29|56-59.400N 009-17.400E
+en|AUDIO_0|56.99|9.29|56 degrees 59 min. North 9 degrees 17 min. East
+en|AUDIO_1|56.99|9.29|56 degrees 59.4 min. North 9 degrees 17.4 min. East
+en|AUDIO_2|56.99|9.29|56 degrees 59.40 min. North 9 degrees 17.40 min. East
+en|SEC|55.51|11.11|55° 30' 35"N 011° 06' 35"E
+en|DEC_1|55.51|11.11|55° 30.6'N 011° 06.6'E
+en|DEC_2|55.51|11.11|55° 30.60'N 011° 06.60'E
+en|DEC_3|55.51|11.11|55° 30.600'N 011° 06.600'E
+en|NAVTEX_1|55.51|11.11|55-30.6N 011-06.6E
+en|NAVTEX_2|55.51|11.11|55-30.60N 011-06.60E
+en|NAVTEX_3|55.51|11.11|55-30.600N 011-06.600E
+en|AUDIO_0|55.51|11.11|55 degrees 31 min. North 11 degrees 7 min. East
+en|AUDIO_1|55.51|11.11|55 degrees 30.6 min. North 11 degrees 6.6 min. East
+en|AUDIO_2|55.51|11.11|55 degrees 30.60 min. North 11 degrees 6.60 min. East
+da|DEC_1|55.2211|12.5|55° 13,3'N 012° 30,0'E
+da|DEC_2|55.2211|12.5|55° 13,27'N 012° 30,00'E
+da|DEC_3|55.2211|12.5|55° 13,266'N 012° 30,000'E
+da|AUDIO_0|55.2211|12.5|55 degrees 13 min. North 12 degrees 30 min. East
+da|AUDIO_1|55.2211|12.5|55 degrees 13,3 min. North 12 degrees 30,0 min. East
+da|AUDIO_2|55.2211|12.5|55 degrees 13,27 min. North 12 degrees 30,00 min. East
+da|DEC_1|57.123456|10.654321|57° 07,4'N 010° 39,3'E
+da|DEC_2|57.123456|10.654321|57° 07,41'N 010° 39,26'E
+da|DEC_3|57.123456|10.654321|57° 07,407'N 010° 39,259'E
+da|AUDIO_0|57.123456|10.654321|57 degrees 7 min. North 10 degrees 39 min. East
+da|AUDIO_1|57.123456|10.654321|57 degrees 7,4 min. North 10 degrees 39,3 min. East
+da|AUDIO_2|57.123456|10.654321|57 degrees 7,41 min. North 10 degrees 39,26 min. East
+da|DEC_1|-33.865143|151.2099|33° 51,9'S 151° 12,6'E
+da|DEC_2|-33.865143|151.2099|33° 51,91'S 151° 12,59'E
+da|DEC_3|-33.865143|151.2099|33° 51,909'S 151° 12,594'E
+da|AUDIO_0|-33.865143|151.2099|33 degrees 52 min. South 151 degrees 13 min. East
+da|AUDIO_1|-33.865143|151.2099|33 degrees 51,9 min. South 151 degrees 12,6 min. East
+da|AUDIO_2|-33.865143|151.2099|33 degrees 51,91 min. South 151 degrees 12,59 min. East
+da|DEC_1|40.689247|-74.044502|40° 41,4'N 074° 02,7'W
+da|DEC_2|40.689247|-74.044502|40° 41,35'N 074° 02,67'W
+da|DEC_3|40.689247|-74.044502|40° 41,355'N 074° 02,670'W
+da|AUDIO_0|40.689247|-74.044502|40 degrees 41 min. North 74 degrees 3 min. West
+da|AUDIO_1|40.689247|-74.044502|40 degrees 41,4 min. North 74 degrees 2,7 min. West
+da|AUDIO_2|40.689247|-74.044502|40 degrees 41,35 min. North 74 degrees 2,67 min. West
+da|DEC_1|-22.9068|-43.1729|22° 54,4'S 043° 10,4'W
+da|DEC_2|-22.9068|-43.1729|22° 54,41'S 043° 10,37'W
+da|DEC_3|-22.9068|-43.1729|22° 54,408'S 043° 10,374'W
+da|AUDIO_0|-22.9068|-43.1729|22 degrees 54 min. South 43 degrees 10 min. West
+da|AUDIO_1|-22.9068|-43.1729|22 degrees 54,4 min. South 43 degrees 10,4 min. West
+da|AUDIO_2|-22.9068|-43.1729|22 degrees 54,41 min. South 43 degrees 10,37 min. West
+da|DEC_1|0.5|-0.25|00° 30,0'N 000° 15,0'W
+da|DEC_2|0.5|-0.25|00° 30,00'N 000° 15,00'W
+da|DEC_3|0.5|-0.25|00° 30,000'N 000° 15,000'W
+da|AUDIO_0|0.5|-0.25|0 degrees 30 min. North 0 degrees 15 min. West
+da|AUDIO_1|0.5|-0.25|0 degrees 30,0 min. North 0 degrees 15,0 min. West
+da|AUDIO_2|0.5|-0.25|0 degrees 30,00 min. North 0 degrees 15,00 min. West
+da|DEC_1|64.1814|-51.6941|64° 10,9'N 051° 41,6'W
+da|DEC_2|64.1814|-51.6941|64° 10,88'N 051° 41,65'W
+da|DEC_3|64.1814|-51.6941|64° 10,884'N 051° 41,646'W
+da|AUDIO_0|64.1814|-51.6941|64 degrees 11 min. North 51 degrees 42 min. West
+da|AUDIO_1|64.1814|-51.6941|64 degrees 10,9 min. North 51 degrees 41,6 min. West
+da|AUDIO_2|64.1814|-51.6941|64 degrees 10,88 min. North 51 degrees 41,65 min. West
+da|DEC_1|78.2232|15.6267|78° 13,4'N 015° 37,6'E
+da|DEC_2|78.2232|15.6267|78° 13,39'N 015° 37,60'E
+da|DEC_3|78.2232|15.6267|78° 13,392'N 015° 37,602'E
+da|AUDIO_0|78.2232|15.6267|78 degrees 13 min. North 15 degrees 38 min. East
+da|AUDIO_1|78.2232|15.6267|78 degrees 13,4 min. North 15 degrees 37,6 min. East
+da|AUDIO_2|78.2232|15.6267|78 degrees 13,39 min. North 15 degrees 37,60 min. East
+da|DEC_1|54.75|10.48333|54° 45,0'N 010° 29,0'E
+da|DEC_2|54.75|10.48333|54° 45,00'N 010° 29,00'E
+da|DEC_3|54.75|10.48333|54° 45,000'N 010° 29,000'E
+da|AUDIO_0|54.75|10.48333|54 degrees 45 min. North 10 degrees 29 min. East
+da|AUDIO_1|54.75|10.48333|54 degrees 45,0 min. North 10 degrees 29,0 min. East
+da|AUDIO_2|54.75|10.48333|54 degrees 45,00 min. North 10 degrees 29,00 min. East
+da|DEC_1|56.1|8.2|56° 06,0'N 008° 12,0'E
+da|DEC_2|56.1|8.2|56° 06,00'N 008° 12,00'E
+da|DEC_3|56.1|8.2|56° 06,000'N 008° 12,000'E
+da|AUDIO_0|56.1|8.2|56 degrees 6 min. North 8 degrees 12 min. East
+da|AUDIO_1|56.1|8.2|56 degrees 6,0 min. North 8 degrees 12,0 min. East
+da|AUDIO_2|56.1|8.2|56 degrees 6,00 min. North 8 degrees 12,00 min. East
+da|DEC_1|-0.3|0.7|00° 18,0'S 000° 42,0'E
+da|DEC_2|-0.3|0.7|00° 18,00'S 000° 42,00'E
+da|DEC_3|-0.3|0.7|00° 18,000'S 000° 42,000'E
+da|AUDIO_0|-0.3|0.7|0 degrees 18 min. South 0 degrees 42 min. East
+da|AUDIO_1|-0.3|0.7|0 degrees 18,0 min. South 0 degrees 42,0 min. East
+da|AUDIO_2|-0.3|0.7|0 degrees 18,00 min. South 0 degrees 42,00 min. East
+da|DEC_1|89.1|179.2|89° 06,0'N 179° 12,0'E
+da|DEC_2|89.1|179.2|89° 06,00'N 179° 12,00'E
+da|DEC_3|89.1|179.2|89° 06,000'N 179° 12,000'E
+da|AUDIO_0|89.1|179.2|89 degrees 6 min. North 179 degrees 12 min. East
+da|AUDIO_1|89.1|179.2|89 degrees 6,0 min. North 179 degrees 12,0 min. East
+da|AUDIO_2|89.1|179.2|89 degrees 6,00 min. North 179 degrees 12,00 min. East
+da|DEC_1|-89.4|-179.6|89° 24,0'S 179° 36,0'W
+da|DEC_2|-89.4|-179.6|89° 24,00'S 179° 36,00'W
+da|DEC_3|-89.4|-179.6|89° 24,000'S 179° 36,000'W
+da|AUDIO_0|-89.4|-179.6|89 degrees 24 min. South 179 degrees 36 min. West
+da|AUDIO_1|-89.4|-179.6|89 degrees 24,0 min. South 179 degrees 36,0 min. West
+da|AUDIO_2|-89.4|-179.6|89 degrees 24,00 min. South 179 degrees 36,00 min. West
+da|DEC_1|55.0|12.0|55° 00,0'N 012° 00,0'E
+da|DEC_2|55.0|12.0|55° 00,00'N 012° 00,00'E
+da|DEC_3|55.0|12.0|55° 00,000'N 012° 00,000'E
+da|AUDIO_0|55.0|12.0|55 degrees 0 min. North 12 degrees 0 min. East
+da|AUDIO_1|55.0|12.0|55 degrees 0,0 min. North 12 degrees 0,0 min. East
+da|AUDIO_2|55.0|12.0|55 degrees 0,00 min. North 12 degrees 0,00 min. East
+da|DEC_1|56.99|9.29|56° 59,4'N 009° 17,4'E
+da|DEC_2|56.99|9.29|56° 59,40'N 009° 17,40'E
+da|DEC_3|56.99|9.29|56° 59,400'N 009° 17,400'E
+da|AUDIO_0|56.99|9.29|56 degrees 59 min. North 9 degrees 17 min. East
+da|AUDIO_1|56.99|9.29|56 degrees 59,4 min. North 9 degrees 17,4 min. East
+da|AUDIO_2|56.99|9.29|56 degrees 59,40 min. North 9 degrees 17,40 min. East
+da|DEC_1|55.51|11.11|55° 30,6'N 011° 06,6'E
+da|DEC_2|55.51|11.11|55° 30,60'N 011° 06,60'E
+da|DEC_3|55.51|11.11|55° 30,600'N 011° 06,600'E
+da|AUDIO_0|55.51|11.11|55 degrees 31 min. North 11 degrees 7 min. East
+da|AUDIO_1|55.51|11.11|55 degrees 30,6 min. North 11 degrees 6,6 min. East
+da|AUDIO_2|55.51|11.11|55 degrees 30,60 min. North 11 degrees 6,60 min. East

@@ -1,0 +1,101 @@
+/* The divider is var-driven so the group container can blank it on its last row (a global
+   layered rule cannot beat this unlayered component style directly — see components.css). */
+.ed-row {
+  border-bottom: var(--ed-row-border, 1px solid var(--niord-divider));
+}
+
+.ed-row-head {
+  display: grid;
+  grid-template-columns: 130px 1fr 26px;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 6px;
+  border-radius: var(--niord-radius);
+}
+
+.ed-row-head.interactive {
+  cursor: pointer;
+}
+
+.ed-row-head.interactive:hover {
+  background: var(--niord-surface-sunken);
+}
+
+.ed-row.open .ed-row-head {
+  background: var(--niord-surface-sunken);
+}
+
+.ed-row-head:focus-visible {
+  outline: 2px solid var(--niord-accent);
+  outline-offset: -2px;
+}
+
+.ed-row-label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--niord-fg-muted);
+}
+
+.ed-row.invalid .ed-row-label {
+  color: var(--color-danger);
+}
+
+.ed-row-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--niord-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--niord-accent), transparent 78%);
+}
+
+.ed-row-req {
+  color: var(--niord-accent);
+}
+
+.ed-row-val {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--niord-fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ed-row-val.empty,
+.ed-row-val.editing {
+  color: var(--niord-fg-subtle);
+  font-style: italic;
+}
+
+.ed-row-pen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--niord-fg-subtle);
+  opacity: 0;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.ed-row-head.interactive:hover .ed-row-pen {
+  opacity: 1;
+}
+
+.ed-row.open .ed-row-pen {
+  opacity: 1;
+  color: var(--niord-accent);
+  transform: rotate(90deg);
+}
+
+.ed-row-editor {
+  padding: 6px 6px 16px 142px;
+}

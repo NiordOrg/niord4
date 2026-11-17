@@ -1,0 +1,81 @@
+name: Guides
+
+# Builds the user guides under guides/ (AsciiDoc) with guides/build.sh, the script a developer
+# runs: Asciidoctor from the pinned image named there, the country kit's Markdown guides rendered
+# from country-kit/ beside them (guides/build-tools.mjs, kramdoc and Graphviz from the same image),
+# then guides/check-links.mjs over the result (every relative link, image and #fragment between the
+# built pages resolves, and so does every target of the admin application's help map,
+# help-urls.json; no page names an internal host, a person's home folder or a staff account's user
+# id; and outside the archived development guides, where they only warn, no page names SECOM or
+# S-124 or links a GitHub address other than the NiordOrg organisation). The built site is uploaded
+# as an artifact to read; nothing is deployed and nothing is published.
+#
+# ---------------------------------------------------------------------------------------------
+# Which pull requests
+# ---------------------------------------------------------------------------------------------
+# Only pull requests into main that touch guides/, the help map, the country kit's guides (the
+# paths below, be/docs/country-api.md among them) or this file, and only once they
+# are ready for review — the reasons are in be-ci.yml: Actions minutes are billed, sub-PRs into a
+# `feature/**` branch run no CI, and a push to a draft starts a run whose job skips itself, which
+# costs nothing; `ready_for_review` starts the real run. A re-run is never skipped as a draft
+# (`github.run_attempt > 1`, see fe-ci.yml). Plus workflow_dispatch, to build any branch by hand.
+#
+# Unlike the other workflows, `pull_request` is path-filtered at the trigger: this check is not
+# one branch protection requires, so a pull request that never reports it waits for nothing.
+# guides/ is outside be/ and fe/, so a guides-only change runs no Backend CI and no Frontend CI.
+on:
+  pull_request:
+    branches: [ main ]
+    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
+    types: [ opened, synchronize, reopened, ready_for_review ]
+    paths:
+      - 'guides/**'
+      - '.github/workflows/guides.yml'
+      # The admin application's help map: the link check reads every target against the build
+      - 'fe/ui-apps/admin/src/app/core/main-shell/help/help-urls.json'
+      # The country kit's guides, rendered onto the site (guides/README.md, The country kit's guides)
+      - 'country-kit/docs/**'
+      - 'country-kit/README.md'
+      - 'country-kit/API-CHANGES.md'
+      - 'country-kit/templates/AGENTS.md'
+      - 'be/docs/country-api.md'
+  workflow_dispatch:
+
+# A newer push to the same pull request cancels its in-flight run; a dispatch gets a group of its
+# own (its run id).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the guides
+    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # The whole tree, pictures included: the one checkout that takes the guides' images (every
+      # other leaves them out, be-ci.yml's header, What a job checks out).
+      - uses: actions/checkout@v4
+
+      # The link check is plain Node; the version is the repository's.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+
+      # Docker is preinstalled on the GitHub-hosted ubuntu runners; build.sh pulls the image.
+      - name: Build the HTML and the PDFs, then check the links
+        run: guides/build.sh --pdf
+
+      # Kept 7 days: the Free plan's Actions storage is small and billed by the hour (see the
+      # artifact deletion in publish.yml); the site is about 25 MB.
+      - name: Upload the built site
+        uses: actions/upload-artifact@v4
+        with:
+          name: guides-site
+          path: guides/_site/
+          if-no-files-found: error
+          retention-days: 7

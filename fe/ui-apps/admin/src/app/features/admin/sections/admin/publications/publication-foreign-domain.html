@@ -1,0 +1,16 @@
+<!--
+  The shared placeholder carries the sentence; the action sits under it, because
+  the placeholder is a statement and this is the one thing to do about it.
+-->
+<div class="flex flex-col items-center" data-testid="foreign-domain-refusal">
+  <app-empty-state
+    icon="lucideLock"
+    [title]="'admin.publications.foreignDomain.title' | transloco"
+    [body]="bodyKey() | transloco: { domain: ownerName() }"
+  />
+  @if (canSwitch()) {
+    <button type="button" class="btn-primary" (click)="switchDesk()">
+      {{ 'admin.publications.foreignDomain.switch' | transloco: { domain: ownerName() } }}
+    </button>
+  }
+</div>

@@ -1,0 +1,46 @@
+/* Component-scoped (Layer 4) styling for the time-picker columns — kept in CSS so the
+   hover/selected/focus state precedence is explicit and `bg-primary` never loses to a hover
+   utility. Colours read the global @theme tokens. The columns own the fixed, viewport-bounded
+   height the shared PickerPopover requires (so its one-time position is always right). */
+.time-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  height: min(14rem, 45vh);
+  overflow-y: auto;
+  /* Keep a wheel/trackpad scroll INSIDE the column: without this, scrolling past a column's
+     top/bottom chains to the page, and the popover's close-on-scroll strategy dismisses it. */
+  overscroll-behavior: contain;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.time-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  padding: 0.375rem 0.5rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg);
+  cursor: pointer;
+}
+
+.time-option:hover:not(.is-selected) {
+  background: var(--color-surface-100);
+}
+
+.time-option.is-selected {
+  background: var(--color-primary);
+  color: var(--color-fg-on-primary);
+  font-weight: 600;
+}
+
+.time-option:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}

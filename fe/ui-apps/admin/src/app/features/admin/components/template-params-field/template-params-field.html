@@ -1,0 +1,86 @@
+<div class="flex flex-col gap-2">
+  <app-model-language-picker [selection]="modelLanguage" />
+  <table class="niord-table">
+    <thead>
+      <tr>
+        <th class="w-8"></th>
+        <th>{{ 'admin.paramTypes.paramTable.paramId' | transloco }}</th>
+        <th>{{ 'admin.paramTypes.paramTable.name' | transloco }}</th>
+        <th>{{ 'admin.paramTypes.paramTable.type' | transloco }}</th>
+        <th class="w-40"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (param of rows(); track $index; let index = $index) {
+        <tr>
+          <td class="w-8">
+            <app-icon
+              name="lucideMenu"
+              class="text-fg-muted"
+              [attr.aria-label]="'admin.paramTypes.paramTable.reorderHandle' | transloco"
+            />
+          </td>
+          <td class="font-mono text-xs">{{ param.paramId }}</td>
+          @let text = currentName(param);
+          <td [attr.lang]="text.lang">{{ text.value }}</td>
+          <td class="text-sm">
+            {{ param.type }}
+            @if (kindKey(param); as key) {
+              ({{ key | transloco }})
+            }
+          </td>
+          <td class="text-right whitespace-nowrap">
+            <button
+              type="button"
+              class="icon-button"
+              [disabled]="index === 0"
+              (click)="moveUp(index)"
+              [attr.aria-label]="'admin.paramTypes.paramTable.moveUp' | transloco"
+            >
+              <app-icon name="lucideArrowUp" />
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              [disabled]="index === rows().length - 1"
+              (click)="moveDown(index)"
+              [attr.aria-label]="'admin.paramTypes.paramTable.moveDown' | transloco"
+            >
+              <app-icon name="lucideArrowDown" />
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              (click)="edit(index)"
+              [attr.aria-label]="'admin.paramTypes.paramTable.edit' | transloco"
+            >
+              <app-icon name="lucidePencil" />
+            </button>
+            <button
+              type="button"
+              class="icon-button hover:text-danger"
+              (click)="remove(index)"
+              [attr.aria-label]="'admin.paramTypes.paramTable.remove' | transloco"
+            >
+              <app-icon name="lucideTrash2" />
+            </button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5" class="py-2 text-sm text-fg-muted">
+            {{ 'admin.paramTypes.paramTable.empty' | transloco }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  <div>
+    <button type="button" class="btn-tertiary" (click)="add()">
+      <app-icon name="lucidePlus" class="mr-1" />
+      {{ 'admin.paramTypes.paramTable.add' | transloco }}
+    </button>
+  </div>
+</div>
+
+<app-template-param-dialog (committed)="onCommitted($event)" />

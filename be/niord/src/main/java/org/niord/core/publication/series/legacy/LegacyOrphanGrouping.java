@@ -1,0 +1,211 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series.legacy;
+
+import org.niord.core.publication.Publication;
+import org.niord.core.publication.PublicationDesc;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Where each template-less publication belongs.
+ *
+ * The first version gave all 39 their own one-off series, because nothing in the
+ * plan said which of them were really the same publication and inventing an
+ * answer would have been a guess dressed as a migration. Rasmus has now supplied
+ * the answer, so the guess is replaced by a ruling and 39 series become 9.
+ *
+ * CLASSIFYING BY TITLE HERE IS NOT WHAT THE KEYING RULE FORBIDS. That rule is about
+ * IDENTITY -- never key an issue on its title, because three publications carry a
+ * literal ${year} in title, fileName and tag name, and two were released with it.
+ * Identity is untouched: every issue still takes its publicId from the legacy
+ * publicationId, verbatim. What the title decides here is only which series an
+ * issue is filed under, and that is a judgement Rasmus made and this records.
+ *
+ * The judgement, in his words:
+ *
+ *   - all 11 NCAGS annexes are one series, in "Annexes - Notices to Mariners"
+ *   - all 8 ice-service annexes are one series, in the same category
+ *   - the double-week issues belong to the weekly series they were hacked out of
+ *   - "Danish List of Lights" is one series with four issues, one still active
+ *   - the 2016 Firing Practice Areas annex is that series' earliest issue
+ *   - the remaining five are genuinely standalone
+ *
+ * The double weeks matter beyond tidiness: having to hand-assemble them was one
+ * of the drivers for this rewrite. Filing them under the weekly series is what
+ * lets the new model express them at all.
+ */
+public final class LegacyOrphanGrouping {
+
+    /** Where a publication goes. */
+    public enum Destination {
+        /** Its own one-off series, as before. */
+        OWN_SERIES,
+        /** A series shared with its siblings, created by the import. */
+        SHARED_SERIES,
+        /** A series that already exists, translated from a legacy template. */
+        EXISTING_SERIES
+    }
+
+    /**
+     * The placement, and why.
+     *
+     * seriesId is the authored id for SHARED_SERIES, and the legacyTemplateId of
+     * the destination for EXISTING_SERIES -- two different keys, which is why the
+     * kind travels with it rather than being inferred from the shape of the id.
+     *
+     * names is the ruled name per language, empty where none is ruled. A SHARED
+     * series has no template to take a name from, so without a ruling it is named
+     * from whichever of its issues is the newest -- and an issue of a yearly
+     * publication is titled for ONE YEAR. That put "for vinteren 2026" and "2022"
+     * into two series names, where they will stay until the next edition arrives
+     * and moves them to a different wrong year. The identity of a shared series is
+     * an editorial decision -- the same decision that ruled these rows are one
+     * series -- so it belongs beside the ruled id rather than in a heuristic that
+     * strips a trailing year and leaves "for vinteren" dangling.
+     */
+    public record Placement(Destination kind, String seriesId, String categoryId,
+                            Map<String, String> names, String note) {
+
+        /** The common case: a placement with no ruled name. */
+        public Placement(Destination kind, String seriesId, String categoryId, String note) {
+            this(kind, seriesId, categoryId, Map.of(), note);
+        }
+    }
+
+    /** The Danish ice-service annex, as it is to be named. */
+    private static final Map<String, String> ICE_SERVICE_NAMES = Map.of(
+            "da", "Meddelelse fra Marinestaben om istjeneste samt om ismeldinger m.m.",
+            "en", "Meddelelse fra Marinestaben om istjeneste samt om ismeldinger m.m. (Danish Only)");
+
+    /** The list of lights, whose two names are the same publication in two languages. */
+    private static final Map<String, String> LIST_OF_LIGHTS_NAMES = Map.of(
+            "da", "Dansk Fyrliste",
+            "en", "Danish List of Lights");
+
+    /** "Annexes - Notices to Mariners". */
+    public static final String ANNEX_CATEGORY = "dk-dma-nm-annex";
+
+    /** The templates the double-week issues belong to. */
+    public static final String WEEKLY_NTM_TEMPLATE = "a8e661ee-49b8-45ea-a176-952e99253fec";
+    public static final String WEEKLY_PT_TEMPLATE = "11262933-2e62-4d16-a498-39e238467fa6";
+
+    /** The annual "Firing Practice Areas" annex, whose series runs 2017-2027. */
+    public static final String FIRING_PRACTICE_TEMPLATE = "51387a4e-8f9b-46b0-afb6-43b71c62d9bb";
+
+    private LegacyOrphanGrouping() {
+    }
+
+    /** Decides where one template-less publication belongs. */
+    public static Placement placeOf(Publication orphan) {
+        String title = titleOf(orphan);
+
+        if (matches(title, "NCAGS")) {
+            return new Placement(Destination.SHARED_SERIES, "nm-annex-ncags", ANNEX_CATEGORY,
+                    "one of the 11 NCAGS annexes, which are one series");
+        }
+        if (matches(title, "istjeneste") || matches(title, "Marinestaben")) {
+            return new Placement(Destination.SHARED_SERIES, "nm-annex-ice-service", ANNEX_CATEGORY,
+                    ICE_SERVICE_NAMES,
+                    "one of the 8 ice-service annexes, which are one series");
+        }
+
+        // The double weeks. "EfS 51-52 2016" is the Danish naming of the same
+        // thing as "NtM Week 51-52", so both land on the weekly NtM series.
+        if (startsWith(title, "Active P&T Week")) {
+            return new Placement(Destination.EXISTING_SERIES, WEEKLY_PT_TEMPLATE, null,
+                    "a double week of the weekly P&T series, assembled by hand because the old model "
+                            + "could not express it");
+        }
+        if (startsWith(title, "NtM Week") || startsWith(title, "EfS ")) {
+            return new Placement(Destination.EXISTING_SERIES, WEEKLY_NTM_TEMPLATE, null,
+                    "a double week of the weekly NtM series, assembled by hand because the old model "
+                            + "could not express it");
+        }
+
+        if (matches(title, "Danish List of Lights")) {
+            return new Placement(Destination.SHARED_SERIES, "danish-list-of-lights", null,
+                    LIST_OF_LIGHTS_NAMES,
+                    "one of the four Danish List of Lights editions, which are one series");
+        }
+
+        // The 2016 annex, from before the report template existed. Its series
+        // runs 2017-2027 one issue a year and this is the year in front of it:
+        // same English title, same dk-dma-nm-annex category, published as a LINK
+        // to a hand-made PDF because there was nothing yet to generate one.
+        //
+        // Surfaced by the id namespace rather than by reading the estate -- the
+        // template and this row both authored "firing-practice-areas", and asking
+        // why turned a name clash into a publication that had lost its series.
+        if (matches(title, "Firing Practice Areas")) {
+            return new Placement(Destination.EXISTING_SERIES, FIRING_PRACTICE_TEMPLATE, null,
+                    "the 2016 edition of the Firing Practice Areas annex, which predates the report "
+                            + "template its later issues are generated from");
+        }
+
+        return new Placement(Destination.OWN_SERIES, null, null, "genuinely standalone");
+    }
+
+    /**
+     * Which orphan supplies the shared series' own configuration.
+     *
+     * The NEWEST, because a series' settings are what its NEXT issue will follow,
+     * and the newest issue is the closest thing to a statement of current intent.
+     * Ties break on publicationId so the choice is total -- an unstable pick would
+     * make the imported series' cadence depend on the order rows came back in.
+     *
+     * The per-issue snapshot is unaffected either way: the deriver takes each
+     * issue's own timeRelation and aliveAtCutoff from its own filter, which is
+     * exactly why a series-level default can be chosen this simply.
+     */
+    public static Publication configurationSource(List<Publication> group) {
+        return group.stream()
+                .max((a, b) -> {
+                    long left = a.getPublishDateFrom() == null ? 0 : a.getPublishDateFrom().getTime();
+                    long right = b.getPublishDateFrom() == null ? 0 : b.getPublishDateFrom().getTime();
+                    return left != right
+                            ? Long.compare(left, right)
+                            : a.getPublicationId().compareTo(b.getPublicationId());
+                })
+                .orElseThrow(() -> new IllegalArgumentException("a group cannot be empty"));
+    }
+
+    private static boolean matches(String title, String needle) {
+        return title != null && title.toLowerCase().contains(needle.toLowerCase());
+    }
+
+    private static boolean startsWith(String title, String prefix) {
+        return title != null && title.toLowerCase().startsWith(prefix.toLowerCase());
+    }
+
+    /** English first, then anything -- the same preference the id authoring uses. */
+    private static String titleOf(Publication p) {
+        if (p.getDescs() == null) {
+            return "";
+        }
+        return p.getDescs().stream()
+                .filter(d -> "en".equalsIgnoreCase(d.getLang()))
+                .map(PublicationDesc::getTitle)
+                .filter(s -> s != null && !s.isBlank())
+                .findFirst()
+                .orElseGet(() -> p.getDescs().stream()
+                        .map(PublicationDesc::getTitle)
+                        .filter(s -> s != null && !s.isBlank())
+                        .findFirst().orElse(""));
+    }
+}

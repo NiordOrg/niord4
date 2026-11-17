@@ -1,0 +1,174 @@
+
+:imagesdir: images
+
+[#parameter-types]
+== Parameter Types
+
+When an editor creates a message from a message template, the template asks for the details the
+message needs: the type of a buoy, the depth over a wreck, a name. Each such question is a template
+parameter, and its _parameter type_ decides how it is asked: as a text field, a number, a tick box,
+a list to choose from, or a group of these. The templates and their parameters are set up under
+<<categories,Categories>>; how editors execute templates is described in the
+link:../editor-manual/manual.html#message-template-execution[Message Template Execution] chapter of
+the Editors Manual.
+
+The _Parameter Types_ page lists the parameter types. To open it, click *Sysadmin* in the main menu,
+then *Parameter Types*.
+
+image::ParameterTypesPage.png["The Parameter Types page, filtered on \"obstruction\"", 800]
+
+There are three kinds of parameter types, shown in the *Type* column:
+
+[cols="30,70", options="header"]
+|===
+| Kind
+| Description
+
+| Standard
+| The fixed types of Niord: _text_, _number_, _boolean_, _date_, _aton_name_, _light_character_ and
+  _call_sign_. They are asked with a plain field of their kind, such as a text field for _text_ and a
+  tick box for _boolean_. They cannot be changed or deleted, so their rows have no actions.
+
+| List
+| A named, ordered list of dictionary entries (see <<dictionaries,Dictionaries>>): the editor chooses
+  one of them from a list.
+
+| Composite
+| A named group of standard and list parameters, asked together.
+|===
+
+The *Values* column shows the values of a list type and the parameters of a composite type. The
+*Filter* field matches the name.
+
+For example, the "Wreck" message template asks for one parameter of the composite type _wreck_:
+
+image::ParameterTypeExample.png[The Wreck parameter as an editor fills it in, 480]
+
+The type _wreck_ is made of a parameter of the list type _vessel_type_list_ for the kind of vessel,
+one of the standard type _number_ for the depth over the wreck, and one of the standard type
+_boolean_ for whether the wreck is visible above the surface. The list type _vessel_type_list_ holds
+three entries of the "aton" dictionary: "vessel", "fishing vessel" and "sailing vessel".
+
+[#adding-or-editing-a-parameter-type]
+=== Adding or Editing a Parameter Type
+
+To add a parameter type, click *New Parameter Type* and choose *List Param Type* or *Composite Param
+Type*:
+
+image::ParameterTypeAddBtn.png[The New Parameter Type menu, 141]
+
+To edit a list or composite type, click the pencil of its row (*Edit*). Either way the editor drawer
+opens, with the type's *Name*, which must be unique, and its values or parameters. Click *Save* to
+save the type.
+
+[#list-parameter-type-edit-page]
+==== List Parameter Type Edit Page
+
+image::ParameterTypesListEditPage.png[The Edit Parameter Type drawer of a list type, 687]
+
+The *Values* have two panels:
+
+* *Selected Values*, on the left, is the list in its order: each entry's key and value. The arrows
+  of a row (*Move up* and *Move down*) move it in the list, and the minus (*Remove*) takes it out.
+  *Clear All* empties the list.
+* On the right are the entries you can add. Choose the dictionary in the list at the top and narrow
+  the entries with the *Filter* field, which matches their keys; the plus (*Add*) of an entry adds it
+  at the end of the list. The entries already in the list are not offered.
+
+[#composite-parameter-type-edit-page]
+==== Composite Parameter Type Edit Page
+
+image::ParameterTypesCompositeEditPage.png[The Edit Parameter Type drawer of a composite type, 512]
+
+The *Parameters* table lists the nested parameters with their *Parameter ID*, *Name* and *Type*.
+The arrows of a row (*Move up* and *Move down*) change their order, the pencil (*Edit*) edits one,
+and the bin (*Remove*) takes it out. *Add Parameter* adds one. *Add Parameter* opens the _New
+Parameter_ dialog and the pencil the _Edit Parameter_ dialog; both have the same fields:
+
+image::ParameterTypesCompositeDialog.png[The Edit Parameter dialog, 400]
+
+* *Parameter ID*: unique within the composite type. Templates refer to the value by it.
+* *Name*: the label the editor sees, in each language.
+* *Type*: a standard or list parameter type. A composite type cannot hold another composite type.
+* *Mandatory*: the editor sees the parameter's label marked with a red asterisk, and a list
+  parameter cannot be cleared once a value is chosen. On the _Execute templates_ page, *Execute* is
+  held back while a mandatory parameter is empty, and a line beside it names the parameters still
+  to fill in; the preview keeps running. A tick box is never empty: unticked is a value. A mandatory
+  parameter inside a composite type counts only when the composite parameter is mandatory in the
+  template or one of its other parameters has a value, so a group the editor leaves wholly empty
+  does not hold *Execute* back; a mandatory composite parameter none of whose parameters is
+  mandatory needs one of them filled. *Test…* in the Categories editor gives a template no
+  parameters, and a template run directly through the REST API is not checked, so a template that
+  cannot do without a value still has to cope with an empty one itself.
+* *Position List*: the parameter is asked once for each position of the message (below).
+
+*Save* in the dialog puts the parameter in the table; the type itself is saved with the drawer's
+*Save*.
+
+A parameter tied to the position list is repeated for each position the editor gives the message.
+In the example below, the "Buoy off station" template has two positions, and its "Buoy" parameter is
+asked once for each:
+
+image::ParameterTypeExample2.png[The Buoy parameter repeated for two positions, 480]
+
+[#duplicating-a-parameter-type]
+=== Copying a Parameter Type
+
+Click the double square of a row (*Copy*) to start a new parameter type with the values or
+parameters of an existing one. The copy opens with an empty name, which you give it.
+
+[#deleting-a-parameter-type]
+=== Deleting a Parameter Type
+
+Click the bin of a row (*Delete*) and confirm with *Yes*. Niord does not check whether the type is
+in use, so first make sure that no template (see <<categories,Categories>>) and no composite
+parameter type has a parameter of the type.
+
+[#importing-and-exporting-parameter-types]
+=== Importing and Exporting Parameter Types
+
+The action menu (the cog) has *Export...*, which downloads every list and composite parameter type
+as a JSON file, and *Import...*, which uploads such a file and runs the _param-type-import_ batch job
+(see <<sysadmin-lists,Working with the Sysadmin Lists>>).
+
+The import adds the types Niord lacks and overwrites the ones it has, by name: a list type's values
+and a composite type's parameters become the file's. The values of a list type are dictionary
+entries, found by their keys; a value whose key no dictionary has is left out, so import the
+dictionary entries first. An item with the name of a standard type is skipped.
+
+The file is a list of types, for example:
+
+[source,json]
+----
+[
+  {
+    "type": "COMPOSITE",
+    "name": "wreck",
+    "templateParams": [
+      {
+        "paramId": "wreck_type",
+        "type": "vessel_type_list",
+        "mandatory": true,
+        "positionList": false,
+        "descs": [ { "lang": "en", "name": "Vessel Type" } ]
+      },
+      {
+        "paramId": "wreck_depth",
+        "type": "number",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [ { "lang": "en", "name": "Depth over wreck (m)" } ]
+      }
+    ]
+  },
+  {
+    "type": "LIST",
+    "name": "vessel_type_list",
+    "values": [
+      { "key": "vessel.type.vessel" },
+      { "key": "vessel.type.fishing_vessel" },
+      { "key": "vessel.type.sailing_vessel" }
+    ]
+  }
+]
+----

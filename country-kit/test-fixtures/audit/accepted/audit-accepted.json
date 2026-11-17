@@ -1,0 +1,19 @@
+[
+  {
+    "advisory": "GHSA-xvch-5gv4-984h",
+    "package": "minimist",
+    "reason": "Reached only through the build's mkdirp; the base product's next version drops it.",
+    "added": "2026-10-20"
+  },
+  {
+    "signature": "@zz/berths@1.0.0",
+    "reason": "Published before its registry signed packages; checked by hand.",
+    "added": "2026-10-21"
+  },
+  {
+    "advisory": "GHSA-aaaa-bbbb-cccc",
+    "package": "ws",
+    "reason": "Fixed in the base product since; kept to show the warning.",
+    "added": "2026-09-01"
+  }
+]

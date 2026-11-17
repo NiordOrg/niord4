@@ -1,0 +1,180 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model(); as m) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="series-id" class="text-sm font-medium text-fg-title">
+          {{ 'admin.series.field.seriesId' | transloco }}
+        </label>
+        <input
+          #seriesIdField
+          id="series-id"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.seriesId"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <fieldset class="flex flex-col gap-1">
+        <legend class="text-sm font-medium text-fg-title">
+          {{ 'admin.series.field.mainType' | transloco }}
+        </legend>
+        <div class="flex flex-wrap gap-x-6 gap-y-1 pt-1">
+          @for (mainType of mainTypes; track mainType) {
+            <div class="flex items-center gap-2">
+              <input
+                type="radio"
+                class="radio"
+                name="series-main-type"
+                [id]="'series-main-type-' + mainType"
+                [checked]="mainTypeValue() === mainType"
+                (change)="setMainType(mainType)"
+              />
+              <label [for]="'series-main-type-' + mainType" class="text-sm">
+                {{ 'admin.series.mainTypeLong.' + mainType | transloco }}
+              </label>
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="flex flex-col gap-1">
+        <legend class="text-sm font-medium text-fg-title">
+          {{ 'admin.series.field.restrictTypes' | transloco }}
+        </legend>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2 pt-1">
+          @for (type of restrictTypes[mainTypeValue()]; track type) {
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                class="checkbox"
+                [checked]="typeChecks()[mainTypeValue()][type]"
+                (change)="toggleType(mainTypeValue(), type)"
+              />
+              <span>{{ 'msg.type.' + type | transloco }}</span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="flex flex-col gap-1">
+        <legend class="text-sm font-medium text-fg-title">
+          {{ 'admin.series.field.sequenceType' | transloco }}
+        </legend>
+        <div class="flex flex-wrap gap-x-6 gap-y-1 pt-1">
+          @for (sequenceType of sequenceTypes; track sequenceType) {
+            <div class="flex items-center gap-2">
+              <input
+                type="radio"
+                class="radio"
+                name="series-sequence-type"
+                [id]="'series-sequence-type-' + sequenceType"
+                [checked]="sequenceTypeValue() === sequenceType"
+                (change)="setSequenceType(sequenceType)"
+              />
+              <label [for]="'series-sequence-type-' + sequenceType" class="text-sm">
+                {{ 'admin.series.sequenceType.' + sequenceType | transloco }}
+              </label>
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      @if (showShortFormat()) {
+        <div class="flex flex-col gap-1">
+          <label for="series-short-format" class="text-sm font-medium text-fg-title">
+            {{ 'admin.series.field.shortFormat' | transloco }}
+          </label>
+          <app-format-token-input
+            inputId="series-short-format"
+            [formField]="form.shortFormat"
+            [tokens]="shortFormatTokens()"
+          />
+          <app-length-counter [text]="form.shortFormat().value()" [limit]="formatMax" />
+        </div>
+      }
+
+      @if (showNextNumber()) {
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.series.field.nextNumber' | transloco: { year: currentYear() } }}
+          </span>
+          <div #nextNumberRow class="flex items-center gap-2 text-sm">
+            <span>{{ displayNextNumber() }}</span>
+            <button
+              type="button"
+              class="icon-button text-xs"
+              [disabled]="changed()"
+              [attr.aria-label]="'admin.series.editNextNumber' | transloco"
+              [attr.title]="'admin.series.editNextNumber' | transloco"
+              (click)="nextNumberPopover.toggle(nextNumberRow)"
+            >
+              <app-icon name="lucidePencil" />
+            </button>
+          </div>
+          <app-next-number-popover
+            #nextNumberPopover
+            [seriesId]="m.series.seriesId"
+            [sequenceType]="sequenceTypeValue()"
+            (updated)="onNextNumberUpdated()"
+          />
+        </div>
+      }
+
+      <app-editor-fields-grid
+        label="admin.series.field.editorFields"
+        [candidates]="editorFieldCandidates"
+        [(value)]="editorFields"
+      />
+
+      @if (showNavtex()) {
+        <div class="flex flex-col gap-1">
+          <label for="series-navtex-format" class="text-sm font-medium text-fg-title">
+            {{ 'admin.series.field.navtexFormat' | transloco }}
+          </label>
+          <app-format-token-input
+            inputId="series-navtex-format"
+            [multiline]="true"
+            [rows]="2"
+            [formField]="form.navtexFormat"
+            [tokens]="navtexTokens()"
+          />
+          <app-length-counter [text]="form.navtexFormat().value()" [limit]="formatMax" />
+        </div>
+      }
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.series.field.searchIndex' | transloco }}
+        </span>
+        <label class="flex items-center gap-2 pt-1 text-sm">
+          <input type="checkbox" class="checkbox" [formField]="form.excludeFromMessageIndex" />
+          <span>{{ 'admin.series.field.excludeFromMessageIndex' | transloco }}</span>
+        </label>
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.series.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.series.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

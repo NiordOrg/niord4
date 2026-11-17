@@ -1,0 +1,8 @@
+<app-filter-panel appFilterAutofocus="chart" label="messages.filter.chart.label" (clear)="clear()">
+  <app-charts-field
+    placeholder="messages.filter.chart.placeholder"
+    [initialIds]="initialIds()"
+    [value]="value()"
+    (valueChange)="onChange($event)"
+  />
+</app-filter-panel>

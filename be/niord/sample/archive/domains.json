@@ -1,0 +1,89 @@
+[
+  {
+    "domainId": "niord-nw",
+    "active": true,
+    "sortOrder": 1,
+    "name": "NW",
+    "timeZone": "Europe/Copenhagen",
+    "messageSeries": [
+      {
+        "seriesId": "dma-nw",
+        "mainType": "NW",
+        "shortFormat": "NW-${number-3-digits}-${year-2-digits}",
+        "navtexFormat": "${publish-date}\nDANISH NAV WARN ${number-year-id}",
+        "numberSequenceType": "YEARLY"
+      },
+      {
+        "seriesId": "dma-nw-local",
+        "mainType": "NW",
+        "numberSequenceType": "NONE"
+      }
+    ],
+    "publish": true,
+    "templates": true
+  },
+  {
+    "domainId": "niord-nm",
+    "active": true,
+    "sortOrder": 2,
+    "name": "NM",
+    "timeZone": "Europe/Copenhagen",
+    "messageSeries": [
+      {
+        "seriesId": "dma-nm",
+        "mainType": "NM",
+        "shortFormat": "NM-${number-3-digits}-${year-2-digits}",
+        "numberSequenceType": "YEARLY"
+      }
+    ],
+    "publish": true
+  },
+  {
+    "domainId": "niord-fa",
+    "active": true,
+    "sortOrder": 3,
+    "name": "Firing Areas",
+    "timeZone": "Europe/Copenhagen",
+    "messageSeries": [
+      {
+        "seriesId": "dma-fa",
+        "mainType": "NM",
+        "numberSequenceType": "MANUAL"
+      }
+    ]
+  },
+  {
+    "domainId": "niord-almanac",
+    "active": true,
+    "sortOrder": 4,
+    "name": "NM Almanac",
+    "timeZone": "Europe/Copenhagen",
+    "messageSortOrder": "ID ASC",
+    "messageSeries": [
+      {
+        "seriesId": "dma-nm-almanac",
+        "mainType": "NM",
+        "shortFormat": "A/${number} ${year}",
+        "numberSequenceType": "MANUAL"
+      }
+    ],
+    "publish": false
+  },
+  {
+    "domainId": "niord-annex",
+    "active": true,
+    "sortOrder": 5,
+    "name": "NM Annex",
+    "timeZone": "Europe/Copenhagen",
+    "messageSortOrder": "ID ASC",
+    "messageSeries": [
+      {
+        "seriesId": "dma-nm-annex",
+        "mainType": "NM",
+        "shortFormat": "B/${number} ${year}",
+        "numberSequenceType": "MANUAL"
+      }
+    ],
+    "publish": false
+  }
+]

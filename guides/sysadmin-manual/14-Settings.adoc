@@ -1,0 +1,211 @@
+
+:imagesdir: images
+
+[#settings]
+== Settings
+
+_Settings_ are the values that adjust how a deployment of Niord works: its addresses, its languages, how it
+sends mail, the map it shows, and much more. Niord keeps them in its database. The _Settings_ page lets a system
+administrator see and change them. You open it from *Sysadmin* -> *Settings*.
+
+image::SettingsPage.png[Settings, 800]
+
+Each row shows the setting's key, its description and its value; the value of a password is shown as
+"pass:[********]". Type in the _Filter_ field to show only the settings whose key or value contains the text (the
+picture shows the settings that contain "map"). The list shows 20 settings at a time, with a pager below it.
+
+[#settings-model]
+=== Settings Model
+
+A setting is more than a key and a value. The Niord program _declares_ each setting it reads, and the declaration
+gives it these attributes:
+
+[cols="20,80",options="header"]
+|===
+| Attribute
+| Description
+
+| Key
+| The unique name of the setting.
+
+| Value
+| The value of the setting, in the form its type gives.
+
+| Type
+| One of "String", "Password", "Integer", "Long", "Float", "Double", "Date", "Boolean", "Path" and "json".
+
+| Description
+| A text saying what the setting does.
+
+| Cached
+| Whether Niord may keep the value in memory for a few minutes instead of reading the database each time.
+
+| Web
+| Whether the value is passed to the web applications. The administration application reads these values when it
+  starts, and a value from the server replaces the value the application was built with.
+
+| Editable
+| Whether the setting is shown on this page and can be changed there.
+
+| Scope
+| _operator_ for a value a system administrator sets; _state_ for a value only the system writes, which this page
+  and the settings import refuse to change.
+
+| Required
+| Whether the setting must have a value: Niord refuses to save it empty.
+
+|===
+
+The page lists only the editable settings that the running version of Niord declares. A setting no version
+declares any more, such as one of an earlier Niord version, is not listed or exported, and stays in the database
+untouched.
+
+The value of a "Password" setting never leaves the server: you can set a new one on this page, but you cannot see
+the old one.
+
+[#settings-from-niord-json]
+=== Where Settings Come From
+
+When Niord starts, it adds every declared setting the database lacks, with its default value, and it never changes
+a value the database already has: a value you set stays until you change it, also when a new version of Niord
+has another default. Niord does not add a setting back once its row is gone.
+
+The default value comes from, in this order:
+
+. the file "niord.json" in the server's home folder (the setting `niord.home`), when it has the key;
+. the settings file of the country the deployment is built on, or the base product's;
+. the default the Niord program declares.
+
+The file "niord.json" gives values only: the type, the description and the flags always come from the program,
+whatever the file says, and a key no version of Niord declares is skipped, with a warning in the log. Example:
+
+[source,json]
+----
+[
+  {
+    "key"   : "baseUri",
+    "value" : "https://niord.example.org"
+  },
+  {
+    "key"   : "authServerUrl",
+    "value" : "https://niord.example.org/auth"
+  },
+  ...
+]
+----
+
+[#settings-from-environment-variables]
+=== Settings from Environment Variables
+
+A system property or an environment variable with the same name as a setting takes precedence over the value in
+the database, for as long as it is set. For the home folder, `niord.home`, the environment variable `NIORD_HOME`
+works too. For example, start Niord with `-Dniord.home=/srv/niord`, or with the environment variable
+`NIORD_HOME=/srv/niord`.
+
+The _Settings_ page still shows and saves the value in the database, but while such a system property or
+environment variable is set, Niord uses that instead.
+
+[#settings-from-code]
+=== Settings from Code
+
+The Niord program declares its settings in its code, with their type and default value. For example:
+
+[source,java]
+----
+@Setting(value = "mailDeleteAfterDays", defaultValue = "30", type = Type.Integer,
+         description = "Delete scheduled mails older than the given value. "
+                     + "A non-positive value means never.")
+Integer mailDeleteAfterDays;
+----
+
+Most settings declared this way are read when the server starts, so a change to one of them on this page takes
+effect when the server is restarted.
+
+[#settings-an-operator-sets]
+=== Settings to Set for a New Deployment
+
+Among the many settings, these are the ones a system administrator usually sets first:
+
+[cols="35,65",options="header"]
+|===
+| Setting
+| Description
+
+| `baseUri`
+| The address of the Niord server.
+
+| `adminAppUrl`
+| The address of the administration application. Links to messages in mails point here. When it is empty, the links
+  use `baseUri`.
+
+| `authServerUrl`
+| The address of Keycloak (see <<keycloak-integration,Keycloak Integration>>).
+
+| `country` and `organisation`
+| The country and the organisation that run the deployment. Both are required.
+
+| `documentationUrl`
+| The address of the user guides. Every help button of the administration application opens a page under this
+  address; the default is `https://docs.niord.org`.
+
+| `mailSender`, `mailValidRecipients`, `mailDeleteAfterDays`
+| The sender of Niord's mails, who receives them, and how long the mail queue keeps them (see
+  <<mail-queue,Mail Queue>>). Mail is only pretended to be sent until `mailValidRecipients` is changed from `LOG`.
+
+| `adminIntegrationPageEnabled`
+| Shows the _Niord Integration_ page in the *Sysadmin* menu (see <<integration,Integration>>).
+
+| `batchFileExpiryDays`
+| How many days the files of batch jobs are kept (see <<batch-jobs,Batch Jobs>>).
+
+|===
+
+[#editing-a-system-setting]
+=== Editing a System Setting
+
+Click the *Edit Setting* button (the pencil) of a row. The editor opens beside the list:
+
+image::SettingEditPage.png[Setting Editor Page, 325]
+
+You can change only the value. The field depends on the type of the setting:
+
+* a checkbox for "Boolean";
+* a number field for "Integer" and "Long", and one that takes decimals for "Float" and "Double";
+* a hidden field for "Password";
+* a code editor for "json", where *Save Setting* is disabled while the text is not valid JSON ("Invalid JSON — fix
+  the syntax to save.");
+* a text field for the other types.
+
+Niord checks the value when you save: a value that does not fit the setting's type, or an empty value for a
+required setting, is refused ("Error saving setting"), and the setting keeps its value.
+
+[#importing-and-exporting-settings]
+=== Importing and Exporting Settings
+
+The menu of the gear button (_Settings actions_) has *Export...* and *Import...*.
+
+The file is a JSON list of settings, for example:
+
+[source,json]
+----
+[
+  {
+    "description": "The Keycloak URL",
+    "key": "authServerUrl",
+    "type": "String",
+    "value": "https://niord.example.org/auth"
+  },
+  {
+    "description": "The base application server URI",
+    "key": "baseUri",
+    "type": "String",
+    "value": "https://niord.example.org"
+  },
+  ...
+]
+----
+
+The import runs as the _settings-import_ batch job, which you follow on the <<batch-jobs,Batch Jobs>> page. It only
+changes the values of settings this deployment has. It skips, each with a line in the job's log, a key the running
+version of Niord does not declare, a _state_ setting, a key the database has no row for, a value that does not
+fit the setting's type, and a required setting that the file gives no value.

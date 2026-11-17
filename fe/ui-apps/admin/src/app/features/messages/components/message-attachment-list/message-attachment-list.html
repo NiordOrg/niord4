@@ -1,0 +1,17 @@
+<div class="flex flex-wrap gap-2">
+  @for (attachment of attachments(); track $index) {
+    <app-message-attachment
+      [attachment]="attachment"
+      [language]="language()"
+      (clicked)="onAttachmentClicked($event)"
+    />
+  }
+</div>
+
+@if (previewAttachment()) {
+  <app-message-attachment-preview-dialog
+    [attachment]="previewAttachment()!"
+    [visible]="previewVisible()"
+    (visibleChange)="onPreviewClosed()"
+  />
+}

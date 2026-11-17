@@ -1,0 +1,85 @@
+
+[#mariners]
+== For Mariners Using the Public Site
+
+The public site is where mariners and anyone else read the Navigational Warnings and Notices to
+Mariners without signing in. It has been replaced by a new site. It shows the same messages, but it
+looks different, and a few things work differently. The base product's site is in English; a
+country's site adds its own languages, which you choose with the language buttons in the menu bar.
+
+[#mariners-reading]
+=== Reading the Messages
+
+[#mariners-views]
+==== Details, List and Map
+
+The menu bar has three views of the messages. _Details_, where the site opens, shows the full text
+of every message under the heading of its area. _List_ shows one line for each message, with its
+number and title. _Map_ shows the messages on a chart, and lists the messages that have no position
+in a panel called _Additional Messages_.
+
+[#mariners-filter]
+==== Choosing what is shown
+
+Above the messages, _Navigational Warnings_ and _Notices to Mariners_ switch each kind of message on
+or off; one of them is always on. _Show Active Now_ limits the list to the messages in force at
+this moment. _Print_ opens the messages you are looking at as a PDF document, ready to print or
+save.
+
+[#mariners-one-message]
+==== One message, and links to it
+
+Clicking a message in the _List_ or on the _Map_ opens it in a window with its map, its full text,
+arrows to the previous and next message, and a button that prints that message alone. A single
+message also has an address of its own, `/messages/details/message/` followed by its id, which you
+can bookmark or send to someone.
+
+[#mariners-addresses]
+==== Addresses without the "#"
+
+The addresses of the old public site had a `#` in them, for example `/#/messages/map`. The new
+site's addresses have none: the map is simply `/messages/map`. Bookmarks and links written for the
+old site still work, because the new site turns them into the new form when it opens.
+
+[#mariners-publications]
+=== Publications
+
+[#mariners-downloads]
+==== The Downloads page
+
+_Downloads_ in the menu bar lists the publications, such as the weekly Notices to Mariners, grouped
+by category. Its first tab, _Active NtM and Publications_, holds the publications that are current
+now. The second, _Historical NtM and Publications_, holds older ones: choose a period under _Date
+Interval_ to see what was published in it.
+
+[#mariners-browse]
+==== Download or browse an issue
+
+A publication with a document has a _Download_ link, which opens it. A publication made from
+messages also has _Browse_, which shows the messages of that issue on the _Details_ view of the site, so you
+can read them there instead of in the document.
+
+[#mariners-what-is-listed]
+==== Why a publication is or is not listed
+
+A publication is listed when three things are all true: its category is one the site shows, it has
+not been withdrawn, and the period in which it is public has begun. A withdrawn publication
+disappears from the site, from the historical tab as well, but messages that cite it still show
+the reference.
+
+[#mariners-other-sites]
+=== For Sites That Show the Messages
+
+[#mariners-teaser]
+==== The teaser for other web sites
+
+Another web site can show a small map of the current messages, the _teaser_, which leads to the
+public site when it is clicked. Its address is `/teaser`, and it accepts `area` to limit it to one
+area and `lang` to choose the language. A teaser address written in the old form, with `#?` before
+these parameters, still works.
+
+[#mariners-phones]
+==== On a phone
+
+The site works on a phone. On a narrow screen the menu bar shows its icons without their labels,
+and the panel of messages without a position can be made smaller so that it leaves the map free.

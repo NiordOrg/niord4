@@ -1,0 +1,130 @@
+<div class="admin-toolbar">
+  <span class="relative">
+    <input
+      type="text"
+      class="w-64 text-input"
+      [value]="filter()"
+      (input)="onFilterInput($any($event.target).value)"
+      (blur)="onFilterBlur()"
+      [placeholder]="'admin.users.contacts.filterPlaceholder' | transloco"
+      [attr.aria-label]="'admin.users.contacts.filterPlaceholder' | transloco"
+    />
+    @if (filter() !== '') {
+      <button
+        type="button"
+        class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+        [attr.aria-label]="'admin.users.clearFilter' | transloco"
+        (click)="clearFilter()"
+      >
+        <app-icon name="lucideX" class="text-xs" />
+      </button>
+    }
+  </span>
+  <span class="admin-toolbar-spacer"></span>
+  <button type="button" class="btn-primary" (click)="addContact()">
+    <app-icon name="lucidePlus" class="mr-1 text-xs" />
+    {{ 'admin.users.contacts.addContact' | transloco }}
+  </button>
+  <app-menu-trigger
+    icon="lucideSettings"
+    [ariaLabel]="'admin.users.contacts.actionsAriaLabel' | transloco"
+    [menu]="cogMenu"
+  />
+  <app-menu
+    #cogMenu
+    [model]="cogItems()"
+    [ariaLabel]="'admin.users.contacts.actionsAriaLabel' | transloco"
+  />
+</div>
+
+<app-progress-bar [visible]="loading()" />
+
+@if (error()) {
+  <app-error-banner
+    [title]="'admin.users.contacts.loadError' | transloco"
+    [retryLabel]="'admin.users.retry' | transloco"
+    (retry)="search()"
+  />
+}
+
+@if (!loading() && !error() && result().data.length === 0) {
+  <app-empty-state icon="lucideMail" [title]="'admin.users.contacts.empty' | transloco" />
+} @else if (result().data.length > 0) {
+  <div class="admin-card">
+    <table class="niord-table">
+      <thead>
+        <tr>
+          <th>{{ 'admin.users.contacts.column.email' | transloco }}</th>
+          <th>{{ 'admin.users.contacts.column.name' | transloco }}</th>
+          <th class="w-16">{{ 'admin.users.column.language' | transloco }}</th>
+          <th class="w-24">
+            <span class="sr-only">{{ 'admin.users.column.actions' | transloco }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (contact of result().data; track contact.id) {
+          <tr>
+            <td>{{ contact.email }}</td>
+            <td>{{ contact.name }}</td>
+            <td>
+              @if (contact.language) {
+                <app-language-flag
+                  class="h-3.5 w-5"
+                  [lang]="contact.language"
+                  [flagPath]="flagPathFor(contact.language)"
+                  [alt]="languageLabelFor(contact.language)"
+                />
+              }
+            </td>
+            <td class="text-right whitespace-nowrap">
+              <button
+                type="button"
+                class="icon-button text-xs"
+                [attr.aria-label]="'admin.users.contacts.editContact' | transloco"
+                (click)="editContact(contact)"
+              >
+                <app-icon name="lucidePencil" />
+              </button>
+              <button
+                type="button"
+                class="icon-button text-xs hover:text-danger"
+                [attr.aria-label]="'admin.users.contacts.deleteContact' | transloco"
+                (click)="deleteContact(contact)"
+              >
+                <app-icon name="lucideTrash2" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="mt-2 flex items-center justify-between gap-3">
+    <span class="text-xs text-fg-muted">
+      {{
+        'admin.users.contacts.countLine' | transloco: { size: result().size, total: result().total }
+      }}
+    </span>
+    @if (result().total > pageSize) {
+      <app-pager
+        [first]="first()"
+        [rows]="pageSize"
+        [total]="result().total"
+        (pageChange)="onPageChange($event)"
+      />
+    }
+  </div>
+}
+
+<app-contact-editor
+  [model]="editorModel()"
+  (saved)="onEditorSaved()"
+  (closed)="editorModel.set(undefined)"
+/>
+
+<app-import-emails-dialog
+  [visible]="importOpen()"
+  (visibleChange)="importOpen.set($event)"
+  (imported)="onImport($event)"
+/>

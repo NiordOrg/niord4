@@ -1,0 +1,1175 @@
+<app-drawer
+  #drawerRef
+  size="wide"
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  initialFocus="first"
+  (closed)="closed.emit()"
+  (hidden)="hidden.emit()"
+>
+  @if (model(); as m) {
+    <form (submit)="$event.preventDefault(); save()" class="flex min-w-0 flex-col gap-4">
+      <!--
+        Above the tabs, because it is true of all four of them. The drawer still
+        opens and every setting still reads: reads are not scoped, and this is
+        the only screen the full configuration of a series is legible from.
+      -->
+      @if (otherDomainId(); as domain) {
+        <div class="message message-warn" role="status">
+          <app-icon name="lucideTriangleAlert" class="message-icon" />
+          <span>{{ 'admin.publications.otherDomainNote' | transloco: { domain } }}</span>
+        </div>
+      }
+
+      <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))">
+        <app-tab-list>
+          @for (tab of tabs; track tab) {
+            <app-tab [value]="tab">
+              {{ 'admin.publications.series.tab.' + tab | transloco }}
+            </app-tab>
+          }
+        </app-tab-list>
+
+        <app-tab-panels>
+          <!-- ============================================ 1. Basics ============ -->
+          <app-tab-panel value="basics">
+            <div class="flex flex-col gap-5 pt-4">
+              <!--
+                What creating a series actually does, said before anything is
+                typed. A new series is a DRAFT in this one domain and publishes
+                nothing until somebody activates it, which is the part that
+                surprises whoever expected the act of saving to be the act of
+                starting the publication.
+              -->
+              @if (creating()) {
+                <!-- The domain is the part of the sentence that changes with the
+                     desk, so it is the part that is emphasised. Rendered as
+                     markup because the name sits INSIDE the sentence: splitting
+                     the copy in two around it would leave the translator with
+                     two half-sentences and no way to reorder them. -->
+                <div class="message message-info" role="status">
+                  <app-icon name="lucideInfo" class="message-icon" />
+                  <span [innerHTML]="createNoticeHtml()"></span>
+                </div>
+              }
+
+              <!--
+                The name first: it is the thing being made, and every other
+                answer on this tab is about it.
+
+                Grouped by FIELD, one flagged control per DECLARED language --
+                the shape every other admin editor uses. The flag inside the
+                field is what names the language.
+
+                Ordered by the configured list, so the rows do not reshuffle
+                when a language is ticked back on.
+              -->
+              <div class="flex flex-col gap-2">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.name' | transloco }}
+                </span>
+                <div class="flex flex-col gap-2">
+                  @for (lang of languages(); track lang) {
+                    <app-localized-text-input
+                      [lang]="lang"
+                      [inputId]="'desc-name-' + lang"
+                      [value]="descs()[lang].name"
+                      (valueChange)="setDescField(lang, 'name', $event)"
+                      ariaLabelKey="admin.publications.series.field.name"
+                      placeholderKey="admin.publications.series.placeholder.name"
+                    />
+                    <app-length-counter [text]="descs()[lang].name" [limit]="nameMax" />
+                    @for (error of errorsFor('descs.' + lang + '.name'); track error.rule) {
+                      <p class="text-xs text-danger">
+                        {{ ruleText(error.rule) }}
+                      </p>
+                    }
+                  }
+                </div>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="flex flex-col gap-1">
+                  <label for="series-id" class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.seriesId' | transloco }}
+                  </label>
+                  <!--
+                    Proposed from the name while nobody has typed here, and left
+                    alone from the first keystroke onwards. The id is the
+                    import/export key and the handle every stored citation
+                    points at, so it is worth getting right once — and it is not
+                    worth typing twice for the common case where the name
+                    already says it.
+                  -->
+                  <input
+                    id="series-id"
+                    type="text"
+                    class="w-full text-input"
+                    [formField]="form.seriesId"
+                    [attr.aria-invalid]="seriesIdUnservable() || null"
+                    [attr.aria-describedby]="seriesIdUnservable() ? 'series-id-error' : null"
+                    [placeholder]="'admin.publications.series.hint.seriesIdDerived' | transloco"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    autocomplete="off"
+                    spellcheck="false"
+                    (input)="markSeriesIdTyped()"
+                  />
+                  <p class="text-xs text-fg-muted">
+                    {{ seriesIdHintKey() | transloco }}
+                  </p>
+                  @if (seriesIdUnservable()) {
+                    <p id="series-id-error" class="text-xs text-danger" role="alert">
+                      {{ unservableIdKey | transloco }}
+                    </p>
+                  }
+                  @for (error of errorsFor('seriesId'); track error.rule) {
+                    <p class="text-xs text-danger">
+                      {{ ruleText(error.rule) }}
+                    </p>
+                  }
+                </div>
+
+                <fieldset class="flex flex-col gap-1">
+                  <legend class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.languages' | transloco }}
+                  </legend>
+                  <!-- The installation's languages, then anything else this series
+                       declares. A language the installation dropped keeps its
+                       checkbox so it can be READ and removed deliberately; hiding it
+                       deleted it, and the text with it, on the next tick of any
+                       other box. -->
+                  <div class="flex flex-wrap items-center gap-4 pt-1">
+                    @for (lang of languageOptions(); track lang.value) {
+                      <label class="check-row">
+                        <input
+                          type="checkbox"
+                          class="checkbox"
+                          [checked]="isLanguageOn(lang.value)"
+                          (change)="toggleLanguage(lang.value)"
+                        />
+                        <span>{{ lang.label }}</span>
+                      </label>
+                    }
+                  </div>
+                  @if (foreignLanguageCount() > 0) {
+                    <div class="message message-warn" role="alert">
+                      <app-icon name="lucideTriangleAlert" class="message-icon" />
+                      <span>{{
+                        'admin.publications.series.hint.languageNotConfigured' | transloco
+                      }}</span>
+                    </div>
+                  }
+                </fieldset>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="flex flex-col gap-1">
+                  <label for="series-category" class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.category' | transloco }}
+                  </label>
+                  <!-- Bound to the field, so the schema's `required` (S-19) reaches
+                       the control and a blank category marks itself instead of
+                       only greying out Save. -->
+                  <!-- Muted while the prompt is what is showing: the placeholder
+                       row is an instruction rather than a value, and in the
+                       field's own colour it reads as one that has been chosen. -->
+                  <select
+                    id="series-category"
+                    class="w-full text-input"
+                    [class.text-fg-muted]="value().categoryId === ''"
+                    [formField]="form.categoryId"
+                  >
+                    <option value="">
+                      {{ 'admin.publications.series.option.noCategory' | transloco }}
+                    </option>
+                    @for (category of categories(); track category.categoryId) {
+                      <option [value]="category.categoryId">
+                        {{ categoryName(category) }}
+                      </option>
+                    }
+                  </select>
+                  <p class="text-xs text-fg-muted">
+                    {{ 'admin.publications.series.hint.category' | transloco }}
+                  </p>
+                  @for (error of errorsFor('categoryId'); track error.rule) {
+                    <p class="text-xs text-danger">
+                      {{ ruleText(error.rule) }}
+                    </p>
+                  }
+                </div>
+
+                <!--
+                  The owner, stated rather than picked, and stated as a LOCKED
+                  FIELD: it sits in the same row as the category and reads as
+                  the same kind of answer, which a bare line of text does not.
+                  A series is listed and administered in exactly one domain, and
+                  moving it is a separate action on the series page.
+                -->
+                <div class="flex flex-col gap-1">
+                  <label for="series-owner" class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.owner' | transloco }}
+                  </label>
+                  @if (value().domainId) {
+                    <input
+                      id="series-owner"
+                      type="text"
+                      class="w-full text-input"
+                      [value]="ownerDomainName()"
+                      disabled
+                      readonly
+                    />
+                  } @else {
+                    <p class="text-sm text-warning">
+                      {{ 'admin.publications.series.hint.noSessionDomain' | transloco }}
+                    </p>
+                  }
+                  <p class="text-xs text-fg-muted">
+                    {{ 'admin.publications.series.hint.ownerLocked' | transloco }}
+                  </p>
+                  <!--
+                    The schedule on the frequency tab is declared in wall-clock
+                    terms and read in the owner's zone. With an owner that has
+                    none, those fields refuse to show a clock rather than guess
+                    at one, and the fix belongs on the domain rather than here —
+                    so it is said next to the owner.
+                  -->
+                  @if (ownerTimeZoneMissing()) {
+                    <p class="text-xs text-warning">
+                      {{ 'admin.publications.series.hint.domainNoTimeZone' | transloco }}
+                    </p>
+                  }
+                  @for (error of errorsFor('domainId'); track error.rule) {
+                    <p class="text-xs text-danger">
+                      {{ ruleText(error.rule) }}
+                    </p>
+                  }
+                </div>
+              </div>
+
+              <!--
+                What the series PRODUCES, as a segmented control rather than a
+                dropdown: there are four answers, they are short, and the choice
+                decides which of the other tabs mean anything — so it is worth
+                the width to have all of them readable at once.
+              -->
+              <div class="flex flex-col gap-1">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.contentMode' | transloco }}
+                </span>
+                <!-- Full width, so it lines up with the fields above and below it
+                     rather than reading as a loose row of buttons floating in
+                     the form. Four segments do not fit a phone in one row, so
+                     `is-stack-2` breaks them into two columns below 40rem. -->
+                <div
+                  class="seg is-soft is-stack-2 w-full"
+                  role="group"
+                  [attr.aria-label]="'admin.publications.series.field.contentMode' | transloco"
+                >
+                  @for (option of contentModes; track option) {
+                    <button
+                      type="button"
+                      class="seg-btn flex-1"
+                      [class.is-active]="value().contentMode === option"
+                      [attr.aria-pressed]="value().contentMode === option"
+                      [disabled]="!writable()"
+                      (click)="setField('contentMode', option)"
+                    >
+                      {{ 'admin.publications.series.contentMode.' + option | transloco }}
+                    </button>
+                  }
+                </div>
+                <p class="text-xs text-fg-muted">
+                  {{ 'admin.publications.series.hint.contentMode' | transloco }}
+                </p>
+              </div>
+
+              <!--
+                Who else may cite it. A separate question from who owns it: the
+                owner is where the publication is administered, and this is who
+                may reference it from their own desk, read-only.
+              -->
+              <div class="flex flex-col gap-1">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.availability.title' | transloco }}
+                </span>
+                <app-publication-availability-field
+                  name="series-availability"
+                  [value]="value().availability"
+                  (valueChange)="setField('availability', $event)"
+                  [domainIds]="availableDomainIds()"
+                  (domainIdsChange)="availableDomainIds.set($event)"
+                  [ownerId]="value().domainId"
+                  [disabled]="!writable()"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label for="series-publication" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.messagePublication' | transloco }}
+                </label>
+                <!-- Locked once the series has left DRAFT: the citations already
+                     stored live in whichever field was configured at the time, and
+                     moving the setting orphans them. -->
+                <select
+                  id="series-publication"
+                  class="w-full text-input"
+                  [disabled]="messagePublicationLocked()"
+                  (change)="setFromSelect('messagePublication', $event)"
+                >
+                  @for (option of messagePublications; track option) {
+                    <option [value]="option" [selected]="value().messagePublication === option">
+                      {{ 'admin.publications.series.messagePublication.' + option | transloco }}
+                    </option>
+                  }
+                </select>
+                <!-- One line, and which one depends on whether the setting is
+                     still free: the rule and the refusal say the same thing, so
+                     printing both is the same sentence twice. -->
+                <p class="text-xs text-fg-muted">
+                  {{ messagePublicationHintKey() | transloco }}
+                </p>
+              </div>
+
+              @if (citable()) {
+                <div class="flex flex-col gap-2">
+                  <span class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.messageReferenceFormat' | transloco }}
+                  </span>
+                  <div class="flex flex-col gap-2">
+                    @for (lang of languages(); track lang) {
+                      <app-localized-text-input
+                        [lang]="lang"
+                        [monospace]="true"
+                        [inputId]="'desc-ref-' + lang"
+                        [value]="descs()[lang].messageReferenceFormat"
+                        [tokens]="patternTokens()"
+                        (valueChange)="setDescField(lang, 'messageReferenceFormat', $event)"
+                        ariaLabelKey="admin.publications.series.field.messageReferenceFormat"
+                      />
+                      @for (
+                        error of errorsFor('descs.' + lang + '.messageReferenceFormat');
+                        track error.rule
+                      ) {
+                        <p class="text-xs text-danger">
+                          {{ ruleText(error.rule) }}
+                        </p>
+                      }
+                    }
+                  </div>
+                  <p class="text-xs text-fg-muted">
+                    {{ 'admin.publications.series.hint.messageReferenceFormat' | transloco }}
+                  </p>
+                </div>
+              }
+            </div>
+          </app-tab-panel>
+
+          <!-- ============================================ 2. Content =========== -->
+          <app-tab-panel value="content">
+            <div class="flex flex-col gap-5 pt-4">
+              @if (queryBacked()) {
+                <div class="flex flex-col gap-1">
+                  <label for="series-report" class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.reportId' | transloco }}
+                  </label>
+                  <select
+                    id="series-report"
+                    class="w-full text-input"
+                    (change)="setFromSelect('reportId', $event)"
+                  >
+                    <option value="" [selected]="value().reportId === ''">
+                      {{ 'admin.publications.series.option.noReport' | transloco }}
+                    </option>
+                    @for (report of reports(); track report.reportId) {
+                      <option
+                        [value]="report.reportId"
+                        [selected]="value().reportId === report.reportId"
+                      >
+                        {{ report.name || report.reportId }}
+                      </option>
+                    }
+                  </select>
+                  <!-- The report IS the document. Without one the series can be
+                       saved but never activated: there would be nothing for an
+                       issue to render. -->
+                  @if (reportMissing()) {
+                    <div class="message message-warn" role="alert">
+                      <app-icon name="lucideTriangleAlert" class="message-icon" />
+                      <span>{{
+                        'admin.publications.series.hint.activateNeedsReport' | transloco
+                      }}</span>
+                    </div>
+                  }
+                </div>
+
+                <!-- S-9: page setup exists exactly when a report does, so it appears
+                     with the report rather than as a permanently half-relevant block. -->
+                @if (showReportSetup()) {
+                  <div class="grid gap-4 sm:grid-cols-3">
+                    <div class="flex flex-col gap-1">
+                      <label for="series-page-size" class="text-sm font-medium text-fg-title">
+                        {{ 'admin.publications.series.field.pageSize' | transloco }}
+                      </label>
+                      <select
+                        id="series-page-size"
+                        class="w-full text-input"
+                        (change)="setFromSelect('pageSize', $event)"
+                      >
+                        @for (option of pageSizes; track option) {
+                          <option [value]="option" [selected]="value().pageSize === option">
+                            {{ option }}
+                          </option>
+                        }
+                      </select>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                      <label for="series-orientation" class="text-sm font-medium text-fg-title">
+                        {{ 'admin.publications.series.field.pageOrientation' | transloco }}
+                      </label>
+                      <select
+                        id="series-orientation"
+                        class="w-full text-input"
+                        (change)="setFromSelect('pageOrientation', $event)"
+                      >
+                        @for (option of pageOrientations; track option) {
+                          <option [value]="option" [selected]="value().pageOrientation === option">
+                            {{ 'admin.publications.series.pageOrientation.' + option | transloco }}
+                          </option>
+                        }
+                      </select>
+                    </div>
+
+                    <label class="flex items-start gap-2 text-sm sm:items-end sm:pb-2">
+                      <input
+                        type="checkbox"
+                        class="checkbox mt-0.5 sm:mt-0"
+                        [checked]="value().mapThumbnails"
+                        (change)="setChecked('mapThumbnails', $event)"
+                      />
+                      <span>{{ 'admin.publications.series.field.mapThumbnails' | transloco }}</span>
+                    </label>
+                  </div>
+
+                  <fieldset class="flex flex-col gap-2">
+                    <legend class="text-sm font-medium text-fg-title">
+                      {{ 'admin.publications.series.field.reportParams' | transloco }}
+                    </legend>
+                    <p class="text-xs text-fg-muted">
+                      {{ 'admin.publications.series.hint.reportParams' | transloco }}
+                    </p>
+                    @for (row of reportParams(); track $index) {
+                      <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-2">
+                          <input
+                            type="text"
+                            class="w-28 shrink-0 font-mono text-input sm:w-40"
+                            [value]="row.key"
+                            [attr.aria-invalid]="isReservedParamKey(row.key) ? 'true' : null"
+                            [attr.aria-label]="
+                              'admin.publications.series.field.reportParamKey' | transloco
+                            "
+                            (input)="setReportParam($index, 'key', $event)"
+                          />
+                          <input
+                            type="text"
+                            class="min-w-0 flex-1 text-input"
+                            [value]="row.value"
+                            [attr.aria-label]="
+                              'admin.publications.series.field.reportParamValue' | transloco
+                            "
+                            (input)="setReportParam($index, 'value', $event)"
+                          />
+                          <button
+                            type="button"
+                            class="icon-button shrink-0 hover:text-danger"
+                            [attr.aria-label]="
+                              'admin.publications.series.action.removeParam' | transloco
+                            "
+                            (click)="removeReportParam($index)"
+                          >
+                            <app-icon name="lucideTrash2" />
+                          </button>
+                        </div>
+                        <!-- The issue supplies these, so a row repeating one is a
+                             second source for the same value. Refused here as well
+                             as by the server, next to the input rather than as a
+                             failed save. -->
+                        @if (isReservedParamKey(row.key)) {
+                          <p class="text-xs text-danger">
+                            {{
+                              'admin.publications.reportParams.reservedKey'
+                                | transloco: { key: row.key.trim() }
+                            }}
+                          </p>
+                        }
+                      </div>
+                    }
+                    <button
+                      type="button"
+                      class="btn-tertiary self-start"
+                      (click)="addReportParam()"
+                    >
+                      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+                      {{ 'admin.publications.series.action.addParam' | transloco }}
+                    </button>
+                    <!-- What the report NAMES, offered rather than applied. A
+                         template may read a key the report never declared and a
+                         report may declare one its template ignores, so this is
+                         a shortcut to a row, never a check on the series. -->
+                    @if (suggestedParamKeys().length > 0) {
+                      <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">
+                        <span>{{
+                          'admin.publications.series.hint.reportParamSuggestions' | transloco
+                        }}</span>
+                        @for (key of suggestedParamKeys(); track key) {
+                          <button
+                            type="button"
+                            class="link-button is-quiet font-mono"
+                            [attr.aria-label]="
+                              'admin.publications.series.action.addSuggestedParam'
+                                | transloco: { key }
+                            "
+                            (click)="addSuggestedParam(key)"
+                          >
+                            {{ key }}
+                          </button>
+                        }
+                      </p>
+                    }
+                  </fieldset>
+                }
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div class="flex flex-col gap-1">
+                    <label for="series-sort-by" class="text-sm font-medium text-fg-title">
+                      {{ 'admin.publications.series.field.messageSortBy' | transloco }}
+                    </label>
+                    <input
+                      id="series-sort-by"
+                      type="text"
+                      class="w-full text-input"
+                      [value]="value().messageSortBy"
+                      (input)="setFromInput('messageSortBy', $event)"
+                    />
+                    <p class="text-xs text-fg-muted">
+                      {{ 'admin.publications.series.hint.messageSortBy' | transloco }}
+                    </p>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <label for="series-sort-order" class="text-sm font-medium text-fg-title">
+                      {{ 'admin.publications.series.field.messageSortOrder' | transloco }}
+                    </label>
+                    <select
+                      id="series-sort-order"
+                      class="w-full text-input"
+                      [disabled]="value().messageSortBy.trim() === ''"
+                      (change)="setFromSelect('messageSortOrder', $event)"
+                    >
+                      <option value="ASC" [selected]="value().messageSortOrder === 'ASC'">
+                        {{ 'admin.publications.series.sortOrder.ASC' | transloco }}
+                      </option>
+                      <option value="DESC" [selected]="value().messageSortOrder === 'DESC'">
+                        {{ 'admin.publications.series.sortOrder.DESC' | transloco }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              }
+
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  [checked]="value().languageSpecific"
+                  (change)="setChecked('languageSpecific', $event)"
+                />
+                <span>{{ 'admin.publications.series.field.languageSpecific' | transloco }}</span>
+              </label>
+
+              <!-- File-name and link patterns are per-language: S-15 wants one path per
+                   language, or the last language written wins and the others are absent. -->
+              <div class="flex flex-col gap-2">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.fileNamePattern' | transloco }}
+                </span>
+                <div class="flex flex-col gap-2">
+                  @for (lang of languages(); track lang) {
+                    <app-localized-text-input
+                      [lang]="lang"
+                      [monospace]="true"
+                      [inputId]="'desc-file-' + lang"
+                      [value]="descs()[lang].fileNamePattern"
+                      [tokens]="patternTokens()"
+                      (valueChange)="setDescField(lang, 'fileNamePattern', $event)"
+                      ariaLabelKey="admin.publications.series.field.fileNamePattern"
+                    />
+                    @for (
+                      error of errorsFor('descs.' + lang + '.fileNamePattern');
+                      track error.rule
+                    ) {
+                      <p class="text-xs text-danger">
+                        {{ ruleText(error.rule) }}
+                      </p>
+                    }
+                  }
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.linkPattern' | transloco }}
+                </span>
+                <div class="flex flex-col gap-2">
+                  @for (lang of languages(); track lang) {
+                    <app-localized-text-input
+                      [lang]="lang"
+                      [monospace]="true"
+                      [inputId]="'desc-link-' + lang"
+                      [value]="descs()[lang].linkPattern"
+                      [tokens]="patternTokens()"
+                      (valueChange)="setDescField(lang, 'linkPattern', $event)"
+                      ariaLabelKey="admin.publications.series.field.linkPattern"
+                    />
+                  }
+                </div>
+              </div>
+
+              <p class="text-xs text-fg-muted">
+                {{ 'admin.publications.series.hint.tokens' | transloco }}
+                @for (token of nameTokens(); track token) {
+                  <code class="ml-1 font-mono">{{ tokenLabel(token) }}</code>
+                }
+              </p>
+            </div>
+          </app-tab-panel>
+
+          <!-- ====================================== 3. Frequency & naming ====== -->
+          <app-tab-panel value="cadence">
+            <div class="flex flex-col gap-5 pt-4">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="flex flex-col gap-1">
+                  <label for="series-cadence" class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.cadence' | transloco }}
+                  </label>
+                  <select
+                    id="series-cadence"
+                    class="w-full text-input"
+                    (change)="setFromSelect('cadence', $event)"
+                  >
+                    @for (option of cadences; track option) {
+                      <option [value]="option" [selected]="value().cadence === option">
+                        {{ 'admin.publications.cadence.' + option | transloco }}
+                      </option>
+                    }
+                  </select>
+                </div>
+
+                @if (showCutoffTime()) {
+                  <div class="flex flex-col gap-1">
+                    <!-- A span, not a <label for>: the field's trigger is a button
+                         with no id to associate with, so the accessible name is
+                         the same key passed as [ariaLabel] below. -->
+                    <span class="text-sm font-medium text-fg-title">
+                      {{ 'admin.publications.series.field.nominalCutoffTime' | transloco }}
+                    </span>
+                    <!-- The shared field, not a native `type="time"`: the browser
+                         draws its own popup in the BROWSER's locale, so a Danish
+                         admin reading an English browser got a 12-hour clock on a
+                         24-hour value. -->
+                    <app-time-field
+                      class="w-28"
+                      [value]="nominalCutoffTimeValue()"
+                      [ariaLabel]="'admin.publications.series.field.nominalCutoffTime' | transloco"
+                      (valueChange)="setNominalCutoffTime($event)"
+                    />
+                  </div>
+                }
+              </div>
+
+              <!--
+                How an issue goes out, READ-ONLY.
+                Automatic release is a stored setting with nothing behind it yet,
+                so there is exactly one answer and nothing to choose between. It
+                is still shown, because "somebody has to press publish" is the
+                single most consequential thing about how this series behaves,
+                and a screen that says nothing about it reads as a screen where
+                releases happen by themselves.
+              -->
+              <div class="flex flex-col gap-1" data-testid="series-release-mode">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.releaseMode' | transloco }}
+                </span>
+                <p class="text-sm text-fg">
+                  {{ 'admin.publications.series.releaseMode.' + value().releaseMode | transloco }}
+                </p>
+                <p class="text-xs text-fg-muted">
+                  {{
+                    'admin.publications.series.releaseModeHint.' + value().releaseMode | transloco
+                  }}
+                </p>
+              </div>
+
+              @if (showWeekday() || showDayOfMonth() || showMonth()) {
+                <div class="grid gap-4 sm:grid-cols-3">
+                  @if (showWeekday()) {
+                    <div class="flex flex-col gap-1">
+                      <label for="series-cutoff-day" class="text-sm font-medium text-fg-title">
+                        {{ 'admin.publications.series.field.nominalCutoffDay' | transloco }}
+                      </label>
+                      <select
+                        id="series-cutoff-day"
+                        class="w-full text-input"
+                        (change)="setFromSelect('nominalCutoffDay', $event)"
+                      >
+                        @for (day of cutoffDays; track day) {
+                          <option [value]="day" [selected]="value().nominalCutoffDay === day">
+                            {{ 'admin.publications.series.weekday.' + day | transloco }}
+                          </option>
+                        }
+                      </select>
+                    </div>
+                  }
+                  @if (showMonth()) {
+                    <div class="flex flex-col gap-1">
+                      <label for="series-cutoff-month" class="text-sm font-medium text-fg-title">
+                        {{ 'admin.publications.series.field.nominalCutoffMonth' | transloco }}
+                      </label>
+                      <!-- The 1-12 bounds come from the form schema; [formField]
+                           reflects them onto the input. -->
+                      <input
+                        id="series-cutoff-month"
+                        type="number"
+                        step="1"
+                        class="w-full text-input"
+                        [formField]="form.nominalCutoffMonth"
+                      />
+                    </div>
+                  }
+                  @if (showDayOfMonth()) {
+                    <div class="flex flex-col gap-1">
+                      <label for="series-cutoff-dom" class="text-sm font-medium text-fg-title">
+                        {{ 'admin.publications.series.field.nominalCutoffDayOfMonth' | transloco }}
+                      </label>
+                      <!-- The 1-31 bounds come from the form schema; [formField]
+                           reflects them onto the input. -->
+                      <input
+                        id="series-cutoff-dom"
+                        type="number"
+                        step="1"
+                        class="w-full text-input"
+                        [formField]="form.nominalCutoffDayOfMonth"
+                      />
+                    </div>
+                  }
+                </div>
+              }
+
+              <p class="text-xs text-fg-muted">
+                {{ 'admin.publications.series.hint.nominalCutoff' | transloco }}
+              </p>
+
+              <!--
+                Where the cut-off falls by default when an issue is released.
+
+                The cut-off ends the CONTENT period, which is not the moment
+                somebody pressed publish: a weekly notice closes its content when
+                the release runs, while a yearly list closes at the boundary its
+                public window names however late the document went out. Only a
+                yearly series has such a boundary (S-21), so the two period
+                options are shown disabled elsewhere rather than hidden — the
+                choice is worth seeing, and so is the reason it is not offered.
+              -->
+              <div class="flex flex-col gap-1">
+                <label for="series-cutoff-default" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.cutoffDefault' | transloco }}
+                </label>
+                <select
+                  id="series-cutoff-default"
+                  class="w-full text-input"
+                  (change)="setFromSelect('cutoffDefault', $event)"
+                >
+                  @for (option of cutoffDefaults; track option) {
+                    <option
+                      [value]="option"
+                      [selected]="value().cutoffDefault === option"
+                      [disabled]="isCutoffDefaultLocked(option)"
+                    >
+                      {{ 'admin.publications.series.cutoffDefault.' + option | transloco }}
+                    </option>
+                  }
+                </select>
+                <p class="text-xs text-fg-muted">
+                  {{ 'admin.publications.series.hint.cutoffDefault' | transloco }}
+                </p>
+                @if (cutoffDefaultBroken()) {
+                  <p class="text-xs text-danger">
+                    {{ 'admin.publications.series.rule.cutoffDefault' | transloco }}
+                  </p>
+                }
+                @for (error of errorsFor('cutoffDefault'); track error.rule) {
+                  <p class="text-xs text-danger">
+                    {{ ruleText(error.rule) }}
+                  </p>
+                }
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="flex flex-col gap-1">
+                  <label for="series-numbering" class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.numberingScheme' | transloco }}
+                  </label>
+                  <select
+                    id="series-numbering"
+                    class="w-full text-input"
+                    [disabled]="oneOff()"
+                    (change)="setFromSelect('numberingScheme', $event)"
+                  >
+                    @for (option of numberingSchemes; track option) {
+                      <option [value]="option" [selected]="value().numberingScheme === option">
+                        {{ 'admin.publications.series.numberingScheme.' + option | transloco }}
+                      </option>
+                    }
+                  </select>
+                </div>
+
+                <!--
+                  When the next issue opens — stated, never chosen.
+
+                  The cadence decides it, both ways: a fixed frequency is the
+                  statement that the next issue opens itself when the current one
+                  publishes, and a publication with no frequency has no next
+                  period to open, so each one is made by hand. S-8 says exactly
+                  that, so a control here could only offer an answer the server
+                  refuses — and on a cadenced series it would be a switch that
+                  turns the schedule off without saying so.
+                -->
+                @if (nextIssueDerived()) {
+                  <div class="flex flex-col gap-1" data-testid="series-next-issue-derived">
+                    <span class="text-sm font-medium text-fg-title">
+                      {{ 'admin.publications.series.field.nextIssueCreation' | transloco }}
+                    </span>
+                    <p class="text-sm text-fg">
+                      {{
+                        'admin.publications.series.nextIssueCreation.AUTO_ON_PUBLISH' | transloco
+                      }}
+                    </p>
+                    <p class="text-xs text-fg-muted">
+                      {{ 'admin.publications.series.hint.nextIssueDerived' | transloco }}
+                    </p>
+                  </div>
+                } @else {
+                  <div class="flex flex-col gap-1" data-testid="series-next-issue-by-hand">
+                    <span class="text-sm font-medium text-fg-title">
+                      {{ 'admin.publications.series.field.nextIssueCreation' | transloco }}
+                    </span>
+                    <p class="text-sm text-fg">
+                      {{ 'admin.publications.series.nextIssueCreation.MANUAL' | transloco }}
+                    </p>
+                    <p class="text-xs text-fg-muted">
+                      {{ 'admin.publications.series.hint.nextIssueByHand' | transloco }}
+                    </p>
+                  </div>
+                }
+              </div>
+
+              @if (oneOff()) {
+                <!-- Locked rather than hidden: "there is no next issue" is a fact worth
+                     reading on the screen where somebody just chose a one-off (S-8). -->
+                <p class="text-xs text-fg-muted">
+                  {{ 'admin.publications.series.hint.oneOff' | transloco }}
+                </p>
+              }
+
+              <!-- The per-language name suggestion. Sits here rather than under Basics
+                   because it is computed from the frequency's interval. -->
+              <div class="flex flex-col gap-2">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.nameSuggestionPattern' | transloco }}
+                </span>
+                <div class="flex flex-col gap-2">
+                  @for (lang of languages(); track lang) {
+                    <app-localized-text-input
+                      [lang]="lang"
+                      [monospace]="true"
+                      [inputId]="'desc-suggest-' + lang"
+                      [value]="descs()[lang].nameSuggestionPattern"
+                      [tokens]="patternTokens()"
+                      (valueChange)="setDescField(lang, 'nameSuggestionPattern', $event)"
+                      ariaLabelKey="admin.publications.series.field.nameSuggestionPattern"
+                    />
+                    @for (
+                      error of errorsFor('descs.' + lang + '.nameSuggestionPattern');
+                      track error.rule
+                    ) {
+                      <p class="text-xs text-danger">
+                        {{ ruleText(error.rule) }}
+                      </p>
+                    }
+                  }
+                </div>
+              </div>
+
+              @if (showFirstIssueStart()) {
+                <div class="flex flex-col gap-1">
+                  <label for="series-first-start" class="text-sm font-medium text-fg-title">
+                    {{ 'admin.publications.series.field.firstIssueStartsAt' | transloco }}
+                  </label>
+                  <!-- An INSTANT, read in the OWNER's timezone — not a calendar
+                       date, and not the zone the admin happens to be sitting in:
+                       a series is scheduled where it is published from. The
+                       seeded values carry a real time of day, so the control
+                       carries one too. With no owner zone there is no wall clock
+                       to show, and the field says so instead of guessing. -->
+                  <app-date-time-field
+                    class="w-full max-w-md"
+                    inputId="series-first-start"
+                    [timeZone]="seriesTimeZone()"
+                    [disabled]="!seriesTimeZone()"
+                    [value]="firstIssueStartsAtValue()"
+                    [showClear]="true"
+                    [clearLabel]="'common.clear' | transloco"
+                    [ariaLabel]="'admin.publications.series.field.firstIssueStartsAt' | transloco"
+                    (valueChange)="setFirstIssueStartsAt($event)"
+                  />
+                  <p class="text-xs text-fg-muted">
+                    {{ 'admin.publications.series.hint.firstIssueStartsAt' | transloco }}
+                  </p>
+                  @if (seriesTimeZone(); as zone) {
+                    <p class="text-xs text-fg-muted">
+                      {{
+                        'admin.publications.series.hint.firstIssueStartsAtZone'
+                          | transloco: { zone: zone }
+                      }}
+                    </p>
+                  } @else if (ownerKnown()) {
+                    <!-- Only once the owner is in hand: an owner that has not arrived yet is
+                         not an owner without a zone, and there is no domain picker here, so
+                         the note names the domain as the place the zone is missing from. -->
+                    <p class="text-xs text-fg-muted">
+                      {{ 'admin.publications.series.hint.domainNoTimeZone' | transloco }}
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          </app-tab-panel>
+
+          <!-- ============================================ 4. Criteria ========== -->
+          <app-tab-panel value="criteria">
+            <div class="flex flex-col gap-4 pt-4">
+              @if (!queryBacked()) {
+                <p class="text-sm text-fg-muted">
+                  {{ 'admin.publications.series.criteria.notQueryBacked' | transloco }}
+                </p>
+              } @else {
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div class="flex flex-col gap-1">
+                    <label for="series-time-relation" class="text-sm font-medium text-fg-title">
+                      {{ 'admin.publications.series.field.timeRelation' | transloco }}
+                    </label>
+                    <select
+                      id="series-time-relation"
+                      class="w-full text-input"
+                      (change)="setFromSelect('timeRelation', $event)"
+                    >
+                      @for (option of timeRelations; track option) {
+                        <option [value]="option" [selected]="value().timeRelation === option">
+                          {{ 'admin.publications.series.timeRelation.' + option | transloco }}
+                        </option>
+                      }
+                    </select>
+                    <!-- One line per regime rather than one for all three: the
+                         choice decides what the rest of this tab even asks, and
+                         the names alone do not say that a compilation reproduces
+                         what other issues printed instead of selecting messages. -->
+                    <p class="text-xs text-fg-muted">
+                      {{
+                        'admin.publications.series.timeRelationHint.' + value().timeRelation
+                          | transloco
+                      }}
+                    </p>
+                    @for (error of errorsFor('timeRelation'); track error.rule) {
+                      <p class="text-xs text-danger">
+                        {{ ruleText(error.rule) }}
+                      </p>
+                    }
+                  </div>
+
+                  <!-- The second cell answers whichever question the regime asks:
+                       which messages are still in force (S-2), or which series is
+                       being compiled (S-24). A compilation asks nothing about
+                       liveness — each source issue judged that at its own
+                       cut-off. -->
+                  @if (compilation()) {
+                    <div class="flex flex-col gap-1">
+                      <label for="series-source" class="text-sm font-medium text-fg-title">
+                        {{ 'admin.publications.series.field.sourceSeriesId' | transloco }}
+                      </label>
+                      <select
+                        id="series-source"
+                        class="w-full text-input"
+                        [class.text-fg-muted]="value().sourceSeriesId === ''"
+                        (change)="setFromSelect('sourceSeriesId', $event)"
+                      >
+                        <option value="" [selected]="value().sourceSeriesId === ''">
+                          {{ 'admin.publications.series.option.noSourceSeries' | transloco }}
+                        </option>
+                        @for (series of sourceSeriesOptions(); track series.seriesId) {
+                          <option
+                            [value]="series.seriesId"
+                            [selected]="value().sourceSeriesId === series.seriesId"
+                          >
+                            {{ seriesName(series) }}
+                          </option>
+                        }
+                      </select>
+                      <p class="text-xs text-fg-muted">
+                        {{ 'admin.publications.series.hint.sourceSeries' | transloco }}
+                      </p>
+                      @for (error of errorsFor('sourceSeriesId'); track error.rule) {
+                        <p class="text-xs text-danger">
+                          {{ ruleText(error.rule) }}
+                        </p>
+                      }
+                    </div>
+                  } @else {
+                    <label class="flex items-start gap-2 text-sm sm:items-end sm:pb-2">
+                      <input
+                        type="checkbox"
+                        class="checkbox mt-0.5 sm:mt-0"
+                        [checked]="effectiveAliveAtCutoff()"
+                        [disabled]="livenessForced()"
+                        (change)="setChecked('aliveAtCutoff', $event)"
+                      />
+                      <span>
+                        {{ 'admin.publications.series.field.aliveAtCutoff' | transloco }}
+                        @if (livenessForced()) {
+                          <span class="block text-xs text-fg-muted">
+                            {{ 'admin.publications.series.hint.aliveAtCutoffForced' | transloco }}
+                          </span>
+                        }
+                      </span>
+                    </label>
+                  }
+                </div>
+
+                @if (showCriteria()) {
+                  <!-- Probed with the liveness flag AS SENT (S-3 forces it on for an
+                       in-force series), or the preview answers for a series that
+                       will never be saved — over the whole corpus rather than over
+                       what is still in force. -->
+                  <app-series-criteria-editor
+                    [active]="activeTab() === 'criteria'"
+                    [criteria]="criteria()"
+                    [timeRelation]="value().timeRelation"
+                    [aliveAtCutoff]="effectiveAliveAtCutoff()"
+                    [intervalFrom]="previewFrom()"
+                    [cutoff]="previewCutoff()"
+                    (criteriaChange)="onCriteriaChange($event)"
+                  />
+                } @else {
+                  <!-- There is no predicate to probe: what a compilation will
+                       contain is decided by the source series' own published
+                       issues, and the issue screen lists them once it has a
+                       period to compile. -->
+                  <p class="text-sm text-fg-muted">
+                    {{ 'admin.publications.series.criteria.compiled' | transloco }}
+                  </p>
+                }
+              }
+            </div>
+          </app-tab-panel>
+        </app-tab-panels>
+      </app-tabs>
+
+      <!--
+        Every rule the server reports, in one place. Field-level copies render
+        beside their inputs; this catches the ones whose field has no control on
+        screen, which would otherwise be invisible.
+
+        Each row names the FIELD in the reader's language, then says why the rule
+        refused — also in their language, keyed on the rule's id. The server's own
+        sentence is not shown: it is English prose, and pasting it into a Danish
+        UI is the defect the section's error mapping exists to avoid. The id
+        follows the sentence, because it is what an operator quotes.
+      -->
+      @if (validation(); as errors) {
+        @if (errors.length > 0) {
+          <div class="rounded border border-surface-200 dark:border-surface-700" role="alert">
+            <div
+              class="flex items-center gap-2 border-b border-surface-200 bg-surface-sunken px-3 py-2 text-sm font-medium text-danger dark:border-surface-700"
+            >
+              <app-icon name="lucideTriangleAlert" class="text-xs" />
+              {{
+                'admin.publications.series.editor.rulesFail' | transloco: { count: errors.length }
+              }}
+            </div>
+            <ul class="flex flex-col gap-1 p-3">
+              @for (error of errors; track error.rule + error.field) {
+                <li class="text-xs text-fg">
+                  <span class="mr-1 font-medium">{{ fieldLabel(error) }}</span>
+                  {{ ruleText(error.rule) }}
+                </li>
+              }
+            </ul>
+          </div>
+        } @else {
+          <p class="flex items-center gap-2 text-sm text-fg-muted">
+            <app-icon name="lucideCheck" class="text-xs" />
+            {{ 'admin.publications.series.editor.rulesPass' | transloco }}
+          </p>
+        }
+      }
+
+      <!-- Hidden submit makes Enter in any field submit the form (gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!--
+    Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+    select()ed one — nested here, the buttons would render in the body.
+
+    Three actions and no more. Activating a series, taking it out of use and
+    putting it back are things done TO a series rather than settings on it: they
+    change what other people see, they are not part of the edit being saved, and
+    a settings drawer that also performs them makes "Cancel" mean two different
+    things. They live in the series page's own menu.
+  -->
+  <!--
+    The row wraps rather than squeezing: `mr-auto` on the check keeps it left and
+    `justify-end` holds Cancel/Save right, so when the footer runs out of width
+    the pieces drop onto a second line instead of overlapping.
+  -->
+  <div drawerFooter class="flex w-full flex-wrap items-center justify-end gap-2">
+    <button
+      type="button"
+      class="link-button mr-auto"
+      [disabled]="validating()"
+      (click)="validate()"
+    >
+      {{ 'admin.publications.series.editor.validate' | transloco }}
+    </button>
+    <!--
+      A series is created into the desk being worked at, so an admin sitting at
+      none has nothing to create it into. Said beside the button rather than left
+      as a Save that never lights up. Too narrow for that, it takes the row above
+      the buttons instead of pushing them off the edge.
+    -->
+    @if (noSessionDomain()) {
+      <span class="order-first w-full text-xs text-warning sm:order-none sm:w-auto">
+        {{ 'admin.publications.series.hint.noSessionDomain' | transloco }}
+      </span>
+    }
+    <button type="button" class="btn-secondary" (click)="drawerRef.requestClose()">
+      {{ 'admin.publications.series.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ saveLabelKey() | transloco }}
+    </button>
+  </div>
+</app-drawer>

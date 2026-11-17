@@ -1,0 +1,42 @@
+<div class="ed-row" [class.open]="showEditor()" [class.invalid]="invalid()">
+  <div
+    #rowHead
+    class="ed-row-head"
+    tabindex="-1"
+    [class.interactive]="isEditor()"
+    [attr.role]="isEditor() ? 'button' : null"
+    [attr.aria-expanded]="isEditor() ? showEditor() : null"
+    (click)="onClick()"
+    (keydown)="onKeydown($event)"
+  >
+    <div class="ed-row-label">
+      @if (edited()) {
+        <span class="ed-row-dot" aria-hidden="true"></span>
+      }
+      <span>{{ label() | transloco }}</span>
+      @if (required()) {
+        <span class="ed-row-req" aria-hidden="true">*</span>
+      }
+    </div>
+
+    @if (showEditor()) {
+      <div class="ed-row-val editing">{{ 'editor.row.editing' | transloco }}</div>
+    } @else if (empty()) {
+      <div class="ed-row-val empty">{{ emptyLabel() | transloco }}</div>
+    } @else {
+      <div class="ed-row-val"><ng-content select="[fieldViewer]" /></div>
+    }
+
+    <div class="ed-row-pen" aria-hidden="true">
+      @if (isEditor()) {
+        <app-icon name="lucidePencil" />
+      }
+    </div>
+  </div>
+
+  @if (showEditor()) {
+    <div class="ed-row-editor">
+      <ng-content select="[fieldEditor]" />
+    </div>
+  }
+</div>

@@ -1,0 +1,51 @@
+@if (mode() === 'source') {
+  <!-- Inline full-size rendering (details view, display ABOVE/BELOW): the actual
+       image/video at its authored width/height, italic caption below. -->
+  <figure class="m-0 flex flex-col gap-1">
+    @if (fileUrl()) {
+      @if (isVideo()) {
+        <video
+          controls
+          class="max-w-full"
+          [style.width]="sourceWidth()"
+          [style.height]="sourceHeight()"
+        >
+          <source [src]="fileUrl()" [type]="attachment().type" />
+        </video>
+      } @else {
+        <img
+          [src]="fileUrl()"
+          [alt]="displayLabel()"
+          class="max-w-full"
+          [style.width]="sourceWidth()"
+          [style.height]="sourceHeight()"
+        />
+      }
+    }
+    @if (caption()) {
+      <figcaption class="text-xs italic text-fg-muted">{{ caption() }}</figcaption>
+    }
+  </figure>
+} @else {
+  <div class="flex flex-col items-center gap-1">
+    @if (thumbnailUrl()) {
+      <button
+        type="button"
+        class="cursor-pointer border-0 bg-transparent p-0"
+        [title]="displayLabel()"
+        (click)="onClick()"
+      >
+        <img
+          [src]="thumbnailUrl()"
+          [alt]="displayLabel()"
+          class="rounded border border-surface-200"
+        />
+      </button>
+    }
+    @if (displayLabel()) {
+      <span class="text-xs text-surface-600 dark:text-surface-400 max-w-32 truncate">
+        {{ displayLabel() }}
+      </span>
+    }
+  </div>
+}

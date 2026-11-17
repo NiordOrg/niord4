@@ -1,0 +1,19 @@
+# Deployment-specific configuration only. The generic Niord framework defaults live in the
+# niord-base library (config/niord-core-defaults.yml), added at the lowest property-source
+# precedence by NiordCoreDefaultsEnvironmentPostProcessor — everything in this file (and env
+# vars, command-line args and profile files) overrides them.
+#
+# This deployable is deliberately thin: it is the demo application, not a country (the S-124
+# opt-out, the owner 2026-11-01). A country deployable's application.yml sets niord.s124.producer-code,
+# the IHO S-62 producer code every S-124 dataset carries, and niord.s124.enabled: true. The
+# generic app has no producer code, so it switches S-124 off: no /rest/S-124 and no S-124
+# datasets, and SECOM stays off (it needs S-124). The automatic cancellation warning still
+# applies. It has no settings file of its own either: it runs on the base product's values,
+# among them the neutral country XX and organisation Niord.
+spring:
+  application:
+    name: niord
+
+niord:
+  s124:
+    enabled: false

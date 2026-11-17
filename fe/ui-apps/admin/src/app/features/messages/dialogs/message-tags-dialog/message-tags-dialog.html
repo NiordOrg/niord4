@@ -1,0 +1,352 @@
+<app-drawer
+  [visible]="dialog.visible()"
+  (closed)="onClose()"
+  [dirty]="dirty()"
+  size="wide"
+  header="messages.tags.dialog.header"
+>
+  <div class="flex flex-col gap-3">
+    <!-- Filter row: name + type chips + help + (logged-in) "New Tag" -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Filtering/sorting is frozen while a row is being edited: a changed
+           result set could hide the open inline editor, stranding the draft. -->
+      <input
+        type="text"
+        class="w-48 shrink-0 text-input"
+        [placeholder]="'messages.tags.dialog.filter.namePlaceholder' | transloco"
+        [attr.aria-label]="'messages.tags.dialog.filter.namePlaceholder' | transloco"
+        [value]="filterName()"
+        [disabled]="dirty()"
+        (input)="onFilterNameChange($any($event.target).value)"
+      />
+      <app-tag-scope-select
+        class="shrink-0"
+        [value]="filterTypes()"
+        [disabled]="dirty()"
+        (valueChange)="onTypeChipsChange($event)"
+      />
+      <app-help-anchor section="message-tags" />
+      @if (isLoggedIn()) {
+        <button
+          type="button"
+          class="btn-primary text-sm ml-auto shrink-0"
+          [disabled]="dirty()"
+          (click)="addTag()"
+        >
+          <app-icon name="lucidePlus" />
+          <span>{{ 'messages.tags.dialog.newTag' | transloco }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Sortable table with inline-row editing -->
+    <table class="niord-table w-full text-xs">
+      <thead>
+        <tr>
+          <th
+            [attr.aria-sort]="
+              sortIndicator('NAME') === 'asc'
+                ? 'ascending'
+                : sortIndicator('NAME') === 'desc'
+                  ? 'descending'
+                  : 'none'
+            "
+          >
+            <button
+              type="button"
+              (click)="toggleSort('NAME')"
+              class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0"
+            >
+              {{ 'messages.tags.dialog.column.tag' | transloco }}
+              @if (sortIndicator('NAME') === 'asc') {
+                <app-icon name="lucideArrowUp" />
+              } @else if (sortIndicator('NAME') === 'desc') {
+                <app-icon name="lucideArrowDown" />
+              }
+            </button>
+          </th>
+          <th
+            class="whitespace-nowrap"
+            [attr.aria-sort]="
+              sortIndicator('TYPE') === 'asc'
+                ? 'ascending'
+                : sortIndicator('TYPE') === 'desc'
+                  ? 'descending'
+                  : 'none'
+            "
+          >
+            <button
+              type="button"
+              (click)="toggleSort('TYPE')"
+              class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0"
+            >
+              {{ 'messages.tags.dialog.column.type' | transloco }}
+              @if (sortIndicator('TYPE') === 'asc') {
+                <app-icon name="lucideArrowUp" />
+              } @else if (sortIndicator('TYPE') === 'desc') {
+                <app-icon name="lucideArrowDown" />
+              }
+            </button>
+          </th>
+          <th
+            class="whitespace-nowrap"
+            [attr.aria-sort]="
+              sortIndicator('CREATED') === 'asc'
+                ? 'ascending'
+                : sortIndicator('CREATED') === 'desc'
+                  ? 'descending'
+                  : 'none'
+            "
+          >
+            <button
+              type="button"
+              (click)="toggleSort('CREATED')"
+              class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0"
+            >
+              {{ 'messages.tags.dialog.column.created' | transloco }}
+              @if (sortIndicator('CREATED') === 'asc') {
+                <app-icon name="lucideArrowUp" />
+              } @else if (sortIndicator('CREATED') === 'desc') {
+                <app-icon name="lucideArrowDown" />
+              }
+            </button>
+          </th>
+          <th
+            class="whitespace-nowrap"
+            [attr.aria-sort]="
+              sortIndicator('EXPIRY_DATE') === 'asc'
+                ? 'ascending'
+                : sortIndicator('EXPIRY_DATE') === 'desc'
+                  ? 'descending'
+                  : 'none'
+            "
+          >
+            <button
+              type="button"
+              (click)="toggleSort('EXPIRY_DATE')"
+              class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0"
+            >
+              {{ 'messages.tags.dialog.column.expiryDate' | transloco }}
+              @if (sortIndicator('EXPIRY_DATE') === 'asc') {
+                <app-icon name="lucideArrowUp" />
+              } @else if (sortIndicator('EXPIRY_DATE') === 'desc') {
+                <app-icon name="lucideArrowDown" />
+              }
+            </button>
+          </th>
+          <th
+            class="text-right whitespace-nowrap"
+            [attr.aria-sort]="
+              sortIndicator('MESSAGE_COUNT') === 'asc'
+                ? 'ascending'
+                : sortIndicator('MESSAGE_COUNT') === 'desc'
+                  ? 'descending'
+                  : 'none'
+            "
+          >
+            <button
+              type="button"
+              (click)="toggleSort('MESSAGE_COUNT')"
+              class="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0"
+            >
+              {{ 'messages.tags.dialog.column.messageCount' | transloco }}
+              @if (sortIndicator('MESSAGE_COUNT') === 'asc') {
+                <app-icon name="lucideArrowUp" />
+              } @else if (sortIndicator('MESSAGE_COUNT') === 'desc') {
+                <app-icon name="lucideArrowDown" />
+              }
+            </button>
+          </th>
+          @if (isLoggedIn()) {
+            <th class="text-right whitespace-nowrap">
+              {{ 'messages.tags.dialog.column.action' | transloco }}
+            </th>
+          }
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (tag of tableValue(); track tag.tagId) {
+          @if (isEditingRow(tag)) {
+            <!-- Inline editor row (new / duplicate / edit-in-place) -->
+            <tr class="bg-surface-50 dark:bg-surface-800">
+              <td>
+                <input
+                  type="text"
+                  class="w-full text-input"
+                  [formField]="form.name"
+                  [placeholder]="'messages.tags.dialog.edit.nameLabel' | transloco"
+                  [attr.aria-label]="'messages.tags.dialog.edit.nameLabel' | transloco"
+                />
+              </td>
+              <td>
+                <div
+                  class="seg"
+                  role="group"
+                  data-testid="tag-edit-type"
+                  [attr.aria-describedby]="canChangeType() ? null : 'tag-edit-type-hint'"
+                >
+                  @for (opt of typeOptions(); track opt.value) {
+                    <button
+                      type="button"
+                      class="seg-btn text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      [class.is-active]="editingType() === opt.value"
+                      [disabled]="!canChangeType()"
+                      (click)="setTagType(opt.value)"
+                    >
+                      <app-icon
+                        [name]="opt.icon"
+                        [attr.aria-label]="opt.label"
+                        [attr.title]="opt.label"
+                      />
+                    </button>
+                  }
+                </div>
+                @if (!canChangeType()) {
+                  <p
+                    id="tag-edit-type-hint"
+                    class="mt-1 max-w-48 text-xs text-surface-500"
+                    data-testid="tag-edit-type-hint"
+                  >
+                    {{ 'messages.tags.dialog.edit.typeAdminOnly' | transloco }}
+                  </p>
+                }
+              </td>
+              <td class="whitespace-nowrap">{{ formatDate(tag.created) }}</td>
+              <td>
+                <app-date-picker
+                  class="w-40"
+                  [formField]="form.expiryDate"
+                  [showClear]="true"
+                  [clearLabel]="'common.clear' | transloco"
+                  [placeholder]="'messages.tags.dialog.edit.expiryDateLabel' | transloco"
+                  [ariaLabel]="'messages.tags.dialog.edit.expiryDateLabel' | transloco"
+                />
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <label for="tag-edit-locked" class="inline-flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    id="tag-edit-locked"
+                    class="checkbox"
+                    [formField]="form.locked"
+                  />
+                  <span class="text-surface-500">{{
+                    'messages.tags.dialog.edit.lockedLabel' | transloco
+                  }}</span>
+                </label>
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [title]="'messages.tags.dialog.edit.cancel' | transloco"
+                  (click)="cancelEdit()"
+                >
+                  <app-icon name="lucideX" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [disabled]="saveDisabled()"
+                  [title]="'messages.tags.dialog.edit.save' | transloco"
+                  (click)="saveTag()"
+                >
+                  <app-icon name="lucideCheck" />
+                </button>
+              </td>
+            </tr>
+          } @else {
+            <tr>
+              <td>{{ tag.name }}</td>
+              <td>
+                <span class="inline-flex items-center gap-1">
+                  <app-icon [name]="iconForType(tag.type)" />
+                  <span>{{ tag.type | lowercase }}</span>
+                </span>
+              </td>
+              <td class="whitespace-nowrap">{{ formatDate(tag.created) }}</td>
+              <td class="whitespace-nowrap">{{ formatDate(tag.expiryDate) }}</td>
+              <td class="text-right">
+                <span>{{ tag.messageCount }}</span>
+                @if (isLoggedIn() && !tag.locked && tag.messageCount > 0) {
+                  <button
+                    type="button"
+                    class="ml-2 link-button"
+                    [disabled]="dirty()"
+                    (click)="clearTagMessages(tag)"
+                  >
+                    {{ 'messages.tags.dialog.action.clear' | transloco }}
+                  </button>
+                } @else if (isLoggedIn()) {
+                  <span class="ml-2 text-surface-400">{{
+                    'messages.tags.dialog.action.clear' | transloco
+                  }}</span>
+                }
+              </td>
+              @if (isLoggedIn()) {
+                <td class="text-right whitespace-nowrap">
+                  @if (tag.locked) {
+                    @if (canUnlock()) {
+                      <button
+                        type="button"
+                        class="icon-button text-xs"
+                        [disabled]="dirty()"
+                        [title]="'messages.tags.dialog.action.unlock' | transloco"
+                        (click)="unlockTag(tag)"
+                      >
+                        <app-icon name="lucideLock" />
+                      </button>
+                    } @else {
+                      <app-icon
+                        name="lucideLock"
+                        class="px-3 text-surface-400"
+                        [title]="'messages.tags.dialog.edit.lockedLabel' | transloco"
+                      />
+                    }
+                  } @else {
+                    <button
+                      type="button"
+                      class="icon-button text-xs"
+                      [disabled]="dirty()"
+                      [title]="'messages.tags.dialog.action.edit' | transloco"
+                      (click)="editTag(tag)"
+                    >
+                      <app-icon name="lucidePencil" />
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-button text-xs"
+                      [disabled]="dirty()"
+                      [title]="'messages.tags.dialog.action.copy' | transloco"
+                      (click)="copyTag(tag)"
+                    >
+                      <app-icon name="lucideCopy" />
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-button text-xs"
+                      [disabled]="dirty()"
+                      [title]="'messages.tags.dialog.action.delete' | transloco"
+                      (click)="deleteTag(tag)"
+                    >
+                      <app-icon name="lucideTrash2" />
+                    </button>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        } @empty {
+          <tr>
+            <td [attr.colspan]="isLoggedIn() ? 6 : 5" class="text-center text-surface-500 py-4">
+              {{ 'messages.tags.dialog.noResults' | transloco }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</app-drawer>
+
+<app-confirm />

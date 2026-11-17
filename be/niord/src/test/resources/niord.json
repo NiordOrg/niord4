@@ -1,0 +1,203 @@
+[
+  {
+    "key"         : "niord.home",
+    "description" : "The root directory for the Niord application",
+    "value"       : "${NIORD_HOME}",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "baseUri",
+    "description" : "The base application server URI",
+    "value"       : "http://localhost:8888",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "authServerUrl",
+    "description" : "The Keycloak URL",
+    "value"       : "http://localhost:8080/auth",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "documentationUrl",
+    "description" : "The URL template to the documentation site",
+    "value"       : "http://docs.niord.org",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "modelLanguages",
+    "description" : "The default message model languages",
+    "value"       : [ "da", "en" ],
+    "type"        : "json",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "siteLanguages",
+    "description" : "The languages of the website",
+    "value"       : [ "da", "en" ],
+    "type"        : "json",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "mode",
+    "description" : "The Niord execution mode, either 'development', 'test' or 'production'.",
+    "value"       : "production",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "infoSiteLanguages",
+    "description" : "The languages of the public niord-info website",
+    "value"       : [ "da", "en" ],
+    "type"        : "json",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "infoDefaultLanguage",
+    "description" : "The default language of the public niord-info website",
+    "value"       : "da",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "editorFieldsBase",
+    "description" : "The base set of editor fields to display in the message editor",
+    "value"       : { "type": true, "orig_info": false, "id": true, "title": true, "references": true, "publish_date": true,
+                      "areas": true, "categories": true, "positions": true, "charts": false, "event_dates": false, "subject": true,
+                      "description": true, "attachments": false, "publication": true, "source": false,
+                      "part_types": false, "prohibition": false, "signals": false, "layout" : false },
+    "type"        : "json",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "editorFieldsNw",
+    "description" : "The additional set of editor fields to display for NW messages",
+    "value"       : { },
+    "type"        : "json",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "editorFieldsNm",
+    "description" : "The additional set of editor fields to display for NM messages",
+    "value"       : { "orig_info": true, "references": true, "attachments": true, "charts": true,
+                      "event_dates": true, "source": true, "part_types": true, "layout" : true },
+    "type"        : "json",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "stdTemplateFields",
+    "description" : "The possible set of standard message fields to display when executing a template",
+    "value"       : [ "type", "promulgation", "id", "publish_date", "areas", "positions", "event_dates", "work_vessel", "markings" ],
+    "type"        : "json",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "mapDefaultZoomLevel",
+    "description" : "Default zoom level to use for maps",
+    "value"       : 6,
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "mapDefaultLatitude",
+    "description" : "Default latitude to use for maps",
+    "value"       : 56,
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "mapDefaultLongitude",
+    "description" : "Default longitude to use for maps",
+    "value"       : 11,
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "wmsLayerEnabled",
+    "description" : "Whether or not to display the WMS layer in maps",
+    "value"       : true,
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "wmsProvider",
+    "description" : "The WMS provider",
+    "value"       : "http://kortforsyningen.kms.dk/",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "wmsServiceName",
+    "description" : "The WMS service name",
+    "value"       : "soe_enc",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "wmsLogin",
+    "description" : "The WMS login",
+    "value"       : "TO_BE_DEFINED",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "wmsPassword",
+    "description" : "The WMS password",
+    "value"       : "TO_BE_DEFINED",
+    "type"        : "Password",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "wmsLayers",
+    "description" : "The WMS layers",
+    "value"       : "",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "openSeaMapLayerEnabled",
+    "description" : "Whether or not to display the OpenSeaMap layer in maps",
+    "value"       : false,
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "osmUrl",
+    "description" : "Base map tile URL with {z}, {x} and {y}: the web maps and, without a range such as {a-c}, the message map images. Use https from a host that sends CORS headers; a range only in the first host label. Another host: update the public site's cookie statement.",
+    "value"       : "http://127.0.0.1:9/{z}/{x}/{y}.png",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "openSeaMapUrl",
+    "description" : "Tile URL of the OpenSeaMap sea-mark layer of the web maps, with {z}, {x} and {y}. Use https from a host that sends CORS headers; a range such as {a-c} only in the first host label.",
+    "value"       : "http://127.0.0.1:9/{z}/{x}/{y}.png",
+    "web"         : true,
+    "editable"    : true
+  },
+  {
+    "key"         : "mapTileContact",
+    "description" : "E-mail address or URL that the backend names in the User-Agent of its map tile requests, so that the tile server can reach this deployment. Empty: the baseUri.",
+    "value"       : "",
+    "web"         : false,
+    "editable"    : true
+  },
+  {
+    "key"         : "disableLucene",
+    "description" : "Use the experimental PostgreSQL free-text message search instead of the Lucene index",
+    "value"       : false,
+    "web"         : false,
+    "editable"    : true
+  }
+]

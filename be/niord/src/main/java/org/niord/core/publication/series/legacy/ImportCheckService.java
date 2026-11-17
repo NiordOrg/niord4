@@ -1,0 +1,767 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series.legacy;
+
+import org.springframework.stereotype.Service;
+import jakarta.inject.Inject;
+import org.niord.core.mailinglist.MailingListTrigger;
+import org.niord.core.publication.vo.PublicationStatus;
+import org.niord.core.publication.series.IssueListService;
+import org.niord.core.publication.series.IssueMember;
+import org.niord.core.publication.series.IssueStatus;
+import org.niord.core.publication.series.MemberSource;
+import org.niord.core.publication.series.PublicWindowSource;
+import org.niord.core.publication.series.PublicationIssue;
+import org.niord.core.publication.series.PublicationSeries;
+import org.niord.core.publication.series.SeriesCadence;
+import org.niord.core.publication.series.SeriesKind;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.series.vo.IssueListResultVo;
+import org.niord.core.service.BaseService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+/**
+ * The assertions that must hold over the imported archive, and the audit that
+ * must be READ alongside them.
+ *
+ * Run against the imported estate, not against a fixture. Everything here is
+ * about the shape of ~1,077 real rows, and a fixture of three cannot be wrong in
+ * the ways this is looking for.
+ *
+ * These checks are the go/no-go of the go-live window. Every one of them names a
+ * defect that reaches the public site the moment an imported issue is published,
+ * and by then the only way back is a database restore -- so a violation is a
+ * refusal to proceed, not a warning to note down.
+ */
+@Service
+public class ImportCheckService extends BaseService {
+
+    private static final Logger log = LoggerFactory.getLogger(ImportCheckService.class);
+
+
+    /**
+     * A tag named the way the weekly convention names them.
+     *
+     * nm-w27-2026, nm-pt-w27-2026, and the double-week forms the estate also
+     * carries.
+     *
+     * NOT anchored on "tag=". Twelve of the fifteen live triggers express
+     * themselves in messageFilter, which is a script expression -- a tag appears
+     * there quoted, not as a query parameter. Anchoring on tag= was how the first
+     * version of this audit came back clean having read a fifth of the triggers.
+     *
+     * Matched loosely on purpose: a miss is a mailing list that silently stops
+     * going out, a false positive is one line for somebody to dismiss.
+     */
+    private static final Pattern WEEKLY_TAG = Pattern.compile(
+            "(nm-(?:pt-)?w\\d{1,2}(?:-\\d{1,2})?-\\d{4})", Pattern.CASE_INSENSITIVE);
+
+    /** One thing that is wrong, named so somebody can act on it. */
+    public record Violation(String code, String subject, String detail) {
+    }
+
+    /**
+     * What the rehearsal checklist reads about ONE series, in one row.
+     *
+     * Separate rows of the checklist ask about the same series -- how many
+     * periods the archive is missing, and what kind of publication it is -- and
+     * answering them from two places is how a sheet gets ticked from two
+     * different moments. One row, one request.
+     *
+     * NONE OF IT IS A VIOLATION. A gap is a fact about the archive that predates
+     * this system, and folding it into `clear` would stop the check passing on an
+     * estate that is in exactly the state everybody expects.
+     */
+    public record SeriesRow(String seriesId, String status, String kind,
+                            Integer gapCount, boolean gapDetectionEnabled, String gapReasonCode) {
+    }
+
+    /** What the check found. No violations means the import may proceed. */
+    public record ImportCheck(List<Violation> violations, List<TriggerHit> triggerAudit,
+                              Map<String, Integer> counts, Map<String, SeriesRow> series) {
+
+        public boolean isClear() {
+            return violations.isEmpty();
+        }
+    }
+
+    /** A mailing-list trigger that names a weekly tag by hand. */
+    public record TriggerHit(String mailingListId, String triggerType, String field,
+                             String matchedTag, String expression) {
+    }
+
+    /** Runs every assertion and the audit. Reads only. */
+    public ImportCheck run() {
+        List<Violation> violations = new ArrayList<>();
+        Map<String, Integer> counts = new LinkedHashMap<>();
+
+        List<PublicationIssue> imported = em.createQuery(
+                        "SELECT i FROM PublicationIssue i WHERE i.legacyPublicationId IS NOT NULL",
+                        PublicationIssue.class)
+                .getResultList();
+        counts.put("importedIssues", imported.size());
+
+        assertEverySeriesHasAnOwner(violations, counts);
+        assertOneCurrentIssuePerSeries(imported, violations, counts);
+        assertCadencedIssuesDeriveTheirWindow(imported, violations);
+        assertUnpublishedIssuesCarryNoStamp(imported, violations, counts);
+        reportUnstampedReleasedIssues(imported, withdrawnLegacyIds(imported), violations, counts);
+        countCompilationIssuesCreated(counts);
+        reportMembersPublishedAfterTheirIssue(loadImportedMembers(), violations, counts);
+        assertIdSpaceDoesNotCollide(violations, counts);
+        assertMembershipIsUnique(violations, counts);
+
+        List<TriggerHit> audit = auditTriggers();
+        counts.put("triggersNamingAWeeklyTag", audit.size());
+
+        Map<String, SeriesRow> series = describeSeries(counts, new Date());
+
+        log.info("import check: {} violation(s), {} trigger(s) naming a weekly tag, "
+                        + "{} series described", violations.size(), audit.size(), series.size());
+        return new ImportCheck(violations, audit, counts, series);
+    }
+
+    /**
+     * The per-series sheet: the missing periods, and the kind.
+     *
+     * Several rows of the rehearsal checklist read these, and they were
+     * previously answerable only by calling other endpoints and counting rows. A
+     * checklist ticked from three moments is a checklist that can be ticked
+     * against three different states of the estate.
+     *
+     * The gap count is the ISSUE LIST'S OWN, computed by the same builder the
+     * list uses rather than by a second walk over the intervals. That matters more
+     * than the duplication it saves: the coverage rule -- a double-week issue
+     * leaves nothing uncovered, an OPEN newest issue suppresses the rows after it
+     * -- is the whole reason the numbers on the sheet and the rows on the screen
+     * ever agreed, and a second implementation of it is a second answer.
+     *
+     * Absent, not zero, where gap detection did not run: a closed gate is the
+     * absence of a finding, and reporting it as "0 gaps" claims something nobody
+     * checked. The reason code travels beside it so the sheet says which.
+     */
+    private Map<String, SeriesRow> describeSeries(Map<String, Integer> counts, Date now) {
+        List<PublicationSeries> all = em.createNamedQuery(
+                        "PublicationSeries.findAllOrdered", PublicationSeries.class)
+                .getResultList();
+
+        // One query for every issue, grouped in memory, rather than one per
+        // series: the estate is ~1,100 issues over ~50 series, and the check is
+        // run inside the go-live window where a minute of round trips is a minute
+        // nobody has.
+        Map<String, List<PublicationIssue>> issuesBySeries = new LinkedHashMap<>();
+        for (PublicationIssue i : em.createQuery(
+                        "SELECT i FROM PublicationIssue i ORDER BY "
+                                + "COALESCE(i.cutoffStampedAt, i.intervalTo) DESC NULLS LAST, i.publicId DESC",
+                        PublicationIssue.class).getResultList()) {
+            if (i.getSeries() != null) {
+                issuesBySeries.computeIfAbsent(i.getSeries().getSeriesId(), k -> new ArrayList<>()).add(i);
+            }
+        }
+
+        Map<String, SeriesRow> out = new LinkedHashMap<>();
+        Map<String, Integer> kinds = new LinkedHashMap<>();
+        for (SeriesKind kind : SeriesKind.values()) {
+            // Every kind is named whether or not the estate has one. A kind absent
+            // from the report and a kind with no series read alike on a sheet, and
+            // the estate-shape row is ticked by comparing the three numbers
+            // against expected ones.
+            kinds.put(kind.name(), 0);
+        }
+        int totalGaps = 0;
+
+        for (PublicationSeries s : all) {
+            IssueListResultVo list = IssueListService.build(s,
+                    issuesBySeries.getOrDefault(s.getSeriesId(), List.of()), now);
+
+            SeriesKind kind = s.getKind() == null ? SeriesKind.SCHEDULED : s.getKind();
+            kinds.merge(kind.name(), 1, Integer::sum);
+            if (list.getGapCount() != null) {
+                totalGaps += list.getGapCount();
+            }
+
+            out.put(s.getSeriesId(), new SeriesRow(
+                    s.getSeriesId(),
+                    s.getStatus() == null ? null : s.getStatus().name(),
+                    kind.name(),
+                    list.getGapCount(),
+                    list.getGapDetection() != null && list.getGapDetection().isEnabled(),
+                    list.getGapDetection() == null ? null : list.getGapDetection().getReasonCode()));
+        }
+
+        counts.put("series", all.size());
+        kinds.forEach((kind, n) -> counts.put("seriesOfKind" + kind, n));
+        counts.put("uncoveredPeriods", totalGaps);
+        return out;
+    }
+
+    /**
+     * One message is in one issue once, and one override names it once.
+     *
+     * The data model specifies both as UNIQUE constraints and neither exists in
+     * the schema. Adding a unique constraint to a populated table is a claim about
+     * the DATA, not the schema: one duplicate and the ALTER fails and takes the
+     * deploy with it. So the claim is measured here first, over the whole estate,
+     * on the checklist an admin already runs before the import.
+     *
+     * Counted rather than only flagged, because zero is the finding. "No
+     * duplicates" is what licenses the constraint; a count of zero says the
+     * question was asked, where a missing violation could equally mean nobody
+     * looked.
+     *
+     * A duplicate is a real defect independently of the constraint: two rows for
+     * one message in one issue print it twice in the report, and the member count
+     * an editor reads disagrees with what comes out.
+     */
+    /**
+     * Every publication names the desk that owns it.
+     *
+     * A VIOLATION, not a note, and the count must read zero before the import.
+     * The owner decides three things at once -- which admin list the publication
+     * appears on, who may change it, and the timezone its cut-offs are reckoned in
+     * -- so a row without one is a publication nobody is responsible for whose
+     * schedule is read in whatever zone the server happens to be set to, and
+     * whose published issues reach the public site on that unowned schedule.
+     *
+     * Counted even when it is zero. An absent number and a number that is zero
+     * read alike on a checklist, and this is a line somebody ticks.
+     */
+    private void assertEverySeriesHasAnOwner(List<Violation> violations, Map<String, Integer> counts) {
+        reportOwnerless(em.createQuery(
+                        "SELECT s.seriesId FROM PublicationSeries s WHERE s.domain IS NULL",
+                        String.class)
+                .getResultList(), violations, counts);
+    }
+
+    /** The wire code for a publication that belongs to no domain. */
+    public static final String SERIES_WITHOUT_OWNER = "SERIES_WITHOUT_OWNER";
+
+    /** The counts key the checklist reads, whatever the number turns out to be. */
+    public static final String OWNERLESS_COUNT = "seriesWithoutOwner";
+
+    /**
+     * The finding, separated from the query that feeds it.
+     *
+     * SO IT CAN BE ASSERTED AT ALL. The owner is mapped @ManyToOne(optional =
+     * false) over a @JoinColumn(name = "domain_id", nullable = false), so the
+     * column is NOT NULL in whatever changeset creates it -- and it has to be,
+     * because Hibernate runs with ddl-auto: validate and would refuse to start
+     * against a schema that disagreed. The real query can therefore
+     * only ever return an empty list, and a test driving the whole pass
+     * would assert that zero findings look right. That is a test of nothing. What
+     * matters is the shape of a finding when there IS one: the code a checklist
+     * greps for, the key the count lives under, and a message that tells whoever
+     * reads it what to do. Those are asserted here with the count supplied.
+     *
+     * Package-visible rather than public: this is a seam for the test, not a
+     * second way to raise a violation.
+     */
+    static void reportOwnerless(List<String> ownerlessSeriesIds,
+                                List<Violation> violations, Map<String, Integer> counts) {
+        counts.put(OWNERLESS_COUNT, ownerlessSeriesIds.size());
+        for (String seriesId : ownerlessSeriesIds) {
+            violations.add(new Violation(SERIES_WITHOUT_OWNER, seriesId,
+                    "the publication names no domain. Every publication belongs to exactly one -- "
+                            + "the desk that lists and administers it, and the only source of the "
+                            + "timezone its cut-offs are read in. Assign one before the import."));
+        }
+    }
+
+    private void assertMembershipIsUnique(List<Violation> violations, Map<String, Integer> counts) {
+        List<Object[]> memberDupes = em.createQuery(
+                        "SELECT m.issue.id, m.messageUid, COUNT(m) FROM IssueMember m "
+                                + "GROUP BY m.issue.id, m.messageUid HAVING COUNT(m) > 1",
+                        Object[].class)
+                .getResultList();
+        counts.put("duplicateMemberships", memberDupes.size());
+
+        for (Object[] row : memberDupes) {
+            violations.add(new Violation("X2_DUPLICATE_MEMBERSHIP", String.valueOf(row[0]),
+                    "message " + row[1] + " is a member of this issue " + row[2] + " times. It "
+                            + "prints twice, and the member count disagrees with the document."));
+        }
+
+        List<Object[]> overrideDupes = em.createQuery(
+                        "SELECT o.issue.id, o.messageUid, COUNT(o) FROM IssueOverride o "
+                                + "GROUP BY o.issue.id, o.messageUid HAVING COUNT(o) > 1",
+                        Object[].class)
+                .getResultList();
+        counts.put("duplicateOverrides", overrideDupes.size());
+
+        for (Object[] row : overrideDupes) {
+            violations.add(new Violation("X2_DUPLICATE_OVERRIDE", String.valueOf(row[0]),
+                    "message " + row[1] + " carries " + row[2] + " overrides on this issue. Which "
+                            + "one applies is whichever the query returned first."));
+        }
+    }
+
+    /**
+     * I-18: a series has at most one RELEASED issue with publicTo IS NULL.
+     *
+     * That issue is the current one. Two of them means two editions are current
+     * at once, which on the public site reads as the archive having forked.
+     *
+     * AN UNRELEASED ISSUE IS NOT A CURRENT ONE, and counting it as one is a
+     * category error rather than a stricter reading. It has no public window --
+     * neither end of it -- because nothing has published it; it is on no public
+     * list and serves nobody. Counted, it makes every series that has a next
+     * edition in preparation look like a fork, which is every healthy cadenced
+     * series. The publish path already states the invariant this way: it counts
+     * open-ended windows among PUBLISHED rows.
+     */
+    private void assertOneCurrentIssuePerSeries(List<PublicationIssue> imported,
+                                                List<Violation> violations,
+                                                Map<String, Integer> counts) {
+        Map<String, List<PublicationIssue>> openEnded = new LinkedHashMap<>();
+        for (PublicationIssue i : imported) {
+            if (i.getStatus() == IssueStatus.OPEN) {
+                continue;
+            }
+            if (i.getPublicTo() == null && i.getSeries() != null) {
+                openEnded.computeIfAbsent(i.getSeries().getSeriesId(), k -> new ArrayList<>()).add(i);
+            }
+        }
+        counts.put("seriesWithACurrentIssue", openEnded.size());
+
+        openEnded.forEach((seriesId, issues) -> {
+            if (issues.size() > 1) {
+                violations.add(new Violation("I18_TWO_CURRENT_ISSUES", seriesId,
+                        issues.size() + " issues carry publicTo IS NULL: "
+                                + issues.stream().map(PublicationIssue::getPublicId).toList()
+                                + ". Two current editions on one series is the archive forking in "
+                                + "public."));
+            }
+        });
+    }
+
+    /**
+     * An OPEN issue carries no cut-off stamp, and none dated before its own interval.
+     *
+     * cutoffStampedAt means "the publish action recorded this instant". An OPEN
+     * issue has not been published, so there is no such instant, and a value here
+     * is evidence of something that did not happen.
+     *
+     * It reached the estate through the recovery cascade, which read `updated` --
+     * a column every row has. On a never-published issue that is when the row was
+     * CREATED, and the thing that created it was the release of the issue BEFORE
+     * it. So all four OPEN issues took their predecessor's release instant, to
+     * the millisecond, and three of them ended up dated before their own interval
+     * had opened -- the 2027 firing-areas issue by a full year.
+     *
+     * The second assertion is the one that generalises: whatever a cut-off's
+     * provenance, an issue whose period closed before it began is not a date
+     * anybody can act on, and it silently mis-sorts the row and mis-anchors every
+     * gap measured from it.
+     */
+    private void assertUnpublishedIssuesCarryNoStamp(List<PublicationIssue> imported,
+                                                     List<Violation> violations,
+                                                     Map<String, Integer> counts) {
+        int open = 0;
+        for (PublicationIssue i : imported) {
+            if (i.getStatus() == IssueStatus.OPEN) {
+                open++;
+                if (i.getCutoffStampedAt() != null) {
+                    violations.add(new Violation("OPEN_ISSUE_IS_STAMPED", i.getPublicId(),
+                            "an OPEN issue carries cutoffStampedAt " + i.getCutoffStampedAt()
+                                    + ". Nothing published it, so no release instant exists; the "
+                                    + "value is its predecessor's, and it sorts and anchors gaps "
+                                    + "on a date at which this issue did not exist."));
+                }
+            }
+
+            Date cutoff = i.getCutoffStampedAt();
+            if (cutoff != null && i.getIntervalFrom() != null
+                    && cutoff.before(i.getIntervalFrom())) {
+                violations.add(new Violation("CUTOFF_PRECEDES_ITS_INTERVAL", i.getPublicId(),
+                        "the cut-off " + cutoff + " falls before this issue's interval opens at "
+                                + i.getIntervalFrom() + ". A period cannot close before it "
+                                + "begins, whatever the cut-off's provenance."));
+            }
+        }
+        counts.put("openIssues", open);
+    }
+
+    /** The counts key for the annuals the import opened on a compiled series. */
+    public static final String COMPILATION_ISSUES_CREATED = "compilationIssuesCreated";
+
+    /**
+     * How many periods the import OPENED rather than read out of the archive.
+     *
+     * A COUNT AND NOT A VIOLATION. The legacy archive stops at the last annual
+     * somebody assembled by hand, and the years since carry no issue at all -- so
+     * the import opens one per missing year on a compiled series, because a series
+     * whose newest period ended years ago reads as dormant and gap detection then
+     * reports nothing missing at all. They are perfectly ordinary OPEN issues; what
+     * the sheet needs is the number, so an operator can check it against the years
+     * the strip shows waiting.
+     *
+     * Recognised by what they lack: an issue of an IMPORTED, COMPILED_FROM_SOURCE
+     * series that carries no legacy publication id came from nowhere but here.
+     * Nothing else in the system creates one -- the publish transaction's successor
+     * is minted when an issue is released, and there is nothing to release on a
+     * series the importer has just left in DRAFT.
+     */
+    private void countCompilationIssuesCreated(Map<String, Integer> counts) {
+        Long created = em.createQuery(
+                        "SELECT COUNT(i) FROM PublicationIssue i WHERE i.legacyPublicationId IS NULL "
+                                + "AND i.series.importSource IS NOT NULL "
+                                + "AND i.series.timeRelation = :compiled", Long.class)
+                .setParameter("compiled", TimeRelation.COMPILED_FROM_SOURCE)
+                .getSingleResult();
+        counts.put(COMPILATION_ISSUES_CREATED, created.intValue());
+    }
+
+    /**
+     * The legacy rows behind these issues that the public site would NOT serve.
+     *
+     * ONE QUERY FOR THE WHOLE BATCH rather than a lookup per issue: the estate is
+     * over a thousand imported issues, the check runs inside the go-live window,
+     * and a round trip each is a minute nobody has.
+     *
+     * Not-ACTIVE rather than INACTIVE, because what the exemption below turns on is
+     * whether {@link org.niord.core.publication.PublicationResolver} would serve
+     * the row to an anonymous caller, and it serves ACTIVE and nothing else.
+     */
+    private Set<String> withdrawnLegacyIds(List<PublicationIssue> imported) {
+        Set<String> ids = new LinkedHashSet<>();
+        for (PublicationIssue i : imported) {
+            if (i.getLegacyPublicationId() != null) {
+                ids.add(i.getLegacyPublicationId());
+            }
+        }
+        if (ids.isEmpty()) {
+            return Set.of();
+        }
+        return new LinkedHashSet<>(em.createQuery(
+                        "SELECT p.publicationId FROM Publication p WHERE p.publicationId IN :ids "
+                                + "AND p.status <> :active", String.class)
+                .setParameter("ids", ids)
+                .setParameter("active", PublicationStatus.ACTIVE)
+                .getResultList());
+    }
+
+    /** The wire code for a released imported issue carrying no publish stamp. */
+    public static final String PUBLISHED_ISSUE_WITHOUT_STAMP = "PUBLISHED_ISSUE_WITHOUT_STAMP";
+
+    /** The counts key the checklist reads, whatever the number turns out to be. */
+    public static final String UNSTAMPED_RELEASED_COUNT = "publishedIssuesWithoutStamp";
+
+    /**
+     * A PUBLISHED or RETIRED imported issue carries a publish stamp.
+     *
+     * WHAT THIS PROTECTS IS THE PUBLIC UNION. The public list is the new-model
+     * issues union the legacy rows no published issue has taken over, and the
+     * legacy half's exclusion is keyed on publishedAt IS NOT NULL -- deliberately,
+     * because gating it on the current status would lapse on retire and put the
+     * superseded legacy row back on the public site carrying its original uncapped
+     * window. An unstamped released issue is therefore served TWICE, once from
+     * each half, under one publication id: the same document appearing as two
+     * entries with two windows, and whichever the deduplication drops is a
+     * coin toss nobody chose.
+     *
+     * OPEN is not a violation and must not be. An imported issue between import
+     * and first publish has not taken over anything, and its legacy row is
+     * correctly still the one being served.
+     *
+     * NEITHER IS A RETIRED ISSUE WHOSE LEGACY ROW WAS WITHDRAWN, and that follows
+     * from the union rather than softening it. Being served twice needs BOTH halves
+     * to serve the document, and each half has its own gate: the resolver serves a
+     * legacy row to an anonymous caller only while its status is ACTIVE, and serves
+     * an issue only while it is PUBLISHED. A legacy row somebody withdrew -- left
+     * INACTIVE, with no publish-from date -- is already off the public site for a
+     * reason that has nothing to do with the import, and the RETIRED issue imported
+     * from it is off it too. Neither half serves it, so there is no double entry
+     * for a stamp to prevent, and demanding one would mean inventing the instant a
+     * document that was withdrawn became public.
+     *
+     * A PUBLISHED issue is judged unchanged whatever its legacy row says: it IS on
+     * the public list, and if the row it came from is ACTIVE as well then the
+     * document is there twice.
+     *
+     * Counted even when it is zero. The importer stamps every released issue, so
+     * this reads zero on a healthy estate -- which is the finding. An absent
+     * number and a zero read alike on a sheet somebody ticks, and a check that
+     * says nothing is indistinguishable from one that did not run.
+     *
+     * @param withdrawnLegacyIds the legacy publications behind these issues whose
+     *                           status is not ACTIVE. An id the set does not name
+     *                           is treated as servable, which is the safe way round:
+     *                           a legacy row nobody can find is not evidence that
+     *                           the public site would leave it out
+     */
+    // Package-visible so the finding's shape can be asserted on issues built in
+    // memory: on a correctly imported estate the real pass can only ever report
+    // zero, which would test nothing.
+    static void reportUnstampedReleasedIssues(List<PublicationIssue> imported,
+                                              Set<String> withdrawnLegacyIds,
+                                              List<Violation> violations,
+                                              Map<String, Integer> counts) {
+        int unstamped = 0;
+        for (PublicationIssue i : imported) {
+            if (i.getStatus() == IssueStatus.OPEN || i.getPublishedAt() != null) {
+                continue;
+            }
+            if (i.getStatus() == IssueStatus.RETIRED
+                    && withdrawnLegacyIds != null
+                    && withdrawnLegacyIds.contains(i.getLegacyPublicationId())) {
+                continue;
+            }
+            unstamped++;
+            violations.add(new Violation(PUBLISHED_ISSUE_WITHOUT_STAMP, i.getPublicId(),
+                    "this issue is " + i.getStatus() + " and carries no publishedAt. The public "
+                            + "list drops a legacy row only once the issue imported from it has a "
+                            + "publish stamp, so this document is served twice -- as the issue and "
+                            + "as the legacy row it replaced. Stamp it with the instant it became "
+                            + "public before the import is accepted."));
+        }
+        counts.put(UNSTAMPED_RELEASED_COUNT, unstamped);
+    }
+
+    /** The wire code for an imported member row published after its own issue went out. */
+    public static final String MEMBER_PUBLISHED_AFTER_ISSUE = "MEMBER_PUBLISHED_AFTER_ISSUE";
+
+    /** The counts key the checklist reads, whatever the number turns out to be. */
+    public static final String MEMBER_AFTER_ISSUE_COUNT = "membersPublishedAfterIssue";
+
+    /**
+     * Every member row of an imported issue was published by the time that issue went out.
+     *
+     * THE IMPORT COPIES A TAG, NOT A DOCUMENT. A legacy publication's members are
+     * whatever its message tag held at import time, and a tag is a mutable list
+     * somebody maintains by hand -- so it can hold a message published long after
+     * the publication was printed. The estate carries exactly that: the tag of a
+     * January weekly holding two notices published the following December, filed
+     * under the wrong tag by somebody who picked the nearest name.
+     *
+     * Such a row was not in the printed document, and it cannot be made true
+     * later: the frozen snapshot is the archive's record of what the issue
+     * contained, and a compilation drawing on it attributes the message to a week
+     * it was not announced in. The public archive then answers a question about
+     * January with a notice nobody could have read before December.
+     *
+     * WHAT IS LEFT FOR THIS CHECK TO FIND. The importer now applies the same rule
+     * and leaves such a row out, so a freshly imported estate reads zero here.
+     * This catches what the importer let through -- a row added to a frozen issue
+     * afterwards, or an estate imported before the rule existed -- and the check
+     * only means that while both sides judge alike, which is why the boundary
+     * lives in LateMemberRule rather than here.
+     *
+     * IMPORTED provenance only. A natively published issue's members come from
+     * the resolver, which selects on the issue's own window, so a row there that
+     * post-dates the cut-off is a resolver question and not a tag that was edited.
+     *
+     * The grace is LateMemberRule.GRACE_DAYS whole days in the series' cut-off
+     * zone, measured to the end of the day it lands on. A publication goes out and
+     * the notices it announces are stamped in the same sitting, minutes either
+     * side of the publication's own timestamp; and most imported cut-offs are
+     * reconstructed, so the sitting itself can be days after the instant recorded
+     * for it. A fortnight later no reconstruction explains the gap.
+     *
+     * Counted even when it is zero. A clean estate reads zero here, and that is
+     * the finding somebody ticks -- an absent number and a zero read alike on a
+     * sheet, and a check that says nothing cannot be told from one that did not run.
+     */
+    // Package-visible so the rule can be driven on rows built in memory: the
+    // estate's own offenders are two rows in one tag, which pins neither the
+    // grace boundary nor the provenance filter.
+    static void reportMembersPublishedAfterTheirIssue(List<IssueMember> importedMembers,
+                                                      List<Violation> violations,
+                                                      Map<String, Integer> counts) {
+        int late = 0;
+        for (IssueMember m : importedMembers) {
+            if (m.getSource() != MemberSource.IMPORTED || m.getFrozenPublishDateFrom() == null) {
+                continue;
+            }
+            PublicationIssue issue = m.getIssue();
+            if (issue == null) {
+                continue;
+            }
+
+            // The cut-off is when the document closed; publishedAt stands in for an
+            // issue the recovery never gave one, and an issue with neither states no
+            // instant to measure against at all.
+            Date reference = issue.getCutoffStampedAt() != null
+                    ? issue.getCutoffStampedAt() : issue.getPublishedAt();
+            if (reference == null) {
+                continue;
+            }
+
+            PublicationSeries series = issue.getSeries();
+            ZoneId zone = series == null ? ZoneId.of("UTC") : series.cutoffZone();
+            Instant published = m.getFrozenPublishDateFrom().toInstant();
+            if (!LateMemberRule.publishedAfter(reference.toInstant(), zone, published)) {
+                continue;
+            }
+
+            late++;
+            String message = m.getFrozenShortId() != null ? m.getFrozenShortId() : m.getMessageUid();
+            violations.add(new Violation(MEMBER_PUBLISHED_AFTER_ISSUE, issue.getPublicId(),
+                    "member " + message + " was published " + published + ", more than "
+                            + LateMemberRule.GRACE_DAYS + " days after the day this issue closed on ("
+                            + reference.toInstant() + ", read in "
+                            + zone.getId() + "). It cannot have been in the printed document -- the "
+                            + "import copied the legacy publication's message tag verbatim, and the "
+                            + "tag was edited after the issue went out. A compilation built on this "
+                            + "row announces the message in the wrong period. Remove the message "
+                            + "from the legacy publication's tag, or move it to the publication that "
+                            + "printed it, before the import is accepted."));
+        }
+        counts.put(MEMBER_AFTER_ISSUE_COUNT, late);
+    }
+
+    /**
+     * The member rows of every imported issue, in one query.
+     *
+     * One query rather than one per issue: the estate holds roughly a thousand
+     * imported issues, and walking their member collections would be a thousand
+     * selects for an audit that reads one date per row. The issue and its series
+     * come along, because the rule reads the cut-off zone off the series and a
+     * lazy hop there would put the per-issue round trip straight back.
+     *
+     * LEFT JOIN on the series on purpose: a series-less issue is itself a
+     * violation another assertion raises, and dropping its rows here would hide a
+     * second finding behind the first.
+     */
+    private List<IssueMember> loadImportedMembers() {
+        return em.createQuery(
+                        "SELECT m FROM IssueMember m JOIN FETCH m.issue i "
+                                + "LEFT JOIN FETCH i.series "
+                                + "WHERE i.legacyPublicationId IS NOT NULL "
+                                + "AND m.frozenPublishDateFrom IS NOT NULL",
+                        IssueMember.class)
+                .getResultList();
+    }
+
+    /**
+     * R8: the newest imported issue of a cadenced series derives its window.
+     *
+     * A cadenced issue left MANUAL is not capped when its successor publishes, so
+     * the first native publish leaves two current editions on the public site --
+     * the failure I-18 above describes, arriving by a different route.
+     */
+    private void assertCadencedIssuesDeriveTheirWindow(List<PublicationIssue> imported,
+                                                       List<Violation> violations) {
+        for (PublicationIssue i : imported) {
+            PublicationSeries s = i.getSeries();
+            boolean cadenced = s != null && s.getCadence() != null
+                    && s.getCadence() != SeriesCadence.NONE;
+            if (cadenced && i.getPublicWindowSource() != PublicWindowSource.DERIVED) {
+                violations.add(new Violation("R8_CADENCED_ISSUE_IS_MANUAL", i.getPublicId(),
+                        "series '" + s.getSeriesId() + "' has a cadence, so this issue's window must "
+                                + "be DERIVED; MANUAL means the first native publish will not cap it."));
+            }
+        }
+    }
+
+    /**
+     * X-1: publicId is unique across the new and the legacy id spaces.
+     *
+     * They share one keyspace by design -- an imported issue keeps the legacy
+     * publicationId verbatim, which is what keeps citations resolving. A
+     * collision would make one id mean two documents, and the resolver would
+     * answer with whichever it found first.
+     */
+    private void assertIdSpaceDoesNotCollide(List<Violation> violations, Map<String, Integer> counts) {
+        List<String> collisions = em.createQuery(
+                        "SELECT i.publicId FROM PublicationIssue i GROUP BY i.publicId "
+                                + "HAVING COUNT(i) > 1", String.class)
+                .getResultList();
+        collisions.forEach(id -> violations.add(new Violation("X1_PUBLIC_ID_COLLIDES", id,
+                "more than one issue carries this publicId; one id would mean two documents")));
+
+        // A publicId that is NOT an import must not reuse a legacy publicationId.
+        List<String> reused = em.createQuery(
+                        "SELECT i.publicId FROM PublicationIssue i WHERE i.legacyPublicationId IS NULL "
+                                + "AND EXISTS (SELECT 1 FROM Publication p WHERE p.publicationId = i.publicId)",
+                        String.class)
+                .getResultList();
+        reused.forEach(id -> violations.add(new Violation("X1_NATIVE_ID_REUSES_LEGACY", id,
+                "a natively created issue carries an id that a legacy publication also uses")));
+
+        counts.put("idCollisions", collisions.size() + reused.size());
+    }
+
+    /**
+     * The trigger audit. A REPORT, not a rewrite.
+     *
+     * SCANS EVERY FIELD A TRIGGER CAN EXPRESS ITSELF IN, not just messageQuery.
+     * The first version read messageQuery alone -- and on the live estate TWELVE
+     * of the fifteen triggers carry no messageQuery at all, putting their logic in
+     * messageFilter instead. It would have reported a clean audit having looked at
+     * a fifth of the triggers, which is the failure mode this report exists to
+     * prevent: silence that reads as success.
+     *
+     * The `publication=` filter in mailing-list triggers has been cured. Nothing audits the
+     * triggers that name a TAG. After C8 no new nm-wNN-YYYY tag is minted, so a
+     * mailing list keyed on the naming convention silently stops matching and
+     * nobody is told: the failure is a mailing that does not go out, which
+     * nobody notices until somebody asks why they stopped receiving it.
+     *
+     * What to do with each hit is the user's call, made before the import. This
+     * only makes sure the question is asked.
+     */
+    public List<TriggerHit> auditTriggers() {
+        List<TriggerHit> hits = new ArrayList<>();
+
+        // Every trigger, not only those with a messageQuery.
+        List<MailingListTrigger> triggers = em.createQuery(
+                        "SELECT t FROM MailingListTrigger t", MailingListTrigger.class)
+                .getResultList();
+
+        for (MailingListTrigger t : triggers) {
+            String listId = t.getMailingList() == null
+                    ? null : t.getMailingList().getMailingListId();
+            String type = t.getType() == null ? null : t.getType().name();
+
+            scan(hits, listId, type, "messageQuery", t.getMessageQuery());
+            scan(hits, listId, type, "messageFilter", t.getMessageFilter());
+
+            // A script can name a tag too, and the path is the only part of it
+            // stored here -- so a hit on the path is a prompt to open the script,
+            // not a finding about its contents.
+            if (t.getScriptResourcePaths() != null) {
+                t.getScriptResourcePaths().forEach(
+                        path -> scan(hits, listId, type, "scriptResourcePath", path));
+            }
+        }
+        return hits;
+    }
+
+    /** Records a hit if the expression names a weekly tag. */
+    private void scan(List<TriggerHit> hits, String listId, String type,
+                      String field, String expression) {
+        if (expression == null || expression.isBlank()) {
+            return;
+        }
+        var m = WEEKLY_TAG.matcher(expression);
+        if (m.find()) {
+            hits.add(new TriggerHit(listId, type, field, m.group(1), expression));
+        }
+    }
+}

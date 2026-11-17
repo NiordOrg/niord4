@@ -1,0 +1,91 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model(); as m) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="dict-entry-key" class="text-sm font-medium text-fg-title">
+          {{ 'admin.dictionaries.field.key' | transloco }}
+        </label>
+        <input id="dict-entry-key" type="text" [formField]="form.key" class="w-full text-input" />
+      </div>
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.dictionaries.field.values' | transloco }}
+        </legend>
+        <div class="flex flex-col gap-2">
+          @for (desc of form.descs().value(); track desc.lang; let i = $index) {
+            <div class="flex flex-col gap-1">
+              <app-localized-text-input
+                [formField]="form.descs[i].value"
+                [lang]="desc.lang"
+                [multiline]="true"
+                ariaLabelKey="admin.dictionaries.field.values"
+              />
+              <app-length-counter [text]="desc.value" [limit]="valueMax" />
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      @if (m.showExtended) {
+        <fieldset class="flex flex-col gap-2">
+          <legend class="mb-1 text-sm font-medium text-fg-title">
+            {{ 'admin.dictionaries.field.longVersion' | transloco }}
+          </legend>
+          <div class="flex flex-col gap-2">
+            @for (desc of form.descs().value(); track desc.lang; let i = $index) {
+              <div class="flex flex-col gap-1">
+                <app-localized-text-input
+                  [formField]="form.descs[i].longValue"
+                  [lang]="desc.lang"
+                  [multiline]="true"
+                  ariaLabelKey="admin.dictionaries.field.longVersion"
+                />
+                <app-length-counter [text]="desc.longValue" [limit]="valueMax" />
+              </div>
+            }
+          </div>
+        </fieldset>
+
+        <div class="flex flex-col gap-1">
+          <label for="dict-entry-aton" class="text-sm font-medium text-fg-title">
+            {{ 'admin.dictionaries.field.atonFilter' | transloco }}
+          </label>
+          <input
+            id="dict-entry-aton"
+            type="text"
+            [formField]="form.atonFilter"
+            class="w-full text-input"
+            [placeholder]="'admin.dictionaries.field.atonFilter' | transloco"
+          />
+        </div>
+      }
+
+      @for (warning of warnings(); track warning) {
+        <div class="message message-warn" role="alert">
+          <app-icon name="lucideTriangleAlert" class="message-icon" />
+          <span>{{ warning | transloco }}</span>
+        </div>
+      }
+
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.dictionaries.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.dictionaries.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

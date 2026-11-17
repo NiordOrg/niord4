@@ -1,0 +1,384 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import org.junit.jupiter.api.Test;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.criteria.MessageSeriesCriterionVo;
+import org.niord.core.publication.series.vo.SystemPublicationSeriesVo;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+
+/**
+ * Every settable field on a series survives entity -> VO -> entity.
+ *
+ * Written after nominalCutoffDayOfMonth and nominalCutoffMonth were found missing
+ * from the VO. Nothing was corrupted by that -- updateFromVo simply never assigned
+ * them, so an update left them alone -- but they could not be SET or READ through
+ * the API at all, and S-6 requires both for a MONTHLY or YEARLY cadence. Four real
+ * series in the archive are YEARLY. None of them could ever have been activated,
+ * and the failure would have surfaced at go-live as a validation error naming a
+ * field with no input to fix it.
+ *
+ * REFLECTIVE ON PURPOSE. A test that listed the fields would have been written from
+ * the same mental model that dropped them, and would have dropped them again. This
+ * one fails when a field is ADDED to the entity and forgotten, which is the moment
+ * the mistake is cheap. That is why the skip list below names fields explicitly and
+ * gives each a reason: a blanket skip would let the next one through.
+ */
+public class SeriesVoRoundTripTest {
+
+    /**
+     * Fields deliberately outside the VO round-trip.
+     *
+     * Both are entity references the REST layer resolves from an id the VO does
+     * carry (categoryId, domainId), so round-tripping the object itself would be
+     * asserting the wrong thing. Everything else must survive.
+     */
+    private static final Set<String> RESOLVED_BY_ID = Set.of("category", "domain",
+            // The sharing list is the same thing in plural: the wire carries
+            // availableDomainIds and the resource looks each one up, refusing an
+            // id that names nothing or names an inactive domain. Round-tripping
+            // the Domain objects would assert something no caller can do.
+            "availableDomains",
+            // The series a compilation compiles. The wire carries sourceSeriesId
+            // and the resource resolves it, refusing an id that names nothing
+            // with SOURCE_SERIES_NOT_FOUND -- so round-tripping the entity would
+            // assert a journey no caller can make.
+            "sourceSeries");
+
+    /**
+     * Fields deliberately off the wire entirely.
+     *
+     * nominalCutoffTimeZone is vestigial. The timezone is a DOMAIN setting and the
+     * domains genuinely differ, so a per-series column is a second source that can
+     * disagree with the one that counts. cutoffZone() reads the domain and nothing
+     * else; the column stays only because dropping it is a migration.
+     */
+    private static final Set<String> NOT_ON_THE_WIRE = Set.of("nominalCutoffTimeZone");
+
+    /**
+     * Fields updateFromVo DERIVES rather than copies.
+     *
+     * A settable field whose stored value is decided by another one, so the
+     * round-trip probe cannot compare it: what comes back is the right answer
+     * rather than the value that went in. Each is asserted on its own below --
+     * skipping it here without saying what it becomes would hide exactly the
+     * silently-dropped field this class exists to catch.
+     */
+    private static final Map<String, String> DERIVED_FROM_ANOTHER_FIELD = Map.of(
+            "nextIssueCreation",
+            "derived from the cadence: a cadenced series opens its next issue when one publishes (S-8), "
+                    + "so a stored MANUAL on one heals to AUTO_ON_PUBLISH on the next save");
+
+    /**
+     * Fields the VALUE OBJECT declares that no entity field backs.
+     *
+     * The probe above walks the ENTITY and catches a setting an admin cannot
+     * reach. This set is the mirror image: a field the wire carries and the
+     * database does not, which is fine when it is derived and a bug when it is a
+     * setting somebody meant to persist. Each is named with its reason, so the
+     * next one has to be argued for rather than added.
+     */
+    private static final Map<String, String> DERIVED_ON_THE_VO = Map.of(
+            // The id form of the entity reference the REST layer resolves. The
+            // round-trip probe already excludes the entity side for the same reason.
+            "domainId", "the id of the domain reference, resolved by the REST layer",
+            // The same, in plural: the ids of the domains a publication is shared
+            // with. Resolved and refused by the REST layer, which is also where an
+            // unknown or inactive one is turned into an answer rather than a row.
+            "availableDomainIds", "the ids of the availability list, resolved by the REST layer",
+            // An observation about the calendar. Stored, it would go stale the
+            // moment the calendar moved on -- which is why RETIRED is a column and
+            // dormancy is not.
+            "dormant", "derived from the calendar, never stored",
+            // A COUNT OF OTHER ROWS, read-only. S-18 locks the citation channel off
+            // it, and a value arriving in a save is ignored: updateFromVo does not
+            // read it, and nothing could be written to if it did.
+            "publishedIssueCount", "read-only, derived: PUBLISHED plus RETIRED issues of the series",
+            // A REAL COLUMN, but it is declared on VersionedEntity rather than on
+            // this class, so the scan above cannot see it. It is also the one
+            // field that must never be written from a body: updateFromVo drops it
+            // deliberately, because the optimistic-lock guard compares it and a
+            // client that could assign it would control its own guard.
+            "version", "the optimistic-lock counter, on VersionedEntity; compared, never assigned",
+            // The id form of the source-series reference, on the same terms as
+            // domainId above it: resolved by the REST layer and by the batch
+            // import, each of which refuses an id that names no series rather
+            // than leaving a compilation with nothing to compile.
+            "sourceSeriesId", "the id of the source-series reference, resolved by the REST layer");
+
+    /**
+     * Every field on the wire is either a stored setting or a declared derivation.
+     *
+     * The failure this catches is the opposite one to the probe above: a field
+     * added to the VO, wired into a form, saved by an admin, and silently
+     * discarded because nothing on the entity ever receives it. The admin sees
+     * their change accepted and gone on the next load.
+     */
+    @Test
+    public void everyWireFieldIsBackedByTheEntityOrDeclaredDerived() {
+        Set<String> entityFields = new java.util.LinkedHashSet<>();
+        for (Field f : PublicationSeries.class.getDeclaredFields()) {
+            entityFields.add(f.getName());
+        }
+
+        List<String> unexplained = new ArrayList<>();
+        for (Field f : SystemPublicationSeriesVo.class.getDeclaredFields()) {
+            if (Modifier.isStatic(f.getModifiers()) || f.isSynthetic()
+                    || entityFields.contains(f.getName())
+                    || DERIVED_ON_THE_VO.containsKey(f.getName())) {
+                continue;
+            }
+            unexplained.add("  " + f.getName());
+        }
+
+        if (!unexplained.isEmpty()) {
+            fail(unexplained.size() + " field(s) are on the wire with no entity field behind them:"
+                    + System.lineSeparator() + String.join(System.lineSeparator(), unexplained)
+                    + System.lineSeparator()
+                    + "Either updateFromVo/toVo is missing a field an admin can edit and lose, or the "
+                    + "field is derived -- in which case add it to DERIVED_ON_THE_VO with the reason.");
+        }
+    }
+
+    /**
+     * The source series reaches the wire, and only as its seriesId.
+     *
+     * It is excluded from the round-trip probe above because the resource
+     * resolves it, so the one thing nothing else asserts is that the READ half
+     * happens at all -- and a source that never reaches the wire is a compilation
+     * whose editor cannot show what it compiles, and whose export cannot carry it
+     * into the next installation.
+     */
+    @Test
+    public void thesourceSeriesTravelsAsItsSeriesId() {
+        PublicationSeries source = new PublicationSeries();
+        source.setSeriesId("weekly-ntm");
+
+        PublicationSeries compilation = new PublicationSeries();
+        compilation.setSeriesId("accumulated-yearly-ntm");
+        compilation.setSourceSeries(source);
+
+        assertEquals("weekly-ntm",
+                compilation.toVo(SystemPublicationSeriesVo.class).getSourceSeriesId());
+
+        // And a series that compiles nothing says nothing, rather than an empty
+        // string a client would have to tell apart from a real id.
+        assertNull(new PublicationSeries().toVo(SystemPublicationSeriesVo.class).getSourceSeriesId());
+
+        // The lean shape does not declare it at all, so it cannot leak however the
+        // caller got hold of the object.
+        assertFalse(java.util.Arrays.stream(
+                        org.niord.core.publication.series.vo.PublicationSeriesVo.class
+                                .getDeclaredFields())
+                        .anyMatch(f -> "sourceSeriesId".equals(f.getName())),
+                "the public series shape declares sourceSeriesId; which other publication a "
+                        + "document is assembled from is not a public question");
+    }
+
+    @Test
+    public void everySettableFieldSurvivesTheVoRoundTrip() throws Exception {
+        PublicationSeries source = new PublicationSeries();
+        List<Field> fields = settableFields();
+        assertFalse(fields.isEmpty(), "reflection found no fields -- the probe would pass vacuously");
+
+        // A DISTINCT, NON-DEFAULT value in every field. Setting a default would let a
+        // dropped field pass by coincidence, which is exactly the bug being hunted.
+        for (Field f : fields) {
+            f.set(source, distinctValue(f, f.get(source)));
+        }
+
+        PublicationSeries target = new PublicationSeries();
+        target.updateFromVo(source.toVo(SystemPublicationSeriesVo.class));
+
+        List<String> lost = new ArrayList<>();
+        for (Field f : fields) {
+            if (DERIVED_FROM_ANOTHER_FIELD.containsKey(f.getName())) {
+                continue;
+            }
+            Object before = f.get(source);
+            Object after = f.get(target);
+            if (!comparable(before).equals(comparable(after))) {
+                lost.add("  " + f.getName() + ": set " + comparable(before)
+                        + ", came back " + comparable(after));
+            }
+        }
+
+        if (!lost.isEmpty()) {
+            fail(lost.size() + " field(s) do not survive entity -> VO -> entity."
+                    + System.lineSeparator() + String.join(System.lineSeparator(), lost)
+                    + System.lineSeparator()
+                    + "Each is a setting an admin cannot reach through the API: absent from the VO, "
+                    + "or absent from updateFromVo/toVo. If a field genuinely does not belong on the "
+                    + "wire, add it to RESOLVED_BY_ID with the reason -- do not delete this assertion.");
+        }
+    }
+
+    /**
+     * The MONTHLY/YEARLY schedule specifically, named so the failure reads plainly.
+     *
+     * The reflective probe above already covers these two. This one exists because
+     * a reflective failure says "a field was lost" while the rule it breaks -- S-6,
+     * and with it the activation of four real series -- is worth stating outright.
+     */
+    @Test
+    public void aYearlySeriesCanCarryTheScheduleSSixDemands() {
+        PublicationSeries yearly = new PublicationSeries();
+        yearly.setCadence(SeriesCadence.YEARLY);
+        yearly.setNominalCutoffMonth(12);
+        yearly.setNominalCutoffDayOfMonth(31);
+        yearly.setNominalCutoffTime("12:00");
+
+        PublicationSeries reloaded = new PublicationSeries();
+        reloaded.updateFromVo(yearly.toVo(SystemPublicationSeriesVo.class));
+
+        assertEquals(Integer.valueOf(12), reloaded.getNominalCutoffMonth(),
+                "S-6 requires a month for a YEARLY cadence; without it on the VO the series can "
+                        + "never be given one and can never activate");
+        assertEquals(Integer.valueOf(31), reloaded.getNominalCutoffDayOfMonth(),
+                "S-6 requires a day of the month for a MONTHLY or YEARLY cadence");
+    }
+
+    /**
+     * A cadenced series comes back scheduling itself, however it was saved.
+     *
+     * The pair "weekly, and its next issue is created by hand" reads like a
+     * setting and behaves like a series that quietly stops scheduling itself: it
+     * publishes, opens nothing, and somebody has to notice every week. It reached
+     * the estate two ways -- the new-series template ships MANUAL to agree with
+     * its own cadence of NONE and nothing re-derives it when the admin picks a
+     * cadence, and the import wrote MANUAL onto every translated series -- so the
+     * healing is here rather than in a refusal. Refusing it would leave an admin
+     * unable to save the very screen that shows the problem.
+     */
+    @Test
+    public void acadencedSeriesComesBackOpeningItsNextIssueItself() {
+        PublicationSeries stored = new PublicationSeries();
+        stored.setCadence(SeriesCadence.WEEKLY);
+        stored.setNextIssueCreation(NextIssueCreation.MANUAL);
+
+        PublicationSeries saved = new PublicationSeries();
+        saved.updateFromVo(stored.toVo(SystemPublicationSeriesVo.class));
+
+        assertEquals(NextIssueCreation.AUTO_ON_PUBLISH, saved.getNextIssueCreation(),
+                "a weekly series saved as MANUAL stayed MANUAL; it would publish and open nothing, "
+                        + "and the next period would exist only if a person remembered it");
+    }
+
+    /** And a series with no cadence has no next period to open, so it stays manual. */
+    @Test
+    public void acadencelessSeriesIsLeftCreatingItsIssuesByHand() {
+        PublicationSeries stored = new PublicationSeries();
+        stored.setCadence(SeriesCadence.NONE);
+        stored.setNextIssueCreation(NextIssueCreation.MANUAL);
+
+        PublicationSeries saved = new PublicationSeries();
+        saved.updateFromVo(stored.toVo(SystemPublicationSeriesVo.class));
+
+        assertEquals(NextIssueCreation.MANUAL, saved.getNextIssueCreation(),
+                "a one-off has no next period to derive, so there is nothing to automate");
+    }
+
+    /** Instance fields declared by the entity, minus the two resolved by id. */
+    private static List<Field> settableFields() {
+        List<Field> fields = new ArrayList<>();
+        for (Field f : PublicationSeries.class.getDeclaredFields()) {
+            if (Modifier.isStatic(f.getModifiers()) || f.isSynthetic()
+                    || RESOLVED_BY_ID.contains(f.getName())
+                    || NOT_ON_THE_WIRE.contains(f.getName())) {
+                continue;
+            }
+            f.setAccessible(true);
+            fields.add(f);
+        }
+        return fields;
+    }
+
+    /** A value of the field's type that differs from what it currently holds. */
+    private static Object distinctValue(Field f, Object current) {
+        Class<?> type = f.getType();
+        String name = f.getName();
+
+        if (type == String.class) {
+            // messageSortBy is free text; the rest are ids. Any distinct string works.
+            return name + "-value";
+        }
+        if (type == Integer.class || type == int.class) {
+            // Within 1-12 so it is legal for nominalCutoffMonth as well.
+            return Math.floorMod(name.hashCode(), 12) + 1;
+        }
+        if (type == Boolean.class || type == boolean.class) {
+            return !Boolean.TRUE.equals(current);
+        }
+        if (type == Date.class) {
+            return new Date(1_700_000_000_000L);
+        }
+        if (type.isEnum()) {
+            Object[] constants = type.getEnumConstants();
+            for (Object c : constants) {
+                if (!c.equals(current)) {
+                    return c;
+                }
+            }
+            return constants[0];
+        }
+        if (type == IssueCriteriaVo.class) {
+            MessageSeriesCriterionVo node = new MessageSeriesCriterionVo();
+            node.setValues(new ArrayList<>(List.of("dma-nm")));
+            IssueCriteriaVo criteria = new IssueCriteriaVo();
+            criteria.getCriteria().add(node);
+            return criteria;
+        }
+        if (type == Map.class) {
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("issn", "1397-6656");
+            return params;
+        }
+        if (type == List.class) {
+            if (name.equals("languages")) {
+                return new ArrayList<>(List.of("da", "en"));
+            }
+            // descs round-trip through createDesc, which sets the back-reference; an
+            // empty list still proves the list itself is not dropped.
+            return new ArrayList<>();
+        }
+        throw new IllegalStateException("SeriesVoRoundTripTest has no sample value for "
+                + name + " of type " + type.getName() + ". Add one -- do not skip the field, "
+                + "because an unskipped field is the only reason this probe caught anything.");
+    }
+
+    /** Collections compare by content; everything else by value. */
+    private static Object comparable(Object value) {
+        if (value instanceof List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        return String.valueOf(value);
+    }
+}

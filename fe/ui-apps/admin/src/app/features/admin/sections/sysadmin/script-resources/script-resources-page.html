@@ -1,0 +1,135 @@
+<app-admin-section-page
+  titleKey="admin.sections.script-resources.label"
+  descriptionKey="admin.scriptResources.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.scriptResources.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.scriptResources.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.scriptResources.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <button type="button" class="btn-primary" [appMenuTriggerFor]="addMenu">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.scriptResources.new' | transloco }}
+      <app-icon name="lucideChevronDown" class="ml-1 text-xs" />
+    </button>
+    <app-menu #addMenu [model]="addItems()" />
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.scriptResources.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.scriptResources.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.scriptResources.loadError' | transloco"
+      [retryLabel]="'admin.scriptResources.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.resources().length === 0) {
+      <app-empty-state
+        icon="lucideInbox"
+        [title]="'admin.scriptResources.empty.none' | transloco"
+      />
+    } @else {
+      <app-empty-state
+        icon="lucideFilterX"
+        [title]="'admin.scriptResources.empty.noMatches' | transloco"
+      />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-24">{{ 'admin.scriptResources.column.type' | transloco }}</th>
+            <th>{{ 'admin.scriptResources.column.path' | transloco }}</th>
+            <th class="w-32">
+              <span class="sr-only">{{ 'admin.scriptResources.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (resource of pageRows(); track resource.id) {
+            <tr
+              [class.bg-surface-100]="resource.id === editingId()"
+              [class.dark:bg-surface-800]="resource.id === editingId()"
+            >
+              <td><app-script-resource-type-badge [type]="resource.type" /></td>
+              <td class="font-mono text-xs">{{ resource.path }}</td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.scriptResources.editResource' | transloco"
+                  (click)="editResource(resource)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.scriptResources.copyResource' | transloco"
+                  (click)="copyResource(resource)"
+                >
+                  <app-icon name="lucideCopy" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.scriptResources.deleteResource' | transloco"
+                  (click)="deleteResource(resource)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-script-resource-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="onEditorClosed()"
+  />
+
+  <app-script-resource-import-dialog (closed)="onImportClosed()" />
+
+  <app-confirm />
+</app-admin-section-page>

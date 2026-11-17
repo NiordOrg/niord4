@@ -1,0 +1,160 @@
+
+:imagesdir: images
+
+[#domains]
+== Domains
+
+A _domain_ is a working space of Niord: a set of message series with the areas and categories their
+messages may use, such as one domain for navigational warnings, one for notices to mariners, one for
+the firing areas and their exercises, or one for each region with a time zone of its own. A user
+always works in one domain at a time, the _current domain_, which is chosen in the domain menu of
+the header, and the user's roles are given per domain.
+
+Each domain is a client of the same name in Keycloak, where the users' roles in the domain are
+kept; see <<keycloak-integration,Keycloak Integration>>.
+
+The _Domains_ page lists every domain, active or not. To open it, click *Sysadmin* in the main menu,
+then *Domains*.
+
+image::DomainsPage.png[The Domains page, 800]
+
+The columns are *Active* (a dot, filled for an active domain), *Order*, *Keycloak ID* (with a tick
+when the domain's client exists in Keycloak), *Name*, *Time Zone*, and the *Areas*, *Categories* and
+*Message Series* the domain is limited to. The *Filter* field matches the Keycloak ID and the name.
+
+*Keycloak…* in the toolbar opens Keycloak's administration console in a new browser tab, where
+Keycloak asks you to sign in.
+
+[#adding-or-editing-a-domain]
+=== Adding or Editing a Domain
+
+Click *New Domain* to add a domain, the pencil of a row (*Edit Domain*) to edit one, or the double
+square (*Copy Domain*) to start a new domain from a copy of one. Each opens the editor drawer:
+
+image::DomainsEditPage.png[The Edit Domain drawer, 324]
+
+[cols="30,70", options="header"]
+|===
+| Field
+| Description
+
+| Keycloak ID
+| The domain's unique identifier, which is also the name of its client in Keycloak. It cannot be
+  changed once the domain is saved; a copy starts with it empty.
+
+| Active
+| *Domain is active*: only active domains are offered in the domain menu of the header.
+
+| Sort Order
+| The domain's place in the domain menu: lower numbers come first.
+
+| Keycloak Status
+| Shown when you edit a saved domain. "Client "<id>" exists in Keycloak" when the client is there;
+  otherwise a *Create in Keycloak* button that creates it.
+
+| Name
+| The name users see in the domain menu.
+
+| Time Zone
+| Required. The time zone of the domain: the dates and times users enter and see in the domain, such
+  as a message's publish dates, are read in it.
+
+| Map Center
+| Optional: three fields, in this order the *Latitude*, the *Longitude* and the *Zoom Level* (3 to
+  15) of the view a map shows when it has nothing to show of its own, such as the messages map, the
+  front page's map or the position editor of a new message (see the
+  link:../editor-manual/manual.html#position-editor[Position Editor]). An empty field shows its name.
+
+| Message Sort Order
+| How the domain's message lists are sorted at first: by _Area_, _ID_ or _Date_, each _ascending_ or
+  _descending_.
+
+| HTML Color
+| A colour for the domain's mark in the domain menu: any colour a web page understands, such as
+  `red` or `#ff0000`. The square beside the field shows it.
+
+| Areas
+| Optional. The areas the domain's messages may use: with "The Baltic Sea" chosen, a message of the
+  domain may have "The Baltic Sea" or any of its sub-areas. Empty means every area.
+
+| Categories
+| Optional, in the same way for the message categories: with "Firing Exercises" chosen, only that
+  category and its sub-categories.
+
+| Message Series
+| The message series of the domain: editors create messages of these series only.
+
+| Publish
+| *Promulgate messages by default*: when a client of Niord's public interface asks for messages
+  without naming a domain, a message series or a publication, it gets the messages of the active
+  domains that have this ticked.
+
+| AtoNs
+| *Integrate with AtoN module*: kept with the domain for an aids-to-navigation module that is not
+  part of the administration application; it changes nothing there.
+
+| Templates
+| *Support message template execution*: the domain's editors can create messages from message
+  templates (see the
+  link:../editor-manual/manual.html#message-template-execution[Message Template Execution] chapter
+  of the Editors Manual).
+|===
+
+Click *Save Domain* to save. When you save a new domain, Niord also creates its client in Keycloak.
+If that fails, the domain is saved all the same and its row has no tick; open the domain again and
+click *Create in Keycloak*.
+
+A domain's firing schedule is set up on the <<firing-schedules,Firing Schedules>> page, not here.
+
+[#deleting-a-domain]
+=== Deleting a Domain
+
+Click the bin of a row (*Delete Domain*) and confirm with *Yes*. A domain that other data still
+refers to, such as a firing schedule or a promulgation type, cannot be deleted: Niord answers "Error
+deleting domain". Untick *Domain is active* instead, which takes the domain out of the domain menu.
+The domain's client in Keycloak is not deleted with it.
+
+[#importing-and-exporting-domains]
+=== Importing and Exporting Domains
+
+The action menu (the cog) has *Export...*, which downloads every domain, the inactive ones too, as a
+JSON file, and *Import...*, which uploads such a file and runs the _domain-import_ batch job (see
+<<sysadmin-lists,Working with the Sysadmin Lists>>).
+
+The import adds the domains the file has and Niord lacks, with the areas, categories and message
+series they name: one Niord lacks is created from the file, and one it has is used as it is. A domain that
+exists already, by its Keycloak ID, is left as it is: an import never changes it. The import does
+not create clients in Keycloak; use *Create in Keycloak* for each new domain.
+
+The file is a list of domains, for example:
+
+[source,json]
+----
+[
+  {
+    "domainId": "niord-nw",
+    "active": true,
+    "sortOrder": 1,
+    "name": "NW",
+    "timeZone": "Europe/Copenhagen",
+    "messageSeries": [
+      {
+        "seriesId": "nw",
+        "mainType": "NW",
+        "types": [ "COASTAL_WARNING" ],
+        "shortFormat": "NW-${number-3-digits}-${year-2-digits}",
+        "navtexFormat": "${publish-date}\nNAV WARN ${number-year-id}",
+        "numberSequenceType": "YEARLY"
+      },
+      {
+        "seriesId": "nw-local",
+        "mainType": "NW",
+        "types": [ "LOCAL_WARNING" ],
+        "numberSequenceType": "NONE"
+      }
+    ],
+    "publish": true,
+    "templates": true
+  }
+]
+----

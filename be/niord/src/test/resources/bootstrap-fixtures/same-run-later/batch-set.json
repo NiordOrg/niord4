@@ -1,0 +1,30 @@
+[
+  {
+    "jobName": "script-resource-import",
+    "fileName": "templates"
+  },
+  {
+    "jobName": "domain-import",
+    "fileName": "domains.json"
+  },
+  {
+    "jobName": "dictionary-import",
+    "fileName": "it-dict.json"
+  },
+  {
+    "jobName": "category-import",
+    "fileName": "categories.json"
+  },
+  {
+    "jobName": "param-type-import",
+    "fileName": "param-types.json"
+  },
+  {
+    "jobName": "report-import",
+    "fileName": "reports.json"
+  },
+  {
+    "jobName": "promulgation-type-import",
+    "fileName": "promulgation-types.json"
+  }
+]

@@ -1,0 +1,12 @@
+<app-filter-panel label="messages.filter.text.label" appFilterAutofocus="text" (clear)="clear()">
+  <input
+    class="text-input"
+    type="search"
+    autocomplete="off"
+    spellcheck="false"
+    [placeholder]="'messages.filter.text.placeholder' | transloco"
+    [attr.aria-label]="'messages.filter.text.placeholder' | transloco"
+    [ngModel]="localQuery()"
+    (ngModelChange)="onInput($event)"
+  />
+</app-filter-panel>

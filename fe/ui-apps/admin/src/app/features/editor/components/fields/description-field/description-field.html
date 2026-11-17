@@ -1,0 +1,100 @@
+<app-editor-field-row
+  fieldId="description"
+  [index]="partIndex()"
+  label="msg.field.description"
+  [edited]="fields.edited('description', partIndex())"
+  [empty]="!viewerDetails()"
+  emptyLabel="editor.field.description.empty"
+>
+  <!-- line-clamp keeps the collapsed value to one line like every other row (design one-liner).
+       -webkit-line-clamp only clamps inline text, so a body with block content (tables, images,
+       multiple paragraphs) would otherwise render full-height; the max-height + overflow-hidden is
+       the hard backstop that keeps ANY content clipped to the one-line row. -->
+  <div
+    fieldViewer
+    class="prose-sm line-clamp-1 max-h-6 max-w-none overflow-hidden"
+    [innerHTML]="viewerDetails() | safeMessageHtml"
+  ></div>
+
+  <div fieldEditor class="flex flex-col gap-4">
+    @if (expanded()) {
+      @for (lang of languages(); track lang.code) {
+        <div class="flex flex-col gap-1">
+          <span
+            class="flex items-center gap-1.5 text-[0.625rem] font-bold tracking-wide text-fg-subtle uppercase"
+          >
+            <app-language-flag
+              class="h-3.5 w-5 rounded-xs"
+              [lang]="lang.code"
+              [flagPath]="lang.flagPath"
+              [codeFallback]="false"
+            />
+            {{ lang.badge }}
+          </span>
+          <app-rich-text-editor
+            #rte
+            preset="full"
+            [value]="detailsFor(lang.code)"
+            [disabled]="!facade.editableNow()"
+            [label]="'editor.field.description.editorAria' | transloco: { language: lang.label }"
+            [linkModal]="true"
+            (valueChange)="onDetailsChange(lang.code, $event)"
+            (imageRequest)="openImagePicker(rte)"
+            (linkEdit)="openLinkDialog($event, rte)"
+          >
+            <span richTextTools class="inline-flex items-center gap-0.5">
+              <button
+                type="button"
+                class="icon-button rte-btn"
+                [disabled]="!facade.editableNow()"
+                [attr.aria-label]="'editor.dialog.locations.insertAction' | transloco"
+                [title]="'editor.dialog.locations.insertAction' | transloco"
+                (click)="openLocationsDialog(lang.code, rte)"
+              >
+                <app-icon name="lucideMapPin" />
+              </button>
+              <button
+                type="button"
+                class="icon-button rte-btn"
+                [disabled]="!facade.editableNow()"
+                [attr.aria-label]="'editor.dialog.time.insertAction' | transloco"
+                [title]="'editor.dialog.time.insertAction' | transloco"
+                (click)="openTimeDialog(lang.code, rte)"
+              >
+                <app-icon name="lucideClock" />
+              </button>
+            </span>
+          </app-rich-text-editor>
+        </div>
+      }
+    }
+  </div>
+</app-editor-field-row>
+
+<app-insert-time-dialog
+  [(visible)]="timeDialogVisible"
+  [message]="facade.message()"
+  [partIndex]="partIndex()"
+  [lang]="dialogLang()"
+  (insertContent)="onInsert($event)"
+/>
+
+<app-insert-locations-dialog
+  [(visible)]="locationsDialogVisible"
+  [message]="facade.message()"
+  [partIndex]="partIndex()"
+  [lang]="dialogLang()"
+  (insertContent)="onInsert($event)"
+/>
+
+<app-image-picker-dialog
+  [(visible)]="imagePickerVisible"
+  [message]="facade.message()"
+  (picked)="onImagePicked($event)"
+/>
+
+<app-link-dialog
+  [(visible)]="linkDialogVisible"
+  [state]="linkState()"
+  (confirmed)="onLinkConfirmed($event)"
+/>

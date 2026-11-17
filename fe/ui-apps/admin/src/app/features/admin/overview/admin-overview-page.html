@@ -1,0 +1,19 @@
+<app-admin-section-page titleKey="admin.shell.overview">
+  <p class="mb-6 max-w-3xl text-fg-muted">{{ area.introKey | transloco }}</p>
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    @for (section of area.sections; track section.path) {
+      @if (gates.isVisible(section)) {
+        <a
+          [routerLink]="['..', section.path]"
+          class="flex flex-col gap-1 rounded-niord-md border border-surface-200 bg-surface-0 p-4 shadow-niord-md hover:border-primary"
+        >
+          <h3 class="flex items-center gap-2 font-semibold text-fg">
+            <app-icon [name]="section.icon" class="text-primary" />
+            {{ section.labelKey | transloco }}
+          </h3>
+          <p class="text-sm text-fg-muted">{{ section.descriptionKey | transloco }}</p>
+        </a>
+      }
+    }
+  </div>
+</app-admin-section-page>

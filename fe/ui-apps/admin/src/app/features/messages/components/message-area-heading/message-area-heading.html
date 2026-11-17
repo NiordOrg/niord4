@@ -1,0 +1,10 @@
+@if (isNoArea()) {
+  <span class="mx-1 text-surface-500">{{ 'msg.area.general' | transloco }}</span>
+} @else {
+  <app-message-areas [areas]="areasArray()" />
+}
+@if (canSort()) {
+  <button type="button" class="ml-2 text-xs text-primary hover:underline" (click)="sort()">
+    {{ 'messages.sortArea.link' | transloco }}
+  </button>
+}

@@ -1,0 +1,2 @@
+# build.sh runs under bash on Windows too: a CRLF checkout (core.autocrlf) would break it.
+*.sh text eol=lf

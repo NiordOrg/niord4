@@ -1,0 +1,269 @@
+
+[#editors]
+== For Editors
+
+These changes meet editors in their daily work. Most of them also meet a user with the _User_ role,
+who reads and comments on messages without editing them.
+
+[#editors-finding-messages]
+=== Finding Messages
+
+[#editors-five-views]
+==== Five views, with Selection as one of them
+
+The _Messages_ page had four view modes, _Table_, _Grid_, _Details_ and _Map_, and the selected
+messages on a sub-page of their own. Now _Selection_ is a fifth tab beside the four views, with a
+badge that counts the selected messages and a cross that clears the selection. Switching between
+the tabs keeps your filter. See link:../editor-manual/manual.html#messages[Messages] in the editor
+manual.
+
+[#editors-selection]
+==== Selecting messages with the star
+
+You select and deselect a message with its star, in the lists and in the message details. The
+selection is kept while you search, filter and change view, but it is emptied when you reload the
+page, switch domain, or sign in or out; the old application kept it for the whole browser session. _Select all_ in
+the _Actions_ menu selects the messages loaded so far, not every message the search could find.
+
+[#editors-load-more]
+==== Long result lists load in pages
+
+A long search result is loaded a page at a time. A button at the bottom of the list says which
+messages it will fetch, out of how many, for example _Load 100 - 200 of 340 messages_, and adds them
+to the list. If loading fails, a
+_Retry_ button fetches the same page again without losing what is already shown.
+
+[#editors-hold-e]
+==== Hold E to open a message in the editor
+
+If you hold down the kbd:[E] key while you click a message in the _Table_, _Grid_, _Details_ or
+_Selection_ view, the message opens straight in the editor instead of in the message details. It
+works only for a message you may open in the editor; any other message opens as usual. On some
+laptop touchpads a tap is ignored while a key is held down; a mouse click always works.
+
+[#editors-overdue-marker]
+==== A red bar marks an overdue follow-up date
+
+A message whose follow-up date has passed has a red bar along the left edge of its row in the
+_Table_, _Details_ and _Selection_ views. Point at the row to read _Requires attention (e.g.
+expired/overdue warning)_. The rest of the row keeps its usual colours.
+
+[#editors-message-details]
+==== Message details open as a panel on the right
+
+The message details used to open in a dialog. They now open in a panel on the right of the list,
+and the page's address names the message, so you can copy it and send it to someone. As before,
+the panel has the previous and next arrows, a _Back_ arrow after you have followed a
+reference, the selection star and a menu with _Edit_, _Copy_, _Print_ and the tag actions. See
+link:../editor-manual/manual.html#message-details[Message Details] in the editor manual.
+
+[#editors-tags]
+==== Tags: a picker and a tag manager
+
+The old _Message Tag_ dialog has been split in two. Adding messages to a tag, removing them and
+choosing tags in the filter now happen in a small picker that opens where you click, with chips
+for private, domain and public tags. Creating, editing and deleting tags happens in _Manage tags…_,
+which you open from the _Actions_ menu of the _Messages_ page. A tag's name cannot be changed once
+it is created, and only an administrator can unlock a locked tag. See
+link:../editor-manual/manual.html#message-tags[Message Tags] in the editor manual.
+
+[#editors-actions-menu]
+==== Who may use the actions
+
+_Update selection status…_ in the _Actions_ menu, which changes the status of all the selected
+messages at once, was an action for administrators only. It is now open to editors. _Import..._ is
+still for administrators. See
+link:../editor-manual/manual.html#update-selection-status-action[Update Selection Status Action] in
+the editor manual.
+
+[#editors-writing]
+=== Writing a Message
+
+[#editors-start-screen]
+==== The start screen: Create a message
+
+When you open _Editor_ in the main menu you no longer get a blank editor page with a template
+field. You get a start screen, _Create a message_, with a card for each type of message you can
+create in the current domain: _Navigational Warning_, _Notice to Mariners_, or both. A domain with
+only one type shows one card. Each card has a _New blank NW_ (or _NM_) button and, where the domain
+uses templates, _Select NW template…_ (or _NM_). Below the cards are your _Recently edited drafts_. See
+link:../editor-manual/manual.html#blank-editor-page[Blank Editor Page] in the editor manual.
+
+[#editors-templates]
+==== Templates on a page of their own
+
+The old two dialogs for choosing and running message templates are gone. Choosing a template on
+the start screen, or _Run template…_ in the _Categories_ field of an open message, opens the page
+_Execute templates_. There you pick templates in a _Select templates_ panel, which shows an example
+when you point at a template, fill in the _Base fields_ and the _Template parameters_, and watch a
+preview of the result as you type. _Execute_ replaces the whole message and opens it, unsaved, for
+editing. See
+link:../editor-manual/manual.html#message-template-execution[Message Template Execution] in the
+editor manual.
+
+[#editors-editor-header]
+==== Save, Clear and Back sit in the header
+
+The old editor marked unsaved changes with a red save icon beside its title and had _Save Message_
+and _Reload Message_ buttons at the bottom of the page. The header of the editor now holds _Back_,
+which returns to the message list with your filter, a reload button, the title, a status chip that
+reads _Unsaved changes_ or _All changes saved_, _Clear_ and _Save_. Because it is the header, you can
+save from any of the editor's tabs. See link:../editor-manual/manual.html#editor[Editor] in the
+editor manual.
+
+[#editors-unsaved-changes]
+==== Leaving with unsaved changes
+
+If you leave the editor, or open another message in it, while you have unsaved changes, you are
+asked first whether to leave without saving. Saving a _Verified_ message asks for confirmation too,
+because saving it returns it to _Draft_. The _Status_, _Comments_ and _History_ tabs appear once the
+message has been saved for the first time.
+
+[#editors-live-preview]
+==== A live preview beside the fields
+
+To the right of the fields, a _Live preview_ shows the message as it will look, and changes as you
+type. Clicking a part of the preview opens the field it comes from. On a narrow window the preview
+is a panel you open with the _Preview_ button in the header. See
+link:../editor-manual/manual.html#editor[Editor] in the editor manual.
+
+[#editors-status-stepper]
+==== The status steps above the preview
+
+Above the preview, a row of steps shows where the message is: _Draft_, _Verified_, _Published_ and,
+at the end, _Expired_ or _Cancelled_. The steps only show the status; for an editor, a button beside
+them moves the message on: _Verify_ on a _Draft_ message and _Publish_ on a _Verified_ one. A _Verified_
+message with a _Publish from_ date shows the date it is scheduled to be published instead of the
+_Publish_ button. The one step you can click is _Draft_ on a _Verified_ message, which reverts the
+message to draft. Deleting, cancelling and copying stay on the _Status_ page.
+
+[#editors-optional-fields]
+==== Manage optional fields
+
+Which fields the editor shows is still decided by the deployment, by the message's series, areas
+and categories. To show a field that is hidden, use _Manage optional fields…_ on the _Edit_ page,
+which replaces the old _More Fields_ actions at the bottom of the _Action_ menu. _Expand all
+fields_ and _Collapse all fields_ are in the editor's _Actions_ menu.
+
+[#editors-part-types]
+==== Two new part types
+
+A message part could be of the type _Details_, _Time_, _Positions_ or _Note_. Two types have been
+added, _Prohibition_ and _Signals_, and like the others they decide which fields a part shows.
+Parts can now be reordered by dragging them by their grip, as well as with the arrow buttons. See
+link:../editor-manual/manual.html#editor[Editor] in the editor manual.
+
+[#editors-publication-field]
+==== Citing a publication
+
+The _Publication_ field of a message still writes a reference to a publication into the message's
+text. With the new publications model, the dialog that inserts it offers the published issues of
+the series that may be cited, rather than a list of publications. See
+<<administrators-publications>> for what series and issues are.
+
+[#editors-status-and-publishing]
+=== Verifying, Publishing and Copying
+
+[#editors-status-page]
+==== The Status page
+
+The _Status_ page shows the message as it will be published. A row of buttons above it, one for
+each of the deployment's message languages, switches the language of the preview; it starts at the
+language the application is shown in. Its buttons are disabled while the message has unsaved changes, so
+save first. A _Verified_ message with a _Publish from_ date shows the date it is scheduled to be
+published instead of a _Publish_ button. See
+link:../editor-manual/manual.html#status-editor-page[Status Editor Page] in the editor manual.
+
+[#editors-copy-and-cancel]
+==== Copying and cancelling ask first
+
+_Copy Message_ used to open the copy in the editor at once. _Copy message…_ now opens a dialog,
+_Copy Message?_, where a copy of a Notice to Mariners can be given a reference to the message it
+was copied from with _Include reference to copied message_. _Cancel message…_ opens a dialog too,
+and for a Notice to Mariners its _Create cancellation message_ starts a new message that announces
+the cancellation.
+
+[#editors-publications-panel]
+==== Which publications a message is in
+
+The _Status_ page has a new _Publications_ panel. It lists each publication series the message
+appears in, with the number of issues, and marks whether the message is _Published_ in it,
+_Withdrawn_ from it or _Pending_, which means it would be in the issue being prepared but can still
+change before that issue is published.
+
+[#editors-positions]
+=== Positions
+
+[#editors-position-tools]
+==== New drawing tools, Undo and Redo
+
+The position editor opens in a large window over the editor. Its tools are now _Point_, _Line_,
+_Area_, _Box_, _Select_, _Delete_ and _Measure_, and it has _Undo_ and _Redo_. Its _Actions_ menu
+offers _Merge geometries_, _Split geometries_ and _Convert_ to a line, an area or points. See
+link:../editor-manual/manual.html#position-editor[Position Editor] in the editor manual.
+
+[#editors-position-files]
+==== Positions from a file, or as text
+
+You can drop a GeoJSON, KML or WKT file on the map to add its positions. The import dialog still
+offers _From Area_, _From Text_ and _From UTM_. _Edit as text_, in the _Positions_ field and in the
+position editor, lets you type or paste the positions instead of drawing them.
+
+[#editors-schedule]
+=== The Firing Area Schedule
+
+[#editors-schedule-menu]
+==== Schedule is an item in the main menu
+
+The firing schedule was a _Schedule_ sub-page of the domain that holds the firing areas. It is now
+the _Schedule_ item in the main menu, shown to editors in a domain that has a firing schedule, and
+opens the page _Firing Area Schedule_. You pick a day, edit each firing area's periods in the list,
+and see the areas on a map. See
+link:../sysadmin-manual/manual.html#maintain-firing-exercise-schedule[Maintain Firing Exercise
+Schedule] in the system administrator manual.
+
+[#editors-schedule-updates]
+==== How often the firing exercises are updated
+
+_Update Firing Exercises…_ still updates the firing exercise messages from the schedule at once.
+The system also updates them on its own every hour, so a change to the schedule reaches the
+messages within the hour even if you do not press the button.
+
+[#editors-gone]
+=== Gone, and What to Use Instead
+
+[cols="35,65",options="header"]
+|===
+| Gone
+| Use instead
+
+| The _Selection_ sub-page
+| The _Selection_ tab of the _Messages_ page. See <<editors-five-views>>.
+
+| The _Message Tag_ dialog
+| The tag picker, and _Manage tags…_ in the _Actions_ menu. See <<editors-tags>>.
+
+| The blank editor page with its template field
+| The start screen, _Create a message_. See <<editors-start-screen>>.
+
+| The _Template Selection_ and _Template Execution_ dialogs
+| The _Execute templates_ page. See <<editors-templates>>.
+
+| The red save icon, and the _Save Message_ and _Reload Message_ buttons at the bottom of the page
+| The editor's header: the status chip, _Save_ and the reload button. See <<editors-editor-header>>.
+
+| The _More Fields_ actions in the _Action_ menu
+| _Manage optional fields…_ on the _Edit_ page. See <<editors-optional-fields>>.
+
+| _Subtract Geometries_ in the position editor
+| No direct replacement. Draw the remaining area as it should be, or import it from a file.
+
+| Adding the selected messages to a publication, or removing them, from the message list or the
+  editor's menu
+| A publication now finds its messages by its own criteria. An administrator adds or leaves out a
+  single message by hand on the issue. See <<administrators-publications>>.
+
+| A message tag for each issue of a publication, such as a weekly Notices to Mariners
+| Filter the message list with the _Publication_ filter, which picks an issue. Tags made by the old
+  publications stay as they were.
+|===

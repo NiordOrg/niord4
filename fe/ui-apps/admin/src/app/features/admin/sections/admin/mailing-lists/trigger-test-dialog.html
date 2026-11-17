@@ -1,0 +1,82 @@
+<app-dialog
+  [visible]="model() !== undefined"
+  (visibleChange)="onVisibleChange($event)"
+  [header]="'admin.mailingLists.test.title' | transloco"
+  [style]="{ width: '56rem', maxWidth: '92vw' }"
+>
+  @if (model()) {
+    <div class="flex flex-col gap-4">
+      @if (isStatusChange()) {
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.mailingLists.test.testMessage' | transloco }}
+          </span>
+          <app-message-id-field
+            [value]="messageId()"
+            (valueChange)="messageId.set($event)"
+            placeholder="admin.mailingLists.test.testMessage"
+          />
+        </div>
+      }
+
+      <div>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="!canExecute() || executing()"
+          (click)="execute()"
+        >
+          <app-icon name="lucidePlay" class="mr-1 text-xs" />
+          {{ 'admin.mailingLists.test.execute' | transloco }}
+        </button>
+      </div>
+
+      @if (mails(); as mailList) {
+        <div class="rounded border border-surface-200 dark:border-surface-700">
+          <table class="niord-table">
+            <thead>
+              <tr>
+                <th>{{ 'admin.mailingLists.test.to' | transloco }}</th>
+                <th>{{ 'admin.mailingLists.test.subject' | transloco }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (mail of mailList; track $index) {
+                <tr
+                  class="row-interactive"
+                  [class.row-selected]="mail === selectedMail()"
+                  (click)="selectedMail.set(mail)"
+                >
+                  <td>{{ mail.recipients?.[0]?.address }}</td>
+                  <td>{{ mail.subject }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2" class="text-fg-muted">
+                    {{ 'admin.mailingLists.test.noMails' | transloco }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (selectedMail(); as mail) {
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-fg-title">
+              {{ 'admin.mailingLists.test.details' | transloco }}
+            </span>
+            <div
+              class="h-80 overflow-hidden rounded border border-surface-200 dark:border-surface-700"
+            >
+              <app-sandboxed-html
+                [html]="mail.contents ?? ''"
+                [title]="'admin.mailingLists.test.details' | transloco"
+              />
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
+</app-dialog>

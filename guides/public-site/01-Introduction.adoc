@@ -1,0 +1,110 @@
+
+[#introduction]
+== Introduction
+
+The public site is where you read the Navigational Warnings and Notices to Mariners that a
+maritime authority publishes with Niord. It is written for mariners, harbour offices and anyone
+else who needs to know what is going on in the waters the authority covers. You need no account
+and nothing to install: the site opens in any up-to-date web browser, on a computer or on a phone,
+and you only read on it. Nothing you do on the site changes a message.
+
+The site shows two kinds of message:
+
+* A _Navigational Warning_ (_NW_) tells you about something that matters to navigation now: a light
+  that is unlit, a buoy that is missing or out of position, an obstruction, a firing exercise.
+* A _Notice to Mariners_ (_NM_) tells you about a change to the charts and nautical publications.
+  A notice marked _(T)_ is temporary, for example dredging that goes on for a few weeks; one marked
+  _(P)_ is preliminary, a notice in advance of work that has not started yet.
+
+The site lists the messages the authority has published and not yet withdrawn: a message leaves the
+site's lists when the authority cancels it or when it expires.
+
+This guide describes the site as the Niord base product makes it. The site of a particular country
+may look a little different: its own colours and logo, more languages, and its own links at the
+bottom of the page.
+
+[#addresses]
+=== Where to find the site
+
+The public site is at https://nautiskinformation.brs2.dk[nautiskinformation.brs2.dk^].
+
+There is also a test site, at
+https://nautiskinformation.staging.brs2.dk[nautiskinformation.staging.brs2.dk^], where new versions
+of the site are tried out before they are put into use. Its messages are test data: never use them
+for navigation. A site that is not set up as a production site says so with a ribbon across its
+top left corner, carrying a word such as _TEST_.
+
+Every view of the site has an address of its own, which you can bookmark or send to someone:
+
+[cols="40,60",options="header"]
+|===
+|Address |What it opens
+|`/messages/details` |The full text of every message (the page the site opens on)
+|`/messages/table` |The list of messages, one line each
+|`/messages/map` |The messages on a map
+|`/publications` |The publications you can download
+|`/messages/details/message/NM-811-26` |One message, here the notice with the number NM-811-26, in a window of its own (see <<message-links>>)
+|===
+
+Addresses written for the earlier public site had a `#` in them, such as `/#/messages/map`. They
+still work: the site turns them into the new form when it opens.
+
+[#page-layout]
+=== The parts of the page
+
+Every page of the site has the same three parts: the menu bar at the top, the page itself, and a
+footer at the bottom.
+
+.The menu bar
+image::PublicSiteMenuBar.png[The menu bar, 335]
+
+The _menu bar_ takes you to the four views of the site:
+
+* _Details_ shows the full text of every message, under the name of the sea area it is in.
+* _List_ shows one line for each message: its number and its title.
+* _Map_ shows the messages on a map.
+* _Downloads_ lists the publications you can download, such as the weekly Notices to Mariners.
+
+After _Downloads_ come the language buttons (see <<languages>>). The view you are in is
+highlighted.
+
+On the three views of the messages, a second bar under the menu bar, the _filter bar_, chooses
+which messages you see and prints them (see <<choosing-messages>>). Both bars stay at the top of the
+window while you scroll.
+
+The _footer_ at the bottom of the page carries the site's copyright line. A country's site may add
+the authority's name and logo there, and links to its disclaimer, its statement on cookies and its
+accessibility statement.
+
+TIP: If you use the keyboard, the first press of kbd:[Tab] on a page shows a link, _Skip to main
+content_, which takes you past the menu bar to the page itself. On the views of the messages, the
+next press of kbd:[Tab] goes to the first button of the filter bar.
+
+[#languages]
+=== Languages
+
+After _Downloads_, the menu bar has one button for each language the site is offered in. A button
+shows the language's flag, or the language's name when the site has no flag for it. The flag of the
+language you are reading in is brighter than the others. Click a language to read the site in it:
+the menu, the buttons and the messages change at once.
+
+The Niord base product is in English only, so its menu bar has one flag. A country's site adds its
+own languages.
+
+A message is shown in your language when the authority wrote it in that language. When it did not,
+the site shows the message in a language it has, and puts a small flag of that language after the
+title, or the language's code in small type, such as _DA_, when the site has no flag for it. So you
+can see that the text is not in the language you chose.
+
+[#remembered]
+=== What the site remembers
+
+The site remembers some of your choices in your browser, on the device you use, for your next
+visit: the language you chose with a language button, and which kinds of message you chose to see
+(_Navigational Warnings_, _Notices to Mariners_ or both); on a site that covers more than one
+region, also the region you chose. The sea areas you chose are not remembered. These choices stay
+in your browser. On another device, or in another browser, the site starts with its own defaults:
+both kinds of message, in the site's own language.
+
+A link that names a language, such as one ending in `?lang=en`, opens the site in that language
+without changing the language the site remembers for you.

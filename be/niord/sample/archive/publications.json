@@ -1,0 +1,225 @@
+[
+  {
+    "mainType": "PUBLICATION",
+    "type": "LINK",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-external-publications"
+    },
+    "messagePublication": "EXTERNAL",
+    "publishDateFrom": 1451606400000,
+    "languageSpecific": false,
+    "descs": [
+      {
+        "lang": "da",
+        "link": "https://example.org/sample/harbour-pilot",
+        "title": "www.danskehavnelods.dk",
+        "messagePublicationFormat": "www.danskehavnelods.dk"
+      },
+      {
+        "lang": "en",
+        "link": "https://example.org/sample/harbour-pilot",
+        "title": "www.danskehavnelods.dk",
+        "messagePublicationFormat": "www.danskehavnelods.dk"
+      }
+    ]
+  },
+  {
+    "mainType": "PUBLICATION",
+    "type": "LINK",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-dma-publications"
+    },
+    "messagePublication": "EXTERNAL",
+    "publishDateFrom": 1451606400000,
+    "languageSpecific": true,
+    "descs": [
+      {
+        "lang": "da",
+        "link": "https://example.org/sample/list-of-lights-da.pdf",
+        "title": "Dansk Fyrliste 2015",
+        "messagePublicationFormat": "Dansk Fyrliste, nr. ${parameters}"
+      },
+      {
+        "lang": "en",
+        "link": "https://example.org/sample/list-of-lights-en.pdf",
+        "title": "Danish List of Lights 2015",
+        "messagePublicationFormat": "Danish List of Lights (Dansk Fyrliste) no ${parameters}"
+      }
+    ]
+  },
+  {
+    "mainType": "PUBLICATION",
+    "type": "LINK",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-dma-publications"
+    },
+    "messagePublication": "EXTERNAL",
+    "publishDateFrom": 1451606400000,
+    "languageSpecific": true,
+    "descs": [
+      {
+        "lang": "da",
+        "link": "https://example.org/sample/firing-practice-areas-da.pdf",
+        "title": "Skydepladser 2016",
+        "messagePublicationFormat": "Oversigt over forsvarets skydepladser 2016, punkt ${parameters}"
+      },
+      {
+        "lang": "en",
+        "link": "https://example.org/sample/firing-practice-areas-en.pdf",
+        "title": "Firing Practice Areas",
+        "messagePublicationFormat": "Danish List of Firing Practice Areas, section ${parameters}"
+      }
+    ]
+  },
+  {
+    "mainType": "PUBLICATION",
+    "type": "LINK",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-dma-internal-publications"
+    },
+    "messagePublication": "INTERNAL",
+    "publishDateFrom": 1451606400000,
+    "languageSpecific": false,
+    "descs": [
+      {
+        "lang": "da",
+        "title": "Journalnummer",
+        "messagePublicationFormat": "J.nr. ${parameters}"
+      },
+      {
+        "lang": "en",
+        "title": "Journal number",
+        "messagePublicationFormat": "J. no. ${parameters}"
+      }
+    ]
+  },
+  {
+    "mainType": "PUBLICATION",
+    "type": "NONE",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-dma-internal-publications"
+    },
+    "messagePublication": "INTERNAL",
+    "publishDateFrom": 1451606400000,
+    "languageSpecific": false,
+    "descs": [
+      {
+        "lang": "da",
+        "title": "Vragliste",
+        "messagePublicationFormat": "VragID ${parameters}"
+      },
+      {
+        "lang": "en",
+        "title": "List of wrecks",
+        "messagePublicationFormat": "Wreck ID ${parameters}"
+      }
+    ]
+  },
+  {
+    "mainType": "PUBLICATION",
+    "type": "NONE",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-dma-internal-publications"
+    },
+    "messagePublication": "INTERNAL",
+    "publishDateFrom": 1451606400000,
+    "languageSpecific": false,
+    "descs": [
+      {
+        "lang": "da",
+        "title": "Afmærkninger",
+        "messagePublicationFormat": "AFM, nr. ${parameters}"
+      },
+      {
+        "lang": "en",
+        "title": "Aids to Navigation",
+        "messagePublicationFormat": "AtoN no ${parameters}"
+      }
+    ]
+  },
+  {
+    "mainType": "TEMPLATE",
+    "type": "MESSAGE_REPORT",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-dma-weekly-nm-publications"
+    },
+    "domain": {
+      "domainId": "niord-nm"
+    },
+    "periodicalType": "WEEKLY",
+    "messagePublication": "NONE",
+    "languageSpecific": true,
+    "messageTagFormat": "nm-w${week-2-digits}-${year}",
+    "printSettings": {
+      "report": "nm-report",
+      "pageSize": "A4",
+      "pageOrientation": "portrait",
+      "mapThumbnails": false
+    },
+    "reportParams": {
+      "year": "${year}",
+      "week": "${week}"
+    },
+    "descs": [
+      {
+        "lang": "da",
+        "title": "Ugentlig EfS",
+        "titleFormat": "EfS uge ${week} - ${year}",
+        "fileName": "NtM-Uge-${week}-${year}.pdf"
+      },
+      {
+        "lang": "en",
+        "title": "Week NtM",
+        "titleFormat": "NtM Week ${week} - ${year}",
+        "fileName": "EfS-Week-${week}-${year}.pdf"
+      }
+    ]
+  },
+  {
+    "mainType": "TEMPLATE",
+    "type": "MESSAGE_REPORT",
+    "status": "ACTIVE",
+    "category": {
+      "categoryId": "dk-dma-weekly-nm-publications"
+    },
+    "domain": {
+      "domainId": "niord-nm"
+    },
+    "periodicalType": "WEEKLY",
+    "messagePublication": "NONE",
+    "languageSpecific": true,
+    "messageTagFormat": "nm-tp-w${week-2-digits}-${year}",
+    "messageTagFilter": "(msg.type == Type.TEMPORARY_NOTICE || msg.type == Type.PRELIMINARY_NOTICE) && msg.status == Status.PUBLISHED",
+    "printSettings": {
+      "report": "nm-tp-report",
+      "pageSize": "A4",
+      "pageOrientation": "portrait",
+      "mapThumbnails": false
+    },
+    "reportParams": {
+      "year": "${year}",
+      "week": "${week}"
+    },
+    "descs": [
+      {
+        "lang": "da",
+        "title": "Ugentlig EfS T&P",
+        "titleFormat": "Aktive EfS T&P uge ${week} - ${year}",
+        "fileName": "NtM-TP-uge-${week}-${year}.pdf"
+      },
+      {
+        "lang": "en",
+        "title": "Weekly NtM T&P",
+        "titleFormat": "Active NtM T&P Week ${week} - ${year}",
+        "fileName": "EfS-TP-Week-${week}-${year}.pdf"
+      }
+    ]
+  }
+]

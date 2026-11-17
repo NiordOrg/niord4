@@ -1,0 +1,99 @@
+{
+  "format": 1,
+  "note": "Every root file of a country's generated workspace (fe/ of the country repository) and how set-up makes it: copy (the base product's file unchanged), rewrite (the base product's file with its paths or names changed), generate (written by the kit). `notNeeded` names each other root file and folder of the base product's fe/ with why a country workspace has no copy; workspace.test.mjs fails when the base product's fe/ gains a tracked root file in neither list. `gitignore` is what init writes into the country's fe/.gitignore: the generated files and folders, never committed.",
+  "files": {
+    "angular.json": {
+      "how": "generate",
+      "from": "angular.json",
+      "what": "one project per application, niord-app and niord-info, with the base product's own non-country configurations, every path into .niord/base/, the staged assets, the country's styles, each application's styles budget raised by the size of the country's font sheet (styles/fonts.<cc>.css) when it has one, a fileReplacement for every seam the country fills, and the e2e specs in niord-app's lint target"
+    },
+    "package.json": {
+      "how": "rewrite",
+      "from": "package.json",
+      "what": "the base product's dependencies plus the country's (fe/country/package.json), overrides, engines and packageManager under the name niord-<cc>-fe, with the kit's scripts, run from ../.niord/kit/ (the audit among them, run first in build; build ending with the checks on every country build; bundle:info; image:info; e2e) and no git hooks"
+    },
+    "package-lock.json": {
+      "how": "rewrite",
+      "from": "package-lock.json",
+      "what": "the base product's lockfile with its root name changed to the workspace's and the country's entries (fe/country/package-lock.json) merged on top"
+    },
+    ".npmrc": { "how": "copy", "from": ".npmrc", "what": "npm's settings" },
+    ".nvmrc": { "how": "copy", "from": ".nvmrc", "what": "the Node version" },
+    ".postcssrc.json": {
+      "how": "copy",
+      "from": ".postcssrc.json",
+      "what": "Tailwind's PostCSS plugin"
+    },
+    "tsconfig.json": {
+      "how": "generate",
+      "from": "tsconfig.json",
+      "what": "the base product's compiler options with the path aliases into .niord/base/ (@niord/map/*, @niord/html/* and the four API entries: @niord/admin/api, @niord/admin/api/testing, @niord/info/api, @niord/info/api/testing), and a reference to each generated application tsconfig in .niord/; @niord/<app>/internal/* is mapped only in the tsconfigs of an application the country overrides"
+    },
+    "eslint.config.js": {
+      "how": "generate",
+      "from": "eslint.config.js",
+      "what": "the base product's lint configuration, applied to the country's files and its e2e specs (parsed in their own TypeScript program, .niord/tsconfig.e2e.json), followed by the country blocks, required from ../.niord/kit/: imports of base product code only through the two APIs, no relative path out of the country's folders, no import of the other application's API, the e2e specs' imports held to the login fixtures, Playwright, node: built-ins and e2e/ (niord-country/e2e-imports), the security rules and no inline disabling"
+    },
+    "vitest.config.ts": {
+      "how": "generate",
+      "from": "vitest.config.ts",
+      "what": "re-exports the base product's"
+    },
+    "proxy.conf.mjs": {
+      "how": "generate",
+      "from": "proxy.conf.mjs",
+      "what": "re-exports the base product's dev-server proxy"
+    },
+    "playwright.config.ts": {
+      "how": "generate",
+      "from": "playwright.config.ts",
+      "what": "the base product's options over the country's own specs in e2e/, compiled with .niord/tsconfig.e2e.json, which extends tsconfig.json, maps @niord/admin/e2e alone to the base product's login fixtures and is also the specs' lint program"
+    }
+  },
+  "notNeeded": {
+    ".claude": "the base product's own agent settings",
+    ".editorconfig": "the base product's editor settings; a country keeps its own at its repository root",
+    ".gitattributes": "not in the zip; init writes fe/.gitattributes from country-kit/templates/gitattributes when the country has none",
+    ".gitignore": "the country's is written by init",
+    ".husky": "the base product's git hooks; a country workspace installs none",
+    ".mcp.json": "the base product's own editor tooling",
+    ".prettierignore": "formatting is the country repository's own business",
+    ".prettierrc": "formatting is the country repository's own business",
+    "AGENTS.md": "the base product's agent instructions; a country's agent contract is at its repository root, from init",
+    "CLAUDE.md": "the base product's one-line importer of AGENTS.md for Claude Code; a country's is at its repository root, from init",
+    "LICENSE": "in the zip as the base product's licence; a country repository has its own",
+    "README.md": "the base product's; the country repository has its own",
+    "country-kit": "the kit; in niord-ng's tree beside fe/, not in fe/; a package of its own, unpacked at the repository root's .niord/kit/, which the generated scripts and lint configuration name as ../.niord/kit/",
+    "docs": "the base product's documentation, never in the zip",
+    "eslint-shared.cjs": "in the zip, read from .niord/base/ by the base product's eslint.config.js",
+    "guides-shots": "the screenshot rig of the base product's user guides (guides/ at the repository root), never in the zip; it runs on a local copy of test data and takes the pictures of the base product's own screens",
+    "languages": "in the zip (en only), read from .niord/base/languages/en/",
+    "potentiel-bugs.txt": "the base product's own working note",
+    "scripts": "the base product's own checks; the public site's checks and the URL allow-list are in the zip and run from .niord/base/scripts/",
+    "shared-html": "in the zip, read from .niord/base/shared-html/",
+    "shared-map": "in the zip, read from .niord/base/shared-map/",
+    "styles": "in the zip, read from .niord/base/styles/",
+    "transloco.config.ts": "the base product's key-manager tooling for its English text",
+    "ui-apps": "in the zip, read from .niord/base/ui-apps/"
+  },
+  "gitignore": [
+    "/angular.json",
+    "/package.json",
+    "/package-lock.json",
+    "/.npmrc",
+    "/.nvmrc",
+    "/.postcssrc.json",
+    "/tsconfig.json",
+    "/eslint.config.js",
+    "/vitest.config.ts",
+    "/proxy.conf.mjs",
+    "/playwright.config.ts",
+    "/.niord/",
+    "node_modules/",
+    "/dist/",
+    "/.angular/",
+    "/out-tsc/",
+    "/test-results/",
+    "/playwright-report/"
+  ]
+}

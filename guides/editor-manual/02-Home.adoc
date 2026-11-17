@@ -1,0 +1,142 @@
+
+:imagesdir: images
+
+[#home]
+== Home
+
+The _Home_ page is the page the administration application of Niord opens with. It shows the
+published messages of the current domain on a map that fills the window, with a small welcome
+panel on top of it: the Niord logo, _Welcome to the Nautical Information Directory_ and, while you
+have not logged in, a _Login_ button. Point at a message on the map to see its title. You come back
+to the _Home_ page from anywhere by clicking the Niord logo at the left of the header.
+
+image::Home.png[Home, 800]
+
+Everyone can open the _Home_ page and the _Messages_ page, also without logging in: you then see
+the public messages (published, cancelled and expired) and can read them, but you cannot change
+anything. The pages for editors,
+administrators and system administrators ask you to log in first.
+
+This chapter describes what every page has in common: the header, the help, logging in and out,
+and choosing the domain and the language.
+
+[#application-header]
+=== The Header
+
+The header runs across the top of every page. From left to right it holds:
+
+* The Niord logo, which takes you to the _Home_ page.
+* The menu items _Messages_, _Editor_, _Schedule_, _Admin_ and _Sysadmin_. _Messages_ is always
+  there. Each of the others appears only when your role in the current domain lets you open the
+  page behind it: _Editor_ for an editor, an administrator or a system administrator, _Admin_ for an
+  administrator or a system administrator, and _Sysadmin_ for a system administrator. _Schedule_
+  appears to the same roles as _Editor_, and only in a domain that has a firing schedule.
+* At the right: the help (a question mark), the domain menu (the name of the current domain with a
+  coloured disc), your account menu (a person icon; before you log in, the _Login_ button, an arrow
+  pointing into a door) and the language menu (a flag).
+
+On a narrow window, such as a tablet held upright, the menu items fold into one menu button. It
+opens a single list with the pages, the help, your account and the languages. The domain menu
+stays visible beside the button, because it tells you which data you are working on.
+
+A deployment that is not the production system, for example a test system, shows a red badge
+under the logo, such as _TEST_, so that nobody mistakes test data for real warnings and notices:
+
+image::DeploymentBadge.png[Badge of a Test System, 49]
+
+[#help]
+=== Help
+
+The question mark in the header, image:HeaderHelpLink.png[Help, 16], opens the section of the user
+guides that describes the page you are on, in a new browser tab. For the _Home_, _Messages_ and
+_Editor_ pages that is a section of this manual; the _Schedule_, _Admin_ and _Sysadmin_ pages open
+the manuals for administrators and system administrators. A page that no section describes shows
+no question mark. Many dialogs and panels have a question mark of their own next to their title,
+which opens the section about that dialog.
+
+The address of the manuals is a setting that a system administrator can change, so a deployment
+can point the help at its own copy of the manuals.
+
+[#login]
+=== Logging In and Out
+
+Before you log in for the first time, ask a Niord administrator for a user account and for the
+roles you need in each domain. Your roles can differ from one domain to another: you may be an
+editor in one domain and only able to read in another.
+
+To log in, click _Login_ in the header or in the welcome panel on the _Home_ page. Niord takes you
+to the login page of its sign-in service. Enter your username and password and click _Sign In_.
+Once you are logged in, you come back to the page you were on.
+
+image::Log-In.png[Login, 350]
+
+The login page is set up for each deployment. Depending on the set-up, it may also offer your
+organisation's own login, or ask for a one-time code after the password.
+
+When you are logged in, the person icon in the header is your account menu. Point at it to see your
+name. The menu has two items:
+
+* _Edit <your name>_ opens your account pages in the sign-in service, where you change your
+  password and your profile.
+* _Logout_ logs you out.
+
+image::ProfileMenu.png[Account Menu, 167]
+
+[#session-expired]
+==== When Your Session Expires
+
+If your session expires, or the sign-in service cannot be reached, Niord does not log you out or
+reload the page. It carries on as if you had not logged in and shows a strip under the header,
+_Your session has expired — you're browsing as a guest._ or _Login is currently unavailable —
+you're browsing as a guest._, with a _Login_ button:
+
+image::GuestBanner.png[Guest Banner, 800]
+
+Click _Login_ to log in again. Logging in or
+out loads the application afresh: your message selection is emptied, and if the editor holds
+changes you have not saved, the browser first asks whether you want to leave the page.
+
+[#domain-selection]
+=== Choosing the Domain
+
+As described in the <<editors-manual,Editors Manual>> section, you always work within a current
+_domain_ in Niord. The current domain is chosen in the domain menu in the header, which shows its
+name and a disc in the domain's colour:
+
+image::DomainMenu.png[Domain Menu, 167]
+
+Next to each domain name, a pencil shows that you hold a role in that domain, and an eye that you
+can only view its published messages. The current domain is shown in bold on a grey background.
+
+Choosing another domain loads the application afresh, at the same address in most cases. Your
+message selection is emptied. If the editor holds changes you have not saved, the browser first
+asks whether you want to leave the page, and the changes are lost if you go on, so save your work
+before you switch.
+
+The browser remembers your choice, so Niord opens in the same domain the next time. A link to Niord
+that ends in `?domain=` followed by the id of a domain opens Niord in that domain.
+
+[#language-selection]
+=== Choosing the Language
+
+The language menu at the right of the header chooses the language of the menus, buttons and
+labels. The languages it lists are set up for each deployment: the base product comes with English
+only, and a country adds its own languages. Lists of messages show each message in the chosen
+language when the message has a text in it.
+
+As with the domain, the browser remembers your choice for the next time.
+
+[#out-of-date-warning]
+=== When Niord Is Updated
+
+[[update-banner]]Niord notices by itself when a newer version has been installed while you have it
+open: when you come back to the browser tab, or when a page you open cannot be loaded any more. It
+then shows a banner under the header on whatever page you are on, _Please refresh web-browser_,
+with a _Retry_ button:
+
+image::UpdateBanner.png[Update Banner, 800]
+
+Click _Retry_ in the banner to load the new version. Save your work in the editor first.
+
+After the button, the banner names in small print the _Server Version_ and the _Web Version_, the
+versions of the two parts of Niord; the picture leaves them out. Give them when you report a problem.

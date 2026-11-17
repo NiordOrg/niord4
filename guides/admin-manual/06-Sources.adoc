@@ -1,0 +1,99 @@
+
+:imagesdir: images
+
+[#sources]
+== Sources
+
+The _Sources_ page keeps a list of the sources that messages name: the authorities, harbours and
+others that report what a notice or warning is about, each with its usual abbreviation. Editors
+pick from this list when they fill in a message's _Source_ field, so the same source is written the
+same way, in every language. Open the page with *Admin* > *Sources*. Sources are shared by all
+domains.
+
+image::SourcesPage.png[The Sources page, 800]
+
+The list shows whether each source is *Active* (a coloured dot) or inactive (a grey one), its
+*Name* and its *Abbreviation*. It shows 20 sources at a time; the pager below it moves between the
+pages. To find a source, type in *Filter* above the list: the text is looked for, in any case, in
+the names and abbreviations. The cross in the field clears it.
+
+When the deployment writes its messages in more than one language, a *Model language* list in the
+toolbar chooses the language the list shows the names and abbreviations in. It changes only what
+the page shows, not the language of the application. With one language, the list is not shown.
+
+[#adding-or-editing-sources]
+=== Adding or Editing Sources
+
+Click *New Source* above the list to add a source, or the pencil, *Edit Source*, on a source's row
+to change it. The source opens in a drawer, _New Source_ or _Edit Source_:
+
+image::SourcesEditPage.png[The Edit Source drawer, 324]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Active
+| Only an active source is offered to editors in the message editor. A new source is active.
+
+| Name
+| The name of the source, with a field for each language the deployment writes its messages in
+  (the flag before each field shows which). The name in the deployment's default language, a
+  setting of the system administrator (English unless it is changed), is required.
+
+| Abbreviation
+| The official abbreviation of the source, in each language. It is optional.
+|===
+
+*Save Source* saves the source and closes the drawer; it can be clicked once you have changed
+something and the source has its name. *Cancel* closes the drawer without saving.
+
+[#deleting-a-source]
+=== Deleting a Source
+
+Click the bin, *Delete Source*, on a source's row, and confirm with _Delete Source?_. A message
+that already names the source keeps its text: the message editor writes the source's name into the
+message, so deleting the source changes no message. To keep a source from being picked without
+losing it, make it inactive instead.
+
+[#message-editor-source-field]
+=== The Source Field of the Message Editor
+
+Editors add sources to a message in its _Source_ field: *Add sources…* opens a dialog where they
+search the active sources of this list, tick the ones to add and give the date of each. The field
+and the dialog are described in the
+link:../editor-manual/manual.html#source-editor-field[Source Field] section of the User Manual for
+Editors.
+
+[#importing-and-exporting-sources]
+=== Importing and Exporting Sources
+
+The cog, _Source actions_, beside *New Source* holds the export and the import:
+
+* *Export...* opens every source, as JSON, in a new browser tab, where you can save it as a file.
+* *Import...* opens _Upload Sources File_: choose a JSON file, or drop it on the dialog. The file
+  is imported by the batch job _source-import_ in the background; _Upload Result_ shows the answer
+  to the upload, and a system administrator can follow the job on the
+  link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] page. A source in the file that has
+  the name of an existing source, in one of the languages, updates it; any other is added.
+
+The file holds a list of sources in the format of the export, with a `descs` entry for each
+language. For example:
+
+[source,json]
+----
+[
+  {
+    "active": true,
+    "descs": [
+      {
+        "lang": "en",
+        "name": "Joint Arctic Command",
+        "abbreviation": "JACMD"
+      }
+    ]
+  },
+  ...
+]
+----

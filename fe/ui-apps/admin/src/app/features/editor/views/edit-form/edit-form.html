@@ -1,0 +1,165 @@
+<app-editor-view-header>
+  <!-- `contents`: the wrapper must not create a box — an empty flex child would still claim a
+       gap slot in the header row, nudging Save/Clear left only on this tab. -->
+  <div headerActions class="contents">
+    @if (facade.message() && !readOnly() && narrow()) {
+      <button type="button" class="btn-tertiary" (click)="previewOpen.set(true)">
+        <app-icon name="lucideEye" />
+        <span>{{ 'editor.header.preview' | transloco }}</span>
+      </button>
+    }
+  </div>
+</app-editor-view-header>
+
+@if (facade.loadStatus() === 'error') {
+  <!-- Retry only when it can help; a 403 (another domain, or no right to open the message) and a
+       load with nothing to replay offer the way back to Start instead. -->
+  <div
+    class="m-4 flex flex-col items-start gap-3 rounded border border-danger/40 bg-danger/5 p-4"
+    data-testid="editor-load-error"
+  >
+    <p class="text-sm text-danger">{{ facade.loadErrorPanel() | transloco }}</p>
+    @if (facade.canRetryLoad()) {
+      <button
+        type="button"
+        class="btn-primary"
+        data-testid="editor-load-retry"
+        (click)="facade.retryLoad()"
+      >
+        <app-icon name="lucideRefreshCw" />
+        <span>{{ 'editor.load.retry' | transloco }}</span>
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="btn-primary"
+        data-testid="editor-load-to-start"
+        (click)="facade.leaveToStart()"
+      >
+        <app-icon name="lucideArrowLeft" />
+        <span>{{ 'editor.load.toStart' | transloco }}</span>
+      </button>
+    }
+  </div>
+} @else if (facade.message(); as message) {
+  @if (readOnly()) {
+    <div class="min-h-0 flex-1 overflow-auto p-4">
+      <app-message-details-renderer
+        [message]="message"
+        [language]="previewLanguage()"
+        [showPromulgation]="true"
+      />
+    </div>
+  } @else {
+    <div class="flex min-h-0 flex-1">
+      <!-- Form pane. Inert while a save is in flight: the save sends the message as it stood at
+           the click and then repopulates the form from the server's copy, so anything typed in
+           the round trip would be overwritten without a word. Inert blocks typing, clicks and
+           focus in every field, part card and promulgation editor at once, and leaves the header
+           (Save, the chip) and the preview alone. -->
+      <div
+        class="min-w-0 flex-1 p-4"
+        data-testid="edit-form-pane"
+        [attr.inert]="facade.saving() ? '' : null"
+        [attr.aria-busy]="facade.saving() ? 'true' : null"
+      >
+        <div class="flex flex-col">
+          <app-section-panel heading="editor.section.preamble">
+            <app-type-field [field]="form.type" />
+            @if (fields.showField('orig_info')) {
+              <app-orig-info-field [field]="form.originalInformation" />
+            }
+            <app-id-field
+              [seriesField]="form.seriesId"
+              [shortIdField]="form.shortId"
+              [numberField]="form.number"
+            />
+            <app-title-field [titlesField]="form.titles" [autoTitleField]="form.autoTitle" />
+            @if (fields.showReferencesField()) {
+              <app-references-field-editor />
+            }
+            <app-dates-field
+              [fromField]="form.publishDateFrom"
+              [toField]="form.publishDateTo"
+              [followUpField]="form.followUpDate"
+            />
+            <app-areas-vicinity-field [vicinitiesField]="form.vicinities" />
+            <app-categories-field-row />
+          </app-section-panel>
+
+          <app-section-panel heading="editor.parts.title" [sunken]="true">
+            @if (editableNow()) {
+              <button
+                panelActions
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded border border-dashed border-surface-300 px-2.5 py-1 text-xs text-fg-muted hover:border-primary hover:text-primary dark:border-surface-600"
+                (click)="onAddPart()"
+              >
+                <app-icon name="lucidePlus" />
+                <span>{{ 'editor.part.add' | transloco }}</span>
+              </button>
+            }
+            <div cdkDropList class="flex flex-col gap-3" (cdkDropListDropped)="onPartDrop($event)">
+              @for (part of parts(); track $index) {
+                <div cdkDrag [cdkDragDisabled]="!editableNow()">
+                  <app-part-card
+                    [partIndex]="$index"
+                    [part]="part"
+                    [first]="$first"
+                    [last]="$last"
+                  />
+                </div>
+              }
+            </div>
+          </app-section-panel>
+
+          <app-section-panel heading="editor.section.misc">
+            <app-promulgation-field />
+            @if (fields.showChartsField()) {
+              <app-charts-field-row [datumField]="form.horizontalDatum" />
+            }
+            @if (fields.showField('attachments')) {
+              <app-attachments-field />
+            }
+            @if (fields.showField('publication')) {
+              <app-publication-field />
+            }
+            @if (fields.showField('source')) {
+              <app-source-field [sourcesField]="form.sources" />
+            }
+            @if (fields.showField('layout')) {
+              <app-layout-field [field]="form.separatePage" />
+            }
+          </app-section-panel>
+
+          <app-manage-optional-fields />
+        </div>
+      </div>
+
+      <!-- Inline preview (wide only) -->
+      @if (!narrow()) {
+        <app-live-preview [message]="message" mode="inline" (focusField)="onPreviewFocus($event)">
+          <app-status-flow />
+        </app-live-preview>
+      }
+    </div>
+
+    <!-- Narrow preview drawer -->
+    @if (narrow()) {
+      <app-drawer
+        [visible]="previewOpen()"
+        header="editor.preview.title"
+        size="wide"
+        (closed)="previewOpen.set(false)"
+      >
+        <app-live-preview [message]="message" mode="drawer" (focusField)="onPreviewFocus($event)">
+          <app-status-flow />
+        </app-live-preview>
+      </app-drawer>
+    }
+  }
+} @else {
+  <app-progress-bar [visible]="true" />
+}
+
+<app-confirm width="28rem" />

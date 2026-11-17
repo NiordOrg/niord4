@@ -1,0 +1,732 @@
+
+:imagesdir: images
+
+== SECOM Certificates and MCP Identities
+
+Niord can exchange S-124 navigational warnings with other systems via SECOM
+(IEC 63173-2), a standard for secure communication between maritime service providers.
+All SECOM security — who Niord _is_, who it talks to, and how data is signed —
+is based on X.509 certificates issued under the Maritime Connectivity Platform (MCP).
+
+This appendix explains the concepts from scratch and describes the practical operations:
+obtaining certificates, installing them, rotating them, trusting peers, and monitoring.
+
+IMPORTANT: This appendix is only relevant when the SECOM integration is enabled
+(`niord.secom.enabled=true`). SECOM needs S-124 on (`niord.s124.enabled`, `true` by
+default): a deployment that switches S-124 off serves no S-124 at all, and then refuses
+to start with SECOM enabled, naming both properties. SECOM support is currently used by the
+_Danish_ Niord system for S-124 navigational warnings, and is disabled by default.
+
+No prior knowledge of certificates is assumed.
+
+=== Certificates in a Nutshell
+
+A quick tour of the concepts used throughout this appendix:
+
+* *Key pair*: a _private key_ (kept secret, used to sign) and a matching _public key_
+  (shared freely, used to verify). Whoever holds the private key can prove they are the
+  owner of the identity.
+* *Certificate*: a document, digitally signed by a _Certificate Authority_ (CA), which
+  states "this public key belongs to this named subject, and is valid from date A to
+  date B". It binds a name to a key.
+* *Certificate chain and root*: the CA that signs your certificate has a certificate of
+  its own, signed by a higher CA, ending in a self-signed _root certificate_. A verifier
+  that trusts the root can verify the whole chain. The CA in the middle of the chain is
+  called the _intermediate_ (or _issuing_) CA.
+* *Keystore*: a password-protected file containing _your own_ private key and
+  certificate chain. It must be protected like a password — anyone with the keystore
+  file and its password can impersonate your Niord instance.
+* *Truststore*: a file containing the CA certificates of _other parties_ that you have
+  decided to trust. It contains no secrets, but it must be protected against tampering —
+  adding a rogue CA to the truststore means trusting an attacker.
+* *Mutual TLS (mTLS)*: normal HTTPS authenticates only the server. In mutual TLS the
+  client _also_ presents a certificate. SECOM Edition 2 (IEC CDV 63173-2) no longer
+  uses it: a SECOM request travels over ordinary HTTPS, and the peer's identity is the
+  certificate carried in the _signed envelope_ of the message. Niord still uses mTLS in
+  one place — when the renewal job authenticates towards the MCP Identity Registry.
+* *Digital signature*: a hash of a payload, encrypted with the sender's private key.
+  Anyone holding the sender's certificate can verify that the payload came from the
+  sender and was not modified. SECOM signs both the transport envelopes and the S-124
+  datasets themselves.
+* *Revocation (OCSP and CRL)*: how a CA declares a certificate "no longer valid" before
+  its expiry date — for instance after a key compromise. OCSP is an online status query;
+  a CRL is a downloadable list of revoked certificates. Certificates embed the URLs
+  where their status can be checked.
+* *Expiry and renewal*: every certificate has a fixed end date. MCP certificates are
+  typically valid for only *6 months*, and the recommendation is to renew them
+  *2 months before expiry* — always with a freshly generated key pair.
+* *Fingerprint*: the SHA-256 hash of a certificate, used as a short unique handle to
+  confirm which certificate is currently in use.
+
+=== The Maritime Connectivity Platform
+
+The https://maritimeconnectivity.net[Maritime Connectivity Platform] (MCP) provides the
+identity layer of the maritime digital ecosystem. Its identity component, the _Maritime
+Identity Registry_ (MIR), registers organizations and their entities (services, users,
+vessels, devices) and issues certificates for them. The governing IALA guideline is
+https://www.iala.int/product/g1183-provison-of-mcp-identities/[G1183 — The provision of MCP identities].
+
+Every MCP entity is named by an *MRN* (Maritime Resource Name), for example:
+
+----
+urn:mrn:mcp:entity:mcc:dma            <- an organization
+urn:mrn:mcp:entity:mcc:dma:niord-nw   <- a service belonging to that organization
+----
+
+A Niord instance is registered as a _service_ entity under its operating organization,
+and its certificate carries the service MRN in the certificate subject (the `UID`
+attribute). This is how Niord identifies itself, and how Niord identifies its peers: the
+MRN is read from the peer's certificate, which every signed SECOM request carries.
+
+Two properties of the MCP PKI are important to understand:
+
+* *There is no single global MCP root certificate.* Every MCP _identity service
+  provider_ operates its own root CA. "Installing the MCP root" therefore really means
+  "installing the root and intermediate CA certificates of the provider(s) your peers
+  use". The MCP consortium maintains a list of endorsed providers and their root
+  certificates.
+* *Test and production environments have separate CA chains.* Certificates from the MCP
+  test environment are worthless in production and vice versa. Never mix the chains in
+  one truststore.
+
+The MCC testbed publishes its CA chains for download:
+
+[cols="30,70", options="header"]
+|===
+| Environment | CA chain (PEM)
+
+| Public demonstrator
+| https://raw.githubusercontent.com/maritimeconnectivity/docs.maritimeconnectivity.net/refs/heads/files/mcp-ca-chain.pem
+
+| Test environment
+| https://raw.githubusercontent.com/maritimeconnectivity/docs.maritimeconnectivity.net/refs/heads/files/test/mcp-ca-chain.pem
+|===
+
+Production identity providers publish their chains as part of their certification
+practice statement (for example the Digital Maritime Consultancy, the currently endorsed
+provider).
+
+=== What Niord Uses the Certificates For
+
+The same identity — one keystore, one truststore — serves four purposes:
+
+1. *Authenticating peers (inbound)*: a SECOM peer signs each request with its MCP
+   certificate, which travels in the request's envelope. Niord validates the certificate
+   against the truststore (issuing CA, validity window), checks revocation, and extracts
+   the peer's MRN. Requests without a valid certificate are rejected (the
+   unauthenticated `ping` endpoint being the only exception). Nothing in front of Niord
+   takes part: the proxy forwards `/api/secom` like any other path, over the ordinary
+   HTTPS certificate of the site.
+2. *Authenticating Niord (outbound)*: when Niord pushes warnings to subscribers or
+   queries the MCP service registry, the signed envelope identifies it; the peer's
+   server certificate is validated like any HTTPS server's.
+3. *Signing SECOM messages*: every SECOM upload is signed (envelope and payload) with
+   Niord's private key, so recipients can verify origin and integrity.
+4. *Signing S-124 datasets*: each dataset version in a SECOM exchange set carries a
+   digital signature. These signatures are created once, when the dataset is written,
+   and stored with it.
+
+In one picture:
+
+----
+ Inbound:   peer ── ordinary HTTPS, request signed with its MCP certificate ──▶ proxy
+                                                                                  │ forwards
+                                                                                  ▼
+                                                                                Niord
+                                                 │ validates the certificate against the truststore
+                                                 │ checks revocation (OCSP/CRL)
+                                                 │ reads the peer MRN from the certificate
+                                                 ▼
+                                               SECOM endpoints
+
+ Outbound:  Niord ── ordinary HTTPS,
+                     messages signed with the keystore key ──▶ peer / service registry
+----
+
+IMPORTANT: Transitional state (October 2026). Niord does not read the peer certificate
+from the envelope yet; it still reads it from the `X-Secom-Cert` request header that
+the earlier, mutual-TLS listener used to set. That header is only trusted when the
+deployment says so (`niord.secom.trust-cert-header=true`, below), which the Helm chart
+never does. So in a deployed stack every SECOM request except `ping` is refused with
+`403` until the envelope support lands — the subsystem fails closed, never open. The
+certificates, stores, renewal and monitoring described here are unaffected and can be
+set up and rehearsed now.
+
+=== The Keystore and the Truststore
+
+The certificate material lives in two PKCS12 stores, used by Niord alone — nothing in
+front of it holds certificate material:
+
+----
+ keystore.p12    our private key + certificate chain     (protect like a password)
+ truststore.p12  the CA certificates we trust            (no secrets, but tamper-proof)
+      │
+      │  Kubernetes: Secret "niord-secom-stores", mounted read-only
+      ▼
+ Niord loads both into memory at startup, polls the files every minute and swaps
+ in updated stores automatically — without a restart; the "Reload" function on
+ the SECOM sysadmin page does the same on demand
+----
+
+NOTE: PKCS12 (`.p12`) is a standard container format, produced and read by both
+`openssl` and Java's `keytool` — nothing about it locks you into Java tooling.
+
+The key material is configured with the following properties (typically via environment
+variables or the application configuration — these are Spring properties, not
+<<Settings>> page settings):
+
+[cols="34,14,52", options="header"]
+|===
+| Property | Default | Description
+
+| `niord.secom.enabled`
+| `false`
+| Master switch for the entire SECOM subsystem.
+
+| `niord.secom.keystore.location`
+| _(required)_
+| Path of the keystore, e.g. `file:/run/secrets/secom/keystore.p12`. A bare absolute path is treated as a file; `classpath:` is also supported (but cannot be hot-reloaded).
+
+| `niord.secom.keystore.password`
+| _(required)_
+| Keystore password.
+
+| `niord.secom.keystore.alias`
+| `1`
+| Alias of the key entry inside the keystore.
+
+| `niord.secom.truststore.location`
+| _(required)_
+| Path of the truststore.
+
+| `niord.secom.truststore.password`
+| _(required)_
+| Truststore password.
+
+| `niord.secom.truststore.root-alias`
+| _(empty)_
+| Alias of the root CA entry in the truststore. When empty, the first certificate entry is used. SECOM signature validation references the root by this alias, so it must resolve correctly.
+
+| `niord.secom.store-watch-cron`
+| _(every minute)_
+| Cron of the store-file watch: file-backed stores are polled and hot-reloaded automatically when their content changes, with a confirmation mail to the `secomAlertEmails` recipients. Set to `-` to disable the watch; `classpath:` stores are never watched.
+
+| `niord.secom.trust-cert-header`
+| `false`
+| Whether the `X-Secom-Cert` request header is a trusted source of the peer identity. Only ever `true` behind a TLS-terminating proxy that verifies the peer's client certificate, sets the header from the handshake, and is the only way to reach the application. Leave it `false` (the Helm chart never sets it): the header is then ignored whoever sends it.
+|===
+
+Both stores must be in *PKCS12* format. As a convenience for Kubernetes-style secret
+handling, a store file may also contain the _base64-encoded_ PKCS12 bytes — Niord
+detects and decodes this automatically.
+
+IMPORTANT: The truststore must contain the *issuing (intermediate) CA certificates* of
+your peers, not only the root. Niord checks a peer's own certificate (the "leaf")
+directly against the entries of the truststore — it does not walk a chain to the root —
+so the certificate's direct issuer must be in the truststore for it to validate.
+
+=== Registering the Identities in the Portal
+
+Certificates are issued against entities that must first exist in the identity
+registry. For Niord this is a one-time setup, done by an _organization administrator_
+in the MCP management portal:
+
+1. a *service* entity — this _is_ Niord in the registry; its certificate is the
+   identity Niord serves and signs with, and registering it fixes the service MRN;
+2. only when unattended renewal (or the *Renew Now* button) will be used: a *role
+   mapping* and a dedicated *robot user* whose credential the renewal job
+   authenticates with.
+
+Use the management portal of the environment your organization is registered in —
+for example https://management.maritimeconnectivity.net[the public demonstrator] or
+https://test-management.maritimeconnectivity.net[the test environment]; production
+providers run their own. The relevant pages are all found under the portal's
+_Identity Registry_ menu, in the _My Organization_ group.
+
+==== The Niord service entity
+
+Under _Identity Registry → ID Services_, press *Add* and register the service:
+
+* *MRN*: the portal pre-fills the organization prefix
+  (`urn:mrn:mcp:entity:<provider>:<org>:`) — append a short service name, e.g.
+  `urn:mrn:mcp:entity:mcc:dma:niord-nw`. Choose it deliberately in production —
+  peers configure and subscribe against this name, and it is designed to survive
+  every certificate rotation. Test-environment MRNs are throwaway. Do not encode a
+  version in the MRN: versioned service identities are deprecated, and
+  deployment/version metadata belongs in the service registry instead.
+* *Name*: a human-readable name, e.g. `Niord NW`.
+* *Certificate domain name* (optional): a domain name embedded in the issued
+  certificates — set it to the public host name of the SECOM endpoint if your
+  peers verify the TLS host name.
+
+image::McpPortalServiceAdd.png[Registering the Niord service entity, 600]
+
+==== The renewal robot user
+
+_Only needed for unattended renewal and the Renew Now button._ A service certificate
+cannot be used to issue its own successor — the identity registry grants service
+credentials no roles. Issuing service certificates requires the `SERVICE_ADMIN`
+role, which only _user_ identities can hold, so the renewal authenticates with a
+dedicated technical ("robot") user. A user may always re-issue its _own_
+certificate, which is how the robot credential keeps itself alive in the same
+renewal loop.
+
+First make sure the organization maps a permission to the service-administrator
+role. Under _Identity Registry → Roles_, press *Add* and create the mapping:
+
+* *Permission*: a permission string of your choice, e.g. `serviceadmin`
+* *Role name*: `ROLE_SERVICE_ADMIN`
+
+image::McpPortalRoleAdd.png[Adding the SERVICE_ADMIN role mapping, 600]
+
+Then create the robot user under _Identity Registry → Users_ with *Add*:
+
+* *MRN*: the pre-filled organization prefix plus a name, e.g.
+  `urn:mrn:mcp:entity:mcc:dma:niord-robot`
+* *First/last name*: something recognizable in audit trails, e.g. `Niord` /
+  `Renewal Robot`
+* *E-mail*: a mailbox your operations team controls — the registry sends account
+  notifications there; the robot itself never logs in interactively, it
+  authenticates with its certificate
+* *Permissions*: select the permission mapped above (e.g. `serviceadmin`). The
+  drop-down offers the permissions of the organization's role mappings — which is
+  why the role mapping is created first.
+
+image::McpPortalUserAdd.png[Creating the robot user, 600]
+
+IMPORTANT: Give the robot only the service-administration permission — never an
+organization-administrator permission (such as `MCPADMIN`). `SERVICE_ADMIN` is
+organization-scoped: the robot can issue and revoke certificates for _all_ service
+entities of your organization — the registry has no per-service restriction — but
+it cannot manage users, devices or anything in other organizations. Should the
+robot credential ever leak, revoke its certificate in the portal like any other.
+
+Finally, issue the first certificates for both the service entity and the robot
+user as described in <<obtaining-a-certificate,Obtaining a Certificate>>, and
+install them per <<installing-the-certificates-in-kubernetes,Installing the
+Certificates in Kubernetes>>.
+
+=== Obtaining a Certificate
+
+Prerequisites, done once by your organization:
+
+1. The organization is registered with an MCP identity service provider. For testing,
+   anyone with a maritime purpose can apply on the MCC testbed portals
+   (https://management.maritimeconnectivity.net[public demonstrator],
+   https://test-management.maritimeconnectivity.net[test environment]); for production,
+   use an endorsed provider.
+2. The Niord service entity — and, for unattended renewal, the robot user — are
+   registered, see
+   <<registering-the-identities-in-the-portal,Registering the Identities in the Portal>>.
+
+After that, a certificate can be issued in two ways:
+
+==== Via the Management Portal
+
+An organization administrator opens the service entity in the MCP management portal and
+issues a certificate there (the *Add* button of the _Active certificates_ panel). The
+portal generates the key pair and returns a bundle containing the private key and
+certificate (PEM, PKCS#12 and JKS formats). The private key can only be downloaded at
+issuance — store it securely immediately.
+
+image::McpPortalServiceCerts.png[Certificates panel of a service entity, 600]
+
+If the downloaded PKCS#12 keystore uses a different alias or password than configured,
+adjust it:
+
+[source,bash]
+----
+# Inspect the keystore, note the alias
+keytool -list -keystore keystore.p12 -storepass changeit
+
+# Rename the alias to match niord.secom.keystore.alias (default "1")
+keytool -changealias -keystore keystore.p12 -storepass changeit \
+        -alias "old-alias" -destalias 1
+----
+
+==== Via the MIR REST API (scriptable)
+
+The MIR can issue certificates from a _certificate signing request_ (CSR), which has
+the advantage that the private key never leaves your machine, and that the process can
+be scripted. The certificate content is taken from the registry — the subject you put
+in the CSR is ignored; only its key matters.
+
+[source,bash]
+----
+# 1. Generate a fresh key pair (MCP requires ECDSA; use curve secp384r1)
+openssl ecparam -name secp384r1 -genkey -noout -out niord-service.key
+
+# 2. Build a CSR (the subject is ignored by the MIR)
+openssl req -new -key niord-service.key -subj "/CN=niord" -out niord-service.csr
+
+# 3. Ask the MIR to issue the certificate. The call must be authenticated by an
+#    identity with service-administrator rights in your organization - here with
+#    mTLS using that identity's own MCP certificate:
+curl --cert org-admin.pem --key org-admin.key \
+     -H "Content-Type: application/x-pem-file" \
+     --data-binary @niord-service.csr \
+     -o niord-service-chain.pem \
+     "https://<mir-host>/x509/api/org/<org-mrn>/service/<service-mrn>/certificate/issue-new/csr"
+
+# 4. Package the key + returned chain as the Niord keystore (alias "1")
+openssl pkcs12 -export -name 1 \
+        -inkey niord-service.key -in niord-service-chain.pem \
+        -out keystore.p12 -passout pass:changeit
+----
+
+NOTE: In the reference MIR, a service certificate cannot be used to issue its own
+successor — the mTLS identity in step 3 must be a _user_ whose permissions map to the
+service-administrator role. If you plan to automate renewal, create a dedicated
+technical ("robot") user for this purpose — see
+<<registering-the-identities-in-the-portal,Registering the Identities in the Portal>>.
+
+=== Building the Truststore
+
+Download the CA certificates of the environment your peers use (see the table in
+<<The Maritime Connectivity Platform>>), and import *both the root and the intermediate*
+CA certificates:
+
+[source,bash]
+----
+keytool -importcert -noprompt -storetype PKCS12 \
+        -keystore truststore.p12 -storepass changeit \
+        -alias mcp-root -file mcp-root-ca.pem
+
+keytool -importcert -noprompt -storetype PKCS12 \
+        -keystore truststore.p12 -storepass changeit \
+        -alias mcp-idreg -file mcp-intermediate-ca.pem
+----
+
+If `niord.secom.truststore.root-alias` is set, it must match the alias of the root
+entry (`mcp-root` above).
+
+The repository ships a helper that performs exactly these steps —
+`k8s/scripts/secom-truststore.sh` fetches or reads one or more CA chain PEMs (files or
+URLs), splits and de-duplicates them, and emits `truststore.p12`. With `--apply` it also
+patches the store into the running cluster's stores secret, which the app picks up via
+the store watch within a couple of minutes:
+
+[source,bash]
+----
+k8s/scripts/secom-truststore.sh https://raw.githubusercontent.com/maritimeconnectivity/\
+docs.maritimeconnectivity.net/gh-pages/files/mcp-ca-chain.pem
+k8s/scripts/secom-truststore.sh --apply my-provider-chain.pem
+----
+
+=== Installing the Certificates in Kubernetes
+
+The Niord Helm chart expects one secret, created outside of Helm (plus a second when
+unattended renewal is enabled — see <<rotating-certificates-renewal,Rotating Certificates (Renewal)>>).
+The store passwords are keys of the same secrets, next to the stores:
+
+[source,bash]
+----
+# The application key material and the store passwords
+kubectl -n <namespace> create secret generic niord-secom-stores \
+        --from-file=keystore.p12 --from-file=truststore.p12 \
+        --from-literal=keystore-password=... --from-literal=truststore-password=...
+
+# Only with unattended renewal: the MIR robot-user credential
+kubectl -n <namespace> create secret generic niord-secom-renewal \
+        --from-file=robot.p12 --from-literal=robot-password=...
+----
+
+The HTTPS certificate SECOM peers see is the site's ordinary one, terminated in front of
+the proxy by the environment's ingress — no SECOM-specific TLS material exists. The key
+aliases are configured via the chart values (`secom.keystore.alias`, etc.), and SECOM
+itself is enabled with `secom.enabled=true`.
+
+=== Rotating Certificates (Renewal)
+
+MCP service certificates are short-lived (typically 6 months). Renewal means obtaining
+a *new* certificate with a *freshly generated key pair* — as described in
+<<Obtaining a Certificate>> — and swapping it in. Plan the renewal about *2 months
+before expiry*; the expiry date is shown on the SECOM sysadmin page and in the status
+endpoint (see <<Monitoring>>).
+
+The rotation itself does not require a restart:
+
+1. Build the new `keystore.p12` (same password and alias as before).
+2. Update the secret in place:
++
+[source,bash]
+----
+kubectl -n <namespace> create secret generic niord-secom-stores \
+        --from-file=keystore.p12 --from-file=truststore.p12 \
+        --dry-run=client -o yaml | kubectl apply -f -
+----
++
+Kubernetes propagates the updated secret into the running pod within about a minute.
+3. Wait for the automatic pickup: Niord polls the store files every minute and reloads
+   as soon as the updated secret has propagated (altogether a minute or two), mailing a
+   confirmation with the new fingerprint to the `secomAlertEmails` recipients. To reload
+   immediately instead — and verify the fingerprints synchronously — press the *Reload*
+   button on the SECOM sysadmin page, or call the endpoint directly:
++
+[source,bash]
+----
+curl -X POST -H "Authorization: Bearer <sysadmin token>" \
+     "https://<niord-host>/rest/secom/security/reload"
+----
++
+The response contains the previous and new certificate fingerprints — verify that they
+differ and that the new expiry date is correct. If the reload fails (for instance
+because the file is unreadable or the password changed), the previous key material
+remains active — the endpoint returns an error, and the automatic watch mails the alert
+recipients once per failure; a changed store _password_ requires a restart.
+NOTE: Stored S-124 dataset versions keep the signatures made with the _old_ key: every
+exchange set that serves or cancels such a dataset carries the old certificate and its
+issuing chain alongside the current one, so consumers keep verifying them — no manual
+action is needed and nothing is re-signed. Keep the MCP issuing CA in the keystore entry or
+the truststore, or exchange sets carry the leaf certificate alone.
+
+Independently of how renewal happens, Niord warns about approaching expiry: once the
+expiry date comes within `secomCertExpiryWarnDays` (default 60 days), the
+`secomAlertEmails` recipients receive a warning mail, repeated weekly and escalating at
+14 days and again on expiry — so make sure those settings are configured.
+
+IMPORTANT: All alert mails additionally honor the global `mailValidRecipients`
+setting, whose default `LOG` only _simulates_ delivery (the log reads "Sent email"
+but nothing leaves the server). Set it to `ALL` — or a whitelist of addresses — and
+note that the setting is read at startup, so changing it requires an application
+restart.
+
+==== Unattended Renewal
+
+Niord can renew its own certificates against the MCP Identity Registry, turning the
+manual procedure above into a supervised background process. Once a day (05:27 by
+default, before the 06:17 expiry check), when the service certificate — or the renewal
+credential itself — is within `secomRenewalWindowDays` (default 60) of expiry, Niord:
+
+1. generates a *fresh* EC P-384 key pair (keys are never reused),
+2. sends a PKCS#10 CSR to the MIR's `issue-new/csr` endpoint, authenticated with a
+   dedicated *robot-user* credential (a service certificate cannot renew itself — the
+   MIR grants it no roles; the robot user's permissions must map to `SERVICE_ADMIN`,
+   see <<registering-the-identities-in-the-portal,Registering the Identities in the Portal>>),
+3. verifies the issued chain (fresh-key match, validity, MRN match, chain signatures)
+   and only then persists the new keystore — with the same alias and password,
+4. mails a confirmation to the `secomAlertEmails` recipients. The robot credential
+   renews itself the same way, always _before_ the service certificate.
+
+A failure leaves the current material serving, alerts once per distinct failure and
+retries on the next run, while the expiry warnings above keep escalating independently.
+
+The same renewal can also be forced at any time with the *Renew Now* button on the
+SECOM sysadmin page (or `POST /rest/secom/security/renew` with a sysadmin token): it
+renews *both* the robot and the service certificate immediately, regardless of the
+expiry window and of the `secomRenewalEnabled` setting — only the
+`niord.secom.renewal.*` configuration below is required. This is the intended way to
+supervise the _first_ renewal against the identity registry before arming the
+unattended loop; the response lists the renewed credentials with their old and new
+fingerprints, or the failures. Use it deliberately — every press requests genuinely new
+certificates from the registry.
+
+Unattended renewal is off by default and armed by *two* switches: the
+`secomRenewalEnabled` setting (see <<Settings>>; `false` by default) and the
+`niord.secom.renewal.*` configuration:
+
+[cols="34,14,52", options="header"]
+|===
+| Property | Default | Description
+
+| `niord.secom.renewal-cron`
+| _(daily 05:27)_
+| Cron of the renewal check. Set to `-` to disable the job entirely.
+
+| `niord.secom.renewal.mir-url`
+| _(required)_
+| Base URL of the MIR the certificates are issued by, e.g. `https://api-x509.maritimeconnectivity.net` (the client-certificate-terminating host variant - the renewal authenticates with robot mTLS). The `/x509/api/...` paths are appended.
+
+| `niord.secom.renewal.org-mrn`
+| _(required)_
+| The MCP organisation MRN — always explicit, never derived.
+
+| `niord.secom.renewal.service-mrn`
+| _(empty)_
+| The service entity MRN. When empty, derived from the service certificate subject `UID`.
+
+| `niord.secom.renewal.user-mrn`
+| _(empty)_
+| The robot user MRN. When empty, derived from the robot certificate subject `UID`.
+
+| `niord.secom.renewal.keystore.location`
+| _(required)_
+| The robot-user credential keystore (PKCS12; may be base64), e.g. `file:/run/secrets/secom-renewal/robot.p12`.
+
+| `niord.secom.renewal.keystore.password`
+| _(required)_
+| Robot keystore password.
+
+| `niord.secom.renewal.keystore.alias`
+| `1`
+| Alias of the robot key entry.
+
+| `niord.secom.renewal.timeout-seconds`
+| `30`
+| HTTP timeout towards the MIR.
+|===
+
+*Persisting the renewed keystore* is deployment-specific. On a VM-style install the
+configured `file:` keystore is simply replaced in place (atomically). In Kubernetes the
+mounted secret files are read-only, so Niord instead PATCHes the renewed store into its
+*secret* through the Kubernetes API — the secret stays the single source of truth across
+pod restarts — authenticated with the pod's ServiceAccount token. The Helm chart renders
+everything needed when `secom.renewal.enabled=true`: the robot-credential mount, the
+configuration, and a ServiceAccount bound to a Role scoped to `get`/`patch` on exactly
+the two SECOM secrets. The k8s backend is selected with:
+
+[cols="34,14,52", options="header"]
+|===
+| Property | Default | Description
+
+| `niord.secom.renewal.k8s.enabled`
+| `false`
+| Persist renewed keystores by PATCHing the Kubernetes secrets instead of writing files.
+
+| `niord.secom.renewal.k8s.secret-mounts`
+| _(required)_
+| Comma-separated `<mount-directory>=<secret-name>` pairs. A store located under a mapped directory is PATCHed into that secret, with the file name as the secret key — e.g. `/run/secrets/secom=niord-secom-stores,/run/secrets/secom-renewal=niord-secom-renewal`.
+
+| `niord.secom.renewal.k8s.namespace`
+| _(empty)_
+| Namespace of the secrets; empty = the pod's own namespace.
+
+| `niord.secom.renewal.k8s.api-url`
+| _(empty)_
+| Kubernetes API base URL; empty = the standard in-cluster discovery.
+|===
+
+After a Kubernetes renewal the running pod deliberately keeps serving the _previous_
+certificate for a couple of minutes: the secret is updated immediately, the kubelet
+syncs it into the mount within about a minute, and the store watch then hot-reloads it —
+the same convergence path as a manual secret rotation, confirmed by its own rotation
+mail. The confirmation mail of the renewal itself says so. Should the pickup ever stall
+(a wrong `secret-mounts` mapping, a disabled store watch), the next renewal run detects
+that the rotated-away certificate is still being served, pauses re-issuing and alerts —
+rather than silently minting a fresh MIR identity every day.
+
+NOTE: The whole loop can be rehearsed offline on a local cluster —
+`k8s/scripts/secom-renewal-rehearsal.sh` mints a short-lived throwaway PKI, serves a
+stub MIR on the host, deploys the chart with renewal enabled and verifies every step
+(secret PATCHes, store-watch pickup, confirmation mails) end to end without touching
+any real registry.
+
+=== Revocation Checking
+
+Niord checks certificate revocation in both directions using the OCSP and CRL pointers
+embedded in the certificates. The checks are _soft-fail_: an unreachable OCSP responder
+or CRL server does not reject the connection, but a positive "this certificate is
+revoked" answer does. The behavior is controlled by two <<Settings>>:
+
+[cols="30,12,58", options="header"]
+|===
+| Setting | Default | Description
+
+| `secomValidateClientChain`
+| `true`
+| Validate inbound client certificates against the truststore. Only ever disable this in isolated test setups.
+
+| `secomRevocationCheck`
+| `true`
+| Perform OCSP/CRL revocation checks on inbound client certificates and outbound server certificates. Serves as an emergency knob if, for example, a production certificate was issued without working revocation pointers.
+
+| `secomSignatureAlgorithm`
+| `SHA2_384_WITH_ECDSA`
+| Signature algorithm for outgoing SECOM signatures. Inbound signatures are accepted in both 384-bit ECDSA variants (SHA-2 and SHA-3), so this only needs changing if all consuming peers expect the SHA-3 variant.
+
+| `secomAlertEmails`
+| _(empty)_
+| Comma-separated recipients for SECOM alert mails: delivery failures, rejected acknowledgements and certificate-expiry warnings.
+
+| `secomCertExpiryWarnDays`
+| `60`
+| Days before service-certificate expiry at which warning mails to the `secomAlertEmails` recipients begin. The mails repeat weekly and escalate at 14 days and again on expiry.
+
+| `secomRenewalEnabled`
+| `false`
+| Arms the unattended certificate renewal (see <<rotating-certificates-renewal,Rotating Certificates (Renewal)>>). Also requires the `niord.secom.renewal.*` configuration.
+
+| `secomRenewalWindowDays`
+| `60`
+| Days before expiry at which the service and renewal-robot certificates are renewed automatically — matching the "renew about 2 months early" MCP practice.
+|===
+
+IMPORTANT: Production certificates should always carry OCSP/CRL pointers — MCP-issued
+certificates do. Peer systems may reject certificates entirely if revocation
+information is _absent_ (soft-fail only forgives an _unreachable_ responder).
+
+=== Monitoring
+
+The SECOM sysadmin page shows the current service certificate subject, its SHA-256
+fingerprint, its *expiry date and days-to-expiry* (with a red marker when expired),
+along with the root certificate subject. The same information is available from the
+status endpoint:
+
+[source,bash]
+----
+curl -H "Authorization: Bearer <sysadmin token>" "https://<niord-host>/rest/secom/status"
+----
+
+For dashboards and alerting systems, the days-to-expiry is also published as the
+actuator metric `niord.secom.certificate.days-to-expiry` (it tracks certificate
+rotations immediately).
+
+Beyond that, Niord actively warns: when the expiry comes within
+`secomCertExpiryWarnDays` (default 60 days), warning mails go to the
+`secomAlertEmails` recipients — see <<rotating-certificates-renewal,Rotating Certificates (Renewal)>>. Check the
+expiry date and fingerprint after every rotation.
+
+=== Troubleshooting
+
+[cols="33,33,34", options="header"]
+|===
+| Symptom | Likely cause | Remedy
+
+| Peers get `403` on every request but `ping`, whatever they send
+| The transitional state described under <<What Niord Uses the Certificates For>>: Niord does not read the envelope certificate yet, and the request header it still reads is not trusted (`niord.secom.trust-cert-header` is `false`, as it should be)
+| Nothing to configure — this is the intended fail-closed behavior until the envelope support ships
+
+| Peers get `403` on every request although they present a valid certificate
+| The peer's _issuing_ CA is missing from the truststore (importing only the root is not enough)
+| Import the intermediate CA into the truststore (`k8s/scripts/secom-truststore.sh --apply ...`), or press *Reload* after updating the secret
+
+| Every _signed_ inbound request fails signature validation
+| `niord.secom.truststore.root-alias` does not match an alias in the truststore
+| List the aliases with `keytool -list` and correct the setting
+
+| Reload endpoint returns an error
+| New keystore unreadable, wrong password, or corrupt file
+| No harm done — the previous material stays active. Fix the file; note that a changed store password requires a restart
+
+| A peer rejects Niord's pushes (TLS or authorization errors)
+| The peer has not imported the root/intermediate of _our_ certificate's provider — or our certificate has expired
+| Check the expiry on the SECOM sysadmin page; coordinate CA trust with the peer
+
+| Outbound upload fails with a certificate path error
+| The peer's server CA is missing from _our_ truststore, or the peer's certificate lacks revocation pointers
+| Add the CA to the truststore; `secomRevocationCheck=false` is the emergency fallback
+
+| One specific peer cannot verify our signatures
+| Signature algorithm variant mismatch (SHA-2 vs SHA-3 ECDSA-384)
+| Align `secomSignatureAlgorithm` with the peer fleet
+
+| Certificate-less `GET /v2/ping` succeeds
+| Intentional — the ping endpoint is the only anonymous SECOM endpoint
+| Nothing to fix
+
+| Secret updated in Kubernetes but Niord still uses the old certificate
+| Secret propagation plus the store-file watch take a minute or two — or the watch is disabled (`niord.secom.store-watch-cron: "-"`), or the store is a `classpath:` resource (never watched)
+| Wait briefly, or press *Reload* for an immediate pickup
+
+| Renewal alert mail with `HTTP 401`/`403` from the MIR
+| The robot user's permissions do not map to the `SERVICE_ADMIN` role, or the robot credential has expired
+| Fix the robot user's permission mapping in the identity provider's portal (see <<registering-the-identities-in-the-portal,Registering the Identities in the Portal>>); check the robot certificate expiry
+
+| Renewal alert mail with a Kubernetes `HTTP 403` (`ServiceAccount needs get/patch`)
+| The pod runs without the scoped ServiceAccount/Role — `secom.renewal.enabled` was not set on the Helm release, or the Role does not name the secret
+| Re-deploy with `secom.renewal.enabled=true`; verify with `kubectl auth can-i patch secret/niord-secom-stores --as system:serviceaccount:<ns>:niord-app`
+
+| Renewal confirmation mail arrived, but no rotation mail follows and the certificate stays old ("a previous renewal never became visible" alert on the next run)
+| The `niord.secom.renewal.k8s.secret-mounts` mapping PATCHes a different secret than the one mounted into the pod — or the store watch is disabled
+| Compare the mapping against the deployment's secret volume mounts. Re-issuing is deliberately paused (and alerted daily) until the renewed keystore actually reaches the mounted location, so no MIR identities are minted in vain
+|===

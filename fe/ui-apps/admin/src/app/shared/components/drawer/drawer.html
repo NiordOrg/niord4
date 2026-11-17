@@ -1,0 +1,38 @@
+<!-- The chrome is portaled into a CDK overlay via a TemplatePortal, so the
+     default + [drawerFooter] ng-content slots still project from this
+     component's content children. A single content root gives one focus-trap
+     boundary for header, body and footer. -->
+<ng-template #panel>
+  <div
+    class="flex h-full w-full min-h-0 flex-col"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="header() ? (header() | transloco) : null"
+    cdkTrapFocus
+  >
+    <header class="flex items-center justify-between gap-2 border-b border-surface-200 px-4 py-3">
+      <h2 class="truncate text-lg font-semibold">{{ header() | transloco }}</h2>
+      <button
+        type="button"
+        class="icon-button"
+        (click)="requestClose()"
+        [attr.aria-label]="'term.close' | transloco"
+      >
+        <app-icon name="lucideX" />
+      </button>
+    </header>
+
+    <!-- Marked so [initialFocus]="first" can find the body's first field without
+         reaching into the header's ✕ or the footer's buttons. The body clips on
+         the x-axis so a single wide child (a tab strip, a segmented control, a
+         chip row) pans or wraps inside itself instead of turning the whole form
+         into a sideways scroller. -->
+    <div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4" data-drawer-body>
+      <ng-content />
+    </div>
+
+    <footer class="border-t border-surface-200 px-4 pt-4 pb-3 empty:hidden">
+      <ng-content select="[drawerFooter]" />
+    </footer>
+  </div>
+</ng-template>

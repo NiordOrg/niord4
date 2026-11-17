@@ -1,0 +1,9 @@
+<app-entity-multiselect-control [field]="this" />
+
+<app-tree-picker
+  [entities]="roots()"
+  [selectedIds]="selectedIdList()"
+  header="messages.treePicker.areaHeader"
+  searchPlaceholder="messages.treePicker.areaSearch"
+  (selectionChange)="onPickerChange($event)"
+/>

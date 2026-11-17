@@ -1,0 +1,106 @@
+/*
+ * Copyright 2016 Danish Maritime Authority.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.niord.web;
+
+import org.niord.core.domain.DomainService;
+import org.niord.core.user.CurrentUserContext;
+import org.niord.core.user.TicketService;
+import org.niord.core.user.UserService;
+import org.slf4j.Logger;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.annotation.security.PermitAll;
+import org.springframework.transaction.annotation.Transactional;
+import org.niord.core.web.NiordWebException;
+import java.util.Set;
+
+/**
+ * The ticket service can be used to issue a one-time ticket with a short expiry time (1 minute).
+ *
+ * This is useful when e.g. creating a download link to a protected resource. Since
+ * the download link is not an Ajax call, the usual Authorization header will not be
+ * injected, and thus, the REST endpoint cannot be protected using the usual mechanism.
+ * <p>
+ * Instead, the download link should start by making an Ajax call to get a ticket, then
+ * add the ticket to the link being opened as a ticket.
+ * In the REST endpoint, the ticket can be validated programmatically.
+ * <p>
+ * The ticket is associated with various types of data, known to be valid when the ticket
+ * was issued, i.e. the current domain, current user and optionally, a set of users roles.<br>
+ * If in a subsequent request the ticket is resolved, then the stored ticket data can be trusted to be true
+ * even in an un-authorized request.
+ */
+@RestController
+@RequestMapping("/rest/tickets")
+@Transactional
+public class TicketRestService {
+
+    static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TicketRestService.class);
+
+    private final UserService userService;
+
+    private final TicketService ticketService;
+
+    private final DomainService domainService;
+
+    private final CurrentUserContext currentUserContext;
+
+    TicketRestService(UserService userService, TicketService ticketService, DomainService domainService,
+                      CurrentUserContext currentUserContext) {
+        this.userService = userService;
+        this.ticketService = ticketService;
+        this.domainService = domainService;
+        this.currentUserContext = currentUserContext;
+    }
+
+    /**
+     * Returns a ticket to be used in a subsequent call.
+     *
+     * @param roles optionally, specify roles for which the ticket is issued
+     * @return a new ticket
+     */
+    @GetMapping(value = "/ticket", produces = "text/plain")
+    @PermitAll
+    public String getTicket(@RequestParam(name = "role", required = false) Set<String> roles) {
+
+        String[] ticketRoles = null;
+
+        if (roles != null && !roles.isEmpty()) {
+            // Ensure that the current user has all the roles that the ticket is requested for:
+            // 401 when the caller presents no credentials at all, 403 when authenticated (or
+            // ticket-resolved) but lacking a requested role
+            boolean anonymous = currentUserContext.isAnonymous()
+                    && ticketService.getTicketDataForCurrentThread() == null;
+            for (String role : roles) {
+                if (!userService.isCallerInRole(role)) {
+                    throw new NiordWebException(anonymous ? 401 : 403);
+                }
+            }
+
+            ticketRoles = roles.toArray(new String[roles.size()]);
+        }
+
+        // Create a ticket for the current domain, user and the given roles. For a caller whose only
+        // credential is a ticket, the current domain is that ticket's domain whatever the NiordDomain
+        // header says (DomainService.currentDomain()), so a ticket cannot be exchanged for one bound to
+        // another domain.
+        return ticketService.createTicket(domainService.currentDomain(), userService.currentUser(), ticketRoles);
+    }
+
+}

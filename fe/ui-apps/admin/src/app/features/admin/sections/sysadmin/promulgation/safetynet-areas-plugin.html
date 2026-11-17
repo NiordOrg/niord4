@@ -1,0 +1,315 @@
+<!-- The in-drawer plugin row (the "Areas" form row in the type form). -->
+<div class="flex flex-col gap-1">
+  <span class="text-sm font-medium text-fg-title">
+    {{ 'admin.promulgation.safetynet.row' | transloco }}
+  </span>
+  <div>
+    <button type="button" class="btn-secondary" (click)="openDialog()">
+      {{ 'admin.promulgation.safetynet.manage' | transloco }}
+    </button>
+  </div>
+</div>
+
+<!-- The areas surface is a modal dialog ABOVE the drawer — never a second drawer. -->
+<app-dialog
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
+  [header]="headerText()"
+  [style]="{ width: '42rem', maxWidth: '92vw' }"
+>
+  @if (editing()) {
+    <!-- Edit view (in-dialog swap) — the shape is fixed at add time and shown read-only. -->
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.safetynet.type' | transloco }}
+        </span>
+        <span class="text-sm text-fg">{{ shapeKey(shape()) | transloco }}</span>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" class="checkbox" [formField]="form.active" />
+        <span class="font-medium text-fg">
+          {{ 'admin.promulgation.safetynet.active' | transloco }}
+        </span>
+      </label>
+
+      <div class="flex flex-col gap-1">
+        <label for="safetynet-area-name" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.safetynet.name' | transloco }}
+        </label>
+        <input
+          id="safetynet-area-name"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.name"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="safetynet-area-repetition" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.safetynet.repetition.label' | transloco }}
+        </label>
+        <app-select
+          inputId="safetynet-area-repetition"
+          class="w-64"
+          [formField]="form.repetition"
+          [options]="repetitionOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ariaLabel]="'admin.promulgation.safetynet.repetition.label' | transloco"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="safetynet-area-prefix" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.safetynet.messageAreaPrefix' | transloco }}
+        </label>
+        <input
+          id="safetynet-area-prefix"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.messageAreaPrefix"
+          [title]="'admin.promulgation.safetynet.messageAreaPrefixTooltip' | transloco"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="safetynet-area-sort-order" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.safetynet.sortOrder' | transloco }}
+        </label>
+        <!-- min 0 comes from the form schema — [formField] forbids the native attribute. -->
+        <input
+          id="safetynet-area-sort-order"
+          type="number"
+          step="1"
+          class="w-40 text-input"
+          [formField]="form.sortOrder"
+        />
+      </div>
+
+      <!-- Shape-conditional rows — only the opened shape's fields render. -->
+      @if (shape() === 'CIRCULAR') {
+        <div class="flex flex-col gap-1">
+          <label for="safetynet-area-center" class="text-sm font-medium text-fg-title">
+            {{ 'admin.promulgation.safetynet.center' | transloco }}
+          </label>
+          <input
+            id="safetynet-area-center"
+            type="text"
+            class="w-full text-input"
+            [formField]="form.center"
+            [placeholder]="'admin.promulgation.safetynet.centerPlaceholder' | transloco"
+            [title]="'admin.promulgation.safetynet.centerTooltip' | transloco"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label for="safetynet-area-radius" class="text-sm font-medium text-fg-title">
+            {{ 'admin.promulgation.safetynet.radius' | transloco }}
+          </label>
+          <input
+            id="safetynet-area-radius"
+            type="text"
+            class="w-full text-input"
+            [formField]="form.radius"
+            [placeholder]="'admin.promulgation.safetynet.radiusPlaceholder' | transloco"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      }
+      @if (shape() === 'RECTANGULAR') {
+        <div class="flex flex-col gap-1">
+          <label for="safetynet-area-sw-corner" class="text-sm font-medium text-fg-title">
+            {{ 'admin.promulgation.safetynet.swCorner' | transloco }}
+          </label>
+          <input
+            id="safetynet-area-sw-corner"
+            type="text"
+            class="w-full text-input"
+            [formField]="form.swCorner"
+            [placeholder]="'admin.promulgation.safetynet.swCornerPlaceholder' | transloco"
+            [title]="'admin.promulgation.safetynet.swCornerTooltip' | transloco"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label for="safetynet-area-northings" class="text-sm font-medium text-fg-title">
+            {{ 'admin.promulgation.safetynet.northings' | transloco }}
+          </label>
+          <input
+            id="safetynet-area-northings"
+            type="text"
+            class="w-full text-input"
+            [formField]="form.northings"
+            [placeholder]="'admin.promulgation.safetynet.northingsPlaceholder' | transloco"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label for="safetynet-area-eastings" class="text-sm font-medium text-fg-title">
+            {{ 'admin.promulgation.safetynet.eastings' | transloco }}
+          </label>
+          <input
+            id="safetynet-area-eastings"
+            type="text"
+            class="w-full text-input"
+            [formField]="form.eastings"
+            [placeholder]="'admin.promulgation.safetynet.eastingsPlaceholder' | transloco"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      }
+      @if (shape() === 'COASTAL' || shape() === 'NAVAREA') {
+        <div class="flex flex-col gap-1">
+          <label for="safetynet-area-navarea" class="text-sm font-medium text-fg-title">
+            {{ 'admin.promulgation.safetynet.navarea' | transloco }}
+          </label>
+          <app-select
+            inputId="safetynet-area-navarea"
+            class="w-64"
+            [formField]="form.navarea"
+            [options]="navareaOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ariaLabel]="'admin.promulgation.safetynet.navarea' | transloco"
+          />
+        </div>
+      }
+      @if (shape() === 'COASTAL') {
+        <div class="flex flex-col gap-1">
+          <label for="safetynet-area-coastal-area" class="text-sm font-medium text-fg-title">
+            {{ 'admin.promulgation.safetynet.coastalArea' | transloco }}
+          </label>
+          <app-select
+            inputId="safetynet-area-coastal-area"
+            class="w-64"
+            [formField]="form.coastalArea"
+            [options]="coastalAreaOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ariaLabel]="'admin.promulgation.safetynet.coastalArea' | transloco"
+          />
+        </div>
+      }
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  } @else {
+    <!-- List view -->
+    @if (loadFailed()) {
+      <div class="flex flex-col items-start gap-2 text-sm text-fg-muted">
+        <span>{{ 'admin.promulgation.safetynet.loadError' | transloco }}</span>
+        <button type="button" class="btn-secondary" (click)="load()">
+          {{ 'admin.promulgation.retry' | transloco }}
+        </button>
+      </div>
+    } @else if (areas(); as list) {
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-16">{{ 'admin.promulgation.safetynet.active' | transloco }}</th>
+            <th>{{ 'admin.promulgation.safetynet.name' | transloco }}</th>
+            <th>{{ 'admin.promulgation.safetynet.type' | transloco }}</th>
+            <th>{{ 'admin.promulgation.safetynet.sortOrder' | transloco }}</th>
+            <th class="w-20">
+              <span class="sr-only">{{ 'admin.promulgation.safetynet.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (area of list; track area.name) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="area.active"
+                  [class.is-inactive]="!area.active"
+                  [attr.aria-label]="
+                    (area.active ? 'admin.promulgation.safetynet.active' : 'common.inactive')
+                      | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td>{{ area.name }}</td>
+              <td>{{ shapeKey(area.type) | transloco }}</td>
+              <td>{{ area.sortOrder }}</td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.promulgation.safetynet.edit' | transloco"
+                  (click)="editArea(area)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.promulgation.safetynet.delete' | transloco"
+                  (click)="deleteArea(area)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="text-fg-muted">
+                {{ 'admin.promulgation.safetynet.empty' | transloco }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <app-progress-bar [visible]="true" />
+    }
+  }
+
+  <ng-template #footer>
+    @if (editing()) {
+      <!-- Cancel returns to the in-dialog list (refetching) — it never closes the dialog. -->
+      <button type="button" class="btn-tertiary" (click)="load()">
+        {{ 'admin.promulgation.safetynet.cancel' | transloco }}
+      </button>
+      <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+        {{ 'admin.promulgation.safetynet.save' | transloco }}
+      </button>
+    } @else {
+      <!-- Add is a per-shape menu — the shape is fixed at add time. -->
+      <app-menu-trigger
+        class="mr-auto"
+        icon="lucidePlus"
+        variant="primary"
+        [label]="'admin.promulgation.safetynet.addArea' | transloco"
+        [menu]="addMenu"
+      />
+      <app-menu
+        #addMenu
+        [model]="addItems()"
+        [ariaLabel]="'admin.promulgation.safetynet.addArea' | transloco"
+      />
+      <button type="button" class="btn-tertiary" (click)="dialogVisible.set(false)">
+        {{ 'admin.promulgation.safetynet.close' | transloco }}
+      </button>
+    }
+  </ng-template>
+</app-dialog>
+
+<app-confirm />

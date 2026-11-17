@@ -1,0 +1,9 @@
+{
+  "admin": {
+    "menu.close": { "text": "Afslut", "fp": "7d9eb7acb13e2462" },
+    "menu.open": { "text": "Vis {{ name }}", "fp": "e23c1c3aee07ac06" }
+  },
+  "info": {
+    "SITE_TITLE": { "text": "Efterretninger", "fp": "00a05fce19732187" }
+  }
+}

@@ -1,0 +1,57 @@
+{{- if (.Values.info | default dict).enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "niord.componentName" (list . "info") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "info") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "niord.componentSelectorLabels" (list . "info") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "niord.componentSelectorLabels" (list . "info") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # The image's own unprivileged `nginx` user (101), which writes under /tmp alone and
+      # listens on 8080 (fe/ui-apps/info/Dockerfile). Pod Security `restricted`.
+      securityContext:
+        {{- include "niord.podSecurityContext" 101 | nindent 8 }}
+      containers:
+        - name: nginx
+          image: {{ include "niord.image" (list . "info") | quote }}
+          imagePullPolicy: {{ .Values.info.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          env:
+            # The backend, over the cluster's own network: the app's Service in this release, by
+            # plain http. nginx resolves the name once, when it starts, which is why the site
+            # needs the app in the same release (validate.yaml).
+            - name: NIORD_SERVER_URL
+              value: "http://{{ include "niord.app.host" . }}:{{ .Values.app.service.port }}"
+            - name: NIORD_TEASER_FRAME_ANCESTORS
+              value: {{ .Values.info.teaserFrameAncestors | quote }}
+          ports:
+            - name: http
+              containerPort: 8080
+          # TCP, like the proxy's: nginx binds its port only once its configuration has loaded,
+          # and an HTTP probe would put a line in the site's access log every few seconds.
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.info.resources | nindent 12 }}
+{{- end }}

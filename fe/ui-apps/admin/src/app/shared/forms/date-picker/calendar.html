@@ -1,0 +1,86 @@
+<div class="w-64 p-2">
+  <div class="mb-1 flex items-center justify-between gap-1">
+    <button
+      type="button"
+      class="icon-button"
+      [attr.aria-label]="previousLabel()"
+      (click)="previous()"
+    >
+      <app-icon name="lucideChevronLeft" />
+    </button>
+    <button
+      type="button"
+      class="rounded px-2 py-1 text-sm font-semibold text-fg hover:bg-surface-100"
+      [attr.aria-label]="headerAriaLabel()"
+      aria-live="polite"
+      (click)="toggleYearView()"
+    >
+      {{ headerLabel() }}
+    </button>
+    <button type="button" class="icon-button" [attr.aria-label]="nextLabel()" (click)="next()">
+      <app-icon name="lucideChevronRight" />
+    </button>
+  </div>
+
+  @if (view() === 'days') {
+    <div role="grid">
+      <div role="row" class="grid grid-cols-7">
+        @for (wd of weekdays(); track $index) {
+          <span
+            role="columnheader"
+            class="flex h-8 items-center justify-center text-xs font-medium text-fg-muted"
+            >{{ wd }}</span
+          >
+        }
+      </div>
+      @for (week of weeks(); track $index) {
+        <div role="row" class="grid grid-cols-7">
+          @for (cell of week; track cell.key) {
+            <button
+              #day
+              type="button"
+              role="gridcell"
+              class="calendar-day"
+              [attr.data-key]="cell.key"
+              [class.is-outside]="!cell.inMonth"
+              [class.is-today]="cell.isToday"
+              [class.is-selected]="cell.isSelected"
+              [attr.aria-selected]="cell.isSelected"
+              [attr.aria-current]="cell.isToday ? 'date' : null"
+              [attr.aria-label]="cell.label"
+              [disabled]="cell.disabled"
+              [attr.tabindex]="cell.isFocused ? 0 : -1"
+              (click)="selectDay(cell)"
+              (keydown)="onGridKeydown($event)"
+            >
+              {{ cell.day }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- A listbox (not a grid): the years are a flat selection list, so `option` children need
+         no `role="row"` wrapper — unlike the day grid, whose gridcells do. -->
+    <div role="listbox" class="grid grid-cols-3 gap-1" [attr.aria-label]="chooseYearLabel()">
+      @for (yc of years(); track yc.year) {
+        <button
+          #yearBtn
+          type="button"
+          role="option"
+          class="calendar-year"
+          [attr.data-year]="yc.year"
+          [class.is-selected]="yc.isSelected"
+          [attr.aria-selected]="yc.isSelected"
+          [attr.aria-current]="yc.isFocused ? 'date' : null"
+          [attr.tabindex]="yc.isFocused ? 0 : -1"
+          [disabled]="yc.disabled"
+          (click)="selectYear(yc.year)"
+          (keydown)="onYearGridKeydown($event)"
+        >
+          {{ yc.year }}
+        </button>
+      }
+    </div>
+  }
+</div>

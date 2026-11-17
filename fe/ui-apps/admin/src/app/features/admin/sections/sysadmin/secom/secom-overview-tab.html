@@ -1,0 +1,93 @@
+<app-progress-bar [visible]="facade.statusLoading()" />
+
+@if (facade.statusError()) {
+  <app-error-banner
+    [title]="'admin.secom.status.loadError' | transloco"
+    [retryLabel]="'admin.secom.retry' | transloco"
+    (retry)="facade.refreshStatus()"
+  />
+} @else if (facade.status(); as status) {
+  <dl class="grid grid-cols-[max-content_1fr] items-start gap-x-6 gap-y-2 text-sm">
+    <dt class="text-fg-title">{{ 'admin.secom.overview.certificateCreated' | transloco }}</dt>
+    <dd>
+      {{ status.serviceCertificate.created | localeDate: 'date' }}
+      <span class="text-fg-muted">
+        {{
+          'admin.secom.overview.daysAgo' | transloco: { days: status.serviceCertificate.ageDays }
+        }}
+      </span>
+    </dd>
+
+    <dt class="text-fg-title">{{ 'admin.secom.overview.certificateExpires' | transloco }}</dt>
+    <dd>
+      {{ status.serviceCertificate.expires | localeDate: 'date' }}
+      <span [class]="expiryTone()">
+        {{
+          'admin.secom.overview.inDays'
+            | transloco: { days: status.serviceCertificate.daysToExpiry }
+        }}
+      </span>
+      @if (expired()) {
+        <strong class="text-danger">{{ 'admin.secom.overview.expired' | transloco }}</strong>
+      }
+    </dd>
+
+    <dt class="text-fg-title">{{ 'admin.secom.overview.automaticRenewal' | transloco }}</dt>
+    <dd>
+      @switch (renewalState()) {
+        @case ('scheduled') {
+          {{ status.renewal.renewsAt | localeDate: 'date' }}
+          <span class="text-fg-muted">
+            {{ 'admin.secom.overview.inDays' | transloco: { days: status.renewal.renewsInDays } }}
+          </span>
+        }
+        @case ('incomplete') {
+          <span class="text-warning">{{
+            'admin.secom.overview.renewalIncomplete' | transloco
+          }}</span>
+        }
+        @case ('disabled') {
+          <span class="text-fg-muted">{{
+            'admin.secom.overview.renewalDisabled' | transloco
+          }}</span>
+        }
+      }
+    </dd>
+
+    <dt class="text-fg-title">{{ 'admin.secom.overview.exposedSeries' | transloco }}</dt>
+    <dd>
+      @if (exposedSeries().length > 0) {
+        {{ exposedSeries().join(', ') }}
+      } @else {
+        <span class="text-fg-muted">{{ 'admin.secom.overview.noSeries' | transloco }}</span>
+      }
+    </dd>
+
+    <dt class="text-fg-title">{{ 'admin.secom.overview.datasets' | transloco }}</dt>
+    <dd>{{ status.datasets }}</dd>
+
+    <dt class="text-fg-title">{{ 'admin.secom.overview.subscriptions' | transloco }}</dt>
+    <dd>{{ status.subscriptions }}</dd>
+
+    <dt class="text-fg-title">{{ 'admin.secom.overview.outbox' | transloco }}</dt>
+    <dd>
+      @if (outboxCounts().length > 0) {
+        <span class="flex flex-wrap gap-x-3 gap-y-1">
+          @for (entry of outboxCounts(); track entry.status) {
+            <span>{{ outboxStatusKey(entry.status) | transloco }}: {{ entry.count }}</span>
+          }
+        </span>
+      } @else {
+        <span class="text-fg-muted">{{ 'admin.secom.overview.outboxEmpty' | transloco }}</span>
+      }
+    </dd>
+  </dl>
+
+  <p class="mt-6 text-sm text-fg-muted">
+    {{ 'admin.secom.overview.settingsNotePrefix' | transloco }}
+    <a routerLink="/sysadmin/settings" class="font-medium text-primary hover:underline">{{
+      'admin.sections.settings.label' | transloco
+    }}</a
+    >{{ 'admin.secom.overview.settingsNoteSuffix' | transloco }}
+  </p>
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "categoryId": "dk-external-publications",
+    "priority": 100,
+    "publish": false,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "Eksterne publikationer"
+      },
+      {
+        "lang": "en",
+        "name": "External publications"
+      }
+    ]
+  },
+  {
+    "categoryId": "dk-dma-publications",
+    "priority": 50,
+    "publish": true,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "Søfartsstyrelsens publikationer"
+      },
+      {
+        "lang": "en",
+        "name": "Danish Maritime Authority publications"
+      }
+    ]
+  },
+  {
+    "categoryId": "dk-dma-internal-publications",
+    "priority": 60,
+    "publish": false,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "Søfartsstyrelsens interne publikationer"
+      },
+      {
+        "lang": "en",
+        "name": "Danish Maritime Authority internal publications"
+      }
+    ]
+  },
+  {
+    "categoryId": "dk-dma-weekly-nm-publications",
+    "priority": 10,
+    "publish": true,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "Ugentlige Efterretninger for Søfarende"
+      },
+      {
+        "lang": "en",
+        "name": "Weekly Notices to Mariners"
+      }
+    ]
+  }
+]

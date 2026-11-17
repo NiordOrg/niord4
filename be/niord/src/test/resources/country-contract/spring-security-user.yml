@@ -1,0 +1,5 @@
+# A country jar that configures Spring Security: refused (CountryContractGuard).
+spring:
+  security:
+    user:
+      name: country

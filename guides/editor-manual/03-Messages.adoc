@@ -1,0 +1,760 @@
+
+:imagesdir: images
+
+[#messages]
+== Messages
+
+The _Messages_ page lists the NW and NM messages of the current domain that match your filter, in
+one of five views. You open it with _Messages_ in the header, which is always there.
+
+image::Messages.png[Messages, 800]
+
+Everyone can open the _Messages_ page, also without logging in. What you see depends on your role:
+
+* Without logging in, or in a domain where you hold no role, you see only the public messages:
+  those that are _Published_, _Cancelled_ or _Expired_.
+* Logged in with a role in the current domain, you can also find the messages in the other
+  statuses, drafts included, with the <<status-filter,Status Filter>>, and you can use the actions
+  for your role. A role on the base product's own client, `niord-client-master`, counts in every
+  domain.
+
+When you open the page, it lists the published messages of the current domain, sorted the way the
+domain is set up to sort them, by area unless a system administrator has chosen otherwise.
+
+Under the header, a bar holds the five views in the middle, _Table_, _Grid_, _Details_, _Map_ and
+_Selection_, and at its right the _Filter_ menu and the _Actions_ menu. The panels of the filters
+you use appear above the list.
+
+The address of the page in the browser holds your filter. You can bookmark it, or copy it and send
+it to someone, and switching between the views keeps the filter. A bookmark with the _Domain_ filter
+set also changes your current domain; see <<domain-filter>>.
+
+[#view-modes]
+=== View Modes
+
+The tabs in the middle of the bar choose how the messages are shown:
+
+image::ViewModes.png[View Modes, 324]
+
+[#table-view-mode]
+==== Table View Mode
+
+_Table_ is the view the page opens in. It lists the messages in a compact table (see the example at
+the start of this chapter), with these columns:
+
+* _ID_: the message's ID, coloured by its status. A message that has no ID yet, such as a draft,
+  shows its type instead, for example _Coastal NW_.
+* The dates: the event dates of the messages. Click the arrow next to the column's heading, _Select
+  date column_, to show the _Publish date_ or the _Follow-up date_ instead. The browser remembers
+  your choice.
++
+image::DatesColumnMenu.png[Select Date Column, 191]
+* _Title_ and _Areas_.
+* The actions, under a cog: each message's cog is the menu of actions for that one message (see
+  <<message-details>>).
+* The selection, under a star: each message's star selects it (see <<message-selection>>). The star
+  in the heading selects every message the list has loaded, or clears the selection when some are
+  selected.
+
+Click the heading _ID_, the date heading or _Areas_ to sort the list by that column. Click the same
+heading again to switch between ascending and descending order; an arrow shows the order. The
+_Title_ column cannot be sorted.
+
+While the list is sorted by area, a heading row names each area, and an editor finds a _sort…_
+link next to it (see <<sort-area-action>>).
+
+A red bar along the left edge of a row means that the message needs attention: its follow-up date
+has passed. Point at the row to read _Requires attention (e.g. expired/overdue warning)_. The bar
+marks the rows in the _Details_ view too; a selected row shows its selection colour instead.
+
+image::FollowUpOverdue.png[Rows Whose Follow-up Date Has Passed, 784]
+
+[#grid-view-mode]
+==== Grid View Mode
+
+In the _Grid_ view, each message is a card with a thumbnail map of the message, its ID, its title
+and its text. The view helps you recognise a message by its place on the map. Point at a card to
+see its selection star in the middle, and use the cog in its corner for its actions.
+
+image::GridViewMode.png[Grid View Mode, 800]
+
+[#details-view-mode]
+==== Details View Mode
+
+In the _Details_ view, each message is shown in full, the way it is shown in the
+<<message-details,Message Details>> panel, with a thumbnail map at its left and its cog at its
+right. Point at the thumbnail map to see the message's selection star. A message marked as original
+information shows a star above its text.
+
+image::DetailsViewMode.png[Details View Mode, 800]
+
+[#map-view-mode]
+==== Map View Mode
+
+In the _Map_ view, the messages are drawn on a map that fills the window. The map is a filter of
+its own: the list holds only the messages within the part of the map you see, and moving or
+zooming the map searches again. The _Map area_ panel at the top left shows the corners of that part
+of the map.
+
+Below it, the _Search Result_ panel lists the messages in the map. It is collapsed when you open
+the view; click the arrow in its heading to expand it. Its heading reads _Partial Search Result_
+when the map holds more messages than were loaded. Point at a message in the list to highlight it
+on the map, and click the magnifying glass next to it to zoom in on it. Messages without a position
+are listed too, without a magnifying glass.
+
+image::MapViewMode.png[Map View Mode, 800]
+
+Point at a message on the map to see its title, and click it, on the map or in the list, to open
+its details. In the _Map_ view a click never selects a message. The _Layers_ panel at the bottom
+left switches the map's layers on and off; when you filter on charts or areas, their outlines are
+layers of their own.
+
+[#selection-view-mode]
+==== Selection View Mode
+
+The _Selection_ view lists the messages you have selected, in the same way as the _Details_ view.
+See <<message-selection>>.
+
+[#load-more]
+==== Long Lists
+
+A long list is loaded a part at a time: 200 messages at a time, and up to 1000 in the _Map_ view.
+When more messages match than are shown, a button at the bottom of the list says which ones it will
+load, for example _Load 200 - 400 of 813 messages_:
+
+image::LoadMore.png[Load More Messages, 774]
+
+If loading fails, click _Retry_ to try the same part again without losing what is already shown.
+
+[#opening-a-message]
+==== Opening a Message
+
+Click a message's title in the _Table_ view, or the message itself in the other views, to open it
+in the <<message-details,Message Details>> panel. The messages are links: a click with the middle
+mouse button, or with kbd:[Ctrl] held down, opens the message in a new browser tab instead.
+
+[#hold-e-to-edit]
+If you hold down the kbd:[E] key while you click a message in the _Table_, _Grid_, _Details_ or
+_Selection_ view, the message opens straight in the editor. This works for every message you may
+open in the editor; any other message opens in the details panel as usual. On some laptop touchpads
+a tap is ignored while a key is held down; a mouse click always works.
+
+[#message-selection]
+=== Message Selection
+
+In every view but the _Map_ view, each message has a star,
+image:SelectionButton.png[Selection, 16]. Click it to select the message, and click it again to
+deselect it. In the _Table_ view the star is in the last column; in the _Grid_, _Details_ and
+_Selection_ views it shows in the middle of the message's thumbnail map when you point at it, and
+stays there while the message is selected. The star in the message details panel does the same.
+
+The selected messages are listed in the _Selection_ view. Its tab shows how many messages are
+selected, and the cross next to the number clears the selection:
+
+image::MessageSelection.png[Message Selection, 800]
+
+The selection is kept while you filter, search and switch between the views, so you can build it
+up from several searches. It is emptied when you reload the page, choose another domain, or log in
+or out. Print, mail or tag the selection before you do any of these.
+
+The selection lets you act on just the messages you choose rather than on everything the filter
+finds: you can print them, mail them, add them to a tag, compare two of them, export them and
+change their status. These actions are described in <<message-actions>>.
+
+[#message-filtering]
+=== Message Filtering
+
+The _Filter_ menu lists the filters. Click a filter to switch it on: its panel appears above the
+list, where you set its value. The menu stays open, so you can switch on several filters in turn,
+and a dot marks each filter that is on. The number on the _Filter_ button counts them.
+
+image::MessageFiltering.png[Message Filtering, 800]
+
+Your saved filters head the menu, such as _Guide example: Baltic drafts_ in the picture
+(see <<save-filter>>).
+
+The list follows every change at once, and the address of the page in the browser changes with it,
+so you can bookmark a filter.
+
+To switch a filter off, click the cross at the right of its panel, or click the filter in the
+menu again. Either way its value is cleared.
+
+The filters are described one by one below.
+
+[#domain-filter]
+==== Domain Filter
+
+image::MessageFilterDomain.png[Domain Filter, 138]
+
+The _Domain_ filter searches the messages of another domain without changing your current domain.
+This is useful when, for example, you want to base a new Notice to Mariners on a copy of an
+existing Navigational Warning.
+
+When you search another domain, only its public messages are found: those that are _Published_,
+_Cancelled_ or _Expired_.
+
+Like every filter, the _Domain_ filter is kept in the address of the page, as `domain=` followed by
+the id of the domain. Niord also reads that part of an address when it starts, to choose the
+current domain (see <<domain-selection>>). So when you open a bookmark or a link that has the
+_Domain_ filter set, the filtered domain becomes your current domain, and the filter then searches
+your own domain.
+
+[#message-series-filter]
+==== Message Series Filter
+
+image::MessageFilterSeries.png[Message Series Filter, 313]
+
+The messages of a domain always belong to one of the domain's _message series_, which decide among
+other things how the messages are numbered. A domain for navigational warnings may, for example,
+have one series for local warnings and another for coastal warnings.
+
+The _Message series_ filter finds the messages of the series you pick. With the _Domain_ filter on,
+you pick from the series of that domain.
+
+[#text-filter]
+==== Text Filter
+
+image::MessageFilterText.png[Text Filter, 188]
+
+The _Text_ filter, whose panel is labelled _Search_, finds the messages that contain the words you
+type in _Search terms_. It searches all the texts of a message: its ID, title, details and
+subjects, areas, categories, charts, references, publication and source.
+
+When you are logged in, you can use this syntax:
+
+[cols="30,70",options="header"]
+|===
+|Example|Finds
+
+|`light buoy`|Messages with at least one of the words.
+
+|`"light buoy"`|Messages with the words next to each other, in this order.
+
+|`+light -buoy`|Messages that contain _light_ and do not contain _buoy_.
+
+|`harb*`|Messages with a word that starts with _harb_, such as _harbour_.
+|===
+
+Without logging in, the text is searched as plain words.
+
+A system administrator can switch the text search to the database's own search (the setting
+_disableLucene_). The text filter then finds the messages that contain all the words you type, also
+in other forms of the words (_harbour_ finds _harbours_), and a `*` is not understood.
+
+[#type-filter]
+==== Type Filter
+
+image::MessageFilterType.png[Type Filter, 186]
+
+The _Type_ filter finds messages of the types you pick. Click a type to pick it, and click it again
+to leave it out; _All_ picks every type and _Reset_ none.
+
+For Navigational Warnings the types are _Local_, _Coastal_, _Sub-area_ and _Navarea_; for Notices
+to Mariners _Preliminary_, _Temporary_, _Permanent_ and _Misc_. The filter offers only the types the
+domain's message series use. In a domain with both Navigational Warnings and Notices to Mariners, it
+also has the choices _All_, _NW_ and _NM_.
+
+[#status-filter]
+==== Status Filter
+
+image::MessageFilterStatus.png[Status Filter, 368]
+
+When no status is picked, the page shows the published messages. The _Status_ filter lets you pick
+any combination of statuses: _Published_, _Draft_, _Verified_, _Cancelled_, _Expired_ and
+_Deleted_. _All_ picks every status and _Reset_ none.
+
+When you are logged in with a role in the current domain, the _Tag_ and _Publication_ filters are
+an exception: with either of them on and no status picked, the list holds the messages of the tag
+or the publication in every status, drafts and deleted messages included.
+
+Every status is offered when you are logged in with a role in the current domain. Without logging
+in, in a domain where you hold no role, or with the _Domain_ filter set to another domain, only the
+public statuses are offered: _Published_, _Cancelled_ and _Expired_.
+
+[#tag-filter]
+==== Tag Filter
+
+image::MessageFilterTag.png[Tag Filter, 309]
+
+_Message tags_ are named groups of messages; see <<message-tags>>. The _Tag_ filter finds the
+messages of the tags you pick. Type part of a tag's name in _Search tags_ and pick the tag, or
+click image:TagButton.png[Browse all tags, 16], _Browse all tags_, to choose from a list of the tags
+(see <<tag-picker>>).
+
+[#publication-filter]
+==== Publication Filter
+
+image::MessageFilterPublication.png[Publication Filter, 321]
+
+Administrators publish _publications_ made from messages, such as the weekly Notices to Mariners.
+The _Publication_ filter finds the messages a publication holds. Type part of its title in _Search
+publications_ and pick it from the list.
+
+If a publication cannot be used as a filter, the panel says so under the field, starting with _The
+publication filter could not be applied_.
+
+[#promulgation-filter]
+==== Promulgation Filter
+
+image::MessageFilterPromulgation.png[Promulgation Filter, 307]
+
+System administrators set up _promulgation types_, such as NAVTEX, which are the channels a message
+is sent through; see <<promulgation-editor-field,Promulgation Editor Field>>. The _Promulgation_
+filter finds the messages that use the promulgation types you pick.
+
+[#user-filter]
+==== User Filter
+
+image::MessageFilterUser.png[User Filter, 509]
+
+The _User_ filter finds the messages a user has worked on. Pick the user in _Search users_, or click
+_Me_ for yourself, and choose how: _Created by_ (the user created the message), _Updated by_ (the
+user has changed it at some point) or _Last updated by_ (the user made the latest change).
+
+The _User_ filter is offered only when you are logged in.
+
+[#comments-filter]
+==== Comments Filter
+
+image::MessageFilterComments.png[Comments Filter, 419]
+
+Writing a message often involves several people who write it and read it through. To help them,
+users can add _comments_ to a message and acknowledge the comments of others; see the editor's
+<<comments-editor-page,Comments>> page.
+
+The _Comments_ filter finds messages by their comments: _Any_ (messages with comments), _Own_
+(messages you have commented on), _Any unacknowledged_ and _Own unacknowledged_ (messages with
+comments nobody has acknowledged yet). _Ignore comments_ leaves comments out of the search.
+
+[#reference-filter]
+==== Reference Filter
+
+image::MessageFilterReference.png[Reference Filter, 223]
+
+A message may refer to other messages. Each reference has a type that says, for example, that the
+message cancels the referenced message or repeats it.
+
+The _Reference_ filter finds messages by these references. Start typing in _Message ID_ (at least
+three characters) and pick the message: the list of suggestions says whether your text matched the
+message's database ID, its short ID or its text. That message is the starting point, and the number
+field next to it says how many levels of references to follow, from 0 to 5. It starts at 1:
+
+* With 0, only the message itself is found.
+* With 1, the messages that refer to it, or that it refers to, are found as well.
+* With 2, also the messages that refer to those, or that those refer to, and so on.
+
+[#chart-filter]
+==== Chart Filter
+
+image::MessageFilterChart.png[Chart Filter, 279]
+
+The _Chart_ filter finds the messages that concern any of the sea charts you pick in _Search
+charts_. In the _Map_ view, the charts' outlines are shown on the map.
+
+[#area-filter]
+==== Area Filter
+
+image::MessageFilterArea.png[Area Filter, 289]
+
+Administrators keep the areas in a tree, from countries down to waters and places. The _Area_ filter
+finds the messages of the areas you pick, including those of their sub-areas. Type part of an
+area's name in _Search areas_, or click the magnifying glass, _Browse area tree_, to pick areas in
+the tree. In the _Map_ view, the areas' outlines are shown on the map.
+
+[#category-filter]
+==== Category Filter
+
+image::MessageFilterCategory.png[Category Filter, 314]
+
+Categories, such as _Light_ or _Light buoy_, are also kept in a tree by administrators. The
+_Category_ filter finds the messages of the categories you pick, including those of their
+sub-categories. Type in _Search categories_, or click _Browse category tree_.
+
+[#date-filter]
+==== Date Filter
+
+image::MessageFilterDate.png[Date Filter, 346]
+
+The _Date_ filter finds messages by a date. Choose which date in the list at the left, and set
+_From_, _To_ or both:
+
+[cols="30,70",options="header"]
+|===
+|Date|Finds the messages
+
+|Publish date|whose publishing period overlaps the dates.
+
+|Publish from date|that were published, or are to be published, between the dates.
+
+|Event dates|whose event dates overlap the dates.
+
+|Created date|that were created between the dates.
+
+|Updated date|that were last changed between the dates.
+|===
+
+[#clear-filter]
+==== Clear Filters
+
+_Clear Filters_ at the bottom of the _Filter_ menu switches every filter off.
+
+[#save-filter]
+==== Save Filter
+
+_Save Filter..._ at the bottom of the _Filter_ menu saves the filters you have set, so you can use
+them again. Give the filter a name in the _Save filter_ dialog and click _Save_.
+
+image::SaveFilterDialog.png[Save Filter Dialog, 240]
+
+Your saved filters are listed at the top of the _Filter_ menu. Click one to set its filters again,
+or click the bin next to it to delete it. Saved filters are yours: nobody else sees them.
+
+Without logging in, _Clear Filters_ and _Save Filter..._ are greyed out and cannot be used.
+
+[#message-actions]
+=== Message Actions
+
+The _Actions_ menu at the right of the bar lists what you can do with the messages the filter has
+found, or with the messages you have selected.
+
+image::MessageActions.png[Message Actions, 167]
+
+Which actions the menu holds depends on your role and on whether you have selected messages:
+
+* Everyone can print the list, select all messages, compare two selected messages and sort the
+  list.
+* When you are logged in, you can also export the messages the filter has found.
+* When you are logged in with a role in the current domain, you can also print and export the
+  selection, run a report, tag messages and manage tags.
+* Editors can also mail the selection, change the status of the selected messages and sort the
+  messages of an area.
+* Administrators can also import messages.
+
+The actions are described one by one below.
+
+[#print-messages]
+==== Print Action
+
+image::PrintDialog.png[Print Dialog, 360]
+
+_Print..._ prints the messages the filter has found, as a PDF. The print dialog, _Print 2
+messages_ for two messages, has these settings:
+
+* _Output language_: the language the messages are printed in.
+* _Report_: the layout of the PDF. The reports are set up per domain by a system administrator.
+  Usually there is a _Standard_ report, which prints the details of the messages, and a _Draft_
+  report, which prints every language of the messages with more of their fields, useful for reading
+  messages through. A domain for Notices to Mariners often has more reports, for example for the
+  weekly Notices to Mariners.
+* _Layout_ (_portrait_ or _landscape_) and _Paper size_.
+* _include thumbnails_, a thumbnail map beside each message. It is offered only when the report
+  leaves the choice to you.
+* Some reports have settings of their own, listed below the others by name.
+
+Click _Print_ to make the PDF; the browser opens it. The browser remembers the layout, the paper
+size and the thumbnails for the next time; the report and its settings start afresh each time.
+
+[#print-selection-action]
+==== Print Selection Action
+
+_Print selection..._ works like the <<print-messages,Print Action>>, but prints only the messages
+you have selected.
+
+[#report-action]
+==== Report Action
+
+image::MailingListReportDialog.png[Mailing List Report Dialog, 520]
+
+Niord can send reports to the recipients of a mailing list on a schedule; see the
+link:../admin-manual/manual.html#mailing-lists[Mailing Lists] chapter. Sometimes you need such a
+report outside its schedule.
+
+_Report..._ opens the dialog _Execute Mailing List Report_, which lists the reports that may be run
+on demand, with their schedules. Click _Execute_ next to a report to see its result below the list.
+To print the result, or keep it open, click _Open in new window_.
+
+[#e-mail-selection-action]
+==== E-mail Selection Action
+
+image::MailDialog.png[E-mail Dialog, 360]
+
+_E-mail selection..._, for editors, mails the messages you have selected. The dialog _Mail 2
+selected messages_ asks for:
+
+* _Output language_: the language of the messages in the mail.
+* _To_: the recipients. Type in _Select e-mail addresses_ and pick from the list: part of a name
+  finds Niord's users with that name, and a whole e-mail address is offered as it is, so you can
+  also mail someone who is not a user of Niord.
+* _Subject_, which is required, and an optional _Message_ to the recipients.
+
+Click _Send Mail_ to mail the details of the selected messages. This can be useful when, for
+example, you follow up on the work a Notice to Mariners describes. Niord queues the mail and sends
+it shortly after, as the message on the screen says; a mail that cannot be delivered is listed for
+the system administrators in the Mail Queue.
+
+[#add-selection-to-tag-action]
+==== Add Selection to Tag Action
+
+_Add selection to tag…_ opens the tag picker (see <<tag-picker>>), where you tick the tags the
+selected messages should be added to.
+
+[#remove-selection-from-tag-action]
+==== Remove Selection from Tag Action
+
+_Remove selection from tag…_ opens the tag picker with only the tags the selected messages are in.
+Untick a tag to take the messages out of it.
+
+[#manage-tags-action]
+==== Manage Tags Action
+
+_Manage tags…_ opens the tag manager, where you create, change and delete tags. See
+<<tag-manager>>.
+
+[#select-all-action]
+==== Select All Action
+
+_Select all_ selects every message the list has loaded. In a long list, that may be fewer than the
+filter has found (see <<load-more>>). See <<message-selection>>.
+
+[#clear-selection-action]
+==== Clear Selection Action
+
+_Clear selection_ empties the selection. See <<message-selection>>.
+
+[#compare-messages]
+==== Compare Action
+
+image::ComparisonDialog.png[Message Comparison Dialog, 560]
+
+_Compare two messages_ is offered when you have selected exactly two messages. It opens the dialog
+_Compare messages_ on its _Side-by-side_ tab, which shows the two messages next to each other, each
+the way the details panel shows it.
+
+_Message 1_ and _Message 2_ name the two messages. When the dialog opens from your selection, they
+show the messages' database IDs, the long codes of letters and digits that Niord gives every
+message. To compare another message, clear a field with the cross on its chip, type at least three
+characters of the message's short ID, such as _NW-348_, and pick the message from the list. Deleted
+messages can be picked too. _Swap messages_ changes their places, _Language_ chooses which language
+to compare, and _Show XL_ makes the dialog larger.
+
+The _Changes_ tab shows the text of the two messages as one, with the words of message 2 that
+message 1 does not have marked as _Additions_ and the words of message 1 that message 2 does not
+have as _Deletions_:
+
+image::ComparisonDialogChanges.png[Message Comparison Changes, 560]
+
+The _Data_ tab compares the data of the two messages, field by field, and marks what was changed,
+added and removed. Click the name of a group of fields to fold or unfold it; in the picture,
+_areas_ and _categories_ are folded. The tab is meant for advanced users:
+
+image::ComparisonDialogData.png[Message Comparison Data, 560]
+
+[#export-action]
+==== Export Action
+
+_Export..._ downloads the messages the filter has found as a zip archive. The archive holds the
+messages, a page that shows them, and the files attached to them, such as the pictures of a Notice
+to Mariners. It can be read back into Niord with the <<import-action,Import Action>>.
+
+[#export-selection-action]
+==== Export Selection Action
+
+_Export selection..._ works like the <<export-action,Export Action>>, but exports only the messages
+you have selected.
+
+[#import-action]
+==== Import Action
+
+image::ImportDialog.png[Message Import Dialog, 440]
+
+_Import..._ is offered to administrators only, because it can change many messages at once. It
+reads a zip archive made by the <<export-action,Export Action>>. Click _Choose file_, or drop the
+archive on the dialog, and choose how to import it:
+
+[cols="30,70",options="header"]
+|===
+|Setting|Choices
+
+|Message UIDs|_Ignore messages with existing UIDs_ leaves out each message whose unique id is
+already in Niord; _Assign new UIDs to all messages_ imports every message as a new one.
+
+|Message status|_Assign DRAFT status to all messages_, or _Preserve status for messages_.
+
+|Areas, categories and charts|When a message names an area, a category or a chart that Niord does
+not have: _Ignore non-existing areas, categories and charts_, or _Create non-existing areas,
+categories and charts_.
+
+|Message series|_If valid, preserve associated message series_ keeps a message's series when it
+belongs to the current domain; _Always assign the default series below_ puts every message in the
+_Default message series_.
+
+|Tag|When you pick a tag, every imported message is added to it.
+|===
+
+Click _Import_ to start. The import runs as a batch job in the background: the dialog shows the
+answer under _Result_, with a _View batch job_ link to follow the job. The link opens the batch job
+page of _Sysadmin_, so it works for system administrators only; anyone else is told _Access denied._
+and taken to the _Home_ page. The list of messages is not updated by itself; search again when the
+job has finished.
+
+[#update-selection-status-action]
+==== Update Selection Status Action
+
+image::StatusUpdateDialog.png[Status Update Dialog, 520]
+
+_Update selection status…_ is offered to editors when messages are selected. It changes the status
+of many messages at once, which you otherwise do one message at a time on the editor's
+<<status-editor-page,Status>> page.
+
+The dialog _Update Statuses_ lists the selected messages whose status can change, with their
+_Current status_. For each, pick the _New status_ among the changes its status allows:
+
+* a _Draft_ can become _Verified_ or _Deleted_;
+* a _Verified_ message can become _Published_, _Draft_ or _Deleted_;
+* a _Published_ message can become _Cancelled_.
+
+_Cancelled_, _Expired_ and _Deleted_ messages cannot change status and are left out. To make the
+same change for every message it fits, pick it in _Change all statuses_, for example _Draft →
+Verified_. Click _Update_ and confirm to change the statuses.
+
+The statuses change together or not at all. If one of the changes is refused, for example because
+another editor changed that message after you opened the dialog, no status is changed, a message
+names the message and the reason, and the dialog stays open.
+
+[#sort-area-action]
+==== Sort Area Action
+
+image::SortMessagesDialog.png[Sort Messages by Area Dialog, 480]
+
+_Sort area…_, offered to editors, sets the order of the messages within an area, which is the order
+they are listed and printed in when sorted by area.
+
+In the dialog _Sort Messages_, pick the _Area_ and the status of the messages to sort, _Published_,
+_Verified_ or _Draft_. The messages are listed in their current order. Drag a message by its handle,
+image:DragHandle.png[Drag Handle, 16], to its place. Each move is saved at once. Click _Close_ when
+you are done; the list of messages is then updated.
+
+You can also click _sort…_ next to an area's heading in the list, which is shown while the list is
+sorted by area:
+
+image::SortAreaLink.png[Sort Messages by Area Link, 153]
+
+The dialog then lists the messages under that heading, whatever their status.
+
+By default, the messages of an area follow the order of the area tree, which administrators keep:
+
+image::AreaTree.png[Sample Area Tree, 251]
+
+In this example, _The Baltic Sea_ comes before _The Sound_, and so on.
+
+An administrator can also give an area a _Message sorting_, so that its messages, and those of its
+sub-areas, are sorted by their position: for example _North-South_, or _Clockwise_ around a point.
+The _Sort area…_ action then lets you adjust that order by hand.
+
+[#message-list-sort-selection]
+==== Sorting the List
+
+The last items of the _Actions_ menu sort the list: _Areas_, _ID_, _Event dates_, _Publish date_ and
+_Follow-up date_. Choosing the field the list is already sorted by switches between ascending and
+descending order. An arrow next to the field shows the current order.
+
+[#message-details]
+=== Message Details
+
+image::MessageDetailsDialog.png[Message Details, 800]
+
+The _Message_ panel opens on the right of the page when you open a message from a list (see
+<<opening-a-message>>). The address of the page then names the message, so you can copy it and send
+it to someone.
+
+At the top, a map shows the message's positions and areas, with the _Layers_ panel to switch its
+labels on and off. The map is left out when the message has no position, or when a picture attached
+to the message is shown above it. Below the map, the message is shown in full, with its promulgation
+when it has any.
+
+At the bottom of the panel:
+
+* The arrows show the previous and the next message of the list. When you click a referenced message
+  in the text, the panel shows that message instead, and a _Back_ arrow takes you back.
+* The star selects or deselects the message.
+* The cog, _Message actions_, is the menu for this one message:
+** _Edit_ opens the message in the editor. It is offered when you are logged in and the message
+   belongs to the current domain; a user who is not an editor can read the message there and comment
+   on it.
+** _Copy_, for editors, starts a new message in the editor as a copy of this one, once you confirm
+   with _Copy Message_ in the dialog _Copy Message?_. For a Notice to Mariners, the dialog also
+   offers _Include reference to copied message_.
+** _Print_ prints this message, with the same dialog as the <<print-messages,Print Action>>. It is
+   offered to everyone.
+** _Add to tag…_ opens the tag picker for this message. _Add to_ followed by a tag's name adds the
+   message to the tag you used last, in one click. _Remove from…_ lists the tags the message is in,
+   to take it out of one. These items are offered when you are logged in with a role in the current
+   domain.
+* The question mark opens this section of the manual, and _Close_ closes the panel.
+
+The cog's menu, here for a message that is in a tag, with no tag used yet:
+
+image::MessageDetailsMenu.png[Message Actions Menu, 120]
+
+The same cog is in the _Actions_ column of the _Table_ view and on every message in the _Grid_,
+_Details_ and _Selection_ views.
+
+[#message-tags]
+=== Message Tags
+
+_Message tags_ are named groups of messages, for example the messages a colleague should read
+through, or the messages of a project. They are used in the <<tag-filter,Tag Filter>>, in the
+<<import-action,Import Action>>, and by the actions that add messages to tags and remove them.
+
+A tag is one of three kinds:
+
+* A _private_ tag is yours: only you see it and use it.
+* A _domain_ tag belongs to a domain and is shared by everyone who works in that domain.
+* A _public_ tag is shared by every domain.
+
+A tag can have an expiry date; within an hour after it, Niord deletes the tag, but not its
+messages. A tag can also be _locked_: no messages can be added to a locked tag or removed from it,
+and only an administrator can unlock it.
+
+[#tag-picker]
+==== The Tag Picker
+
+The tag picker opens where you click: from _Add selection to tag…_ and _Remove selection from
+tag…_ in the _Actions_ menu, from _Add to tag…_ in a message's cog, and from _Browse all tags_ in
+the _Tag_ filter, where its title is _Filter by tag_.
+
+image::TagPicker.png[The Tag Picker as the Tag filter opens it, 270]
+
+The chips at the top, _private_, _domain_ and _public_, show only the tags of those kinds; with no
+chip chosen, every kind is shown. In the picture, _private_ and _domain_ are chosen. _Search tags_ finds a tag by its name. Each tag shows how many
+messages it holds.
+
+When you add messages to tags, a tick shows that all the messages are in the tag, and a dash that
+some of them are. Ticking or unticking a tag adds the messages to it, or takes them out, at once.
+Locked tags are not listed then, since they cannot change. In the _Tag_ filter, ticking a tag
+filters the list by it instead, and locked tags, marked with a lock, are listed too. _Manage tags…_
+at the bottom opens the tag manager, and _Done_ closes the picker.
+
+[#tag-manager]
+==== The Tag Manager
+
+_Manage tags…_ in the _Actions_ menu, or in the tag picker, opens the _Message Tags_ panel, where
+you create, change and delete tags.
+
+image::MessageTagsDialog.png[Message Tags, 800]
+
+The panel lists the tags you can see, with their _type_, the date they were _created_, their
+_expiry date_ and the number of messages they hold. Click a column heading to sort by it. _Name_
+and the chips _private_, _domain_ and _public_ narrow the list.
+
+* _New Tag_ adds a row at the top of the list. Type the _Tag Name_, choose who shares it (private,
+  domain or public), set an _Expiry Date_ if the tag should be deleted by itself, tick _Locked_ if
+  its messages should not change, and click the tick to save it.
+* _Edit tag_ (the pencil) changes the tag's sharing, expiry date and lock. A tag's name cannot be
+  changed once it is created.
+* _Copy tag_ adds a new row filled in from the tag, without its lock, for you to name and save.
+* _Delete tag_ (the bin) deletes the tag after you confirm. Its messages are not deleted.
+* _clear_, next to the number of messages, empties the tag without deleting it.
+
+A locked tag shows a lock instead of these actions. An administrator can click the lock, _Unlock
+tag_, to unlock it.

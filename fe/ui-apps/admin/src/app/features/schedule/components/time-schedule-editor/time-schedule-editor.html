@@ -1,0 +1,105 @@
+@if (editing()) {
+  <div class="flex flex-col gap-2">
+    @for (interval of draft(); track $index) {
+      @if (interval.locked && interval.original) {
+        <!-- A period from an earlier day: kept as stored, edited on the day it starts. -->
+        <div class="flex flex-col items-end">
+          <div>{{ formatPeriod(interval.original) }}</div>
+          <div class="text-xs text-fg-muted">{{ 'schedule.editor.otherDay' | transloco }}</div>
+        </div>
+      } @else {
+        @let errorLine = rowErrorLines()[$index];
+        @let inError = errorLine !== null;
+        <div
+          class="flex flex-col items-end gap-1"
+          role="group"
+          [attr.aria-describedby]="inError ? errorIdPrefix + '-' + $index : null"
+        >
+          <div class="flex items-center justify-end gap-2">
+            <app-time-field
+              class="w-28"
+              [value]="interval.from"
+              (valueChange)="setFrom($index, $event)"
+              [ariaLabel]="'schedule.editor.from' | transloco"
+            />
+            <span aria-hidden="true">–</span>
+            <app-time-field
+              class="w-28"
+              [value]="interval.to"
+              (valueChange)="setTo($index, $event)"
+              [ariaLabel]="'schedule.editor.to' | transloco"
+            />
+            <button
+              type="button"
+              class="icon-button text-xs hover:text-danger"
+              [attr.aria-label]="'common.remove' | transloco"
+              (click)="removeInterval($index)"
+            >
+              <app-icon name="lucideTrash2" />
+            </button>
+          </div>
+          @if (errorLine) {
+            <p class="text-xs text-danger" role="alert" [id]="errorIdPrefix + '-' + $index">
+              {{ errorLine.key | transloco: errorLine.params }}
+            </p>
+          }
+        </div>
+      }
+    }
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" class="btn-secondary" (click)="addInterval()">
+        <app-icon name="lucidePlus" class="mr-1 text-xs" />
+        {{ 'schedule.editor.add' | transloco }}
+      </button>
+      <button type="button" class="btn-secondary" (click)="clearIntervals()">
+        <app-icon name="lucideTrash2" class="mr-1 text-xs" />
+        {{ 'common.clear' | transloco }}
+      </button>
+      <button type="button" class="btn-tertiary" (click)="cancel()">
+        {{ 'term.cancel' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        [disabled]="saving() || zoneMissing() || hasRowErrors()"
+        [attr.title]="zoneMissing() ? noTimeZoneLabel() : null"
+        (click)="save()"
+      >
+        <app-icon name="lucideSave" class="mr-1 text-xs" />
+        {{ 'schedule.editor.save' | transloco }}
+      </button>
+    </div>
+  </div>
+} @else {
+  <div class="flex items-start justify-end gap-2">
+    <div class="flex flex-col">
+      @for (period of periods(); track $index) {
+        @if (storedBackwards(period)) {
+          <!-- Stored with its end before its start: the editor names the end and holds Save back. -->
+          <div class="flex items-center justify-end gap-1">
+            <app-icon
+              name="lucideTriangleAlert"
+              class="text-warning"
+              role="img"
+              [attr.aria-label]="'schedule.editor.storedBackwards' | transloco"
+              [title]="'schedule.editor.storedBackwards' | transloco"
+            />
+            <span>{{ formatPeriod(period) }}</span>
+          </div>
+        } @else {
+          <div>{{ formatPeriod(period) }}</div>
+        }
+      }
+    </div>
+    <button
+      type="button"
+      class="icon-button text-xs"
+      [disabled]="zoneMissing()"
+      [attr.aria-label]="'schedule.editor.edit' | transloco"
+      [title]="zoneMissing() ? noTimeZoneLabel() : ('schedule.editor.edit' | transloco)"
+      (click)="startEdit()"
+    >
+      <app-icon name="lucidePencil" />
+    </button>
+  </div>
+}

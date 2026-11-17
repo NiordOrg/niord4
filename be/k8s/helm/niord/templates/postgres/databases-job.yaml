@@ -1,0 +1,85 @@
+{{- if and .Values.postgres.enabled .Values.postgres.databases -}}
+{{- range .Values.postgres.databases }}
+{{- if not (regexMatch "^[a-z_][a-z0-9_]{0,62}$" (toString .)) }}
+{{- fail (printf "postgres.databases: %q is not a plain database name (lower-case letters, digits and _, at most 63 characters, not starting with a digit)" (toString .)) }}
+{{- end }}
+{{- end -}}
+# Creates the databases listed in postgres.databases that do not exist yet. Idempotent: an
+# existing database is left alone, and nothing is ever dropped. The Postgres image only creates
+# `postgres.database`, and only on an empty volume, so this is what lets one infra release serve
+# several app releases, and a database be added to a running environment.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "niord.componentName" (list . "db-databases") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "db-databases") | nindent 4 }}
+  annotations:
+    # After every install and upgrade; Argo CD maps these hooks to PostSync, so it runs after
+    # every sync. Each run replaces the previous Job and removes itself once it succeeds.
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        # Its own component label: with `db` it would match the Postgres Service's selector.
+        {{- include "niord.componentSelectorLabels" (list . "db-databases") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # psql needs no root; 999 is the image's own postgres user. Pod Security `restricted`.
+      securityContext:
+        {{- include "niord.podSecurityContext" 999 | nindent 8 }}
+      containers:
+        - name: create-databases
+          # The Postgres image itself: it brings psql and pg_isready.
+          image: {{ include "niord.image" (list . "postgres") | quote }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          env:
+            - name: PGHOST
+              value: {{ include "niord.componentName" (list . "db") | quote }}
+            - name: PGPORT
+              value: {{ .Values.postgres.service.port | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.adminSecretName" . }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.adminSecretName" . }}
+                  key: password
+            - name: PGDATABASE
+              value: {{ .Values.postgres.database | quote }}
+            - name: DATABASES
+              value: {{ join " " .Values.postgres.databases | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              until pg_isready -q; do echo "waiting for $PGHOST:$PGPORT ..."; sleep 2; done
+              for db in $DATABASES; do
+                if [ "$(psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$db'")" = 1 ]; then
+                  echo "database $db exists"
+                else
+                  psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\" TEMPLATE template_postgis OWNER \"$PGUSER\""
+                  echo "database $db created"
+                fi
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+{{- end }}

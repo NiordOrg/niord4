@@ -1,0 +1,29 @@
+
+:imagesdir: images
+
+[#mailing-lists]
+== Mailing Lists
+
+The _Mailing Lists_ page is a section of the _Admin_ area: *Admin* -> *Mailing Lists*. Every
+administrator manages the recipients of the lists there, and a system administrator also creates,
+changes, copies and deletes the lists, their triggers and the import and export, on the same page.
+The page is described in one place, the
+link:../admin-manual/manual.html#mailing-lists[Mailing Lists] chapter of the Administrator Manual.
+The parts for system administrators are these:
+
+* [[managing-mailing-list-recipients]]Recipients:
+  link:../admin-manual/manual.html#manage-mailing-list-recipients[Managing Mailing List Recipients].
+* [[adding-or-editing-a-mailing-list]]Adding, changing and copying a list:
+  link:../admin-manual/manual.html#adding-or-editing-a-mailing-list[Adding or Editing a Mailing List].
+* [[mailing-list-triggers]]Triggers, their subject and their mail body:
+  link:../admin-manual/manual.html#mailing-list-triggers[Mailing List Triggers], with
+  [[scheduled-triggers]]link:../admin-manual/manual.html#scheduled-triggers[Scheduled Triggers] and
+  [[status-change-triggers]]link:../admin-manual/manual.html#status-change-triggers[Status Change Triggers].
+* [[testing-triggers]]Trying a trigger without sending mails:
+  link:../admin-manual/manual.html#testing-triggers[Testing Triggers].
+* [[deleting-a-mailing-list]]Deleting a list:
+  link:../admin-manual/manual.html#deleting-a-mailing-list[Deleting a Mailing List].
+* [[importing-and-exporting-mailing-list]]Importing and exporting lists:
+  link:../admin-manual/manual.html#importing-and-exporting-mailing-list[Importing and Exporting Mailing Lists].
+
+The mails the lists send can be followed on the <<mail-queue,Mail Queue>> page.

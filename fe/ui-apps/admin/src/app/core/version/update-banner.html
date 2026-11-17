@@ -1,0 +1,20 @@
+@if (version.webUpdateAvailable()) {
+  <div
+    class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-[var(--niord-notice-warn-bg)] px-4 py-2 text-center text-sm text-[var(--niord-notice-warn-fg)]"
+    role="alert"
+  >
+    <span>
+      <app-icon name="lucideTriangleAlert" class="mr-1" />
+      {{ 'front_page.version_error' | transloco }}
+    </span>
+    <button type="button" class="font-medium underline" (click)="reload()">
+      {{ 'common.retry' | transloco }}
+    </button>
+    <span class="text-xs">
+      {{ 'core.versionBanner.server' | transloco }}: {{ version.serverBuildVersion() }}
+    </span>
+    <span class="text-xs">
+      {{ 'core.versionBanner.web' | transloco }}: {{ version.webBuildVersion }}
+    </span>
+  </div>
+}

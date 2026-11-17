@@ -1,0 +1,739 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.junit.jupiter.api.Test;
+import org.niord.core.domain.Domain;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.TestIds;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.criteria.MessageSeriesCriterionVo;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.series.vo.IssueDraftVo;
+import org.niord.core.publication.series.vo.IssueDraftWarningVo;
+import org.niord.core.publication.series.vo.PublicationIssueDescVo;
+import org.niord.core.publication.vo.MessagePublication;
+import org.niord.core.user.User;
+import org.niord.test.ITTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * S12. The issue that does not exist yet.
+ *
+ * What is pinned here is the part three screens share and could each get wrong
+ * on their own: WHERE the proposed period opens and closes, HOW FIRM each bound
+ * is, and WHAT the issue would be called. The name is the one that has a known
+ * wrong answer -- deriving it from the interval START returns "uge 26" for a
+ * week production calls "uge 27", because every weekly window runs Wednesday to
+ * Wednesday and therefore spans two ISO weeks.
+ *
+ * And that the endpoint writes nothing, asserted by counting rows rather than by
+ * reading the code, because "it only reads" is a claim that decays.
+ */
+public class IssueDraftITTest extends ITTest {
+
+    @Autowired
+    IssueDraftService drafts;
+
+    @Autowired
+    IssueLifecycleService lifecycle;
+
+    @Autowired
+    IssuePublishService publishService;
+
+    @PersistenceContext
+    EntityManager em;
+
+    /** The series' own zone, which every derivation below is read in. */
+    private static final ZoneId ZONE = ZoneId.of("Europe/Copenhagen");
+
+    private static final long WEEK = 7L * 24 * 3600 * 1000;
+
+    // ------------------------------------------------------------------ fixtures
+
+    private PublicationSeries series(TimeRelation relation, String namePattern) {
+        PublicationCategory c = new PublicationCategory();
+        c.setCategoryId(TestIds.category());
+        c.setPriority(100);
+        em.persist(c);
+
+        // S-20: the timezone a cut-off is read in is the DOMAIN's, so a series
+        // whose weeks must come out right has to have one.
+        Domain d = new Domain();
+        d.setDomainId(TestIds.domain());
+        d.setName("Test domain");
+        d.setTimeZone("Europe/Copenhagen");
+        em.persist(d);
+
+        PublicationSeries s = new PublicationSeries();
+        s.setSeriesId(TestIds.series());
+        s.setStatus(SeriesStatus.ACTIVE);
+        s.setDomain(d);
+        s.setContentMode(ContentMode.GENERATED_FROM_QUERY);
+        s.setReportId("some-report");
+        s.setCadence(SeriesCadence.WEEKLY);
+        s.setNominalCutoffDay(CutoffDay.WEDNESDAY);
+        s.setNominalCutoffTime("12:00");
+        s.setTimeRelation(relation);
+        s.setAliveAtCutoff(relation == TimeRelation.IN_FORCE_AT_CUTOFF);
+        s.setReleaseMode(ReleaseMode.MANUAL_GATE);
+        s.setNextIssueCreation(NextIssueCreation.MANUAL);
+        s.setMessagePublication(MessagePublication.NONE);
+        s.setNumberingScheme(NumberingScheme.ISO_WEEK_YEAR);
+        s.setFirstIssueStartsAt(wednesday(2026, 6, 24));
+        // No report: a draft never renders, and a configured report would make
+        // the published fixtures below refuse for want of a document.
+        s.setCategory(c);
+        s.getLanguages().add("da");
+
+        IssueCriteriaVo doc = new IssueCriteriaVo();
+        MessageSeriesCriterionVo node = new MessageSeriesCriterionVo();
+        node.setValues(new ArrayList<>(List.of("dma-nm")));
+        doc.getCriteria().add(node);
+        s.setCriteria(doc);
+
+        PublicationSeriesDesc desc = s.createDesc("da");
+        desc.setName("Test series");
+        desc.setNameSuggestionPattern(namePattern);
+        desc.setFileNamePattern("test-w${week-2-digits}-${year}.pdf");
+        em.persist(s);
+        em.flush();
+        return s;
+    }
+
+    private User user() {
+        User u = new User();
+        u.setUsername(TestIds.user());
+        em.persist(u);
+        return u;
+    }
+
+    /** Noon on a given date, in the series' zone -- the shape of a real cut-off. */
+    private static Date wednesday(int year, int month, int day) {
+        return Date.from(ZonedDateTime.of(year, month, day, 12, 0, 0, 0, ZONE).toInstant());
+    }
+
+    private PublicationIssue publishedIssue(PublicationSeries s, Date from, Date stamp) {
+        PublicationIssue i = lifecycle.create(s, from, IntervalBoundSource.STAMPED, user());
+        em.flush();
+        publishService.publish(i.getId(),
+                new IssuePublishService.PublishRequest(
+                        IssuePublishService.PublishRequest.ALL_WARNINGS, user(), stamp));
+        em.flush();
+        return em.find(PublicationIssue.class, i.getId());
+    }
+
+    private static String nameOf(IssueDraftVo draft, String lang) {
+        for (PublicationIssueDescVo d : draft.getDescs()) {
+            if (lang.equals(d.getLang())) {
+                return d.getName();
+            }
+        }
+        return null;
+    }
+
+    private static boolean warns(IssueDraftVo draft, String code) {
+        return draft.getWarnings().stream().map(IssueDraftWarningVo::code).anyMatch(code::equals);
+    }
+
+    // ============================================================ the three asks
+
+    /**
+     * "The next one after this": the period opens where the named issue closed.
+     *
+     * The bound reads STAMPED because the publish recorded it, and that marker is
+     * the difference between a date somebody can act on and one the cadence
+     * guessed.
+     */
+    @Test
+    @Transactional
+    public void aDraftChainedOffAnIssueOpensAtItsClose() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        Date stamp = wednesday(2026, 7, 1);
+        PublicationIssue published = publishedIssue(s, wednesday(2026, 6, 24), stamp);
+
+        IssueDraftVo draft = drafts.draft(s, published.getPublicId(), null, null, new Date());
+
+        assertEquals(stamp, draft.getIntervalFrom(), "the chain continues where that issue ended");
+        assertEquals("STAMPED", draft.getIntervalFromSource(),
+                "the publish recorded that instant; it is not the cadence talking");
+        assertEquals(published.getPublicId(), draft.getChainedFromPublicId());
+        assertEquals(new Date(stamp.getTime() + WEEK), draft.getIntervalTo(),
+                "one cadence period on, which is what the gap rows are tiled with");
+        assertEquals("NOMINAL", draft.getIntervalToSource(), "nothing has stamped the close yet");
+        assertEquals(draft.getIntervalTo(), draft.getEffectiveCutoff());
+        assertNull(draft.getPublicId(), "the id is minted at create, not proposed here");
+    }
+
+    /**
+     * And it comes back NAMED, not merely addressed.
+     *
+     * The id is a slug. A form that says the period follows on from
+     * "nm-w26-2026" is showing the person deciding whether the dates are right a
+     * database key, and the question they are actually answering is which
+     * edition this one comes after. Both travel: the id is what a link to that
+     * issue is built from, the name is what goes on the page.
+     */
+    @Test
+    @Transactional
+    public void thepredecessorIsNamedAsWellAsAddressed() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        PublicationIssue published =
+                publishedIssue(s, wednesday(2026, 6, 24), wednesday(2026, 7, 1));
+
+        IssueDraftVo draft = drafts.draft(s, published.getPublicId(), null, null, new Date(), "da");
+
+        assertEquals(published.getPublicId(), draft.getChainedFromPublicId(),
+                "the id addresses the issue, and a link to it is built from nothing else");
+        assertEquals("EfS uge 27, 2026", draft.getChainedFromName(),
+                "the draft names the previous edition by its identifier, which names nothing to a "
+                        + "person reading the form");
+
+        IssueDraftVo elsewhere =
+                drafts.draft(s, published.getPublicId(), null, null, new Date(), "fr");
+        assertEquals("EfS uge 27, 2026", elsewhere.getChainedFromName(),
+                "a language the edition has no name in left the row blank; the wrong language is "
+                        + "still a name and an identifier is not");
+    }
+
+    /** At the head of the chain there is nothing to name, and nothing is named. */
+    @Test
+    @Transactional
+    public void nothingToChainOffIsNamedNothing() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, null, null, new Date(), "da");
+
+        assertNull(draft.getChainedFromPublicId());
+        assertNull(draft.getChainedFromName(),
+                "a name for an issue that does not exist would put a title on the seam at the head "
+                        + "of the chain");
+    }
+
+    /**
+     * The gap row hands its own bounds back, and gets its own marker back.
+     *
+     * A typed bound that lands exactly on an issue's close IS a chained bound.
+     * Marking it MANUAL would show one provenance in the list and a different one
+     * in the form the row opens.
+     */
+    @Test
+    @Transactional
+    public void anExplicitIntervalThatLandsOnACloseIsStillChained() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        Date stamp = wednesday(2026, 7, 1);
+        PublicationIssue published = publishedIssue(s, wednesday(2026, 6, 24), stamp);
+
+        IssueDraftVo draft = drafts.draft(s, null, stamp, wednesday(2026, 7, 8), new Date());
+
+        assertEquals(stamp, draft.getIntervalFrom());
+        assertEquals("STAMPED", draft.getIntervalFromSource());
+        assertEquals(published.getPublicId(), draft.getChainedFromPublicId());
+        assertEquals(wednesday(2026, 7, 8), draft.getIntervalTo());
+        assertEquals("MANUAL", draft.getIntervalToSource(), "the caller chose the close");
+        assertTrue(draft.getWarnings().stream()
+                        .noneMatch(w -> IssueDraftService.NOT_CHAINED.equals(w.code())),
+                "it chains off a real issue: " + draft.getWarnings());
+    }
+
+    /**
+     * At the head of the chain the series' own declared start is the bound.
+     *
+     * S-4 requires it of every interval-based series precisely so a newly
+     * activated one has somewhere to begin. NOMINAL rather than STAMPED: it is a
+     * declaration, not a record of anything that happened.
+     */
+    @Test
+    @Transactional
+    public void aSeriesWithNoIssuesOpensAtItsDeclaredFirstStart() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, null, null, new Date());
+
+        assertEquals(wednesday(2026, 6, 24), draft.getIntervalFrom());
+        assertEquals("NOMINAL", draft.getIntervalFromSource());
+        assertNull(draft.getChainedFromPublicId(), "nothing precedes the first issue");
+        assertEquals(wednesday(2026, 7, 1), draft.getIntervalTo());
+    }
+
+    /** With no argument at all the draft follows the newest issue. */
+    @Test
+    @Transactional
+    public void withNoArgumentsTheDraftFollowsTheNewestIssue() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        publishedIssue(s, wednesday(2026, 6, 24), wednesday(2026, 7, 1));
+        PublicationIssue newest = publishedIssue(s, wednesday(2026, 7, 1), wednesday(2026, 7, 8));
+
+        IssueDraftVo draft = drafts.draft(s, null, null, null, new Date());
+
+        assertEquals(newest.getPublicId(), draft.getChainedFromPublicId());
+        assertEquals(wednesday(2026, 7, 8), draft.getIntervalFrom());
+    }
+
+    // =============================================================== the naming
+
+    /**
+     * The name comes from the ISO week of the CUT-OFF, never of the start.
+     *
+     * The canonical weekly window opens Wednesday of week 26 and closes Wednesday
+     * of week 27, and production calls the result "EfS uge 27". Naming from the
+     * start returns 26 -- and it is the plausible mistake, because the start is
+     * the field the create form is built around.
+     */
+    @Test
+    @Transactional
+    public void theNameComesFromTheWeekTheIntervalCLOSEDIn() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, wednesday(2026, 6, 24), wednesday(2026, 7, 1),
+                new Date());
+
+        assertEquals(Integer.valueOf(27), draft.getWeek(),
+                "the interval opens in week 26 and closes in week 27; the issue is named for 27");
+        assertEquals(Integer.valueOf(2026), draft.getYear());
+        assertNull(draft.getWeekTo(), "a single ordinary week is not a double week");
+        assertEquals("EfS uge 27, 2026", nameOf(draft, "da"));
+    }
+
+    /**
+     * A window that really has swallowed a second period is named for both weeks.
+     *
+     * The holiday double issue: two periods, so ${week} re-points at the first
+     * week it closed and ${weekTo} carries the cut-off's own. The threshold is a
+     * quarter-period of tolerance rather than rounding, so a single week released
+     * five days late stays one week.
+     */
+    @Test
+    @Transactional
+    public void aTwoPeriodWindowIsNamedForBothWeeks() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL,
+                "EfS uge ${week}+${weekTo}, ${year}");
+
+        IssueDraftVo doubleWeek = drafts.draft(s, null, wednesday(2026, 6, 24), wednesday(2026, 7, 8),
+                new Date());
+        assertEquals(Integer.valueOf(27), doubleWeek.getWeek());
+        assertEquals(Integer.valueOf(28), doubleWeek.getWeekTo());
+        assertEquals("EfS uge 27+28, 2026", nameOf(doubleWeek, "da"));
+
+        // Twelve days: one week released five days late, and still one week.
+        IssueDraftVo late = drafts.draft(s, null, wednesday(2026, 6, 24),
+                new Date(wednesday(2026, 6, 24).getTime() + 12 * 24 * 3600_000L), new Date());
+        assertNull(late.getWeekTo(),
+                "floor(periods + 1/4) keeps a late single week single; rounding would call it two");
+    }
+
+    /** The file name is expanded from the same numbers, per configured language. */
+    @Test
+    @Transactional
+    public void theFileNameIsExpandedFromTheSameCutOff() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, wednesday(2026, 6, 24), wednesday(2026, 7, 1),
+                new Date());
+
+        assertEquals(1, draft.getDescs().size(), "one row per declared language");
+        assertEquals("test-w27-2026.pdf", draft.getDescs().get(0).getFileName());
+    }
+
+    // =============================================================== refusals
+
+    /**
+     * A period reaching back into a released issue is refused HERE, not on save.
+     *
+     * The rule is the create's own, called from the draft, so the preview and the
+     * save can never disagree about whether a period is free.
+     */
+    @Test
+    @Transactional
+    public void anIntervalInsideAReleasedIssueIsRefused() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        Date from = wednesday(2026, 6, 24);
+        Date stamp = wednesday(2026, 7, 1);
+        PublicationIssue released = publishedIssue(s, from, stamp);
+
+        Date inside = new Date((from.getTime() + stamp.getTime()) / 2);
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> drafts.draft(s, null, inside, stamp, new Date()));
+
+        assertEquals("ISSUE_INTERVAL_OVERLAP", e.code());
+        assertTrue(e.getMessage().contains(released.getPublicId()),
+                "the refusal names the issue whose period this one reaches into");
+    }
+
+    /** An interval that ends before it begins selects nothing and is refused. */
+    @Test
+    @Transactional
+    public void anInvertedIntervalIsRefused() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> drafts.draft(s, null, wednesday(2026, 7, 8), wednesday(2026, 7, 1),
+                                new Date()));
+        assertEquals("INTERVAL_INVERTED", e.code());
+    }
+
+    /** A draft chained off an issue of another series is a caller error, not a 500. */
+    @Test
+    @Transactional
+    public void anUnknownPredecessorIsRefusedByName() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> drafts.draft(s, "not-an-issue-of-this-series", null, null, new Date()));
+        assertEquals("ISSUE_NOT_FOUND", e.code());
+    }
+
+    // =============================================================== warnings
+
+    /**
+     * An in-force publication has NO period start, and the draft says so twice:
+     * by leaving the bound empty, and in words.
+     *
+     * §4.2 refuses an intervalFrom on such a series outright, so a draft that
+     * prefilled one would fill a form with a value the create rejects.
+     */
+    @Test
+    @Transactional
+    public void anInForceSeriesGetsNoLowerBound() {
+        PublicationSeries s = series(TimeRelation.IN_FORCE_AT_CUTOFF, "Skydeområder ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, null, null, new Date());
+
+        assertNull(draft.getIntervalFrom(), "an in-force issue has no period start at all");
+        assertNull(draft.getIntervalFromSource());
+        assertNotNull(draft.getIntervalTo(), "but it does have the instant it describes");
+        assertTrue(warns(draft, IssueDraftService.IN_FORCE_HAS_NO_LOWER_BOUND),
+                "and it says why: " + draft.getWarnings());
+    }
+
+    /** A series nothing is expected from still drafts, and says it is not active. */
+    @Test
+    @Transactional
+    public void aDraftOnANonActiveSeriesWarns() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        s.setStatus(SeriesStatus.DRAFT);
+        em.flush();
+
+        IssueDraftVo draft = drafts.draft(s, null, null, null, new Date());
+
+        assertNotNull(draft.getIntervalTo(), "the draft is still computed");
+        assertTrue(warns(draft, IssueDraftService.SERIES_NOT_ACTIVE), draft.getWarnings().toString());
+    }
+
+    /** A bound that chains off nothing is allowed, and is marked as such. */
+    @Test
+    @Transactional
+    public void aBoundThatChainsOffNothingIsWarnedAbout() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        publishedIssue(s, wednesday(2026, 6, 24), wednesday(2026, 7, 1));
+
+        // Well after the released issue, and on no boundary anything recorded.
+        Date adrift = new Date(wednesday(2026, 7, 1).getTime() + 3 * 24 * 3600_000L);
+        IssueDraftVo draft = drafts.draft(s, null, adrift, null, new Date());
+
+        assertEquals("MANUAL", draft.getIntervalFromSource());
+        assertNull(draft.getChainedFromPublicId());
+        assertTrue(warns(draft, IssueDraftService.NOT_CHAINED), draft.getWarnings().toString());
+    }
+
+    // ========================================================= the live count
+
+    /**
+     * The count is taken, and it is a number rather than an absence.
+     *
+     * "11 ville matche" is what an admin decides on when they are looking at a
+     * missing week, and the whole endpoint is pointless for the gap row without
+     * it. The value depends on the corpus, so what is asserted is that a count
+     * was TAKEN -- null would mean nobody looked.
+     */
+    @Test
+    @Transactional
+    public void theDraftCountsWhatTheCriteriaWouldSelect() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, wednesday(2026, 6, 24), wednesday(2026, 7, 1),
+                new Date());
+
+        assertNotNull(draft.getWouldMatchCount(),
+                "null means no count was taken; 0 means the interval is empty, and the two must not "
+                        + "reach a screen looking alike");
+        assertTrue(draft.getWouldMatchCount() >= 0);
+    }
+
+    /** A publication that selects nothing by query gets null and a reason, never 0. */
+    @Test
+    @Transactional
+    public void aSeriesWithNoCriteriaGetsNoCountAndSaysWhy() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        s.setCriteria(null);
+        em.flush();
+
+        IssueDraftVo draft = drafts.draft(s, null, wednesday(2026, 6, 24), wednesday(2026, 7, 1),
+                new Date());
+
+        assertNull(draft.getWouldMatchCount());
+        assertTrue(warns(draft, IssueDraftService.NO_MEMBERSHIP_CRITERIA),
+                draft.getWarnings().toString());
+    }
+
+    // ===================================================== which year it suggests
+
+    /** The accumulated-annual shape: a year-numbered series cut off at its period end. */
+    private PublicationSeries annualSeries(String namePattern) {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, namePattern);
+        s.setCadence(SeriesCadence.YEARLY);
+        s.setNumberingScheme(NumberingScheme.YEAR_EDITION);
+        s.setCutoffDefault(CutoffDefault.PERIOD_END);
+        em.flush();
+        return s;
+    }
+
+    /** An instant in the series' zone, to the minute. */
+    private static Date at(int year, int month, int day, int hour, int minute) {
+        return Date.from(ZonedDateTime.of(year, month, day, hour, minute, 0, 0, ZONE).toInstant());
+    }
+
+    /**
+     * THE DRAFT FOR AN ANNUAL PERIOD SUGGESTS THE YEAR IT CLOSES.
+     *
+     * 31 December 2025 at 23:59 falls in ISO week 1 of 2026, and the draft derived
+     * ${year} on the week basis whatever the series was numbered by. So the create
+     * form offered "Accumulated NtM - 2026" for the 2025 edition -- and the issue
+     * created from that form was renumbered 2025 by the shaping the moment it
+     * existed, leaving the form and the row it produced disagreeing about the one
+     * decision the form was asking about.
+     */
+    @Test
+    @Transactional
+    public void anAnnualDraftSuggestsTheYearThePeriodCloses() {
+        PublicationSeries s = annualSeries("Accumulated NtM - ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, at(2025, 1, 1, 0, 0),
+                at(2025, 12, 31, 23, 59), new Date(), "da");
+
+        assertEquals(2025, draft.getYear(),
+                "the period closes in 2025; the ISO week its boundary lands in is 2026");
+        assertEquals("Accumulated NtM - 2025", nameOf(draft, "da"),
+                "the create form offered the 2025 edition under the following year's name");
+    }
+
+    /**
+     * AND IT PROPOSES ONE WEEK, not the fifty-two its window is long.
+     *
+     * The multi-period test counts SEVEN-DAY periods, so a tiling series handing
+     * over its own lower bound whatever its cadence was made the annual window
+     * fifty-two of them: the form offered a week range, numbered from a week in
+     * the January the period opened in, and the issue created from it was stored
+     * that way. The span is a weekly fact -- there is no column that could hold
+     * two years -- so every other cadence carries the single week it closes in.
+     */
+    @Test
+    @Transactional
+    public void anAnnualDraftProposesTheWeekItClosesInAndNoRange() {
+        PublicationSeries s = annualSeries("Accumulated NtM - ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, at(2025, 1, 1, 0, 0),
+                at(2025, 12, 31, 23, 59), new Date(), "da");
+
+        assertEquals(Integer.valueOf(1), draft.getWeek(),
+                "31 December 2025 falls in ISO week 1; the annual is numbered for the week its "
+                        + "period closes in");
+        assertNull(draft.getWeekTo(),
+                "a year is one period, and the range came from counting a year-long window in weeks");
+    }
+
+    /**
+     * And the weekly is untouched at exactly the same boundary.
+     *
+     * A week closing on Wednesday 31 December 2025 IS week 1 of 2026, which is the
+     * pairing the ISO week-year exists for. Asserted beside the annual case so a
+     * change to either shows up as a change to the other.
+     */
+    @Test
+    @Transactional
+    public void aweeklyDraftClosingOnNewYearsEveIsStillIsoWeekOneOfTheNextYear() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+
+        IssueDraftVo draft = drafts.draft(s, null, at(2025, 12, 24, 12, 0),
+                at(2025, 12, 31, 12, 0), new Date(), "da");
+
+        assertEquals(1, draft.getWeek());
+        assertEquals(2026, draft.getYear());
+        assertEquals("EfS uge 1, 2026", nameOf(draft, "da"));
+    }
+
+    // ================================================ the sources the create records
+
+    /**
+     * ISSUE7. The bounds the draft proposes for the first issue, sent back unchanged, are nominal.
+     *
+     * The dialog sends both bounds whether or not anybody moved them, and the create used to record the start as
+     * STAMPED and the close as MANUAL because a value was sent, so the issue page said "Entered by hand".
+     */
+    @Test
+    @Transactional
+    public void theDraftsOwnBoundsForTheFirstIssueAreNominal() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        IssueDraftVo draft = drafts.draft(s, null, null, null, new Date());
+
+        IssueDraftService.BoundSources sources =
+                drafts.boundSourcesFor(s, draft.getIntervalFrom(), draft.getIntervalTo(), false);
+
+        assertEquals(IntervalBoundSource.NOMINAL, sources.from(), "the series' declared first start");
+        assertEquals(IntervalBoundSource.NOMINAL, sources.to(), "one cadence period on, as the draft proposed");
+        assertEquals(draft.getIntervalFromSource(), sources.from().name(), "the create agrees with the draft");
+        assertEquals(draft.getIntervalToSource(), sources.to().name(), "the create agrees with the draft");
+    }
+
+    /** A start on a released issue's stamped close inherits STAMPED, as the draft chains it. */
+    @Test
+    @Transactional
+    public void aStartOnAStampedCloseIsStamped() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        Date stamp = wednesday(2026, 7, 1);
+        publishedIssue(s, wednesday(2026, 6, 24), stamp);
+
+        IssueDraftService.BoundSources sources =
+                drafts.boundSourcesFor(s, stamp, new Date(stamp.getTime() + WEEK), false);
+
+        assertEquals(IntervalBoundSource.STAMPED, sources.from());
+        assertEquals(IntervalBoundSource.NOMINAL, sources.to(), "the cadence close from that start");
+    }
+
+    /** A start on a recovered issue's close inherits RECOVERED, not STAMPED: nothing stamped it. */
+    @Test
+    @Transactional
+    public void aStartOnARecoveredCloseIsRecovered() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        Date close = wednesday(2026, 7, 1);
+        lifecycle.retroCreate(s, wednesday(2026, 6, 24), close, user());
+        em.flush();
+
+        IssueDraftService.BoundSources sources =
+                drafts.boundSourcesFor(s, close, new Date(close.getTime() + WEEK), false);
+
+        assertEquals(IntervalBoundSource.RECOVERED, sources.from());
+        assertEquals(IntervalBoundSource.NOMINAL, sources.to());
+    }
+
+    /** A start moved off every close and off the declared start was typed; so was a moved close. */
+    @Test
+    @Transactional
+    public void aMovedStartAndAMovedCloseAreManual() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        Date first = wednesday(2026, 6, 24);
+        Date moved = new Date(first.getTime() + 24 * 3600_000L);
+
+        IssueDraftService.BoundSources movedStart =
+                drafts.boundSourcesFor(s, moved, new Date(moved.getTime() + WEEK), false);
+        assertEquals(IntervalBoundSource.MANUAL, movedStart.from(), "a start nothing closed at was typed");
+        assertEquals(IntervalBoundSource.NOMINAL, movedStart.to(),
+                "the cadence close from the start that was given is still the nominal one");
+
+        IssueDraftService.BoundSources movedClose =
+                drafts.boundSourcesFor(s, first, new Date(first.getTime() + WEEK + 3600_000L), false);
+        assertEquals(IntervalBoundSource.NOMINAL, movedClose.from());
+        assertEquals(IntervalBoundSource.MANUAL, movedClose.to(), "a close an hour after the cadence close");
+    }
+
+    /** A period being reconstructed has a RECOVERED start, wherever it lands; a bound not given has no source. */
+    @Test
+    @Transactional
+    public void aRecoveredPeriodHasARecoveredStart() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        Date first = wednesday(2026, 6, 24);
+
+        IssueDraftService.BoundSources sources =
+                drafts.boundSourcesFor(s, first, new Date(first.getTime() + WEEK), true);
+        assertEquals(IntervalBoundSource.RECOVERED, sources.from());
+        assertEquals(IntervalBoundSource.NOMINAL, sources.to());
+
+        IssueDraftService.BoundSources none = drafts.boundSourcesFor(s, null, null, true);
+        assertNull(none.from());
+        assertNull(none.to());
+    }
+
+    /** An in-force publication sends no start; its first edition's close at the declared start is nominal. */
+    @Test
+    @Transactional
+    public void anInForceFirstEditionsCloseAtTheDeclaredStartIsNominal() {
+        PublicationSeries s = series(TimeRelation.IN_FORCE_AT_CUTOFF, "Skydeområder ${year}");
+        IssueDraftVo draft = drafts.draft(s, null, null, null, new Date());
+
+        IssueDraftService.BoundSources sources =
+                drafts.boundSourcesFor(s, draft.getIntervalFrom(), draft.getIntervalTo(), false);
+
+        assertNull(sources.from(), "an in-force issue has no start");
+        assertEquals(IntervalBoundSource.NOMINAL, sources.to());
+        assertEquals(draft.getIntervalToSource(), sources.to().name());
+    }
+
+    // ======================================================== persists nothing
+
+    /**
+     * Counted rather than reasoned about.
+     *
+     * The endpoint is called on every drag of a date picker. "It only reads" is a
+     * property of today's code, and the failure it guards against -- a draft that
+     * quietly creates the issue it is previewing -- would show up as duplicate
+     * weeks nobody created.
+     */
+    @Test
+    @Transactional
+    public void aDraftWritesNothing() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL, "EfS uge ${week}, ${year}");
+        publishedIssue(s, wednesday(2026, 6, 24), wednesday(2026, 7, 1));
+        em.flush();
+
+        long issuesBefore = count("PublicationIssue");
+        long descsBefore = count("PublicationIssueDesc");
+        long membersBefore = count("IssueMember");
+        long auditBefore = count("IssueAuditEntry");
+
+        drafts.draft(s, null, null, null, new Date());
+        drafts.draft(s, null, wednesday(2026, 7, 1), wednesday(2026, 7, 8), new Date());
+        em.flush();
+
+        assertEquals(issuesBefore, count("PublicationIssue"), "no issue was created");
+        assertEquals(descsBefore, count("PublicationIssueDesc"), "and no desc row");
+        assertEquals(membersBefore, count("IssueMember"), "the probe resolves, it does not store");
+        assertEquals(auditBefore, count("IssueAuditEntry"), "and nothing was audited");
+    }
+
+    private long count(String entity) {
+        return em.createQuery("SELECT COUNT(e) FROM " + entity + " e", Long.class).getSingleResult();
+    }
+
+}

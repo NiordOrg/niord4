@@ -1,0 +1,145 @@
+
+:imagesdir: images
+
+[#firing-schedules]
+== Firing Schedules
+
+Firing areas are the sea areas where the armed forces hold firing exercises, and mariners are warned
+of each exercise. Niord writes these warnings by itself: editors keep a schedule of the times each
+firing area is in use, the _firing periods_, and Niord turns the periods into _firing exercise_
+messages. A _firing schedule_ is the set-up that does this: it names the domain that holds the
+firing areas' messages and the domain and message series that receive the firing exercise messages.
+
+The _Firing Schedules_ page lists the firing schedules. To open it, click *Sysadmin* in the main
+menu, then *Firing Schedules*.
+
+image::FiringSchedulesPage.png[The Firing Schedules page with its action menu open, 800]
+
+The columns are *Active*, the *Domain* of the firing area messages, the *Target Domain* and the
+*Target Series* of the firing exercise messages. The *Filter* field matches the two domains' names
+and the target series. The action menu (the cog) has *Update firing exercises...* (see
+<<generating-firing-exercises,Generating Firing Exercises>>); firing schedules have no import or
+export.
+
+[#firing-exercises-system-setup]
+=== Firing Exercises System Setup
+
+Before a firing schedule can do its work, these parts must be in place. The editors' side, the
+_Schedule_ page where they enter the firing periods, is described in the
+link:../editor-manual/manual.html#firing-exercise-schedule[Firing Area Schedule] chapter of the
+Editors Manual.
+
+. *The firing areas.* Each firing area is an area of Niord's base data with the type _Firing area_,
+  defined by an administrator on the Admin
+  link:../admin-manual/manual.html#areas[Areas] page.
+. *A domain for the firing areas*, such as _Firing Areas_, with a message series for notices to
+  mariners. It holds one published message for each firing area, with the firing area among the
+  message's areas, which describes the area: its limits, the signals, whom to contact, what is
+  prohibited. Editors keep these _firing area messages_ up to date like any other message.
+. *A domain for the firing exercises*, such as _Firing Exercises_, with a message series of its own,
+  normally for local navigational warnings. Its messages are written by Niord, so no editor should
+  have the right to edit messages in it.
+. *The firing schedule*, which ties the two domains together (below). The domain of the firing
+  areas then has the _Schedule_ page in its main menu.
+
+[#configuring-firing-area-base-data]
+==== Configuring Firing Area Base Data
+
+image::FiringArea.png[A firing area on the Areas page, 800]
+
+An administrator defines every firing area of the waters on the Admin
+link:../admin-manual/manual.html#areas[Areas] page, as an area with the *Type* _Firing area_. Only
+areas of that type have firing periods, and only active ones are scheduled.
+
+[#create-a-firing-areas-domain]
+==== Create a Firing Areas Domain
+
+The domain of the firing areas holds the firing area messages, one for each area:
+
+image::FiringAreaMessages.png[The firing area messages of the Firing Areas domain, 800]
+
+An administrator can have Niord draft a firing area message for every active firing area with
+*Generate firing area messages…* in the action menu of the Admin Areas page; editors then complete
+and publish them. The drafts get the category whose English name is "Firing Exercises", so keep that
+category and its name (see <<categories,Categories>>). The list of these messages is also a natural basis for a yearly publication of the
+firing areas; see the link:../admin-manual/manual.html#publications[Publications] chapter of the
+Administrators Manual.
+
+[#maintain-firing-exercise-schedule]
+==== Maintain Firing Exercise Schedule
+
+The editors enter the firing periods of each area, day by day, on the _Schedule_ page of the domain
+of the firing areas, which they open with *Schedule* in the main menu. The page is described in the
+link:../editor-manual/manual.html#firing-exercise-schedule[Firing Area Schedule] chapter of the
+Editors Manual. It is there only in a domain that is the *Domain* of a firing schedule.
+
+[#generating-firing-exercises]
+==== Generating Firing Exercises
+
+Every hour, at 21 minutes and 50 seconds past the hour, Niord goes through every firing schedule
+that has *Generate firing exercises* ticked:
+
+. It takes the active firing areas of the schedule's *Domain*, and the published messages of that
+  domain's series that have one of the firing areas among their areas.
+. It takes the firing periods of those areas from today to the number of days ahead the schedule's
+  *Scheduled Days* says.
+. For each firing area message with firing periods, it writes a firing exercise message in the
+  *Target Message Series*: a local warning (or, for a series of notices to mariners, a temporary
+  notice) with the firing area message's areas, categories, charts, texts and positions, the firing
+  periods as its event dates and as a time text written in the target domain's time zone, and the
+  subject "Firing exercises. Warning.". It is published at once and expires after its last firing
+  period.
+. A firing exercise message that has the same firing periods as before is kept. When the periods of
+  an area have changed, Niord publishes a new message and cancels the old one, and it cancels the
+  message of an area that has no firing periods left.
+
+The time text and the subject come from the "message" dictionary (the entries
+`msg.time.date_time_format`, `msg.time.time_format` and `msg.firing_exercises.subject`; see
+<<dictionaries,Dictionaries>>).
+
+*Update firing exercises...* in the action menu of the Firing Schedules page runs the same pass at
+once, for every active firing schedule, without asking first. Editors have the same action on the
+_Schedule_ page.
+
+[#adding-or-editing-a-firing-schedule]
+=== Adding or Editing a Firing Schedule
+
+Click *New Firing Schedule* to add a schedule, or the pencil of a row (*Edit Schedule*) to edit one.
+Both open the editor drawer:
+
+image::FiringScheduleEditPage.png[The Edit Firing Schedule drawer, 324]
+
+[cols="30,70", options="header"]
+|===
+| Field
+| Description
+
+| Domain
+| The domain of the firing area messages. It gets the _Schedule_ page. A new schedule starts with
+  the current domain.
+
+| Target Domain
+| The domain the firing exercise messages are written in.
+
+| Target Message Series
+| The message series of the firing exercise messages, one of the target domain's series. When the
+  target domain has one series only, it is chosen for you.
+
+| Scheduled Days
+| Optional. How many days ahead the firing exercise messages cover. Left empty, the number is the
+  setting `firingExerciseScheduleDays`, 30 by default (see <<settings,Settings>>).
+
+| Generate firing exercises
+| Ticked, the schedule writes firing exercise messages (the _Active_ column of the list).
+|===
+
+The three domain and series fields are required, and their lists offer the domains in which you hold
+a role. Click *Save Firing Schedule* to save.
+
+[#deleting-a-firing-schedule]
+=== Deleting a Firing Schedule
+
+Click the bin of a row (*Delete Schedule*) and confirm with *Yes*. Niord stops writing firing
+exercise messages for the schedule, and its domain loses the _Schedule_ page. The firing exercise
+messages already published stay until they expire. To pause a schedule instead, untick *Generate
+firing exercises*.

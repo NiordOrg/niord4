@@ -1,0 +1,32 @@
+<app-filter-panel
+  appFilterAutofocus="publication"
+  label="messages.filter.publication.label"
+  (clear)="clear()"
+>
+  <!--
+    A floor rather than a fixed width. The panel shrink-wraps its contents, and a
+    chip combobox holding nothing measures only as wide as its own text input —
+    so an untouched publication filter opened as a sliver too narrow to read the
+    placeholder in, let alone the title typed into it. It still grows with the
+    chips a picked publication adds.
+  -->
+  <app-publications-field
+    class="min-w-64"
+    placeholder="messages.filter.publication.placeholder"
+    [initialIds]="initialIds()"
+    [value]="value()"
+    [domain]="domainId()"
+    (valueChange)="onChange($event)"
+  />
+
+  <!--
+    The refusal belongs here rather than to the list. A publication the backend
+    cannot resolve comes back as a 400, and an empty result would read as an
+    answer about the publication instead of a failure to apply the filter.
+  -->
+  @if (filterError(); as detail) {
+    <p class="mt-1 text-xs text-danger" role="alert">
+      {{ 'messages.filter.publicationError' | transloco: { detail } }}
+    </p>
+  }
+</app-filter-panel>

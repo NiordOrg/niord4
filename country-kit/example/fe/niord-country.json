@@ -1,0 +1,29 @@
+{
+  "country": "xx",
+  "name": "Example country",
+  "apps": {
+    "admin": {
+      "uiLanguages": ["en", "zz"],
+      "contentLanguages": ["en", "zz"],
+      "defaultLanguage": "en"
+    },
+    "info": { "uiLanguages": ["zz"], "defaultLanguage": "zz" }
+  },
+  "packs": {
+    "zz": { "home": true, "publish": true }
+  },
+  "locales": { "zz": "en-GB" },
+  "overrides": [
+    {
+      "file": "ui-apps/admin/src/app/features/messages/components/message-selection-toggle/message-selection-toggle.ts",
+      "with": "admin/overrides/features/messages/components/message-selection-toggle/message-selection-toggle.ts",
+      "basedOn": {
+        "ui-apps/admin/src/app/features/messages/components/message-selection-toggle/message-selection-toggle.ts": "sha256:61c457d8ae0d72ebbb92b4ea59210b10f321d10e5137954e8dfbd2ec9b86e5c6",
+        "ui-apps/admin/src/app/features/messages/components/message-selection-toggle/message-selection-toggle.html": "sha256:1ed6f8c0bae36d023c6ff85233afda0bfebf426d82dbdf63f36189e053de4d09",
+        "ui-apps/admin/src/app/features/messages/components/message-selection-toggle/message-selection-toggle.scss": "sha256:8b03b140d039bc85e3894cb006e421e4b35380f754e8516798ec21f2e6df94ec"
+      },
+      "reason": "The example marks a selected message with a bookmark rather than a star",
+      "added": "2026-10-21"
+    }
+  ]
+}

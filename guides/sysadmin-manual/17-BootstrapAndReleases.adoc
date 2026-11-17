@@ -1,0 +1,184 @@
+
+:imagesdir: images
+
+[#data-and-releases]
+== Bootstrap, Releases and Imports
+
+This chapter explains how data gets into a deployment of Niord: how a new deployment gets its first data, how a
+new version of Niord offers new or changed templates, and what a system administrator imports.
+
+[#data-and-program]
+=== Data and Program
+
+A deployment of Niord consists of the _program_, which a new version replaces, and its _data_, which lives in the
+database. Everything you can see and change on the *Admin* and *Sysadmin* pages is data: the script resources
+(templates and scripts), the print reports (the built-in ones included), the categories, the mailing lists, the
+domains, areas, charts and message series, the parameter types you define, the data dictionaries and the
+promulgation types, besides the messages and publications.
+
+Niord keeps to one rule about data: *a new version never changes or deletes the data of a running deployment*.
+The program brings no base data of its own into a running deployment. Base data arrives in three ways, each the act
+of a person:
+
+* the _bootstrap_ of a new deployment, once, on an empty database (see <<bootstrap,The Bootstrap of a New
+  Deployment>>);
+* an _import_ a system administrator makes, on the page that owns the data (see <<importing-a-release,Importing a
+  Release>>);
+* what a system administrator or an administrator adds or changes on the pages themselves, such as a new category or
+  print report.
+
+Messages are another matter: editors write them, and an integration point set up on the
+<<integration,Integration>> page fetches messages from another Niord server by itself, on its schedule.
+
+A new version adds only two kinds of things by itself, when it starts: the keys of its texts (the five default
+dictionaries "web", "message", "pdf", "mail" and "template") and the settings it declares, each only when the
+database lacks it, and never changing one the database has. Niord remembers what it added: a text key or a setting
+you deleted is not added again.
+
+[#no-reload]
+=== What Niord Never Does
+
+Because the data is the deployment's own, Niord has no function that puts the program's copy back:
+
+* There is no "reload" or "reset to default" of script resources, dictionaries or anything else. A template you
+  changed stays as you changed it, also when a new version brings another one.
+* Niord never copies a template from its program files into the database, and never reads one from them: a template
+  is read from the database only.
+* A report, a template or a text you deleted stays deleted; Niord does not create it again when it starts.
+* No folder on the server is watched: putting a file in a folder imports nothing.
+
+The standard parameter types are the exception: they are part of the program, and the
+<<parameter-types,Parameter Types>> page shows them without letting you change them.
+
+To get something back, import it: from a release folder (below), from an export of another deployment, or, for a
+text, from the texts file of a release folder.
+
+[#bootstrap]
+=== The Bootstrap of a New Deployment
+
+A new deployment starts with an empty database. The person who installs it runs the _bootstrap_ once, as a system
+administrator: the bootstrap command of the server (`POST /rest/bootstrap`), usually through the backend's script
+`bootstrap.sh`, which sends the bootstrap archives and waits until the bootstrap has
+ended. The base product's archive goes first; a country built on the base product sends its own archive after it,
+in the same run, and the country's values then replace or add to the base product's.
+
+The base product's bootstrap holds the base product's generic data, in English:
+
+* the domain "Master", through which a system administrator reaches the *Sysadmin* pages before the deployment
+  has domains of its own;
+* all the base product's templates and scripts (see <<script-resources,Script Resources>>);
+* the built-in print reports _Standard_, _Draft_ and _Public_ (see <<print-reports,Print Reports>>);
+* the categories and templates of lights, buoys, beacons, obstructions, drifting objects and radio navigation, and
+  the category "Firing Exercises" (see <<categories,Categories>>);
+* the parameter types those templates use, and the "aton" data dictionary;
+* the promulgation types NAVTEX, Twitter and Audio.
+
+It holds no settings, which the server adds itself when it starts (see <<settings,Settings>>), and no messages.
+
+The bootstrap runs only on a new, empty database:
+
+* When the server first starts on a database, it records whether the database is new. A database that already held
+  a domain, an area or a message is never bootstrapped.
+* When the bootstrap starts, Niord checks the database once more, and refuses if any table holds data, naming the
+  first such table.
+* The bootstrap runs its imports as batch jobs, which the <<batch-jobs,Batch Jobs>> page lists.
+
+A system administrator can ask for the state of the bootstrap at `GET /rest/bootstrap`: _pending_ (a new database,
+not bootstrapped yet), _existing_ (a database that held data at its first start), _in-progress_, _applied_ or
+_failed_ (with the error).
+
+A bootstrap runs once, and is never tried again on the same database. When it failed, or broke off because the
+server stopped, the command refuses it from then on, and none of its batch jobs can be restarted. The remedy is to
+create the database again, empty, start the server on it, and run the same bootstrap again.
+
+[#release-folders]
+=== Release Folders
+
+When a new version of Niord brings a new or changed template or script, the new version does not apply it: it
+offers it in a _release folder_, and you decide whether to import it.
+
+A release folder is named after the date and the topic of the change, for example "2026-11-02-accumulated-period",
+and the release notes of the first version that contains it name it. The folders come with the base product's
+bootstrap package of each version, which holds every release folder made so far, so you find each one also when you
+skip versions. A release folder never changes once it is published. A country built on the base product has
+release folders of its own in the same form.
+
+A release folder holds:
+
+[cols="25,75",options="header"]
+|===
+| File
+| What it is
+
+| README.md
+| What changed, and how a running deployment takes the change: which paths to import, which to overwrite, and
+  what to leave.
+
+| script-resources.json
+| The base product's templates and scripts at this release, in the format of the import of the
+  <<script-resources,Script Resources>> page.
+
+| texts.json
+| The base product's English texts at this release, in the format of the import of the <<dictionaries,Dictionaries>>
+  page.
+
+| missing-paths.sql
+| The missing-path report (see <<missing-path-report,The Missing-Path Report>>) as an SQL query that only reads,
+  so that you can see before you upgrade what the deployment lacks.
+
+|===
+
+[#importing-a-release]
+=== Importing a Release
+
+To take the changes of a release folder into a running deployment:
+
+. Read the folder's "README.md": it names the paths that changed, and says what to tick.
+. If you like, run "missing-paths.sql" against the database before the upgrade, to see which paths the deployment
+  lacks. It changes nothing.
+. Upgrade Niord to the version whose release notes name the folder.
+. Open *Sysadmin* -> *Script Resources*, choose *Import...* in the menu of the gear button, and choose the folder's
+  "script-resources.json". Nothing is written yet: Niord shows what the import would do (see
+  <<importing-and-exporting-script-resource,Importing and Exporting Script Resources>>).
+. Under _Would add_, keep ticked only the paths the deployment should get; *Only the paths the missing-path report
+  lists* keeps just those that something in the deployment names. Under _Would overwrite_, tick a path only when
+  the README says its template changed and you want the new one: click *Show diff* first, because a template the
+  deployment edited loses its edits when you overwrite it. You may instead carry the change into your own copy on
+  the <<script-resources,Script Resources>> page.
+. Click *Import ticked*, and follow the _script-resource-import_ job on the <<batch-jobs,Batch Jobs>> page. Every
+  path it writes is recorded in the script resource's revisions with your name and the source _Import_.
+. Check that the missing-path report is empty.
+
+New text keys need no import: the new version adds them in English when it starts, and a country's language pack
+brings their translations. The folder's "texts.json" is for a text key the deployment deleted: import it on the
+<<dictionaries,Dictionaries>> page, where the preview offers such a key unticked, and only a key you tick is added
+again.
+
+Whether to import at all is your decision: nothing applies these files by itself, and a new deployment needs none
+of them, because its bootstrap brings the current templates.
+
+[#missing-path-report]
+=== The Missing-Path Report
+
+A template or script that something names but the database lacks makes that function fail: a report prints
+nothing, a mail is not written. The _missing-path report_ lists them:
+
+* each path of a template or script named by the Niord program itself, by a category, a mailing list trigger, a
+  promulgation type or a print report, or included or loaded by another template or script, that has no row in
+  the database, with what names it;
+* each language variant of such a path that the base product offers and the database lacks;
+* each built-in print report (`standard`, `draft`, `public`) the deployment lacks.
+
+Niord writes the report to its log every time it starts, except on a new database whose bootstrap has not been
+applied (while it waits, runs or has failed), as a warning with one line for each entry, or "no missing path". A system administrator can read it at any time at
+`GET /rest/script-resources/missing-paths`. It only reads. When you import a release file on the
+<<script-resources,Script Resources>> page, the preview marks the paths it lists.
+
+[#other-imports]
+=== Other Imports
+
+Besides script resources and texts, each page of base data has an import of its own, in the menu of its gear
+button: areas, charts, sources, domains, categories, parameter types, promulgation types, print reports,
+mailing lists, publications, settings and more. Each import runs as a batch job (see <<batch-jobs,Batch Jobs>>),
+and a batch set uploaded on the Batch Jobs page can start several of them in one go (see <<batch-sets,Batch
+Sets>>).

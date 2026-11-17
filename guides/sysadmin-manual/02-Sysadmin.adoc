@@ -1,0 +1,97 @@
+
+:imagesdir: images
+
+[#sysadmin-page]
+== Sysadmin Page
+
+The _Sysadmin_ area is where system administrators set up what the rest of Niord works with: the
+message series and the domains, the promulgation types, the firing schedules, the dictionaries and
+the parameter types of the message templates, the script resources, the categories, the print
+reports, the mail queue, the settings and the batch jobs.
+
+To open it, click *Sysadmin* in the main menu. The item is in the menu only when you hold the system
+administrator role in the domain that is selected in the header's domain menu: roles are given per
+domain (see <<keycloak-integration,Keycloak Integration>>). When you switch to a domain where you do
+not hold the role, *Sysadmin* leaves the menu, and an address of the area opened there takes you to
+the front page with the message "Access denied.". Most of what you set up here is shared by every
+domain, so a user who is a system administrator in one domain is normally made one in all of them.
+
+image::SysadminPage.png[The Sysadmin overview, 800]
+
+The area opens on its *Overview*: a short introduction and a card for each section. Click a card to
+open the section. The same sections are listed in the rail on the left, which stays in place while
+you work; in a narrow window the rail becomes a row of tabs above the page. The rail's *Batch Jobs*
+entry shows how many batch jobs are running.
+
+[cols="25,75", options="header"]
+|===
+| Section
+| What it holds
+
+| <<message-series,Message Series>>
+| How messages are numbered and given their short ID, for each series of messages.
+
+| <<domains,Domains>>
+| The domains users work in, each a client of Keycloak, and what each domain may hold.
+
+| <<promulgation-types,Promulgation Types>>
+| The extra channels a message can be sent through, such as NAVTEX and audio.
+
+| <<firing-schedules,Firing Schedules>>
+| The schedules that turn firing periods into firing exercise warnings.
+
+| <<dictionaries,Dictionaries>>
+| The translatable texts of Niord: interface texts, texts of messages, mails and reports, and the
+  values of template parameter lists.
+
+| <<parameter-types,Parameter Types>>
+| The kinds of parameters editors fill in when they execute a message template.
+
+| <<script-resources,Script Resources>>
+| The Freemarker templates and JavaScript files used by message templates, print reports and mails.
+
+| <<categories,Categories>>
+| The message categories and the message templates.
+
+| <<print-reports,Print Reports>>
+| The PDF reports of message lists.
+
+| <<mail-queue,Mail Queue>>
+| The mails Niord has sent or is about to send.
+
+| <<settings,Settings>>
+| The system settings.
+
+| <<batch-jobs,Batch Jobs>>
+| The background jobs, such as imports, and their logs.
+|===
+
+The *Niord Integration* section, which imports messages from another Niord server, is listed only
+where the setting `adminIntegrationPageEnabled` is on (see <<integration,Integration>>).
+
+[#sysadmin-lists]
+=== Working with the Sysadmin Lists
+
+The sections of the area work alike, so this is said once here:
+
+* A section opens on a list. The *Filter* field above it narrows the list as you type; the chapter
+  of each section says what the filter matches. The cross in the field clears it.
+* The button on the right of the toolbar adds a row, such as *New Message Series*.
+* Each row has its actions at the right end: the pencil edits the row, the double square copies it
+  (where the section offers a copy), and the bin deletes it. A delete asks first, and *Yes* deletes.
+* Adding, copying and editing open a panel on the right of the page, the _editor drawer_, with the
+  row's fields. Its save button, such as *Save Message Series*, stays disabled until you change
+  something and the required fields are filled in; *Cancel* closes the drawer. A copy opens as a new
+  row with the copied values. Its identifier must be unique: most sections leave it empty for you
+  to give, while a dictionary entry keeps the key and a script resource the folder of its path, for
+  you to change. If
+  you close the drawer with changes that are not saved, Niord asks "You have unsaved changes. Leave
+  without saving?" first.
+* Where a section can export and import its rows, the cog at the right end of the toolbar opens its
+  action menu with *Export...* and *Import...*. *Export...* downloads the rows as a JSON file.
+  *Import...* opens a dialog where you choose a JSON file (*Choose file…*, or drop it on the dialog).
+  In most sections the import starts as soon as the file is chosen and runs in the background as a
+  batch job; the dialog shows the upload result, and most sections add a link, *View batch job*, to
+  the job's page under <<batch-jobs,Batch Jobs>>. The Dictionaries and Script Resources sections
+  show what an import would change before anything is written. What an import does to rows that
+  exist already differs from section to section, and each chapter says it.

@@ -1,0 +1,92 @@
+<div class="flex flex-col gap-1.5">
+  @for (option of options; track option) {
+    <label class="check-row items-start">
+      <input
+        type="radio"
+        class="radio mt-0.5"
+        [name]="name()"
+        [value]="option"
+        [checked]="value() === option"
+        [disabled]="disabled()"
+        (change)="select(option)"
+      />
+      <!--
+        The answer, and nothing else. The list the middle answer owns appears
+        directly under it the moment it is picked, which says where it is more
+        plainly than a suffix on the label does.
+      -->
+      <span class="text-fg">{{ optionKey(option) | transloco }}</span>
+    </label>
+  }
+
+  <!--
+    The list belongs to the middle answer alone. Shown beneath it rather than
+    beside the radios so it reads as part of that choice, and left out entirely
+    under the other two — a list of desks under "this domain only" is a control
+    that describes nothing.
+  -->
+  @if (showList()) {
+    <div class="mt-1 ml-6 flex flex-col gap-1.5" data-testid="availability-domains">
+      @for (domain of others(); track domain.domainId) {
+        <label class="check-row">
+          <input
+            type="checkbox"
+            class="checkbox"
+            [checked]="isSelected(domain.domainId)"
+            [disabled]="disabled()"
+            (change)="toggle(domain.domainId)"
+          />
+          <span>{{ domain.name || domain.domainId }}</span>
+          @if (domain.active === false) {
+            <span class="text-xs text-fg-subtle">({{ 'common.inactive' | transloco }})</span>
+          }
+        </label>
+      }
+
+      <!--
+        A share with a desk the catalogue no longer carries: deactivated after
+        the publication was shared with it. No tickbox — there is nothing to turn
+        back on from here, and one would imply the domain could be re-picked — but
+        it is shown, and it can be dropped. A list that rendered only what it
+        recognised left an admin no way to see the share, let alone remove it.
+      -->
+      @for (domainId of unknownIds(); track domainId) {
+        <span
+          class="flex items-center gap-2 text-sm text-fg-muted"
+          data-testid="availability-orphan"
+        >
+          <span class="font-mono text-xs">{{ domainId }}</span>
+          <span class="text-xs text-fg-subtle">({{ 'common.inactive' | transloco }})</span>
+          <button
+            type="button"
+            class="icon-button text-xs"
+            [disabled]="disabled()"
+            [attr.aria-label]="
+              'admin.publications.availability.removeShare' | transloco: { domain: domainId }
+            "
+            (click)="remove(domainId)"
+          >
+            <app-icon name="lucideX" />
+          </button>
+        </span>
+      }
+
+      @if (listEmpty()) {
+        <span class="text-sm text-fg-muted">{{
+          'admin.publications.availability.noOtherDomains' | transloco
+        }}</span>
+      }
+    </div>
+
+    <!--
+      Chosen "selected domains" and selected none. The save gate refuses it
+      through the same predicate, so the message and the disabled button cannot
+      disagree about why.
+    -->
+    @if (needsDomain()) {
+      <p class="ml-6 text-xs text-danger" role="alert">
+        {{ 'admin.publications.availability.mustPickOne' | transloco }}
+      </p>
+    }
+  }
+</div>

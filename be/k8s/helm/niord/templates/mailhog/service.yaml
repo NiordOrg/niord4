@@ -1,0 +1,22 @@
+{{- if .Values.mailhog.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "niord.componentName" (list . "smtp") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "smtp") | nindent 4 }}
+spec:
+  # LoadBalancer so the captured-mail web UI is reachable from the host
+  # (http://localhost:<uiPort>). SMTP (1025) is only used in-cluster by the app,
+  # but is published too for convenience/debugging.
+  type: {{ .Values.mailhog.service.type }}
+  selector:
+    {{- include "niord.componentSelectorLabels" (list . "smtp") | nindent 4 }}
+  ports:
+    - name: smtp
+      port: {{ .Values.mailhog.smtpPort }}
+      targetPort: smtp
+    - name: http
+      port: {{ .Values.mailhog.uiPort }}
+      targetPort: http
+{{- end }}

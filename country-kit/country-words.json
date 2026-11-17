@@ -1,0 +1,139 @@
+{
+  "format": 1,
+  "note": "The base product's own country-word guard (fe-country-split-plan §4.8, §4.11 rule 6), read by lib/country-words.mjs: no file of fe/ or of the kit beside it, country-kit/…, names one of these words — an authority's name or host, a country's locale or place — unless an entry of `allowed` permits that word in that file, with its reason and, where the need ends, the phase that ends it (`until`). A word is matched case-insensitively as a literal substring of the NFC text and of each path, so a word inside a longer one counts. The guard covers every file git lists in fe/ and country-kit/, named as the zip names them (the kit's as country-kit/…), but this list (the tree mode, run by test:guards, which reports the words and every entry that permits nothing, so the list shrinks as the files lose the word) and every entry of the source zip (the zip mode, run by source-zip.mjs build and guard, the example harness and the publish workflow, which reports the words only, since an entry for a file outside the zip permits nothing there). An entry whose path is a glob permits its word in every file the glob matches, a new spec included: a reviewer of a new spec should know that it passes the guard without an entry of its own. Language names are not words: a language is a pack (R3), and the base product's specs use them as sample languages. This file stays out of the zip, because it names every word, and a country never runs the guard.",
+  "words": [
+    "Beredskab",
+    "Søfart",
+    "Soefart",
+    "brs.dk",
+    "dma.dk",
+    "t-dma",
+    "kl-GL",
+    "da-DK",
+    "Nuuk",
+    "Danish Emergency Management",
+    "Danish Maritime Authority"
+  ],
+  "allowed": [
+    {
+      "word": "Beredskab",
+      "path": "LICENSE",
+      "reason": "the licence's copyright holder"
+    },
+    {
+      "word": "Danish Emergency Management",
+      "path": "LICENSE",
+      "reason": "the licence's copyright holder"
+    },
+    {
+      "word": "Beredskab",
+      "path": "README.md",
+      "reason": "the licence's copyright holder, as in LICENSE; permanent"
+    },
+    {
+      "word": "Danish Emergency Management",
+      "path": "README.md",
+      "reason": "the licence's copyright holder, as in LICENSE; permanent"
+    },
+    {
+      "word": "Nuuk",
+      "path": "country-kit/answers.test.mjs",
+      "reason": "the time-zone rule's accepted case: Node's ICU resolves America/Nuuk to its old name and Intl.supportedValuesOf lacks it, while Java's tz database holds it, so the validator must accept the current IANA name; permanent"
+    },
+    {
+      "word": "Nuuk",
+      "path": "docs/backlog.md",
+      "reason": "the clock-change item of the date-time field: the bug shows only in Greenland's zone, whose spring gap ends a local day; the item and this entry go together when the bug is fixed (fe-country-split-plan §6 P7, D19)"
+    },
+    {
+      "word": "Beredskab",
+      "path": "docs/coding-standards.md",
+      "reason": "the licence's copyright holder, as in LICENSE; permanent"
+    },
+    {
+      "word": "Danish Emergency Management",
+      "path": "docs/coding-standards.md",
+      "reason": "the licence's copyright holder, as in LICENSE; permanent"
+    },
+    {
+      "word": "Nuuk",
+      "path": "docs/niord-info-integration-plan.md",
+      "reason": "a dated record of the public site's integration, kept as written; permanent"
+    },
+    {
+      "word": "Beredskab",
+      "path": "docs/niord-info-integration-plan.md",
+      "reason": "a dated record of the public site's integration, kept as written; permanent"
+    },
+    {
+      "word": "Danish Emergency Management",
+      "path": "docs/niord-info-integration-plan.md",
+      "reason": "a dated record of the public site's integration, kept as written; permanent"
+    },
+    {
+      "word": "Danish Maritime Authority",
+      "path": "docs/niord-info-integration-plan.md",
+      "reason": "a dated record of the public site's integration, kept as written; permanent"
+    },
+    {
+      "word": "Soefart",
+      "path": "docs/niord-info-integration-plan.md",
+      "reason": "a dated record of the public site's integration, kept as written; permanent"
+    },
+    {
+      "word": "dma.dk",
+      "path": "docs/publications/DATA-MODEL.md",
+      "reason": "the schema's $id, kept verbatim until DK's go-live, as scripts/docs-check.mjs excludes the same file"
+    },
+    {
+      "word": "dma.dk",
+      "path": "docs/publications/go-live/GO-LIVE-PROCESS.md",
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+    },
+    {
+      "word": "dma.dk",
+      "path": "docs/publications/go-live/PRODUCTION-CUTOVER-RUNBOOK.md",
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+    },
+    {
+      "word": "dma.dk",
+      "path": "docs/publications/go-live/scripts/lib.sh",
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+    },
+    {
+      "word": "t-dma",
+      "path": "docs/publications/go-live/GO-LIVE-PROCESS.md",
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+    },
+    {
+      "word": "t-dma",
+      "path": "docs/publications/go-live/PRODUCTION-CUTOVER-RUNBOOK.md",
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+    },
+    {
+      "word": "t-dma",
+      "path": "docs/publications/go-live/scripts/lib.sh",
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+    },
+    {
+      "word": "Nuuk",
+      "path": "ui-apps/info/src/app/shared/utils/zoned-date.spec.ts",
+      "reason": "the day-boundary, gap and overlap cases in Greenland's zone: UTC-2 on the EU summer rule, whose spring gap ends a local day (23:00 becomes 00:00, so the resolved instant changes date); no zone outside Greenland reproduces it, and GL's deployments run in it (fe-country-split-plan §6 P7, D18)"
+    },
+    {
+      "word": "Nuuk",
+      "path": "ui-apps/admin/src/app/shared/utils/zoned-date.spec.ts",
+      "reason": "the end of a day on the days the clocks change, in Greenland's zone: its clocks change at 23:00 local, so its spring day has no 23:59:59 and its autumn day has it twice; no zone outside Greenland reproduces it, and GL's deployments run in it; permanent"
+    },
+    {
+      "word": "Nuuk",
+      "path": "ui-apps/admin/src/app/shared/utils/date-interval-wall-clock.spec.ts",
+      "reason": "the wall-clock grid the backend's date formatter pins too (NavWarnDateFormatterZoneGridTest's SHARED_WALL_CLOCKS), whose rows must match it, with Greenland's zone for its clock changes at 23:00 and 00:00 local; no zone outside Greenland reproduces them, and GL's deployments run in it; permanent"
+    },
+    {
+      "word": "Nuuk",
+      "path": "ui-apps/info/src/app/shared/utils/zoned-date-grid.spec.ts",
+      "reason": "the same wall-clock grid in the public site, as the backend's NavWarnDateFormatterZoneGridTest pins it, with Greenland's zone for its clock changes at 23:00 and 00:00 local; no zone outside Greenland reproduces them, and GL's deployments run in it; permanent"
+    }
+  ]
+}

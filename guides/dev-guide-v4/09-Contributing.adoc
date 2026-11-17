@@ -1,0 +1,95 @@
+
+[#contributing]
+== Contributing
+
+This chapter describes how a change travels into the main branch. The rules are kept with the code
+in the repository's `AGENTS.md` (section _Working here_), `README.md` (section _CI_) and
+`fe/docs/definition-of-done.md`.
+
+[#branches-and-pull-requests]
+=== Branches and pull requests
+
+* The main branch, `main`, is the trunk. Every merge to it that changes code and passes its checks
+  becomes a released version (<<releases-images-and-deployment>>), so `main` is kept releasable at
+  all times.
+* A change is made on a branch of its own and goes into `main` through a pull request. A larger
+  piece of work can collect several smaller pull requests on a long-lived `feature/<name>` branch
+  first, and reach `main` as one pull request at the end.
+* Open a pull request as a draft while you are still working on it. A draft runs no checks;
+  marking it ready for review starts them.
+* Each new push to a pull request that is ready for review starts the checks again and cancels the
+  run in progress, so push when a piece of work is done rather than after every commit.
+* A change to the base product that changes what a country may use or must do is recorded in
+  `country-kit/API-CHANGES.md` in the same pull request (<<building-a-country>>).
+* A bug you find outside the task at hand is written down, not fixed in passing: backend findings
+  in `be/docs/potential-errors.md`, frontend ones in `fe/docs/backlog.md`.
+
+[#continuous-integration]
+=== Continuous integration
+
+The workflows are in `.github/workflows/` at the root of the repository; GitHub reads them nowhere
+else. The checking workflows run on pull requests into `main` once they are ready for review. On a
+pull request, each workflow first looks at which files the change touches and skips the work that
+does not concern it. On a push to `main`, a workflow starts only when the push touches the paths it
+watches, and `guides.yml` never runs on a push: it runs on pull requests into `main` that touch the
+guides or their sources, and by hand.
+
+[cols="20,80",options="header"]
+|===
+|Workflow |What it checks
+
+|`be-ci.yml`
+|The backend: the unit tests and the integration tests, and a country made by the kit's `init`
+ when the change reaches what that country's backend is built from. A change only to the
+ backend's documentation runs nothing.
+
+|`fe-ci.yml`
+|The administration application and the kit: formatting, documentation links, lint, the guard
+ tests, the unit tests and the production build, and the example country built against the
+ change.
+
+|`info-ci.yml`
+|The public site: the same kinds of check, plus its bundle size against a recorded baseline.
+
+|`guides.yml`
+|This site: a change under `guides/` is built and its links are checked.
+
+|`publish.yml`
+|After the checks of a push to `main` passed: the publication of the version.
+|===
+
+[#the-gates]
+=== The gates
+
+The branch protection of `main` will require three checks: *Frontend gate* for the administration
+application, *Info gate* for the public site and *Unit tests* for the backend. The two gates are
+jobs that summarise their workflow: each is green only when every other job of its workflow
+succeeded. *Unit tests* is not such a gate. It is the backend's unit-test job itself and says
+nothing about the integration tests or the generated country, which are jobs of their own beside
+it. Until the branch protection is switched on, every check is advisory, so read every check,
+these and the others, before merging.
+
+[#local-verification]
+=== Local verification
+
+The checks of the continuous integration cost time, so verify in proportion:
+
+* While you work, run only the tests of what you changed: one backend test class
+  (`./test-it --its-only -pl niord -Dit.test=<class>` in `be/`) or one spec file in `fe/`.
+* Run the whole suite once, as the last step before review. For a pull request into `main`, the
+  continuous integration does that.
+* A pull request into a `feature/**` branch gets no continuous integration at all. Run
+  `./verify-local --base origin/feature/<name>` at the root of the repository instead, and paste
+  the summary it prints into the pull request. It runs the same steps as the workflows for the
+  parts the branch changed: the whole backend suite with the check that the integration tests
+  really ran, the frontend gates, and the example country when the branch reaches it.
+
+`fe/docs/definition-of-done.md` lists what a frontend change has to pass beyond the gates, such as
+the end-to-end tests and the manual checks of the public site's image.
+
+[#licence]
+=== Licence
+
+Niord is open source under the Apache License 2.0, stated in `be/LICENSE` and `fe/LICENSE`. Most of
+the backend's Java files carry the licence header; the frontend's files carry none, and their licence
+is stated in `fe/LICENSE` and `fe/README.md` only.

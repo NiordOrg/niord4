@@ -1,0 +1,233 @@
+[
+  {
+    "mailingListId": "audio-broadcast",
+    "active": false,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "Farvandsefterretninger til oplæsning",
+        "description": "Farvandsefterretninger og skydeøvelser til oplæsning på DR"
+      },
+      {
+        "lang": "en",
+        "name": "Navigational Warnings for Voice Broadcast",
+        "description": "Navigational Warnings and Firing Exercises for voice broadcast on Danish Radio"
+      }
+    ],
+    "triggers": [
+      {
+        "type": "SCHEDULED",
+        "scheduleType": "DAILY",
+        "scheduledExecutionTime": "15:55",
+        "scheduledExecutionTimeZone": "Europe/Copenhagen",
+        "messageQuery": "messageSeries=dma-nw&messageSeries=dma-nw-local&status=PUBLISHED&promulgationType=audio",
+        "scriptResourcePaths": [
+          "templates/mailinglist/fetch-firing-exercises.js",
+          "templates/mailinglist/audio-broadcast.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "da",
+            "subject": "Farvandsefterretninger til oplæsning ${date-short}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "mailingListId": "navtex-baltico",
+    "active": false,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "NAVTEX Baltico",
+        "description": "Mailliste for NAVTEX Baltico"
+      },
+      {
+        "lang": "en",
+        "name": "NAVTEX Baltico",
+        "description": "Mailing list of NAVTEX Baltico"
+      }
+    ],
+    "triggers": [
+      {
+        "type": "STATUS_CHANGE",
+        "statusChanges": [
+          "CANCELLED"
+        ],
+        "messageFilter": "msg.promulgation('navtex').promulgate && msg.promulgation('navtex').useTransmitter('Baltico')",
+        "scriptResourcePaths": [
+          "templates/mailinglist/cancel-navtex.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "en",
+            "subject": "CANCEL DANISH NAV WARN ${number-year-id}"
+          }
+        ]
+      },
+      {
+        "type": "STATUS_CHANGE",
+        "statusChanges": [
+          "PUBLISHED"
+        ],
+        "messageFilter": "msg.promulgation('navtex').promulgate && msg.promulgation('navtex').useTransmitter('Baltico')",
+        "scriptResourcePaths": [
+          "templates/mailinglist/publish-navtex.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "en",
+            "subject": "DANISH NAV WARN ${number-year-id}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "mailingListId": "navtex-rogaland",
+    "active": false,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "NAVTEX Rogaland",
+        "description": "Mailliste for NAVTEX Rogaland"
+      },
+      {
+        "lang": "en",
+        "name": "NAVTEX Rogaland",
+        "description": "Mailing list of NAVTEX Rogaland"
+      }
+    ],
+    "triggers": [
+      {
+        "type": "STATUS_CHANGE",
+        "statusChanges": [
+          "CANCELLED"
+        ],
+        "messageFilter": "msg.promulgation('navtex').promulgate && msg.promulgation('navtex').useTransmitter('Rogaland')",
+        "scriptResourcePaths": [
+          "templates/mailinglist/cancel-navtex.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "en",
+            "subject": "CANCEL DANISH NAV WARN ${number-year-id}"
+          }
+        ]
+      },
+      {
+        "type": "STATUS_CHANGE",
+        "statusChanges": [
+          "PUBLISHED"
+        ],
+        "messageFilter": "msg.promulgation('navtex').promulgate && msg.promulgation('navtex').useTransmitter('Rogaland')",
+        "scriptResourcePaths": [
+          "templates/mailinglist/publish-navtex.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "en",
+            "subject": "DANISH NAV WARN ${number-year-id}"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "mailingListId": "navwarn-overview",
+    "active": false,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "Aktive navigationsadvarsler",
+        "description": "Liste over aktive danske navigationsadvarsler"
+      },
+      {
+        "lang": "en",
+        "name": "Active coastal warnings",
+        "description": "List of active Danish coastal warnings"
+      }
+    ],
+    "triggers": [
+      {
+        "type": "SCHEDULED",
+        "scheduleType": "DAILY",
+        "scheduledExecutionTime": "07:30",
+        "scheduledExecutionTimeZone": "Europe/Copenhagen",
+        "messageQuery": "messageSeries=dma-nw&status=PUBLISHED&type=COASTAL_WARNING&sortBy=ID",
+        "scriptResourcePaths": [
+          "templates/mailinglist/active-navwarns.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "da",
+            "subject": "Aktive navigationsadvarsler"
+          },
+          {
+            "lang": "en",
+            "subject": "Active navigational warnings"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "mailingListId": "navwarn-update",
+    "active": false,
+    "descs": [
+      {
+        "lang": "da",
+        "name": "Navwarn opdateringer",
+        "description": "Mailliste for danske navigationsadvarsler"
+      },
+      {
+        "lang": "en",
+        "name": "Navwarn updates",
+        "description": "Mailing list for Danish coastal warnings"
+      }
+    ],
+    "triggers": [
+      {
+        "type": "STATUS_CHANGE",
+        "statusChanges": [
+          "CANCELLED"
+        ],
+        "messageFilter": "msg.messageSeries.seriesId == 'dma-nw' && msg.type == 'COASTAL_WARNING'",
+        "scriptResourcePaths": [
+          "templates/mailinglist/cancel-navwarn.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "da",
+            "subject": "Annullér Dansk navigationsadvarsel ${short-id}"
+          },
+          {
+            "lang": "en",
+            "subject": "Cancel Danish Navigational Warning ${short-id}"
+          }
+        ]
+      },
+      {
+        "type": "STATUS_CHANGE",
+        "statusChanges": [
+          "PUBLISHED"
+        ],
+        "messageFilter": "msg.messageSeries.seriesId == 'dma-nw' && msg.type == 'COASTAL_WARNING'",
+        "scriptResourcePaths": [
+          "templates/mailinglist/publish-navwarn.ftl"
+        ],
+        "descs": [
+          {
+            "lang": "da",
+            "subject": "Dansk navigationsadvarsel ${short-id}"
+          },
+          {
+            "lang": "en",
+            "subject": "Danish Navigational Warning ${short-id}"
+          }
+        ]
+      }
+    ]
+  }
+]

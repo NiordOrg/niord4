@@ -1,0 +1,23 @@
+<app-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [style]="{ width: '52rem', maxWidth: '94vw' }"
+  [header]="title()"
+>
+  <app-progress-bar [visible]="loading()" />
+
+  <textarea
+    class="text-viewer"
+    readonly
+    [attr.aria-label]="'admin.secom.gml.contentLabel' | transloco"
+    [value]="gml()"
+  ></textarea>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary text-sm" (click)="close()">
+      <span>{{ 'admin.secom.gml.close' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

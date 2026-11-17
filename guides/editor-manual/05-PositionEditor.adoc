@@ -1,0 +1,407 @@
+
+:imagesdir: images
+
+[#position-editor]
+== Position Editor
+
+The _position editor_ is where you draw and change the positions of a message part on a map:
+single positions (points), lines and areas, with their names. Each message part has its own
+positions; see <<positions-editor-field,Positions>> in the Editor chapter.
+
+image::PositionEditor.png[The position editor with an area and three points, 759]
+
+To open it, open a message in the editor, click the *Positions* row of a message part and then
+*Edit positions*. The row shows a small map of the part's positions and a numbered list of them,
+and the two buttons *Edit positions* and *Edit as text* (<<text-editor>>). The buttons are there
+while you can edit the message. The same editor opens from the *Positions* of a template on the
+_Execute templates_ page (<<message-template-execution>>). Administrators use it for the extent of
+areas and charts too, with the tools that fit there (a *Box* tool among them, and no *Measure*)
+and without the names, restrictions and affected areas this chapter describes (see the
+link:../admin-manual/manual.html#areas[Areas] and link:../admin-manual/manual.html#charts[Charts]
+chapters of the administrator manual).
+
+[[graphical-editor]]The position editor fills almost the whole window:
+
+* The toolbar at the top holds the title, *Positions*, with the help link (the question mark),
+  the drawing tools (<<graphical-editor-tools>>), *Undo* and *Redo* (<<position-editor-undo>>),
+  the *Actions* menu (the cog, <<action-menu>>), and *Cancel* and *OK*.
+* The map shows the positions in magenta, with their names. Drag the map to move it; zoom with
+  the mouse wheel or the *+* and *−* buttons. Beside the pointer the map shows the position under
+  it, in degrees and minutes.
+* The _Positions panel_ floats over the left side of the map: a card for each geometry, with its
+  positions (<<features-panel>>). Below it, *Layers* switches the map's layers on and off.
+
+[[action-button-panel]]The editor works on a copy of the part's positions. *OK* puts your changes into the message part
+and closes the editor; like every other change in the editor, they are kept only when you save the
+message. *Cancel*, or the Escape key, closes the editor and throws your changes away: when you have
+changed something, Niord asks first (_Unsaved changes_, "You have unsaved changes. Leave without
+saving?"), and *Yes* throws them away. *OK* without a change is the same as *Cancel*. The browser
+also warns you when you reload or close the page with changes in the position editor.
+
+[#geojson]
+=== Geometries and Their Types
+
+Niord keeps positions in the GeoJSON format, the common format for geographic data on the web;
+the link:../model/model.html#niord-geojson-model[message model] describes how Niord uses it. In
+the position editor you meet it as the names of the geometry types, which the Positions panel
+shows:
+
+[cols="25,75",options="header"]
+|===
+|Geometry type|What it is
+
+| Point
+| A single position: latitude and longitude.
+
+| MultiPoint
+| A list of points, kept together as one geometry.
+
+| LineString
+| A line: a list of positions joined in order.
+
+| MultiLineString
+| A list of lines.
+
+| Polygon
+| An area. Its outline is the _Exterior_ ring; an area can also have inner rings, holes in the
+  area.
+
+| MultiPolygon
+| A list of areas.
+
+| GeometryCollection
+| A list of geometries of different types.
+|===
+
+Each card of the Positions panel is one _feature_: one geometry together with its name and its
+restriction. All the features of a message part make up the part's positions. In practice you work
+with points, lines and areas.
+
+[#graphical-editor-tools]
+=== Drawing Tools
+
+The tools in the toolbar decide what a click on the map does. Only one tool is chosen at a time;
+the editor opens with *Point* chosen, because adding a position is the most common first step.
+Whatever the tool, you can drag the map to move it.
+
+[#point-tool]
+==== image:PositionEditorPointTool.png[Point, 16] Point
+
+Each click on the map adds a point.
+
+[#path-tool]
+==== image:PositionEditorPathTool.png[Line, 16] Line
+
+Click where the line starts and click again for each further position. Double-click to place the
+last position and finish the line.
+
+[#polygon-tool]
+==== image:PositionEditorPolygonTool.png[Area, 16] Area
+
+Click where the area's outline starts and click again for each corner. Double-click to place the
+last corner and finish the area; Niord closes the outline for you.
+
+[#modify-tool]
+==== image:PositionEditorModifyTool.png[Select, 16] Select
+
+With *Select* you choose features and change them on the map:
+
+* Click a feature to select it alone. Shift-click adds a feature to the selection or takes it out
+  again. Click an empty spot of the map to clear the selection.
+* Hold Ctrl (Cmd on a Mac) and drag a box to select every feature the box touches. This works with
+  any tool.
+* Drag a feature to move all of it.
+* On a selected line or area, drag a corner to move it, or drag a point on an edge to add a new
+  corner there. Shift-click a corner to delete it.
+
+The selected features are drawn with a heavier outline, and their cards are ticked in the
+Positions panel. Selecting decides what the <<action-menu,Actions menu>> offers.
+
+image::PositionGraphicalEditor.png[The selected area with its name and restriction in the Positions panel, 759]
+
+[#delete-tool]
+==== image:PositionEditorDeleteTool.png[Delete, 16] Delete
+
+Each click on a feature deletes the feature.
+
+[#measure-tool]
+==== image:PositionEditorMeasureTool.png[Measure, 16] Measure
+
+*Measure* draws a measuring line, the same way as *Line*: click for each position, and
+double-click to finish. While you draw, a label at the pointer gives the length so far in metres,
+kilometres and nautical miles; a finished measurement keeps its label.
+
+image::PositionEditorMeasurement.png[A measuring line with its length, 759]
+
+A measuring line is not a position of the message: it is not saved, and all measuring lines go
+away when you choose another tool or close the editor.
+
+[#position-editor-undo]
+=== Undo and Redo
+
+image:PositionEditorUndoRedo.png[Undo and Redo, 31] *Undo* takes back your last change in the
+position editor, one step at a time, and *Redo* makes it again. The keys do the same: Ctrl+Z to
+undo, and Ctrl+Shift+Z or Ctrl+Y to redo; on a Mac, Cmd+Z to undo and Cmd+Shift+Z to redo. While
+you type in a field, the keys work in the field instead, and while the _Edit as text_ or _Import
+geometry_ dialog is open they do nothing in the position editor.
+
+[#action-menu]
+=== Actions Menu
+
+image::PositionEditorActionMenu.png[The Actions menu with three points selected, 130]
+
+The *Actions* menu, the cog in the toolbar, holds the actions on all the positions and, below a
+line, the actions on the selected features. Only the actions that fit the selection are offered.
+
+[#clear-all-action]
+==== Clear all
+
+Deletes every feature. It can be used only when there are positions; *Undo* or *Cancel* brings
+them back.
+
+[#zoom-to-extent-action]
+==== Zoom to extent
+
+Moves and zooms the map so that it shows all the positions.
+
+[#edit-as-text-action]
+==== Edit as text
+
+Opens all the positions as text (<<text-editor>>). Saving the text replaces all the positions in
+the editor, as one step that *Undo* takes back.
+
+[#position-editor-import]
+==== Import geometry
+
+[[import-action-2]]Adds positions from another source (<<position-editor-import-dialog>>).
+
+[#add-affected-radius-action]
+==== Add affected radius
+
+Adds an _affected area_ around the selected features: a circle of the given radius around a point,
+a corridor along a line, or a wider area around an area. One or more features of any type can be
+selected. See <<affected-areas>>.
+
+image::PositionEditorAffectedRadius.png[An affected radius of 1 nautical mile around a buoy, 388]
+
+[#add-affected-path-action]
+==== Add affected path
+
+[[add-affected-radius-action-2]]Adds an affected area along a line through two or more selected
+points, in the order of their cards
+in the Positions panel. With a radius, the line becomes a corridor of that width on each side.
+
+image::PositionEditorAffectedPath.png[An affected path through three buoys with a radius of half a nautical mile, 388]
+
+[#add-affected-area-action]
+==== Add affected area
+
+Adds an affected area with three or more selected points as its corners, in the order of their
+cards in the Positions panel. With a radius, the area is widened by that distance.
+
+image::PositionEditorAffectedArea.png[An affected area with three buoys as its corners, 388]
+
+[#merge-geometries-action]
+==== Merge geometries
+
+Makes one feature of two or more selected features. Points become a MultiPoint, lines a
+MultiLineString and areas a MultiPolygon; a mix of types becomes a GeometryCollection. The names
+of the features and of their positions are kept; a restriction is not.
+
+[#split-geometries-action]
+==== Split geometries
+
+Makes separate features of each selected feature that is not a single point:
+
+* a line or an area becomes a point for each of its positions;
+* a MultiPoint, MultiLineString or MultiPolygon becomes its points, lines or areas;
+* a GeometryCollection becomes its geometries.
+
+The names of the positions are kept; the name of the feature that was split is not.
+
+[#convert-action]
+==== Convert
+
+With one feature selected, *Convert* changes its type, keeping its positions and names:
+
+* [[convert-to-linestring-action]]*To line* makes a line of a MultiPoint or of an area's outline;
+* [[convert-to-polygon-action]]*To area* makes an area of a MultiPoint or a line;
+* [[convert-to-multipoint-action]]*To points* makes a MultiPoint of a line or an area.
+
+[[subtract-geometries-action]]*Merge geometries* keeps the areas it joins as they are, side by side
+in one feature. Niord has no action that unites areas into one outline, subtracts one area from
+another, or gives the part two areas have in common.
+
+[#affected-areas]
+=== Affected Areas
+
+An affected area marks the waters a hazard affects: around a wreck, along a cable route, around an
+exercise. It is made from the features you selected, its _parent features_, and Niord keeps it in
+step with them: when you move or change a parent, the affected area is made again. You cannot move
+or reshape an affected area itself, and in the Positions panel its card has a lock and its
+positions cannot be changed. When every parent is deleted, the affected area goes too.
+
+Select the affected area's card to set it up:
+
+* *Radius* and the unit beside it (m, km or nm): an affected radius starts at 1 nm. An affected path
+  or area starts without a radius; give it one to widen it.
+* *Restriction*: what applies in the area. It starts as _Affected_; see <<features-panel>>.
+* *Name*: like any feature, an affected area can have a name; until it has one, the panel calls it
+  _Affected area_.
+
+[#features-panel]
+=== Positions Panel
+
+image::PositionEditorFeaturePanel.png[The Positions panel: the selected area with its restriction and a named position, 200]
+
+The Positions panel lists the features, each on a card. image:PositionEditorCollapse.png[Collapse, 12]
+*Collapse* at the top of the panel folds it away, so that you see the whole map; *Expand* opens it
+again. A card has, from left to right:
+
+* the handle (*Reorder geometry*): drag a card up or down to change the order of the features.
+  The order is the order in which the message numbers its positions;
+* the tick box (*Select geometry*), which adds the feature to the selection or takes it out;
+* the feature's name, or its geometry type when it has no name: click it to select the feature
+  alone;
+* *Zoom to geometry*, which moves and zooms the map to the feature;
+* *Delete geometry*, which deletes the feature.
+
+When a feature is the only one selected, its card also shows:
+
+* *Name*: the feature's name, one field for each language. A chart system or another client may
+  show the name on the map as a label.
+* *Restriction*: _None_, _Affected_, _Restricted_, _Speed-restricted_, _Prohibited_ or
+  _Stopping-prohibited_. A client may use it to draw the area or to plan a route.
+* *Radius*, for an affected area (<<affected-areas>>).
+
+Below that is the feature's geometry as a tree: its type, an area's ring, and its positions in
+degrees and minutes. You can change positions here:
+
+* Click a position to change it. Type the new position and press Enter; Escape leaves it as it
+  was. A position Niord cannot read is marked red and stays open. You can type
+  `55° 10.000'N - 015° 16.000'E`, the same without the symbols (`55 10.000N 015 16.000E`), or
+  decimal degrees (`55.1667N 15.2667E`); a comma also works as the decimal sign. Niord does not
+  read a position that cannot exist: minutes of 60 or more, more than 90° of latitude or 180° of
+  longitude, or a sign before the degrees (the N, S, E or W gives the side).
+* Point at a position to see its buttons: *+* (_Add a position after this one_), on lines and areas,
+  adds a position and opens it for typing; *−* (_Delete this position_) deletes it, as long as
+  enough positions are left for the type.
+* The arrow to the left of a position (*Edit names*) opens a name for the position, one field for
+  each language. Positions of points, lines and an area's outline can have names; a client may show
+  them beside the positions.
+
+You can also move through the tree with the keyboard: the up and down arrows go from row to row,
+the right and left arrows open and close a row, and F2 or Enter starts typing a position.
+
+[#text-editor]
+=== Editing Positions as Text
+
+For positions given as a list, such as positions copied from an e-mail, it is often quicker to
+type them than to draw them. *Edit as text* opens the positions as text: from the *Positions* row
+of the message part, or from the *Actions* menu in the position editor.
+
+image::PositionTextEditor.png[The Edit as text dialog with an area and three named points, 560]
+
+The text is on the left, and a map on the right shows what Niord reads from it as you type. Below
+the text, Niord tells how many features it has read; when it cannot read the text, the text field
+gets a red frame. *Show examples* shows two examples of the format. *Save geometry* replaces all
+the positions with the ones in the text; it can be used once you have changed the text and Niord
+has read it. *Cancel* closes the dialog, asking first when you have changed the text. When you
+start from the *Positions* row, saving puts the positions straight into the message part, and you
+keep them by saving the message.
+
+The text can show only simple geometries: points, MultiPoints, lines and areas without holes.
+When the positions hold anything else, the dialog says "Could not parse the original geometry as
+plain text." and the text starts empty. The text carries the positions and their names only:
+saving it drops the features' restrictions, and an affected area becomes an ordinary area that no
+longer follows its parent features.
+
+[#text-format]
+==== The Text Format
+
+The text lists the features one after another, with a blank line between two features:
+
+[source,text]
+----
+<geometry type>, <feature name>
+<position>, <position name>
+...
+<position>, <position name>
+
+<geometry type>, <feature name>
+<position>, <position name>
+...
+----
+
+* The first line of a feature names its type: `Point`, `MultiPoint`, `LineString` or `Polygon`.
+  Without it, a single position is a point and several positions are a MultiPoint.
+* Each further line is one position: the latitude, then the longitude, each with its hemisphere
+  (N or S, E or W). You can write degrees and minutes (`55° 10.000'N 015° 16.000'E`), degrees,
+  minutes and seconds (`55° 10' 30"N`), or decimal degrees, with a point or a comma as the decimal
+  sign. A line may start with a number, such as `1)`, and there may be a dash between latitude and
+  longitude. Minutes and seconds must be below 60, the latitude at most 90° and the longitude at
+  most 180°, and the degrees take no sign: the hemisphere letter gives the side.
+* For an area, list its corners: Niord closes the outline, so you do not repeat the first corner at
+  the end.
+* A name follows a comma, after the type (the feature's name) or after a position (the position's
+  name). Write a language code and a colon before the name, such as `en:`, to give the name in one
+  language, and one such part for each language; a name without a language code is used for every
+  language.
+
+[[examples]]A single point:
+
+[source,text]
+----
+56N 11 30.23E
+----
+
+A named area, a named point and a line with named positions:
+
+[source,text]
+----
+Polygon, en: Exercise area
+55° 10.000'N 015° 16.000'E
+55° 10.000'N 015° 30.000'E
+55° 00.000'N 015° 30.000'E
+55° 00.000'N 015° 16.000'E
+
+Point, en: Buoy A
+55° 12.500'N 015° 14.000'E
+
+LineString, en: Cable route
+1) 55° 05.000'N 015° 09.000'E, en: Landing point
+2) 55° 05.000'N 015° 16.000'E
+----
+
+[#position-editor-import-dialog]
+=== Importing Positions
+
+*Import geometry* in the *Actions* menu adds positions from another source to the ones already in
+the editor; it replaces nothing.
+
+image::PositionEditorImportGeometry.png[The Import geometry dialog on the From Area tab, 420]
+
+The dialog has three tabs:
+
+* *From Area*: positions of an area of Niord's base data. Search the areas, or open the tree, and
+  click an area that has a geometry; administrators give areas their geometry (see the
+  link:../admin-manual/manual.html#areas[Areas] chapter of the administrator manual).
+* *From Text*: positions typed in the text format above (<<text-format>>); *Show examples* shows
+  two examples.
+* *From UTM*: positions in the Universal Transverse Mercator (UTM) system, one on each line: the
+  zone and its latitude band, then the easting and the northing, such as `32V 624726.15 6207884.60`.
+  One position becomes a point and several positions become a MultiPoint. Blank lines are skipped,
+  and a comma also works as the decimal sign. When Niord cannot read one of the lines, it reads none
+  of them: the text field gets a red frame and nothing can be imported until the line is corrected.
+  *Show examples* shows the format and a link to a map of the UTM zones.
+
+Below the tabs, Niord tells how many features it has read. *Import* adds them; it can be used once
+there is something to add.
+
+[#drop-files]
+==== Dropping a File on the Map
+
+You can also drag a file from your computer onto the map of the position editor: a GeoJSON file, a
+KML file (for example from Google Earth) or a file of WKT text. Its features are added to the
+positions. A name in the file (a GeoJSON feature's `name` property, a KML placemark's name)
+becomes the feature's name in every language.

@@ -1,0 +1,304 @@
+#!/usr/bin/env node
+/**
+ * Seeds one publication series and one published issue, through the real API.
+ *
+ * WHY THIS EXISTS. Everything on the series and issue surface was reachable
+ * EXCEPT creation: the series create endpoint was a stub and the issue service
+ * had no create route at all. So the whole new REST surface had never been
+ * exercised against a running system, and the first thing to touch it would
+ * have been the historical importer -- 1,077 publications, all-or-nothing,
+ * against endpoints nobody had ever called. This walks the same path first,
+ * with one row.
+ *
+ * It drives the PUBLIC endpoints deliberately. A seed that reaches past the API
+ * into the entity layer proves the entity layer works, which was never in
+ * doubt; what needs proving is that the wire shapes, the validator, the
+ * transactions and the security annotations line up.
+ *
+ * WHAT IT PROVES, in order, failing loudly at the first step that does not:
+ *
+ *   1. a series can be created from a value object            (S8)
+ *   2. the canonical citation format is ACCEPTED              (S-13 + S-14)
+ *   3. the series can be activated, which runs the validator  (S10, S-17)
+ *   4. an issue can be created on it                          (I1)
+ *   5. the issue can be published                             (the transaction)
+ *   6. and it reports whether the issue reaches the PUBLIC list  (the union)
+ *
+ * Step 6 is the one that exercises the public adapter end to end: a published
+ * issue in a publishing category is on the public list, and nothing has to be
+ * switched on for it to be there.
+ *
+ * Usage:
+ *   node scripts/seed-publication-series.mjs [--no-publish] [--base <url>]
+ *
+ *   --no-publish  stop after the issue is created. Everything up to that point
+ *                 is reversible, so this run cleans up completely and can be
+ *                 repeated as often as you like.
+ *
+ * A FULL RUN CANNOT BE UNDONE. Publishing makes an issue undeletable by design,
+ * and a series with any issue is undeletable in turn, so every full run leaves
+ * one series and one published issue on the target system for good. Each run
+ * therefore takes its own id, and prints what it left.
+ */
+
+const args = process.argv.slice(2);
+const BASE = args.includes('--base') ? args[args.indexOf('--base') + 1] : 'https://niord.t-dma.dk/rest';
+// Publishing is the one step this script cannot take back. --no-publish stops
+// after the issue is created, which leaves nothing behind: an OPEN, unstamped
+// issue is deletable, and so is its series once the issue is gone. Use it to
+// smoke-test create and activate as often as you like.
+const PUBLISH = !args.includes('--no-publish');
+const KEYCLOAK = (process.env.NIORD_KEYCLOAK
+    || 'https://login.t-dma.dk/auth/realms/niord/protocol/openid-connect/token');
+// No default login. A run that can publish -- which cannot be undone -- must
+// be one somebody deliberately authenticated, and a password in a file is a
+// password in every clone.
+const USER = process.env.NIORD_USER;
+const PASS = process.env.NIORD_PASS;
+if (!USER || !PASS) {
+  console.error('set NIORD_USER and NIORD_PASS in the environment');
+  process.exit(2);
+}
+
+// A recognisable id, unique per run.
+//
+// Unique because a run that reaches step 4 CANNOT be undone. A published issue
+// is refused deletion by design -- it is a historical record -- and a series is
+// refused deletion while it has any issue at all. Both refusals are correct, and
+// together they mean a fixed id would let this script run exactly once and then
+// fail every later run with SERIES_ID_TAKEN.
+//
+// So each run gets its own id, and the run says plainly what it left behind.
+const STAMP = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 13);
+const SERIES_ID = `seed-probe-${STAMP}`;
+
+let token;
+let step = 0;
+
+function ok(what, detail) {
+    console.log(`  ${String(++step).padStart(2)}. PASS  ${what}${detail ? '  -- ' + detail : ''}`);
+}
+
+function fail(what, detail) {
+    console.error(`  ${String(++step).padStart(2)}. FAIL  ${what}\n        ${detail}`);
+    process.exitCode = 1;
+    throw new Error(what);
+}
+
+async function call(method, path, body, expect = [200, 204]) {
+    const res = await fetch(BASE + path, {
+        method,
+        headers: {
+            Authorization: `Bearer ${token}`,
+            ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (!expect.includes(res.status)) {
+        throw new Error(`${method} ${path} -> ${res.status}\n        ${text.slice(0, 400)}`);
+    }
+    return text ? JSON.parse(text) : null;
+}
+
+async function authenticate() {
+    const res = await fetch(KEYCLOAK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            grant_type: 'password', client_id: 'niord-web', username: USER, password: PASS,
+        }),
+    });
+    if (!res.ok) {
+        throw new Error(`token request failed: ${res.status}`);
+    }
+    token = (await res.json()).access_token;
+}
+
+/** A category the public list actually serves, so step 6 can see the issue. */
+async function publishingCategory() {
+    const cats = await call('GET', '/publication-categories/all?lang=da');
+    const publishing = (Array.isArray(cats) ? cats : cats.data || []).find(c => c.publish);
+    if (!publishing) {
+        throw new Error('no publishing publication category exists; step 6 could not distinguish '
+            + 'a correct empty list from a broken one');
+    }
+    return publishing.categoryId;
+}
+
+/**
+ * Removes what this run made.
+ *
+ * The issues are deleted by the ids this process created, because there is no
+ * endpoint that lists the issues of a series -- so a previous run that died
+ * between creating an issue and deleting it leaves one behind, and the series
+ * delete then refuses with SERIES_HAS_ISSUES. That is the correct refusal; it
+ * just means the leftovers need clearing by hand. The message says so rather
+ * than swallowing it.
+ */
+async function cleanup(createdIssueIds = []) {
+    try {
+        for (const publicId of createdIssueIds) {
+            await call('DELETE', `/publication-issues/issue/${publicId}`, undefined,
+                [204, 200, 400, 404, 409]);
+        }
+        const existing = await call('GET', `/publication-series/series/${SERIES_ID}`,
+            undefined, [200, 404, 400]);
+        if (existing && existing.seriesId) {
+            await call('DELETE', `/publication-series/series/${SERIES_ID}`, undefined,
+                [204, 200, 400, 404, 409]);
+        }
+    } catch (e) {
+        console.log(`  --. NOTE  cleanup incomplete: ${e.message.split('\n')[0]}`);
+        console.log('        a published issue cannot be deleted, which is correct -- clear the '
+            + 'leftover series by hand before re-running');
+    }
+}
+
+async function main() {
+    console.log(`seeding against ${BASE}\n`);
+    await authenticate();
+    await cleanup();
+
+
+    const categoryId = await publishingCategory();
+
+    // 1. Create.
+    const created = await call('POST', '/publication-series/series/', {
+        seriesId: SERIES_ID,
+        categoryId,
+        contentMode: 'GENERATED_FROM_QUERY',
+        cadence: 'WEEKLY',
+        numberingScheme: 'ISO_WEEK_YEAR',
+        timeRelation: 'PUBLISHED_IN_INTERVAL',
+        aliveAtCutoff: false,
+        nominalCutoffDay: 'WEDNESDAY',
+        nominalCutoffTime: '12:00',
+        nominalCutoffTimeZone: 'Europe/Copenhagen',
+        firstIssueStartsAt: Date.parse('2026-08-01T00:00:00Z'),
+        releaseMode: 'MANUAL_GATE',
+        nextIssueCreation: 'MANUAL',
+        messagePublication: 'EXTERNAL',
+        languages: ['da'],
+        // The discriminator is "kind", not "type", and its values are the camelCase
+        // names from the @JsonSubTypes list -- not the CriterionKind constants. The
+        // deviation is deliberate upstream: "type" is already the message-type
+        // domain word, so a node reading {"type":"messageType"} would be ambiguous.
+        // This script had it wrong in both respects and the server said so exactly,
+        // which is the validator earning its place.
+        criteria: {
+            schemaVersion: 1,
+            match: 'ALL',
+            criteria: [{ kind: 'messageSeries', operator: 'IN', values: ['dma-nm'] }],
+        },
+        descs: [{
+            lang: 'da',
+            name: 'Seed probe',
+            fileNamePattern: 'seed-${week}-${year}.pdf',
+            // The format that S-14 used to reject while S-13 required one. This
+            // step is the live proof of that fix; the unit test cannot reach the
+            // endpoint and the endpoint could not reach the validator.
+            messageReferenceFormat: 'Seed ${week}/${year} ${parameters}',
+        }],
+    });
+    ok('series created from a value object', `status ${created.status}`);
+    ok('the canonical citation format was accepted', 'S-13 + S-14 no longer deadlock');
+
+    // 2. Activate -- this is what runs the validator.
+    const active = await call('PUT', `/publication-series/series/${SERIES_ID}/status`, 'ACTIVE');
+    if (active.status !== 'ACTIVE') {
+        fail('series activation', `status is ${active.status}`);
+    }
+    ok('series activated', 'the validator passed a complete series');
+
+    // 3. Create an issue.
+    const issue = await call('POST', '/publication-issues/issue', {
+        seriesId: SERIES_ID,
+        intervalFrom: Date.parse('2026-08-05T12:00:00Z'),
+        recovered: false,
+    });
+    if (!/^[0-9a-f-]{36}$/.test(issue.publicId)) {
+        fail('publicId shape', `${issue.publicId} is not a lowercase UUID`);
+    }
+    ok('issue created', `publicId ${issue.publicId}`);
+
+    if (!PUBLISH) {
+        await cleanup([issue.publicId]);
+        console.log();
+        console.log('--no-publish: stopped before the irreversible step, and cleaned up.');
+        console.log();
+        console.log('seed complete.');
+        return;
+    }
+
+    // 4. Publish it.
+    //
+    // The endpoint reads three keys: acknowledgedWarnings, cutoff and names. This
+    // script used to send acknowledgeWarnings, acknowledged and stamp -- none of
+    // which are read -- and then reported PASS without looking at the result. A
+    // step that cannot fail is not a check, so it now reads the issue back.
+    //
+    // No cutoff and no names: the release stamps the moment it runs and keeps the
+    // name the series suggested. Step 5 therefore has to ask the public list about
+    // the returned stampedAt rather than about a date chosen here.
+    const published = await call('PUT', `/publication-issues/issue/${issue.publicId}/publish`, {
+        acknowledgedWarnings: [],
+    });
+
+    // Publish sets PUBLISHED and REPORTS warnings rather than refusing on them, so
+    // a green response is not by itself evidence that the status moved.
+    //
+    // Read back through editable-issue, not issue. The public PublicationIssueVo
+    // carries no lifecycle state at all -- no status, no publishedAt, no member
+    // count -- which is correct for a citizen-facing shape and useless for this
+    // check. Asking the wrong one returned status undefined, which this step
+    // reported as a failure rather than passing on a field that was never there.
+    const after = await call('GET', `/publication-issues/editable-issue/${issue.publicId}`);
+    if (after.status !== 'PUBLISHED') {
+        fail('issue published',
+            `the call succeeded but status is ${after.status}, not PUBLISHED`);
+    }
+    if (!after.publishedAt) {
+        fail('issue published', 'status is PUBLISHED but publishedAt was never stamped');
+    }
+    ok('issue published', `members ${published.memberCount ?? '?'}, stamped `
+        + new Date(published.stampedAt).toISOString());
+
+    const warnings = published.unacknowledgedWarnings || [];
+    if (warnings.length) {
+        console.log(`        warnings, unacknowledged and not fatal: ${warnings.join('; ')}`);
+    }
+
+    // 5. The union. A published issue is served from the new model as soon as it
+    // is published -- there is nothing to switch on -- so this step either passes
+    // or has found a real regression in the public adapter.
+    const at = published.stampedAt;
+    const publicList = await fetch(
+        `${BASE}/public/v1/publications?lang=da&from=${at}&to=${at}`).then(r => r.json());
+    const served = publicList.some(pub => pub.publicationId === issue.publicId);
+
+    if (served) {
+        ok('the published issue is on the PUBLIC list',
+            'the new half of the union serves a real row');
+    } else {
+        fail('the published issue is on the PUBLIC list',
+            'a PUBLISHED issue in a publishing category is served unconditionally, so the new '
+            + 'half of the union is not returning it');
+    }
+
+    // Nothing to clean up: the issue is published, so both deletes are refused.
+    // Reported rather than attempted, because a cleanup that always fails reads
+    // like a broken script instead of a correct rule.
+    console.log();
+    console.log(`  LEFT BEHIND, permanently: series ${SERIES_ID} and one published issue.`);
+    console.log('  Neither can be deleted through the API -- a published issue is a historical');
+    console.log('  record, and a series with any issue is refused deletion. Both are correct.');
+    console.log('  Run with --no-publish for a smoke test that cleans up after itself.');
+
+    console.log('\nseed complete.');
+}
+
+main().catch(e => {
+    console.error('\nSEED FAILED:', e.message);
+    process.exit(1);
+});

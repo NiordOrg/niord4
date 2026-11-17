@@ -1,0 +1,134 @@
+# Beacon damaged  [templates/tmpl/beacon-damaged.ftl]
+# std fields [areas, type, promulgation, positions], params [ParamDef[paramId=aton, type=beacon_by_function, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | BEACON HALS BARRE 55-30.0N 010-30.0E
+  | DAMAGED.
+AUDIO:   The beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is damaged. /
+NAVTEX:
+  | BEACON HALS BARRE 56-00.0N 012-00.0E
+  | DAMAGED.
+AUDIO:   The beacon Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is damaged.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is damaged. /
+NAVTEX:
+  | BEACON HALS BARRE 56-00.0N 012-00.0E
+  | DAMAGED.
+AUDIO:   The beacon Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is damaged.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon Hals Barre in pos. 61° 06.0'N - 045° 15.0'W is damaged. /
+NAVTEX:
+  | BEACON HALS BARRE 61-06.0N 045-15.0W
+  | DAMAGED.
+AUDIO:   The beacon Hals Barre in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West is damaged.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. / The beacon Hals Barre in pos. 55° 36.0'N - 010° 45.0'E is damaged. / The beacon Hals Barre in pos. 55° 42.0'N - 011° 00.0'E is damaged. /
+NAVTEX:
+  | BEACON HALS BARRE 55-30.0N 010-30.0E
+  | DAMAGED.
+  | BEACON HALS BARRE 55-36.0N 010-45.0E
+  | DAMAGED.
+  | BEACON HALS BARRE 55-42.0N 011-00.0E
+  | DAMAGED.
+AUDIO:   The beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged. The beacon Hals Barre in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East is damaged. The beacon Hals Barre in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East is damaged.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: 
+NAVTEX:
+  | 
+  |         
+AUDIO:   null
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.function.beacon
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | BEACON HALS BARRE 55-30.0N 010-30.0E
+  | DAMAGED.
+AUDIO:   The beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### param aton_type = aton.function.beacon.front
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The front beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | FRONT BEACON HALS BARRE 55-30.0N
+  | 010-30.0E DAMAGED.
+AUDIO:   The front beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### param aton_type = aton.function.beacon.rear
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The rear beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | REAR BEACON HALS BARRE 55-30.0N
+  | 010-30.0E DAMAGED.
+AUDIO:   The rear beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### param aton_type = aton.function.beacon.cable
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The cable beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | CABLE BEACON HALS BARRE 55-30.0N
+  | 010-30.0E DAMAGED.
+AUDIO:   The cable beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### param aton_type = aton.function.beacon.front_rear
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The front and rear beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | FRONT AND REAR BEACON HALS BARRE
+  | 55-30.0N 010-30.0E DAMAGED.
+AUDIO:   The front and rear beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | BEACON HALS BARRE 55-30.0N 010-30.0E
+  | DAMAGED.
+AUDIO:   The beacon Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | BEACON 55-30.0N 010-30.0E DAMAGED.
+AUDIO:   The beacon in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Beacon damaged.
+SUBJECT: Beacon damaged
+DETAILS: The beacon St. John's Point in pos. 55° 30.0'N - 010° 30.0'E is damaged. /
+NAVTEX:
+  | BEACON ST. JOHN'S POINT 55-30.0N
+  | 010-30.0E DAMAGED.
+AUDIO:   The beacon St. John's Point in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is damaged.
+

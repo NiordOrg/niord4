@@ -1,0 +1,112 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series.vo;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * S12. An issue that does not exist yet, in the shape of one that does.
+ *
+ * It EXTENDS the issue's system shape rather than declaring a parallel set of
+ * fields. Three screens ask for a draft -- "＋ Ny udgave", the retro-create
+ * prefill, and the live preview on a gap row -- and each of them renders an
+ * issue afterwards. A separate type would mean two renderers for one thing, and
+ * the second one is where the interval bound and its provenance marker stop
+ * agreeing with the list the row came from.
+ *
+ * NOTHING HERE IS PERSISTED. The draft is computed on every request from the
+ * series and its issues; no row is written, no member is resolved into an issue,
+ * and the counting probe below reads only.
+ *
+ * The fields it adds are the ones a saved issue has no need of: what the
+ * criteria would select over this interval, which issue the interval chains off
+ * -- by the id that addresses it and by the name a person reads it under -- and
+ * what an admin should know before pressing create.
+ */
+public class IssueDraftVo extends SystemPublicationIssueVo {
+
+    /**
+     * What the series' criteria would select over this interval, right now.
+     *
+     * The prototype's "11 ville matche". Null rather than 0 when no count could
+     * be taken -- a series with no membership at all, or a criteria document that
+     * does not resolve -- because 0 is a finding about the interval and null is
+     * the absence of one, and a screen that showed them alike would tell an admin
+     * their week is empty when nothing was ever counted.
+     */
+    private Integer wouldMatchCount;
+
+    /**
+     * The issue this draft's interval opens at the close of.
+     *
+     * Null at the head of the chain, and null when the caller typed a bound that
+     * matches no issue's close -- which is exactly when the chained warning is
+     * raised, so the two answers cannot disagree.
+     */
+    private String chainedFromPublicId;
+
+    /**
+     * The same issue, under the name a person would recognise it by.
+     *
+     * BESIDE the id rather than instead of it, because the two answer different
+     * questions. The id addresses the issue -- it is what a link to it is built
+     * from -- and the name is what the admin deciding whether this period is
+     * right is actually looking at. A public id is a slug: "nm-w26-2026" names
+     * nothing to somebody reading a form.
+     *
+     * In the requested language, falling back to whichever language the
+     * predecessor has a name in. Null only where it has none at all, which leaves
+     * the caller free to say nothing rather than to print an identifier.
+     */
+    private String chainedFromName;
+
+    /** What an admin should know before creating this issue. Never a refusal. */
+    private List<IssueDraftWarningVo> warnings = new ArrayList<>();
+
+    public Integer getWouldMatchCount() {
+        return wouldMatchCount;
+    }
+
+    public void setWouldMatchCount(Integer wouldMatchCount) {
+        this.wouldMatchCount = wouldMatchCount;
+    }
+
+    public String getChainedFromPublicId() {
+        return chainedFromPublicId;
+    }
+
+    public void setChainedFromPublicId(String chainedFromPublicId) {
+        this.chainedFromPublicId = chainedFromPublicId;
+    }
+
+    public String getChainedFromName() {
+        return chainedFromName;
+    }
+
+    public void setChainedFromName(String chainedFromName) {
+        this.chainedFromName = chainedFromName;
+    }
+
+    public List<IssueDraftWarningVo> getWarnings() {
+        return warnings;
+    }
+
+    public void setWarnings(List<IssueDraftWarningVo> warnings) {
+        this.warnings = warnings;
+    }
+}

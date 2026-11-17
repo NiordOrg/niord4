@@ -1,0 +1,76 @@
+<app-dialog
+  [visible]="dialog.visible()"
+  (visibleChange)="dialog.onVisibleChange($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '36rem' }"
+  [header]="'messages.mail.dialog.header' | transloco: { totalMessageNo: totalMessageNo() }"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2">
+      <span class="font-semibold">{{
+        'messages.mail.dialog.header' | transloco: { totalMessageNo: totalMessageNo() }
+      }}</span>
+      <app-help-anchor section="e-mail-selection-action" />
+    </div>
+  </ng-template>
+
+  <form (submit)="$event.preventDefault()" class="flex flex-col gap-3">
+    <div class="flex items-center gap-3">
+      <label for="mailLanguage" class="w-24">{{ 'messages.outputLanguage' | transloco }}</label>
+      <app-select
+        inputId="mailLanguage"
+        class="flex-1"
+        [options]="language.modelLanguages"
+        optionLabel="label"
+        optionValue="value"
+        [formField]="form.language"
+      />
+    </div>
+    <div class="flex items-start gap-3">
+      <span class="w-24 pt-2">{{ 'messages.mail.dialog.to' | transloco }}</span>
+      <app-email-address-field
+        class="flex-1"
+        [formField]="form.emailAddresses"
+        placeholder="messages.mail.dialog.emailPlaceholder"
+      />
+    </div>
+
+    <div class="flex items-center gap-3">
+      <label for="mailSubject" class="w-24">{{ 'messages.mail.dialog.subject' | transloco }}</label>
+      <input
+        id="mailSubject"
+        type="text"
+        class="flex-1 text-input"
+        [formField]="form.mailSubject"
+      />
+    </div>
+
+    <div class="flex items-start gap-3">
+      <label for="mailMessage" class="w-24 pt-2">{{
+        'messages.mail.dialog.message' | transloco
+      }}</label>
+      <textarea
+        id="mailMessage"
+        rows="4"
+        class="flex-1 text-input"
+        [formField]="form.mailMessage"
+      ></textarea>
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary text-sm" (click)="dialog.dismiss()">
+      <span>{{ 'messages.mail.dialog.close' | transloco }}</span>
+    </button>
+    <button
+      type="button"
+      class="btn-primary text-sm"
+      [disabled]="sendDisabled()"
+      (click)="onSend()"
+    >
+      <app-icon name="lucideMail" />
+      <span>{{ 'messages.mail.dialog.send' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

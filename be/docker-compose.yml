@@ -1,0 +1,112 @@
+# Local development infrastructure for the Spring Boot 4 Niord port.
+#
+#   docker compose up -d        # start PostgreSQL/PostGIS (empty), Keycloak (niord realm) and MailHog, once the
+#                               # realm is copied to ~/.niord-local/keycloak/ (../start-local.sh or ./run.sh does it)
+#   ./run.sh                    # or, once the realm is copied (above): mvn -pl niord-app spring-boot:run -Dspring-boot.run.profiles=local
+#
+# The three containers are shared by every checkout and every country's launcher. A launcher never stops, restarts
+# or recreates a running one; it starts only a missing or stopped one (start_services, scripts/local-run-lib.sh).
+#
+# The database starts empty; the app builds the schema with Liquibase, and a new database is bootstrapped once
+# with the base product's bootstrap (../start-local.sh does it). `../start-local.sh --sample` adds the sample
+# (niord/sample/) to the database niord_sample.
+#
+# Adapted from the original Quarkus niord-dk/docker-compose.yml: dropped Jaeger (no
+# OpenTracing in the Spring port) and the external Artemis (the app uses an embedded broker).
+# Keycloak imports keycloak/niord-realm-local.json: the sample users sysadmin, admin, editor and user, password =
+# name, with example.org addresses (on a realm imported before P9, only after the realm is imported again, below:
+# Keycloak imports the file only when the realm does not exist yet).
+
+# The project the three containers, the be_default network and their labels have always carried (it came from
+# this folder's name), fixed here so that the file keeps it from any folder: a worktree, or a country's
+# .local-run/. Never another name: the fixed container names would conflict, and the project be would be orphaned.
+name: be
+
+services:
+
+  niord-db:
+    # Multi-arch (arm64 + amd64) PostGIS 3.6 / PostgreSQL 18 (official postgis/postgis:18-* is amd64-only).
+    image: imresamu/postgis:18-3.6
+    container_name: niord-db
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: niord
+      POSTGRES_PASSWORD: niord
+      POSTGRES_DB: niord
+    # No seed mount: the database starts empty. The app builds the schema with Liquibase on startup, and the
+    # bootstrap command fills a new database once (../start-local.sh).
+    volumes:
+      # Named, so the data survives `docker compose down` and container recreation (the image's anonymous
+      # volume did not). PostgreSQL 18 images keep PGDATA under this directory (/var/lib/postgresql/18/docker).
+      # Start over with `docker compose down -v`.
+      - niord-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U niord -d niord"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  niord-keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2
+    # From 26.8.2 the Admin REST API accepts only a token with the client scope kc-admin-api, and the app's
+    # admin calls (a domain's client, the users) carry the signed-in user's niord-web token, so the realm file
+    # gives niord-web that scope. A realm an older image imported lacks it, and those calls answer 401 once the
+    # container runs this image: remove the volume (below), or add kc-admin-api to niord-web's default client
+    # scopes in the admin console (be/README.md, Run locally).
+    container_name: niord-keycloak
+    # Keycloak 26 hostname v2: --hostname is the full public frontend URL (incl. the /auth
+    # path); with --http-relative-path=/auth the issuer becomes http://localhost:8080/auth/realms/niord.
+    # (v1's --hostname-url was removed in 26.) --hostname-strict=false keeps start-dev lenient
+    # so the app can also reach Keycloak over the compose network.
+    command: ['start-dev', '--import-realm', '--http-relative-path=/auth', '--hostname=http://localhost:8080/auth', '--hostname-strict=false']
+    volumes:
+      # start-dev keeps its H2 database under /opt/keycloak/data/h2; the named volume keeps users, sessions
+      # and the per-domain clients the app creates at runtime across `docker compose down`. --import-realm
+      # skips a realm that already exists, so edits to the realm file only apply to a fresh volume (see below).
+      - niord-keycloak-data:/opt/keycloak/data
+      # The local-development realm, derived from the test environment's realm export: its domain clients
+      # (niord-nw, niord-nm, niord-fa, ...), roles and groups, without the external ADFS login and the
+      # test-only clients, plus one local user per group. Deliberately NOT niord/src/test/resources/keycloak/
+      # niord-realm.json, the integration tests' realm: its domain clients carry the same ids since C4b (only the
+      # k8s chart's copy, k8s/helm/niord/files/niord-realm.json, still has niord-client-*), but it is derived from
+      # the original DK bootstrap realm with the tests' own users, while this one follows the test environment's
+      # roles and groups, with one local user per group and no ADFS login.
+      # Mounted from one path per user, not from the checkout: every launcher (and ./run.sh) copies
+      # keycloak/niord-realm-local.json to ~/.niord-local/keycloak/ before compose up, so the container's
+      # configuration is the same from every checkout (a path per checkout made compose recreate the container
+      # from another one). A missing file fails the up instead of creating a folder in its place.
+      # To pick up edits: docker compose rm -sf niord-keycloak && docker volume rm niord-keycloak-data
+      - type: bind
+        source: ~/.niord-local/keycloak/niord-realm-local.json
+        target: /opt/keycloak/data/import/niord-realm.json
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      # Keycloak 26 renamed the temporary-admin bootstrap vars (was KEYCLOAK_ADMIN[_PASSWORD]).
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo done"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  niord-smtp:
+    image: mailhog/mailhog:v1.0.1
+    container_name: niord-smtp
+    logging:
+      driver: 'none'
+    ports:
+      - "127.0.0.1:1025:1025"   # SMTP
+      - "127.0.0.1:8025:8025"   # web UI
+
+volumes:
+  # Fixed names (no compose-project prefix), so `docker volume ls` shows what they belong to.
+  niord-db-data:
+    name: niord-db-data
+  niord-keycloak-data:
+    name: niord-keycloak-data

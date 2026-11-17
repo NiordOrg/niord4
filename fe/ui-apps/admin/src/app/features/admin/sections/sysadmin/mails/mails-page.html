@@ -1,0 +1,169 @@
+<app-admin-section-page titleKey="admin.sections.mails.label" descriptionKey="admin.mails.intro">
+  <p class="mb-1 text-sm text-fg-muted">
+    {{
+      'admin.mails.displaying'
+        | transloco: { size: facade.result().size, total: facade.result().total }
+    }}
+  </p>
+  @if (facade.ttlDays() !== undefined) {
+    <p class="mb-3 text-sm text-fg-muted">
+      {{ 'admin.mails.ttlNote' | transloco: { ttl: facade.ttlDays() } }}
+    </p>
+  }
+
+  <div class="admin-toolbar-stack">
+    <div class="admin-toolbar-row">
+      @for (
+        field of [
+          { param: 'recipient', value: recipientInput() },
+          { param: 'sender', value: senderInput() },
+          { param: 'subject', value: subjectInput() },
+        ];
+        track field.param
+      ) {
+        <span class="relative">
+          <input
+            type="text"
+            class="w-48 text-input"
+            [value]="field.value"
+            (input)="onTextInput($any(field.param), $any($event.target).value)"
+            (blur)="commitText($any(field.param))"
+            [placeholder]="'admin.mails.filter.' + field.param | transloco"
+            [attr.aria-label]="'admin.mails.filter.' + field.param | transloco"
+          />
+          @if (field.value !== '') {
+            <button
+              type="button"
+              class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+              [attr.aria-label]="'admin.mails.filter.clear' | transloco"
+              (click)="clearText($any(field.param))"
+            >
+              <app-icon name="lucideX" class="text-xs" />
+            </button>
+          }
+        </span>
+      }
+    </div>
+    <div class="admin-toolbar-row">
+      <div
+        class="seg"
+        role="group"
+        [attr.aria-label]="'admin.mails.filter.statusAriaLabel' | transloco"
+      >
+        @for (option of statusOptions(); track option.value) {
+          <button
+            type="button"
+            class="seg-btn"
+            [class.is-active]="facade.params().status === option.value"
+            (click)="onStatusChange($any(option.value))"
+          >
+            {{ option.labelKey | transloco }}
+          </button>
+        }
+      </div>
+      <app-date-picker
+        class="w-40"
+        [ariaLabel]="'admin.mails.filter.fromDate' | transloco"
+        [showClear]="true"
+        [clearLabel]="'common.clear' | transloco"
+        [value]="fromDate()"
+        (valueChange)="onFromDateChange($event)"
+      />
+      <app-date-picker
+        class="w-40"
+        [ariaLabel]="'admin.mails.filter.toDate' | transloco"
+        [showClear]="true"
+        [clearLabel]="'common.clear' | transloco"
+        [value]="toDate()"
+        (valueChange)="onToDateChange($event)"
+      />
+      <span class="admin-toolbar-spacer"></span>
+      <!-- Re-runs the current search with unchanged filters and page. -->
+      <button
+        type="button"
+        class="icon-button"
+        [attr.aria-label]="'admin.mails.refresh' | transloco"
+        (click)="facade.refresh()"
+      >
+        <app-icon name="lucideRefreshCw" />
+      </button>
+    </div>
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.mails.loadError' | transloco"
+      [retryLabel]="'admin.mails.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && facade.result().total === 0) {
+    <app-empty-state icon="lucideInbox" [title]="'admin.mails.empty' | transloco" />
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-44">{{ 'admin.mails.column.created' | transloco }}</th>
+            <th class="w-24">{{ 'admin.mails.column.status' | transloco }}</th>
+            <th>{{ 'admin.mails.column.sender' | transloco }}</th>
+            <th>{{ 'admin.mails.column.recipients' | transloco }}</th>
+            <th>{{ 'admin.mails.column.subject' | transloco }}</th>
+            <th class="w-12">
+              <span class="sr-only">{{ 'admin.mails.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (mail of pageRows(); track mail.id) {
+            <tr>
+              <td class="whitespace-nowrap">{{ formatDateTime(mail.created) }}</td>
+              <td>
+                <span class="status-badge" [class]="statusClass(mail)">
+                  {{ statusKey(mail) | transloco }}
+                </span>
+              </td>
+              <td>{{ mail.sender }}</td>
+              <td>
+                @let recipient = firstRecipient(mail);
+                {{ recipient.address }}
+                @if (recipient.others > 0) {
+                  <span class="text-fg-muted">
+                    {{ 'admin.mails.othersSuffix' | transloco: { count: recipient.others } }}
+                  </span>
+                }
+              </td>
+              <td>{{ mail.subject }}</td>
+              <td class="text-right">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.mails.openMail' | transloco"
+                  (click)="openMail(mail)"
+                >
+                  <app-icon name="lucideMail" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (facade.result().total > facade.rows) {
+      <app-pager
+        [first]="facade.first()"
+        [rows]="facade.rows"
+        [total]="facade.result().total"
+        (pageChange)="facade.setFirst($event)"
+      />
+    }
+  }
+
+  <app-mail-details-dialog
+    [mail]="detailsMail()"
+    [createdLabel]="formatDateTime(detailsMail()?.created)"
+    [sentLabel]="formatDateTime(detailsMail()?.sendDate)"
+    (closed)="detailsMail.set(undefined)"
+  />
+</app-admin-section-page>

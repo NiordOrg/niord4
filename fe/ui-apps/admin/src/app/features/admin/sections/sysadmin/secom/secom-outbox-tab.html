@@ -1,0 +1,115 @@
+<div class="admin-toolbar">
+  <div class="seg" role="group" [attr.aria-label]="'admin.secom.outbox.statusFilter' | transloco">
+    @for (option of statusOptions; track option.value) {
+      <button
+        type="button"
+        class="seg-btn"
+        [class.is-active]="facade.outboxStatus() === option.value"
+        (click)="onStatusChange(option.value)"
+      >
+        {{ option.labelKey | transloco }}
+      </button>
+    }
+  </div>
+  <span class="admin-toolbar-spacer"></span>
+  <button
+    type="button"
+    class="icon-button"
+    [attr.aria-label]="'admin.secom.outbox.refresh' | transloco"
+    (click)="facade.refreshOutbox()"
+  >
+    <app-icon name="lucideRefreshCw" />
+  </button>
+</div>
+
+<app-progress-bar [visible]="facade.outboxLoading()" />
+
+@if (facade.outboxError()) {
+  <app-error-banner
+    [title]="'admin.secom.outbox.loadError' | transloco"
+    [retryLabel]="'admin.secom.retry' | transloco"
+    (retry)="facade.refreshOutbox()"
+  />
+} @else if (!facade.outboxLoading() && facade.outbox().length === 0) {
+  <app-empty-state icon="lucideInbox" [title]="'admin.secom.outbox.empty' | transloco" />
+} @else if (!facade.outboxLoading()) {
+  @if (newestOnly()) {
+    <p class="mb-2 text-xs text-fg-muted" data-testid="outbox-newest-only">
+      {{ 'admin.secom.outbox.newestOnly' | transloco: { count: listLimit } }}
+    </p>
+  }
+  <div class="admin-card">
+    <table class="niord-table">
+      <thead>
+        <tr>
+          <th class="w-48">{{ 'admin.secom.outbox.column.operation' | transloco }}</th>
+          <th>{{ 'admin.secom.outbox.column.node' | transloco }}</th>
+          <th>{{ 'admin.secom.outbox.column.dataset' | transloco }}</th>
+          <th class="w-28">{{ 'admin.secom.outbox.column.status' | transloco }}</th>
+          <th class="w-24 num">{{ 'admin.secom.outbox.column.attempts' | transloco }}</th>
+          <th class="w-44">{{ 'admin.secom.outbox.column.nextAttempt' | transloco }}</th>
+          <th>{{ 'admin.secom.outbox.column.lastError' | transloco }}</th>
+          <th class="w-24">
+            <span class="sr-only">{{ 'admin.secom.outbox.column.actions' | transloco }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (entry of rows(); track entry.id) {
+          <tr>
+            <td>
+              {{ operationKey(entry.operation) | transloco }}
+              @if (entry.notificationEvent; as event) {
+                <span class="text-fg-muted">({{ event }})</span>
+              }
+            </td>
+            <td class="break-all">{{ entry.nodeMrn }}</td>
+            <td class="break-all">{{ entry.datasetMrn }}</td>
+            <td>
+              <span class="status-badge" [class]="statusClass(entry.status)">
+                {{ statusKey(entry.status) | transloco }}
+              </span>
+            </td>
+            <td class="num">{{ entry.attempts }}</td>
+            <td class="whitespace-nowrap">{{ entry.nextAttemptAt | localeDate }}</td>
+            <td class="text-sm">
+              @if (entry.lastError; as lastError) {
+                <span [title]="lastError">{{ errorPreview(lastError) }}</span>
+              }
+            </td>
+            <td class="whitespace-nowrap text-right">
+              @if (canRetry(entry)) {
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.secom.outbox.retry' | transloco"
+                  [title]="'admin.secom.outbox.retryHelp' | transloco"
+                  (click)="retry(entry)"
+                >
+                  <app-icon name="lucideRefreshCw" />
+                </button>
+              }
+              @if (canCancel(entry)) {
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.secom.outbox.cancel' | transloco"
+                  [title]="'admin.secom.outbox.cancelHelp' | transloco"
+                  (click)="cancel(entry)"
+                >
+                  <app-icon name="lucideX" />
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-pager
+    [first]="pager.first()"
+    [rows]="pager.rows"
+    [total]="pager.total()"
+    (pageChange)="pager.setFirst($event)"
+  />
+}

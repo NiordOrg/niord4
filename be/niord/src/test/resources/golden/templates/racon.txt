@@ -1,0 +1,341 @@
+# RACON  [templates/tmpl/radio-navigation.ftl]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=racon, type=racon, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 56-00.0N
+  | 012-00.0E UNRELIABLE.
+AUDIO:   RACON on the light Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is unreliable.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 56-00.0N
+  | 012-00.0E UNRELIABLE.
+AUDIO:   RACON on the light Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is unreliable.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light Hals Barre in pos. 61° 06.0'N - 045° 15.0'W is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 61-06.0N
+  | 045-15.0W UNRELIABLE.
+AUDIO:   RACON on the light Hals Barre in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West is unreliable.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. RACON unreliable. RACON unreliable. RACON unreliable.
+SUBJECT: RACON unreliable. RACON unreliable. RACON unreliable.
+DETAILS: RACON on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. / RACON on the light Hals Barre in pos. 55° 36.0'N - 010° 45.0'E is unreliable. / RACON on the light Hals Barre in pos. 55° 42.0'N - 011° 00.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+  | RACON ON LIGHT HALS BARRE 55-36.0N
+  | 010-45.0E UNRELIABLE.
+  | RACON ON LIGHT HALS BARRE 55-42.0N
+  | 011-00.0E UNRELIABLE.
+AUDIO:   RACON on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable. RACON on the light Hals Barre in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East is unreliable. RACON on the light Hals Barre in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East is unreliable.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea.
+SUBJECT: 
+
+DETAILS: 
+NAVTEX:
+  | 
+  |     
+AUDIO:   null
+LINT:    subject: empty
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.type.light
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.north_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON NORTH CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.south_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the south cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON SOUTH CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the south cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.east_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the east cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON EAST CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the east cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.west_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the west cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON WEST CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the west cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.port_hand
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the port hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON PORT HAND BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the port hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.starboard_hand
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the starboard hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON STARBOARD HAND BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the starboard hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the preferred channel to port hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON PREFERRED CHANNEL TO PORT HAND
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   RACON on the preferred channel to port hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the preferred channel to starboard hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON PREFERRED CHANNEL TO STARBOARD
+  | HAND BUOY HALS BARRE 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   RACON on the preferred channel to starboard hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.safe_water
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the safe water buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON SAFE WATER BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the safe water buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.isolated_danger
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the isolated danger buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON ISOLATED DANGER BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the isolated danger buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.special
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the special buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON SPECIAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the special buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.north_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON NORTH CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.south_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the south cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON SOUTH CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the south cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.east_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the east cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON EAST CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the east cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.west_cardinal
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the west cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON WEST CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the west cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.port_hand
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON PORT HAND LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.starboard_hand
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON STARBOARD HAND LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the preferred channel to port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON PREFERRED CHANNEL TO PORT HAND
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the preferred channel to port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the preferred channel to starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON PREFERRED CHANNEL TO STARBOARD
+  | HAND LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the preferred channel to starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.safe_water
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the safe water light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON SAFE WATER LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the safe water light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.isolated_danger
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the isolated danger light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON ISOLATED DANGER LIGHT BUOY
+  | HALS BARRE 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   RACON on the isolated danger light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.special
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the special light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON SPECIAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the special light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.emergency_wreck
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the emergency wreck light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON EMERGENCY WRECK LIGHT BUOY
+  | HALS BARRE 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   RACON on the emergency wreck light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on AtoN Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON ATON HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   RACON on AtoN Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   RACON on the light in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light St. John's Point in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT ST. JOHN'S POINT
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the light St. John's Point in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param racon_status = radio_navigation.status.unreliable
+TITLE:   Denmark. The Baltic Sea. RACON unreliable.
+SUBJECT: RACON unreliable.
+DETAILS: RACON on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   RACON on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param racon_status = radio_navigation.status.inoperative
+TITLE:   Denmark. The Baltic Sea. RACON inoperative.
+SUBJECT: RACON inoperative.
+DETAILS: RACON on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is inoperative. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E INOPERATIVE.
+AUDIO:   RACON on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is inoperative.
+
+### param racon_status = empty
+TITLE:   Denmark. The Baltic Sea. RACON.
+SUBJECT: RACON.
+DETAILS: RACON on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | RACON ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E.
+AUDIO:   RACON on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+

@@ -1,0 +1,13 @@
+@let p = promulgation();
+<div class="text-xs my-1">
+  <span>{{ 'messages.promulgation.priority' | transloco }}</span
+  >: {{ p.priority }}
+  @if (p.areaName) {
+    <span class="ml-2">{{ 'messages.promulgation.area' | transloco }}:</span>
+    <span class="ml-1">{{ p.areaName }}</span>
+  }
+</div>
+
+@if (p.text) {
+  <div class="font-mono text-sm" [innerHTML]="p.text | plainTextToHtml"></div>
+}

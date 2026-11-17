@@ -1,0 +1,31 @@
+@if (!editorReady()) {
+  <textarea
+    class="block w-full rounded border border-surface-300 bg-surface-0 px-3 py-2 font-mono text-sm leading-relaxed break-words whitespace-pre-wrap text-fg focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-surface-700 dark:bg-surface-900"
+    [class.flex-1]="fill()"
+    [class.min-h-0]="fill()"
+    [class.resize-none]="fill()"
+    [class.resize-y]="!fill()"
+    [rows]="rows()"
+    [value]="value()"
+    [disabled]="disabled()"
+    [readOnly]="readOnly()"
+    [attr.aria-label]="ariaLabel()"
+    [attr.spellcheck]="false"
+    autocapitalize="off"
+    autocomplete="off"
+    autocorrect="off"
+    (input)="onInput($event)"
+    (blur)="touch.emit()"
+  ></textarea>
+}
+<!-- CodeMirror mounts here when a `language` is set. Kept in the DOM from first
+     render (empty = zero height) so the lazy mount has a stable host element. -->
+<div
+  #host
+  class="cm-host overflow-hidden rounded text-sm"
+  [class.flex-1]="fill() && editorReady()"
+  [class.min-h-0]="fill() && editorReady()"
+  [class.border]="editorReady()"
+  [class.border-surface-300]="editorReady()"
+  [class.dark:border-surface-700]="editorReady()"
+></div>

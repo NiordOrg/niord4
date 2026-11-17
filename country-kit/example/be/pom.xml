@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- The example country's backend, as far as its frontend set-up needs it: the parent names the
+         base product release the country builds on, and fe/setup.mjs reads its version and fetches
+         that release's frontend source zip through this project's Maven wrapper. A real country's
+         backend module is a full project; this one has nothing to build. The example's harness
+         (country-kit/example/run.mjs) installs niord-parent and the zip under the version
+         4.0.0-example into a scratch repository of its own, and copies the base product's wrapper
+         beside this file. -->
+    <parent>
+        <groupId>org.niord</groupId>
+        <artifactId>niord-parent</artifactId>
+        <version>4.0.0-example</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.niord.xx</groupId>
+    <artifactId>niord-xx</artifactId>
+    <packaging>pom</packaging>
+    <name>Niord example country</name>
+</project>

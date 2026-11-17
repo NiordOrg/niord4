@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="187" height="187" viewBox="-16.7 -16.7 18.7 18.7">
+  <!-- IHO S-124 ApproximatePosition adornment (CHMGD #C045D1). Drawn in addition to the NW symbol when a position is approximate. -->
+  <path d="M -11.8,-11.5 L -4.6,-4.1" fill="none" stroke="#C045D1" stroke-width="0.32" stroke-linecap="round" />
+  <path d="M -14.5,-14.45 L -14.23,-14.7 L -13.6,-14.69 L -13.25,-14.45 L -13.03,-14.07 L -13.06,-13.59 L -13.27,-13.19 L -13.81,-13.01 L -13.8,-12.59 L -13.8,-12.5" fill="none" stroke="#C045D1" stroke-width="0.64" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M -13.8,-11.7 L -13.8,-11.69" fill="none" stroke="#C045D1" stroke-width="0.64" stroke-linecap="round" />
+</svg>

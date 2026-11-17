@@ -1,0 +1,4 @@
+@let p = promulgation();
+@if (p.tweet) {
+  <div class="font-mono text-sm" [innerHTML]="p.tweet | plainTextToHtml"></div>
+}

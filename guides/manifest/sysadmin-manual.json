@@ -1,0 +1,700 @@
+[
+  {
+    "manual": "sysadmin-manual", "chapterFile": "01-Introduction.adoc", "line": 13, "file": "EfficienSea2.png", "caption": "EfficienSea2", "inline": false,
+    "shows": "Logo of the EU project EfficienSea2, where Niord began",
+    "kind": "external", "disposition": "keep", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "Archive logo, not a screen. Keep it only if the history paragraph stays (sysadmin-1 proposes replacing the EfficienSea2/DMA/Maritime Cloud history; the link efficiensea2.org is dead). The same file is in admin-manual, editor-manual, dev-guide-v2 and dev-guide-v3."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "02-Sysadmin.adoc", "line": 19, "file": "SysadminPage.png", "caption": "The Sysadmin overview", "inline": false,
+    "shows": "Sysadmin area overview: left rail and one launcher card per section",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/overview", "role": "sysadmin",
+    "steps": "Header Domain: NW; main menu Sysadmin (opens Overview)",
+    "crop": "viewport",
+    "needsData": "Sysadmin role on the selected domain. The copy has adminIntegrationPageEnabled on (prepare.sql), so the picture has 13 cards with Niord Integration, and the rail lists it; the text says when that card shows. The other setting-gated card stays hidden (off in the copy)",
+    "note": "Taken again in the finishing round (2026-11-12): 13 cards, Niord Integration among them, and the rail with the Batch Jobs count."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "03-MessageSeries.adoc", "line": 17, "file": "MessageSeriesPage.png", "caption": "The Message Series page", "inline": false,
+    "shows": "Message Series list: Series ID, Type, Sequence, Short Format, Next Number columns and row actions",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/series", "role": "sysadmin",
+    "steps": "Fixed clock (the Next Number heading names the year); Sysadmin rail: Message Series",
+    "crop": "viewport",
+    "needsData": "The copy's 10 message series (dma-nw, dma-nm, dma-fa, ...)",
+    "note": "Row actions are now Edit, Copy and Delete Message Series."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "03-MessageSeries.adoc", "line": 39, "file": "MessageSeriesEditPage.png", "caption": "The Edit Message Series drawer", "inline": false,
+    "shows": "Edit Message Series drawer for an NW series",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/series", "role": "sysadmin",
+    "steps": "Window 1280 x 880 (the drawer's height); Edit Message Series (pencil) on row dma-nw; NAVTEX Preamble typed as '${publish-date}' / 'NAV WARN ${number-year-id}', not saved",
+    "crop": "the editor drawer",
+    "needsData": "Series dma-nw (YEARLY numbering)",
+    "note": "The edit page is now a drawer; it adds the field 'Exclude messages from free-text search index' and the Insert menus of the short format and the NAVTEX preamble. Every preamble of the copy names its country (dma-nw 'DANISH NAV WARN', ako-nw 'GREENLANDIC NAV WARN'), so the spec types the base product's example over it (the same as the JSON example in 04-Domains); the typed change leaves the Next number pencil disabled and Save enabled, which the text describes."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "04-Domains.adoc", "line": 19, "file": "DomainsPage.png", "caption": "The Domains page", "inline": false,
+    "shows": "Domains list with Active, Order, Keycloak ID, Name, Time Zone columns and the Keycloak… toolbar link",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/domains", "role": "sysadmin",
+    "steps": "Sysadmin rail: Domains",
+    "crop": "viewport",
+    "needsData": "The copy's 8 domains; matching clients in the local Keycloak realm (niord-realm-local.json has them) so 'Client exists in Keycloak' shows",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "04-Domains.adoc", "line": 34, "file": "DomainsEditPage.png", "caption": "The Edit Domain drawer", "inline": false,
+    "shows": "Edit Domain drawer for NW Greenland, every field filled in, including the Keycloak Status row",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/domains", "role": "sysadmin",
+    "steps": "Window 1280 x 1320 (the drawer's height); Edit Domain (pencil) on row niord-gl-nw",
+    "crop": "the editor drawer",
+    "needsData": "Domain niord-gl-nw with a map centre, a message sort order, areas and a series; Keycloak client niord-gl-nw present",
+    "note": "niord-gl-nw rather than niord-nw: niord-nw has no map centre and no message sort order, which left an empty list box in the picture. The drawer shows 'Client \"niord-gl-nw\" exists in Keycloak'. Alt text corrected. The three Map Center fields show their values (70, -40, 4), not their names: the text names them in their order (review 2026-11-12)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "05-PromulgationTypes.adoc", "line": 31, "file": "PromulgationTypesPage.png", "caption": "The Promulgation Types page", "inline": false,
+    "shows": "Promulgation Types list with Active, Service ID, Type ID, Name, Requirement, Priority, Language, Domains, Types columns",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/promulgation", "role": "sysadmin",
+    "steps": "Sysadmin rail: Promulgation Types",
+    "crop": "viewport",
+    "needsData": "Types audio, navtex, navtexGL and twitter (in the copy), and the inactive example types 'Guide example SafetyNET' and 'Guide example Twitter' (no domain) that prepare.sql adds and the dialogs below are taken on. prepare.sql deletes the country type baleen",
+    "note": "Taken again in the finishing round (2026-11-12) without hiding a row: six types, the two example types last (priority 900), so the list holds a SafetyNET type too."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "05-PromulgationTypes.adoc", "line": 43, "file": "PromulgationTypesAddBtn.png", "caption": "The Add Promulgation Type menu", "inline": false,
+    "shows": "The Add Promulgation Type menu open, listing the backend's promulgation services",
+    "kind": "menu", "disposition": "retake", "app": "admin", "route": "/sysadmin/promulgation", "role": "sysadmin",
+    "steps": "Click Add Promulgation Type",
+    "crop": "the Add Promulgation Type button and its open menu",
+    "needsData": "None beyond the base backend (services audio, navtex, safetynet, twitter)",
+    "note": "The list comes from the backend; a country's backend may add services."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "05-PromulgationTypes.adoc", "line": 47, "file": "PromulgationTypeEditPage.png", "caption": "The Edit Promulgation Type drawer", "inline": false,
+    "shows": "Edit Promulgation Type drawer for the NAVTEX type, with the Transmitters row",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/promulgation", "role": "sysadmin",
+    "steps": "Window 1280 x 1080; Edit Promulgation Type (pencil) on the row named NAVTEX/S-53 (type navtex)",
+    "crop": "the editor drawer",
+    "needsData": "NAVTEX type navtex with domains and restrict types",
+    "note": "Now a drawer; field Requirement replaces the old default flag; per-service settings show only after the type is saved."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "05-PromulgationTypes.adoc", "line": 118, "file": "NavtexTransmitterDialog.png", "caption": "The Transmitters dialog of a NAVTEX type", "inline": false,
+    "shows": "Transmitters dialog of the NAVTEX type: transmitter rows with areas",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/sysadmin/promulgation", "role": "sysadmin",
+    "steps": "Edit Promulgation Type on row navtex; Transmitters: Manage...",
+    "crop": "the Transmitters dialog",
+    "needsData": "NAVTEX transmitters with areas (3 in the copy)",
+    "note": "Dialog title reads 'Transmitters — <type name>'."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "05-PromulgationTypes.adoc", "line": 135, "file": "SafetyNetAreaDialog.png", "caption": "The Areas dialog of a SafetyNET type", "inline": false,
+    "shows": "Areas dialog of a SafetyNET type: area rows with Active, Name, Type (shape) and Sort Order",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/sysadmin/promulgation", "role": "sysadmin",
+    "steps": "Edit Promulgation Type on the row 'Guide example SafetyNET'; Areas: Manage...",
+    "crop": "the Areas dialog",
+    "needsData": "A SafetyNET promulgation type with two areas (one NAVAREA, one Circular): prepare.sql adds the inactive example type 'Guide example SafetyNET' (typeId guide-example-safetynet, no domain) with 'Guide example NAVAREA I' and 'Guide example circle' (centre '57 10', radius 25); the spec makes them through REST only on a copy without them (support/sysadmin-1.ts)",
+    "note": "NOT TAKEN YET: the spec was a test.fixme while the backend answered 500 to GET /rest/promulgation/safetynet/areas/<typeId>/all (LazyInitializationException on PromulgationType.domains); the backend is mended (2026-11-12, SafetyNetAreaRestITTest) and the fixme is gone, so the next rig run takes it and the chapter's comment becomes an image macro. The chapter keeps the 'Picture to take' comment, which the build does not print; its SafetyNET section describes the dialog in words and reads whole without the picture (checked after the review, 2026-11-12). The old AngularJS picture is deleted, so nothing stray is published."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "05-PromulgationTypes.adoc", "line": 162, "file": "TwitterSettingsDialog.png", "caption": "The OAuth Settings dialog of a Twitter type", "inline": false,
+    "shows": "OAuth Settings dialog of a Twitter type: Format, Include thumbnail, API Key, API Secret, Access Token, Access Token Secret, filled in with invented values",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/sysadmin/promulgation", "role": "sysadmin",
+    "steps": "Edit Promulgation Type on the row 'Guide example Twitter'; Settings: Update Settings...; fill in the format (the default one) and example-... credentials; not saved",
+    "crop": "the OAuth Settings dialog",
+    "needsData": "A Twitter type without settings. The copy's type twitter cannot be used: GET /rest/promulgation/twitter-settings/twitter answers 500 (LazyInitializationException) and the dialog silently opens empty. prepare.sql adds the inactive example type 'Guide example Twitter' (typeId guide-example-twitter, no domain, no settings); the spec makes it through REST only on a copy without it (support/sysadmin-1.ts)",
+    "note": "Taken by sysadmin-1 (2026-11-11) on the example type. Inline macro fixed (image::)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "05-PromulgationTypes.adoc", "line": 128, "file": "Tweet.png", "caption": "Tweet", "inline": false,
+    "shows": "A tweet posted by Niord: message title and link",
+    "kind": "external", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "Dropped by sysadmin-1 (2026-11-11): it shows a country authority's account and logo and a link to the old system's address; the text now describes the post in words (format, thumbnail). File deleted."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "06-FiringSchedules.adoc", "line": 16, "file": "FiringSchedulesPage.png", "caption": "The Firing Schedules page with its action menu open", "inline": false,
+    "shows": "Firing Schedules list: Active, Domain, Target Domain, Target Series, with the action menu (cog) open on 'Update firing exercises...'",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/schedules", "role": "sysadmin",
+    "steps": "Sysadmin rail: Firing Schedules; open the cog (Firing schedule actions); the menu item is not clicked",
+    "crop": "viewport",
+    "needsData": "The copy's firing schedule Firing Areas -> Firing Exercises / dma-fe",
+    "note": "The cog menu holds 'Update firing exercises...'."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "06-FiringSchedules.adoc", "line": 48, "file": "FiringArea.png", "caption": "A firing area on the Areas page", "inline": false,
+    "shows": "Admin Areas page with a firing area selected; editor shows Type = Firing area and the extent map",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/admin/areas", "role": "admin",
+    "steps": "Window 1280 x 1120 (the area form with its whole Extent map); Admin rail: Areas; Filter areas: 'Bornholm', and wait until the tree keeps only Denmark > The Baltic Sea > the three Bornholm areas; select 'ES D 138 Bornholm N.'",
+    "crop": "viewport (ends below the form's Save area)",
+    "needsData": "Firing areas (35 in the copy)",
+    "note": "The old image had a red box round Type; no call-outs in the new shots. Kept in the sysadmin chapter's set-up (the admin manual's Areas chapter describes the type too). Taken as admin; the extent map fits the area, tiles from the rig's cache. Retaken in a taller window: in 1280 x 800 the bottom edge cut through the map and its Edit / Edit as text buttons. Retaken after the review (2026-11-12): the picture had been taken before the filter narrowed the tree, so it listed The Sound, Kattegat and others beside 'Bornholm'; the test now waits for the narrowed tree."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "06-FiringSchedules.adoc", "line": 59, "file": "FiringAreaMessages.png", "caption": "The firing area messages of the Firing Areas domain", "inline": false,
+    "shows": "Message list (table view) of the Firing Areas domain: one firing area message per area, grouped by area",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/messages/table", "role": "editor",
+    "steps": "Session domain niord-fa (Firing Areas); Messages (table view)",
+    "crop": "viewport",
+    "needsData": "Published Miscellaneous NM firing-area messages in niord-fa (dma-fa series)",
+    "note": "sysadmin-1 took the list without a details drawer: the chapter's point is one message per firing area."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "06-FiringSchedules.adoc", "line": 63, "file": "FiringAreaSchedule.png", "caption": "Firing Area Schedule", "inline": false,
+    "shows": "Firing Area Schedule page for one date: day navigator, area filter, area rows with firing periods, map",
+    "kind": "page", "disposition": "drop", "app": "admin", "route": "/schedule", "role": "editor",
+    "steps": "Header Domain: Firing Areas; main menu Schedule; set Schedule Date to a date with firing periods (Previous day / Next day)",
+    "crop": "viewport",
+    "needsData": "Firing periods on the chosen date: niord_test's periods end on 2026-10-01, so pick an earlier date or add periods; firing schedule with domain niord-fa",
+    "note": "Dropped by sysadmin-1 (2026-11-11): the Schedule page is described, with this picture, in the editor manual's Firing Area Schedule chapter (editor-manual/FiringAreaSchedule.png, manifest/editor-manual.json); the sysadmin chapter links there. The file under sysadmin-manual/images is deleted."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "06-FiringSchedules.adoc", "line": 110, "file": "FiringScheduleEditPage.png", "caption": "The Edit Firing Schedule drawer", "inline": false,
+    "shows": "Edit Firing Schedule drawer: Domain, Target Domain, Target Message Series, Scheduled Days, Generate firing exercises",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/schedules", "role": "sysadmin",
+    "steps": "Window 1280 x 560 (the form's height); Edit Schedule (pencil) on the firing schedule row",
+    "crop": "the editor drawer",
+    "needsData": "The copy's firing schedule. Its Scheduled Days is empty, which the text explains (the setting firingExerciseScheduleDays, 30 by default, applies); not changed",
+    "note": "Labels changed: 'Scheduled Days', 'Generate firing exercises'."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "07-Dictionaries.adoc", "line": 15, "file": "DictionariesPage.png", "caption": "The Dictionaries page", "inline": false,
+    "shows": "Dictionaries page with a dictionary selected: Key and Value columns",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/dictionaries", "role": "sysadmin",
+    "steps": "Sysadmin rail: Dictionaries; dictionary selector: message",
+    "crop": "viewport",
+    "needsData": "The copy's dictionaries (pdf, aton, template, mail, message, web)",
+    "note": "DK rows in the web dictionary override English UI text at run time; check the shot for Danish wording."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "07-Dictionaries.adoc", "line": 75, "file": "DictionariesExtendedPage.png", "caption": "The aton dictionary with its long values", "inline": false,
+    "shows": "Dictionaries page with Show Extended ticked: the Long Value column",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/dictionaries", "role": "sysadmin",
+    "steps": "Dictionary selector: aton (Show Extended ticks itself); Filter: cardinal",
+    "crop": "viewport",
+    "needsData": "Long values in the aton dictionary (204 in the copy)",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "07-Dictionaries.adoc", "line": 84, "file": "DictionaryEntryEditPage.png", "caption": "The Edit Entry drawer", "inline": false,
+    "shows": "Edit Entry drawer: Key and one value per language",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/dictionaries", "role": "sysadmin",
+    "steps": "Window 1280 x 380 (the form's height); Dictionary selector: mail; Filter: mail.dear.user; Edit Entry (pencil) on that row",
+    "crop": "the editor drawer",
+    "needsData": "The entry mail.dear.user of the mail dictionary",
+    "note": "Now a drawer."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "07-Dictionaries.adoc", "line": 100, "file": "DictionaryEntryExtendedEditPage.png", "caption": "The Edit Entry drawer of an extended entry", "inline": false,
+    "shows": "Edit Entry drawer with the Long Version and AtoN filter fields",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/dictionaries", "role": "sysadmin",
+    "steps": "Window 1280 x 560; Dictionary selector: aton; Filter: aton.function.buoy.north_cardinal; Edit Entry on that row",
+    "crop": "the editor drawer",
+    "needsData": "An aton entry with long values",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 18, "file": "ParameterTypesPage.png", "caption": "The Parameter Types page, filtered on \"obstruction\"", "inline": false,
+    "shows": "Parameter Types list filtered on 'obstruction': the composite type obstruction and the list types obstruction_report_list and obstruction_type_list, with Name, Type, Values and row actions",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/param-types", "role": "sysadmin",
+    "steps": "Sysadmin rail: Parameter Types; Filter: obstruction",
+    "crop": "viewport",
+    "needsData": "The copy's composite type obstruction (four parameters) and list types obstruction_report_list (observed, reported) and obstruction_type_list (obstruction, ground, stone)",
+    "note": "Standard types have no row actions. Filtered on 'obstruction' since the review (2026-11-12): on 'buoy' the values of buoy_function_list ended with two entries that both read 'buoy' (aton.function.buoy and aton.function.aton, two keys of the aton dictionary with the same English text), which looked like one value listed twice."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 45, "file": "ParameterTypeExample.png", "caption": "The Wreck parameter as an editor fills it in", "inline": false,
+    "shows": "Template execution: the 'Wreck' composite parameter (Vessel Type, Depth over wreck (m), Visible above sea surface)",
+    "kind": "panel", "disposition": "replace", "app": "admin", "route": "/editor/execute-template", "role": "editor",
+    "steps": "Header Domain: NW; Editor (start screen); Select NW template…: search 'Wreck', pick it; on Execute templates capture the Wreck parameter group",
+    "crop": "the Wreck parameter group (the first app-template-param-field)",
+    "needsData": "Template category Wreck using parameter type wreck (vessel_type_list, number, boolean); domain NW",
+    "note": "Replace: the old Template Execution dialog is now the full page 'Execute templates'. The picture keeps to the parameter group, the chapter's point; the live preview beside it (English since english.sql's audio texts) is not in it and no longer hidden. Same file name kept: the manifest has no newFile, and the chapter references ParameterTypeExample.png."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 58, "file": "ParameterTypeAddBtn.png", "caption": "The New Parameter Type menu", "inline": false,
+    "shows": "The New Parameter Type menu open: List Param Type, Composite Param Type",
+    "kind": "menu", "disposition": "retake", "app": "admin", "route": "/sysadmin/param-types", "role": "sysadmin",
+    "steps": "Click New Parameter Type",
+    "crop": "the New Parameter Type button and its open menu",
+    "needsData": "none",
+    "note": "The text says 'List Parameter Type' / 'Composite Parameter Type'; the menu reads 'List Param Type' / 'Composite Param Type'."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 67, "file": "ParameterTypesListEditPage.png", "caption": "The Edit Parameter Type drawer of a list type", "inline": false,
+    "shows": "Edit Parameter Type drawer for a list type: Selected Values with Move up / Move down / Remove, and the aton dictionary's available entries filtered on 'buoy'",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/param-types", "role": "sysadmin",
+    "steps": "Window 1280 x 720; Edit (pencil) on row buoy_function_list; in the right panel choose the dictionary aton and filter 'buoy'",
+    "crop": "the editor drawer",
+    "needsData": "List type buoy_function_list with aton dictionary entries",
+    "note": "Now a drawer; ordering by Move up / Move down. buoy_function_list rather than vessel_type_list: a longer list, and its dictionary has unselected buoy entries to show on the right. The model language picker shows only with more than one model language (one in the copy)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 77, "file": "DragHandle.png", "caption": "Drag Handle", "inline": true,
+    "shows": "Drag-handle icon for reordering list values",
+    "kind": "icon", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "List values are no longer dragged: they move with the Move up / Move down buttons (list-values-editor.html:41). Describe the arrows in the text."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 81, "file": "ParameterTypesCompositeEditPage.png", "caption": "The Edit Parameter Type drawer of a composite type", "inline": false,
+    "shows": "Edit Parameter Type drawer for a composite type: parameter table with Parameter ID, Name, Type and row actions",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/param-types", "role": "sysadmin",
+    "steps": "Window 1280 x 500; Filter: wreck; Edit (pencil) on row wreck",
+    "crop": "the editor drawer",
+    "needsData": "Composite type wreck",
+    "note": "Nesting stops at one level."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 88, "file": "ParameterTypesCompositeDialog.png", "caption": "The Edit Parameter dialog", "inline": false,
+    "shows": "Edit Parameter dialog (the pencil of a row; Add Parameter opens the same form as 'New Parameter'): Parameter ID, Name per language, Type, Mandatory, Position List",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/sysadmin/param-types", "role": "sysadmin",
+    "steps": "Edit on row wreck; in the parameter table click Edit on a row",
+    "crop": "the Edit Parameter dialog",
+    "needsData": "Composite type wreck",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 105, "file": "ParameterTypeExample2.png", "caption": "The Buoy parameter repeated for two positions", "inline": false,
+    "shows": "Template execution of 'Buoy off station' with two positions: the positions' map and list, and the Buoy parameter once per position",
+    "kind": "panel", "disposition": "replace", "app": "admin", "route": "/editor/execute-template", "role": "editor",
+    "steps": "Window 1280 x 1560; Header Domain: NW; Editor; Select NW template…: 'Buoy off station'; the template's Positions: Edit as text, two points (56° 05'N 011° 30'E and 56° 10'N 011° 40'E), Save geometry (the form only; nothing executed)",
+    "crop": "from the Positions map to the second Buoy parameter, page as it is (no backdrop)",
+    "needsData": "Template category Buoy off station with a position-list parameter; two positions entered in the shot",
+    "note": "Replace: the old dialog is now the Execute templates page. The live preview is outside the picture and no longer hidden (as for ParameterTypeExample.png). Map tiles from the rig's cache."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "08-ParameterTypes.adoc", "line": 109, "file": "DragHandle.png", "caption": "Drag Handle", "inline": true,
+    "shows": "Drag-handle icon for reordering nested parameters",
+    "kind": "icon", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "Nested parameter rows show a non-draggable icon (aria-label 'Reorder'); they are ordered with Move up / Move down (template-params-field.html:17-49)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "09-ScriptResources.adoc", "line": 15, "file": "ScriptResourcesPage.png", "caption": "Script Resources", "inline": false,
+    "shows": "Script Resources list: Type (fm/js), Path and row actions",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/script-resources", "role": "sysadmin",
+    "steps": "Sysadmin rail: Script Resources",
+    "crop": "viewport",
+    "needsData": "The copy's 86 script resources (none on an s124/secom path)",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "09-ScriptResources.adoc", "line": 263, "file": "ScriptResourcesAddBtn.png", "caption": "Add Script Resource Button", "inline": false,
+    "shows": "The Add Script Resource menu open: Freemarker Template, JavaScript File",
+    "kind": "menu", "disposition": "retake", "app": "admin", "route": "/sysadmin/script-resources", "role": "sysadmin",
+    "steps": "Click Add Script Resource",
+    "crop": "the Add Script Resource button and its open menu",
+    "needsData": "none",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "09-ScriptResources.adoc", "line": 267, "file": "ScriptResourceEditor.png", "caption": "Script Resource Editor", "inline": false,
+    "shows": "Edit Script Resource drawer: Path, Content code editor, History... button",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/script-resources", "role": "sysadmin",
+    "steps": "Edit (pencil) on a Freemarker row (or deep link ?path=<path>)",
+    "crop": "the editor drawer",
+    "needsData": "A short .ftl script resource without second-language text or host names: templates/tmpl/navtex.ftl",
+    "note": "The ?path= deep link opens the editor (script-resources-page.ts:127). message-list-pdf-footer.ftl was refused: it holds a host name the guard reads as a key."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "09-ScriptResources.adoc", "line": 292, "file": "ScriptResourceHistory.png", "caption": "Script Resource History Dialog", "inline": false,
+    "shows": "Revision History dialog with two revisions ticked and their diff; the Source column shows Import for the newer revision and nothing for the older one, made before the source was recorded",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/sysadmin/script-resources", "role": "sysadmin",
+    "steps": "Edit templates/messages/nm-accumulated-report-pdf.ftl (deep link ?path=); History...; tick both revisions",
+    "crop": "the Revision History dialog",
+    "needsData": "A path with a revision whose source is recorded: in the copy only templates/messages/nm-accumulated-report-pdf.ftl (an Import revision of 2026-11-02 and an older one without source). No revision with the source Editor exists, and making one means saving a script resource",
+    "note": "The User column shows who saved: personal data unless scrubbed. Both revisions read Version 1: the application gives a resource's first niord-ng change the version number of its previous entry (SCRIPT9 in be/docs/potential-errors.md). The text does not promise distinct numbers: it says two revisions can share one and their times tell them apart (review 2026-11-12). The copy has no other path with an Import revision to show instead."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "10-Categories.adoc", "line": 17, "file": "CategoriesPage.png", "caption": "Categories", "inline": false,
+    "shows": "Categories page: category tree with toolbar and the editor panel of the selected category",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/categories", "role": "sysadmin",
+    "steps": "Sysadmin rail: Categories; expand Light buoy and select it (a plain category with an AtoN filter)",
+    "crop": "viewport",
+    "needsData": "The copy's 45 categories (37 templates)",
+    "note": "TEMPLATE nodes carry a Template badge in the tree."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "10-Categories.adoc", "line": 80, "file": "CategoryEditorPanel.png", "caption": "Category Editor Page", "inline": false,
+    "shows": "Edit category panel of a TEMPLATE: Domains, Standard template fields, Template parameters, Script resources (both paths whole), Example template message, Test…",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/categories", "role": "sysadmin",
+    "steps": "Select the template 'Light buoy unlit' in the tree, in a window 1000 x 2400 px: below 1024 px the editor sits under the tree at full width, so the script resource paths are not cut, and the window shows the whole panel",
+    "crop": "the category editor panel",
+    "needsData": "Template Light buoy unlit with domains, template parameters, script resources and an example message",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "10-Categories.adoc", "line": 133, "file": "CategoryStdTemplateFields.png", "caption": "Standard Template Fields", "inline": false,
+    "shows": "Template execution of 'Light buoy unlit': the Base fields card with the standard template fields type, promulgation and areas (a per-position template asks for positions in its parameter card)",
+    "kind": "panel", "disposition": "replace", "app": "admin", "route": "/editor/execute-template", "role": "editor",
+    "steps": "Header Domain: NW; Editor; Select NW template…: 'Light buoy unlit'; capture the Base fields card",
+    "crop": "the Base fields card",
+    "needsData": "Template Light buoy unlit with standard template fields type, promulgation, areas, positions; nothing entered (the card as the page opens it)",
+    "note": "Replace: the old Template Execution dialog (with a red call-out box) is now the Execute templates page, where these fields form the 'Base fields' card ('Configured in Sysadmin')."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "10-Categories.adoc", "line": 148, "file": "CategoryTemplateParams.png", "caption": "Category Template Parameters", "inline": false,
+    "shows": "Template execution of 'Light buoy unlit': the Template parameters card with one position typed in and its light buoy parameter (Light Buoy Type, Light Buoy Name), left empty",
+    "kind": "panel", "disposition": "replace", "app": "admin", "route": "/editor/execute-template", "role": "editor",
+    "steps": "As for CategoryStdTemplateFields; Edit as text: 55° 41.0'N - 012° 36.0'E; Save geometry; capture the Template parameters card (window 1100 px tall)",
+    "crop": "the Template parameters card",
+    "needsData": "Template Light buoy unlit with parameter type light_buoy_by_function",
+    "note": "Replace: same page as above, Template parameters card. The page's audio preview (outside the card) is English since english.sql's audio texts and is no longer hidden; the picture keeps to the card, the chapter's point."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "10-Categories.adoc", "line": 163, "file": "DragHandle.png", "caption": "Drag Handle", "inline": true,
+    "shows": "Drag-handle icon of a script-resource row in the category editor",
+    "kind": "icon", "disposition": "retake", "app": "admin", "route": "/sysadmin/categories", "role": "sysadmin",
+    "steps": "Select template 'Light buoy unlit'; locate the first Script resources row",
+    "crop": "the grip icon of the first Script resources row (about 16 px)",
+    "needsData": "A template with script resources",
+    "note": "The handle is now the lucide grip icon (script-resources-field.html:15) and rows also have Move up / Move down; the trash icon removes the row. Same file name is used by the two dropped ch08 references and by editor-manual/DragHandle.png."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "11-PrintReports.adoc", "line": 15, "file": "PrintReportsPage.png", "caption": "Print Reports Page", "inline": false,
+    "shows": "Print Reports list: Report ID, Name, Sort Order, Template Path, Domains",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/reports", "role": "sysadmin",
+    "steps": "Sysadmin rail: Print Reports",
+    "crop": "viewport",
+    "needsData": "The copy's 9 reports (standard, draft, public plus DK reports)",
+    "note": "The base bootstrap gives three reports; the DK ones are data of the copy."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "11-PrintReports.adoc", "line": 25, "file": "PrintDialog.png", "caption": "Print Dialog", "inline": false,
+    "shows": "Print dialog with the NM report selected and its week/year parameters",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/messages/table", "role": "editor",
+    "steps": "Header Domain: NM; Messages (table); action menu: Print...; Report: NM report; type week 46 and year 2026 (the rig's fixed day; the defaults follow the server's clock)",
+    "crop": "the Print dialog",
+    "needsData": "NM messages and report nm-report with week/year parameters",
+    "note": "Name also used by editor-manual/PrintDialog.png (separate folder)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "11-PrintReports.adoc", "line": 32, "file": "PrintReportExample.png", "caption": "Sample Print Report", "inline": false,
+    "shows": "First page of a PDF printed with the base product's Standard report: Generated, Criteria, Result and the table of contents",
+    "kind": "pdf", "disposition": "retake", "app": "admin", "route": "/rest/message-reports/report.pdf?report=standard", "role": "editor",
+    "steps": "Fetch report.pdf (domain niord-nw, status PUBLISHED, lang en, report standard); render page 1 of the PDF",
+    "crop": "page 1 of the PDF, its content",
+    "needsData": "Published NW messages",
+    "note": "Not a browser capture: the PDF's first page is drawn with PDF.js. The copy's NM report was refused: its template prints the date the Danish way ('11. November 2026'); the base product's Standard report is shown instead."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "11-PrintReports.adoc", "line": 80, "file": "PrintReportEditPage.png", "caption": "Print Report Editor Page", "inline": false,
+    "shows": "Edit Print Report drawer: Report ID, Name, Sort Order, Template Path, Domains, JSON properties and parameters, Test Report",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/reports", "role": "sysadmin",
+    "steps": "Edit Report (pencil) on row nm-report, in a window 1240 px tall (the drawer is as tall as the window)",
+    "crop": "the editor drawer",
+    "needsData": "Report nm-report with parameters JSON",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "12-MailQueue.adoc", "line": 11, "file": "MailQueuePage.png", "caption": "Mail Queue", "inline": false,
+    "shows": "Mail Queue list with filters, retention note, Created/Status/Sender/Recipients/Subject, filtered on the subject of the rig's own mail (one row, status Sent)",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/mails", "role": "sysadmin",
+    "steps": "Sysadmin rail: Mail Queue; Subject: 'warnings (guides)', a part of the subject 'Navigational warnings (guides)' that shows whole in the field (the spec first sends the rig's own mail to guides@example.org when the queue has none, waits through the REST interface until the queue has sent it, up to 150 s since the queue sends once a minute, and shows that mail's Created and Sent times moved by one amount so that it was queued at the rig's fixed clock, GUIDES_NOW, in the browser only)",
+    "crop": "viewport",
+    "needsData": "The rig's own mail (ScheduledMail is empty in niord_test; on the rig, other writers' mailing-list mails fill it too, which the subject filter leaves out); mailDeleteAfterDays=30 shows the retention note. The sender is the editor's address as Niord copied it from Keycloak: on the shared Keycloak editor@niord.local, not example.org (data-requests.md, sysadmin-2). Pending and Error mails would show more statuses",
+    "note": "Read-only page, 20 rows per page, icon-only Refresh button. Retaken after the review (2026-11-12): the final run had shown the mail Pending, as it was taken right after the mail was queued on a fresh copy; the test now waits for Sent and checks the row says so."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "12-MailQueue.adoc", "line": 91, "file": "MailQueueDetails.png", "caption": "Mail Details Dialog", "inline": false,
+    "shows": "Mail details dialog 'Mail <id> (Sent)': From (the editor), To guides@example.org, Created, Sent, Subject, Details (the mail of one published warning in a sandboxed frame)",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/sysadmin/mails", "role": "sysadmin",
+    "steps": "As MailQueuePage (the mail sent, the filter 'warnings (guides)', the times moved to GUIDES_NOW in the browser only); Open mail details on that mail; the dialog's title must read 'Mail <id> (Sent)'",
+    "crop": "the mail details dialog",
+    "needsData": "A sent mail with an example.org recipient (the spec sends the rig's own one when the queue has none). The sender is the editor's address as Keycloak holds it, editor@niord.local (kept, the owner's decision)",
+    "note": "Taken since the guard leaves out the rig's own script errors in the sandboxed frame (rig-support); the chapter's comment is now the image macro (width 400). Retaken after the review (2026-11-12): the final run had shown 'Mail <id> (Pending)' with a Sent time (the test had rewritten the send date of a mail not yet sent); it now waits until the mail is sent. The Sent row shows the mail's send date, the time it was due to be sent, which the application shows for a pending mail too (reported)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "13-Integration.adoc", "line": 22, "file": "IntegrationNwImport.png", "caption": "Legacy NW Import", "inline": false,
+    "shows": "DK legacy NW import panel",
+    "kind": "panel", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "DK-only legacy import (niord-dk); chapter 13 becomes Niord Integration."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "13-Integration.adoc", "line": 35, "file": "IntegrationFaImport.png", "caption": "Legacy Firing Area Import", "inline": false,
+    "shows": "DK legacy firing-area import panel",
+    "kind": "panel", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "DK-only; chapter 13 becomes Niord Integration."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "13-Integration.adoc", "line": 47, "file": "IntegrationAtonImport.png", "caption": "Legacy AtoN Import", "inline": false,
+    "shows": "DK legacy AtoN (Afmærkningsregister) import panel",
+    "kind": "panel", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "DK-only; chapter 13 becomes Niord Integration."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "14-Settings.adoc", "line": 11, "file": "SettingsPage.png", "caption": "Settings", "inline": false,
+    "shows": "Settings list: Key, Description, Value, filtered on 'map' (the map settings)",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/settings", "role": "sysadmin",
+    "steps": "Sysadmin rail: Settings; Filter: 'map' (not 'mail': mailSender shows the address niord@e-navigation.net, the code default, which is not on example.org)",
+    "crop": "viewport",
+    "needsData": "The copy's settings; no secom*/s124 key visible in the shot (filter so)",
+    "note": "Unfiltered, the list may show declared secom* settings: keep SECOM out of the shot."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "14-Settings.adoc", "line": 167, "file": "SettingEditPage.png", "caption": "Setting Editor Page", "inline": false,
+    "shows": "Edit Setting drawer: Key, Description, Value",
+    "kind": "panel", "disposition": "retake", "app": "admin", "route": "/sysadmin/settings", "role": "sysadmin",
+    "steps": "Window 1280 x 380 (the form's height, so the drawer has no empty half below its fields); Filter: 'mailDeleteAfterDays'; Edit Setting (pencil)",
+    "crop": "the editor drawer",
+    "needsData": "Setting mailDeleteAfterDays (30 in the copy)",
+    "note": "The Description field is one line and cuts the description; the text gives it whole."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "15-BatchJobs.adoc", "line": 13, "file": "BatchJobsPage.png", "caption": "Batch Jobs Page", "inline": false,
+    "shows": "Batch Jobs page: the job cards on the left, script-executor's selected, its runs on the right (job number, user, data file, logs…, start, end and status of each execution)",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/batch/script-executor", "role": "sysadmin",
+    "steps": "The spec runs a short reading script through Execute JavaScript's call (data file guide-example-series-ids.js) once, found again on later runs as long as its processor log records its one execution only; /sysadmin/batch/script-executor; the runs' times all moved by one amount so that the oldest run starts at GUIDES_NOW (in the browser only; the same times for that run in the three page pictures)",
+    "crop": "viewport",
+    "needsData": "The runs the spec starts. The engine keeps its runs in memory, so after a backend start the page lists the runs since it, and the spec starts the ones it needs again",
+    "note": "Taken in the finishing round (2026-11-12). The page lists every run of the script job on the copy, so it also shows the stopped runs of the waiting script from earlier runs of the spec. The repo-import card was hidden while the status counted it '0 executions' once JBeret had dropped the job's definition from its cache (BATCH6), and the test skipped while BatchData held an instance id twice (BATCH4); the backend is mended (2026-11-13, BatchServiceStatusTest, BatchServiceGapITTest), so the next rig run takes the three page pictures again, with every job card shown. The card's '1 executions' is the application's plural (reported). Since the review (2026-11-12) the times are anchored on the oldest run, not the newest, so that Job no. 3 reads 10:00 AM in all three page pictures."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "15-BatchJobs.adoc", "line": 50, "file": "BatchJobRunning.png", "caption": "Batch Jobs Running", "inline": false,
+    "shows": "A started execution of the waiting script with its full progress bar and stop link; '1 running' on the job card and 1 on the rail's Batch Jobs badge; the earlier runs below",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/batch/script-executor", "role": "sysadmin",
+    "steps": "The spec starts a script that only waits 40 s (data file guide-example-wait.js) through Execute JavaScript's call; /sysadmin/batch/script-executor while it runs (times moved as on BatchJobsPage, the oldest run at GUIDES_NOW, in the browser); afterwards the spec stops the run (the stop link's call)",
+    "crop": "viewport",
+    "needsData": "As BatchJobsPage. Every take adds one run of the waiting script (a running run can only be had by starting one)",
+    "note": "Taken in the finishing round (2026-11-12). The script job reports its progress as 100 once it has read its script, so the bar is full; the chapter says so. The shot does not wait for the progress bar to go (busy: false)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "15-BatchJobs.adoc", "line": 56, "file": "BatchJobRestart.png", "caption": "Batch Jobs Stopped", "inline": false,
+    "shows": "The newest run of the waiting script stopped, with the restart and abandon links; the earlier runs below",
+    "kind": "page", "disposition": "retake", "app": "admin", "route": "/sysadmin/batch/script-executor", "role": "sysadmin",
+    "steps": "The newest run of the waiting script (stopped by BatchJobRunning, or started and stopped here when there is none); wait until the engine reports it stopped, which is when its 40 s wait ends; /sysadmin/batch/script-executor (times moved as on BatchJobsPage, the oldest run at GUIDES_NOW); restart and abandon are not clicked",
+    "crop": "viewport",
+    "needsData": "As BatchJobsPage: a stopped, restartable run that is not a bootstrap job",
+    "note": "Taken in the finishing round (2026-11-12). The stop takes effect when the script's wait ends, so the test waits about 40 s."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "15-BatchJobs.adoc", "line": 68, "file": "BatchJobLogDialog.png", "caption": "Batch Jobs Log Files", "inline": false,
+    "shows": "Batch Job Log Files dialog of the reading script's run: its two log files, the processor's shown, with the run's one execution of the script and how long it ran",
+    "kind": "dialog", "disposition": "retake", "app": "admin", "route": "/sysadmin/batch/script-executor", "role": "sysadmin",
+    "steps": "logs… on the newest run of guide-example-series-ids.js; select BatchScriptExecutorProcessorLog.txt (its time stamp shown at GUIDES_NOW in UTC, the server's time zone, in English, rewritten in the browser: the server writes it in its own locale's format); the log must record exactly one execution",
+    "crop": "the log dialog",
+    "needsData": "As BatchJobsPage: the script job's run, whose logs name no home folder (the repository import's log does). A new run's folder must be new: the guides home keeps an earlier copy's execution folders (job numbers start again on a new copy, and a run appends its log to a folder of the same number). make-guides-db.sh empties the home's batch-jobs folder; the spec also removes, before it starts a run, the script job's execution folders that no BatchData row of the copy holds, and passes by a run whose log records two executions",
+    "note": "Taken in the finishing round (2026-11-12). Retaken after the review (2026-11-12): the final run's log held two executions of the script, the earlier copy's job no. 3 and this copy's, in one folder. The chapter now says the log's times are the server's (its time zone and format), as the picture's 9:00 AM UTC differs from the list's 10:00 AM."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "16-MailingLists.adoc", "line": 16, "file": "MailingListsPage.png", "caption": "Mailing Lists", "inline": false,
+    "shows": "Mailing Lists list: Active, ID, Name, Description, #Recipients",
+    "kind": "page", "disposition": "drop", "app": "admin", "route": "/admin/mailing-lists", "role": "admin",
+    "steps": "Admin rail: Mailing Lists",
+    "crop": "viewport",
+    "needsData": "The copy's 9 mailing lists with recipients replaced by example.org users/contacts",
+    "note": "Dropped: the two Mailing Lists chapters are merged into admin-manual 08-MailingLists (the page is a section of the Admin area); this chapter keeps a short section with its ids that points there. The picture is admin-manual/MailingListsPage.png; this folder's old file is deleted."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "16-MailingLists.adoc", "line": 31, "file": "MailingListEditPage.png", "caption": "Mailing List Editor Page", "inline": false,
+    "shows": "Edit Mailing List drawer: ID, Active, Name, Description and the collapsed trigger cards",
+    "kind": "panel", "disposition": "drop", "app": "admin", "route": "/admin/mailing-lists", "role": "admin",
+    "steps": "Edit Mailing List (pencil) on a list with both trigger types",
+    "crop": "the editor drawer",
+    "needsData": "A mailing list with a scheduled and a status-change trigger",
+    "note": "Dropped here, moved: the chapter is merged into admin-manual 08-MailingLists, whose entry MailingListEditPage.png (admin-manual.json) takes the picture. This folder's old file is deleted."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "16-MailingLists.adoc", "line": 91, "file": "MailingListScheduledTrigger.png", "caption": "Scheduled Mailing List Trigger", "inline": false,
+    "shows": "Scheduled trigger card expanded: Schedule, Time, Time Zone, Message Query, subject and body",
+    "kind": "panel", "disposition": "drop", "app": "admin", "route": "/admin/mailing-lists", "role": "admin",
+    "steps": "Edit Mailing List; Show details on the Scheduled Trigger card",
+    "crop": "the expanded trigger card",
+    "needsData": "A scheduled trigger with a time zone (3 scheduled triggers in the copy)",
+    "note": "Dropped here, moved: the chapter is merged into admin-manual 08-MailingLists, whose entry MailingListScheduledTrigger.png (admin-manual.json) takes the picture. This folder's old file is deleted."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "16-MailingLists.adoc", "line": 119, "file": "MailingListStatusChangeTrigger.png", "caption": "Status Change Mailing List Trigger", "inline": false,
+    "shows": "Status Change trigger card expanded: Statuses, Message Filter, subject and body",
+    "kind": "panel", "disposition": "drop", "app": "admin", "route": "/admin/mailing-lists", "role": "admin",
+    "steps": "Edit Mailing List; Show details on the Status Change Trigger card",
+    "crop": "the expanded trigger card",
+    "needsData": "A status-change trigger (12 in the copy)",
+    "note": "Dropped here, moved: the chapter is merged into admin-manual 08-MailingLists, whose entry MailingListStatusChangeTrigger.png (admin-manual.json) takes the picture. This folder's old file is deleted."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "16-MailingLists.adoc", "line": 145, "file": "MailingListTest.png", "caption": "Mailing List Test", "inline": false,
+    "shows": "Test Trigger Execution dialog after Execute: To/Subject list and the selected mail's rendered body",
+    "kind": "dialog", "disposition": "drop", "app": "admin", "route": "/admin/mailing-lists", "role": "admin",
+    "steps": "Edit Mailing List; Test trigger on a card; pick a Test Message; Execute; select the first mail",
+    "crop": "the Test Trigger Execution dialog",
+    "needsData": "A list whose recipients are example.org users/contacts; published NW messages for the body",
+    "note": "Dropped here, moved: the chapter is merged into admin-manual 08-MailingLists, whose entry MailingListTest.png (admin-manual.json) takes the picture. This folder's old file is deleted."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 40, "file": "KeycloakClients.png", "caption": "Keycloak Clients", "inline": false,
+    "shows": "Keycloak admin console: Clients of realm niord, searched for 'niord': all ten rows, the eight domains' clients (niord-nw among them), niord-client-master ('Master', the bootstrap's master domain, which this deployment no longer has) and niord-web",
+    "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/clients", "role": "sysadmin",
+    "steps": "Log in to the Keycloak admin console (local admin); realm niord; Clients; search 'niord'; in a window 1080 px tall, so the ten rows show",
+    "crop": "viewport (1280 x 1080)",
+    "needsData": "Local realm from be/keycloak/niord-realm-local.json (domain clients niord-nw, niord-nm, ...)",
+    "note": "Keycloak's own look, not Niord styling; check the console's hash routes against the running version. The text explains niord-client-master in one paragraph below the picture (review 2026-11-12): the copy has no domain 'Master' (the Domains page lists eight), the realm keeps its client."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 60, "file": "KeycloakClientRoles.png", "caption": "Keycloak Client Roles", "inline": false,
+    "shows": "Roles tab of client niord-nw: admin, editor, sysadmin, user",
+    "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/clients", "role": "sysadmin",
+    "steps": "Clients; search niord-nw; niord-nw; Roles tab",
+    "crop": "viewport",
+    "needsData": "Local realm",
+    "note": "The shared local Keycloak's niord-* clients have no publication-curate role (its volume predates the realm file's role; only test clients such as xr-nw have it), and Niord does not create it for a new domain: the text says to add it by hand."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 80, "file": "KeycloakUsers.png", "caption": "Keycloak Users", "inline": false,
+    "shows": "Users list of realm niord",
+    "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/users", "role": "sysadmin",
+    "steps": "Realm niord; Users",
+    "crop": "viewport",
+    "needsData": "Local realm users sysadmin, admin, editor, user. The shared local Keycloak holds their addresses on niord.local, which the owner's ruling allows (kept, as in the Mail Queue pictures); no retake is pending",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 106, "file": "KeycloakGroups.png", "caption": "Keycloak Groups", "inline": false,
+    "shows": "Groups list of realm niord",
+    "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/groups", "role": "sysadmin",
+    "steps": "Realm niord; Groups",
+    "crop": "viewport",
+    "needsData": "Local realm groups (AOK Editor, Admins, Case Officers, Editors, FE Editors, MAS duty, Sysadmin); the group MAS-vagt renamed MAS duty in the shared Keycloak (fe/guides-shots/README.md)",
+    "note": "The text lists the groups of the realm in the pictures (the shared Keycloak, its MAS-vagt renamed MAS duty), all seven with their roles as the console has them."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 111, "file": "KeycloakGroupRoles.png", "caption": "Keycloak Group Roles", "inline": false,
+    "shows": "Role mapping of group MAS duty showing the editor role of client niord-nw; the tab Role mapping readable",
+    "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/groups", "role": "sysadmin",
+    "steps": "Groups; MAS duty; close the console's menu (the navigation button), or the tab scroller cuts the Role mapping tab; Role mapping tab",
+    "crop": "viewport",
+    "needsData": "Group MAS duty with the niord-nw editor role (local realm)",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 130, "file": "KeycloakClientMapper.png", "caption": "Keycloak Client Mapper", "inline": false,
+    "shows": "User Attribute mapper 'editor fields NW' (attribute and claim editorFieldsNw) on client niord-web",
+    "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/clients", "role": "sysadmin",
+    "steps": "Clients; niord-web; Client scopes; niord-web-dedicated; mapper 'editor fields NW'; the focus taken off the User Attribute field the console focuses",
+    "crop": "viewport",
+    "needsData": "Mapper editorFieldsNw on niord-web (in the local realm)",
+    "note": "The picture ends below 'Add to userinfo', above the form's Save: the text is about the attribute and the claim. Retaken after the review (2026-11-12) without the focus ring on User Attribute."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 137, "file": "KeycloakGroupAttribute.png", "caption": "Keycloak Group Attribute", "inline": false,
+    "shows": "Attributes tab of group MAS duty with its editorFieldsNw JSON value, whole",
+    "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/groups", "role": "sysadmin",
+    "steps": "Groups; MAS duty; close the console's menu (the navigation button), as for KeycloakGroupRoles; Attributes tab",
+    "crop": "viewport",
+    "needsData": "A group with the editorFieldsNw attribute (MAS duty in the local realm)",
+    "note": "Retaken after the review (2026-11-12) with the console's menu closed: the tabs show whole and the value field shows { \"publication\": false, \"references\": false } whole, which the text quotes."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A2-SecomCertificates.adoc", "line": 262, "file": "McpPortalServiceAdd.png", "caption": "Registering the Niord service entity", "inline": false,
+    "shows": "MCP portal: registering the Niord service entity",
+    "kind": "external", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "SECOM is out of the guides (owner's ruling): appendix A2 parked, not built."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A2-SecomCertificates.adoc", "line": 280, "file": "McpPortalRoleAdd.png", "caption": "Adding the SERVICE_ADMIN role mapping", "inline": false,
+    "shows": "MCP portal: adding the SERVICE_ADMIN role mapping",
+    "kind": "external", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "SECOM out of the guides; A2 parked."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A2-SecomCertificates.adoc", "line": 295, "file": "McpPortalUserAdd.png", "caption": "Creating the robot user", "inline": false,
+    "shows": "MCP portal: creating the robot user",
+    "kind": "external", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "SECOM out of the guides; A2 parked."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "A2-SecomCertificates.adoc", "line": 332, "file": "McpPortalServiceCerts.png", "caption": "Certificates panel of a service entity", "inline": false,
+    "shows": "MCP portal: certificates panel of a service entity",
+    "kind": "external", "disposition": "drop", "app": "none", "route": null, "role": null, "steps": null, "crop": null,
+    "needsData": "none",
+    "note": "SECOM out of the guides; A2 parked."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "03-MessageSeries.adoc", "line": 139, "file": "MessageSeriesNextNumber.png", "caption": "The Next Message Number panel", "inline": false,
+    "shows": "Next Message Number popover in the series editor: Year, Next number, Compute, Cancel, Update",
+    "kind": "panel", "disposition": "new", "app": "admin", "route": "/sysadmin/series", "role": "sysadmin",
+    "steps": "Fixed clock; Edit Message Series on row dma-nw; Edit Next Message Series Number (pencil by Next number); neither Compute nor Update clicked",
+    "crop": "the popover",
+    "needsData": "A YEARLY or CONTINUOUS series (dma-nw) with no unsaved edits",
+    "note": "New section 'Next Message Number' (#next-message-number). Taken by sysadmin-1 (2026-11-11)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "07-Dictionaries.adoc", "line": 183, "file": "DictionaryImportPreview.png", "caption": "The preview of a dictionary import", "inline": false,
+    "shows": "Upload Dictionary JSON File dialog after choosing a file: Would add (1, ticked) and Would overwrite (1, unticked) with the Current and New values",
+    "kind": "dialog", "disposition": "new", "app": "admin", "route": "/sysadmin/dictionaries", "role": "sysadmin",
+    "steps": "Dictionary selector: web; Dictionary actions (cog): Import...; the spec sets the file input to an invented web-dictionary.json (new key guide.example.welcome, and editor.save_msg with another value); the preview writes nothing",
+    "crop": "the import dialog",
+    "needsData": "none: the file is made by the spec; the copy's web entry editor.save_msg ('Save Message')",
+    "note": "Do not click Import ticked: the preview is the shot. Taken by sysadmin-1 (2026-11-11)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "07-Dictionaries.adoc", "line": 130, "file": "DictionaryDeleteConfirm.png", "caption": "The confirmation of a delete", "inline": false,
+    "shows": "Delete entry? confirmation naming the script resource that uses the key, and that a deleted key stays deleted",
+    "kind": "dialog", "disposition": "new", "app": "admin", "route": "/sysadmin/dictionaries", "role": "sysadmin",
+    "steps": "Dictionary selector: mail; Filter: mail.dear.user; Delete Entry (bin) on that row; the confirmation is photographed and left open (neither Yes nor No clicked)",
+    "crop": "the confirmation dialog",
+    "needsData": "The key mail.dear.user, named by templates/messages/message-mail.ftl",
+    "note": "Nothing is deleted. A key that a part of Niord also reads (e.g. mail.comment.subject) would add a reader line; mail.dear.user keeps the picture short. Taken by sysadmin-1 (2026-11-11)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "09-ScriptResources.adoc", "line": 330, "file": "ScriptResourceImportPreview.png", "caption": "Script Resource Import Preview", "inline": false,
+    "shows": "Upload Script Resources File dialog after choosing a file: Would add (with 'In the missing-path report' marks) and Would overwrite with Show diff",
+    "kind": "dialog", "disposition": "new", "app": "admin", "route": "/sysadmin/script-resources", "role": "sysadmin",
+    "steps": "Script resource actions (cog): Import...; Choose file…: be/niord/bootstrap/releases/2026-11-02-accumulated-period/script-resources.json (the preview only reads; Import ticked is not clicked)",
+    "crop": "the import dialog",
+    "needsData": "A release script-resources.json with at least one path the copy lacks (listed by the missing-path report) and one that differs (be/niord/bootstrap/releases/2026-11-02-accumulated-period/script-resources.json; check against the copy)",
+    "note": "Also illustrates the missing-path report, which has no other UI."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "10-Categories.adoc", "line": 185, "file": "CategoryTemplateResult.png", "caption": "Template Result", "inline": false,
+    "shows": "Template Result dialog after Test… on the template 'Wreck': the generated title and details of its example message NW-041-16 (one language button per language when there are several)",
+    "kind": "dialog", "disposition": "new", "app": "admin", "route": "/sysadmin/categories", "role": "sysadmin",
+    "steps": "Session domain Legacy NW (niord-legacy-nw: the copy's example messages are in its series dma-legacy-nw, and the test runs in the session domain); expand Obstruction; select template 'Wreck'; Test…",
+    "crop": "the Template Result dialog",
+    "needsData": "A template whose text needs no parameter (Test… sends none: 'Light buoy unlit' gives an empty Details), with an example template message whose script resources run on the copy: 'Wreck' (NW-041-16)",
+    "note": "New Test… button (category-editor.html:150)."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "13-Integration.adoc", "line": 22, "file": "NiordIntegrationsPage.png", "caption": "Niord Integration", "inline": false,
+    "shows": "Niord Integration list: Active, URL, Message Series and row actions (edit, delete, execute), with the Sysadmin rail and its Niord Integration entry",
+    "kind": "page", "disposition": "new", "app": "admin", "route": "/sysadmin/niord-integration", "role": "sysadmin",
+    "steps": "Sysadmin rail: Niord Integration (the rail shows the entry when adminIntegrationPageEnabled is on; the spec opens the page by its address and checks the entry)",
+    "crop": "viewport",
+    "needsData": "One NiordIntegration row (none in niord_test): prepare.sql adds the inactive example https://niord.example.org, guide-example-nw -> dma-nw; the spec makes it through REST only on a copy without it. adminIntegrationPageEnabled on, web and editable (prepare.sql)",
+    "note": "Chapter 13 rewritten as Niord Integration. Execute Niord Integration is never clicked; the example is inactive, so the scheduler passes it by."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "13-Integration.adoc", "line": 39, "file": "NiordIntegrationEditPage.png", "caption": "Niord Integration Editor", "inline": false,
+    "shows": "Edit Niord Integration drawer: ID, Active, Assign new UIDs, Create base data, Niord URL, source to target series mappings",
+    "kind": "panel", "disposition": "new", "app": "admin", "route": "/sysadmin/niord-integration", "role": "sysadmin",
+    "steps": "Edit Niord Integration (pencil) on the example row",
+    "crop": "the editor drawer",
+    "needsData": "The NiordIntegration example row (see NiordIntegrationsPage); its ID is the one prepare.sql gave it",
+    "note": ""
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "15-BatchJobs.adoc", "line": 121, "file": "BatchJobExecuteJavaScript.png", "caption": "Execute JavaScript", "inline": false,
+    "shows": "Execute JavaScript dialog with the server-side warning and a short script",
+    "kind": "dialog", "disposition": "new", "app": "admin", "route": "/sysadmin/batch", "role": "sysadmin",
+    "steps": "Execute JavaScript…; type a harmless three-line script",
+    "crop": "the Execute JavaScript dialog",
+    "needsData": "none",
+    "note": "Do not click Schedule."
+  },
+  {
+    "manual": "sysadmin-manual", "chapterFile": "15-BatchJobs.adoc", "line": 76, "file": "BatchSetUploadDialog.png", "caption": "Upload Batch-Set Archive", "inline": false,
+    "shows": "Upload Batch-Set Archive dialog (.zip)",
+    "kind": "dialog", "disposition": "new", "app": "admin", "route": "/sysadmin/batch", "role": "sysadmin",
+    "steps": "Upload batch set…",
+    "crop": "the upload dialog",
+    "needsData": "none (empty dialog)",
+    "note": "The text explains the batch-set allow-list."
+  }
+]

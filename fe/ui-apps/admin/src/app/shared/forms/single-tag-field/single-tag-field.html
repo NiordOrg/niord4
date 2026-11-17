@@ -1,0 +1,93 @@
+<div class="flex items-center gap-1">
+  <button
+    #trigger
+    type="button"
+    class="flex min-w-0 flex-1 items-center justify-between gap-2 rounded border border-surface-300 bg-surface-0 px-3 py-2 text-left text-sm text-fg disabled:cursor-not-allowed disabled:opacity-60 dark:border-surface-700 dark:bg-surface-900"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel()"
+    (click)="openPicker(trigger)"
+  >
+    <span class="min-w-0 truncate" [class.text-fg-muted]="!selected()">
+      {{ selected()?.name ?? placeholder() }}
+    </span>
+    <app-icon name="lucideChevronDown" class="text-xs text-fg-muted" aria-hidden="true" />
+  </button>
+  @if (selected() && !disabled()) {
+    <button
+      type="button"
+      class="text-fg-subtle hover:text-fg"
+      [attr.aria-label]="'common.clear' | transloco"
+      (click)="clear()"
+    >
+      <app-icon name="lucideX" class="text-xs" />
+    </button>
+  }
+</div>
+
+<app-picker-popover #shell>
+  @if (placeholder()) {
+    <header>
+      <h3 class="m-0 text-base font-semibold">{{ placeholder() }}</h3>
+    </header>
+  }
+
+  <app-tag-scope-select [value]="selectedScopes()" (valueChange)="selectedScopes.set($event)" />
+
+  <input
+    #searchInput
+    type="text"
+    class="w-full text-input"
+    [placeholder]="placeholder()"
+    [attr.aria-label]="ariaLabel()"
+    [value]="search()"
+    (input)="search.set(searchInput.value)"
+  />
+
+  <!-- Fixed, viewport-bounded scroll region keeps the popover box stable (see PickerPopover). -->
+  <div class="h-[min(18rem,45vh)] overflow-y-auto">
+    @if (tagsResource.status() === 'error') {
+      <p class="m-0 py-2 text-center text-sm text-fg-muted">
+        {{ 'common.fetchError' | transloco }}
+      </p>
+    } @else if (showSpinner()) {
+      <p class="m-0 py-2 text-center text-sm text-fg-muted" aria-live="polite">
+        <app-icon name="lucideLoaderCircle" [spin]="true" aria-hidden="true" />
+        <span class="sr-only">{{ 'common.loading' | transloco }}</span>
+      </p>
+    } @else {
+      <ul class="m-0 list-none divide-y divide-surface-100 p-0 dark:divide-surface-800">
+        @for (tag of tags(); track tag.tagId) {
+          <li>
+            <button
+              type="button"
+              class="flex w-full items-center gap-2 px-1 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+              [style.background-color]="isSelected(tag) ? 'var(--niord-surface-sunken)' : null"
+              (click)="choose(tag)"
+            >
+              <app-icon [name]="iconForType(tag.type)" class="text-fg-muted" aria-hidden="true" />
+              <span class="min-w-0 flex-1 truncate">{{ tag.name }}</span>
+              @if (tag.locked) {
+                <app-icon name="lucideLock" class="text-xs text-fg-muted" aria-hidden="true" />
+              }
+              <span class="text-xs text-fg-muted">{{ tag.messageCount | number }}</span>
+              @if (isSelected(tag)) {
+                <app-icon name="lucideCheck" class="text-xs text-primary" aria-hidden="true" />
+              }
+            </button>
+          </li>
+        } @empty {
+          <li class="py-3 text-center text-sm text-fg-muted">
+            {{ 'messages.tagPicker.empty' | transloco }}
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <footer class="picker-foot">
+    <span></span>
+    <button type="button" class="btn-tertiary text-sm" (click)="close()">
+      <span>{{ 'messages.tagPicker.done' | transloco }}</span>
+    </button>
+  </footer>
+</app-picker-popover>

@@ -1,0 +1,140 @@
+
+[#frontend-architecture]
+== Frontend architecture and conventions
+
+The frontend is one Angular workspace in `fe/`, with one `package.json`, one lock file and one set
+of tool configurations, holding two applications that ship separately. This chapter is a map of the
+workspace and says where its conventions are written down; `fe/README.md` is the entry point to
+all of them.
+
+[#workspace-map]
+=== A map of the workspace
+
+[cols="30,70",options="header"]
+|===
+|Path |What
+
+|`fe/ui-apps/admin/`
+|The administration application (Angular project `niord-app`): messages and their editor, the
+ firing-area schedule, and the administration and system administration pages, behind a Keycloak
+ sign-in. Its end-to-end tests are in `fe/ui-apps/admin/e2e/`.
+
+|`fe/ui-apps/info/`
+|The public site (Angular project `niord-info`): the published messages as details, list, map and
+ print, the publications, and a small map ("teaser") other sites can embed. No sign-in, read-only,
+ and held to a size budget.
+
+|`fe/styles/`
+|The design tokens, the bridge to Tailwind's theme, the named classes both applications render
+ and the rules for the HTML a message carries.
+
+|`fe/shared-map/`
+|The OpenLayers map kit both applications use, imported as `@niord/map`. Its `portrayal/` folder
+ defines how messages are drawn on a map; the backend reads the same definition when it draws a
+ message's map image itself, so a change there is a backend change too.
+
+|`fe/shared-html/`
+|The sanitiser for the HTML a message carries, imported as `@niord/html`.
+
+|`fe/languages/`
+|The base product's one language pack, English. Every other language is a pack in a country's
+ repository (<<building-a-country>>).
+
+|`fe/scripts/`
+|The workspace's checks and tools, run by the npm scripts.
+
+|`fe/docs/`
+|The documents listed below.
+|===
+
+Neither application imports the other; what they share lives in the three shared folders.
+
+[#admin-app-layers]
+=== The layers of the administration application
+
+The code of the administration application, under `fe/ui-apps/admin/src/app/`, has four layers,
+and ESLint rules enforce which may import which:
+
+* `core/`: what the whole application depends on, one instance each: sign-in, configuration,
+  the current domain, translations, HTTP interceptors, the main shell.
+* `shared/`: building blocks without knowledge of any domain area: components, dialogs, forms,
+  pipes, the wire models.
+* `features/`: the domain areas, each loaded when first used: `home/`, `messages/`, `editor/`,
+  `schedule/` and `admin/`. `messages/` is the one area the others may build on.
+* `country-specific/default/`: the neutral defaults a country's files replace: the language list,
+  the country's providers, routes and menu entries.
+
+Data flows one way: an API service owns an HTTP call and maps the wire format to the model, a
+facade turns it into signals for one screen, and a component renders the signals. A component
+that calls the API itself is in the wrong layer. A country's code imports the base product only
+through the application's public API (`@niord/admin/api`, `@niord/info/api`), and the base
+product never imports it.
+
+[#frontend-conventions]
+=== Where the conventions are written down
+
+[cols="45,55",options="header"]
+|===
+|Document |What it covers
+
+|`fe/docs/architecture.md`
+|the layers and their import boundaries, the data flow, state, extension points, the map layer
+
+|`fe/docs/angular-conventions.md`
+|signals and effects, how data is loaded (`httpResource`, `HttpClient`, `rxResource`), Signal
+ Forms, templates, routing, translations
+
+|`fe/docs/typescript-conventions.md`
+|compiler flags, what lint enforces, naming, wire types against model types
+
+|`fe/docs/coding-standards.md`
+|error handling, dates and time zones, comments, dependencies
+
+|`fe/docs/ui-standards.md`
+|the shared components, overlays, form controls, accessibility, responsive layout; why no
+ component library is used
+
+|`fe/docs/styling-reference.md`
+|every design token and named class, and where each lives
+
+|`fe/docs/platform.md`
+|start-up order, configuration and the runtime settings, sign-in, domains, the service worker
+
+|`fe/docs/testing.md`
+|the unit-test harness and its traps, the end-to-end fixtures
+
+|`fe/docs/definition-of-done.md`
+|what a change has to pass before it is done, and what enforces each check
+
+|`fe/docs/country-deployments.md`
+|the seams a country fills and their neutral defaults
+
+|`fe/AGENTS.md`, +
+`fe/ui-apps/admin/AGENTS.md`, +
+`fe/ui-apps/info/AGENTS.md`
+|the working rules of the workspace and of each application; the public site's rules, its
+ checks and its container are in its own file
+|===
+
+[#frontend-commands]
+=== Everyday commands
+
+From `fe/`, after `npm ci`:
+
+[source,bash]
+----
+npm start              # the administration application on http://localhost:4200
+npm run start:info     # the public site on http://localhost:4400
+npm test               # the administration application's unit tests (Vitest)
+npm run test:info      # the public site's unit tests
+npm run lint           # ESLint over the administration application
+npm run verify         # every check of the administration application, as CI runs them
+npm run verify:info    # every check of the public site, as CI runs them
+----
+
+Every `ng` command names its project (`ng build niord-app`, `ng serve niord-info`); in a workspace
+with two projects a bare `ng build` stops. Prefer the npm scripts above: each start and build
+script first stages the language pack into `.niord/build/<app>/`, which is all a build reads of the
+translations. An `ng serve` or `ng build` run directly needs `npm run languages:stage` first; without it
+the application gets no translations, or those of an earlier staging. A pre-commit hook formats and lints the files you stage. The end-to-end tests need a running backend and Keycloak, and are not part of the
+continuous integration; `fe/README.md`, section _End-to-end tests_, says how to run them.

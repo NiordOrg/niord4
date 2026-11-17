@@ -1,0 +1,58 @@
+# Liquibase changelog of the integration tests: it builds the schema and then layers the committed fixture on
+# top — "Liquibase first, dump on top". It applies the production master changelog (db.changelog-master.yaml)
+# exactly as a deployment does, then loads the fixture (db/niord-base-data.sql) as a changeset of its own,
+# followed by one changeset of applied history (below).
+#
+# The fixture is a dump of a database bootstrapped with the base product's archive and loaded with the sample
+# (docs/fe-country-split-plan.md P9), made by niord/scripts/regen-test-seed-postgres.sh since C4b
+# (docs/code-data-config-plan.md §7.4). It leaves out the bootstrap marker, the ledger and the settings, so a
+# database seeded from it reads existing at its first start and the start-up writes its settings and adopts its
+# texts. Only the integration tests select this changelog: ITTest points spring.liquibase.change-log here, for
+# niord-base's ITs and, through the published test-jar, a country's. Both files are niord-base's test resources
+# since C4.1, at the same class-path paths as before; the regenerated fixture changed the seed changeset's
+# checksum, which only a fresh IT database applies. No deployment loads the fixture: every deployment uses the
+# bare master, and a new one gets its data from the bootstrap.
+#
+# The seed is loaded with foreign-key triggers disabled — niord-base-data.sql carries the
+# `ALTER TABLE ... DISABLE/ENABLE TRIGGER ALL` brackets pg_dump --disable-triggers emits — because V001
+# declares the circular / self-referential foreign keys (Area, Category, Domain<->FiringSchedule,
+# Publication) as non-deferrable, so they would otherwise reject the bulk load. Regenerated together with
+# the schema by niord/scripts/regen-test-seed-postgres.sh.
+#
+# The fixture is loaded as the file says, by org.niord.test.VerbatimSqlFileChange (in the test-jar), not by
+# Liquibase's sqlFile: sqlFile replaces each ${name} in the file with a changelog parameter, and Liquibase makes
+# every environment variable and system property one, the name matched without regard to case. The template rows'
+# FreeMarker is full of ${...}; on GitHub's runners (LANG=C.UTF-8) every ${lang} of common.ftl became C.UTF-8 in
+# the test database (PR #322). The change splits the file as sqlFile did (at ;, comments kept). SeedFixtureVerbatimTest
+# keeps it so. The change type changed the changeset's checksum; only a fresh IT database applies it.
+databaseChangeLog:
+  - include:
+      file: db/changelog/db.changelog-master.yaml
+  - changeSet:
+      id: seed-base-data
+      author: niord
+      changes:
+        - customChange:
+            class: org.niord.test.VerbatimSqlFileChange
+            path: db/niord-base-data.sql
+
+#
+# The dump is never edited: a changed niord-base-data.sql changes the checksum of the seed-base-data
+# changeset that a seeded database has already applied, and Liquibase refuses to start on a checksum
+# mismatch. The changeset below is applied history and stays as it is: it repeats the master's
+# 005-retire-map-image-settings for the rows the old dump inserted after it. Since C4b the fixture holds no
+# Setting row, so it deletes nothing. It is not a pattern to follow. A new
+# changeset, here or in the master, changes the schema only: it never inserts content, deletes rows or
+# changes what a value says, so a retired setting key stays in the database as an inert row that nothing
+# reads. Raw `sql` rather than Liquibase's structured `delete` change, because the schema quotes every
+# identifier (public."Setting") and Liquibase's default quoting would not.
+  - changeSet:
+      id: retire-map-image-settings-after-seed
+      author: niord
+      comment: >-
+        The dump inserts the mapImageServer, mapImageIndent and osmSourceUrl rows after the master's
+        005-retire-map-image-settings has run; delete them here too. Nothing reads them: the backend
+        draws map images on OpenStreetMap tiles from the osmUrl address.
+      changes:
+        - sql:
+            sql: DELETE FROM public."Setting" WHERE setting_key IN ('mapImageServer', 'mapImageIndent', 'osmSourceUrl');

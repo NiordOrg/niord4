@@ -1,0 +1,159 @@
+
+[#everyone]
+== For Everyone
+
+These changes meet every user of the administration application, whatever their role, and most of
+them meet a visitor who has not signed in as well.
+
+[#everyone-finding-your-way]
+=== Finding Your Way Around
+
+[#everyone-header]
+==== The header and the main menu
+
+The old application had a main menu bar with the pages as links. The new header has the Niord logo
+(a link to the home page), the menu items _Messages_, _Editor_, _Schedule_, _Admin_ and _Sysadmin_,
+and to the right of them _Help_, the domain menu, your account menu and the language menu.
+_Messages_ is always there; each of the other items appears only when your role in the current
+domain allows you to open the page behind it, and _Schedule_ only in a domain that has a firing
+schedule.
+See link:../editor-manual/manual.html#home[Home] in the editor manual.
+
+[#everyone-narrow-screens]
+==== Narrow screens
+
+On a narrow window or a tablet, the menu items fold into one menu button that opens a single list
+of everything the header holds. The domain menu stays visible beside that button, because it tells
+you which data you are working on.
+
+[#everyone-home-page]
+==== The home page
+
+The home page is a map of the published messages that fills the window, with a small welcome panel
+on top of it. When you have not signed in, the panel has a _Login_ button. See
+link:../editor-manual/manual.html#home[Home] in the editor manual.
+
+[#everyone-help]
+==== Help
+
+The _Help_ item in the header opens the section of the user manual that describes the page you are
+on. Many dialogs have a help link of their own, which opens the section about that dialog. The
+address of the manuals is a setting a system administrator can change, so a deployment can point
+the help at its own copy of the guides.
+
+[#everyone-test-badge]
+==== A badge on a test deployment
+
+A deployment that is not the production system shows a red badge under the logo, for example
+_TEST_. It is there so that nobody mistakes test data for the real warnings and notices. A
+production deployment shows no badge.
+
+[#everyone-signing-in]
+=== Signing In and Out
+
+[#everyone-login]
+==== The login page
+
+_Login_ takes you to the login page of the sign-in service, Keycloak, and back again once you have
+signed in. How you sign in, with a password or through your organisation's own login, is set up for
+each deployment, so the old manual's description of one organisation's login no longer applies in
+general. See link:../editor-manual/manual.html#home[Home] in the editor manual.
+
+[#everyone-account-menu]
+==== Your account and password
+
+On a wide window, the account control in the header is a button with an icon and no text. Before
+you sign in it is the _Login_ button; once you have signed in it shows a person icon, and pointing at
+it shows your name. Its menu has _Edit <your name>_, which opens your account pages in the sign-in
+service, where you change your password and profile, and _Logout_. On a narrow window, _Edit <your
+name>_ and _Logout_ (or _Login_, before you sign in) are entries in the list of the menu button.
+
+[#everyone-browsing-as-guest]
+==== Browsing without signing in
+
+You can open the _Messages_ page without signing in and read the published messages, in all its
+views, but you cannot change anything. Pages for editors, administrators and system administrators
+ask you to sign in first.
+
+[#everyone-session-expired]
+==== When your session expires
+
+If your session expires, or the sign-in service cannot be reached, the application does not reload
+or log you out. Instead it carries on as if you had not signed in and shows a strip under the header,
+for example _Your session has expired — you're browsing as a guest._, with a _Login_ button. That
+button takes you to the sign-in service and back to the same address, but it loads the application
+afresh: your message selection is emptied, and if the editor holds changes you have not saved, the
+browser first asks whether to leave the page. Signing in or out from the header does the same.
+
+[#everyone-domains-and-languages]
+=== Domains and Languages
+
+[#everyone-switching-domain]
+==== Switching domain reloads the page
+
+You still work in a _current domain_, chosen in the domain menu, where a pencil marks the domains
+you can edit and an eye those you can only view. What is new is that choosing another domain loads
+the application afresh, at the same address in most cases. A page that shows a single publication or
+one of its issues belongs to the domain that owns it, so from there you land on the _Publications_ list instead. Your
+message selection is emptied. If the editor holds changes you have not saved, the browser first
+asks whether to leave the page, and the changes are discarded if you go on, so save your work
+before you switch.
+
+[#everyone-remembered-choices]
+==== What the browser remembers
+
+The browser remembers your domain and your language until you change them, as before. The old
+manual said they were kept in cookies; the new application keeps them in the browser's local
+storage, which you clear in the same place as cookies. A link that ends in `?domain=` followed by a
+domain's id opens the application in that domain.
+
+[#everyone-languages]
+==== Languages
+
+The languages in the language menu are set up for each deployment. The base product itself comes
+with English only; a country adds its own languages. Some labels can be reworded by a system
+administrator in the dictionaries without a new version of the application.
+
+[#everyone-updates]
+=== When Niord Is Updated
+
+[#everyone-update-banner]
+==== The update banner
+
+The old application kept a copy of itself in the browser, and after an update it showed an
+out-of-date warning on the home page, which you cleared by emptying the browser's cache. The new
+application notices by itself when a newer version has been installed and shows a banner under the
+header, _Please refresh web-browser_, on whatever page you are on. Click _Retry_ in the banner to
+load the new version; there is no cache to clear.
+
+[#everyone-links]
+=== Links to Messages
+
+[#everyone-message-links]
+==== Links that open a message
+
+A message has an address of its own, which you can copy from the browser and send to someone: it
+opens the _Messages_ page with that message shown. Links in older mails and posts, written in the
+old form with `#/message/` in them, still open the message.
+
+[#everyone-new-tab]
+==== Opening a message in a new tab
+
+The rows of the message lists are real links. A middle-click, or a click with kbd:[Ctrl] held,
+opens the message in a new browser tab, while a plain click opens it in the current one.
+
+[#everyone-gone]
+=== Gone, and What to Use Instead
+
+[cols="35,65",options="header"]
+|===
+| Gone
+| Use instead
+
+| The out-of-date warning on the home page, and clearing the browser's cache after an update
+| The update banner: click _Retry_. See <<everyone-update-banner>>.
+
+| A selection of messages that lasted for the whole browser session
+| The selection now lasts until the page is reloaded, the domain is switched, or you sign in or
+  out. Print, mail or tag the selection before you do any of these. See <<editors-selection>>.
+|===

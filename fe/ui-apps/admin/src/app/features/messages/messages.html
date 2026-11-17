@@ -1,0 +1,29 @@
+<!-- Messages centers its content at `max-w-screen-2xl` (the cap moved here off
+     `<main>`). The tab menu + map view break back out to full-bleed via `w-screen`
+     (see their templates). -->
+<section class="mx-auto flex w-full max-w-screen-2xl flex-col">
+  <app-messages-tab-menu />
+
+  <!-- Map view is full-bleed (no inset): the OL canvas fills edge-to-edge and
+       computes its own height to the footer. Every other view sits in the
+       padded content area so the gray page shows around it like a card. -->
+  <div class="flex flex-col" [class.gap-4]="!shell.isMap()" [class.p-4]="!shell.isMap()">
+    @if (shell.showFilter()) {
+      <app-messages-filter-panel />
+    }
+
+    <router-outlet />
+  </div>
+</section>
+
+<!-- Dialogs portal to body via an overlay; their declaration sites are
+     invisible placeholders. Keeping them outside the flex section prevents
+     their zero-height hosts from inflating section's gap-4 chain (each
+     placeholder otherwise contributes one extra gap). -->
+<app-message-details-dialog />
+<app-message-tags-dialog />
+<app-message-comparison-dialog />
+<app-message-print-dialog />
+<app-message-mail-dialog />
+<app-message-copy-dialog />
+<app-sort-area-dialog />

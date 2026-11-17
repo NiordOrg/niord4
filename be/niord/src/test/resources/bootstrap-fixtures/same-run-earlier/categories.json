@@ -1,0 +1,287 @@
+[
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It root",
+        "lang": "en"
+      },
+      {
+        "name": "Racine",
+        "lang": "fr"
+      },
+      {
+        "name": "Wurzel",
+        "lang": "de"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 1.0,
+    "domains": [
+      {
+        "domainId": "it-earlier"
+      }
+    ],
+    "children": [
+      {
+        "active": true,
+        "descs": [
+          {
+            "name": "It child",
+            "lang": "en"
+          }
+        ],
+        "type": "TEMPLATE",
+        "siblingSortOrder": 0.0,
+        "domains": [
+          {
+            "domainId": "it-earlier"
+          }
+        ],
+        "templateParams": [
+          {
+            "paramId": "it_p",
+            "type": "text",
+            "mandatory": false,
+            "positionList": false,
+            "descs": [
+              {
+                "name": "It parameter",
+                "lang": "en"
+              }
+            ]
+          }
+        ],
+        "scriptResourcePaths": [
+          "templates/it/same-run-a.ftl"
+        ]
+      },
+      {
+        "active": true,
+        "descs": [
+          {
+            "name": "It sibling",
+            "lang": "en"
+          }
+        ],
+        "type": "CATEGORY",
+        "siblingSortOrder": 1.0
+      }
+    ]
+  },
+  {
+    "active": false,
+    "descs": [
+      {
+        "name": "It inactive",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 3.0
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It flags",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "siblingSortOrder": 4.0,
+    "templateParams": [
+      {
+        "paramId": "it_m",
+        "type": "text",
+        "mandatory": true,
+        "positionList": true,
+        "descs": [
+          {
+            "name": "It mandatory",
+            "lang": "en"
+          }
+        ]
+      },
+      {
+        "paramId": "it_n",
+        "type": "text",
+        "mandatory": false,
+        "positionList": true,
+        "descs": [
+          {
+            "name": "It position list",
+            "lang": "en"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It deactivated",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 5.0
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It equal",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "siblingSortOrder": 6.0,
+    "templateParams": [
+      {
+        "paramId": "it_e",
+        "type": "text",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [
+          {
+            "name": "It equal parameter",
+            "lang": "en"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It earlier only",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "siblingSortOrder": 6.0,
+    "templateParams": [
+      {
+        "paramId": "it_e",
+        "type": "text",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [
+          {
+            "name": "It equal parameter",
+            "lang": "en"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It changes",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 8.0,
+    "atonFilter": "it-filter-a",
+    "editorFields": [
+      "it-a"
+    ],
+    "stdTemplateFields": [
+      "it-x"
+    ]
+  },
+  {
+    "active": true,
+    "mrn": "urn:mrn:iho:category:xx:it-mrn-a",
+    "descs": [
+      {
+        "name": "It mrn",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 9.0
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It emptied",
+        "lang": "en"
+      }
+    ],
+    "type": "TEMPLATE",
+    "siblingSortOrder": 10.0,
+    "editorFields": [
+      "it-a"
+    ],
+    "stdTemplateFields": [
+      "it-x"
+    ]
+  },
+  {
+    "active": false,
+    "descs": [
+      {
+        "name": "It inactive kept",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 11.0
+  },
+  {
+    "active": true,
+    "descs": [
+      {
+        "name": "It parent",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 12.0,
+    "children": [
+      {
+        "active": true,
+        "descs": [
+          {
+            "name": "It active child",
+            "lang": "en"
+          }
+        ],
+        "type": "CATEGORY",
+        "siblingSortOrder": 0.0
+      }
+    ]
+  },
+  {
+    "active": false,
+    "descs": [
+      {
+        "name": "It inactive parent",
+        "lang": "en"
+      }
+    ],
+    "type": "CATEGORY",
+    "siblingSortOrder": 13.0,
+    "children": [
+      {
+        "active": false,
+        "descs": [
+          {
+            "name": "It activated child",
+            "lang": "en"
+          }
+        ],
+        "type": "CATEGORY",
+        "siblingSortOrder": 0.0
+      }
+    ]
+  }
+]

@@ -1,0 +1,1 @@
+This file is not JSON: the domain import fails on it, and so does the bootstrap run (BootstrapITTest).

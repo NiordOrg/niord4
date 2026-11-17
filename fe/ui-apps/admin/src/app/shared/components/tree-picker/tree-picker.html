@@ -1,0 +1,102 @@
+<app-picker-popover #shell>
+  <header>
+    <h3 class="m-0 text-base font-semibold">{{ header() | transloco }}</h3>
+  </header>
+
+  <div class="tree-filter">
+    <app-icon name="lucideSearch" class="tree-filter-icon" />
+    <input
+      type="text"
+      class="tree-filter-input"
+      [placeholder]="searchPlaceholder() | transloco"
+      [attr.aria-label]="searchPlaceholder() | transloco"
+      [value]="filterText()"
+      (input)="filterText.set($any($event.target).value)"
+    />
+  </div>
+
+  <!-- Fixed, viewport-bounded scroll region keeps the popover box stable so it
+       never overflows or re-positions (see PickerPopover). Labels don't wrap
+       (see components.css .tree-row-label). -->
+  <div class="tree-scroll">
+    <cdk-tree
+      #tree="cdkTree"
+      class="tree-root"
+      [dataSource]="visibleRoots()"
+      [childrenAccessor]="childrenOf"
+      [trackBy]="trackByKey"
+      [expansionKey]="keyOf"
+      [attr.aria-multiselectable]="true"
+      [attr.aria-label]="header() | transloco"
+    >
+      <cdk-nested-tree-node
+        *cdkTreeNodeDef="let node"
+        [isExpandable]="node.children.length > 0"
+        [cdkTreeNodeTypeaheadLabel]="node.label"
+        [attr.aria-checked]="isChecked(node)"
+        (activation)="onToggleCheckbox(node)"
+      >
+        <div class="tree-row row-interactive">
+          @if (node.children.length > 0) {
+            <button
+              cdkTreeNodeToggle
+              type="button"
+              class="tree-row-toggle"
+              [attr.aria-label]="
+                (tree.isExpanded(node) ? 'shared.entityTree.collapse' : 'shared.entityTree.expand')
+                  | transloco
+              "
+              (click)="$event.stopPropagation()"
+            >
+              <app-icon
+                [name]="tree.isExpanded(node) ? 'lucideChevronDown' : 'lucideChevronRight'"
+              />
+            </button>
+          } @else {
+            <span class="tree-row-toggle" aria-hidden="true"></span>
+          }
+          <input
+            type="checkbox"
+            class="tree-row-check"
+            [checked]="isChecked(node)"
+            [attr.aria-label]="node.label"
+            (change)="onToggleCheckbox(node)"
+          />
+          <!-- Mouse target for the whole row: keyboard toggles via the CDK
+               treeitem (Enter/Space → (activation)) and the native checkbox; a
+               native button keeps the label clickable without a second tab stop. -->
+          <button
+            type="button"
+            tabindex="-1"
+            class="tree-row-main"
+            (click)="onToggleCheckbox(node)"
+          >
+            <app-icon name="lucideFolder" class="tree-row-folder" />
+            <span class="tree-row-label" [attr.lang]="node.labelLanguage">{{ node.label }}</span>
+          </button>
+        </div>
+
+        <div
+          class="tree-children"
+          role="group"
+          [class.tree-children-collapsed]="!tree.isExpanded(node)"
+        >
+          <ng-container cdkTreeNodeOutlet />
+        </div>
+      </cdk-nested-tree-node>
+    </cdk-tree>
+  </div>
+
+  <footer class="picker-foot">
+    @if (selectedCount() > 0) {
+      <button type="button" class="link-button" (click)="clear()">
+        {{ 'messages.treePicker.clear' | transloco: { count: selectedCount() } }}
+      </button>
+    } @else {
+      <span></span>
+    }
+    <button type="button" class="btn-tertiary" (click)="close()">
+      {{ 'messages.treePicker.done' | transloco }}
+    </button>
+  </footer>
+</app-picker-popover>

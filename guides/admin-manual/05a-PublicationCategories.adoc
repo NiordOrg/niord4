@@ -1,0 +1,106 @@
+
+:imagesdir: images
+
+[#publication-categories]
+== Publication Categories
+
+Every series and one-off publication belongs to a publication category, such as "Notices to
+Mariners" or "External publications". The categories do two things:
+
+* They decide whether a publication reaches the public site at all: only the published issues of a
+  category with _Show on the public site_ ticked are listed there.
+* They group the publications on the public site's download page, in the categories' order.
+
+Categories are shared by all domains. You manage them on the _Publication categories_ page of the
+_Admin_ area: open _Admin_ in the main menu, then _Publication categories_ in the menu on the left.
+The page needs the administrator role.
+
+[#publication-categories-tab]
+=== The Categories List
+
+image::PublicationCategoriesPage.png[Publication Categories, 800]
+
+The list shows each category's _Order_, _Name_ and _Category ID_, whether it is shown on the public
+site (_Publish_: _Yes_ or _No_) and how many series and one-off publications belong to it, in all
+domains (_Publications_). Type in _Filter categories…_ to narrow the list; the name and the
+category ID are searched.
+
+When the deployment writes its texts in more than one language, a *Model language* list in the
+toolbar chooses the language the list shows the names in. It changes only what the page shows, not
+the language of the application. With one language, the list is not shown.
+
+[#adding-or-editing-publication-categories]
+=== Adding or Editing a Category
+
+Click _New category_ to add a category, or the pencil at the end of a row to edit one. This opens
+the _Publication category_ drawer:
+
+image::PublicationCategoryEditor.png[Editing a Publication Category, 324]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Category ID
+| The permanent key a series stores. Choose it when you create the category; it cannot be changed
+  afterwards.
+
+| Name
+| The category's name in each language, shown as a heading on the public site.
+
+| Description
+| Optional. A longer text about the category in each language, kept with the category and in its
+  export. The public site that comes with Niord does not show it: its download page shows only the
+  category's name.
+
+| Order
+| Where the category is placed on the public site: lower numbers come first. A new category starts
+  at 100, in the middle of the order, so that a lower or a higher number places it before or after
+  the categories that are already there.
+
+| Show on the public site
+| Ticked: the published issues of the category's publications are listed on the public site.
+  Not ticked: they stay internal. A new category starts with this box not ticked. Whether a
+  publication can be cited from messages is set on the publication itself, not here.
+|===
+
+Click _Save_ to keep the changes.
+
+To delete a category, open it and click _Delete…_ at the bottom of the drawer. A category that
+still has series or one-off publications cannot be deleted: Niord says how many belong to it, and
+you move them to another category first (in their settings) and try again.
+
+[#importing-and-exporting-publication-categories]
+=== Importing and Exporting Categories
+
+The cog menu _Category actions_ offers _Export categories_ and _Import categories_. The export is a
+JSON file of every category, which you can import into another installation, for example to set up
+a new one with the same categories.
+
+Importing asks first: the file rewrites every category it names, field for field (its order,
+whether it is shown on the public site, and every language's name and description), and every
+series that belongs to a rewritten category takes its new settings. A category that exists only in
+this installation is left alone. Click _Choose a file_ and pick the file. The import runs as the
+batch job _publication-category-import_, which system administrators can follow on the
+link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] page.
+
+An example of the file:
+
+[source,json]
+----
+[
+  {
+    "categoryId": "notices-to-mariners",
+    "priority": 10,
+    "publish": true,
+    "descs": [
+      {
+        "lang": "en",
+        "name": "Notices to Mariners",
+        "description": "The weekly Notices to Mariners and the lists that go with them"
+      }
+    ]
+  }
+]
+----

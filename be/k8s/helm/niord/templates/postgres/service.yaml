@@ -1,0 +1,17 @@
+{{- if .Values.postgres.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "niord.componentName" (list . "db") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "db") | nindent 4 }}
+spec:
+  # ClusterIP: the database is only reached from inside the cluster (by the app).
+  type: ClusterIP
+  selector:
+    {{- include "niord.componentSelectorLabels" (list . "db") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: {{ .Values.postgres.service.port }}
+      targetPort: postgres
+{{- end }}

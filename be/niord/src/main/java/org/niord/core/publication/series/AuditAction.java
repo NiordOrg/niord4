@@ -1,0 +1,161 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+/**
+ * Every action that may appear in the audit trail.
+ *
+ * A closed vocabulary, declared once. An action spelled differently at two call
+ * sites is two actions as far as any reader is concerned, and the history panel
+ * would show one of them as an unknown event. Being an enum rather than a set of
+ * string literals moves that check from a runtime guard to the compiler: a typo
+ * is a build failure at the call site instead of an exception thrown into the
+ * business transaction that was trying to record it.
+ *
+ * Persisted by NAME into a varchar column, and rendered onto the wire by name
+ * too, so the stored and transmitted vocabulary is unchanged by the typing. That
+ * also means a constant may be added freely, but never renamed or removed
+ * without a data migration -- rows already carry the old spelling.
+ *
+ * The sibling column actorKind is guarded by a named CHECK constraint on
+ * PostgreSQL and cannot take a new value without a Liquibase changeset that
+ * drops and recreates that CHECK; this one is a plain varchar (see the
+ * columnDefinition on IssueAuditEntry.action) and can. The difference is
+ * deliberate: the actor kinds are three and settled, the actions grow with the
+ * feature.
+ */
+public enum AuditAction {
+
+    CREATED,
+    CREATED_FROM_PREVIOUS_PUBLISH,
+    CREATED_RETROACTIVELY,
+    CREATED_NEW_EDITION,
+    PUBLISHED,
+    AMENDED,
+    RETIRED,
+    REACTIVATED,
+    SUPERSEDED_BY,
+    DELETED,
+
+    // Specific, never a generic UPDATE: a history panel cannot render "something
+    // changed", and each of these carries the before and after that makes the
+    // line answer the question it was opened for.
+    INTERVAL_CHANGED,
+    NAME_CHANGED,
+
+    /**
+     * The edition string an admin typed, replacing the one the create derived.
+     *
+     * Its own action rather than a name change: the edition is what tells two
+     * publications of the SAME period apart, it is printed on the cover of the
+     * reports that carry one, and it expands into a file-name pattern -- so the
+     * trail has to say which of those moved.
+     */
+    EDITION_CHANGED,
+
+    /**
+     * The PRINTED week, closing week or year, written down or taken back.
+     *
+     * Its own action, and not a rename: these three are what the cover, the file
+     * name and the report heading all render from, so one entry saying "the
+     * numbering changed from 36 to 36+37" explains three things somebody
+     * afterwards sees as three separate surprises. The derived numbers are
+     * untouched by it -- the ordering and the archive still read those -- which
+     * is exactly the distinction the trail has to record.
+     */
+    NUMBERING_CHANGED,
+
+    /**
+     * The file name one language's document will be written under, set by hand
+     * or returned to the series' pattern.
+     *
+     * Distinct from FILE_UPLOADED and FILE_REPLACED_MANUALLY, which are about
+     * BYTES. This one changes the address the bytes will land at, and only ever
+     * while the issue is open -- once it is published the address is fixed,
+     * because every stored citation is a URL into it.
+     */
+    FILE_NAME_CHANGED,
+
+    /**
+     * The report THIS edition renders with, set or handed back to the series.
+     *
+     * It decides the whole shape of the document, so it is not an edit detail:
+     * an edition that came out looking unlike every other edition of its series
+     * is a question somebody asks the history, and this is the line that answers
+     * it.
+     */
+    REPORT_CHANGED,
+    CRITERIA_OVERRIDDEN,
+    OVERRIDE_INCLUDED,
+    OVERRIDE_EXCLUDED,
+    OVERRIDE_REMOVED,
+    FILE_UPLOADED,
+
+    /**
+     * A document that was already released, overwritten by hand. Distinct from an
+     * upload because the trail has to say whether a file appeared or a cited one
+     * was replaced -- the archive path on that entry is the only route back to
+     * what the public was reading before.
+     */
+    FILE_REPLACED_MANUALLY,
+    FILE_CLEARED,
+
+    // A link is the published artefact for an external publication, exactly as a
+    // file is for a hosted one, so changing one is as much a change to what the
+    // public sees as replacing the other.
+    LINK_SET,
+    LINK_CLEARED,
+
+    PREVIEW_GENERATED,
+    WINDOW_ADJUSTED,
+
+    /**
+     * The public window closed by a NEIGHBOUR's publish -- the predecessor capped
+     * at this stamp, or this issue capped at a successor that had already
+     * published. Written on the issue whose window moved, because that is where
+     * somebody looks when a publication left the site.
+     */
+    VISIBILITY_CAPPED,
+
+    /**
+     * The public window's end, set or cleared by hand.
+     *
+     * Distinct from VISIBILITY_CAPPED, which is a NEIGHBOUR's publish closing
+     * this window as a side effect of taking over. This one is somebody deciding
+     * when a publication stops being on the public site -- or deciding it no
+     * longer stops -- and it is the only action that can put a publication whose
+     * window has expired back on the site, so it is what somebody looks for when
+     * one reappears.
+     */
+    VISIBILITY_WINDOW_CHANGED,
+
+    IMPORTED,
+    SERIES_ACTIVATED,
+    SERIES_RETIRED,
+
+    /**
+     * The series moved to another domain: a different desk now lists it,
+     * administers it, and supplies the timezone its future cut-offs are read in.
+     *
+     * Its own action rather than a note on an edit, because it is the one change
+     * that makes a publication disappear from one team's screens and appear on
+     * another's -- and the question afterwards is always "who moved this, and
+     * why", which a generic edit entry cannot answer. The detail carries both
+     * ends; the reason is required at the endpoint.
+     */
+    OWNER_TRANSFERRED
+}

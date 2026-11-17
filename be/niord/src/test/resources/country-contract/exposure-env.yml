@@ -1,0 +1,6 @@
+# A country jar that exposes an actuator endpoint beside health: refused (CountryContractGuard).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,env

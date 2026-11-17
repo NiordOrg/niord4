@@ -1,0 +1,85 @@
+{
+  "note": "Query parameters a frontend call sends that its handler does not read, for the endpoint-role guard (scripts/endpoint-roles.test.mjs), each with where it is recorded: a backlog entry of fe/docs/backlog.md (named by a phrase of it), or design: and why the parameter is sent on purpose. An entry no call needs fails the guard.",
+  "entries": [
+    {
+      "endpoint": "GET /rest/public/v1/messages",
+      "param": "active",
+      "ref": "backlog: The filter bar's \"active now\" chip changes nothing"
+    },
+    {
+      "endpoint": "GET /rest/areas/search/{areaIds}",
+      "param": "geometry",
+      "ref": "backlog: Two lookups send `geometry=false` to handlers that do not read it"
+    },
+    {
+      "endpoint": "GET /rest/charts/search",
+      "param": "geometry",
+      "ref": "backlog: Two lookups send `geometry=false` to handlers that do not read it"
+    },
+    {
+      "endpoint": "GET /rest/charts/search/{chartNumbers}",
+      "param": "geometry",
+      "ref": "backlog: Two lookups send `geometry=false` to handlers that do not read it"
+    },
+    {
+      "endpoint": "GET /rest/repo/file/{*file}",
+      "param": "cb",
+      "ref": "design: layout-field.ts appends ?cb=<n> as a cache-breaker so a replaced thumbnail at the same path is fetched again"
+    },
+    {
+      "endpoint": "GET /rest/areas/area/{areaId}",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/firing-schedules/all",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/publication-series/{seriesId}/history",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/charts/search",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/charts/search/{chartNumbers}",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/message-series/search",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/message-series/search/{seriesIds}",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/messages/copy-message-template/{messageId}",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/messages/message/{messageId}/comments",
+      "param": "lang",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "GET /rest/message-reports/detail-reports",
+      "param": "expandParams",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    },
+    {
+      "endpoint": "POST /rest/messages/adjust-editable-message",
+      "param": "inclPromulgations",
+      "ref": "backlog: The admin app sends query parameters that eleven handlers do not read"
+    }
+  ]
+}

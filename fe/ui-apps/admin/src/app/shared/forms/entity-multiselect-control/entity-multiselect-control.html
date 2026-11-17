@@ -1,0 +1,54 @@
+@if (field().magnifier; as magnifier) {
+  <div class="flex items-center gap-1 w-full">
+    <ng-container [ngTemplateOutlet]="autocomplete" />
+    <button
+      type="button"
+      [class]="magnifier.buttonClass ? 'icon-button ' + magnifier.buttonClass : 'icon-button'"
+      [attr.aria-label]="magnifier.tooltipKey | transloco"
+      [title]="magnifier.tooltipKey | transloco"
+      [disabled]="field().disabled()"
+      (click)="magnifier.onClick($event)"
+    >
+      <app-icon [name]="magnifier.icon" />
+    </button>
+  </div>
+} @else {
+  <ng-container [ngTemplateOutlet]="autocomplete" />
+}
+
+<!-- The single autocomplete both branches stamp out (identical bindings either way). -->
+<ng-template #autocomplete>
+  <app-autocomplete
+    [class]="field().magnifier ? 'flex-1' : ''"
+    [value]="field().value()"
+    [suggestions]="field().suggestions()"
+    [itemLabel]="field().labelOf"
+    [multiple]="field().multiple()"
+    [placeholder]="field().placeholder() | transloco"
+    [ariaLabel]="field().ariaLabelKey() | transloco"
+    [fetchError]="field().fetchError()"
+    [loading]="field().searching()"
+    [panelWidth]="field().panelWidth"
+    [emptyMessage]="'common.emptyMessage' | transloco"
+    [errorMessage]="'common.fetchError' | transloco"
+    [clearLabel]="'common.clear' | transloco"
+    clearIcon="lucideTrash2"
+    [browseOnFocus]="field().browsable"
+    [removeLabel]="'common.remove' | transloco"
+    [disabled]="field().disabled()"
+    [optionTemplate]="rowTemplate()"
+    (query)="field().onSearch($event)"
+    (selectionChange)="field().onSelect($event)"
+    (clear)="field().onClear()"
+    (touched)="field().markTouched()"
+  />
+</ng-template>
+
+<!-- Shared "label + muted suffix" row (area/category breadcrumb, chart name). -->
+<ng-template #suffixRow let-item>
+  <span>{{ field().labelOf(item) }}</span>
+  @let suffix = suffixOf(item);
+  @if (suffix) {
+    <span class="ml-2 text-xs text-fg-subtle">{{ suffix }}</span>
+  }
+</ng-template>

@@ -1,0 +1,348 @@
+/*
+ * Copyright 2016 Danish Maritime Authority.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.util;
+
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.IsoFields;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Locale;
+import java.util.TimeZone;
+
+/**
+ * Utility methods for handling date and time.
+ */
+@SuppressWarnings("unused")
+public class TimeUtils {
+
+    /**
+     * Resets the time part of the date to 0:0:0
+     * @param cal the date to reset
+     * @return the reset date
+     */
+    public static Calendar resetTime(Calendar cal) {
+        if (cal != null) {
+            cal.set(Calendar.HOUR_OF_DAY, 0);            // set hour to midnight
+            cal.set(Calendar.MINUTE, 0);                 // set minute in hour
+            cal.set(Calendar.SECOND, 0);                 // set second in minute
+            cal.set(Calendar.MILLISECOND, 0);            // set millis in second
+        }
+        return cal;
+    }
+
+    /**
+     * Resets the time part of the date to 0:0:0
+     * @param date the date to reset
+     * @return the reset date
+     */
+    public static Date resetTime(Date date) {
+        if (date != null) {
+            Calendar cal = Calendar.getInstance();       // get calendar instance
+            cal.setTime(date);                           // set cal to date
+            date = resetTime(cal).getTime();
+        }
+        return date;
+    }
+
+    /**
+     * Resets the time part of the date to 0:0:0 in the given time zone
+     * @param date the date to reset
+     * @param timeZone the time zone
+     * @return the reset date
+     */
+    public static Date resetTime(Date date, TimeZone timeZone) {
+
+        if (timeZone == null) {
+            return resetTime(date);
+        }
+
+        if (date != null) {
+            ZonedDateTime time = ZonedDateTime.ofInstant(date.toInstant(), timeZone.toZoneId());
+            time = time.with(LocalTime.of(0, 0, 0, 0));
+            date = Date.from(time.toInstant());
+        }
+        return date;
+    }
+
+    /**
+     * Resets the seconds part of the date to 0
+     * @param cal the date to reset
+     * @return the reset date
+     */
+    public static Calendar resetSeconds(Calendar cal) {
+        if (cal != null) {
+            cal.set(Calendar.SECOND, 0);                 // set second in minute
+            cal.set(Calendar.MILLISECOND, 0);            // set millis in second
+        }
+        return cal;
+    }
+
+    /**
+     * Resets the seconds part of the date to 0
+     * @param date the date to reset
+     * @return the reset date
+     */
+    public static Date resetSeconds(Date date) {
+        if (date != null) {
+            Calendar cal = Calendar.getInstance();       // get calendar instance
+            cal.setTime(date);                           // set cal to date
+            date = resetSeconds(cal).getTime();
+        }
+        return date;
+    }
+
+    /**
+     * Resets the time part of the date to 23:59:59
+     * @param date the date to set as the end of the day
+     * @return the end of the day
+     */
+    public static Date endOfDay(Date date) {
+        if (date != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+            cal = resetTime(cal);
+            cal.add(Calendar.DATE, 1);
+            cal.add(Calendar.SECOND, -1);
+            date = cal.getTime();
+        }
+        return date;
+    }
+
+    /**
+     * Returns the last second of the date's day in the given time zone: the start of the next day in the zone,
+     * minus one second. On an ordinary day this is 23:59:59. On a day whose clock changes late in the evening
+     * (in a zone that changes its clock at 23:00 local time) setting the wall clock to 23:59:59 would land on the next day in
+     * spring and an hour before the day ends in autumn; the next day's start does not.
+     * @param date the date to set as the end of the day
+     * @param timeZone the time zone
+     * @return the end of the day
+     */
+    public static Date endOfDay(Date date, TimeZone timeZone) {
+
+        if (timeZone == null) {
+            return endOfDay(date);
+        }
+
+        if (date != null) {
+            ZoneId zone = timeZone.toZoneId();
+            LocalDate day = date.toInstant().atZone(zone).toLocalDate();
+            date = Date.from(day.plusDays(1).atStartOfDay(zone).toInstant().minusSeconds(1));
+        }
+        return date;
+    }
+
+    /**
+     * Shortcut function that returns the given Calendar field for the date
+     * @param date the date
+     * @param calFieldId the Calendar field
+     * @return the result
+     */
+    public static Integer getCalendarField(Date date, int calFieldId) {
+        if (date != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+            return cal.get(calFieldId);
+        }
+        return null;
+    }
+
+    /**
+     * Returns the calendar year of the date in the given zone
+     * @param date the date
+     * @param zone the zone the year is read in
+     * @return the year
+     */
+    public static int year(Date date, ZoneId zone) {
+        return date.toInstant().atZone(zone).getYear();
+    }
+
+    /**
+     * Returns the ISO-8601 week of the date in the given zone
+     * @param date the date
+     * @param zone the zone the week is read in
+     * @return the ISO week, 1 to 53
+     */
+    public static int isoWeek(Date date, ZoneId zone) {
+        return date.toInstant().atZone(zone).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+    }
+
+    /**
+     * Returns the ISO-8601 week-based year of the date in the given zone: the year its ISO week belongs to,
+     * which differs from the calendar year in the first and last days of some years
+     * @param date the date
+     * @param zone the zone the year is read in
+     * @return the week-based year
+     */
+    public static int isoWeekBasedYear(Date date, ZoneId zone) {
+        return date.toInstant().atZone(zone).get(IsoFields.WEEK_BASED_YEAR);
+    }
+
+    /**
+     * Returns the zone with the given id, such as a domain's time zone, or the JVM's zone when the id is blank or
+     * cannot be read. Unlike {@link TimeZone#getTimeZone(String)}, an unreadable id does not silently become GMT.
+     * @param zoneId the zone id, or null
+     * @return the zone
+     */
+    public static ZoneId zoneOrDefault(String zoneId) {
+        if (zoneId != null && !zoneId.isBlank()) {
+            try {
+                return ZoneId.of(zoneId.trim());
+            } catch (java.time.DateTimeException e) {
+                // An unreadable zone falls back to the JVM's
+            }
+        }
+        return TimeZone.getDefault().toZoneId();
+    }
+
+    /**
+     * Shortcut function that adds an amount to the given calendar field
+     * @param date the date
+     * @param calFieldId the Calendar field
+     * @param amount the amount to add
+     * @return the result
+     */
+    public static Date add(Date date, int calFieldId, int amount) {
+        if (date != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+            cal.add(calFieldId, amount);
+            date = cal.getTime();
+        }
+        return date;
+    }
+
+    /**
+     * Returns a Date for the given year, month and day.
+     * Parameters left as null are ignored, so e.g. getDate(null, 0, 1) will return January 1st of the current year.
+     *
+     * @param year the year
+     * @param month the month of the year. NB: Months are zero-based.
+     * @param day the day of the month. NB: Days are one-based.
+     * @return the first day of the current year
+     */
+    public static Date getDate(Integer year, Integer month, Integer day) {
+        Calendar cal = Calendar.getInstance();
+        if (year != null) {
+            cal.set(Calendar.YEAR, year);
+        }
+        if (month != null) {
+            cal.set(Calendar.MONTH, month);
+        }
+        if (day != null) {
+            cal.set(Calendar.DAY_OF_MONTH, day);
+        }
+        return TimeUtils.resetTime(cal.getTime());
+    }
+
+    /**
+     * Checks if the two Dates is for the same date
+     * @param date1 the first date
+     * @param date2 the second date
+     * @return if the two Dates is for the same date
+     */
+    @SuppressWarnings("all")
+    public static boolean sameDate(Date date1, Date date2) {
+        if (date1 == null || date2 == null) {
+            return false;
+        }
+        return resetTime(date1).getTime() == resetTime(date2).getTime();
+    }
+
+    /**
+     * Checks if the two Dates is for the same date taking into account the given time zone
+     * @param date1 the first date
+     * @param date2 the second date
+     * @return if the two Dates is for the same date
+     */
+    public static boolean sameDate(Date date1, Date date2, TimeZone timeZone) {
+        if (date1 == null || date2 == null) {
+            return false;
+        } else if (timeZone == null) {
+            return sameDate(date1, date2);
+        }
+        LocalDate d1 = date1.toInstant().atZone(timeZone.toZoneId()).toLocalDate();
+        LocalDate d2 = date2.toInstant().atZone(timeZone.toZoneId()).toLocalDate();
+        return d1.equals(d2);
+    }
+
+    /**
+     * Checks if the two Dates is for the same date, hour and minute
+     * @param date1 the first date
+     * @param date2 the second date
+     * @return if the two Dates is for the same date, hour and minute
+     */
+    @SuppressWarnings("all")
+    public static boolean sameDateHourMinute(Date date1, Date date2) {
+        if (date1 == null || date2 == null) {
+            return false;
+        }
+        return resetSeconds(date1).getTime() == resetSeconds(date2).getTime();
+    }
+
+    /**
+     * Computes the number of weeks in a given year
+     * See: http://stackoverflow.com/questions/18438332/how-to-get-total-number-of-week-in-the-current-year
+     *
+     * @param year the year of choice
+     * @return the number of weeks in the year
+     */
+    public static int getNumberOfWeeksInYear(int year) {
+        // Use a mid-year date so that the calendar's week-year is unambiguously "year"
+        // (a December date can spill into week 1 of the following week-year).
+        GregorianCalendar cal = new GregorianCalendar(year, Calendar.JUNE, 1);
+        cal.setFirstDayOfWeek(Calendar.MONDAY); // week begin from Monday
+        cal.setMinimalDaysInFirstWeek(4); // 1 week minimum from Thursday
+        return cal.getWeeksInWeekYear();
+    }
+
+    /**
+     * Computes the ISO-8601 week of year for the given date
+     * See: http://stackoverflow.com/questions/147178/what-is-a-good-simple-way-to-compute-iso-8601-week-number
+     *
+     * @param date the date of choice
+     * @return the ISO-8601 week number of the date
+     */
+    public static int getISO8601WeekOfYear(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setMinimalDaysInFirstWeek(4);
+        calendar.setFirstDayOfWeek(Calendar.MONDAY);
+        calendar.setTime(date);
+        return calendar.get(Calendar.WEEK_OF_YEAR);
+    }
+
+    /**
+     * Formats the date in the official NAVTEX date format (see S-53 guidelines)
+     * @param date the date to format
+     * @return the formatted date, or the empty string if the date is not defined
+     */
+    public static String formatNavtexDate(Date date) {
+        try {
+            SimpleDateFormat navtexUtcDate = new SimpleDateFormat("ddHHmm 'UTC' MMM yy", Locale.US);
+            navtexUtcDate.setTimeZone(TimeZone.getTimeZone("UTC"));
+            return navtexUtcDate.format(date);
+        } catch (Exception e) {
+            // Prefer robustness over correctness
+        }
+        return "";
+    }
+
+}

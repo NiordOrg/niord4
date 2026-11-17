@@ -1,0 +1,15 @@
+# The country's configuration, and only its own. The base product's defaults are niord-base's
+# config/niord-core-defaults.yml, at the lowest precedence: this file, the profile files, the
+# environment and the command line all override them. The start-up guard refuses a protected
+# property here (.niord/kit/docs/country-api.md).
+spring:
+  application:
+    name: niord-{{cc}}
+niord:
+  s124:
+    # S-124 is on (the base product's rule for a new country). Without a producer code the backend
+    # starts, generates no S-124 data and answers every S-124 request with an error. Before go-live,
+    # set producer-code to your authority's IHO S-62 producer code, four upper-case letters or
+    # digits, or set enabled: false.
+    enabled: true
+{{producerCode}}

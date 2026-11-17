@@ -1,0 +1,187 @@
+<section class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 p-4">
+  <div class="flex items-center justify-between gap-2">
+    <h1 class="text-xl font-semibold text-fg">{{ 'schedule.title' | transloco }}</h1>
+    @if (firingScheduleDomain()) {
+      <button
+        type="button"
+        class="btn-secondary"
+        [disabled]="updatingExercises()"
+        [attr.aria-busy]="updatingExercises() ? 'true' : null"
+        (click)="updateExercises()"
+      >
+        <app-icon name="lucideRefreshCw" class="mr-1 text-xs" />
+        {{ 'schedule.updateExercises' | transloco }}
+      </button>
+    }
+  </div>
+
+  @if (!firingScheduleDomain()) {
+    <app-empty-state icon="lucideCalendar" [title]="'schedule.noFiringSchedule' | transloco" />
+  } @else {
+    <!-- Filter bar: free-text area-name query + the area popover-select (both feed the search). -->
+    <div class="flex flex-wrap items-start gap-3">
+      <app-filter-panel [label]="'schedule.areaNamePlaceholder'" [closable]="false">
+        <span class="relative inline-block">
+          <input
+            type="search"
+            class="w-64 text-input"
+            [value]="facade.query()"
+            (input)="facade.query.set($any($event.target).value)"
+            [placeholder]="'schedule.areaNamePlaceholder' | transloco"
+            [attr.aria-label]="'schedule.areaNamePlaceholder' | transloco"
+          />
+          @if (facade.query() !== '') {
+            <button
+              type="button"
+              class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+              [attr.aria-label]="'common.clear' | transloco"
+              (click)="facade.query.set('')"
+            >
+              <app-icon name="lucideX" class="text-xs" />
+            </button>
+          }
+        </span>
+      </app-filter-panel>
+
+      <app-filter-panel [label]="'schedule.selectAreas'" (clear)="clearAreas()">
+        <div class="flex flex-wrap items-center gap-1">
+          @for (area of facade.selectedAreas(); track area.id) {
+            <button
+              type="button"
+              class="chip is-active"
+              (click)="removeArea(area)"
+              [attr.aria-label]="(areaName(area) || '') + ' — ' + ('common.remove' | transloco)"
+              [title]="(areaName(area) || '') + ' — ' + ('common.remove' | transloco)"
+            >
+              {{ areaName(area) }}
+              <app-icon name="lucideX" class="text-xs" aria-hidden="true" />
+            </button>
+          }
+          <button
+            #areaTrigger
+            type="button"
+            class="icon-button text-xs"
+            [attr.aria-label]="'schedule.selectAreas' | transloco"
+            [title]="'schedule.selectAreas' | transloco"
+            (click)="areaPicker.toggle(areaTrigger)"
+          >
+            <app-icon name="lucideMapPin" />
+          </button>
+        </div>
+        <app-tree-picker
+          #areaPicker
+          [header]="'schedule.selectAreas'"
+          [entities]="areaRoots()"
+          [selectedIds]="selectedAreaIds()"
+          (selectionChange)="onAreasChange($event)"
+        />
+      </app-filter-panel>
+    </div>
+
+    <!-- Date navigation -->
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-medium text-fg-title">{{
+        'schedule.scheduleDate' | transloco
+      }}</span>
+      <button
+        type="button"
+        class="icon-button text-xs"
+        [attr.aria-label]="'schedule.previousDay' | transloco"
+        [title]="'schedule.previousDay' | transloco"
+        (click)="facade.offsetDate(-1)"
+      >
+        <app-icon name="lucideChevronLeft" />
+      </button>
+      <!-- A browser-local day anchor, not an instant: the facade normalises the pick to local
+           noon and the backend resolves the day from it in the session domain's zone. -->
+      <app-date-picker
+        class="w-40"
+        [local]="true"
+        [value]="facade.date()"
+        (valueChange)="$event && facade.setDate($event)"
+        [ariaLabel]="'schedule.scheduleDate' | transloco"
+      />
+      <button
+        type="button"
+        class="icon-button text-xs"
+        [attr.aria-label]="'schedule.nextDay' | transloco"
+        [title]="'schedule.nextDay' | transloco"
+        (click)="facade.offsetDate(1)"
+      >
+        <app-icon name="lucideChevronRight" />
+      </button>
+    </div>
+
+    <!-- Schedule table + side-by-side firing-areas map. The map keeps a fixed square
+         size on large screens (top-aligned) so it never resizes with the table. -->
+    <div class="flex min-h-0 flex-col gap-4 lg:flex-row lg:items-start">
+      <div class="relative min-w-0 lg:flex-1">
+        <app-progress-bar [visible]="facade.loading()" [overlay]="true" />
+        @if (facade.error()) {
+          <app-error-banner
+            [title]="'schedule.loadError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="facade.retry()"
+          />
+        } @else if (!facade.loading() && facade.rows().length === 0) {
+          <app-empty-state icon="lucideInbox" [title]="'schedule.empty' | transloco" />
+        } @else {
+          <table class="niord-table bg-surface-0">
+            <thead>
+              <tr>
+                <th>{{ 'schedule.column.name' | transloco }}</th>
+                <th class="text-right">{{ 'schedule.column.time' | transloco }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of facade.rows(); track row.fap.area.id) {
+                @if (row.areaHeading; as heading) {
+                  <tr>
+                    <th colspan="2" scope="colgroup" class="bg-surface-sunken px-4 py-3 text-left">
+                      <span class="area-dot" aria-hidden="true"></span>
+                      {{ areaName(heading) }}
+                    </th>
+                  </tr>
+                }
+                <tr
+                  (mouseenter)="hoveredAreaId.set(row.fap.area.id)"
+                  (mouseleave)="hoveredAreaId.set(undefined)"
+                >
+                  <td class="align-top">{{ areaName(row.fap.area) }}</td>
+                  <td class="align-top">
+                    <app-time-schedule-editor
+                      [firingAreaPeriods]="row.fap"
+                      [date]="facade.date()"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <div
+        class="relative h-80 w-full overflow-hidden rounded border border-surface-200 sm:h-96 lg:h-128 lg:w-lg lg:shrink-0 dark:border-surface-700"
+      >
+        <app-ol-map class="block h-full w-full" [view]="initialView()">
+          <!-- No OpenSeaMap here — the schedule map deliberately offers only OSM + WMS. -->
+          <app-base-map-layers [openSeaMap]="false" />
+          <app-ol-areas-layer
+            [areas]="facade.firingAreas()"
+            [name]="areasName()"
+            [fitExtent]="true"
+            [hovered]="hoveredAreaId()"
+            [showInLayerSwitcher]="true"
+          />
+        </app-ol-map>
+        <app-ol-layer-switcher
+          class="absolute right-2 bottom-2 z-10"
+          [title]="'messages.map.layerSwitcher.title' | transloco"
+        />
+      </div>
+    </div>
+
+    <app-confirm width="28rem" />
+  }
+</section>

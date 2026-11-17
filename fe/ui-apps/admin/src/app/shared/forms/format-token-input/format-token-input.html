@@ -1,0 +1,52 @@
+<div class="flex items-start gap-2">
+  @if (multiline()) {
+    <textarea
+      #field
+      class="flex-1 text-input"
+      [rows]="rows()"
+      [attr.id]="inputId() ?? null"
+      [value]="value()"
+      [disabled]="disabled()"
+      [attr.aria-label]="ariaLabel() ?? null"
+      autocapitalize="off"
+      autocorrect="off"
+      autocomplete="off"
+      spellcheck="false"
+      (input)="onInput($event)"
+      (focus)="onFieldFocus()"
+      (blur)="touch.emit()"
+    ></textarea>
+  } @else {
+    <input
+      #field
+      type="text"
+      class="flex-1 text-input"
+      [attr.id]="inputId() ?? null"
+      [value]="value()"
+      [disabled]="disabled()"
+      [attr.aria-label]="ariaLabel() ?? null"
+      autocapitalize="off"
+      autocorrect="off"
+      autocomplete="off"
+      spellcheck="false"
+      (input)="onInput($event)"
+      (focus)="onFieldFocus()"
+      (blur)="touch.emit()"
+    />
+  }
+  <button
+    type="button"
+    class="btn-secondary shrink-0"
+    [disabled]="disabled()"
+    [appMenuTriggerFor]="tokenMenu"
+    align="end"
+  >
+    {{ 'shared.forms.formatTokenInput.insert' | transloco }}
+    <app-icon name="lucideChevronDown" class="ml-1 text-xs opacity-70" />
+  </button>
+  <app-menu
+    #tokenMenu
+    [model]="tokenItems()"
+    [ariaLabel]="'shared.forms.formatTokenInput.menuAria' | transloco"
+  />
+</div>

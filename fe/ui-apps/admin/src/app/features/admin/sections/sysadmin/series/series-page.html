@@ -1,0 +1,117 @@
+<app-admin-section-page titleKey="admin.sections.series.label" descriptionKey="admin.series.intro">
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.series.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.series.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.series.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <button type="button" class="btn-primary" (click)="addSeries()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.series.new' | transloco }}
+    </button>
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.series.loadError' | transloco"
+      [retryLabel]="'admin.series.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.entries().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.series.empty.none' | transloco" />
+    } @else {
+      <app-empty-state icon="lucideFilterX" [title]="'admin.series.empty.noMatches' | transloco" />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-56">{{ 'admin.series.column.seriesId' | transloco }}</th>
+            <th>{{ 'admin.series.column.type' | transloco }}</th>
+            <th class="w-32">{{ 'admin.series.column.sequence' | transloco }}</th>
+            <th>{{ 'admin.series.column.shortFormat' | transloco }}</th>
+            <th class="w-40">
+              {{ 'admin.series.column.nextNumber' | transloco: { year: currentYear() } }}
+            </th>
+            <th class="w-32">
+              <span class="sr-only">{{ 'admin.series.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of pageRows(); track row.series.seriesId) {
+            <tr>
+              <td>{{ row.series.seriesId }}</td>
+              <td>{{ row.typeLabel }}</td>
+              <td>{{ row.sequenceLabel }}</td>
+              <td>{{ row.series.shortFormat }}</td>
+              <td>{{ row.nextNumber }}</td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.series.editSeries' | transloco"
+                  (click)="editSeries(row.series)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.series.copySeries' | transloco"
+                  (click)="copySeries(row.series)"
+                >
+                  <app-icon name="lucideCopy" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.series.deleteSeries' | transloco"
+                  (click)="deleteSeries(row.series)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-series-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="onEditorClosed()"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

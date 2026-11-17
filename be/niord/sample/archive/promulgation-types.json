@@ -1,0 +1,44 @@
+[
+  {
+    "typeId": "navtex",
+    "serviceId": "navtex",
+    "name": "NAVTEX",
+    "priority": 1,
+    "active": true,
+    "language": "en",
+    "domains": [
+      {
+        "domainId": "niord-nw"
+      }
+    ]
+  },
+  {
+    "typeId": "audio",
+    "serviceId": "audio",
+    "name": "Audio",
+    "priority": 50,
+    "active": true,
+    "language": "en",
+    "domains": [
+      {
+        "domainId": "niord-nw"
+      }
+    ]
+  },
+  {
+    "typeId": "twitter",
+    "serviceId": "twitter",
+    "name": "Twitter",
+    "priority": 100,
+    "active": false,
+    "language": "en",
+    "domains": [
+      {
+        "domainId": "niord-nw"
+      },
+      {
+        "domainId": "niord-nm"
+      }
+    ]
+  }
+]

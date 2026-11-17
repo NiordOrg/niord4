@@ -1,0 +1,51 @@
+@if (hasAnyEnabled()) {
+  <div
+    class="flex flex-wrap items-center gap-2 py-2 border-b border-surface-200 dark:border-surface-700"
+  >
+    @if (enabledDomain()) {
+      <app-domain-filter-panel />
+    }
+    @if (enabledText()) {
+      <app-text-filter-panel />
+    }
+    @if (enabledType()) {
+      <app-type-filter-panel />
+    }
+    @if (enabledStatus()) {
+      <app-status-filter-panel />
+    }
+    @if (enabledTag()) {
+      <app-tag-filter-panel />
+    }
+    @if (enabledPublication()) {
+      <app-publication-filter-panel />
+    }
+    @if (enabledPromulgationType()) {
+      <app-promulgation-type-filter-panel />
+    }
+    @if (enabledUser()) {
+      <app-user-filter-panel />
+    }
+    @if (enabledComments()) {
+      <app-comments-filter-panel />
+    }
+    @if (enabledReference()) {
+      <app-reference-filter-panel />
+    }
+    @if (enabledChart()) {
+      <app-chart-filter-panel />
+    }
+    @if (enabledMessageSeries()) {
+      <app-message-series-filter-panel />
+    }
+    @if (enabledArea()) {
+      <app-area-filter-panel />
+    }
+    @if (enabledCategory()) {
+      <app-category-filter-panel />
+    }
+    @if (enabledDate()) {
+      <app-date-filter-panel />
+    }
+  </div>
+}

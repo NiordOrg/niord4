@@ -1,0 +1,30 @@
+<!-- Until the view has been painted once, it shows what a search in progress shows: no rows, the bar. -->
+<app-message-list-status [pending]="!painted()" />
+
+@if (facade.list.messages().length === 0 && !facade.list.loading()) {
+  <app-empty-search-result />
+} @else {
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 py-2">
+    @for (entry of painted() ? facade.list.groupedMessages() : []; track entry.message.id) {
+      @if (entry.areaHeading) {
+        <!--
+          `-my-3` cancels most of the grid's `gap-4` row-gap above and below the
+          heading so it sits tight against its card group instead of floating in
+          a 16px band. Mirrors the table/details views, where the area row is
+          flush with its message rows; without this the heading reads as a
+          taller, detached band.
+        -->
+        <div class="col-span-full -my-3">
+          <h4 class="m-0 text-base font-semibold text-surface-700 dark:text-surface-200 px-4 py-3">
+            <span class="area-dot" aria-hidden="true"></span>
+            <app-message-area-heading [areaHeading]="entry.areaHeading" />
+          </h4>
+        </div>
+      }
+      <app-message-grid-card [message]="entry.message" (openRequested)="onOpenDialog($event)" />
+    }
+  </div>
+  @if (painted()) {
+    <app-load-more-messages />
+  }
+}

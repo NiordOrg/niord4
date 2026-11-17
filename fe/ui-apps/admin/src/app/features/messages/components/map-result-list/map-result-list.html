@@ -1,0 +1,78 @@
+<section class="flex h-full flex-col">
+  <header
+    class="flex items-center justify-between gap-2 border-b border-surface-200 px-3 py-2 dark:border-surface-700"
+  >
+    <h3 class="text-sm font-semibold">{{ headingKey() | transloco }}</h3>
+    <button
+      type="button"
+      class="icon-button text-xs"
+      (click)="toggle()"
+      [attr.aria-label]="toggleKey() | transloco"
+      [attr.title]="toggleKey() | transloco"
+    >
+      <app-icon [name]="collapsed() ? 'lucideChevronDown' : 'lucideChevronUp'" />
+    </button>
+  </header>
+
+  @if (!collapsed()) {
+    <!-- `message-list-status` is a 0-height overlay wrapper, so it must NOT be a `gap-1`
+         flex item (that adds a phantom gap at the list top); the gap lives on the content below it. -->
+    <div class="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2">
+      <app-message-list-status />
+
+      <div class="flex flex-col gap-1">
+        @if (messages().length === 0 && !loading()) {
+          <app-empty-search-result />
+        } @else {
+          <ul class="flex flex-col gap-1">
+            @for (msg of messages(); track msg.id) {
+              <!--
+              Hover events live on the `<li>` so moving the pointer between
+              the row button and the zoom button (siblings inside the same
+              `<li>`) doesn't flicker the map halo off-and-on. The zoom button
+              is a sibling rather than nested inside the row button because
+              `<button>` may not contain another `<button>` per HTML spec;
+              the row button gets `pr-9` so its text doesn't slide under it.
+            -->
+              <li
+                class="relative"
+                (mouseenter)="messageHovered.emit(msg.id)"
+                (mouseleave)="messageHovered.emit(undefined)"
+              >
+                <button
+                  type="button"
+                  class="flex w-full flex-col items-start gap-1 rounded p-1 pr-9 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+                  (click)="messageClicked.emit(msg.id)"
+                >
+                  <app-message-id-badge [message]="msg" />
+                  <span class="block w-full break-words whitespace-normal">
+                    {{ titleFor(msg) }}
+                    @if (isLanguageMismatch(msg) && foreignLanguageFor(msg); as foreign) {
+                      <app-language-flag
+                        class="ml-1 h-3 w-[1.125rem] align-middle opacity-50"
+                        [lang]="foreign.lang"
+                        [flagPath]="foreign.flagPath"
+                      />
+                    }
+                  </span>
+                </button>
+                @if (hasGeometry(msg)) {
+                  <button
+                    type="button"
+                    class="icon-button absolute top-1 right-1 text-xs"
+                    (click)="zoomRequested.emit(msg.id); collapse()"
+                    [attr.aria-label]="'messages.list.mapPanel.zoom' | transloco"
+                    [attr.title]="'messages.list.mapPanel.zoom' | transloco"
+                  >
+                    <app-icon name="lucideZoomIn" />
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+          <app-load-more-messages />
+        }
+      </div>
+    </div>
+  }
+</section>

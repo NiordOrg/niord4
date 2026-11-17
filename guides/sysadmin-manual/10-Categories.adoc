@@ -1,0 +1,269 @@
+
+:imagesdir: images
+
+[#categories]
+== Categories
+
+_Categories_ form a tree, such as "Light buoy" with "Light buoy unlit" beneath it. Editors assign categories to
+navigational warnings and notices to mariners, and filter message lists by them.
+
+A category can also be _executable_: then it generates a message from what an editor enters, as described in the
+link:../editor-manual/manual.html#message-template-execution[Message Template Execution] chapter of the editors'
+manual. An executable category is called a _message template_, or just a _template_, throughout the Niord
+documentation.
+
+The _Categories_ page lets a system administrator manage the tree. You open it from *Sysadmin* -> *Categories*.
+
+image::CategoriesPage.png[Categories, 800]
+
+The tree is on the left. Click the arrow before a category to open or close its sub-categories, and click a
+category to open it in the editor on the right. A template has a template mark after its name. Type a part of a
+name into the _Filter categories_ field above the tree to show only the categories whose name contains it.
+
+[#adding-or-editing-a-category]
+=== Adding or Editing a Category
+
+Click a category in the tree to edit it. To add one, click *New category* when no category is selected, which
+adds a root category, or *New sub-category* when one is, which adds a category beneath the selected one. A
+template cannot have sub-categories: the button is disabled while a template is open in the editor.
+
+The editor shows the attributes every category has:
+
+[cols="30,70",options="header"]
+|===
+| Attribute
+| Description
+
+| Active
+| Only an active category can be assigned to a message, or run as a template.
+
+| Name
+| The name of the category, in each language the deployment writes messages in.
+
+| MRN
+| Optionally, a _Maritime Resource Name_, a unique name (a URN) for the category. Categories with MRNs can be
+  matched between Niord systems of different countries, and the category import uses the MRN to find an existing
+  category.
+
+| Additional editor fields
+| Message editor fields that are shown when the category is assigned to a message. For example, a "Firing
+  Exercises" category assigned to a navigational warning may show the _Signals_ field, which navigational warnings
+  do not normally show.
+
+| AtoN filter
+| A filter on _Aids to Navigation_ (AtoNs), written in the
+  http://wiki.openstreetmap.org/wiki/Seamarks/Seamark_Objects[OpenStreetMap (OSM) seamark] tags that describe an
+  AtoN. The filter decides which templates are offered for an AtoN when a template is run from AtoN data. For
+  example, the "Light buoy" category in the picture above, and every category beneath it, is meant for AtoNs that
+  match `aton.kv('seamark:type', 'buoy.*') && aton.k('seamark:light.*')`: a buoy that has a light. The base product
+  has no page that runs templates from AtoN data, so the filter is kept with the category but not used there.
+
+| Type
+| _Category_ or _Template_. A category of the type _Category_ has no more attributes; a _Template_ has the
+  attributes of the next section.
+
+|===
+
+*Save category* saves the category, and *Cancel* closes the editor without saving.
+
+NOTE: The category with the English name "Firing Exercises" is the one the firing schedules give the
+messages they generate (see <<firing-schedules,Firing Schedules>>). Niord finds it by that exact English name, so
+do not rename it.
+
+[#adding-or-editing-a-template]
+=== Adding or Editing a Template
+
+A category of the type _Template_ is executable, as described in the
+link:../editor-manual/manual.html#message-template-execution[Message Template Execution] chapter. When you
+choose the type _Template_, the editor shows the template's own attributes below the common ones:
+
+image::CategoryEditorPanel.png[Category Editor Page, 594]
+
+[#domains-attribute]
+==== Domains Attribute
+
+Most templates only make sense for navigational warnings, which are short and follow international standards;
+notices to mariners are written more freely and suit a template system less well. The _Domains_ attribute names
+the domains whose editors are offered the template.
+
+[#standard-template-fields-attribute]
+==== Standard Template Fields Attribute
+
+The _Standard template fields_ are the fields of the message editor that the template execution page asks for,
+mostly simplified versions of the editor's fields (see the
+link:../editor-manual/manual.html#editor[Editor] chapter of the editors' manual):
+
+[cols="30,70",options="header"]
+|===
+| Template field
+| Description
+
+| Type
+| The sub-type of the message, such as _Local_ or _Coastal_ for a navigational warning.
+
+| Promulgation
+| Turns the promulgation types of the message on and off.
+
+| ID
+| The message series of the message.
+
+| Publish date
+| The interval the message is published in.
+
+| Areas
+| The areas and the vicinity of the message.
+
+| Positions
+| The positions of the message.
+
+| Event dates
+| The intervals the event of the message takes place in.
+
+| Work vessel
+| The work vessels of, for example, a cable operation.
+
+| Markings
+| The markings of, for example, a wreck.
+
+|===
+
+For example, the "Light buoy unlit" template asks for the type, the promulgation and the areas in the _Base
+fields_ card of the template execution page:
+
+image::CategoryStdTemplateFields.png[Standard Template Fields, 515]
+
+[#template-parameters-attribute]
+==== Template Parameters Attribute
+
+Most templates need more from the editor than the standard fields, such as the type and the name of the light
+buoy in the "Light buoy unlit" template. The _Template parameters_ attribute defines these extra parameters. Each
+parameter has an id, a name in each language, and a type from the <<parameter-types,Parameter Types>> page, and
+they are defined the same way as the parameters of a composite parameter type (see
+<<composite-parameter-type-edit-page,Composite Parameter Type Edit Page>>). *Add Parameter* adds one; the
+buttons of a row move it up or down, edit it or remove it.
+
+For example, the "Light buoy unlit" template has the parameter "aton" of the composite type
+"light_buoy_by_function", and asks for it once for each position the editor enters:
+
+image::CategoryTemplateParams.png[Category Template Parameters, 515]
+
+[#script-resources-attribute]
+==== Script Resources Attribute
+
+The _Script resources_ attribute lists the script resources, Freemarker templates and server-side JavaScript
+files, that run, in their order, when the template is run. The Freemarker templates write the message in the
+<<intermediate-message-template-format,Intermediate Message Template Format>>; a JavaScript file can change the
+data. In the "Light buoy unlit" example, the script "compute-affected-radius.js" adds an affected radius to the
+geometry of the message, from the range of the light.
+
+Each path must be the path of a script resource on the <<script-resources,Script Resources>> page. The buttons of
+a row:
+
+* the up and down arrows move the script resource earlier or later; you can also drag it by the
+  image:DragHandle.png[Drag Handle, 14] handle;
+* the magnifying glass opens a list of the script resources to choose from;
+* the pencil opens the script resource on the <<script-resources,Script Resources>> page;
+* the bin removes the row.
+
+*Add path* adds an empty row.
+
+[#example-template-message-attribute]
+==== Example Template Message Attribute
+
+With many templates, an editor may not know which one to use. The _Example template message_ is a message the
+template was made for; it is shown when the editor points at the template in the list of templates (see the
+link:../editor-manual/manual.html#template-selection-dialog[Template Selection] section of the editors' manual).
+
+*Test…* runs the template, as it stands in the editor and before you save it, on the example message, and
+shows the message it generates in the _Template Result_ dialog, one button per language when the deployment has
+more than one. Nothing is saved. The example message must belong to a message series of your current domain.
+
+*Test…* gives the template no parameters: the text a template writes from its parameters, such as the name of
+the light buoy in "Light buoy unlit", stays empty in the result. The picture shows the result of the "Wreck"
+template, whose text needs no parameter:
+
+image::CategoryTemplateResult.png[Template Result, 520]
+
+[#reorganizing-categories]
+=== Reorganizing Categories
+
+You change the place of a category in two ways:
+
+* To move a category beneath another parent, drag it there by its handle in the tree, and confirm.
+* To move a category up or down among the categories of its parent, select it and click the up or down arrow
+  above the tree.
+
+*Re-index categories* in the menu of the gear button (_Category actions_) recomputes the sort order of the whole
+tree.
+
+[#deleting-a-category]
+=== Deleting a Category
+
+Select the category and click *Delete* above the tree, and confirm. The category is deleted with all its
+sub-categories. Niord does not delete a category, or one of its sub-categories, that a message of any status has
+now, or that a domain names among its categories: it says "Error deleting category", and nothing is deleted. Make
+such a category inactive instead, or remove it from the messages and the domains first.
+
+[#importing-and-exporting-categories]
+=== Importing and Exporting Categories
+
+The menu of the gear button (_Category actions_) has *Export…* and *Import…*.
+
+The file is a JSON list of the root categories, each with its sub-categories in its _children_ field.
+
+An import is merged into the existing tree. Niord looks for an existing category with the MRN of an imported
+category, or, when it finds none, with one of its names under the same parent.
+
+Example:
+[source,json]
+----
+[
+  {
+    "active": true,
+    "descs": [
+      { "name": "Light", "lang": "en" }
+    ],
+    "type": "CATEGORY",
+    "atonFilter": "aton.kv('seamark:type', 'light.*')",
+    "children": [
+      {
+        "active": true,
+        "descs": [
+          { "name": "Light unlit", "lang": "en" }
+        ],
+        "type": "TEMPLATE",
+        "siblingSortOrder": 0.0,
+        "domains": [
+          { "domainId": "niord-nw" }
+        ],
+        "stdTemplateFields": [
+          "areas",
+          "type",
+          "promulgation",
+          "positions"
+        ],
+        "templateParams": [
+          {
+            "paramId": "aton",
+            "type": "light",
+            "mandatory": false,
+            "positionList": true,
+            "descs": [
+              { "name": "Light", "lang": "en" }
+            ]
+          }
+        ],
+        "scriptResourcePaths": [
+          "templates/tmpl/light-unlit.ftl",
+          "templates/tmpl/compute-affected-radius.js"
+        ],
+        "messageId": "NW-003-17"
+      },
+      ...
+    ]
+  },
+  ...
+]
+----
+
+The import runs as the _category-import_ batch job, which you follow on the <<batch-jobs,Batch Jobs>> page.

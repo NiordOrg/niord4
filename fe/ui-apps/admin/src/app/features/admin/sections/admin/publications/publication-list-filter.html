@@ -1,0 +1,32 @@
+<!--
+  The clear button sits INSIDE the field rather than beside it, which is where
+  the section's other filter boxes put it, and it is rendered only when there is
+  something to clear -- a permanently visible × on an empty box is a control
+  that does nothing.
+-->
+<span class="relative block">
+  <app-icon
+    name="lucideSearch"
+    class="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs text-fg-subtle"
+  />
+  <input
+    type="text"
+    class="w-full pr-8 pl-8 text-input"
+    autocomplete="off"
+    spellcheck="false"
+    [value]="draft()"
+    [placeholder]="placeholderKey() | transloco"
+    [attr.aria-label]="placeholderKey() | transloco"
+    (input)="onInput($any($event.target).value)"
+  />
+  @if (draft() !== '') {
+    <button
+      type="button"
+      class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+      [attr.aria-label]="'admin.publications.filter.clear' | transloco"
+      (click)="clear()"
+    >
+      <app-icon name="lucideX" class="text-xs" />
+    </button>
+  }
+</span>

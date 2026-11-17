@@ -1,0 +1,49 @@
+<div class="flex flex-col gap-2">
+  <div
+    class="file-drop-zone"
+    role="group"
+    [attr.aria-label]="ariaLabel() | transloco"
+    [class.is-dragover]="dragOver()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+  >
+    <button type="button" class="btn-primary" [disabled]="disabled()" (click)="fileInput.click()">
+      <app-icon name="lucideUpload" />
+      <span>{{ browseLabel() | transloco }}</span>
+    </button>
+    <span class="text-fg-muted">{{ hint() | transloco }}</span>
+    <input
+      #fileInput
+      type="file"
+      class="sr-only"
+      [attr.accept]="accept() ?? null"
+      [multiple]="multiple()"
+      [disabled]="disabled()"
+      (change)="onFileSelected($event)"
+    />
+  </div>
+
+  @if (queue().length > 0) {
+    <ul class="flex flex-col gap-1">
+      @for (item of queue(); track item.id) {
+        <li class="flex items-center gap-3 text-sm">
+          <span class="min-w-0 flex-1 truncate text-fg" [title]="item.fileName">
+            {{ item.fileName }}
+          </span>
+          <span class="shrink-0 text-xs text-fg-muted">{{ formatSize(item.size) }}</span>
+          <div class="flex w-28 shrink-0 items-center justify-end">
+            @switch (item.status()) {
+              @case ('error') {
+                <app-icon name="lucideCircleX" class="text-danger" />
+              }
+              @default {
+                <app-progress-bar [visible]="true" mode="indeterminate" />
+              }
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

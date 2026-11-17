@@ -1,0 +1,274 @@
+name: Pack
+
+# Publishes a home language pack of this country, fe/packs/<lang>/, as the OCI artifact
+# ghcr.io/<owner>/niord-lang-<lang>:<run>, with this repository's own workflow token, and withdraws
+# a bad one (fe-country-split-plan §4.5). Three jobs:
+#
+#   validate   on every run. Which pack: the dispatch's, or the one pack a push to main changed (a
+#              push that changes two fails: dispatch publish for each; a change to a pack's
+#              status/unaccepted.json alone, the reviewers' notes the archive leaves out, is no
+#              change, and the push filter leaves it out too). Set-up, which checks every
+#              pack against the pinned base product's catalog with the strict pack.json schema and
+#              the markup rule, and fails as the home's own build does; the latest published base
+#              product catalog, fetched through Maven with the workflow token; then, with no token,
+#              `pack.mjs validate`: the pack check against that catalog as information only (in
+#              the run summary), and the pack's canonical archive with its SHA-256. It hands the
+#              archive and the kit's OCI client, lib/oci.mjs — one file, Node's built-ins only —
+#              to the next job as the artifact `pack`, with both SHA-256s as job outputs
+#   publish    on the default branch only, for a pack the manifest marks `publish: true`, on a
+#              push or a dispatch with action publish: `packages: write` and nothing else, no
+#              checkout and no package installed; verifies both files against validate's
+#              SHA-256s and pushes the archive unchanged as :<run>, and writes the digest into
+#              the run summary with the line to add to pack-releases.md. The first publish pushes
+#              the empty withdrawn marker (:withdrawn) before the pack, so a re-run of a first
+#              publish that failed between the two finishes it
+#   withdraw   by dispatch on the default branch only, with the tag and a reason: lists the tag's
+#              digest, the tag, the reason and the date in the pack's withdrawn marker and pushes
+#              the whole marker as :withdrawn, which every consumer's set-up reads first
+#
+# A withdrawal runs validate first, for the verified client: it needs set-up green on main. When
+# main is red, withdraw by hand with the kit README's commands. pack-releases.md, at the repository
+# root, is the human record of every publish and withdrawal: add the summary's line to it.
+#
+# The first publish is the first push to main that changes a pack folder: a home that adds this
+# workflow and its pack in one merge publishes at that merge, and dispatches publish only when no
+# pack folder changed. The owner checks the organisation's package setting before it, and makes
+# the package public once, after it (consumers pull anonymously). The tag is GITHUB_RUN_NUMBER,
+# which GitHub counts per workflow file: a renamed or recreated pack.yml starts again at 1, and
+# publish refuses "exists already" until the numbering passes the old tags; a tag is never
+# overwritten.
+#
+# The language reaches every script through `env:` only and must match ^[a-z]{2,3}$, the folder
+# and its pack.json; so do the tag and the reason. No run block holds an expression, and every
+# one starts with `set -euo pipefail`. Runs never overlap (the marker is read, changed and pushed
+# whole), and none is dropped: the group queues every pending run (`queue: max`), where GitHub's
+# default keeps one and cancels it when a third arrives, which could lose a withdrawal. Nothing is
+# automerged anywhere: a consumer takes a new digest in a reviewed pull request.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'fe/packs/**'
+      - '!fe/packs/*/status/unaccepted.json'
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: 'The pack, e.g. da'
+        required: true
+        type: string
+      action:
+        description: 'publish, or withdraw a tag'
+        required: true
+        type: choice
+        options: [publish, withdraw]
+      tag:
+        description: 'withdraw: the tag to withdraw'
+        required: false
+        type: string
+      reason:
+        description: 'withdraw: why, one line'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pack
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  validate:
+    name: Validate the pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    defaults:
+      run:
+        working-directory: fe
+    outputs:
+      lang: ${{ steps.which.outputs.lang }}
+      publish: ${{ steps.archive.outputs.publish }}
+      sha256: ${{ steps.archive.outputs.sha256 }}
+      oci_sha256: ${{ steps.client.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up JDK 25 (Temurin) + GitHub Packages credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # The dispatch's language, or the one pack folder a push changed, its status/unaccepted.json
+      # left out; none, and nothing is published. A previous commit no ref reaches (a force-push)
+      # stops the run: dispatch publish instead.
+      - name: Which pack
+        id: which
+        env:
+          EVENT: ${{ github.event_name }}
+          PACK_LANG: ${{ inputs.lang }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = workflow_dispatch ]; then
+            [[ "$PACK_LANG" =~ ^[a-z]{2,3}$ ]] || { echo "::error::The dispatch's lang is not a language code, two or three a-z."; exit 1; }
+            [ -d "packs/$PACK_LANG" ] || { echo "::error::packs/$PACK_LANG/ does not exist."; exit 1; }
+            lang="$PACK_LANG"
+          else
+            if [[ ! "$BEFORE" =~ ^[0-9a-f]{40}$ ]] || [[ "$BEFORE" =~ ^0+$ ]]; then
+              echo "::error::The push has no previous commit to compare with: dispatch publish for the pack."
+              exit 1
+            fi
+            git cat-file -e "$BEFORE^{commit}" 2>/dev/null || { echo "::error::The push's previous commit is not in this history (a force-push?): dispatch publish for the pack."; exit 1; }
+            changed="$(git diff --name-only --relative "$BEFORE" "$GITHUB_SHA" -- packs/ ':(exclude)packs/*/status/unaccepted.json' | awk -F/ 'NF >= 3 { print $2 }' | sort -u)"
+            count="$(printf '%s' "$changed" | grep -c . || true)"
+            if [ "$count" -eq 0 ]; then
+              echo "::notice::No pack folder changed: nothing to publish."
+              lang=''
+            elif [ "$count" -gt 1 ]; then
+              echo "::error::One pack per change: this push changed $count packs; dispatch publish for each."
+              exit 1
+            else
+              lang="$changed"
+              [[ "$lang" =~ ^[a-z]{2,3}$ ]] || { echo "::error::A changed folder under packs/ is not a language code."; exit 1; }
+              [ -d "packs/$lang" ] || { echo "::notice::packs/$lang/ was removed: nothing to publish."; lang=''; }
+            fi
+          fi
+          echo "lang=$lang" >> "$GITHUB_OUTPUT"
+      # Set-up checks every pack the manifest names against the pinned base product's catalog,
+      # with the pack.json schema and the markup rule, and leaves the verified kit in ../.niord/kit/
+      # and the base product in .niord/base/. It runs Maven (../be/mvnw dependency:copy) for the
+      # two pinned packages: setup-java's settings.xml reads the password of the server `github`
+      # from GITHUB_TOKEN, which GitHub never exports by itself, so the workflow token is bound on
+      # the two steps that run Maven and on no other (GITHUB_ACTOR, the user name, is a variable
+      # every runner sets).
+      - name: Set up the workspace
+        if: steps.which.outputs.lang != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node setup.mjs
+      # The newest niord-fe-src in the registry, read through Maven's metadata; its catalog.json is
+      # read as data. Consumers are on different versions: the check against it informs.
+      - name: Fetch the latest base product catalog
+        if: steps.which.outputs.lang != '' && (github.event_name == 'push' || inputs.action == 'publish')
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node ../.niord/kit/pack.mjs latest-catalog --out .niord/latest-catalog.json
+      - name: Archive the pack
+        id: archive
+        if: steps.which.outputs.lang != '' && (github.event_name == 'push' || inputs.action == 'publish')
+        env:
+          PACK_LANG: ${{ steps.which.outputs.lang }}
+        run: |
+          set -euo pipefail
+          node ../.niord/kit/pack.mjs validate "$PACK_LANG" --catalog .niord/latest-catalog.json --out "$RUNNER_TEMP/pack"
+          cd "$RUNNER_TEMP/pack"
+          sha256sum -c "niord-lang-$PACK_LANG.zip.sha256"
+      - name: Hand over the OCI client
+        id: client
+        if: steps.which.outputs.lang != ''
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pack"
+          cp ../.niord/kit/lib/oci.mjs "$RUNNER_TEMP/pack/oci.mjs"
+          sha="$(sha256sum "$RUNNER_TEMP/pack/oci.mjs" | cut -d' ' -f1)"
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: steps.which.outputs.lang != ''
+        with:
+          name: pack
+          path: ${{ runner.temp }}/pack/
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  publish:
+    name: Publish the pack
+    needs: validate
+    if: github.ref == 'refs/heads/main' && needs.validate.outputs.publish == 'true' && (github.event_name == 'push' || inputs.action == 'publish')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: pack
+          path: pack
+      - name: Verify the archive and the client
+        env:
+          PACK_LANG: ${{ needs.validate.outputs.lang }}
+          SHA256: ${{ needs.validate.outputs.sha256 }}
+          OCI_SHA256: ${{ needs.validate.outputs.oci_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$PACK_LANG" =~ ^[a-z]{2,3}$ ]] || { echo "::error::validate gave no language code."; exit 1; }
+          [[ "$SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::validate gave no archive SHA-256."; exit 1; }
+          [[ "$OCI_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::validate gave no client SHA-256."; exit 1; }
+          echo "$SHA256  pack/niord-lang-$PACK_LANG.zip" | sha256sum -c -
+          echo "$OCI_SHA256  pack/oci.mjs" | sha256sum -c -
+      - name: Push the archive
+        env:
+          PACK_LANG: ${{ needs.validate.outputs.lang }}
+          SHA256: ${{ needs.validate.outputs.sha256 }}
+          PACK_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node pack/oci.mjs publish --archive "pack/niord-lang-$PACK_LANG.zip" --sha256 "$SHA256"
+
+  withdraw:
+    name: Withdraw a tag
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.action == 'withdraw'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: pack
+          path: pack
+      - name: Verify the client, the tag and the reason
+        env:
+          OCI_SHA256: ${{ needs.validate.outputs.oci_sha256 }}
+          PACK_TAG: ${{ inputs.tag }}
+          PACK_REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          [[ "$OCI_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::validate gave no client SHA-256."; exit 1; }
+          echo "$OCI_SHA256  pack/oci.mjs" | sha256sum -c -
+          [[ "$PACK_TAG" =~ ^[0-9]+$ ]] || { echo "::error::The tag to withdraw is a pack tag, digits only."; exit 1; }
+          [ -n "${PACK_REASON//[[:space:]]/}" ] || { echo "::error::A withdrawal gives its reason."; exit 1; }
+      - name: Add the tag to the withdrawn marker
+        env:
+          PACK_LANG: ${{ needs.validate.outputs.lang }}
+          PACK_TAG: ${{ inputs.tag }}
+          PACK_REASON: ${{ inputs.reason }}
+          PACK_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node pack/oci.mjs withdraw

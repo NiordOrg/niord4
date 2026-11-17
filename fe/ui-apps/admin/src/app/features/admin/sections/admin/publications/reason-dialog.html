@@ -1,0 +1,43 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [header]="headerKey() | transloco"
+  [style]="{ width: '32rem' }"
+>
+  <div class="flex flex-col gap-4">
+    <!-- What actually happens, said before it happens. -->
+    <p class="text-sm text-fg-muted">{{ effectKey() | transloco }}</p>
+
+    <div class="flex flex-col gap-1">
+      <label for="publication-reason" class="text-sm font-medium text-fg-title">
+        {{ 'admin.publications.retire.reason' | transloco }}
+      </label>
+      <textarea
+        id="publication-reason"
+        class="text-input min-h-24 w-full"
+        rows="3"
+        [formField]="reasonForm.reason"
+      ></textarea>
+      <p class="text-xs text-fg-subtle">
+        {{ 'admin.publications.retire.reasonHint' | transloco }}
+      </p>
+    </div>
+
+    @if (errorKey(); as key) {
+      <p class="text-sm text-danger">{{ key | transloco }}</p>
+      <!-- The server's own words, where they carry what no key can: the uids. -->
+      @if (errorDetail(); as detail) {
+        <p class="text-xs text-fg-subtle">{{ detail }}</p>
+      }
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.publications.retire.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-danger" [disabled]="submitDisabled()" (click)="submit()">
+      {{ confirmKey() | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

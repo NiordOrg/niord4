@@ -1,0 +1,304 @@
+<p class="max-w-3xl text-sm text-fg-muted">
+  {{ 'admin.publications.criteria.intro' | transloco }}
+</p>
+
+@if (!isEmpty() && !isScoped()) {
+  <!-- C-6. Shown as a warning rather than left to the save, because this is the one
+       criteria mistake whose preview looks plausible: a big number that is big for
+       the wrong reason. -->
+  <div class="message message-warn" role="alert">
+    <app-icon name="lucideTriangleAlert" class="message-icon" />
+    <span>{{ 'admin.publications.criteria.unscoped' | transloco }}</span>
+  </div>
+}
+
+@if (isEmpty()) {
+  <p class="text-sm text-fg-muted">
+    {{ 'admin.publications.criteria.empty' | transloco }}
+  </p>
+}
+
+<div class="flex flex-col gap-3">
+  @for (row of rows(); track row.kind) {
+    <div class="admin-panel admin-panel-body">
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.criteria.kind.' + row.kind | transloco }}
+        </span>
+        <button
+          type="button"
+          class="icon-button hover:text-danger"
+          [disabled]="disabled()"
+          [attr.aria-label]="
+            'admin.publications.criteria.removeKind'
+              | transloco: { kind: 'admin.publications.criteria.kind.' + row.kind | transloco }
+          "
+          (click)="removeKind(row.kind)"
+        >
+          <app-icon name="lucideTrash2" />
+        </button>
+      </div>
+
+      @if (uiFor(row.kind) !== 'checkbox') {
+        <!-- What was picked, as names. The stored operand is an MRN or a chart
+             number — a stable key that reads as nothing — so the chip resolves it
+             against the very catalogue the picker offered. A key the catalogue
+             cannot account for keeps its raw form and is marked, because a stale
+             one still runs on the server and is refused at save (C-4). -->
+        @if (row.values.length > 0) {
+          <div class="mb-2 flex flex-wrap items-center gap-1.5">
+            <!-- A removable chip, not a status label: `.status-badge` is a
+                 dot-led read-only tag, and a button inside one reads as
+                 decoration rather than as an action. -->
+            @for (chip of chipsFor(row.kind); track chip.value) {
+              <span class="chip is-active ac-chip">
+                @if (chip.resolved) {
+                  <span>{{ chip.label }}</span>
+                  @if (chip.detail) {
+                    <span class="text-xs opacity-75">{{ chip.detail }}</span>
+                  }
+                } @else {
+                  <code>{{ chip.label }}</code>
+                  <span class="text-xs opacity-75">
+                    {{ 'admin.publications.criteria.unresolved' | transloco }}
+                  </span>
+                }
+                <button
+                  type="button"
+                  class="ac-chip-remove"
+                  [disabled]="disabled()"
+                  [attr.aria-label]="
+                    'admin.publications.criteria.removeValue' | transloco: { value: chip.label }
+                  "
+                  (click)="removeValue(row.kind, chip.value)"
+                >
+                  <app-icon name="lucideX" aria-hidden="true" />
+                </button>
+              </span>
+            }
+          </div>
+        }
+      }
+
+      @switch (uiFor(row.kind)) {
+        @case ('tree') {
+          <!-- The shared hierarchy popover. It selects by numeric id and the
+               document stores MRNs, so the mapping runs in both directions here
+               rather than leaking a surrogate id into a saved document. -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              class="btn-secondary"
+              [disabled]="disabled()"
+              (click)="openTreePicker(row.kind, $event)"
+            >
+              <app-icon name="lucideSearch" class="mr-1 text-xs" />
+              {{ 'admin.publications.criteria.browse' | transloco }}
+            </button>
+            @if (
+              (row.kind === 'area' && areaRoots().length === 0) ||
+              (row.kind === 'category' && categoryRoots().length === 0)
+            ) {
+              <span class="text-sm text-fg-muted">
+                {{ 'admin.publications.criteria.noOptions' | transloco }}
+              </span>
+            }
+          </div>
+          @if (unusableNames(row.kind)) {
+            <!-- C-9: an area or category with no MRN has no stable key, so it
+                 cannot be an operand at all. Named here, because the click that
+                 tried to add it otherwise just does nothing. -->
+            <p class="mt-2 text-xs text-danger">
+              {{
+                'admin.publications.criteria.noMrn' | transloco: { names: unusableNames(row.kind) }
+              }}
+            </p>
+          }
+        }
+        @case ('catalogue') {
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              class="w-64 text-input"
+              [value]="chartFilter()"
+              [disabled]="disabled()"
+              [placeholder]="'admin.publications.criteria.chartFilter' | transloco"
+              [attr.aria-label]="'admin.publications.criteria.chartFilter' | transloco"
+              (input)="setChartFilter($event)"
+            />
+          </div>
+          <div
+            class="mt-2 max-h-56 overflow-y-auto rounded border border-surface-200 p-2 dark:border-surface-700"
+          >
+            @for (chart of chartMatches().shown; track chart.chartNumber) {
+              <label class="check-row gap-1.5 py-0.5 text-fg">
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  [checked]="isChecked(row.kind, chart.chartNumber)"
+                  [disabled]="disabled()"
+                  (change)="toggleValue(row.kind, chart.chartNumber)"
+                />
+                <span class="font-mono">{{ chart.chartNumber }}</span>
+                @if (chart.name) {
+                  <span class="text-fg-muted">{{ chart.name }}</span>
+                }
+              </label>
+            } @empty {
+              <span class="text-sm text-fg-muted">
+                {{ 'admin.publications.criteria.noOptions' | transloco }}
+              </span>
+            }
+          </div>
+          @if (chartMatches().total > chartMatches().shown.length) {
+            <p class="mt-1 text-xs text-fg-muted">
+              {{
+                'admin.publications.criteria.catalogueTruncated'
+                  | transloco: { shown: chartMatches().shown.length, total: chartMatches().total }
+              }}
+            </p>
+          }
+        }
+        @default {
+          <div class="flex flex-wrap gap-x-4 gap-y-1.5">
+            @for (option of optionsFor(row.kind); track option.value) {
+              <label class="check-row gap-1.5 text-fg">
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  [checked]="isChecked(row.kind, option.value)"
+                  [disabled]="disabled()"
+                  (change)="toggleValue(row.kind, option.value)"
+                />
+                @if (option.labelKey) {
+                  <span>{{ option.labelKey | transloco }}</span>
+                } @else {
+                  <span>{{ option.label }}</span>
+                }
+              </label>
+            } @empty {
+              <span class="text-sm text-fg-muted">
+                {{ 'admin.publications.criteria.noOptions' | transloco }}
+              </span>
+            }
+          </div>
+        }
+      }
+
+      @if (row.values.length === 0) {
+        <!-- C-1 refuses an empty operand list. Said here so the save is not the
+             first place it is mentioned. -->
+        <p class="mt-2 text-xs text-danger">
+          {{ 'admin.publications.criteria.noValues' | transloco }}
+        </p>
+      }
+    </div>
+  }
+</div>
+
+@if (addableKinds().length > 0) {
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="text-xs text-fg-muted">{{ 'admin.publications.criteria.add' | transloco }}</span>
+    @for (kind of addableKinds(); track kind) {
+      <button type="button" class="btn-tertiary" [disabled]="disabled()" (click)="addKind(kind)">
+        <app-icon name="lucidePlus" class="mr-1 text-xs" />
+        {{ 'admin.publications.criteria.kind.' + kind | transloco }}
+      </button>
+    }
+  </div>
+} @else if (rows().length >= maxNodes) {
+  <p class="text-xs text-fg-muted">
+    {{ 'admin.publications.criteria.maxNodes' | transloco: { max: maxNodes } }}
+  </p>
+}
+
+<!-- The count is the point of this screen. `total` is the answer; `sample` says it
+     is a sample, because a silently capped list reads as the whole result. -->
+<div class="admin-panel">
+  <h4 class="admin-panel-header">
+    {{ 'admin.publications.criteria.preview.title' | transloco }}
+  </h4>
+  <div class="admin-panel-body">
+    @if (previewResult(); as result) {
+      <p class="text-sm text-fg">
+        <strong>{{
+          'admin.publications.criteria.preview.total' | transloco: { total: result.total }
+        }}</strong>
+        <span class="text-fg-muted">
+          {{
+            'admin.publications.criteria.preview.candidates'
+              | transloco: { candidates: result.candidates }
+          }}
+        </span>
+      </p>
+      <!-- Candidates the resolver dropped. A count of 0 with nineteen messages
+         silently discarded for having no publish date is a different answer from a
+         count of 0, and it is the one the reader can act on. -->
+      @for (warning of result.warnings ?? []; track warning.code) {
+        <div class="message message-warn mt-1.5 text-xs" role="alert">
+          <app-icon name="lucideTriangleAlert" class="message-icon" />
+          <span>
+            {{ warningKey(warning.code) | transloco: { count: warning.count, code: warning.code } }}
+          </span>
+        </div>
+      }
+
+      @if (result.sample.length > 0) {
+        <p class="mt-1.5 text-xs text-fg-muted">
+          {{
+            result.truncated
+              ? ('admin.publications.criteria.preview.sampleTruncated'
+                | transloco: { shown: result.sample.length, total: result.total })
+              : ('admin.publications.criteria.preview.sampleAll' | transloco)
+          }}
+        </p>
+        <!-- Named, not listed by key: the panel is here to let an admin recognise
+             what the document they are typing selects, and a row of uuids answers
+             that with something nobody can read or quote. -->
+        <ul class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+          @for (message of result.sample; track message.messageUid) {
+            <li>
+              <app-message-ref
+                [messageUid]="message.messageUid"
+                [messageId]="message.messageId"
+                [title]="message.title"
+              />
+            </li>
+          }
+        </ul>
+      }
+    } @else if (previewStatus() === 'loading') {
+      <p class="text-sm text-fg-muted">
+        {{ 'admin.publications.criteria.preview.loading' | transloco }}
+      </p>
+    } @else if (previewStatus() === 'error') {
+      <p class="text-sm text-danger">
+        {{ 'admin.publications.criteria.preview.error' | transloco }}
+      </p>
+    } @else {
+      <p class="text-sm text-fg-muted">
+        {{ 'admin.publications.criteria.preview.idle' | transloco }}
+      </p>
+    }
+  </div>
+</div>
+
+<!-- Both popovers live outside the row loop: they are body-portalled overlays
+     anchored at whichever button opened them, and a picker rebuilt on every row
+     edit would lose the tree's expansion state mid-selection. -->
+<app-tree-picker
+  #areaPicker
+  [entities]="areaRoots()"
+  [selectedIds]="selectedAreaIds()"
+  header="messages.treePicker.areaHeader"
+  searchPlaceholder="messages.treePicker.areaSearch"
+  (selectionChange)="onTreeSelection('area', $event)"
+/>
+<app-tree-picker
+  #categoryPicker
+  [entities]="categoryRoots()"
+  [selectedIds]="selectedCategoryIds()"
+  header="messages.treePicker.categoryHeader"
+  searchPlaceholder="messages.treePicker.categorySearch"
+  (selectionChange)="onTreeSelection('category', $event)"
+/>

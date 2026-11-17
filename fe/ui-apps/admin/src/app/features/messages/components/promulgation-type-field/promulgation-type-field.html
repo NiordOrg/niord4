@@ -1,0 +1,10 @@
+<!-- The "(inactive)" danger badge is structurally different from the shared
+     label + muted-suffix row, so the row template stays leaf-owned. -->
+<app-entity-multiselect-control [field]="this" [optionTemplate]="optionRow" />
+
+<ng-template #optionRow let-option>
+  <span>{{ labelOf(option) }}</span>
+  @if (option.active === false) {
+    <span class="ml-1 text-xs text-danger">({{ 'common.inactive' | transloco }})</span>
+  }
+</ng-template>

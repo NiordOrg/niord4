@@ -1,0 +1,40 @@
+{
+  "note": "What scripts/endpoint-roles/extract-calls.mjs cannot see by itself, for the endpoint-role guard (scripts/endpoint-roles.test.mjs). unresolved: a site whose address the extractor cannot follow (file and the address expression as written), with the calls it makes (verb, path with {} for an unknown part, params) or none and why. ticketRoles: a ticketed call whose ticket is asked in another file, with the roles asked (null = a ticket with no role). notCalls: a member the extractor reports as a call of its own that nothing calls. An entry that matches nothing fails the guard.",
+  "unresolved": [
+    {
+      "file": "shared-map/layers/ol-wms-layer.ts",
+      "expression": "src",
+      "reason": "The WMS tile loader: src is the tile address OpenLayers builds from the layer's url, the /wms proxy servlet, which is outside the handler mapping (WmsProxyServletTest, WmsProxyServletITTest, WmsProxyHttpITTest)."
+    },
+    {
+      "file": "ui-apps/admin/src/app/core/version/build-version.service.ts",
+      "expression": "new URL('index.html', this.document.baseURI).toString()",
+      "reason": "The application's own index.html, read to compare build versions; not the backend."
+    },
+    {
+      "file": "ui-apps/admin/src/app/features/admin/components/json-import-dialog/json-import-dialog.ts",
+      "expression": "this.uploadUrl()",
+      "reason": "An input: each page binds its API service's uploadUrl(), which the extractor reports as a POST of its own (member <Service>.uploadUrl)."
+    },
+    {
+      "file": "ui-apps/admin/src/app/shared/components/file-upload/file-upload.ts",
+      "expression": "target",
+      "reason": "An input: the attachments and the layout fields bind their uploadUrl, which the extractor reports as a POST of its own (member AttachmentsField.uploadUrl, LayoutField.uploadUrl)."
+    }
+  ],
+  "ticketRoles": [
+    {
+      "file": "ui-apps/admin/src/app/features/messages/services/message-print.service.ts",
+      "endpoint": "GET /rest/message-reports/report.pdf",
+      "roles": ["user", null],
+      "from": "message-print-dialog.ts onPrint: authTicket.fetch(hasDomainUserRole() ? 'user' : undefined)"
+    },
+    {
+      "file": "ui-apps/admin/src/app/features/messages/services/message-print.service.ts",
+      "endpoint": "GET /rest/message-reports/message/{messageId}.pdf",
+      "roles": ["user", null],
+      "from": "message-print-dialog.ts onPrint: authTicket.fetch(hasDomainUserRole() ? 'user' : undefined)"
+    }
+  ],
+  "notCalls": []
+}

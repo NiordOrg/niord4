@@ -1,0 +1,50 @@
+{{- if .Values.mailhog.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "niord.componentName" (list . "smtp") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "smtp") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "niord.componentSelectorLabels" (list . "smtp") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "niord.componentSelectorLabels" (list . "smtp") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # The image's `mailhog` user, uid 1000. Spelled out as a number: the image names its user,
+      # and runAsNonRoot cannot verify a name, so the kubelet would refuse the pod. Pod Security
+      # `restricted`.
+      securityContext:
+        {{- include "niord.podSecurityContext" 1000 | nindent 8 }}
+      containers:
+        - name: mailhog
+          image: {{ include "niord.image" (list . "mailhog") | quote }}
+          imagePullPolicy: {{ .Values.mailhog.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: smtp
+              containerPort: 1025
+            - name: http
+              containerPort: 8025
+          readinessProbe:
+            tcpSocket:
+              port: smtp
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: smtp
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.mailhog.resources | nindent 12 }}
+{{- end }}

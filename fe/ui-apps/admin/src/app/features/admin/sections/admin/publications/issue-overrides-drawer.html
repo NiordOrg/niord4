@@ -1,0 +1,445 @@
+<app-drawer
+  #drawerRef
+  size="wide"
+  [visible]="open()"
+  header="admin.publications.overrides.title"
+  [dirty]="changed()"
+  initialFocus="first"
+  (closed)="closed.emit()"
+  (hidden)="hidden.emit()"
+>
+  @if (issue(); as issue) {
+    <form
+      (submit)="$event.preventDefault(); submit()"
+      class="flex min-w-0 flex-col gap-5"
+      data-testid="issue-overrides"
+    >
+      <!--
+        One quiet line, and only when there is something to say. A standing
+        banner over an untouched issue would announce a state nobody has put it
+        in; the count is what tells a reader how much of this drawer has stopped
+        following the series.
+      -->
+      @if (overriddenCount() > 0) {
+        <p
+          class="flex flex-wrap items-center gap-2 text-sm text-fg-muted"
+          data-testid="issue-overrides-count"
+        >
+          <span class="status-badge is-plain is-tailored">
+            {{
+              'admin.publications.overrides.countBadge' | transloco: { count: overriddenCount() }
+            }}
+          </span>
+          <span>{{ 'admin.publications.overrides.countNote' | transloco }}</span>
+        </p>
+      }
+
+      @if (errorKey(); as key) {
+        <p class="text-sm text-danger" role="alert">{{ key | transloco }}</p>
+      }
+
+      <!-- ======================================================== 1. Name ==== -->
+      <fieldset class="flex flex-col gap-2" data-testid="issue-overrides-name">
+        <legend class="mb-2 flex items-center gap-2 text-sm font-medium text-fg-title">
+          <span>{{ 'admin.publications.overrides.name' | transloco }}</span>
+          @if (marks().name) {
+            <span class="status-badge is-plain is-tailored">
+              {{ 'admin.publications.overrides.mark' | transloco }}
+            </span>
+          }
+        </legend>
+
+        @for (row of languageRows(); track row.lang) {
+          <div class="flex items-center gap-2">
+            <app-language-flag
+              class="h-3 w-[1.125rem] rounded-xs"
+              [lang]="row.lang"
+              [flagPath]="row.flagPath"
+            />
+            <!--
+              Real text, not a prompt behind an empty box: an untouched box holds
+              the name the pattern would give this issue and follows it as the
+              numbering is typed, so what will be written can be read and
+              adjusted in the same place.
+            -->
+            <input
+              type="text"
+              class="min-w-0 flex-1 text-input"
+              [id]="'issue-override-name-' + row.lang"
+              [value]="nameDraft(row.lang)"
+              [attr.maxlength]="maxNameLength"
+              [attr.aria-label]="
+                'admin.publications.overrides.nameFor' | transloco: { lang: row.lang.toUpperCase() }
+              "
+              (input)="onNameInput(row.lang, $any($event.target))"
+            />
+            @if (nameOverridden(row.lang)) {
+              <span class="status-badge is-plain is-tailored shrink-0">
+                {{ 'admin.publications.overrides.mark' | transloco }}
+              </span>
+            }
+          </div>
+        }
+
+        <p class="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">
+          @if (primaryNamePattern(); as pattern) {
+            <span>
+              {{
+                (marks().name
+                  ? 'admin.publications.overrides.nameHintOverridden'
+                  : 'admin.publications.overrides.nameHintFollows'
+                ) | transloco: { pattern }
+              }}
+            </span>
+          } @else {
+            <span>{{ 'admin.publications.overrides.nameHintNone' | transloco }}</span>
+          }
+          @if (marks().name) {
+            <button type="button" class="link-button is-quiet" (click)="followSeriesNames()">
+              {{ 'admin.publications.overrides.followSeries' | transloco }}
+            </button>
+          }
+        </p>
+      </fieldset>
+
+      <!-- =================================================== 2. File name ==== -->
+      <fieldset class="flex flex-col gap-2" data-testid="issue-overrides-file-name">
+        <legend class="mb-2 flex items-center gap-2 text-sm font-medium text-fg-title">
+          <span>{{ 'admin.publications.overrides.fileName' | transloco }}</span>
+          @if (marks().fileName) {
+            <span class="status-badge is-plain is-tailored">
+              {{ 'admin.publications.overrides.mark' | transloco }}
+            </span>
+          }
+        </legend>
+
+        @for (row of languageRows(); track row.lang) {
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+              <app-language-flag
+                class="h-3 w-[1.125rem] rounded-xs"
+                [lang]="row.lang"
+                [flagPath]="row.flagPath"
+              />
+              <!--
+                Real text, not a prompt behind an empty box: an untouched box
+                holds the name the pattern would give this issue and follows it
+                as the numbering is typed, so what will be written can be read
+                and adjusted in the same place.
+              -->
+              <input
+                type="text"
+                class="min-w-0 flex-1 font-mono text-input"
+                [id]="'issue-override-file-name-' + row.lang"
+                [value]="fileNameDraft(row.lang)"
+                [attr.maxlength]="maxFileNameLength"
+                [attr.aria-label]="
+                  'admin.publications.overrides.fileNameFor'
+                    | transloco: { lang: row.lang.toUpperCase() }
+                "
+                (input)="onFileNameInput(row.lang, $any($event.target).value)"
+              />
+              @if (fileNameOverridden(row.lang)) {
+                <span class="status-badge is-plain is-tailored shrink-0">
+                  {{ 'admin.publications.overrides.mark' | transloco }}
+                </span>
+              }
+            </div>
+            @if (fileNameClash().includes(row.lang)) {
+              <p class="text-xs text-danger" role="alert">
+                {{ 'admin.publications.overrides.fileNameNotDistinct' | transloco }}
+              </p>
+            }
+          </div>
+        }
+
+        <p class="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">
+          @if (primaryFileNamePattern(); as pattern) {
+            <span>
+              {{
+                (marks().fileName
+                  ? 'admin.publications.overrides.fileNameHintOverridden'
+                  : 'admin.publications.overrides.fileNameHintFollows'
+                ) | transloco: { pattern }
+              }}
+            </span>
+          } @else {
+            <span>{{ 'admin.publications.overrides.fileNameHintNone' | transloco }}</span>
+          }
+          @if (marks().fileName) {
+            <button type="button" class="link-button is-quiet" (click)="followSeriesFileNames()">
+              {{ 'admin.publications.overrides.followSeries' | transloco }}
+            </button>
+          }
+        </p>
+      </fieldset>
+
+      <!-- =================================================== 3. Numbering ==== -->
+      <!--
+        Free text, all three of them. The issue keeps deriving its week, its
+        second week and its year from the cut-off and everything that COMPUTES
+        keeps reading those; what is typed here is what they PRINT — "36+37" is
+        a real week label and no number check can accept it.
+      -->
+      <fieldset class="flex flex-col gap-2" data-testid="issue-overrides-numbering">
+        <legend class="mb-2 flex items-center gap-2 text-sm font-medium text-fg-title">
+          <span>{{ 'admin.publications.overrides.numbering' | transloco }}</span>
+          @if (marks().numbering) {
+            <span class="status-badge is-plain is-tailored">
+              {{ 'admin.publications.overrides.mark' | transloco }}
+            </span>
+          }
+        </legend>
+
+        <!--
+          A box only for a label this series' documents print. The numbers are
+          derived from the cut-off whatever the publication is numbered by — a
+          yearly compilation closes in some ISO week too — and a box for one that
+          never reaches a page would collect text nobody ever sees.
+        -->
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          @if (printedLabels().week) {
+            <div class="flex flex-col gap-1">
+              <label for="issue-override-week" class="text-xs text-fg-muted">
+                {{ 'admin.publications.overrides.week' | transloco }}
+              </label>
+              <input
+                id="issue-override-week"
+                type="text"
+                class="w-full text-input"
+                [value]="weekInput()"
+                [attr.maxlength]="maxLabelLength"
+                (input)="onWeekInput($any($event.target).value)"
+              />
+            </div>
+          }
+          @if (printedLabels().year) {
+            <div class="flex flex-col gap-1">
+              <label for="issue-override-year" class="text-xs text-fg-muted">
+                {{ 'admin.publications.overrides.year' | transloco }}
+              </label>
+              <input
+                id="issue-override-year"
+                type="text"
+                class="w-full text-input"
+                [value]="yearInput()"
+                [attr.maxlength]="maxLabelLength"
+                (input)="onYearInput($any($event.target).value)"
+              />
+            </div>
+          }
+          <div class="flex flex-col gap-1">
+            <label for="issue-override-edition" class="text-xs text-fg-muted">
+              {{ 'admin.publications.overrides.edition' | transloco }}
+            </label>
+            <input
+              id="issue-override-edition"
+              type="text"
+              class="w-full text-input"
+              [value]="editionInput()"
+              [attr.maxlength]="maxLabelLength"
+              [attr.aria-invalid]="editionInvalid() ? 'true' : null"
+              (input)="onEditionInput($any($event.target).value)"
+            />
+          </div>
+        </div>
+
+        @if (editionInvalid()) {
+          <p class="text-xs text-danger" role="alert">
+            {{ 'admin.publications.issue.editionRequired' | transloco }}
+          </p>
+        }
+
+        <p class="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">
+          <span>{{ numberingHint().key | transloco: numberingHint().params }}</span>
+          @if (marks().numbering) {
+            <button type="button" class="link-button is-quiet" (click)="followCutoff()">
+              {{ 'admin.publications.overrides.followCutoff' | transloco }}
+            </button>
+          }
+        </p>
+      </fieldset>
+
+      <!-- ====================================================== 4. Report ==== -->
+      <div class="flex flex-col gap-2" data-testid="issue-overrides-report">
+        <label
+          for="issue-override-report"
+          class="flex items-center gap-2 text-sm font-medium text-fg-title"
+        >
+          <span>{{ 'admin.publications.overrides.report' | transloco }}</span>
+          @if (marks().report) {
+            <span class="status-badge is-plain is-tailored">
+              {{ 'admin.publications.overrides.mark' | transloco }}
+            </span>
+          }
+        </label>
+        <select
+          id="issue-override-report"
+          class="w-full text-input"
+          (change)="onReportSelect($event)"
+        >
+          <!-- The first option IS "follow the series", named after the report the
+               series carries, so choosing it is choosing something rather than
+               choosing nothing. -->
+          <option value="" [selected]="reportIdInput() === ''">
+            {{
+              seriesReportName()
+                ? ('admin.publications.overrides.reportFollows'
+                  | transloco: { name: seriesReportName() })
+                : ('admin.publications.overrides.reportNone' | transloco)
+            }}
+          </option>
+          @for (report of reports(); track report.reportId) {
+            <option [value]="report.reportId" [selected]="reportIdInput() === report.reportId">
+              {{ report.name || report.reportId }}
+            </option>
+          }
+        </select>
+        <p class="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">
+          <span>{{ 'admin.publications.overrides.reportHint' | transloco }}</span>
+          @if (marks().report) {
+            <button type="button" class="link-button is-quiet" (click)="followSeriesReport()">
+              {{ 'admin.publications.overrides.followSeries' | transloco }}
+            </button>
+          }
+        </p>
+      </div>
+
+      <!-- ========================================== 5. Report parameters ==== -->
+      <!--
+        The series' answer beside this issue's, per parameter. An empty box on
+        the right is what following the series looks like, and the column to its
+        left says what that means today — which is the whole reason the table has
+        three columns rather than two.
+      -->
+      <div class="flex flex-col gap-2" data-testid="issue-overrides-params">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.overrides.params' | transloco }}
+        </span>
+
+        <div class="overflow-x-auto">
+          <table class="niord-table w-full">
+            <thead>
+              <tr>
+                <th scope="col" class="w-[34%]">
+                  {{ 'admin.publications.overrides.paramColumn' | transloco }}
+                </th>
+                <th scope="col" class="w-[30%]">
+                  {{ 'admin.publications.overrides.paramSeriesColumn' | transloco }}
+                </th>
+                <th scope="col">
+                  {{ 'admin.publications.overrides.paramIssueColumn' | transloco }}
+                </th>
+                <th
+                  scope="col"
+                  class="w-10"
+                  [attr.aria-label]="'admin.publications.overrides.removeParam' | transloco"
+                ></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of paramRows(); track row.key) {
+                <tr>
+                  <td class="font-mono">{{ row.key }}</td>
+                  <td class="text-fg-muted">{{ row.seriesValue ?? '—' }}</td>
+                  <td>
+                    <input
+                      type="text"
+                      class="w-full text-input"
+                      [value]="row.value"
+                      [attr.placeholder]="'admin.publications.overrides.paramFollows' | transloco"
+                      [attr.aria-label]="
+                        'admin.publications.overrides.paramValueFor' | transloco: { key: row.key }
+                      "
+                      (input)="onParamValueInput(row.key, $any($event.target).value)"
+                    />
+                  </td>
+                  <td></td>
+                </tr>
+              }
+              @for (row of added(); track row.id) {
+                <tr>
+                  <td>
+                    <input
+                      type="text"
+                      class="w-full font-mono text-input"
+                      [value]="row.key"
+                      [attr.aria-invalid]="isReservedKey(row.key) ? 'true' : null"
+                      [attr.aria-label]="
+                        'admin.publications.series.field.reportParamKey' | transloco
+                      "
+                      (input)="onAddedKeyInput(row.id, $any($event.target).value)"
+                    />
+                    @if (isReservedKey(row.key)) {
+                      <p class="mt-1 text-xs text-danger" role="alert">
+                        {{
+                          'admin.publications.reportParams.reservedKey'
+                            | transloco: { key: row.key.trim() }
+                        }}
+                      </p>
+                    }
+                  </td>
+                  <td class="text-fg-muted">{{ addedSeriesValue(row.key) ?? '—' }}</td>
+                  <td>
+                    <input
+                      type="text"
+                      class="w-full text-input"
+                      [value]="row.value"
+                      [attr.aria-label]="
+                        'admin.publications.series.field.reportParamValue' | transloco
+                      "
+                      (input)="onAddedValueInput(row.id, $any($event.target).value)"
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="icon-button hover:text-danger"
+                      [attr.aria-label]="'admin.publications.overrides.removeParam' | transloco"
+                      (click)="removeAddedParam(row.id)"
+                    >
+                      <app-icon name="lucideTrash2" />
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <p class="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">
+          <span>{{ 'admin.publications.overrides.paramsHint' | transloco }}</span>
+          <button type="button" class="link-button is-quiet" (click)="addParam()">
+            {{ 'admin.publications.overrides.addParam' | transloco }}
+          </button>
+        </p>
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (gated in submit()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested there, these would render in the body. -->
+  <div drawerFooter class="flex w-full items-center gap-2">
+    <button
+      type="button"
+      class="link-button is-quiet"
+      [disabled]="!resettable()"
+      (click)="resetAll()"
+      data-testid="issue-overrides-reset-all"
+    >
+      {{ 'admin.publications.overrides.resetAll' | transloco }}
+    </button>
+    <span class="flex-1"></span>
+    <!-- Through the drawer, not straight to `closed`: every close intent has to
+         pass the same unsaved-changes gate. -->
+    <button type="button" class="btn-secondary" (click)="drawerRef.requestClose()">
+      {{ 'admin.publications.overrides.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="!canSave()" (click)="submit()">
+      {{ 'admin.publications.overrides.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

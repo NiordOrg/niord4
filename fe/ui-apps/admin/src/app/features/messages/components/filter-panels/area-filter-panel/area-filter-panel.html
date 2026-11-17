@@ -1,0 +1,9 @@
+<app-filter-panel label="messages.filter.area.label" appFilterAutofocus="area" (clear)="clear()">
+  <app-areas-field
+    placeholder="messages.filter.area.placeholder"
+    [domainId]="domainId()"
+    [initialIds]="initialIds()"
+    [value]="value()"
+    (valueChange)="onChange($event)"
+  />
+</app-filter-panel>

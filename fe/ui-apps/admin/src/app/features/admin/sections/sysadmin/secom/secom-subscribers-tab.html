@@ -1,0 +1,132 @@
+<section>
+  <h3 class="text-base font-semibold text-fg">
+    {{ 'admin.secom.subscribers.subscriptionsTitle' | transloco }}
+  </h3>
+
+  <app-progress-bar [visible]="facade.subscriptionsLoading()" />
+
+  @if (facade.subscriptionsError()) {
+    <app-error-banner
+      [title]="'admin.secom.subscribers.subscriptionsLoadError' | transloco"
+      [retryLabel]="'admin.secom.retry' | transloco"
+      (retry)="facade.refreshSubscriptions()"
+    />
+  } @else if (!facade.subscriptionsLoading() && facade.subscriptions().length === 0) {
+    <app-empty-state
+      icon="lucideInbox"
+      [title]="'admin.secom.subscribers.noSubscriptions' | transloco"
+    />
+  } @else if (!facade.subscriptionsLoading()) {
+    <div class="admin-card mt-3">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th>{{ 'admin.secom.subscribers.column.subscriber' | transloco }}</th>
+            <th class="w-40">{{ 'admin.secom.subscribers.column.product' | transloco }}</th>
+            <th>{{ 'admin.secom.subscribers.column.filter' | transloco }}</th>
+            <th class="w-44">{{ 'admin.secom.subscribers.column.created' | transloco }}</th>
+            <th class="w-12">
+              <span class="sr-only">{{
+                'admin.secom.subscribers.column.actions' | transloco
+              }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (subscription of subscriptionRows(); track subscription.uuid) {
+            <tr>
+              <td class="break-all">{{ subscription.nodeMrn }}</td>
+              <td>{{ subscription.dataProductType }} {{ subscription.productVersion }}</td>
+              <td class="text-sm">
+                @if (subscription.dataReference) {
+                  <div class="break-all">
+                    {{ 'admin.secom.subscribers.dataReference' | transloco }}:
+                    {{ subscription.dataReference }}
+                  </div>
+                }
+                @if (subscription.wkt; as wkt) {
+                  <div [title]="wkt">
+                    {{ 'admin.secom.subscribers.geometry' | transloco }}: {{ wktPreview(wkt) }}
+                  </div>
+                }
+                @if (hasPeriod(subscription)) {
+                  <div class="whitespace-nowrap">
+                    {{ 'admin.secom.subscribers.period' | transloco }}:
+                    {{ subscription.periodStart | localeDate: 'date' }} &ndash;
+                    {{ subscription.periodEnd | localeDate: 'date' }}
+                  </div>
+                }
+              </td>
+              <td class="whitespace-nowrap">{{ subscription.created | localeDate }}</td>
+              <td class="text-right">
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.secom.subscribers.remove' | transloco"
+                  [title]="'admin.secom.subscribers.removeHelp' | transloco"
+                  (click)="deleteSubscription(subscription)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-pager
+      [first]="subscriptionPager.first()"
+      [rows]="subscriptionPager.rows"
+      [total]="subscriptionPager.total()"
+      (pageChange)="subscriptionPager.setFirst($event)"
+    />
+  }
+</section>
+
+<section class="mt-8">
+  <h3 class="text-base font-semibold text-fg">
+    {{ 'admin.secom.subscribers.peersTitle' | transloco }}
+  </h3>
+  <p class="mt-1 mb-3 text-sm text-fg-muted">
+    {{ 'admin.secom.subscribers.peersHelp' | transloco }}
+  </p>
+
+  <app-progress-bar [visible]="facade.nodesLoading()" />
+
+  @if (facade.nodesError()) {
+    <app-error-banner
+      [title]="'admin.secom.subscribers.peersLoadError' | transloco"
+      [retryLabel]="'admin.secom.retry' | transloco"
+      (retry)="facade.refreshNodes()"
+    />
+  } @else if (!facade.nodesLoading() && facade.nodes().length === 0) {
+    <app-empty-state icon="lucideUsers" [title]="'admin.secom.subscribers.noPeers' | transloco" />
+  } @else if (!facade.nodesLoading()) {
+    <div class="admin-card max-w-3xl">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th>{{ 'admin.secom.subscribers.column.node' | transloco }}</th>
+            <th class="w-44">{{ 'admin.secom.subscribers.column.lastInteraction' | transloco }}</th>
+            <th class="w-44">{{ 'admin.secom.subscribers.column.firstSeen' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (node of nodeRows(); track node.mrn) {
+            <tr>
+              <td class="break-all">{{ node.mrn }}</td>
+              <td class="whitespace-nowrap">{{ node.lastInteraction | localeDate }}</td>
+              <td class="whitespace-nowrap">{{ node.created | localeDate }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-pager
+      [first]="nodePager.first()"
+      [rows]="nodePager.rows"
+      [total]="nodePager.total()"
+      (pageChange)="nodePager.setFirst($event)"
+    />
+  }
+</section>

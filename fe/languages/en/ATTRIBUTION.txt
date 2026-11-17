@@ -1,0 +1,48 @@
+img/flags/en.png
+The Union Flag, 64x64 with transparent margins: the flag at 60x40 from (2,12), the size and place
+the language packs' flags share (niord-lang-da, niord-lang-kl). Drawn for Niord from
+img/flags/en.svg in this pack.
+
+Construction: the Flag Institute's Union Flag specification
+(https://www.flaginstitute.org/wp/uk-flags/union-flag-specification/), in units of the hoist,
+which is 30. St George's cross, red, 6 wide with a white border of 2 each side. The diagonals 6
+wide each, St Andrew's white saltire, carrying St Patrick's red saltire counterchanged: white 3,
+red 2, white 1, the broad white uppermost at the hoist and the narrow white uppermost at the fly.
+Each diagonal runs corner to corner and the two meet in the centre; widths are measured square to
+the diagonal. Colours as the specification gives them: blue Pantone 280 C, drawn #012169; red
+Pantone 186 C, drawn #C8102E; white, which it leaves open, #FFFFFF.
+
+Where it departs: the specification's field is 30 by 50 (3:5) on land and 30 by 60 (1:2) at sea.
+Here the field is 30 by 45 (3:2), so that the flag fills the 60x40 box as the other packs' flags
+do. The cross and the diagonals keep the specification's widths, and the diagonals run
+corner to corner of the 3:2 field. The SVG's coordinates are rounded to a thousandth of a unit.
+
+Rendered from this wrapper, en-64.svg, which places the SVG above unchanged:
+
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><svg x="2" y="12" width="60" height="40" viewBox="0 0 45 30">
+  <rect fill="#012169" x="0" y="0" width="45" height="30"/>
+  <polygon fill="#FFFFFF" points="0,0 5.408,0 45,26.394 45,30 39.592,30 0,3.606"/>
+  <polygon fill="#FFFFFF" points="39.592,0 45,0 45,3.606 5.408,30 0,30 0,26.394"/>
+  <polygon fill="#C8102E" points="0,0 22.5,15 18.894,15 0,2.404"/>
+  <polygon fill="#C8102E" points="22.5,15 26.106,15 45,27.596 45,30"/>
+  <polygon fill="#C8102E" points="41.394,0 45,0 22.5,15 22.5,12.596"/>
+  <polygon fill="#C8102E" points="22.5,15 22.5,17.404 3.606,30 0,30"/>
+  <rect fill="#FFFFFF" x="17.5" y="0" width="10" height="30"/>
+  <rect fill="#FFFFFF" x="0" y="10" width="45" height="10"/>
+  <rect fill="#C8102E" x="19.5" y="0" width="6" height="30"/>
+  <rect fill="#C8102E" x="0" y="12" width="45" height="6"/>
+</svg></svg>
+
+with rsvg-convert 2.60.0-r0 in Alpine 3.22, the image pinned by its digest and run without a
+network, twice, both runs giving the same bytes (sha256
+f522d224b2174e11de54807153a16a57867ad17121980f021d9fc53e323c8258):
+
+  FROM alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8
+  RUN apk add --no-cache rsvg-convert=2.60.0-r0
+
+  docker run --rm --network none -v "$PWD:/w" <that image> \
+    rsvg-convert --width 64 --height 64 --format png --output /w/en.png /w/en-64.svg
+
+The backend's be/niord/src/main/resources/META-INF/resources/img/flags/en.png is the same file.
+
+Licence: none. Drawn here, no third-party work.

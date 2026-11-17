@@ -1,0 +1,207 @@
+
+:imagesdir: images
+
+[#users-contacts]
+== Users & Contacts
+
+The _Users & Contacts_ page manages the people Niord knows. Open it with *Admin* > *Users &
+Contacts*. It has two tabs:
+
+* *Users*: the people who sign in to Niord and work in it, with their user groups, which decide
+  what they may do in each domain.
+* *Contacts*: people who only receive mails from Niord's mailing lists, and never sign in.
+
+image::UsersPage.png[The Users tab of the Users & Contacts page, 800]
+
+[#users-tab]
+=== Users Tab
+
+Niord's users are kept by the sign-in service, Keycloak (see
+link:../sysadmin-manual/manual.html#niord-users[Niord Users] in the System Administrator Manual).
+The _Users_ tab lists Keycloak's users and lets you add, change and delete them, and manage their
+groups, without opening Keycloak.
+
+Because the tab changes Keycloak, it is shown only to an administrator who also holds the role
+_manage-users_ of Keycloak's own client "realm-management", which a system administrator gives in
+Keycloak. An administrator without that role sees only the _Contacts_ tab.
+
+The list shows each user's *User Name*, *E-mail*, *Name* and preferred language (*Lang*, as a
+flag), 20 users at a time. To find a user, type in *Filter users* above the list: the text is
+looked for, in any case, in the user name, the e-mail address and the name.
+
+*Keycloak…*, at the right of the toolbar, opens Keycloak's own administration pages in a new
+browser tab, for what this page does not do, such as renaming a user.
+
+Depending on how a deployment is set up, some users are not added here at all: when Keycloak signs
+people in through another identity service, such as an organisation's own sign-in, a user is
+created the first time the person signs in. Such a user still needs to be put in the right user
+groups here before they can do anything in Niord.
+
+[#adding-or-editing-a-user]
+==== Adding or Editing a User
+
+Click *Add* to add a user, or the pencil, *Edit user*, on a user's row to change one. The user opens
+in a drawer, _Add User_ or _Edit User_, on its *User details* tab:
+
+image::UserDetailsPanel.png[The User details tab of the Edit User drawer, 512]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Username
+| The name the user signs in with. It is required and must be unique. It is set when you add the
+  user and cannot be changed here afterwards (it can in Keycloak, with *Keycloak…*).
+
+| E-mail
+| The user's e-mail address. It is required and must be unique.
+
+| First Name, Last Name
+| The user's name.
+
+| Password
+| The user's password. When you add a user, give a first password. When you change a user, the
+  field is empty: leave it empty to keep the password, or type a new one to replace it.
+
+| Preferred Language
+| The language of the mails the user receives from Niord's mailing lists. Which mail a user with no
+  preferred language receives, and when a user receives none, is described under _Mail Subject_ in
+  <<mailing-list-triggers>>.
+
+| Required actions
+| What Keycloak asks the user to do at the next sign-in: *Update Profile* (check the name and
+  e-mail address), *Update Password* (choose a new password, useful after you gave a first one)
+  and *Verify Email* (confirm the e-mail address). They are sent to Keycloak when the user is added
+  only; ticking them when you change a user has no effect.
+|===
+
+*Save* saves the user and closes the drawer; it can be clicked once you have changed something and
+the user has a username and a valid e-mail address. *Cancel* closes the drawer without saving.
+
+The tabs *Groups* and *Mailing lists* are shown when you edit a user who exists; for a new user,
+save the user first and open it again.
+
+[#managing-user-group-membership]
+==== Managing User Group Membership
+
+A user's rights are held per domain: a user can be an editor in one domain and only a user in
+another (see <<administrators-manual,Administrators Manual>>). With several domains this would make many roles to keep, so roles
+are not given to users one by one. A system administrator gives the roles to _user groups_ in
+Keycloak, each group a set of roles in the domains, and you make users members of the groups. The
+groups of a deployment are set up seldom, and are described in
+link:../sysadmin-manual/manual.html#user-groups[User Groups] in the System Administrator Manual.
+
+Open the *Groups* tab of the user's drawer:
+
+image::UserGroupsPanel.png[The Groups tab of the Edit User drawer, 512]
+
+* *Group membership*, on the left, lists the groups the user is a member of. The bin, *Leave
+  group*, takes the user out of a group.
+* *Available groups*, on the right, holds the other groups as a tree, with a field to filter them.
+  Click a group to select it, then *Join* to make the user a member.
+
+The changes take effect at once, without *Save*.
+
+You can only manage a group that gives, in the domain you are working in, a role you hold
+yourself. Any other group is shown in grey italics and cannot be selected, and when the user is in
+such a group, it has no bin. An administrator, for example, cannot put anybody, themselves included,
+in a group that only gives the _Sysadmin_ role. Since the check is made for the
+current domain, the groups you may give can change when you switch domain in the header.
+
+[#managing-user-mailing-lists]
+==== Managing User Mailing Lists
+
+The *Mailing lists* tab of the user's drawer lists every mailing list. The dot in the *Member*
+column is coloured when the user is one of the list's recipients and grey when not:
+
+image::UserMailingListsPanel.png[The Mailing lists tab of the Edit User drawer, 512]
+
+*Join* makes the user a recipient of the list, and *Leave* takes the user off it. The change takes
+effect at once, without *Save*. The mailing lists themselves are described in
+<<mailing-lists>>.
+
+[#deleting-a-user]
+==== Deleting a User
+
+Click the bin, *Delete user*, on a user's row, and confirm with _Delete user?_. The user's account
+is deleted in Keycloak at once, whatever the user has done in Niord, and the user can no longer
+sign in. The messages, comments and history the user made in Niord are kept, with the user's name.
+
+Niord also takes the user off every mailing list, and off the lists' mails that wait to be sent,
+and forgets the user's e-mail address. So no list mails the user any more, the _Manage Recipients_
+drawer (<<manage-mailing-list-recipients>>) no longer offers the user, and a comment's *E-mail
+notification* no longer suggests the user. Niord does this before it deletes the account, so if
+the delete fails, the user may already be off the lists: delete the user again. If you create a
+user again with the same user name, the address comes back but the lists do not: add the user to
+them again on the *Mailing lists* tab (<<managing-user-mailing-lists>>).
+
+To take away a user's access but keep the account, take the user out of all groups instead.
+
+[#contacts-tab]
+=== Contacts Tab
+
+A _contact_ is a person or a mailbox that receives mails from Niord's mailing lists without being a
+user of Niord: a harbour office, a pilot station, a shipping company. The _Contacts_ tab lists them:
+
+image::ContactsPanel.png[The Contacts tab of the Users & Contacts page, 800]
+
+The list shows each contact's *E-mail*, *Name* and preferred language (*Lang*), 20 at a time, with
+a line below it that says how many contacts match, and a pager. To find a contact, type in *Filter
+contacts*: the text is looked for in the names and e-mail addresses when you stop typing.
+
+[#adding-or-editing-a-contact]
+==== Adding or Editing a Contact
+
+Click *Add* to add a contact, or the pencil, *Edit contact*, on a contact's row to change one. The
+contact opens in a drawer, _Add Contact_ or _Edit Contact_, on its *Contact details* tab:
+
+image::ContactDetailsPanel.png[The Contact details tab of the Edit Contact drawer, 512]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| E-mail
+| The contact's e-mail address. It is required and must be unique.
+
+| Name
+| The contact's name.
+
+| Preferred Language
+| The language of the mails the contact receives from the mailing lists, as for a user
+  (<<mailing-list-triggers>>).
+|===
+
+*Save* saves the contact and closes the drawer. *Cancel* closes it without saving.
+
+[#managing-contact-mailing-lists]
+==== Managing Contact Mailing Lists
+
+The *Mailing lists* tab of the contact's drawer, shown when you edit a contact who exists, works as
+for a user (<<managing-user-mailing-lists>>): *Join* and *Leave* change at once whether the
+contact receives a list.
+
+image::ContactMailingListsPanel.png[The Mailing lists tab of the Edit Contact drawer, 512]
+
+[#deleting-a-contact]
+==== Deleting a Contact
+
+A contact that is a recipient of a mailing list cannot be deleted: Niord says _Contact operation
+failed_ and keeps it. First take the contact off every list on its *Mailing lists* tab
+(<<managing-contact-mailing-lists>>). Then click the bin, *Delete contact*, on the contact's row,
+and confirm with _Delete contact?_.
+
+[#importing-and-exporting-contacts]
+=== Importing and Exporting Contacts
+
+The cog, _Contact actions_, beside *Add* holds the export and the import:
+
+* *Export…* opens every contact in a new browser tab, one line each, with the e-mail address, the
+  name and the preferred language separated by semicolons. Save it as a file to open it in a
+  spreadsheet.
+* *Import emails…* opens _Import contact emails_. Paste a list of e-mail addresses, separated by
+  commas, semicolons or line breaks, and click *Import*. Each valid address that is not already a
+  contact or a user becomes a new contact; the others are skipped. Niord then says how many
+  contacts it imported. Give the new contacts their names and preferred languages afterwards.

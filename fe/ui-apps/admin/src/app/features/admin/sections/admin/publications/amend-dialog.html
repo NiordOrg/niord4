@@ -1,0 +1,131 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [header]="'admin.publications.amend.title' | transloco"
+  [style]="{ width: '34rem' }"
+>
+  <div class="flex flex-col gap-4">
+    <!--
+      What an amend is, stated before it runs: the same address, the same window,
+      the same cut-off, a different document. Everything a citation depends on
+      survives, and the file it replaces is archived rather than overwritten.
+    -->
+    <p class="text-sm text-fg-muted">{{ 'admin.publications.amend.effect' | transloco }}</p>
+
+    <div class="flex flex-col gap-1">
+      <label for="publication-amend-reason" class="text-sm font-medium text-fg-title">
+        {{ 'admin.publications.retire.reason' | transloco }}
+      </label>
+      <textarea
+        id="publication-amend-reason"
+        class="text-input min-h-24 w-full"
+        rows="3"
+        [formField]="amendForm.reason"
+      ></textarea>
+      <p class="text-xs text-fg-subtle">
+        {{ 'admin.publications.retire.reasonHint' | transloco }}
+      </p>
+    </div>
+
+    <!--
+      The warnings, ticked one by one. Not a gate on the button: the checklist was
+      fetched before this attempt and the server re-resolves at amend time, so the
+      refusal below is the authority on what is still owed.
+    -->
+    @if (warnings().length > 0) {
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.publications.publish.warnings' | transloco }}
+        </legend>
+        @for (row of warningRows(); track row.code) {
+          <label class="flex items-start gap-2 text-sm">
+            <input
+              [id]="'amend-ack-' + row.code"
+              type="checkbox"
+              class="checkbox mt-0.5"
+              [checked]="isAcknowledged(row.code)"
+              (change)="toggleAcknowledged(row.code)"
+            />
+            <span>
+              <!-- The code itself where this build has no sentence for it. -->
+              @if (row.labelKey; as key) {
+                <span>{{ key | transloco }}</span>
+              } @else {
+                <span class="font-mono text-xs">{{ row.code }}</span>
+              }
+              <!-- What the check found, in the same language as the line above it. -->
+              @if (row.detail; as detail) {
+                <span class="block text-xs text-fg-subtle" data-testid="amend-check-detail">
+                  @if (detail.key; as key) {
+                    {{ key | transloco: detail.params }}
+                  } @else {
+                    {{ detail.text }}
+                  }
+                </span>
+              }
+            </span>
+          </label>
+        }
+      </fieldset>
+    }
+
+    <!--
+      What the server refused this attempt over, re-listed rather than replacing
+      the form: the reason stays typed, and the codes named here are the ones that
+      were not ticked when the amend was actually attempted.
+    -->
+    @if (unacknowledged().length > 0) {
+      <div class="publish-unacknowledged message message-warn flex-col">
+        <p class="text-sm text-fg">
+          {{ 'admin.publications.publish.acknowledgeToContinue' | transloco }}
+        </p>
+        <ul class="mt-2 flex flex-col gap-2">
+          @for (row of unacknowledgedRows(); track row.code) {
+            <li>
+              <label class="flex items-start gap-2 text-sm">
+                <input
+                  [id]="'amend-unack-' + row.code"
+                  type="checkbox"
+                  class="checkbox mt-0.5"
+                  [checked]="isAcknowledged(row.code)"
+                  (change)="toggleAcknowledged(row.code)"
+                />
+                @if (row.labelKey; as key) {
+                  <span>{{ key | transloco }}</span>
+                } @else {
+                  <span class="font-mono text-xs">{{ row.code }}</span>
+                }
+              </label>
+            </li>
+          }
+        </ul>
+      </div>
+    } @else if (errorKey(); as key) {
+      <p class="text-sm text-danger">{{ key | transloco }}</p>
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.publications.publish.cancel' | transloco }}
+    </button>
+    <!--
+      An amend re-resolves the membership and renders the document again, per
+      language, which is tens of seconds on a large issue. The button is already
+      disabled while that runs; the spinner is what says the press landed rather
+      than that the form went wrong.
+    -->
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="submitDisabled()"
+      [attr.aria-busy]="working() ? 'true' : null"
+      (click)="submit()"
+    >
+      @if (working()) {
+        <app-icon name="lucideLoaderCircle" [spin]="true" />
+      }
+      <span>{{ 'admin.publications.amend.confirm' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

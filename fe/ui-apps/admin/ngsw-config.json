@@ -1,0 +1,64 @@
+{
+  "$schema": "../../node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "navigationRequestStrategy": "freshness",
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**",
+    "!/rest/**",
+    "!/auth/**",
+    "!/wms/**"
+  ],
+  "assetGroups": [
+    {
+      "name": "app-shell",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/index.html",
+          "/favicon.ico",
+          "/main-*.js",
+          "/styles-*.css",
+          "/silent-check-sso.html",
+          "/silent-check-sso.js"
+        ]
+      }
+    },
+    {
+      "name": "lazy-chunks",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/chunk-*.js", "/*.css", "!/styles-*.css"]
+      }
+    },
+    {
+      "name": "i18n",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/assets/i18n/*.json", "/assets/branding/*.json", "/assets/legal/*.html"]
+      }
+    },
+    {
+      "name": "images",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": ["/assets/**/*.(svg|png|jpg|jpeg|gif|webp|ico)"]
+      }
+    },
+    {
+      "name": "media",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/media/**"]
+      }
+    }
+  ],
+  "dataGroups": []
+}

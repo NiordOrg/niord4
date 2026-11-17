@@ -1,0 +1,16 @@
+{
+  "name": "niord-xx-country",
+  "private": true,
+  "description": "The example country's own npm packages, merged by node setup.mjs on top of the base product's (fe-country-split-plan §3.2, R12).",
+  "dependencies": {
+    "pretty-bytes": "7.1.0"
+  },
+  "niord": {
+    "dependencies": {
+      "pretty-bytes": {
+        "app": "admin",
+        "reason": "The harbour page states the size of the harbour notes in the reader's language; one small ESM package with no dependencies and no install script"
+      }
+    }
+  }
+}

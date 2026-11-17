@@ -1,0 +1,186 @@
+[#niord-geojson-model]
+== Niord GeoJSON Model
+
+The positions of a message part are written in GeoJSON, the format that
+https://www.rfc-editor.org/rfc/rfc7946[RFC 7946^] defines. Niord uses GeoJSON because most map
+libraries read it directly, and because, unlike for example Well-Known Text (WKT), a GeoJSON
+_Feature_ has properties, in which Niord stores names and other information that helps a client
+draw the message.
+
+The geometry of a message part is always a _FeatureCollection_. Its coordinates are longitude and
+latitude in decimal degrees on WGS 84, in that order, as RFC 7946 prescribes.
+
+[#geojson-model-uml]
+=== GeoJSON Model Class Diagram
+The class diagram below shows the GeoJSON classes of the model and their fields.
+
+[[img-geojson-uml]]
+.GeoJSON model class diagram
+[plantuml, geojson-model, svg]
+....
+@startuml
+hide empty methods
+hide circle
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName sans-serif
+
+abstract class GeoJson #PaleGreen {
+  type : String
+  crs : Crs [0..1]
+  bbox : double[] [0..1]
+}
+
+class Crs #PaleGreen {
+  type : String
+  properties : Map
+}
+
+class FeatureCollection #PaleGreen {
+  id : String [0..1]
+}
+
+class Feature #PaleGreen {
+  id : String [0..1]
+  properties : Map<String, Object>
+}
+
+abstract class Geometry #PaleGreen
+
+class Point #PaleGreen {
+  coordinates : double[]
+}
+class MultiPoint #PaleGreen {
+  coordinates : double[][]
+}
+class LineString #PaleGreen {
+  coordinates : double[][]
+}
+class MultiLineString #PaleGreen {
+  coordinates : double[][][]
+}
+class Polygon #PaleGreen {
+  coordinates : double[][][]
+}
+class MultiPolygon #PaleGreen {
+  coordinates : double[][][][]
+}
+class GeometryCollection #PaleGreen
+
+GeoJson <|-- FeatureCollection
+GeoJson <|-- Feature
+GeoJson <|-- Geometry
+Geometry <|-- Point
+Geometry <|-- MultiPoint
+Geometry <|-- LineString
+Geometry <|-- MultiLineString
+Geometry <|-- Polygon
+Geometry <|-- MultiPolygon
+Geometry <|-- GeometryCollection
+
+GeoJson ..> Crs
+FeatureCollection *-- "0..*" Feature : features
+Feature *-- "0..1" Geometry : geometry
+GeometryCollection *-- "0..*" Geometry : geometries
+@enduml
+....
+
+The classes follow RFC 7946, which describes them in full, with three remarks:
+
+* `type` is the name of the class, for example `"FeatureCollection"`, `"Feature"` or `"Polygon"`.
+  It tells a client which of the classes an object is.
+* A _FeatureCollection_ has an `id`, which RFC 7946 does not define. Niord gives each feature
+  collection and each feature an id of its own, a UUID.
+* `crs` and `bbox` are part of the model but Niord does not fill them; the coordinates are always on
+  WGS 84.
+
+[#niord-geojson-extensions]
+=== Niord GeoJSON Extensions
+A client should be able to show the geometry of each message part. On top of the GeoJSON standard,
+Niord writes a set of _Feature_ properties that a client may use to draw the message better, for
+example to label a feature or its positions. A client that does not know a property can ignore it,
+and should ignore properties not listed here.
+
+[cols="25,75",options="header"]
+|===
+|Property Name|Description
+
+|name:<lang>
+|The name of the whole feature in the language `<lang>`. +
+Example: `"name:en": "Area of reduced depth"`.
+
+|name:<x>:<lang>
+|The name of one position of the feature in the language `<lang>`. `<x>` is the place of the
+position in the coordinates of the feature, counted from 0 in the order the coordinates appear. The
+count includes the closing position of a polygon and the positions of any holes, although neither
+is shown as a position. +
+Example: `"name:3:en": "Yellow spar buoy with topmark"`.
+
+|language
+|The language the request asked for (the `lang` parameter of the public API). The names in other
+languages are still in the properties; a client that shows one language picks the names in this
+one.
+
+|startCoordIndex
+|The number that the first position of the feature has in the list of positions of the message,
+for example `1`. The positions of the feature are numbered on from it, so a map can number its
+positions the way the position table in the message text numbers them, `1)`, `2)` and so on. +
+The administration application writes this property, on each feature whose positions are
+numbered, when an editor opens the message in it, and the message keeps it when it is saved. A message that has not been saved there since, such as an
+imported or older one, may lack it; a client then numbers the positions on from those of the
+features before, counting from 1.
+
+|restriction
+|What the feature means for a ship, which a client may use to choose how to draw it, and whether
+to take the message into account in, say, route planning. The values are `affected`,
+`restricted`, `speed-restricted`, `prohibited` and `stopping-prohibited`. +
+An `affected` area is an area of caution around the positions of the message, not a position the
+message gives: a client should draw it but not number or list its positions.
+
+|parentFeatureIds +
+bufferType +
+bufferRadius +
+bufferRadiusType
+|A feature that the producing system computed from other features. `parentFeatureIds` holds the
+ids of the features it was computed from, separated by commas. `bufferType` says how it was
+computed: `radius` is an area around the features, such as a circle of 1 nautical mile around the
+position of a wreck; `path` is a line through two or more positions, which a distance can widen
+into a corridor; `area` is a polygon through three or more positions, which a distance can widen. +
+`bufferRadius` is the distance and `bufferRadiusType` its unit: `m` (metres), `km` (kilometres)
+or `nm` (nautical miles). A `radius` feature has both; a `path` or `area` feature has them only
+when it is widened, so a client must be prepared for them to be missing. +
+Like an affected area, a computed feature is drawn but its positions are not numbered or listed.
+|===
+
+The following is the geometry of a message part, shortened, as the public API returns it with
+`lang=en`:
+
+[source,json]
+----
+{
+  "type": "FeatureCollection",
+  "id": "79e867af-9831-42ef-8f6c-7313d46953c0",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "9f67fa3f-921f-4c25-b107-98b99ecbea14",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [14.689933333333334, 55.09811666666667],
+            [14.689733333333333, 55.09968333333333],
+            [14.688, 55.09961666666667],
+            [14.687316666666666, 55.09721666666667],
+            [14.689933333333334, 55.09811666666667]
+          ]
+        ]
+      },
+      "properties": {
+        "language": "en",
+        "startCoordIndex": 1
+      }
+    }
+  ]
+}
+----

@@ -1,0 +1,77 @@
+@if (shown()) {
+  <footer class="border-t border-surface-200 bg-surface-0 text-fg-muted">
+    <!-- From `lg`: 3-column grid (1fr auto 1fr) so the logo is centred against the
+         row, not centred between the left/right link clusters. With justify-between
+         the center item shifts whenever the left and right clusters differ in
+         width; with this grid the center column sits at the row's midpoint
+         regardless of how wide the side columns grow. Below `lg` the three columns
+         would each be too narrow for their text (the copyright wraps mid-sentence),
+         so the three items stack and centre instead — the same breakpoint at which
+         the header collapses its nav. Every control keeps a 40px-tall hit area,
+         which the row's min height already reserved on desktop. A column the
+         branding leaves empty keeps its cell from `lg`, so the logo stays centred. -->
+    <div
+      class="app-shell-gutter grid min-h-14 grid-cols-1 justify-items-center gap-2 py-3 text-center text-sm lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:justify-items-stretch lg:gap-4 lg:py-2 lg:text-left"
+    >
+      <div [class.max-lg:hidden]="!copyright()">
+        @if (copyright()) {
+          @if (copyrightLink()) {
+            <a
+              href="{{ 'footer.link' | transloco }}"
+              class="inline-flex min-h-10 items-center outline-offset-2"
+              >{{ 'footer.copyright' | transloco }}</a
+            >
+          } @else {
+            <span class="inline-flex min-h-10 items-center">{{
+              'footer.copyright' | transloco
+            }}</span>
+          }
+        }
+      </div>
+
+      <div [class.max-lg:hidden]="!logo()">
+        @if (logo()) {
+          <!-- A plain <img [src]> (not NgOptimizedImage): the footer logo is a small,
+               fixed-height (`h-9`) decorative mark where lazy-loading / CLS reservation
+               don't pull their weight, and its src swaps freely on a language switch. -->
+          @if (logoLink()) {
+            <a
+              href="{{ 'main.footer.links.center.url' | transloco }}"
+              class="outline-offset-2"
+              [attr.aria-label]="'main.footer.links.center.ariaLabel' | transloco"
+            >
+              <img
+                [src]="'main.footer.links.center.imageSrc' | transloco"
+                [alt]="'main.footer.links.center.imageAlt' | transloco"
+                class="h-9 w-auto"
+              />
+            </a>
+          } @else {
+            <img
+              [src]="'main.footer.links.center.imageSrc' | transloco"
+              [alt]="'main.footer.links.center.imageAlt' | transloco"
+              class="h-9 w-auto"
+            />
+          }
+        }
+      </div>
+
+      <div
+        class="flex items-center justify-center gap-4 lg:justify-end"
+        [class.max-lg:hidden]="documents().length === 0"
+      >
+        @for (id of documents(); track id) {
+          <button
+            type="button"
+            class="inline-flex min-h-10 items-center outline-offset-2"
+            (click)="openDocument(id)"
+          >
+            {{ 'footer.' + id | transloco }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <app-legal-document-dialog [document]="document()" [(visible)]="documentOpen" />
+  </footer>
+}

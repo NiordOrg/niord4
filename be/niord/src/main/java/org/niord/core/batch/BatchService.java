@@ -1,0 +1,772 @@
+/*
+ * Copyright 2016 Danish Maritime Authority.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.niord.core.batch;
+
+import org.springframework.stereotype.Service;
+
+import tools.jackson.core.type.TypeReference;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.niord.core.batch.vo.BatchExecutionVo;
+import org.niord.core.batch.vo.BatchInstanceVo;
+import org.niord.core.batch.vo.BatchStatusVo;
+import org.niord.core.batch.vo.BatchTypeVo;
+import org.niord.core.bootstrap.BootstrapRun;
+import org.niord.core.domain.DomainService;
+import org.niord.core.sequence.DefaultSequence;
+import org.niord.core.sequence.Sequence;
+import org.niord.core.sequence.SequenceService;
+import org.niord.core.service.BaseService;
+import org.niord.core.settings.Setting.Type;
+import org.niord.core.settings.annotation.Setting;
+import org.niord.core.user.UserService;
+import org.niord.core.util.JsonUtils;
+import org.niord.core.util.WebUtils;
+import org.niord.model.search.PagedSearchResultVo;
+import org.slf4j.Logger;
+
+import jakarta.batch.operations.BatchRuntimeException;
+import jakarta.batch.operations.JobExecutionAlreadyCompleteException;
+import jakarta.batch.operations.JobExecutionIsRunningException;
+import jakarta.batch.operations.JobExecutionNotMostRecentException;
+import jakarta.batch.operations.JobExecutionNotRunningException;
+import jakarta.batch.operations.JobOperator;
+import jakarta.batch.operations.JobRestartException;
+import jakarta.batch.operations.NoSuchJobException;
+import jakarta.batch.operations.NoSuchJobExecutionException;
+import jakarta.inject.Inject;
+import org.springframework.transaction.annotation.Transactional;
+import org.niord.core.web.NiordWebException;
+import java.io.*;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Provides an interface for managing batch jobs.
+ * <p>
+ * Batch jobs have up to two associated batch job folders under the "batchJobRoot" path:
+ * <ul>
+ *  <li>
+ *      <b>[jobName]/execution/[year]/[month]/[jobNo]</b>:
+ *      Stores any input file associated with a batch job along with log files for the executions steps.
+ *      These directories will be cleaned up after a configurable amount of time.
+ *  </li>
+ *  <li>
+ *      <b>[jobName]/out</b>:
+ *      Any file-based result from the execution of a batch job can be placed here.
+ *      Not implemented yet.
+ *  </li>
+ * </ul>
+ * <p>
+ * A job's data file reaches its execution folder only through an upload, a batch set or the bootstrap, each of which
+ * starts the job directly; no folder on the server starts a job (docs/code-data-config-plan.md D1).
+ */
+@Service
+@SuppressWarnings("unused")
+public class BatchService extends BaseService {
+
+    public static final String BATCH_REPO_FOLDER = "batch";
+    public static final String BATCH_JOB_ENTITY = "batchJobEntity";
+
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(BatchService.class);
+
+    @Inject
+    UserService userService;
+
+    @Inject
+    DomainService domainService;
+
+    // PORT: JBeret JobOperator bean is wired later (the Quarkus QuarkusJobOperator
+    // had this exact JobOperator API surface, incl. getRunningExecutions(String)).
+    @Inject
+    JobOperator jobOperator;
+
+    @Inject
+    SequenceService sequenceService;
+
+        @Setting(value="batchJobRootPath", defaultValue="${niord.home}/batch-jobs", description="The root directory of the Niord batch jobs. Read at start-up.")
+    private Path batchJobRoot;
+
+    // Delete execution files after 10 days
+        @Setting(value="batchFileExpiryDays", defaultValue="10", description="Number of days after which batch job files are deleted. Read at start-up.", type = Type.Integer)
+    private int batchFileExpiryDays;
+
+    /****************************/
+    /** Starting batch jobs    **/
+    /****************************/
+
+    /**
+     * Starts a new batch job
+     *
+     * @param job the batch job name
+     */
+    public long startBatchJob(BatchData job) {
+
+        // Note to self:
+        // There are some transaction issues with storing the BatchData in the current transaction,
+        // so, we leave it to the BatchJobListener.
+
+        // Launch the batch job
+        Properties props = new Properties();
+        props.put(BATCH_JOB_ENTITY, job);
+        long executionId = jobOperator.start(job.getJobName(), props);
+
+        log.info("Started batch job: " + job);
+        return executionId;
+    }
+
+    /**
+     * Creates and initializes a new batch job data entity
+     */
+    private BatchData initBatchData(String jobName, Map<String, Object> properties) throws IOException {
+        // Construct a new batch data entity
+        BatchData job = new BatchData();
+        job.setUser(userService.currentUser());
+        job.setDomain(domainService.currentDomain());
+        job.setJobName(jobName);
+        job.setJobNo(getNextJobNo(jobName));
+        if (properties != null) {
+            job.getProperties().putAll(properties);
+        }
+        return job;
+    }
+
+    /**
+     * Starts a new batch job
+     *
+     * @param jobName the batch job name
+     */
+    @Transactional
+    // PORT: dropped CDI @ActivateRequestContext (no Spring analog).
+    public long startBatchJobWithJsonData(String jobName, Object data, String dataFileName, Map<String, Object> properties) throws Exception {
+
+        BatchData job = initBatchData(jobName, properties);
+
+        if (data != null) {
+            dataFileName = StringUtils.isNotBlank(dataFileName) ? dataFileName : "batch-data.json";
+            job.setDataFileName(dataFileName);
+            Path path = computeDataFilePath(job);
+            createDirectories(path.getParent());
+            JsonUtils.writeJson(data, path);
+        }
+
+        return startBatchJob(job);
+    }
+
+    /**
+     * Starts a new file-based batch job
+     *
+     * @param jobName the batch job name
+     * @throws IllegalArgumentException when the data file name does not name a file directly inside the
+     *                                  job's execution folder
+     */
+    @Transactional
+    // PORT: dropped CDI @ActivateRequestContext (no Spring analog).
+    public long startBatchJobWithDataFile(String jobName, InputStream in, String dataFileName, Map<String, Object> properties) throws IOException {
+
+        BatchData job = initBatchData(jobName, properties);
+
+        if (in != null) {
+            job.setDataFileName(dataFileName);
+            Path path = computeDataFilePath(job);
+            createDirectories(path.getParent());
+            Files.copy(in, path, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        return startBatchJob(job);
+    }
+
+    /**
+     * Starts a new file-based batch job
+     *
+     * @param jobName the batch job name
+     */
+    @Transactional
+    // PORT: dropped CDI @ActivateRequestContext (no Spring analog).
+    public long startBatchJobWithDataFile(String jobName, Path file, Map<String, Object> properties) throws IOException {
+        if (!Files.isRegularFile(file)) {
+            throw new IllegalArgumentException("Invalid file " + file);
+        }
+
+        try (InputStream in = new FileInputStream(file.toFile())) {
+            return startBatchJobWithDataFile(
+                    jobName,
+                    in,
+                    file.getFileName().toString(),
+                    properties);
+        }
+    }
+
+    /**
+     * Returns the next sequence number for the batch job
+     *
+     * @param jobName the name of the batch job
+     * @return the next sequence number for the batch job
+     */
+    private Long getNextJobNo(String jobName) {
+        Sequence jobSequence = new DefaultSequence("BATCH_JOB_" + jobName, 1);
+        return sequenceService.nextValue(jobSequence);
+    }
+
+    /****************************/
+    /** Batch job repository   **/
+    /****************************/
+
+    /**
+     * Creates the given directories if they do not exist
+     */
+    private Path createDirectories(Path path) throws IOException {
+        if (path != null && !Files.exists(path)) {
+            Files.createDirectories(path);
+        }
+        return path;
+    }
+
+    /**
+     * Computes the absolute path to the given local path within the repository
+     *
+     * @param localPath the local path withing the batch job repository
+     * @return the absolute path to the given local path within the repository
+     */
+    public Path computeBatchJobPath(Path localPath) {
+
+        Path path = batchJobRoot
+                .normalize()
+                .resolve(localPath);
+
+        // Check that it is a valid path within the batch job repository root
+        path = path.normalize();
+        if (!path.startsWith(batchJobRoot)) {
+            throw new RuntimeException("Invalid path " + localPath);
+        }
+
+        return path;
+    }
+
+    /**
+     * Computes the path of the data file of the batch job: its data file name, directly inside the job's own
+     * execution folder.
+     *
+     * @param job the batch job
+     * @return the path of the data file
+     * @throws IllegalArgumentException when the data file name does not name a file directly in that folder
+     */
+    Path computeDataFilePath(BatchData job) {
+        return resolveDataFile(computeBatchJobPath(job.computeBatchJobFolderPath()), job.getDataFileName());
+    }
+
+    /**
+     * Resolves a batch data file name inside the execution folder of a batch job.
+     * <p>
+     * The name is usually an uploaded file's name, which the client chose, and the batch-job root holds every
+     * other job's files too. So the name must resolve, once normalised, to a file directly inside the job's
+     * execution folder ({@link WebUtils#fileDirectlyIn}), and not merely to somewhere below the batch-job root.
+     *
+     * @param jobFolder the normalised execution folder of the batch job
+     * @param dataFileName the data file name
+     * @return the normalised data file
+     * @throws IllegalArgumentException when the name is null or does not name a file directly in the folder
+     */
+    static Path resolveDataFile(Path jobFolder, String dataFileName) {
+        if (dataFileName == null) {
+            throw new IllegalArgumentException("Missing batch data file name");
+        }
+        Path file = WebUtils.fileDirectlyIn(jobFolder, dataFileName);
+        if (file == null) {
+            throw new IllegalArgumentException("Invalid batch data file name: " + dataFileName);
+        }
+        return file;
+    }
+
+    /**
+     * Returns the data file associated with the given batch job instance.
+     * Returns null if no data file is found, or if the stored data file name does not name a file in the
+     * job's own execution folder
+     *
+     * @param instanceId the batch job instance
+     * @return the data file associated with the given batch job instance.
+     */
+    public Path getBatchJobDataFile(Long instanceId) {
+        BatchData job = findByInstanceId(instanceId);
+
+        if (job == null || job.getDataFileName() == null) {
+            return null;
+        }
+
+        Path path;
+        try {
+            path = computeDataFilePath(job);
+        } catch (IllegalArgumentException e) {
+            log.warn("Ignoring invalid data file name of batch job instance " + instanceId + ": " + e.getMessage());
+            return null;
+        }
+        return Files.isRegularFile(path) ? path : null;
+    }
+
+    /**
+     * Loads the batch job JSON data file as the given class.
+     * Returns null if no data file is found
+     *
+     * @param instanceId the batch job instance
+     * @return the data
+     */
+    public <T> T readBatchJobJsonDataFile(Long instanceId, Class<T> dataClass) throws IOException {
+        Path path = getBatchJobDataFile(instanceId);
+
+        return path != null ? JsonUtils.readJson(dataClass, path) : null;
+    }
+
+    /**
+     * Loads the batch job JSON data file as the given class.
+     * Returns null if no data file is found
+     *
+     * @param instanceId the batch job instance
+     * @return the data
+     */
+    public <T> T readBatchJobJsonDataFile(Long instanceId, TypeReference typeRef) throws IOException {
+        Path path = getBatchJobDataFile(instanceId);
+
+        return path != null ? JsonUtils.readJson(typeRef, path) : null;
+    }
+
+    /**
+     * Returns the list of log names in the batch job directory
+     * @param instanceId the instance id
+     * @return the list of log names in the batch job directory
+     */
+    public List<String> getBatchJobLogFiles(Long instanceId) throws IOException {
+
+        BatchData job = findByInstanceId(instanceId);
+        if (job == null) {
+            throw new NiordWebException("Invalid batch instance ID " + instanceId, 404);
+        }
+
+        Path path = computeBatchJobPath(job.computeBatchJobFolderPath());
+
+        File[] files = path.toFile().listFiles();
+        return files == null
+                ? Collections.emptyList()
+                : Arrays.stream(files)
+                    .filter(f -> Files.isRegularFile(f.toPath()) && f.getName().matches(".+Log\\.txt(\\.\\d+)?"))
+                    .map(File::getName)
+                    .sorted()
+                    .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns the contents of the log file with the given file name.
+     * If fromLineNo is specified, only the subsequent lines are returned.
+     *
+     * @param instanceId the instance id
+     * @param logFileName the log file name
+     * @param fromLineNo if specified, only the subsequent lines are returned
+     * @return the contents of the log file
+     */
+    public String getBatchJobLogFile(Long instanceId, String logFileName, Integer fromLineNo) throws IOException {
+
+        BatchData job = findByInstanceId(instanceId);
+        if (job == null) {
+            throw new IllegalArgumentException("Invalid batch instance ID " + instanceId);
+        }
+
+        Path path = computeBatchJobPath(job.computeBatchJobFolderPath().resolve(logFileName));
+        if (!Files.isRegularFile(path) || !Files.isReadable(path)) {
+            throw new IllegalArgumentException("Invalid batch log file " + logFileName);
+        }
+
+        int skipLineNo = fromLineNo == null ? 0 : fromLineNo;
+        try (Stream<String> logStream = Files.lines(path)) {
+            return logStream
+                    .skip(skipLineNo)
+                    .collect(Collectors.joining("\n"));
+        }
+    }
+
+    /****************************/
+    /** Utility methods        **/
+    /****************************/
+
+    /**
+     * Returns the batch data entity with the given instance id.
+     * Returns null if no batch data entity is not found.
+     *
+     * @param instanceId the instance id
+     * @return the batch data entity with the given instance id
+     */
+    public BatchData findByInstanceId(Long instanceId) {
+        try {
+            return em.createNamedQuery("BatchData.findByInstanceId", BatchData.class)
+                    .setParameter("instanceId", instanceId)
+                    .getResultList()
+                    .stream()
+                    .max(Comparator.comparing(BatchData::getCreated))
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Returns the batch data entities with the given instance ids.
+     *
+     * @param instanceIds the instance ids
+     * @return the batch data entities with the given instance ids
+     */
+    public List<BatchData> findByInstanceIds(Set<Long> instanceIds) {
+        return em.createNamedQuery("BatchData.findByInstanceIds", BatchData.class)
+                .setParameter("instanceIds", instanceIds)
+                .getResultList();
+    }
+
+    /**
+     * Creates or updates the batch job.
+     *
+     * @param job the batch job entity
+     */
+    public BatchData saveBatchJob(BatchData job) {
+        Objects.requireNonNull(job, "Invalid job parameter");
+        Objects.requireNonNull(job.getInstanceId(), "Invalid job instance ID");
+
+        job = saveEntity(job);
+        em.flush();
+        return job;
+    }
+
+    /**
+     * Updates progress (0-100) for the given batch job.
+     *
+     * @param instanceIds the batch job id
+     * @param progress the progress
+     */
+    public void updateBatchJobProgress(Long instanceIds, Integer progress) {
+
+        BatchData job = findByInstanceId(instanceIds);
+        if (job != null) {
+            job.setProgress(progress);
+            saveEntity(job);
+        }
+    }
+
+    /****************************/
+    /** Managing batch jobs    **/
+    /****************************/
+
+    /**
+     * Returns the batch job names
+     *
+     * @return the batch job names
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> getJobNames() {
+        // Sadly, this gets reset upon every JVM restart
+        /*
+        return jobOperator.getJobNames()
+                .stream()
+                .sorted()
+                .collect(Collectors.toList());
+        */
+
+        // Look up the names from the database
+        //noinspection SqlDialectInspection
+        return (List<String>) em
+                // Identifiers are double-quoted: with hibernate.globally_quoted_identifiers the physical
+                // names are case-sensitive ("BatchData"/"jobName"), so unquoted names would resolve to
+                // lowercase and fail ("relation batchdata does not exist") on PostgreSQL.
+                .createNativeQuery("SELECT DISTINCT \"jobName\" FROM \"BatchData\" ORDER BY \"jobName\"")
+                .getResultList();
+    }
+
+    /**
+     * Stops the given batch job execution
+     *
+     * @param executionId the execution ID
+     * @throws NiordWebException 404 for an execution that does not exist, 409 for one that is not running
+     */
+    public void stopExecution(long executionId) {
+        try {
+            jobOperator.stop(executionId);
+        } catch (BatchRuntimeException e) {
+            throw refusal(executionId, "stopped", e);
+        }
+    }
+
+    /**
+     * Restarts the given batch job execution. A bootstrap job's, one whose properties carry the bootstrap runner's
+     * token ({@value BootstrapRun#PROPERTY}), is refused: a bootstrap runs once, and one that failed is fixed by
+     * recreating the database empty, never by running its jobs again on it (docs/code-data-config-plan.md §7.2, D4
+     * as amended on 2026-10-24). That refusal is the one change of a running system's endpoint the ruling brought,
+     * and it touches only bootstrap jobs: every other job's restart is as before.
+     *
+     * @param executionId the execution ID
+     * @return the new execution's ID
+     * @throws NiordWebException 404 for an execution that does not exist, 409 for a bootstrap job's execution and
+     *                           for one whose state does not allow a restart (running, completed, not the most recent)
+     */
+    public long restartExecution(long executionId) {
+        try {
+            BatchData job = findByInstanceId(jobOperator.getJobInstance(executionId).getInstanceId());
+            if (job != null && job.getProperties() != null && job.getProperties().containsKey(BootstrapRun.PROPERTY)) {
+                throw new NiordWebException("A bootstrap job is never restarted: a bootstrap runs once; recreate the "
+                        + "database empty", 409);
+            }
+            return jobOperator.restart(executionId, new Properties());
+        } catch (BatchRuntimeException e) {
+            throw refusal(executionId, "restarted", e);
+        }
+    }
+
+    /**
+     * Abandons the given batch job execution
+     *
+     * @param executionId the execution ID
+     * @throws NiordWebException 404 for an execution that does not exist, 409 for one that is running
+     */
+    public void abandonExecution(long executionId) {
+        try {
+            jobOperator.abandon(executionId);
+        } catch (BatchRuntimeException e) {
+            throw refusal(executionId, "abandoned", e);
+        }
+    }
+
+    /**
+     * Turns the job operator's refusal of an action on an execution into the answer the caller should get: 404 for
+     * an execution that does not exist (an id from before a restart of the server, or a mistyped one), 409 for one
+     * whose state does not allow the action (the Batch page was stale: the job ended, or another system
+     * administrator acted first). JBeret refuses before it acts, so nothing has changed. Any other batch failure,
+     * including a restart whose new execution failed to start (JBeret wraps that in a JobRestartException with a
+     * cause), is returned as it is.
+     *
+     * @param executionId the execution ID
+     * @param action      the action, as a past participle ("stopped", "restarted", "abandoned")
+     * @param e           the job operator's exception
+     * @return the exception to throw
+     */
+    private RuntimeException refusal(long executionId, String action, BatchRuntimeException e) {
+        if (e instanceof NoSuchJobExecutionException) {
+            return new NiordWebException("No batch execution " + executionId, 404);
+        }
+        // JBeret also throws JobRestartException to wrap a real failure: AbstractJobOperator.restartFailedOrStopped
+        // catches any exception from starting the new execution (the job repository, a transaction, a rejected
+        // executor, a job listener) and throws new JobRestartException(e). That is a server fault, not a refusal, and
+        // stays a logged 500. JBeret's own refusals of a restart carry no cause.
+        if (e instanceof JobRestartException && e.getCause() != null) {
+            return e;
+        }
+        if (e instanceof JobExecutionNotRunningException
+                || e instanceof JobExecutionIsRunningException
+                || e instanceof JobRestartException
+                || e instanceof JobExecutionAlreadyCompleteException
+                || e instanceof JobExecutionNotMostRecentException) {
+            String status;
+            try {
+                status = ": its status is " + jobOperator.getJobExecution(executionId).getBatchStatus();
+            } catch (RuntimeException statusFailure) {
+                status = "";
+            }
+            return new NiordWebException("Batch execution " + executionId + " cannot be " + action + status
+                    + " (" + e.getMessage() + ")", 409);
+        }
+        return e;
+    }
+
+    /**
+     * Returns the paged search result for the given batch type
+     *
+     * @param jobName the job name
+     * @param start   the start index of the paged search result
+     * @param count   the max number of instances per start
+     * @return the paged search result for the given batch type
+     */
+    public PagedSearchResultVo<BatchInstanceVo> getJobInstances(
+            String jobName, int start, int count) throws Exception {
+
+        Objects.requireNonNull(jobName);
+        PagedSearchResultVo<BatchInstanceVo> result = new PagedSearchResultVo<>();
+
+        try {
+            result.setTotal(jobOperator.getJobInstanceCount(jobName));
+
+            jobOperator.getJobInstances(jobName, start, count).forEach(i -> {
+                BatchInstanceVo instance = new BatchInstanceVo();
+                instance.setName(i.getJobName());
+                instance.setInstanceId(i.getInstanceId());
+                result.getData().add(instance);
+                jobOperator.getJobExecutions(i).forEach(e -> {
+                    BatchExecutionVo execution = new BatchExecutionVo();
+                    execution.setExecutionId(e.getExecutionId());
+                    execution.setBatchStatus(e.getBatchStatus());
+                    execution.setStartTime(e.getStartTime());
+                    execution.setEndTime(e.getEndTime());
+                    instance.getExecutions().add(execution);
+                });
+                instance.updateExecutions();
+            });
+        } catch (NoSuchJobException ignored) {
+            // When the JVM has restarted the call will fail until the job has executed the first time.
+            // Mirror getStatus(): a valid but un-run job name yields an empty 0-total page rather than a 5xx.
+        }
+
+        // Next, copy the associated batch data to the instance VO.
+        // The job repository is in memory, so instance ids start at 1 again in every JVM while the rows stay:
+        // only this job's rows count, and of those the newest, as in findByInstanceId()
+        Set<Long> instanceIds = result.getData().stream()
+                .map(BatchInstanceVo::getInstanceId).collect(Collectors.toSet());
+        Map<Long, BatchData> batchDataLookup = findByInstanceIds(instanceIds)
+                .stream()
+                .filter(data -> jobName.equals(data.getJobName()))
+                .collect(Collectors.toMap(BatchData::getInstanceId, Function.identity(),
+                        BinaryOperator.maxBy(Comparator.comparing(BatchData::getCreated))));
+        for (BatchInstanceVo i : result.getData()) {
+            BatchData data = batchDataLookup.get(i.getInstanceId());
+            if (data != null) {
+                i.setFileName(data.getDataFileName());
+                i.setJobNo(data.getJobNo());
+                i.setUser(data.getUser() != null ? data.getUser().getName() : null);
+                i.setDomain(data.getDomain() != null ? data.getDomain().getDomainId() : null);
+                i.setJobName(data.getJobName());
+                // A copy without the bootstrap runner's token: never removed from the row's own map, which is managed
+                Map<String, Object> properties = data.getProperties() != null
+                        ? new HashMap<>(data.getProperties()) : null;
+                if (properties != null) {
+                    properties.remove(BootstrapRun.PROPERTY);
+                }
+                i.setProperties(properties);
+                i.setProgress(data.getProgress());
+            }
+        }
+
+        result.updateSize();
+        return result;
+    }
+
+    /**
+     * Returns the status of the batch job system
+     *
+     * @return the status of the batch job system
+     */
+    public BatchStatusVo getStatus() {
+        BatchStatusVo status = new BatchStatusVo();
+        getJobNames().forEach(name -> {
+            // Create a status for the batch type
+            BatchTypeVo batchType = new BatchTypeVo();
+            batchType.setName(name);
+            try {
+                batchType.setRunningExecutions(jobOperator.getRunningExecutions(name).size());
+            } catch (NoSuchJobException ignored) {
+                // When the JVM has restarted the call will fail until the job has executed the first time.
+                // A truly annoying behaviour, given that we use persisted batch jobs.
+                // It also fails, with no running execution, once the engine has dropped the job's definition
+                // from its cache, while the instances are still counted: so the count is read on its own.
+            }
+            try {
+                batchType.setInstanceCount(jobOperator.getJobInstanceCount(name));
+            } catch (NoSuchJobException ignored) {
+                // As above: no instance of the job since the JVM started
+            }
+
+            // Update the global batch status with the batch type
+            status.getTypes().add(batchType);
+            status.setRunningExecutions(status.getRunningExecutions() + batchType.getRunningExecutions());
+        });
+        return status;
+    }
+
+    /***************************************/
+    /** Batch "execution" folder clean-up **/
+    /***************************************/
+
+    /**
+     * Called every hour to clean up the batch job "[jobName]/execution" folders for expired files
+     */
+    @Scheduled(cron="30 42 */1 * * ?")
+    void cleanUpExpiredBatchJobFiles() {
+
+        long t0 = System.currentTimeMillis();
+
+        // Resolve the list of batch job "execution" folders
+        List<Path> executionFolders = getBatchJobSubFolders("execution");
+
+        // Compute the expiry time
+        Calendar expiryDate = Calendar.getInstance();
+        expiryDate.add(Calendar.DATE, -batchFileExpiryDays);
+
+        // Clean up the files
+        executionFolders.forEach(folder -> {
+            try {
+                Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                        if (isDirEmpty(dir)) {
+                            log.debug("Deleting batch job directory :" + dir);
+                            Files.delete(dir);
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        if (FileUtils.isFileOlder(file.toFile(), expiryDate.getTime())) {
+                            log.debug("Deleting batch job file      :" + file);
+                            Files.delete(file);
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+            } catch (IOException e) {
+                log.error("Failed cleaning up " + folder + " batch job directory: " + e.getMessage(), e);
+            }
+        });
+
+        log.debug(String.format("Cleaned up expired batch job files in %d ms",
+                System.currentTimeMillis() - t0));
+    }
+
+    /** Returns the batch job root **/
+    public Path getBatchJobRoot() {
+        return batchJobRoot;
+    }
+
+    /** Returns the named sub-folders **/
+    private List<Path> getBatchJobSubFolders(String subFolderName) {
+        List<Path> subFolders = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(batchJobRoot)) {
+            stream.forEach(p -> {
+                Path executionFolder = p.resolve(subFolderName);
+                if (Files.isDirectory(executionFolder)) {
+                    subFolders.add(executionFolder);
+                }
+            });
+        } catch (IOException e) {
+            log.debug("Failed finding '" + subFolderName + "' batch job folders: " + e);
+        }
+        return subFolders;
+    }
+
+    /** Returns if the given directory is empty **/
+    private boolean isDirEmpty(final Path directory) throws IOException {
+        try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(directory)) {
+            return !dirStream.iterator().hasNext();
+        }
+    }
+
+}

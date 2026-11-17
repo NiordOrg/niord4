@@ -1,0 +1,158 @@
+
+[#running-niord-locally]
+== Running Niord locally
+
+One script at the root of the repository, `start-local.sh`, starts the whole stack on your
+machine. This chapter says what it starts and where to find it. The repository's `README.md`
+(sections _Try it_ and _Running locally_), `be/README.md` and `fe/README.md` hold the details and
+every option; read them rather than this chapter when something does not behave as described.
+
+[#local-prerequisites]
+=== Prerequisites
+
+* A JDK 25: `JAVA_HOME` pointing at it, or Temurin 25 unpacked into `~/.jdks/temurin-25`.
+* Node 24 (the version `fe/.nvmrc` names) with npm 11.
+* Docker Desktop, running.
+* A bash shell. On Windows, use Git Bash.
+
+Maven need not be installed: the backend comes with the Maven wrapper, `be/mvnw`. Before the
+first start, or when a start fails for no reason you can see, `be/dev doctor` checks the JDK,
+Docker, the Docker endpoint the integration tests use and the ports the local services need. It
+only reads; it changes nothing.
+
+[#start-local]
+=== The one command
+
+From the root of the repository:
+
+[source,bash]
+----
+./start-local.sh --sample          # the sample deployment: both
+                                   # applications, sample content
+./start-local.sh                   # no content but the bootstrap;
+                                   # the administration application
+./start-local.sh --info            # ... with the public site instead
+./start-local.sh --admin --info    # ... with both
+./start-local.sh --sample --reset  # the sample deployment, from an empty database again
+----
+
+The first run builds the backend, which takes a few minutes. The script then:
+
+. starts three containers from `be/docker-compose.yml`: PostgreSQL with PostGIS (`niord-db`),
+  Keycloak with the local realm (`niord-keycloak`) and MailHog, which catches every mail the
+  backend sends (`niord-smtp`). The containers are shared by every checkout on the machine; the
+  script starts one that is missing or stopped, and never stops or recreates one that runs;
+. launches the backend, the generic English application in `be/niord-app/`, with the JVM in UTC
+  and in the `development` mode, which both applications show as a ribbon;
+. starts the development server of the administration application, the public site, or both, so
+  that the frontend builds while the backend starts;
+. once the backend is up, applies the base product's bootstrap to a new, empty database, once
+  (<<the-bootstrap>>).
+
+With `--sample` the order differs at the end: the script waits for the backend, applies the
+bootstrap, loads the sample content and restarts the backend, and only then starts the development
+servers, so that nothing writes to the sample's database between the bootstrap and the load.
+
+The sample content is a set of domains, message series, charts, areas, publications and a few
+dozen messages from Danish waters, each message titled "SAMPLE —". It lives in `be/niord/sample/`
+and is loaded only into the local database `niord_sample`; it never reaches a jar, an image or a
+real deployment.
+
+kbd:[Ctrl+C] stops the backend and the development servers and leaves the containers running. Their data
+is kept in named Docker volumes, so the next start continues where you left off. The logs are
+written to `.local-run/`.
+
+[#local-ports]
+=== Ports and addresses
+
+Everything listens on the loopback address only.
+
+[cols="30,15,55",options="header"]
+|===
+|What |Port |Address
+
+|Administration application (development server)
+|4100
+|http://localhost:4100
+
+|Public site (development server)
+|4400
+|http://localhost:4400
+
+|Backend, REST API
+|8888
+|http://localhost:8888/rest
+
+|Keycloak
+|8080
+|http://localhost:8080/auth (admin console at `/auth/admin/`, user `admin`, password `admin`)
+
+|MailHog, the caught mails
+|8025
+|http://localhost:8025 (SMTP on 1025)
+
+|PostgreSQL
+|5432
+|database `niord`, or `niord_sample` with `--sample`; user and password `niord`
+|===
+
+The development servers pass every request for `/rest` on to the backend (`fe/proxy.conf.mjs`),
+so the applications and the API share one origin, as they do in a deployment. No CORS
+configuration exists anywhere, and none is to be added.
+
+[#local-logins]
+=== The logins of the local realm
+
+Keycloak imports the realm `be/keycloak/niord-realm-local.json` the first time it starts. Of the
+realm's groups, four have a local user: one each for the system administrators, the
+administrators, the editors and the case officers, each with its own name as password and an
+address on `example.org`. The realm's other groups have no user. The same users sign in to the
+sample deployment.
+
+[cols="25,25,50",options="header"]
+|===
+|User |Password |Group in the realm
+
+|`sysadmin`
+|`sysadmin`
+|Sysadmin
+
+|`admin`
+|`admin`
+|Admins
+
+|`editor`
+|`editor`
+|Editors
+
+|`user`
+|`user`
+|Case Officers
+|===
+
+Keycloak reads the realm file only when the realm does not exist yet. An edited realm file
+reaches Keycloak only after its container and its volume are removed; `be/README.md` gives the
+commands.
+
+These passwords are known to everyone. The local stack is for your own machine only: never make
+it reachable from a network.
+
+[#local-other-ways]
+=== Other ways to run it
+
+* *Only one part.* `be/run.sh` starts the backend and the containers alone; while it runs,
+  `be/reload.sh` compiles your changes and restarts the application in a few seconds. It does not
+  bootstrap the database: a new database stays empty, with no domain, until it has been
+  bootstrapped once, either by `./start-local.sh` or by hand with `be/scripts/bootstrap.sh`, which
+  needs a system administrator's access token (`be/README.md` gives the command). In `fe/`,
+  `npm ci` and then `npm start` serve the administration application on port 4200, and
+  `npm run start:info` the public site on 4400, both against the backend on 8888.
+* *Several branches side by side.* `./new-worktree.sh <branch>` makes a git worktree with a slot
+  of its own, so that its ports do not collide with the main checkout's; `./start-local.sh
+  --fe-only` in it runs only the frontend against the backend that already runs. The repository's
+  `README.md` explains the slots.
+* *Kubernetes.* `be/k8s/README.md` runs the same stack on a local Kubernetes cluster with the Helm
+  chart (<<the-helm-chart>>).
+
+A country runs from its own repository with its own `./start-local.sh`, which the country kit
+writes for it; it uses the same shared containers.

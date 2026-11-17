@@ -1,0 +1,417 @@
+{
+  "note": "What the administration app offers each identity of the backend's endpoint table, and what each offer calls. identities: the token claims (resource_access per client) of each identity, the same users as the backend's test realm (the guard fe/scripts/endpoint-roles.test.mjs holds them to be/niord/src/test/resources/keycloak/niord-realm.json), and the session domain it sits in. components: each gated component endpoint-roles.spec.ts renders, the state it is rendered in, and per item (its label key) the endpoints it calls and the identities it is shown to; the spec fails on an item shown that is not here or a shownTo that differs, the guard fails on an identity shown an item an endpoint refuses it, unless the item names that identity under knownFaults with the backlog line that records the fault (and then fails once the refusal is gone). notRendered: each other file that gates on a role, and why the spec does not render it.",
+  "identities": {
+    "anonymous": {
+      "username": null,
+      "sessionDomain": "niord-nw",
+      "resourceAccess": {}
+    },
+    "user": {
+      "username": "testuser",
+      "sessionDomain": "niord-nw",
+      "resourceAccess": {
+        "niord-nw": ["user"]
+      }
+    },
+    "userOtherDomain": {
+      "username": "testuser",
+      "sessionDomain": "niord-nm",
+      "resourceAccess": {
+        "niord-nw": ["user"]
+      }
+    },
+    "domainEditor": {
+      "username": "testdomaineditor",
+      "sessionDomain": "niord-nw",
+      "resourceAccess": {
+        "niord-nw": ["editor", "user"]
+      }
+    },
+    "editor": {
+      "username": "testeditor",
+      "sessionDomain": "niord-nw",
+      "resourceAccess": {
+        "niord-client-master": ["editor"],
+        "niord-nw": ["editor", "user"]
+      }
+    },
+    "admin": {
+      "username": "testadmin",
+      "sessionDomain": "niord-nw",
+      "resourceAccess": {
+        "niord-client-master": ["admin", "editor", "publication-curate"],
+        "niord-nw": ["admin", "editor", "publication-curate", "user"]
+      }
+    },
+    "adminElsewhere": {
+      "username": "testadminelsewhere",
+      "sessionDomain": "niord-nw",
+      "resourceAccess": {
+        "niord-nm": ["admin", "editor", "publication-curate", "user"],
+        "niord-nw": ["user"]
+      }
+    },
+    "sysadmin": {
+      "username": "sysadmin",
+      "sessionDomain": "niord-nw",
+      "resourceAccess": {
+        "realm-management": ["manage-clients", "manage-users"],
+        "niord-nm": ["admin", "editor", "publication-curate", "sysadmin", "user"],
+        "niord-annex": ["admin", "editor", "publication-curate", "sysadmin", "user"],
+        "niord-almanac": ["admin", "editor", "publication-curate", "sysadmin", "user"],
+        "niord-web": ["admin", "editor", "sysadmin", "user"],
+        "niord-fa": ["admin", "editor", "publication-curate", "sysadmin", "user"],
+        "niord-client-master": ["admin", "editor", "publication-curate", "sysadmin"],
+        "niord-nw": ["admin", "editor", "publication-curate", "sysadmin", "user"]
+      }
+    }
+  },
+  "components": {
+    "MenuService": {
+      "file": "ui-apps/admin/src/app/core/main-shell/menu.service.ts",
+      "state": "the main navigation; an area's own calls are not counted here (its route guard admits the same roles)",
+      "items": {
+        "menu.messages": {
+          "endpoints": [],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "menu.editor": {
+          "endpoints": [],
+          "shownTo": ["domainEditor", "editor", "admin", "sysadmin"]
+        },
+        "menu.schedule": {
+          "endpoints": [],
+          "shownTo": ["domainEditor", "editor", "admin", "sysadmin"]
+        },
+        "menu.admin": {
+          "endpoints": [],
+          "shownTo": ["admin", "sysadmin"]
+        },
+        "menu.sysadmin": {
+          "endpoints": [],
+          "shownTo": ["sysadmin"]
+        }
+      }
+    },
+    "MessagesActionMenu": {
+      "file": "ui-apps/admin/src/app/features/messages/messages-action-menu/messages-action-menu.ts",
+      "state": "two messages selected",
+      "items": {
+        "menu.action.print": {
+          "endpoints": [
+            "GET /rest/message-reports/reports",
+            "GET /rest/tickets/ticket",
+            "GET /rest/message-reports/report.pdf"
+          ],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "menu.action.print.selection": {
+          "endpoints": [
+            "POST /rest/tags/temp-tag",
+            "GET /rest/message-reports/reports",
+            "GET /rest/tickets/ticket",
+            "GET /rest/message-reports/report.pdf"
+          ],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.report": {
+          "endpoints": [
+            "GET /rest/mailing-lists/reports",
+            "GET /rest/tickets/ticket",
+            "GET /rest/mailing-lists/execute-report/{triggerId}.html"
+          ],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.mail": {
+          "endpoints": ["POST /rest/tags/temp-tag", "POST /rest/message-mail/send"],
+          "shownTo": ["domainEditor", "editor", "admin", "sysadmin"]
+        },
+        "menu.action.tag.add_selection": {
+          "endpoints": ["GET /rest/tags/search", "PUT /rest/tags/tag/{tagId}/add-messages"],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.tag.remove_selection": {
+          "endpoints": ["GET /rest/tags/search", "PUT /rest/tags/tag/{tagId}/remove-messages"],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "messages.shell.action.tagManage": {
+          "endpoints": [
+            "GET /rest/tags/search",
+            "POST /rest/tags/tag",
+            "PUT /rest/tags/tag/{tagId}",
+            "DELETE /rest/tags/tag/{tagId}",
+            "DELETE /rest/tags/tag/{tagId}/messages"
+          ],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.select.all": {
+          "endpoints": [],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "menu.action.select.none": {
+          "endpoints": [],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "menu.action.message.compare": {
+          "endpoints": ["GET /rest/messages/message/{messageId}"],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "menu.action.export": {
+          "endpoints": ["GET /rest/tickets/ticket", "GET /rest/message-io/export.zip"],
+          "shownTo": [
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "menu.action.export_selection": {
+          "endpoints": [
+            "POST /rest/tags/temp-tag",
+            "GET /rest/tickets/ticket",
+            "GET /rest/message-io/export.zip"
+          ],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.import": {
+          "endpoints": ["POST /rest/message-io/import"],
+          "shownTo": ["admin", "sysadmin"]
+        },
+        "menu.action.update_status": {
+          "endpoints": ["PUT /rest/messages/update-statuses"],
+          "shownTo": ["domainEditor", "editor", "admin", "sysadmin"]
+        },
+        "menu.action.sort_area": {
+          "endpoints": ["GET /rest/messages/search", "PUT /rest/messages/change-area-sort-order"],
+          "shownTo": ["domainEditor", "editor", "admin", "sysadmin"]
+        },
+        "messages.shell.action.sortBy.area": {
+          "endpoints": ["GET /rest/messages/search"],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "messages.shell.action.sortBy.id": {
+          "endpoints": ["GET /rest/messages/search"],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "messages.shell.action.sortBy.date": {
+          "endpoints": ["GET /rest/messages/search"],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "messages.shell.action.sortBy.publishDate": {
+          "endpoints": ["GET /rest/messages/search"],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "messages.shell.action.sortBy.followUpDate": {
+          "endpoints": ["GET /rest/messages/search"],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        }
+      }
+    },
+    "MessageDetailsMenu": {
+      "file": "ui-apps/admin/src/app/features/messages/message-details-menu/message-details-menu.ts",
+      "state": "a message of the session domain's series, a tag remembered, the message in another tag",
+      "items": {
+        "menu.action.edit": {
+          "endpoints": ["GET /rest/messages/editable-message/{messageId}"],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.copy": {
+          "endpoints": ["GET /rest/messages/copy-message-template/{messageId}"],
+          "shownTo": ["domainEditor", "editor", "admin", "sysadmin"]
+        },
+        "messages.detailsMenu.print": {
+          "endpoints": [
+            "GET /rest/message-reports/detail-reports",
+            "GET /rest/tickets/ticket",
+            "GET /rest/message-reports/message/{messageId}.pdf"
+          ],
+          "shownTo": [
+            "anonymous",
+            "user",
+            "userOtherDomain",
+            "domainEditor",
+            "editor",
+            "admin",
+            "adminElsewhere",
+            "sysadmin"
+          ]
+        },
+        "menu.action.tag.add": {
+          "endpoints": ["GET /rest/tags/search", "PUT /rest/tags/tag/{tagId}/add-messages"],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.tag.add_named": {
+          "endpoints": ["PUT /rest/tags/tag/{tagId}/add-messages"],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
+        "menu.action.tag.remove_named": {
+          "endpoints": [
+            "GET /rest/tags/message/{messageUid}",
+            "PUT /rest/tags/tag/{tagId}/remove-messages"
+          ],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        }
+      }
+    },
+    "TagPicker": {
+      "file": "ui-apps/admin/src/app/features/messages/components/tag-picker/tag-picker.ts",
+      "state": "the Tag filter's picker (filter mode, Manage on), which every identity opens; Manage, offered with the domain's user role, opens the tag manager, whose calls are those of messages.shell.action.tagManage",
+      "items": {
+        "messages.tagPicker.manage": {
+          "endpoints": [
+            "GET /rest/tags/search",
+            "POST /rest/tags/tag",
+            "PUT /rest/tags/tag/{tagId}",
+            "DELETE /rest/tags/tag/{tagId}",
+            "DELETE /rest/tags/tag/{tagId}/messages"
+          ],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        }
+      }
+    },
+    "UserField": {
+      "file": "ui-apps/admin/src/app/core/auth/components/user-field/user-field.ts",
+      "state": "the messages' User filter field (user-filter-panel.html), which the filter menu offers to every signed-in account; its search of the user directory as the user types is enabled only with the domain's user role (the item: the search field), while Me sets the account's own user for every signed-in account",
+      "items": {
+        "messages.filter.user.field.placeholder": {
+          "endpoints": ["GET /rest/users/search"],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        }
+      }
+    }
+  },
+  "notRendered": {
+    "ui-apps/admin/src/app/app.routes.ts": "The area routes' rolesRequired: held by app.routes.spec.ts and role.guard.spec.ts; MenuService, rendered here, offers the same areas from the same lists.",
+    "ui-apps/admin/src/app/core/auth/area-roles.ts": "The role lists the routes and MenuService share; no item of its own.",
+    "ui-apps/admin/src/app/core/auth/facades/auth.facade.ts": "The facade the spec renders every component with.",
+    "ui-apps/admin/src/app/core/auth/guards/role.guard.ts": "The route guard (role.guard.spec.ts).",
+    "ui-apps/admin/src/app/core/auth/services/auth.service.ts": "The service the spec signs each identity in with.",
+    "ui-apps/admin/src/app/core/country/country-routes.ts": "Checks that a country route names rolesRequired; no item of its own.",
+    "ui-apps/admin/src/app/core/domain/facades/domain.facade.ts": "Reads the roles per domain for the domain switcher's icons; rendered here under MessageDetailsMenu (canEditMessageSeries).",
+    "ui-apps/admin/src/app/core/interceptors/auth-token.interceptor.ts": "Adds the token to a signed-in request; no item.",
+    "ui-apps/admin/src/app/core/main-shell/header/services/account-menu.service.ts": "Login, account and logout: Keycloak's pages, no endpoint of the table.",
+    "ui-apps/admin/src/app/core/main-shell/header/services/domain-menu.service.ts": "The domain switcher: switching reloads the application; no endpoint of its own.",
+    "ui-apps/admin/src/app/country-specific/default/country.routes.ts": "The base product's empty country routes.",
+    "ui-apps/admin/src/app/features/admin/sections/admin/mailing-lists/mailing-lists-page.ts": "Not yet rendered: its sysadmin-only export is a ticketed call the guard holds to its ticket cell (role sysadmin).",
+    "ui-apps/admin/src/app/features/admin/sections/admin/publications/transfer-owner.ts": "Not yet rendered: offers the transfer only to an admin of the target domain (adminIn); PUT /rest/publication-series/series/{seriesId}/owner is code-checked in the publications group.",
+    "ui-apps/admin/src/app/features/admin/sections/admin/users/users-contacts-page.ts": "Not yet rendered: the Users tab for canManageUsers (manage-users on realm-management, sysadmin only in the realm); the kc-user endpoints carry realmRole manage-users in the system group.",
+    "ui-apps/admin/src/app/features/admin/sections/sysadmin/batch/batch-page.ts": "Not yet rendered: under the sysadmin area; its download is a ticketed call the guard holds to its ticket cell (role sysadmin).",
+    "ui-apps/admin/src/app/features/editor/components/editor-action-menu/editor-action-menu.ts": "Not yet rendered: the editor shell's menu, gated by isEditor through EditorFacade, whose message state the spec would have to build.",
+    "ui-apps/admin/src/app/features/editor/components/editor-field-row/editor-field-row.ts": "Not yet rendered: a field opens for editing only for isEditor; the editor's writes are RolesAllowed(EDITOR).",
+    "ui-apps/admin/src/app/features/editor/components/manage-optional-fields/manage-optional-fields.ts": "Not yet rendered: isEditor-gated, no endpoint of its own (it changes the form).",
+    "ui-apps/admin/src/app/features/editor/components/status-action-panel/status-action-panel.ts": "Not yet rendered: the status actions for isEditor (PUT /rest/messages/message/{messageId}/status, RolesAllowed(EDITOR)).",
+    "ui-apps/admin/src/app/features/editor/components/status-flow/status-flow.ts": "Not yet rendered: the status flow for isEditor, the same calls as the status action panel.",
+    "ui-apps/admin/src/app/features/editor/services/editor-facade.ts": "Defines isEditor and isAdmin for the editor's components.",
+    "ui-apps/admin/src/app/features/editor/services/editor-fields.service.ts": "Reads isEditor to open fields; no endpoint of its own.",
+    "ui-apps/admin/src/app/features/editor/services/message-status.service.ts": "Documents the copy's isEditor gate; the copy is rendered here under MessageDetailsMenu (menu.action.copy).",
+    "ui-apps/admin/src/app/features/home/components/home-page/home-page.ts": "Shows the login prompt to a guest; no endpoint.",
+    "ui-apps/admin/src/app/features/messages/components/filter-panels/comments-filter-panel/comments-filter-panel.ts": "Not yet rendered: the comments filter for a signed-in user (GET /rest/messages/search with comments, params *).",
+    "ui-apps/admin/src/app/features/messages/components/message-area-heading/message-area-heading.ts": "Not yet rendered: the area heading's sort action for an editor with the domain role, the same calls as MessagesActionMenu's menu.action.sort_area.",
+    "ui-apps/admin/src/app/features/messages/components/message-print-settings/message-print-settings.ts": "Offers a guest printing a list only the public report, which GET /rest/message-reports/report.pdf prints for a caller the backend does not know; narrows the answer of GET /rest/message-reports/reports, no call of its own; held by message-print-settings.spec.ts.",
+    "ui-apps/admin/src/app/features/messages/dialogs/message-print-dialog/message-print-dialog.ts": "Asks the print ticket (role user with the domain role, else none): manual-calls.json ticketRoles; rendered as the print items here.",
+    "ui-apps/admin/src/app/features/messages/dialogs/message-tags-dialog/message-tags-dialog.ts": "Not yet rendered: the tag manager; its unlock action is shown to admin and sysadmin only, as PUT /rest/tags/unlock-tag/{tagId} is RolesAllowed(ADMIN).",
+    "ui-apps/admin/src/app/features/messages/messages-filter-dropdown/messages-filter-dropdown.ts": "Not yet rendered: the saved filters for a signed-in user (GET /rest/filters/all, PermitAll with a code check).",
+    "ui-apps/admin/src/app/features/messages/services/message-edit-shortcut.service.ts": "The keyboard shortcut to the editor for a signed-in user, the same as menu.action.edit rendered here.",
+    "ui-apps/admin/src/app/features/messages/services/message-export.service.ts": "Asks the export ticket (role user with the domain role, else none): extracted with the call; rendered as the export items here.",
+    "ui-apps/admin/src/app/features/messages/services/messages-filter-params.serializer.ts": "Serialises the filter's signed-in-only fields; no item.",
+    "ui-apps/admin/src/app/features/messages/services/messages-filter.facade.ts": "Narrows the filter for a signed-in user (statuses beyond PUBLISHED); GET /rest/messages/search reads them (params *).",
+    "ui-apps/admin/src/app/features/messages/services/named-filters.facade.ts": "Loads the saved filters for a signed-in user: see messages-filter-dropdown.ts.",
+    "ui-apps/admin/src/app/features/schedule/schedule.routes.ts": "Names the area's rolesRequired in a comment; the schedule area is rendered as MenuService's menu.schedule.",
+    "ui-apps/admin/src/app/shared/components/ol-map/wms-layer-visibility.ts": "Shows a protected WMS layer to a signed-in user: the /wms proxy, outside the endpoint table.",
+    "ui-apps/admin/src/app/shared/components/tag-scope-select/tag-scope-select.ts": "Offers the private scope to a signed-in user inside the tag manager and the tag picker; a filter of the tag search (GET /rest/tags/search, PermitAll), no item of its own.",
+    "ui-apps/admin/src/public-api.ts": "The country API's re-exports; no item."
+  }
+}

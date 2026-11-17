@@ -1,0 +1,87 @@
+{
+  "PublicSiteBrowsePublication.png": {
+    "cssWidth": 1280,
+    "cssHeight": 791,
+    "printWidth": 800
+  },
+  "PublicSiteDetailsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "PublicSiteDetailsPagePhone.png": {
+    "cssWidth": 390,
+    "cssHeight": 844,
+    "printWidth": 244
+  },
+  "PublicSiteDownloadsActive.png": {
+    "cssWidth": 1280,
+    "cssHeight": 756,
+    "printWidth": 800
+  },
+  "PublicSiteDownloadsHistorical.png": {
+    "cssWidth": 1280,
+    "cssHeight": 789,
+    "printWidth": 800
+  },
+  "PublicSiteFilterBar.png": {
+    "cssWidth": 584,
+    "cssHeight": 50,
+    "printWidth": 365
+  },
+  "PublicSiteListPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 777,
+    "printWidth": 800
+  },
+  "PublicSiteMapPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "PublicSiteMapPagePhone.png": {
+    "cssWidth": 390,
+    "cssHeight": 844,
+    "printWidth": 244
+  },
+  "PublicSiteMapSymbols.png": {
+    "cssWidth": 1280,
+    "cssHeight": 722,
+    "printWidth": 800
+  },
+  "PublicSiteMapTooltip.png": {
+    "cssWidth": 408,
+    "cssHeight": 144,
+    "printWidth": 255
+  },
+  "PublicSiteMenuBar.png": {
+    "cssWidth": 536,
+    "cssHeight": 48,
+    "printWidth": 335
+  },
+  "PublicSiteMessageCard.png": {
+    "cssWidth": 816,
+    "cssHeight": 490,
+    "printWidth": 510
+  },
+  "PublicSiteMessageDialog.png": {
+    "cssWidth": 1280,
+    "cssHeight": 782,
+    "printWidth": 800
+  },
+  "PublicSiteMessageDialogPhone.png": {
+    "cssWidth": 390,
+    "cssHeight": 773,
+    "printWidth": 244
+  },
+  "PublicSitePrintPdf.png": {
+    "cssWidth": 796,
+    "cssHeight": 398,
+    "printWidth": 498
+  },
+  "PublicSiteTeaser.png": {
+    "cssWidth": 640,
+    "cssHeight": 400,
+    "printWidth": 400
+  }
+}

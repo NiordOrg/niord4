@@ -1,0 +1,218 @@
+# Light buoy missing  [templates/tmpl/light-buoy-missing.ftl, templates/tmpl/compute-affected-radius.js]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=aton, type=light_buoy_by_function, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 56-00.0N 012-00.0E MISSING.
+AUDIO:   The north cardinal light buoy Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is missing.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 56-00.0N 012-00.0E MISSING.
+AUDIO:   The north cardinal light buoy Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is missing.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy Hals Barre in pos. 61° 06.0'N - 045° 15.0'W is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 61-06.0N 045-15.0W MISSING.
+AUDIO:   The north cardinal light buoy Hals Barre in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West is missing.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. / The north cardinal light buoy Hals Barre in pos. 55° 36.0'N - 010° 45.0'E is missing. / The north cardinal light buoy Hals Barre in pos. 55° 42.0'N - 011° 00.0'E is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-36.0N 010-45.0E MISSING.
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-42.0N 011-00.0E MISSING.
+AUDIO:   The north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing. The north cardinal light buoy Hals Barre in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East is missing. The north cardinal light buoy Hals Barre in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East is missing.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: 
+NAVTEX:
+  | 
+  |         
+AUDIO:   null
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.function.light_buoy.north_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.south_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The south cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | SOUTH CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The south cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.east_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The east cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | EAST CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The east cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.west_cardinal
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The west cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | WEST CARDINAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The west cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.port_hand
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | PORT HAND LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.starboard_hand
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | STARBOARD HAND LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The preferred channel to port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | PREFERRED CHANNEL TO PORT HAND LIGHT
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | MISSING.
+AUDIO:   The preferred channel to port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The preferred channel to starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | PREFERRED CHANNEL TO STARBOARD HAND
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E MISSING.
+AUDIO:   The preferred channel to starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.safe_water
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The safe water light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | SAFE WATER LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The safe water light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.special
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The special light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | SPECIAL LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E MISSING.
+AUDIO:   The special light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.isolated_danger
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The isolated danger light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | ISOLATED DANGER LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The isolated danger light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy.emergency_wreck
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The emergency wreck light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | EMERGENCY WRECK LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E MISSING.
+AUDIO:   The emergency wreck light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.light_buoy
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E MISSING.
+AUDIO:   The light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = aton.function.aton
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | MISSING.
+AUDIO:   The buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E MISSING.
+AUDIO:   The light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY 55-30.0N
+  | 010-30.0E MISSING.
+AUDIO:   The north cardinal light buoy in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Light buoy missing.
+SUBJECT: Light buoy missing
+DETAILS: The north cardinal light buoy St. John's Point in pos. 55° 30.0'N - 010° 30.0'E is missing. /
+NAVTEX:
+  | NORTH CARDINAL LIGHT BUOY ST. JOHN'S
+  | POINT 55-30.0N 010-30.0E MISSING.
+AUDIO:   The north cardinal light buoy St. John's Point in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is missing.
+

@@ -1,0 +1,202 @@
+<div
+  class="overflow-hidden rounded-lg border border-surface-200 bg-surface-0 shadow-sm dark:border-surface-700 dark:bg-surface-900"
+>
+  <div
+    class="flex flex-wrap items-center gap-2 border-b border-surface-200 bg-surface-100 px-3 py-2 dark:border-surface-700 dark:bg-surface-800"
+  >
+    <span
+      cdkDragHandle
+      aria-hidden="true"
+      [class]="
+        facade.editableNow()
+          ? 'inline-flex cursor-grab text-fg-subtle active:cursor-grabbing'
+          : 'inline-flex text-fg-subtle'
+      "
+    >
+      <app-icon name="lucideGripVertical" />
+    </span>
+    <span class="text-sm font-semibold text-fg">
+      {{ 'editor.section.message_part' | transloco: { n: partIndex() + 1 } }}
+    </span>
+    <app-part-type-switcher [partIndex]="partIndex()" [part]="part()" />
+
+    @if (facade.editableNow()) {
+      <span class="flex-1"></span>
+      <button
+        type="button"
+        class="icon-button"
+        [disabled]="first()"
+        [attr.aria-label]="'editor.part.moveUp' | transloco"
+        [title]="'editor.part.moveUp' | transloco"
+        (click)="onMoveUp()"
+      >
+        <app-icon name="lucideArrowUp" />
+      </button>
+      <button
+        type="button"
+        class="icon-button"
+        [disabled]="last()"
+        [attr.aria-label]="'editor.part.moveDown' | transloco"
+        [title]="'editor.part.moveDown' | transloco"
+        (click)="onMoveDown()"
+      >
+        <app-icon name="lucideArrowDown" />
+      </button>
+      <button
+        type="button"
+        class="icon-button hover:text-danger"
+        [attr.aria-label]="'editor.part.remove' | transloco"
+        [title]="'editor.part.remove' | transloco"
+        (click)="onRemove()"
+      >
+        <app-icon name="lucideTrash2" />
+      </button>
+    }
+  </div>
+
+  <div class="ed-field-group flex flex-col px-3.5 py-1">
+    @if (fields.showPartEventDates(part())) {
+      <app-event-dates-field [partIndex]="partIndex()" />
+    }
+
+    @if (fields.showPartPositions(part())) {
+      <app-editor-field-row
+        fieldId="positions"
+        [index]="partIndex()"
+        label="msg.field.positions"
+        [edited]="fields.edited('positions', partIndex())"
+        [empty]="coordinateLineCount() === 0"
+        emptyLabel="editor.field.positions.empty"
+      >
+        <!-- Collapsed summary: the first serialized coordinate line, `(more…)` when there are more. -->
+        <span fieldViewer class="tabular-nums">
+          {{ firstCoordinateLine() }}
+          @if (hasMoreCoordinates()) {
+            <span class="text-fg-subtle">{{ 'editor.row.more' | transloco }}</span>
+          }
+        </span>
+
+        <!-- Expanded editor: read-only mini-map + the mono coordinate table with Edit / Edit-as-text.
+             Content projected into the field row is created with the card (not the row's own @if), so
+             the inner @if keeps the OL map from mounting until the row is actually open. -->
+        <div fieldEditor class="flex flex-col gap-2">
+          @if (positionsExpanded()) {
+            <div
+              class="relative h-40 overflow-hidden rounded border border-surface-200 dark:border-surface-700"
+            >
+              <app-ol-map class="block h-full w-full" [readOnly]="true" [view]="initialView()">
+                <app-ol-tile-layer source="OSM" />
+                <app-ol-geometry-preview-layer [featureCollection]="part().geometry" />
+              </app-ol-map>
+              @if (coordinateLineCount() === 0) {
+                <span
+                  class="pointer-events-none absolute inset-x-0 top-2 text-center text-xs text-fg-muted"
+                >
+                  {{ 'editor.field.positions.empty' | transloco }}
+                </span>
+              }
+              @if (facade.editableNow()) {
+                <div class="absolute top-2 right-2 z-10 flex gap-2">
+                  <button
+                    type="button"
+                    class="btn-secondary shadow"
+                    (click)="openPositionsEditor()"
+                  >
+                    <app-icon name="lucidePencil" class="mr-1 text-xs" />
+                    {{ 'editor.field.positions.edit' | transloco }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-secondary shadow"
+                    (click)="openPositionsAsText()"
+                  >
+                    <app-icon name="lucideAlignLeft" class="mr-1 text-xs" />
+                    {{ 'editor.field.positions.editAsText' | transloco }}
+                  </button>
+                </div>
+              }
+            </div>
+
+            @if (coordinateGroups().length > 0) {
+              <div class="ed-coords">
+                @for (group of coordinateGroups(); track $index) {
+                  @if (group.name) {
+                    <div class="ed-coords-name">{{ group.name }}</div>
+                  }
+                  @for (row of group.rows; track row.index) {
+                    <div class="ed-coords-row">
+                      <div class="ed-coords-n">{{ row.index }})</div>
+                      <div class="ed-coords-c">
+                        {{ row.text }}
+                        @if (row.name) {
+                          <span class="text-fg-subtle">— {{ row.name }}</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          }
+        </div>
+      </app-editor-field-row>
+
+      <!-- The positions geometry editor: a near-full-window modal (chart-editor presentation) that
+           owns its own Cancel/OK toolbar and Escape, so the shell's close X + Escape are off.
+           Lazily loaded so @turf / the editor chunk stay out of the initial bundle. -->
+      @defer (when positionsModalOpen()) {
+        <app-dialog
+          [visible]="positionsModalOpen()"
+          [modal]="true"
+          [closable]="false"
+          [closeOnEscape]="false"
+          [dismissableMask]="false"
+          top="1rem"
+          [style]="{
+            width: 'calc(100vw - 2rem)',
+            maxWidth: 'calc(100vw - 2rem)',
+            height: 'calc(100vh - 2rem)',
+            maxHeight: 'calc(100vh - 2rem)',
+            overflow: 'hidden',
+          }"
+        >
+          @if (positionsModalOpen()) {
+            <app-geometry-editor
+              class="block h-full"
+              [geometry]="part().geometry"
+              editType="message"
+              (geometryChange)="onPositionsCommit($event)"
+              (cancelled)="onPositionsCancel()"
+            />
+          }
+        </app-dialog>
+      } @error {
+        @if (positionsModalOpen()) {
+          <p class="p-4 text-sm text-fg-muted" role="alert">
+            {{ 'common.fetchError' | transloco }}
+          </p>
+        }
+      }
+
+      <!-- "Edit as text" reuses the shared geometry plain-text dialog directly (same as the chart
+           editor); saving REPLACES the part's geometry through the same facade commit path. Mounted
+           only while the row is expanded (its trigger lives in the expanded editor), so a collapsed
+           row never spins up the dialog's hidden preview map. -->
+      @if (positionsExpanded()) {
+        <app-edit-as-text-dialog
+          [visible]="positionsAsTextOpen()"
+          (visibleChange)="positionsAsTextOpen.set($event)"
+          [featureCollection]="part().geometry"
+          (saved)="onPositionsCommit($event)"
+        />
+      }
+    }
+
+    @if (fields.showPartSubject(part())) {
+      <app-subject-field [partIndex]="partIndex()" />
+    }
+
+    <!-- Description row: per-language rich-text body (viewer + expanded editors). -->
+    <app-description-field [partIndex]="partIndex()" />
+  </div>
+</div>

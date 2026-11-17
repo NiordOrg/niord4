@@ -1,0 +1,327 @@
+#!/usr/bin/env bash
+#
+# Developer entry point for the backend.
+#
+#   ./dev doctor        check that this machine can actually build, run and test the backend
+#   ./dev help          list the commands
+#
+# `doctor` exists because every way this environment goes wrong looks like something else. A JDK
+# older than the one the reactor targets surfaces as a compiler error deep in a module; Docker
+# Desktop being down surfaces as ~200 integration tests reporting "Tests run: 0" under a green
+# BUILD SUCCESS; a stray postgres on :5432 surfaces four minutes into `./run.sh` as a container
+# that will not start. Each one costs a full build or a full startup to discover. This command
+# answers all of them in about a second, before the wait.
+#
+# It is deliberately read-only: it starts nothing, installs nothing and changes no configuration.
+# When something is wrong it prints the command that fixes it and leaves the decision to you.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+# --- output helpers ---------------------------------------------------------------------------
+
+if [[ -t 1 ]]; then
+    C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'; C_DIM=$'\033[2m'; C_BOLD=$'\033[1m'
+else
+    C_RESET=; C_GREEN=; C_YELLOW=; C_RED=; C_DIM=; C_BOLD=
+fi
+
+failures=0
+warnings=0
+
+section() { printf '\n%s%s%s\n' "$C_BOLD" "$1" "$C_RESET"; }
+ok()      { printf '  %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$1"; }
+warn()    { printf '  %s!%s %s\n' "$C_YELLOW" "$C_RESET" "$1"; warnings=$((warnings + 1)); }
+fail()    { printf '  %s✗%s %s\n' "$C_RED" "$C_RESET" "$1"; failures=$((failures + 1)); }
+hint()    { printf '    %s%s%s\n' "$C_DIM" "$1" "$C_RESET"; }
+
+# --- doctor: Java -----------------------------------------------------------------------------
+
+# The JDK Maven will use, which is not necessarily the one on PATH: JAVA_HOME wins when it is set,
+# and a stale JAVA_HOME pointing at an old JDK is the usual reason `java -version` looks fine while
+# the build does not.
+check_java() {
+    section "Java"
+
+    local required
+    required=$(sed -n 's/.*<java\.version>\([0-9][0-9]*\)<\/java\.version>.*/\1/p' pom.xml | head -1)
+    required=${required:-25}
+
+    local pinned=""
+    [[ -f .java-version ]] && pinned=$(tr -d '[:space:]' < .java-version)
+
+    local java_bin source
+    if [[ -n "${JAVA_HOME:-}" ]]; then
+        java_bin="$JAVA_HOME/bin/java"
+        source="JAVA_HOME=$JAVA_HOME"
+    else
+        java_bin=$(command -v java 2>/dev/null || true)
+        source="java on PATH"
+    fi
+
+    if [[ -z "$java_bin" || ! -x "$java_bin" ]]; then
+        fail "No JDK found ($source)"
+        hint "macOS: install a JDK $required, then  export JAVA_HOME=\$(/usr/libexec/java_home -v $required)"
+        return
+    fi
+
+    # "openjdk version \"25.0.1\"" / "\"1.8.0_402\"" -> 25 / 8
+    local version major
+    version=$("$java_bin" -version 2>&1 | sed -n '1s/.*version "\([^"]*\)".*/\1/p')
+    major=${version%%.*}
+    [[ "$major" == "1" ]] && major=$(echo "$version" | cut -d. -f2)
+
+    if [[ -z "$major" ]]; then
+        warn "Could not parse the Java version from $java_bin ($source)"
+    elif (( major < required )); then
+        fail "Java $version is too old — the reactor targets Java $required ($source)"
+        hint "macOS: export JAVA_HOME=\$(/usr/libexec/java_home -v $required)"
+    elif [[ -n "$pinned" && "$major" != "$pinned" ]]; then
+        # Not an error: --release $required compiles fine on a newer JDK. Worth saying, because it
+        # means .java-version is not being honoured, i.e. jenv/sdkman is not on this shell's PATH.
+        ok "Java $version ($source)"
+        warn ".java-version pins $pinned but Java $major is in use — jenv/sdkman is not active here"
+    else
+        ok "Java $version ($source)"
+    fi
+}
+
+# --- doctor: build tooling --------------------------------------------------------------------
+
+check_tooling() {
+    section "Build tooling"
+
+    if [[ -x ./mvnw ]]; then
+        local mvn_version
+        mvn_version=$(sed -n 's|.*apache-maven-\([0-9.]*\)-bin\.zip.*|\1|p' .mvn/wrapper/maven-wrapper.properties 2>/dev/null | head -1)
+        ok "./mvnw present${mvn_version:+ (Maven $mvn_version)} — a local Maven install is not needed"
+    else
+        fail "./mvnw is missing or not executable"
+        hint "chmod +x mvnw"
+    fi
+
+    # ./test-it's report check is Python; without it an IT run cannot be proven to have happened.
+    if command -v python3 >/dev/null 2>&1; then
+        ok "python3 $(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))') — ./test-it can verify IT reports"
+    else
+        fail "python3 not found — ./test-it cannot check the Failsafe reports"
+        hint "macOS: xcode-select --install   (or: brew install python)"
+    fi
+}
+
+# --- doctor: Docker ---------------------------------------------------------------------------
+
+# Resolve the endpoint Testcontainers will use, in its own precedence order: DOCKER_HOST, then
+# docker.host from ~/.testcontainers.properties, then the active docker CLI context.
+testcontainers_endpoint() {
+    if [[ -n "${DOCKER_HOST:-}" ]]; then
+        printf '%s\t%s\n' "$DOCKER_HOST" "DOCKER_HOST"
+        return
+    fi
+    if [[ -f "$HOME/.testcontainers.properties" ]]; then
+        local host
+        host=$(sed -n 's/^[[:space:]]*docker\.host[[:space:]]*=[[:space:]]*\(.*\)$/\1/p' "$HOME/.testcontainers.properties" | tail -1 | tr -d '[:space:]')
+        if [[ -n "$host" ]]; then
+            printf '%s\t%s\n' "$host" "~/.testcontainers.properties"
+            return
+        fi
+    fi
+    local ctx_endpoint
+    ctx_endpoint=$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)
+    printf '%s\t%s\n' "$ctx_endpoint" "docker context"
+}
+
+# Ask the daemon itself, over the endpoint given. `docker ps` is not a substitute: it follows the
+# docker CLI context, which on a machine running both OrbStack and Docker Desktop can be a
+# completely different daemon from the one Testcontainers talks to. That is exactly how an
+# integration run ends up skipping everything while `docker ps` looks healthy.
+ping_docker_endpoint() {
+    local endpoint="$1"
+    case "$endpoint" in
+        tcp://*|http://*|https://*)
+            curl -sf -m 5 -o /dev/null "http://${endpoint#*://}/_ping"
+            ;;
+        unix://*)
+            curl -sf -m 5 -o /dev/null --unix-socket "${endpoint#unix://}" "http://localhost/_ping"
+            ;;
+        /*)
+            curl -sf -m 5 -o /dev/null --unix-socket "$endpoint" "http://localhost/_ping"
+            ;;
+        *)
+            return 2
+            ;;
+    esac
+}
+
+check_docker() {
+    section "Docker"
+
+    if ! command -v docker >/dev/null 2>&1; then
+        fail "docker not found — needed for ./run.sh (compose services) and ./test-it (Testcontainers)"
+        hint "macOS: install Docker Desktop, then  open -a Docker"
+        return
+    fi
+
+    local ctx server
+    ctx=$(docker context show 2>/dev/null || echo "?")
+    server=$(docker version --format '{{.Server.Version}}' 2>/dev/null || true)
+    if [[ -n "$server" ]]; then
+        ok "docker CLI reachable (context: $ctx, server $server)"
+    else
+        fail "docker CLI cannot reach a daemon (context: $ctx)"
+        hint "macOS: open -a Docker    OrbStack: orb start"
+    fi
+
+    if docker compose version >/dev/null 2>&1; then
+        ok "docker compose v2 available — ./run.sh can start the local services"
+    else
+        fail "docker compose v2 not available — ./run.sh cannot start PostgreSQL/Keycloak/MailHog"
+    fi
+
+    # The endpoint that actually decides whether the integration tests run.
+    local line endpoint origin
+    line=$(testcontainers_endpoint)
+    endpoint=${line%%$'\t'*}
+    origin=${line##*$'\t'}
+
+    if [[ -z "$endpoint" ]]; then
+        warn "Could not determine the Docker endpoint Testcontainers will use"
+        return
+    fi
+
+    if ! command -v curl >/dev/null 2>&1; then
+        warn "curl not found — cannot verify the Testcontainers endpoint $endpoint ($origin)"
+        return
+    fi
+
+    local ping_status=0
+    ping_docker_endpoint "$endpoint" || ping_status=$?
+    if (( ping_status == 0 )); then
+        ok "Testcontainers endpoint $endpoint ($origin) answers — integration tests will run"
+    elif (( ping_status == 2 )); then
+        warn "Unrecognised Testcontainers endpoint $endpoint ($origin) — cannot verify it"
+    else
+        fail "Testcontainers endpoint $endpoint ($origin) is not answering — every *ITTest would SKIP, under a green BUILD SUCCESS"
+        if [[ "$origin" == "~/.testcontainers.properties" ]]; then
+            hint "That endpoint is Testcontainers Desktop, which proxies to Docker Desktop — it stays"
+            hint "dead while only OrbStack is running, even though \`docker ps\` succeeds. Start Docker"
+            hint "Desktop:  open -a Docker"
+        else
+            hint "macOS: open -a Docker    OrbStack: orb start"
+        fi
+    fi
+
+    if [[ -f "$HOME/.testcontainers.properties" ]] \
+        && grep -qE '^[[:space:]]*testcontainers\.reuse\.enable[[:space:]]*=[[:space:]]*true' "$HOME/.testcontainers.properties"; then
+        ok "testcontainers.reuse.enable=true — containers survive between runs (faster reruns)"
+    fi
+}
+
+# --- doctor: ports ----------------------------------------------------------------------------
+
+# Who is listening on a port, as a printable description ("" when nothing is).
+port_listener() {
+    local port="$1"
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:"$port" -sTCP:LISTEN -F pcn 2>/dev/null \
+            | awk '/^c/ { cmd = substr($0, 2) } /^p/ { pid = substr($0, 2) } END { if (cmd) print cmd " (pid " pid ")" }'
+    elif (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+        echo "an unidentified process"
+    fi
+    return 0
+}
+
+# The container publishing a port, if any — so "port busy" can be reported as "already up" when it
+# is our own compose stack rather than something foreign.
+port_container() {
+    local port="$1"
+    docker ps --filter "publish=$port" --format '{{.Names}}' 2>/dev/null | head -1
+    return 0
+}
+
+check_ports() {
+    section "Ports"
+
+    # service:port:owning-container:severity   (severity: fail = startup will break, warn = probably you)
+    local entries="PostgreSQL/PostGIS:5432:niord-db:fail
+Keycloak:8080:niord-keycloak:fail
+MailHog SMTP:1025:niord-smtp:fail
+MailHog web UI:8025:niord-smtp:fail
+niord-app HTTP:8888::warn"
+
+    local service port container severity listener actual
+    while IFS=: read -r service port container severity; do
+        [[ -z "$port" ]] && continue
+        listener=$(port_listener "$port")
+        if [[ -z "$listener" ]]; then
+            ok "$port free ($service)"
+            continue
+        fi
+        actual=$(port_container "$port")
+        if [[ -n "$container" && "$actual" == "$container" ]]; then
+            ok "$port held by the $container container ($service) — already up, ./run.sh will reuse it"
+        elif [[ -n "$actual" ]]; then
+            fail "$port held by an unrelated container '$actual' — $service cannot bind"
+            hint "docker stop $actual"
+        elif [[ "$severity" == "warn" ]]; then
+            warn "$port in use by $listener ($service) — ./run.sh will fail to bind unless that is your own run"
+        else
+            fail "$port in use by $listener — the $service container cannot bind"
+            hint "Stop it, or start the stack on other ports."
+        fi
+    done <<< "$entries"
+}
+
+# --- commands ---------------------------------------------------------------------------------
+
+doctor() {
+    printf '%sChecking the backend development environment%s  %s(%s)%s\n' \
+        "$C_BOLD" "$C_RESET" "$C_DIM" "$PWD" "$C_RESET"
+
+    check_java
+    check_tooling
+    check_docker
+    check_ports
+
+    printf '\n'
+    if (( failures > 0 )); then
+        printf '%s%d problem(s)%s' "$C_RED" "$failures" "$C_RESET"
+        (( warnings > 0 )) && printf ', %s%d warning(s)%s' "$C_YELLOW" "$warnings" "$C_RESET"
+        printf ' — fix the ✗ lines above first.\n'
+        return 1
+    fi
+    if (( warnings > 0 )); then
+        printf '%sReady%s, with %s%d warning(s)%s — see the ! lines above.\n' \
+            "$C_GREEN" "$C_RESET" "$C_YELLOW" "$warnings" "$C_RESET"
+        return 0
+    fi
+    printf '%sReady.%s  ./run.sh to start the app · ./test-it to run the integration tests\n' "$C_GREEN" "$C_RESET"
+}
+
+usage() {
+    cat <<'USAGE'
+Usage: ./dev <command>
+
+Commands:
+  doctor    Check that this machine can build, run and test the backend:
+            the JDK Maven will use, ./mvnw and python3, the Docker daemon and the
+            endpoint Testcontainers actually talks to, and the ports the local
+            services need. Read-only — it starts and changes nothing.
+  help      Show this message.
+
+Related scripts in this directory:
+  ./run.sh     Start the generic English application (niord-app) with its services.
+  ./reload.sh  Hot-restart a running ./run.sh after a code change (~3 s).
+  ./test-it    Run the integration tests and prove they really ran.
+USAGE
+}
+
+case "${1:-help}" in
+    doctor)         shift; doctor "$@" ;;
+    help|-h|--help) usage ;;
+    *)
+        printf 'dev: unknown command %s\n\n' "'$1'" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

@@ -1,0 +1,61 @@
+<!-- Until the view has been painted once, it shows what a search in progress shows: no rows, the bar. -->
+<app-message-list-status [pending]="!painted()" />
+
+@if (facade.list.messages().length === 0 && !facade.list.loading()) {
+  <app-empty-search-result />
+} @else {
+  <!--
+    Plain semantic table used purely as the surface chrome — no header, one
+    column per body row. The `.message-table` class provides the rounded
+    surface card, the inter-row dividers, the sticky-header band (unused here),
+    and pairs with `.row-interactive` for the hover affordance — same primitives
+    the table view leverages. The row itself is `<app-message-details-row>`
+    inside a `<td class="p-0">` so the row's own `.details-row` padding isn't
+    stacked on top of the table's cell padding.
+  -->
+  <table class="message-table">
+    <tbody>
+      @for (entry of painted() ? facade.list.groupedMessages() : []; track entry.message.id) {
+        @if (entry.areaHeading) {
+          <tr>
+            <th
+              scope="colgroup"
+              class="bg-surface-sunken text-left text-base font-semibold px-4 py-3"
+            >
+              <span class="area-dot" aria-hidden="true"></span>
+              <app-message-area-heading [areaHeading]="entry.areaHeading" />
+            </th>
+          </tr>
+        }
+        <!--
+          The row opens `?messageId=` on the current search, so it is a link:
+          the thumb inside the row carries the href and is the row's tab stop,
+          and the row body itself opens the same URL in a new tab on a
+          ctrl/cmd/shift or middle click. A plain click still runs `onActivate`,
+          hold-E edit shortcut and prev/next context included.
+        -->
+        <tr
+          class="row-interactive group"
+          tabindex="-1"
+          [appRowAttention]="entry.message"
+          [class.row-selected]="facade.selection.isSelected(entry.message.id)"
+          [appRowLink]="[]"
+          [rowLinkQueryParams]="{ messageId: entry.message.id }"
+          rowLinkQueryParamsHandling="merge"
+          (appRowLinkActivate)="onActivate(entry.message)"
+        >
+          <td class="p-0">
+            <app-message-details-row
+              [message]="entry.message"
+              (openRequested)="onOpenDialog($event)"
+            />
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  @if (painted()) {
+    <app-load-more-messages />
+  }
+}

@@ -1,0 +1,259 @@
+# Hydrographic survey  [templates/tmpl/hydrographic-survey.ftl]
+# std fields [type, promulgation, areas, positions, event_dates, work_vessel], params []
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 56° 00.0'N - 012° 00.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 56-00.0N 012-00.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 56° 00.0'N - 012° 00.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 56-00.0N 012-00.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 61° 06.0'N - 045° 15.0'W. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 61-06.0N 045-15.0W.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out between pos. 55° 30.0'N - 010° 30.0'E and 55° 36.0'N - 010° 45.0'E and 55° 42.0'N - 011° 00.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E
+  | AND 55-36.0N 010-45.0E AND 55-42.0N
+  | 011-00.0E. BY 'POSEIDON' CALL SIGN
+  | OXYZ. MARINERS REQUESTED TO PASS WITH
+  | CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 36.0 min. North - 010 degrees 45.0 min. East and 55 degrees 42.0 min. North - 011 degrees 00.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### geometry: an area (polygon)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in the area between pos. 55° 30.0'N - 010° 30.0'E and 55° 30.0'N - 011° 00.0'E and 56° 00.0'N - 011° 00.0'E and 56° 00.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY IN AREA 55-30.0N
+  | 010-30.0E AND 55-30.0N 011-00.0E AND
+  | 56-00.0N 011-00.0E AND 56-00.0N
+  | 010-30.0E. BY 'POSEIDON' CALL SIGN
+  | OXYZ. MARINERS REQUESTED TO PASS WITH
+  | CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in the area between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 30.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY. BY 'POSEIDON' CALL
+  | SIGN OXYZ. MARINERS REQUESTED TO PASS
+  | WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: within a day (12 May 10:00-14:00 CEST)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: across midnight (12 May 22:00 - 13 May 02:00 CEST)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: From the 12 th May 2026 at 2200 to the 13 th May 2026 at 0200 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 122000 UTC MAY 26 - 130000 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   From the 12th May 2026 at 2200 to the 13th May 2026 at 0200 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: across a month end (31 May 20:00 - 1 Jun 06:00 CEST)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: From the 31 st May 2026 at 2000 to the 1 st June 2026 at 0600 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 311800 UTC MAY 26 - 010400 UTC JUN 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   From the 31st May 2026 at 2000 to the 1st June 2026 at 0600 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: across the spring clock change (28 Mar 22:00 CET - 29 Mar 04:00 CEST)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: From the 28 th March 2026 at 2200 to the 29 th March 2026 at 0400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 282100 UTC MAR 26 - 290200 UTC MAR 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   From the 28th March 2026 at 2200 to the 29th March 2026 at 0400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: across New Year (31 Dec 22:00 - 1 Jan 02:00 CET)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: From the 31 st December 2026 at 2200 to the 1 st January 2027 at 0200 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 312100 UTC DEC 26 - 010100 UTC JAN 27
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   From the 31st December 2026 at 2200 to the 1st January 2027 at 0200 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: open-ended (from 12 May 10:00 CEST)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: From the 12 th May 2026 at 1000 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | FROM 120800 UTC MAY 26 HYDROGRAPHIC
+  | SURVEY 55-30.0N 010-30.0E. BY
+  | 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   From the 12th May 2026 at 1000 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: all-day (12 May - 14 May)
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: From the 12 th to the 14 th May 2026 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | FROM 12TH TO 14TH MAY 2026 HYDROGRAPHIC
+  | SURVEY 55-30.0N 010-30.0E. BY
+  | 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   From the 12th to the 14th May 2026 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: two intervals
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 and the 14 th May 2026 from 0800 to 1700 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | AND 140600 UTC MAY 26 - 141500 UTC MAY
+  | 26 HYDROGRAPHIC SURVEY 55-30.0N
+  | 010-30.0E. BY 'POSEIDON' CALL SIGN
+  | OXYZ. MARINERS REQUESTED TO PASS WITH
+  | CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 and the 14th May 2026 from 0800 to 1700 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### event dates: no event dates
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: Hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   Hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Mariners are requested to pass with caution.
+
+### vessel: none
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | MARINERS REQUESTED TO PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Mariners are requested to pass with caution.
+
+### vessel: name only
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo;. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON'. MARINERS REQUESTED TO
+  | PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon«. Mariners are requested to pass with caution.
+
+### vessel: call sign only
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by the vessel with call sign OXYZ. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY VESSEL WITH CALL SIGN OXYZ. MARINERS
+  | REQUESTED TO PASS WITH CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by the vessel with call sign OXYZ. Mariners are requested to pass with caution.
+
+### vessel: everything, minimum distance in m
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Guard vessels will be in the area. The vessels are listening on VHF channel 16 and 12. Mariners are requested to pass with caution and keep a minimum distance of 500m.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. GUARD
+  | VESSELS IN AREA. LISTENING VHF CH 16
+  | AND 12. MARINERS REQUESTED TO PASS WITH
+  | CAUTION KEEPING MINIMUM DISTANCE 500M.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Guard vessels will be in the area. The vessels are listening on VHF channel 16 and 12. Mariners are requested to pass with caution and keep a minimum distance of 500m.
+LINT:    details: 'in the area' without a position
+LINT:    audio: 'in the area' without a position
+
+### vessel: everything, minimum distance in nm
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Poseidon&laquo; call sign OXYZ. Guard vessels will be in the area. The vessels are listening on VHF channel 16 and 12. Mariners are requested to pass with caution and keep a minimum distance of 2nm.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'POSEIDON' CALL SIGN OXYZ. GUARD
+  | VESSELS IN AREA. LISTENING VHF CH 16
+  | AND 12. MARINERS REQUESTED TO PASS WITH
+  | CAUTION KEEPING MINIMUM DISTANCE 2NM.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Poseidon« call sign OXYZ. Guard vessels will be in the area. The vessels are listening on VHF channel 16 and 12. Mariners are requested to pass with caution and keep a minimum distance of 2nm.
+LINT:    details: 'in the area' without a position
+LINT:    audio: 'in the area' without a position
+
+### vessel: a name with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Hydrographic survey.
+SUBJECT: Hydrographic survey
+DETAILS: The 12 th May 2026 from 1000 to 1400 hydrographic survey is carried out in pos. 55° 30.0'N - 010° 30.0'E. Work is carried out by &raquo;Queen's Pride&laquo;. The vessel is listening on VHF channel 16. Mariners are requested to pass with caution.
+NAVTEX:
+  | 120800 UTC MAY 26 - 121200 UTC MAY 26
+  | HYDROGRAPHIC SURVEY 55-30.0N 010-30.0E.
+  | BY 'QUEEN'S PRIDE'. LISTENING VHF CH
+  | 16. MARINERS REQUESTED TO PASS WITH
+  | CAUTION.
+AUDIO:   The 12th May 2026 from 1000 to 1400 hydrographic survey is carried out in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. Work is carried out by »Queen's Pride«. The vessel is listening on VHF channel 16. Mariners are requested to pass with caution.
+

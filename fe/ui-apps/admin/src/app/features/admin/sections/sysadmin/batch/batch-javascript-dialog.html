@@ -1,0 +1,36 @@
+<app-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [style]="{ width: '46rem', maxWidth: '94vw' }"
+  [header]="'admin.batch.editor.title' | transloco"
+>
+  <form (submit)="$event.preventDefault(); submit()" class="flex flex-col gap-3">
+    <p class="rounded-niord-md border border-surface-200 bg-surface-50 p-2 text-xs text-fg-muted">
+      {{ 'admin.batch.editor.serverSideWarning' | transloco }}
+    </p>
+
+    <!-- Not a <label>: the lint rule can't associate one with a custom control;
+         the CVA's textarea carries the accessible name via [ariaLabel]. -->
+    <div class="flex flex-col gap-1 text-sm">
+      <span class="font-medium text-fg">{{ 'admin.batch.editor.codeLabel' | transloco }}</span>
+      <app-code-text-input
+        [formField]="form.javaScript"
+        [rows]="14"
+        [ariaLabel]="'admin.batch.editor.codeLabel' | transloco"
+      />
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary text-sm" (click)="close()">
+      <span>{{ 'admin.batch.editor.cancel' | transloco }}</span>
+    </button>
+    <button type="button" class="btn-primary" [disabled]="submitDisabled()" (click)="submit()">
+      {{ 'admin.batch.editor.schedule' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>
+
+<app-confirm />

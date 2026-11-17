@@ -1,0 +1,650 @@
+{
+  "$comment": "Golden fixtures of the map portrayal, shared by the web maps and the backend map images. Each case is a map view (the centre in longitude and latitude, the zoom level and the image size in pixels, which fixes the window as the backend frames it: its corner on a whole pixel) and GeoJSON features, drawn with the size set named below. expected.json holds the draw list the web maps make of each case, and both engines are checked against it; see fe/docs/map-portrayal.md.",
+  "sizeSet": "screen",
+  "cases": [
+    {
+      "id": "point-nw",
+      "description": "A navigational warning at one position: the NW point symbol, anchored at its pivot.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [11.021, 55.493]
+          }
+        }
+      ]
+    },
+    {
+      "id": "point-nm",
+      "description": "A notice to mariners at one position: the NM point symbol.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NM",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [10.9873, 55.5061]
+          }
+        }
+      ]
+    },
+    {
+      "id": "multipoint-edges",
+      "description": "A symbol at every position: one inside, one whose symbol the right edge cuts, one just beyond the edge (inside the render buffer, but its box misses the image) and one beyond the render buffer.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "MultiPoint",
+            "coordinates": [
+              [10.95, 55.52],
+              [11.172, 55.5],
+              [11.205, 55.49],
+              [11.45, 55.5]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "line",
+      "description": "A bent line with a vertex a fraction of a pixel off its chord, which the simplification drops: the dashed pen, and a tag at half the spacing from the start and then every spacing.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [10.86, 55.44],
+              [10.98, 55.48],
+              [11.1, 55.52],
+              [11.12, 55.4]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "multiline",
+      "description": "Two lines: the long one gets its tags along it, the short one a single tag at its middle.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "MultiLineString",
+            "coordinates": [
+              [
+                [10.88, 55.47],
+                [11.05, 55.53]
+              ],
+              [
+                [11.06, 55.45],
+                [11.09, 55.46]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "zero-length-line",
+      "description": "A line whose two positions are the same: a zero-length stroke and one tag at the position.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [11.01, 55.51],
+              [11.01, 55.51]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "concave-polygon",
+      "description": "A U-shaped area whose extent centre lies in the notch: the outline without fill, and the tag in the middle of the longest inside stretch of the horizontal line through that centre.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [10.9, 55.45],
+                [11.1, 55.45],
+                [11.1, 55.55],
+                [11.04, 55.55],
+                [11.04, 55.48],
+                [10.95, 55.48],
+                [10.95, 55.55],
+                [10.9, 55.55],
+                [10.9, 55.45]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "polygon-with-hole",
+      "description": "An area with a hole around its extent centre: both rings stroked in the orientation OpenLayers gives them, and the tag where its interior-point scan puts it.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [10.9, 55.44],
+                [11.1, 55.44],
+                [11.1, 55.56],
+                [10.9, 55.56],
+                [10.9, 55.44]
+              ],
+              [
+                [10.97, 55.47],
+                [10.97, 55.53],
+                [11.03, 55.53],
+                [11.03, 55.47],
+                [10.97, 55.47]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "multipolygon",
+      "description": "Two areas, one wound each way: an outline and a tag per area.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "MultiPolygon",
+            "coordinates": [
+              [
+                [
+                  [10.88, 55.45],
+                  [10.94, 55.45],
+                  [10.94, 55.5],
+                  [10.88, 55.5],
+                  [10.88, 55.45]
+                ]
+              ],
+              [
+                [
+                  [11.02, 55.49],
+                  [11.06, 55.55],
+                  [11.1, 55.49],
+                  [11.02, 55.49]
+                ]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "buffer",
+      "description": "A position and the buffer area around it: the buffer drawn with the buffer fill and pen only, before the point symbol.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [11.003, 55.4987]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "parentFeatureIds": ["position-1"],
+            "bufferType": "RADIUS"
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [11.029482, 55.4987],
+                [11.027466, 55.50444],
+                [11.021726, 55.509307],
+                [11.013134, 55.512558],
+                [11.003, 55.5137],
+                [10.992866, 55.512558],
+                [10.984274, 55.509307],
+                [10.978534, 55.50444],
+                [10.976518, 55.4987],
+                [10.978534, 55.49296],
+                [10.984274, 55.488093],
+                [10.992866, 55.484842],
+                [11.003, 55.4837],
+                [11.013134, 55.484842],
+                [11.021726, 55.488093],
+                [11.027466, 55.49296],
+                [11.029482, 55.4987]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "geometry-collection",
+      "description": "A collection of a point, a line and an area: the pen on the line and the outline, one tag at the centre of its extent, and no symbol for the point.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "GeometryCollection",
+            "geometries": [
+              {
+                "type": "Point",
+                "coordinates": [10.93, 55.53]
+              },
+              {
+                "type": "LineString",
+                "coordinates": [
+                  [10.95, 55.45],
+                  [11.05, 55.47]
+                ]
+              },
+              {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [11.03, 55.5],
+                    [11.09, 55.5],
+                    [11.09, 55.54],
+                    [11.03, 55.54],
+                    [11.03, 55.5]
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "approximate",
+      "description": "Approximate positions: the adornment at a point, at the tag of an area and at the extent centre of a line; a flag that is not the boolean true adds nothing.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "approximate": true
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [10.95, 55.5]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "approximate": true
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [11.02, 55.47],
+                [11.08, 55.47],
+                [11.08, 55.52],
+                [11.02, 55.52],
+                [11.02, 55.47]
+              ]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "approximate": true
+          },
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [10.9, 55.44],
+              [11, 55.45]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "approximate": "true"
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [11.05, 55.55]
+          }
+        }
+      ]
+    },
+    {
+      "id": "draw-order",
+      "description": "Features in mixed order: every area is drawn first, then every line, then every symbol, each in the order of the features.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [10.9, 55.46],
+                [10.96, 55.46],
+                [10.96, 55.5],
+                [10.9, 55.5],
+                [10.9, 55.46]
+              ]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [11, 55.52]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [10.92, 55.54],
+              [11.08, 55.46]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [11.03, 55.52],
+                [11.09, 55.52],
+                [11.09, 55.56],
+                [11.03, 55.56],
+                [11.03, 55.52]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "nm-line",
+      "description": "A notice to mariners of a given type on a line: the NM tags; no select row names the type.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NM",
+      "messageType": "PERMANENT_NOTICE",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [10.87, 55.51],
+              [11.13, 55.49]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "culled-line",
+      "description": "A line that leaves the view and comes back: the coordinates that stay outside on one side are left out, which moves the dashes of the part that returns.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 12,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [10.99, 55.5],
+              [11.2, 55.5],
+              [11.3, 55.52],
+              [11.3, 55.48],
+              [11.2, 55.49],
+              [11.01, 55.49]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "quantized-polygon",
+      "description": "An area with a vertex a fraction of a pixel from a corner and one on a straight edge: the simplification snaps it to the half-pixel grid and drops both.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [10.97, 55.47],
+                [11, 55.47],
+                [11.03, 55.47],
+                [11.03005, 55.47003],
+                [11.03, 55.53],
+                [10.97, 55.53],
+                [10.97, 55.47]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wide-view",
+      "description": "An image wider than it is high, at another zoom level, with a mix of geometries.",
+      "view": {
+        "centre": [10.5, 56],
+        "zoom": 9,
+        "size": [300, 200]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "MultiPolygon",
+            "coordinates": [
+              [
+                [
+                  [10.2, 55.9],
+                  [10.4, 55.9],
+                  [10.4, 56.05],
+                  [10.2, 56.05],
+                  [10.2, 55.9]
+                ]
+              ],
+              [
+                [
+                  [10.6, 56],
+                  [10.9, 56],
+                  [10.9, 56.1],
+                  [10.6, 56.1],
+                  [10.6, 56]
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "MultiLineString",
+            "coordinates": [
+              [
+                [10.1, 56.15],
+                [10.5, 56.12],
+                [10.95, 56.18]
+              ],
+              [
+                [10.45, 55.85],
+                [10.7, 55.9]
+              ]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [10.52, 55.97]
+          }
+        }
+      ]
+    },
+    {
+      "id": "nothing-drawn",
+      "description": "A feature beyond the render buffer, and a buffer area whose geometry is a point: nothing is drawn.",
+      "view": {
+        "centre": [11, 55.5],
+        "zoom": 10,
+        "size": [256, 256]
+      },
+      "mainType": "NW",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [12.5, 55.5]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "parentFeatureIds": ["x"]
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [11, 55.5]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "MessageDetails.png": {
+    "cssWidth": 816,
+    "cssHeight": 336,
+    "printWidth": 510
+  },
+  "MessageGeometry.png": {
+    "cssWidth": 900,
+    "cssHeight": 774,
+    "printWidth": 563
+  },
+  "MessageList.png": {
+    "cssWidth": 816,
+    "cssHeight": 511,
+    "printWidth": 510
+  }
+}

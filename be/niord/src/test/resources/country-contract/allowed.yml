@@ -1,0 +1,16 @@
+# What a country jar may set: the issuer for a local run, the allowed clients with a reason, health exposed.
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/auth/realms/niord
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+niord:
+  oidc:
+    allowed-clients: niord-web,niord-client-master,country-script
+    allowed-clients-reason: the country's import script calls the API with its own client

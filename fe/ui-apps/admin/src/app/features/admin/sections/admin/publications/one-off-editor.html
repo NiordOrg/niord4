@@ -1,0 +1,682 @@
+<app-drawer
+  #drawerRef
+  size="wide"
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  initialFocus="first"
+  (closed)="closed.emit()"
+  (hidden)="hidden.emit()"
+>
+  @if (model()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex min-w-0 flex-col gap-5">
+      <!--
+        Said once, at the top, rather than beside each control that has gone
+        read-only. Every write in this drawer is refused for the same reason and
+        has the same remedy, and a control that is simply disabled explains
+        nothing at all.
+      -->
+      @if (otherDomainId(); as domain) {
+        <div class="message message-warn" role="status">
+          <app-icon name="lucideTriangleAlert" class="message-icon" />
+          <span>{{ 'admin.publications.otherDomainNote' | transloco: { domain } }}</span>
+        </div>
+      }
+
+      <!-- ================================================== 1. What it is ==== -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.oneOff.name' | transloco }}
+        </span>
+        <!-- One box per DECLARED language, not per installed one: a box for a
+             language the publication does not declare accepts text that is
+             dropped on save, silently. -->
+        <app-localized-inputs
+          [languages]="languages()"
+          [value]="names()"
+          (valueInput)="setName($event)"
+          inputIdPrefix="one-off-name"
+          [stacked]="true"
+        />
+        @for (row of nameCounters(); track row.lang) {
+          <app-length-counter [text]="row.text" [limit]="nameMax" [language]="row.label" />
+        }
+      </div>
+
+      <!-- ================================================ 2. What it holds === -->
+      <!--
+        The type, and the thing it names, together. A one-off IS its document:
+        choosing "uploaded PDF" and then having to find the upload control three
+        sections further down is the one flow this drawer exists for, so the
+        file or the address sits directly under the answer that asked for it.
+      -->
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.oneOff.type' | transloco }}
+        </span>
+        <!--
+          The three answers a one-off is written down as. A generated one is
+          offered only where the publication already is one — see
+          `visibleTypeModes`.
+        -->
+        <div
+          class="seg is-soft self-start"
+          role="group"
+          id="one-off-content-mode"
+          [attr.aria-label]="'admin.publications.oneOff.type' | transloco"
+        >
+          @for (mode of visibleTypeModes(); track mode) {
+            <button
+              type="button"
+              class="seg-btn"
+              [class.is-active]="value().contentMode === mode"
+              [attr.aria-pressed]="value().contentMode === mode"
+              [attr.data-mode]="mode"
+              [disabled]="!writable()"
+              (click)="setField('contentMode', mode)"
+            >
+              {{ typeLabelKey(mode) | transloco }}
+            </button>
+          }
+        </div>
+
+        @if (linkBacked()) {
+          <app-localized-inputs
+            [languages]="languages()"
+            [value]="links()"
+            (valueInput)="setLink($event)"
+            inputIdPrefix="one-off-link"
+            [stacked]="true"
+          />
+
+          <!--
+            One copy action per link that points somewhere. A one-off IS its
+            link, so handing the address to somebody else is the commonest
+            thing done with this field, and selecting it out of a text box is
+            how a trailing space ends up in a citation.
+          -->
+          @for (row of linkRows(); track row.lang) {
+            <p class="flex min-w-0 items-center gap-2 text-xs text-fg-muted">
+              <span class="shrink-0 font-semibold">{{ row.lang.toUpperCase() }}</span>
+              <span class="min-w-0 flex-1 truncate">{{ row.url }}</span>
+              <app-copy-link-button [url]="row.url" />
+            </p>
+          }
+        }
+
+        @if (uploaded()) {
+          @if (canUpload()) {
+            <!--
+              The bytes go straight in, from here. The file is what an uploaded
+              publication IS, so replacing it is not a settings change that
+              waits for Save — it is a write of its own, and it takes effect on
+              the publication rather than on the form.
+            -->
+            @for (row of fileRows(); track row.lang) {
+              <div class="flex flex-wrap items-center gap-2 text-sm">
+                <!-- The language only where the languages differ: a publication
+                     with one file for all of them has one row, and a code in
+                     front of it names a distinction it does not make. -->
+                @if (perLanguageFiles()) {
+                  <span class="shrink-0 text-xs font-semibold text-fg-muted">
+                    {{ row.lang.toUpperCase() }}
+                  </span>
+                }
+                <label class="btn-secondary cursor-pointer text-xs">
+                  <input
+                    type="file"
+                    class="sr-only"
+                    [disabled]="uploading() || !writable()"
+                    (change)="onFileChosen(row.lang, $event)"
+                  />
+                  <app-icon name="lucideUpload" class="mr-1 text-xs" />
+                  {{
+                    (row.fileName
+                      ? 'admin.publications.oneOff.detail.replaceFile'
+                      : 'admin.publications.oneOff.detail.uploadFile'
+                    ) | transloco
+                  }}
+                </label>
+                @if (row.fileName) {
+                  <!-- Icon and name are one item, so a narrow row drops them
+                       onto their own line together and the name wraps inside
+                       the box rather than being cut off. -->
+                  <span
+                    class="flex min-w-0 basis-full items-center gap-2 text-[13px] text-fg sm:flex-1"
+                  >
+                    <app-icon name="lucideFile" class="shrink-0 text-xs text-fg-muted" />
+                    <span class="min-w-0 break-words sm:truncate">{{ row.fileName }}</span>
+                  </span>
+                } @else {
+                  <span class="text-xs text-fg-subtle">
+                    {{ 'admin.publications.oneOff.detail.noFile' | transloco }}
+                  </span>
+                }
+              </div>
+            }
+          } @else {
+            <!--
+              A publication being created has nowhere to put the bytes yet: the
+              place is the issue behind it, and that does not exist until the
+              first save does.
+            -->
+            <p class="text-xs text-fg-muted">
+              {{ 'admin.publications.oneOff.uploadOnDetail' | transloco }}
+            </p>
+          }
+          <p class="text-xs text-fg-muted">
+            {{
+              (value().languageSpecific
+                ? 'admin.publications.oneOff.fileForEachLanguage'
+                : 'admin.publications.oneOff.oneFileForAllLanguages'
+              ) | transloco
+            }}
+          </p>
+        }
+      </div>
+
+      <!-- ========================================== 3. The query, if any ===== -->
+      @if (queryBacked()) {
+        <section
+          class="flex flex-col gap-4 border-t border-surface-200 pt-5 dark:border-surface-700"
+        >
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.series.field.timeRelation' | transloco }}
+              </span>
+              <select
+                id="one-off-time-relation"
+                class="text-input"
+                (change)="setField('timeRelation', $any($event.target).value)"
+              >
+                @for (relation of timeRelations; track relation) {
+                  <option [value]="relation" [selected]="value().timeRelation === relation">
+                    {{ 'admin.publications.series.timeRelation.' + relation | transloco }}
+                  </option>
+                }
+              </select>
+              <!-- Both relations are offered, and neither asks for a start: a
+                   one-off takes its interval from its own single issue, so there
+                   is no first interval for the publication to declare. -->
+              <span class="text-xs text-fg-muted">
+                {{ 'admin.publications.oneOff.intervalFromIssue' | transloco }}
+              </span>
+            </label>
+
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.series.field.reportId' | transloco }}
+              </span>
+              <select class="text-input" (change)="setField('reportId', $any($event.target).value)">
+                <option value="" [selected]="value().reportId === ''">
+                  {{ 'admin.publications.oneOff.reportUnset' | transloco }}
+                </option>
+                @for (report of reports(); track report.reportId) {
+                  <option
+                    [value]="report.reportId"
+                    [selected]="value().reportId === report.reportId"
+                  >
+                    {{ report.name || report.reportId }}
+                  </option>
+                }
+              </select>
+              <!-- The report IS the document. Without one there is nothing for the
+                   single issue to publish, so the publication cannot go live. -->
+              @if (reportMissing()) {
+                <span class="message message-warn" role="alert">
+                  <app-icon name="lucideTriangleAlert" class="message-icon" />
+                  <span>{{ 'admin.publications.oneOff.reportRequired' | transloco }}</span>
+                </span>
+              }
+            </label>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              class="checkbox"
+              [checked]="effectiveAliveAtCutoff()"
+              [disabled]="livenessForced()"
+              (change)="setField('aliveAtCutoff', !value().aliveAtCutoff)"
+            />
+            <span>
+              {{ 'admin.publications.series.field.aliveAtCutoff' | transloco }}
+              @if (livenessForced()) {
+                <span class="block text-xs text-fg-muted">
+                  {{ 'admin.publications.series.hint.aliveAtCutoffForced' | transloco }}
+                </span>
+              }
+            </span>
+          </label>
+
+          <div class="grid gap-4 sm:grid-cols-3">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.series.field.pageSize' | transloco }}
+              </span>
+              <select class="text-input" (change)="setField('pageSize', $any($event.target).value)">
+                @for (size of pageSizes; track size) {
+                  <option [value]="size" [selected]="value().pageSize === size">{{ size }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.series.field.pageOrientation' | transloco }}
+              </span>
+              <select
+                class="text-input"
+                (change)="setField('pageOrientation', $any($event.target).value)"
+              >
+                @for (orientation of pageOrientations; track orientation) {
+                  <option
+                    [value]="orientation"
+                    [selected]="value().pageOrientation === orientation"
+                  >
+                    {{ 'admin.publications.series.pageOrientation.' + orientation | transloco }}
+                  </option>
+                }
+              </select>
+            </label>
+
+            <!-- The top margin only lines the checkbox up with the field beside
+                 it; once the grid stacks it is a hole above the label. -->
+            <label class="flex items-center gap-2 text-sm sm:mt-6">
+              <input
+                type="checkbox"
+                class="checkbox"
+                [checked]="value().mapThumbnails"
+                (change)="setField('mapThumbnails', !value().mapThumbnails)"
+              />
+              {{ 'admin.publications.series.field.mapThumbnails' | transloco }}
+            </label>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.series.field.messageSortBy' | transloco }}
+              </span>
+              <input
+                class="text-input"
+                [value]="value().messageSortBy"
+                (input)="setField('messageSortBy', $any($event.target).value)"
+              />
+            </label>
+
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.series.field.messageSortOrder' | transloco }}
+              </span>
+              <select
+                class="text-input"
+                (change)="setField('messageSortOrder', $any($event.target).value)"
+              >
+                @for (direction of sortDirections; track direction) {
+                  <option [value]="direction" [selected]="value().messageSortOrder === direction">
+                    {{ 'admin.publications.series.sortOrder.' + direction | transloco }}
+                  </option>
+                }
+              </select>
+            </label>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.oneOff.reportParams' | transloco }}
+              </span>
+              <button
+                type="button"
+                class="icon-button"
+                [attr.aria-label]="'admin.publications.series.action.addParam' | transloco"
+                (click)="addReportParam()"
+              >
+                <app-icon name="lucidePlus" />
+              </button>
+            </div>
+            <p class="text-xs text-fg-muted">
+              {{ 'admin.publications.reportParams.hint' | transloco }}
+            </p>
+            @for (row of reportParams(); track $index) {
+              <div class="flex flex-col gap-1">
+                <!-- Key over value where there is no room for both: a third of
+                     a phone-width row is too narrow to read a parameter name in. -->
+                <div class="flex flex-wrap gap-2">
+                  <input
+                    class="text-input sm:w-1/3"
+                    [value]="row.key"
+                    [attr.aria-invalid]="isReservedParamKey(row.key) ? 'true' : null"
+                    (input)="setReportParam($index, $any($event.target).value, row.value)"
+                  />
+                  <input
+                    class="text-input flex-1"
+                    [value]="row.value"
+                    (input)="setReportParam($index, row.key, $any($event.target).value)"
+                  />
+                  <button
+                    type="button"
+                    class="icon-button hover:text-danger"
+                    [attr.aria-label]="'admin.publications.series.action.removeParam' | transloco"
+                    (click)="removeReportParam($index)"
+                  >
+                    <app-icon name="lucideTrash2" />
+                  </button>
+                </div>
+                @if (isReservedParamKey(row.key)) {
+                  <p class="text-xs text-danger">
+                    {{
+                      'admin.publications.reportParams.reservedKey'
+                        | transloco: { key: row.key.trim() }
+                    }}
+                  </p>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-fg-title">
+              {{ 'admin.publications.series.tab.criteria' | transloco }}
+            </span>
+            <!-- The same criteria editor the series form uses: a second copy would
+                 be a second place for the document's rules to drift. Probed with
+                 the liveness flag AS SENT and with a lower bound — S-3 forces the
+                 flag on for an in-force publication, and an interval probe with no
+                 floor asks the resolver for the whole corpus. -->
+            <app-series-criteria-editor
+              [criteria]="criteria()"
+              [timeRelation]="value().timeRelation"
+              [aliveAtCutoff]="effectiveAliveAtCutoff()"
+              [intervalFrom]="previewFrom()"
+              [cutoff]="previewCutoff()"
+              (criteriaChange)="onCriteriaChange($event)"
+            />
+          </div>
+        </section>
+      }
+
+      <!-- ============================================ 4. Where it belongs ==== -->
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.publications.oneOff.category' | transloco }}
+          </span>
+          <!-- Field-bound, so the schema's `required` (S-19) reaches the control
+               and a blank category marks itself rather than only greying Save. -->
+          <select class="text-input" [formField]="form.categoryId">
+            <option value="">
+              {{ 'admin.publications.oneOff.categoryUnset' | transloco }}
+            </option>
+            @for (category of categories(); track category.categoryId) {
+              <option [value]="category.categoryId">
+                {{ categoryName(category) }}
+              </option>
+            }
+          </select>
+          <span class="text-xs text-fg-muted">
+            {{ 'admin.publications.series.hint.category' | transloco }}
+          </span>
+        </label>
+
+        <!--
+          The owner, stated rather than picked, and stated as a locked field so
+          it reads as the same kind of answer as the category beside it. A
+          one-off is listed and administered in exactly one domain; who ELSE may
+          cite it is the separate question below.
+        -->
+        <div class="flex flex-col gap-1.5">
+          <label for="one-off-owner" class="text-sm font-medium text-fg-title">
+            {{ 'admin.publications.oneOff.owner' | transloco }}
+          </label>
+          @if (value().domainId) {
+            <input
+              id="one-off-owner"
+              type="text"
+              class="text-input"
+              [value]="ownerDomainName()"
+              disabled
+              readonly
+            />
+          } @else {
+            <p class="text-sm text-warning">
+              {{ 'admin.publications.series.hint.noSessionDomain' | transloco }}
+            </p>
+          }
+          <span class="text-xs text-fg-muted">
+            {{ 'admin.publications.oneOff.hint.ownerLocked' | transloco }}
+          </span>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.availability.title' | transloco }}
+        </span>
+        <app-publication-availability-field
+          name="one-off-availability"
+          [value]="value().availability"
+          (valueChange)="setField('availability', $event)"
+          [domainIds]="availableDomainIds()"
+          (domainIdsChange)="availableDomainIds.set($event)"
+          [ownerId]="value().domainId"
+          [disabled]="!writable()"
+        />
+      </div>
+
+      <!-- ================================================== 5. Advanced ====== -->
+      <!--
+        Everything that has a working default and is changed once in a
+        publication's life. Folded away rather than dropped: the identifier is
+        the citation handle and the reference format is what a message prints,
+        so both have to be reachable — but neither is part of writing down a
+        document somebody has already produced.
+      -->
+      <div class="flex flex-col gap-3">
+        <button
+          type="button"
+          class="flex items-center gap-1 self-start text-[13px] font-medium text-fg-muted hover:text-fg"
+          [attr.aria-expanded]="showAdvanced()"
+          (click)="showAdvanced.set(!showAdvanced())"
+        >
+          <app-icon
+            [name]="showAdvanced() ? 'lucideChevronDown' : 'lucideChevronRight'"
+            class="text-xs"
+          />
+          {{ 'admin.publications.oneOff.advanced' | transloco }}
+          <!-- The gloss beside the toggle, dropped where the row is too narrow
+               to hold it: the toggle's own label already says what it opens. -->
+          <span class="hidden font-normal text-fg-subtle sm:inline">
+            {{ 'admin.publications.oneOff.advancedHint' | transloco }}
+          </span>
+        </button>
+
+        @if (showAdvanced()) {
+          <div class="flex flex-col gap-4" data-testid="one-off-advanced">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.oneOff.seriesId' | transloco }}
+                </span>
+                <!--
+                  Derived from the name when left blank. Offered rather than
+                  hidden because it is the import/export key and the citation
+                  handle, and S-16 makes it immutable after create -- so it is
+                  editable exactly once, here.
+                -->
+                <input
+                  class="text-input font-mono text-xs"
+                  [formField]="form.seriesId"
+                  [placeholder]="'admin.publications.oneOff.seriesIdDerived' | transloco"
+                />
+              </label>
+
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.oneOff.sortOrder' | transloco }}
+                </span>
+                <!--
+                  Stored with the series and nothing else: no list is sorted by
+                  it. The public list orders by category priority, the start of
+                  the public window and the id (PublicationPublicAdapter).
+                  Whether the box gets a hint or goes is an open question to
+                  the owner.
+                -->
+                <input
+                  class="text-input"
+                  type="number"
+                  [value]="value().sortOrder ?? ''"
+                  (input)="setSortOrder($any($event.target).value)"
+                />
+              </label>
+            </div>
+
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                class="checkbox"
+                [checked]="value().languageSpecific"
+                (change)="setField('languageSpecific', !value().languageSpecific)"
+              />
+              {{ 'admin.publications.series.field.languageSpecific' | transloco }}
+            </label>
+
+            @if (uploaded() || queryBacked()) {
+              <div class="flex flex-col gap-1.5">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.oneOff.fileNamePattern' | transloco }}
+                </span>
+                <app-localized-inputs
+                  [languages]="languages()"
+                  [value]="fileNamePatterns()"
+                  (valueInput)="setFileNamePattern($event)"
+                  inputIdPrefix="one-off-filename"
+                  [stacked]="true"
+                />
+              </div>
+            }
+
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-fg-title">
+                {{ 'admin.publications.series.field.messagePublication' | transloco }}
+              </span>
+              <!-- Locked once the single issue has published: the citations already
+                   stored live in whichever field was configured at the time. -->
+              <select
+                class="text-input"
+                [disabled]="messagePublicationLocked()"
+                (change)="setField('messagePublication', $any($event.target).value)"
+              >
+                @for (publication of messagePublications; track publication) {
+                  <option
+                    [value]="publication"
+                    [selected]="value().messagePublication === publication"
+                  >
+                    {{ 'admin.publications.series.messagePublication.' + publication | transloco }}
+                  </option>
+                }
+              </select>
+              <span class="text-xs text-fg-muted">
+                {{ messagePublicationHintKey() | transloco }}
+              </span>
+            </label>
+
+            @if (citable()) {
+              <div class="flex flex-col gap-1.5">
+                <span class="text-sm font-medium text-fg-title">
+                  {{ 'admin.publications.series.field.messageReferenceFormat' | transloco }}
+                </span>
+                <!-- The pattern kit rather than a plain box: the vocabulary is
+                     finite, nobody remembers it, and a mistyped token lands in a
+                     citation as literal text. -->
+                @for (lang of languages(); track lang) {
+                  <app-localized-text-input
+                    [lang]="lang"
+                    [monospace]="true"
+                    [inputId]="'one-off-reference-' + lang"
+                    [value]="referenceFormats()[lang]"
+                    [tokens]="patternTokens()"
+                    (valueChange)="setReferenceFormat({ lang, value: $event })"
+                    ariaLabelKey="admin.publications.series.field.messageReferenceFormat"
+                  />
+                }
+                <span class="text-xs text-fg-muted">
+                  {{ 'admin.publications.series.hint.messageReferenceFormat' | transloco }}
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!--
+        Every rule the server reports, in one place: the fields these refuse are
+        spread across a disclosure and a conditional section, so a refusal
+        rendered only in place would be invisible half the time. The FIELD is
+        named the way the screen names it and the reason is said in the reader's
+        language, with the rule id beside it as the reference an operator quotes.
+      -->
+      @if (validation(); as errors) {
+        @if (errors.length > 0) {
+          <div class="rounded border border-surface-200 dark:border-surface-700" role="alert">
+            <div
+              class="flex items-center gap-2 border-b border-surface-200 bg-surface-sunken px-3 py-2 text-sm font-medium text-danger dark:border-surface-700"
+            >
+              <app-icon name="lucideTriangleAlert" class="text-xs" />
+              {{
+                'admin.publications.series.editor.rulesFail' | transloco: { count: errors.length }
+              }}
+            </div>
+            <ul class="flex flex-col gap-1 p-3">
+              @for (error of errors; track error.rule + error.field) {
+                <li class="text-xs text-fg">
+                  <span class="mr-1 font-medium">{{ fieldLabel(error) }}</span>
+                  {{ ruleText(error.rule) }}
+                </li>
+              }
+            </ul>
+          </div>
+        } @else {
+          <p class="flex items-center gap-2 text-sm text-fg-muted">
+            <app-icon name="lucideCheck" class="text-xs" />
+            {{ 'admin.publications.series.editor.rulesPass' | transloco }}
+          </p>
+        }
+      }
+
+      <!-- Hidden submit makes Enter in any field submit the form (gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!--
+    Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+    select()ed one — nested there, these would render in the body.
+
+    Moving the publication to another desk is not in here. It is a change of who
+    is accountable for the publication rather than a setting on it, so it lives
+    where the publication itself is — its own page, and its row in the list.
+  -->
+  <div drawerFooter class="flex w-full items-center gap-2">
+    <button type="button" class="link-button" [disabled]="validating()" (click)="validate()">
+      {{ 'admin.publications.series.editor.validate' | transloco }}
+    </button>
+    <span class="flex-1"></span>
+    @if (noSessionDomain()) {
+      <span class="text-xs text-warning">
+        {{ 'admin.publications.series.hint.noSessionDomain' | transloco }}
+      </span>
+    }
+    <!-- Through the drawer, not straight to `closed`: every close intent -- this
+         button, the ✕, Escape, the backdrop -- has to pass the same
+         unsaved-changes gate, or three of the four discard silently. -->
+    <button type="button" class="btn-secondary" (click)="drawerRef.requestClose()">
+      {{ 'admin.publications.oneOff.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="!canSave()" (click)="save()">
+      {{ saveLabelKey() | transloco }}
+    </button>
+  </div>
+</app-drawer>

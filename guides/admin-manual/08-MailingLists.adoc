@@ -1,0 +1,267 @@
+
+:imagesdir: images
+
+[#mailing-lists]
+== Mailing Lists
+
+A _mailing list_ sends mails about messages to a list of recipients: for example a mail each time a
+navigational warning is published or cancelled, or a daily list of the warnings in force. Each list
+has one or more _triggers_, which say when it sends and what the mails hold, and its recipients,
+who are users and contacts (<<users-contacts>>).
+
+Open the page with *Admin* > *Mailing Lists*. Every administrator manages the recipients of the
+lists. Creating, changing, copying and deleting lists, their triggers and the import and export are
+for system administrators only: the buttons for them are shown to a user who holds the _Sysadmin_
+role in the current domain. This chapter describes both.
+
+image::MailingListsPage.png[The Mailing Lists page as a system administrator sees it, 800]
+
+The list shows whether each mailing list is *Active* (a coloured dot; grey when it is not), its
+*ID*, its *Name* and
+*Description*, and the number of its recipients (*#Recipients*). To find a list, type in *Filter*:
+the text is looked for in the ID, the name and the description. A system administrator also sees
+*New Mailing List*, the cog _Mailing list actions_ and, on each row, *Edit Mailing List* (the
+pencil), *Copy Mailing List* and *Delete Mailing List* (the bin).
+
+[#manage-mailing-list-recipients]
+=== Managing Mailing List Recipients
+
+Click the number of recipients of a list, *Manage recipients*, to open the _Manage Recipients_
+drawer:
+
+image::MailingListRecipients.png[The Manage Recipients drawer on its Users tab, 687]
+
+The drawer has two tabs, *Users* and *Contacts*, each with the number of recipients it holds. They
+work the same way: the _Users_ tab manages the users who receive the list, the _Contacts_ tab the
+contacts.
+
+* *Selected*, on the left, lists the recipients of the list. The bin, *Remove*, takes one off.
+* *Available*, on the right, lists the others. The plus, *Add*, makes one a recipient.
+* Each side has a *Filter* below it, which looks in the e-mail addresses and the names. *Remove
+  all* and *Add all* move every row the side shows, so with a filter typed in, they move only the
+  rows that match it; the number on the button says how many.
+
+The changes of a tab are saved with its own button, *Save User Selection* or *Save Contact
+Selection*. The drawer stays open after a save, so you can go on with the other tab; *Close* closes
+it, and Niord asks first when a tab has changes you have not saved.
+
+A user's or a contact's lists can also be changed from the other side, on the *Mailing lists* tab
+of the user or the contact (<<managing-user-mailing-lists>>).
+
+[#mailing-lists-sysadmin]
+=== Creating and Changing Mailing Lists (System Administrators)
+
+[#adding-or-editing-a-mailing-list]
+==== Adding or Editing a Mailing List
+
+Click *New Mailing List* to add a list, or the pencil, *Edit Mailing List*, on a list's row to change
+one. *Copy Mailing List* opens a new list with everything of the copied one, its triggers included,
+except its ID and its recipients: give it a new ID and save it. The list opens in a drawer:
+
+image::MailingListEditPage.png[The Edit Mailing List drawer with two folded triggers, 512]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Mailing List ID
+| A unique ID for the list, such as `nw-updates`. It is required, and it cannot be changed once the
+  list is saved.
+
+| Active
+| Only an active list sends mails.
+
+| Name
+| The name of the list, in each language the deployment writes its messages in. The name in the
+  first language is required.
+
+| Description
+| A description of the list, in each language.
+
+| Triggers
+| When the list sends, and what; see <<mailing-list-triggers>>.
+|===
+
+*Save Mailing List* saves the list, its triggers included, and closes the drawer. *Cancel* closes
+it without saving.
+
+[#mailing-list-triggers]
+==== Mailing List Triggers
+
+A trigger decides when the list sends mails and what they hold. A list has one or more of them,
+each shown as a card in the _Triggers_ part of the drawer. A card is folded to one line that sums
+it up, for example "Status Change Trigger (Published)" or "Scheduled Trigger (Daily at 7:30 AM
+Europe/Copenhagen)". On the card's line:
+
+* the arrow, *Show details* or *Hide details*, unfolds or folds the card;
+* the play button, *Test trigger*, tries the trigger out (<<testing-triggers>>);
+* *Copy trigger* adds a copy of the trigger to the list;
+* the bin, *Delete trigger*, removes it.
+
+*Add Trigger*, above the cards, adds a new trigger. Every change to a trigger is saved with the
+list.
+
+What every trigger has:
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Trigger Type
+| _Status Change_ or _Scheduled_; see below.
+
+| Mail Subject
+| The subject of the mails, in each language, each with a tick box before it. A mail is made for
+  each language whose box is ticked. With one language ticked, every recipient receives that one.
+  With two or more, each recipient receives the one in the recipient's preferred language, and a
+  recipient whose preferred language is not ticked receives none. A recipient without a preferred
+  language receives English when English is ticked (in a deployment without English, its default
+  language when that is ticked), and otherwise the first ticked language.
+  Unticking a language clears its subject.
+  The subject can hold _tokens_ that are replaced in each mail: `${date-short}` and `${date-long}`
+  (today's date), and for a status change trigger, which mails about one message, the message's
+  `${short-id}`, `${number-year-id}`, `${title}` and the like.
+
+| Mail Body
+| The script resources that make the mail's text: usually one Freemarker template, sometimes with
+  a JavaScript before it that looks up more data. *Add path* adds one; the magnifier, *Select script
+  resource*, picks one from a list, the pencil, *Edit script resource*, opens it, and the arrows put
+  them in order. A trigger without a Freemarker template sends nothing. Script resources are
+  described in the
+  link:../sysadmin-manual/manual.html#script-resources[Script Resources] chapter of the System
+  Administrator Manual.
+|===
+
+[#scheduled-triggers]
+===== Scheduled Triggers
+
+A scheduled trigger sends its mails at a set time, about the messages that a search finds then.
+
+image::MailingListScheduledTrigger.png["A scheduled trigger, unfolded", 502]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Schedule
+| _Daily_, or one day of the week.
+
+| Time
+| The time of day the mails are sent.
+
+| Time Zone
+| The time zone the time is read in. A scheduled trigger cannot be saved without one: until it has
+  one, the field says that a scheduled trigger needs a time zone, and *Save Mailing List* stays
+  disabled.
+
+| Message Query
+| The search that chooses the messages the mails are about, written as the parameters of a message
+  search, for example `messageSeries=example-nw&status=PUBLISHED&type=COASTAL_WARNING&sortBy=ID`
+  for the coastal warnings of the series `example-nw` that are published.
+
+| Allow public execution of mailing list report
+| When ticked, the trigger can also be run as a report from the action menu of the _Messages_
+  page, without sending any mail; see the
+  link:../editor-manual/manual.html#report-action[Report Action] section of the User Manual for
+  Editors.
+|===
+
+[#status-change-triggers]
+===== Status Change Triggers
+
+A status change trigger sends its mails when a message gets one of the chosen statuses and matches
+the filter. Its mails are about that one message.
+
+image::MailingListStatusChangeTrigger.png["A status change trigger, unfolded", 502]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Statuses
+| The statuses that set the trigger off: _Published_, _Cancelled_ and _Expired_.
+
+| Message Filter
+| A condition the message must meet as well, written as a JavaScript expression about `msg`, the
+  message. For example, `msg.messageSeries.seriesId == 'example-nw' && msg.type == 'COASTAL_WARNING'`
+  matches the coastal warnings of the series `example-nw`. Left empty, every message matches.
+|===
+
+[#testing-triggers]
+==== Testing Triggers
+
+The play button on a trigger's card, *Test trigger*, opens _Test Trigger Execution_. It tests the
+trigger as it stands in the drawer, before you save it, so you can try a change first; the
+recipients are those of the saved list, so save a new list or a copy once before you test it.
+
+For a status change trigger, pick the message to test with in *Test Message*; the browser remembers
+it for the next test. Then click *Execute*. The trigger runs, but no mail is sent: the dialog lists
+the mails it made, with whom each is *To* and its *Subject*. Click a mail to see it under *Details*.
+The picture tests the status change trigger of a list with one published warning.
+
+image::MailingListTest.png[The Test Trigger Execution dialog with a mail shown, 560]
+
+[#deleting-a-mailing-list]
+==== Deleting a Mailing List
+
+Click the bin, *Delete Mailing List*, on a list's row, and confirm with _Delete Mailing List?_. To
+stop a list without losing it, make it inactive instead.
+
+[#importing-and-exporting-mailing-list]
+==== Importing and Exporting Mailing Lists
+
+The cog, _Mailing list actions_, beside *New Mailing List* holds the export and the import:
+
+* *Export...* opens every mailing list, with its triggers, as JSON in a new browser tab, where you
+  can save it as a file. The recipients are not part of it.
+* *Import...* opens _Upload Mailing-Lists File_: choose a JSON file, or drop it on the dialog. The
+  file is imported by the batch job _mailing-list-import_ in the background; _Upload Result_ shows
+  the answer to the upload, and the job can be followed on the
+  link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] page. A list in the file with the ID of
+  an existing list updates it; any other is added.
+
+The file holds a list of mailing lists in the format of the export. For example:
+
+[source,json]
+----
+[
+  {
+    "mailingListId": "nw-daily",
+    "active": false,
+    "descs": [
+      {
+        "lang": "en",
+        "name": "Navigational warnings in force",
+        "description": "A daily list of the navigational warnings in force"
+      }
+    ],
+    "triggers": [
+      {
+        "type": "SCHEDULED",
+        "scheduleType": "DAILY",
+        "scheduledExecutionTime": "07:30",
+        "scheduledExecutionTimeZone": "UTC",
+        "messageQuery": "messageSeries=example-nw&status=PUBLISHED&sortBy=ID",
+        "scriptResourcePaths": [
+          "templates/mailinglist/active-navwarns.ftl"
+        ],
+        "publicReport": true,
+        "descs": [
+          {
+            "lang": "en",
+            "subject": "Navigational warnings in force ${date-short}"
+          }
+        ]
+      }
+    ]
+  },
+  ...
+]
+----
+
+A status change trigger has `"type": "STATUS_CHANGE"`, its statuses in `statusChanges` (for
+example `[ "PUBLISHED" ]`) and its filter in `messageFilter`, instead of the schedule and the query.

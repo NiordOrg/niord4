@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "The country manifest, fe/niord-country.json",
+  "description": "What a country's build can serve: its applications' languages, where each language's pack comes from, per-country locales and the guarded overrides. An unknown field fails. The kit's reader (country-kit/lib/manifest.mjs) adds the rules a schema cannot say: a default among the UI languages, the administration app's UI languages among its content languages, a pack entry for every language but en, and the overrides' paths.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["country", "name", "apps", "packs"],
+  "properties": {
+    "country": {
+      "description": "The country's ISO 3166-1 alpha-2 code, two letters a-z: niord-<country>, tokens.<country>.css.",
+      "type": "string",
+      "pattern": "^[a-z]{2}$"
+    },
+    "name": {
+      "description": "The country's name, plain text.",
+      "type": "string",
+      "pattern": "^[^<>&\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "maxLength": 60
+    },
+    "apps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["admin", "info"],
+      "properties": {
+        "admin": {
+          "description": "The administration app.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["uiLanguages", "contentLanguages", "defaultLanguage"],
+          "properties": {
+            "uiLanguages": {
+              "description": "The UI is offered in these; each needs the application's text in its pack, complete.",
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z]{2,3}$" },
+              "uniqueItems": true,
+              "minItems": 1
+            },
+            "contentLanguages": {
+              "description": "Message content may be written in these; each needs only its pack's name and flag.",
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z]{2,3}$" },
+              "uniqueItems": true,
+              "minItems": 1
+            },
+            "defaultLanguage": { "type": "string", "pattern": "^[a-z]{2,3}$" }
+          }
+        },
+        "info": {
+          "description": "The public site.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["uiLanguages", "defaultLanguage"],
+          "properties": {
+            "uiLanguages": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z]{2,3}$" },
+              "uniqueItems": true,
+              "minItems": 1
+            },
+            "defaultLanguage": { "type": "string", "pattern": "^[a-z]{2,3}$" }
+          }
+        }
+      }
+    },
+    "packs": {
+      "description": "Where each language but en comes from: pinned (a foreign pack, its digest in fe/niord-pins.lock.json) or home (in fe/packs/<lang>/).",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z]{2,3}$": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["pinned"],
+              "properties": {
+                "pinned": { "const": true },
+                "owner": {
+                  "description": "The GitHub owner of the pack's GHCR package; sifa-dk when absent.",
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+$"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["home", "publish"],
+              "properties": {
+                "home": { "const": true },
+                "publish": {
+                  "description": "Whether the country's pack.yml publishes the pack.",
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "locales": {
+      "description": "A per-country locale for a language; otherwise its pack.json's.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z]{2,3}$": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$" }
+      }
+    },
+    "overrides": {
+      "description": "The guarded overrides (fe-country-split-plan §4.9), written by node setup.mjs --add-override and --accept-override, never by hand; normally empty. Each replaces one base product file of an application's src/app/ with the country's copy at the same path below <app>/overrides/, and records the fingerprint of every base product file the copy was made from: the file and, for a component, its template and styles. The kit's reader adds the rules a schema cannot say: `with` mirrors `file`, basedOn names `file` and only files of the same application, no file twice, no spec.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "with", "basedOn", "reason", "added"],
+        "properties": {
+          "file": {
+            "description": "The base product file replaced, relative to its fe/.",
+            "type": "string",
+            "pattern": "^ui-apps/(admin|info)/src/app/[^\\\\]+\\.(ts|mjs|js|json)$"
+          },
+          "with": {
+            "description": "The country's copy, relative to the country's fe/.",
+            "type": "string",
+            "pattern": "^(admin|info)/overrides/[^\\\\]+\\.(ts|mjs|js|json)$"
+          },
+          "basedOn": {
+            "description": "Every base product file the copy was made from, with its fingerprint: sha256 of its bytes, CRLF read as LF.",
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+              "^ui-apps/(admin|info)/src/app/[^\\\\]+$": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
+          },
+          "reason": {
+            "description": "Why the country cannot do without the copy, plain text.",
+            "type": "string",
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+            "maxLength": 200
+          },
+          "added": {
+            "description": "The day the override was added.",
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        }
+      }
+    }
+  }
+}

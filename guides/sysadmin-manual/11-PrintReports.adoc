@@ -1,0 +1,164 @@
+
+:imagesdir: images
+
+[#print-reports]
+== Print Reports
+
+A _print report_ makes a PDF from a list of messages. Editors choose one when they print messages, as described
+in the link:../editor-manual/manual.html#print-messages[Print Action] section of the editors' manual, and a
+publication series that makes its PDF from messages names one too (see the
+link:../admin-manual/manual.html#publications[Publications] chapter of the administrators' manual).
+
+The _Print Reports_ page lets a system administrator manage the print reports. You open it from *Sysadmin* ->
+*Print Reports*.
+
+image::PrintReportsPage.png[Print Reports Page, 800]
+
+Each row shows the report's ID, its name, its sort order, the path of its template and the domains it is offered
+in; a report without domains is offered in every domain. Type a part of an ID or a name in the _Filter_ field to
+show only the reports that match. The buttons at the end of a row edit and delete the report.
+
+When an editor prints, the _Print_ dialog offers the reports of the current domain, in their sort order. A report
+can ask the editor for parameters, such as the week and the year of the "NM report" below, a deployment's own
+weekly report:
+
+image::PrintDialog.png[Print Dialog, 360]
+
+The template of the report can write these parameters into the PDF: the "NM report" writes the week and the year
+into its title and into the header of every page. A report may also have no parameters, like the _Standard_
+report. The picture below shows the first page of a PDF printed with it: the search criteria of the list and a
+table of contents.
+
+image::PrintReportExample.png[Sample Print Report, 500]
+
+[#standard-reports]
+=== Standard Reports
+
+A new deployment gets three print reports from its bootstrap, offered in every domain:
+
+[cols="30,70",options="header"]
+|===
+| Report
+| Description
+
+| Standard (`standard`)
+| Prints the details of each message of the list in the language chosen. Its front page shows the search criteria
+  of the list and a table of contents. Niord also uses it when a print names no report.
+
+| Draft (`draft`)
+| Like _Standard_, but prints every language of each message and a few extra fields, such as the message's type and
+  status. It is meant for proof-reading.
+
+| Public (`public`)
+| The _Standard_ report without the front page. The public site prints its message lists with it.
+
+|===
+
+These reports are data like any other: you may change them, and Niord does not put back a report you deleted. A
+print that needs a built-in report the deployment lacks fails, saying which report is missing, and the
+missing-path report lists it (see <<script-resource-extensions,Where Script Resources Come From>>). To get it back,
+import it on this page, for example from an export of another deployment.
+
+[#generating-pdfs]
+=== Generating PDFs
+
+Niord makes a PDF in two steps. First, the Freemarker template of the report turns the list of messages into HTML.
+Then Niord turns the HTML into a PDF.
+
+The page size, the page breaks, and the headers and footers of the PDF are set in the template's style sheet with
+_CSS Paged Media_. If you write or change report templates, read about it first, for example:
+
+* https://www.w3.org/TR/css-page-3/ - the CSS Paged Media specification.
+* https://www.smashingmagazine.com/2015/01/designing-for-print-with-css/ - an introduction to paged media.
+
+[#adding-or-editing-a-print-report]
+=== Adding or Editing a Print Report
+
+Click *New Report* to add a print report, or the *Edit Report* button (the pencil) of a row to change one. The
+editor opens beside the list:
+
+image::PrintReportEditPage.png[Print Report Editor Page, 510]
+
+The attributes of a print report:
+
+[cols="30,70",options="header"]
+|===
+| Attribute
+| Description
+
+| Report ID
+| A unique ID of the report. It cannot be changed once the report is saved.
+
+| Name
+| The name the _Print_ dialog shows.
+
+| Sort Order
+| The place of the report in the _Print_ dialog's list (10 for a new report).
+
+| Template Path
+| The Freemarker template that writes the report's HTML: the path of a template (".ftl") on the
+  <<script-resources,Script Resources>> page. The magnifying glass opens a list of the templates to choose from, and
+  the pencil opens the template on the <<script-resources,Script Resources>> page.
+
+| Domains
+| The domains the report is offered in. Leave it empty to offer the report in every domain.
+
+| Read-only Properties (JSON)
+| A JSON object of values the template can use, which the editor printing cannot change. In the "NM report"
+  example, the ISSN printed on the report comes from these properties. One property is read by Niord itself:
+  `mapThumbnails`. When the report has it, the _Print_ dialog does not offer its _include thumbnails_ choice
+  for the report.
+
+| Default Parameters (JSON)
+| A JSON object like the read-only properties, but each parameter is shown in the _Print_ dialog, where the editor
+  can change it before printing. A default value may hold the tokens `${week}`, `${week-2-digits}`, `${year}` and
+  `${year-2-digits}`, which Niord replaces with the current week and year. In the "NM report" example the
+  parameters `week` and `year` default to `${week}` and `${year}`.
+
+|===
+
+Niord refuses to save while a JSON field is not valid JSON, and says so under the field ("Invalid JSON").
+
+Under the attributes, _Test Report_ lets you try the report. Optionally choose a _Message tag_, and click *Test*:
+the _Print_ dialog opens with this report and the parameters as they are in the editor, and *Print* prints the
+messages that carry the tag. Without a tag, *Print* prints the published messages of the message series of your
+current domain, at most 1,000 of them, so choose a tag that holds a few messages to keep the test short. The PDF is
+made with the report's template as it is saved, so save a change to the template before you test it.
+
+[#deleting-a-print-report]
+=== Deleting a Print Report
+
+Click the *Delete Report* button (the bin) of a row, and confirm.
+
+[#importing-and-exporting-print-reports]
+=== Importing and Exporting Print Reports
+
+The menu of the gear button (_Print report actions_) has *Export...* and *Import...*.
+
+The file is a JSON list of print reports, for example:
+
+[source,json]
+----
+[
+  {
+    "reportId": "nm-report",
+    "name": "NM report",
+    "sortOrder": 2,
+    "templatePath": "templates/messages/nm-report-pdf.ftl",
+    "domains": [
+      { "domainId": "niord-nm" }
+    ],
+    "properties": {
+      "mapThumbnails": false,
+      "ISSN": "1234-5678"
+    },
+    "params": {
+      "week": "${week}",
+      "year": "${year}"
+    }
+  },
+  ...
+]
+----
+
+The import runs as the _report-import_ batch job, which you follow on the <<batch-jobs,Batch Jobs>> page.

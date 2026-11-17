@@ -1,0 +1,29 @@
+{{- if and .Values.proxy.enabled .Values.proxy.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "niord.componentName" (list . "proxy") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "proxy") | nindent 4 }}
+  {{- with .Values.proxy.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  # Only the controller of this class serves the Ingress. On the test cluster, Traefik
+  # serves the traefik class only, and ends TLS with its own certificate.
+  ingressClassName: {{ .Values.proxy.ingress.className }}
+  rules:
+    # externalBaseUri's host. Everything on it goes to the proxy's plain HTTP port, which
+    # routes /auth to Keycloak and the rest to the app, as it does without an Ingress.
+    - host: {{ include "niord.proxy.ingressHost" . }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "niord.componentName" (list . "proxy") }}
+                port:
+                  name: http
+{{- end }}

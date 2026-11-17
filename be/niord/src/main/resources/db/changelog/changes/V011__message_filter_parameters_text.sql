@@ -1,0 +1,11 @@
+--liquibase formatted sql
+--changeset niord:011-message-filter-parameters-text
+-- A saved message list filter keeps its whole query: the column "parameters" of "MessageFilter" becomes text, as
+-- org.niord.core.message.MessageParamFilter now maps it. The administration app saves the message list's whole
+-- request query, and about 20 areas or categories with statuses and sort pass the 255 characters of the
+-- character varying(255) the baseline gave it; such a save failed with 500 and stored nothing.
+--
+-- Schema only, no data (D2): on PostgreSQL the change from character varying to text rewrites no row, and every
+-- stored query stays as it is. Once applied this changeset is never edited, its comments included: every database
+-- records its checksum, which ChangelogChecksumPinTest pins.
+ALTER TABLE public."MessageFilter" ALTER COLUMN parameters TYPE text;

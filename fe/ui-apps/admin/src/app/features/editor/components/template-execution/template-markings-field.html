@@ -1,0 +1,187 @@
+@if (available()) {
+  <div class="flex flex-col gap-2 text-sm">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="w-32 shrink-0 font-medium">{{
+        'editor.template.markings.type' | transloco
+      }}</span>
+      <div class="flex gap-1">
+        @for (mode of ['unmarked', 'buoy', 'marking']; track mode) {
+          <button
+            type="button"
+            class="rounded border px-2.5 py-1 text-xs"
+            [class.border-primary]="markingType() === mode"
+            [class.bg-primary]="markingType() === mode"
+            [class.text-white]="markingType() === mode"
+            [class.border-surface-300]="markingType() !== mode"
+            (click)="setMode(mode)"
+          >
+            {{
+              (mode === 'unmarked'
+                ? 'editor.template.markings.typeUnmarked'
+                : mode === 'buoy'
+                  ? 'editor.template.markings.typeBuoys'
+                  : 'editor.template.markings.typeOther'
+              ) | transloco
+            }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Buoys: AtoN type · light character · distance · bearing -->
+    @if (markingType() === 'buoy') {
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="text-left text-fg-muted">
+            <th class="py-1 pr-2 font-medium">{{ 'editor.template.aton.type' | transloco }}</th>
+            <th class="py-1 pr-2 font-medium">
+              {{ 'editor.template.markings.lightChar' | transloco }}
+            </th>
+            <th class="py-1 pr-2 font-medium">{{ 'editor.template.markings.dist' | transloco }}</th>
+            <th class="py-1 pr-2 font-medium">
+              {{ 'editor.template.markings.bearing' | transloco }}
+            </th>
+            <th class="py-1 text-right">
+              <button type="button" class="link-button is-subtle" (click)="addMarking()">
+                {{ 'term.add' | transloco }}
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of markings(); track $index; let i = $index) {
+            <tr>
+              <td class="py-1 pr-2">
+                <app-select
+                  class="w-40"
+                  [options]="buoyTypes()"
+                  [optionLabel]="labelFor"
+                  [value]="m.type"
+                  (valueChange)="setMarking(i, { type: $any($event) })"
+                  [ariaLabel]="'editor.template.aton.type' | transloco"
+                />
+              </td>
+              <td class="py-1 pr-2">
+                <app-remote-validated-input
+                  class="w-28"
+                  kind="light-character"
+                  [value]="m.lightCharacter"
+                  [disabled]="!isLightType(m)"
+                  (valueChange)="setMarking(i, { lightCharacter: $any($event) })"
+                  [ariaLabel]="'editor.template.markings.lightChar' | transloco"
+                />
+              </td>
+              <td class="py-1 pr-2">
+                <input
+                  type="number"
+                  step="any"
+                  class="text-input w-16"
+                  [value]="m.distance ?? ''"
+                  (change)="setMarking(i, { distance: toNumber($any($event.target).value) })"
+                  [attr.aria-label]="'editor.template.markings.dist' | transloco"
+                />
+              </td>
+              <td class="py-1 pr-2">
+                <app-select
+                  class="w-20"
+                  [options]="bearings()"
+                  [optionLabel]="labelFor"
+                  [value]="m.bearing"
+                  (valueChange)="setMarking(i, { bearing: $any($event) })"
+                  [ariaLabel]="'editor.template.markings.bearing' | transloco"
+                />
+              </td>
+              <td class="py-1 text-right">
+                <button
+                  type="button"
+                  class="icon-button text-danger"
+                  (click)="deleteMarking(i)"
+                  [attr.aria-label]="'term.remove' | transloco"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <!-- Other markings: colour · type · distance · bearing -->
+    @if (markingType() === 'marking') {
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="text-left text-fg-muted">
+            <th class="py-1 pr-2 font-medium">{{ 'term.color' | transloco }}</th>
+            <th class="py-1 pr-2 font-medium">{{ 'editor.template.aton.type' | transloco }}</th>
+            <th class="py-1 pr-2 font-medium">{{ 'editor.template.markings.dist' | transloco }}</th>
+            <th class="py-1 pr-2 font-medium">
+              {{ 'editor.template.markings.bearing' | transloco }}
+            </th>
+            <th class="py-1 text-right">
+              <button type="button" class="link-button is-subtle" (click)="addMarking()">
+                {{ 'term.add' | transloco }}
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of markings(); track $index; let i = $index) {
+            <tr>
+              <td class="py-1 pr-2">
+                <app-select
+                  class="w-32"
+                  [options]="otherColors()"
+                  [optionLabel]="labelFor"
+                  [value]="m.color"
+                  (valueChange)="setMarking(i, { color: $any($event) })"
+                  [ariaLabel]="'term.color' | transloco"
+                />
+              </td>
+              <td class="py-1 pr-2">
+                <app-select
+                  class="w-40"
+                  [options]="otherTypes()"
+                  [optionLabel]="labelFor"
+                  [value]="m.type"
+                  (valueChange)="setMarking(i, { type: $any($event) })"
+                  [ariaLabel]="'editor.template.aton.type' | transloco"
+                />
+              </td>
+              <td class="py-1 pr-2">
+                <input
+                  type="number"
+                  step="any"
+                  class="text-input w-16"
+                  [value]="m.distance ?? ''"
+                  (change)="setMarking(i, { distance: toNumber($any($event.target).value) })"
+                  [attr.aria-label]="'editor.template.markings.dist' | transloco"
+                />
+              </td>
+              <td class="py-1 pr-2">
+                <app-select
+                  class="w-20"
+                  [options]="bearings()"
+                  [optionLabel]="labelFor"
+                  [value]="m.bearing"
+                  (valueChange)="setMarking(i, { bearing: $any($event) })"
+                  [ariaLabel]="'editor.template.markings.bearing' | transloco"
+                />
+              </td>
+              <td class="py-1 text-right">
+                <button
+                  type="button"
+                  class="icon-button text-danger"
+                  (click)="deleteMarking(i)"
+                  [attr.aria-label]="'term.remove' | transloco"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+}

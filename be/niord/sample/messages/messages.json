@@ -1,0 +1,3687 @@
+{
+  "data": [
+    {
+      "id": "5a301e00-0000-4000-8000-000000000001",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 1,
+      "shortId": "NW-001-26",
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Kattegat"
+            },
+            {
+              "lang": "da",
+              "name": "Kattegat"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Light buoy unlit"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Light buoy"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "100"
+        },
+        {
+          "chartNumber": "124"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788336000000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788336000000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    11.55,
+                    56.8
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Light buoy unlit",
+              "details": "<p>The west cardinal light buoy SAMPLE-1 in pos. 56° 48.0'N - 011° 33.0'E is unlit. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Lystønde slukket",
+              "details": "<p>Vestkardinal-lystønden SAMPLE-1 på pos. 56° 48,0'N - 011° 33,0'E er slukket. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Kattegat. North of Anholt. Light buoy SAMPLE-1 unlit.",
+          "vicinity": "North of Anholt"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Kattegat. Nord for Anholt. Lystønde SAMPLE-1 slukket.",
+          "vicinity": "Nord for Anholt"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000001"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000002",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 2,
+      "shortId": "NW-002-26",
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Great Belt"
+            },
+            {
+              "lang": "da",
+              "name": "Storebælt"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Wreck"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "141"
+        },
+        {
+          "chartNumber": "143"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788940800000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788854400000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    10.9,
+                    55.33
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Wreck",
+              "details": "<p>A wreck with a least depth of 9 metres is reported in pos. 55° 19.8'N - 010° 54.0'E. Mariners are advised to keep well clear. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Vrag",
+              "details": "<p>Et vrag med en mindste dybde på 9 meter er meldt på pos. 55° 19,8'N - 010° 54,0'E. Skibsfarten opfordres til at holde godt klar. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Great Belt. West of Sprogø. Wreck.",
+          "vicinity": "West of Sprogø"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Storebælt. Vest for Sprogø. Vrag.",
+          "vicinity": "Vest for Sprogø"
+        }
+      ],
+      "attachments": [
+        {
+          "type": "image/png",
+          "path": "messages/5/a3/5a301e00-0000-4000-8000-000000000002/1/sample-wreck-sketch.png",
+          "fileName": "sample-wreck-sketch.png",
+          "fileSize": 32298,
+          "descs": [
+            {
+              "lang": "en",
+              "caption": "Sketch of the sample wreck (generated)"
+            },
+            {
+              "lang": "da",
+              "caption": "Skitse af eksempelvraget (genereret)"
+            }
+          ]
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000002"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000003",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 3,
+      "shortId": "NW-003-26",
+      "mainType": "NW",
+      "type": "LOCAL_WARNING",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Sound"
+            },
+            {
+              "lang": "da",
+              "name": "Sundet"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Diving operations"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "131"
+        },
+        {
+          "chartNumber": "133"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1789459200000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1789538400000,
+              "toDate": 1797606000000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    12.66,
+                    55.7
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Diving operations",
+              "details": "<p>Diving operations take place on weekdays from 0700 to 1600 in pos. 55° 42.0'N - 012° 39.6'E. The diving vessel shows the prescribed signals. Passing vessels are requested to keep clear and reduce speed. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Dykkerarbejde",
+              "details": "<p>Der udføres dykkerarbejde på hverdage fra kl. 0700 til 1600 på pos. 55° 42,0'N - 012° 39,6'E. Dykkerfartøjet viser de foreskrevne signaler. Passerende skibe anmodes om at holde klar og sænke farten. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Sound. Off Hellerup. Diving operations.",
+          "vicinity": "Off Hellerup"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Sundet. Ud for Hellerup. Dykkerarbejde.",
+          "vicinity": "Ud for Hellerup"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000003"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000004",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 4,
+      "shortId": "NW-004-26",
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Baltic Sea"
+            },
+            {
+              "lang": "da",
+              "name": "Østersøen"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Object adrift"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Drifting object"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "189"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1790841600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1790841600000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    14.8,
+                    55.4
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Object adrift",
+              "details": "<p>An empty container was reported adrift in pos. 55° 24.0'N - 014° 48.0'E. Mariners are requested to keep a sharp lookout. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Genstand i drift",
+              "details": "<p>En tom container er meldt i drift på pos. 55° 24,0'N - 014° 48,0'E. Skibsfarten anmodes om at holde skarpt udkig. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Baltic Sea. North of Bornholm. Container adrift.",
+          "vicinity": "North of Bornholm"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Østersøen. Nord for Bornholm. Container i drift.",
+          "vicinity": "Nord for Bornholm"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000004"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000005",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 5,
+      "shortId": "NW-005-26",
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Skagerrak"
+            },
+            {
+              "lang": "da",
+              "name": "Skagerrak"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "RACON"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Radio navigation"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "92"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1791273600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1791273600000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    10.6,
+                    57.75
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "RACON out of service",
+              "details": "<p>The RACON on the light buoy SAMPLE-2 in pos. 57° 45.0'N - 010° 36.0'E is out of service. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "RACON ude af drift",
+              "details": "<p>RACON'en på lystønden SAMPLE-2 på pos. 57° 45,0'N - 010° 36,0'E er ude af drift. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Skagerrak. Off Skagen. RACON SAMPLE-2 out of service.",
+          "vicinity": "Off Skagen"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Skagerrak. Ud for Skagen. RACON SAMPLE-2 ude af drift.",
+          "vicinity": "Ud for Skagen"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000005"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000006",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 6,
+      "shortId": "NW-006-26",
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Little Belt"
+            },
+            {
+              "lang": "da",
+              "name": "Lillebælt"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Cable operations"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "151"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1791792000000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1791867600000,
+              "toDate": 1795795200000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "LineString",
+                  "coordinates": [
+                    [
+                      9.72,
+                      55.5
+                    ],
+                    [
+                      9.76,
+                      55.48
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Cable operations",
+              "details": "<p>Cable laying takes place between pos. 55° 30.0'N - 009° 43.2'E and pos. 55° 28.8'N - 009° 45.6'E. The cable vessel is restricted in her ability to manoeuvre. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Kabelarbejde",
+              "details": "<p>Der udlægges kabel mellem pos. 55° 30,0'N - 009° 43,2'E og pos. 55° 28,8'N - 009° 45,6'E. Kabelfartøjet er begrænset i sin manøvreevne. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Little Belt. South of Middelfart. Cable operations.",
+          "vicinity": "South of Middelfart"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Lillebælt. Syd for Middelfart. Kabelarbejde.",
+          "vicinity": "Syd for Middelfart"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000006"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000007",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Waters South of Funen"
+            },
+            {
+              "lang": "da",
+              "name": "Farvandet syd for Fyn"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Buoy missing"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Buoy"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "152"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    10.4,
+                    54.95
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Buoy missing",
+              "details": "<p>The green buoy SAMPLE-3 in pos. 54° 57.0'N - 010° 24.0'E is missing. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Tønde savnet",
+              "details": "<p>Den grønne tønde SAMPLE-3 på pos. 54° 57,0'N - 010° 24,0'E er savnet. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Waters South of Funen. Off Ærø. Buoy SAMPLE-3 missing.",
+          "vicinity": "Off Ærø"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Farvandet syd for Fyn. Ud for Ærø. Tønde SAMPLE-3 savnet.",
+          "vicinity": "Ud for Ærø"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000007"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000008",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "mainType": "NW",
+      "type": "LOCAL_WARNING",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Liim Fiord"
+            },
+            {
+              "lang": "da",
+              "name": "Limfjorden"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Hydrographic survey"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "108"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        8.3,
+                        56.78
+                      ],
+                      [
+                        8.38,
+                        56.78
+                      ],
+                      [
+                        8.38,
+                        56.74
+                      ],
+                      [
+                        8.3,
+                        56.74
+                      ],
+                      [
+                        8.3,
+                        56.78
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Hydrographic survey",
+              "details": "<p>A survey vessel carries out hydrographic survey in the area shown. Passing vessels are requested to give it a wide berth. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Opmåling",
+              "details": "<p>Et opmålingsfartøj udfører opmåling i det viste område. Passerende skibe anmodes om at give god plads. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Liim Fiord. Off Thyborøn. Hydrographic survey.",
+          "vicinity": "Off Thyborøn"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Limfjorden. Ud for Thyborøn. Opmåling.",
+          "vicinity": "Ud for Thyborøn"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000008"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000009",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "VERIFIED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The North Sea"
+            },
+            {
+              "lang": "da",
+              "name": "Nordsøen"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Underwater survey"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "93"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        7.6,
+                        55.62
+                      ],
+                      [
+                        7.8,
+                        55.62
+                      ],
+                      [
+                        7.8,
+                        55.52
+                      ],
+                      [
+                        7.6,
+                        55.52
+                      ],
+                      [
+                        7.6,
+                        55.62
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Underwater survey",
+              "details": "<p>Seabed survey with towed equipment takes place in the area shown. The survey vessel is restricted in her ability to manoeuvre. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Havbundsundersøgelse",
+              "details": "<p>Der udføres havbundsundersøgelse med slæbt udstyr i det viste område. Fartøjet er begrænset i sin manøvreevne. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The North Sea. West of Horns Rev. Underwater survey.",
+          "vicinity": "West of Horns Rev"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Nordsøen. Vest for Horns Rev. Havbundsundersøgelse.",
+          "vicinity": "Vest for Horns Rev"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000009"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000010",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 7,
+      "shortId": "NW-007-26",
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "EXPIRED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Waters South of Zealand"
+            },
+            {
+              "lang": "da",
+              "name": "Smålandsfarvandet"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Salvage operations"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "160"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1785744000000,
+      "publishDateTo": 1787904000000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1785744000000,
+              "toDate": 1787904000000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    11.62,
+                    54.98
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Salvage operations",
+              "details": "<p>Salvage operations took place in pos. 54° 58.8'N - 011° 37.2'E. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Bjærgningsarbejde",
+              "details": "<p>Der blev udført bjærgningsarbejde på pos. 54° 58,8'N - 011° 37,2'E. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Waters South of Zealand. Salvage operations.",
+          "vicinity": "South of Zealand"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Smålandsfarvandet. Bjærgningsarbejde.",
+          "vicinity": "Syd for Sjælland"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000010"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000011",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "number": 8,
+      "shortId": "NW-008-26",
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "CANCELLED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Kattegat"
+            },
+            {
+              "lang": "da",
+              "name": "Kattegat"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Light unreliable"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Light"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "129"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1786348800000,
+      "publishDateTo": 1787299200000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1786348800000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    12.3,
+                    56.17
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Light unreliable",
+              "details": "<p>The light SAMPLE-4 in pos. 56° 10.2'N - 012° 18.0'E was unreliable. The warning is cancelled. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Fyr upålideligt",
+              "details": "<p>Fyret SAMPLE-4 på pos. 56° 10,2'N - 012° 18,0'E var upålideligt. Advarslen er annulleret. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Kattegat. Off Gilleleje. Light SAMPLE-4 unreliable.",
+          "vicinity": "Off Gilleleje"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Kattegat. Ud for Gilleleje. Fyr SAMPLE-4 upålideligt.",
+          "vicinity": "Ud for Gilleleje"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000011"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000012",
+      "messageSeries": {
+        "seriesId": "dma-nw"
+      },
+      "mainType": "NW",
+      "type": "COASTAL_WARNING",
+      "status": "DELETED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Great Belt"
+            },
+            {
+              "lang": "da",
+              "name": "Storebælt"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Exercise"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "142"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        10.9,
+                        55.2
+                      ],
+                      [
+                        11.05,
+                        55.2
+                      ],
+                      [
+                        11.05,
+                        55.12
+                      ],
+                      [
+                        10.9,
+                        55.12
+                      ],
+                      [
+                        10.9,
+                        55.2
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Exercise",
+              "details": "<p>A naval exercise was planned in the area shown. The draft was deleted. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Øvelse",
+              "details": "<p>En flådeøvelse var planlagt i det viste område. Udkastet blev slettet. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Great Belt. Naval exercise.",
+          "vicinity": "Southern part"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Storebælt. Flådeøvelse.",
+          "vicinity": "Sydlige del"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000012"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000013",
+      "messageSeries": {
+        "seriesId": "dma-nw-local"
+      },
+      "mainType": "NW",
+      "type": "LOCAL_WARNING",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Sound"
+            },
+            {
+              "lang": "da",
+              "name": "Sundet"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Bridge closed for passage"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "134"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1791964800000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1792476000000,
+              "toDate": 1793368800000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    12.595,
+                    55.675
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Bridge closed for passage",
+              "details": "<p>The bascule bridge SAMPLE-5 in pos. 55° 40.5'N - 012° 35.7'E is closed for passage on weekdays from 0700 to 1500 because of maintenance. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Bro lukket for gennemsejling",
+              "details": "<p>Klapbroen SAMPLE-5 på pos. 55° 40,5'N - 012° 35,7'E er lukket for gennemsejling på hverdage fra kl. 0700 til 1500 på grund af vedligeholdelse. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Sound. Copenhagen. Bridge SAMPLE-5 closed for passage.",
+          "vicinity": "Copenhagen"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Sundet. København. Bro SAMPLE-5 lukket for gennemsejling.",
+          "vicinity": "København"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000013"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000014",
+      "messageSeries": {
+        "seriesId": "dma-nw-local"
+      },
+      "mainType": "NW",
+      "type": "LOCAL_WARNING",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Liim Fiord"
+            },
+            {
+              "lang": "da",
+              "name": "Limfjorden"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Buoy off station"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Buoy"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "106"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    9.935,
+                    57.055
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Buoy off station",
+              "details": "<p>The red buoy SAMPLE-6 is reported off station in pos. 57° 03.3'N - 009° 56.1'E. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Tønde ude af position",
+              "details": "<p>Den røde tønde SAMPLE-6 er meldt ude af position på pos. 57° 03,3'N - 009° 56,1'E. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Liim Fiord. Off Aalborg. Buoy SAMPLE-6 off station.",
+          "vicinity": "Off Aalborg"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Limfjorden. Ud for Aalborg. Tønde SAMPLE-6 ude af position.",
+          "vicinity": "Ud for Aalborg"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000014"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000015",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 1,
+      "shortId": "NM-001-26",
+      "mainType": "NM",
+      "type": "PERMANENT_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Kattegat"
+            },
+            {
+              "lang": "da",
+              "name": "Kattegat"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Light buoy established"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Light buoy"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "102"
+        },
+        {
+          "chartNumber": "128"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788508800000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788508800000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    10.85,
+                    55.98
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Light buoy established",
+              "details": "<p>A north cardinal light buoy, SAMPLE-7, Q, has been established in pos. 55° 58.8'N - 010° 51.0'E. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Lystønde udlagt",
+              "details": "<p>En nordkardinal-lystønde, SAMPLE-7, Q, er udlagt på pos. 55° 58,8'N - 010° 51,0'E. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Kattegat. Samsø Belt. Light buoy SAMPLE-7 established.",
+          "vicinity": "Samsø Belt"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Kattegat. Samsø Bælt. Lystønde SAMPLE-7 udlagt.",
+          "vicinity": "Samsø Bælt"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000015"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000016",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 2,
+      "shortId": "NM-002-26",
+      "mainType": "NM",
+      "type": "PERMANENT_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Great Belt"
+            },
+            {
+              "lang": "da",
+              "name": "Storebælt"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Buoy withdrawn"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Buoy"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "143"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1789113600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1789113600000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    10.95,
+                    54.95
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Buoy withdrawn",
+              "details": "<p>The red buoy SAMPLE-8 in pos. 54° 57.0'N - 010° 57.0'E has been permanently withdrawn. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Tønde inddraget",
+              "details": "<p>Den røde tønde SAMPLE-8 på pos. 54° 57,0'N - 010° 57,0'E er inddraget permanent. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Great Belt. Buoy SAMPLE-8 withdrawn.",
+          "vicinity": "East of Langeland"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Storebælt. Tønde SAMPLE-8 inddraget.",
+          "vicinity": "Øst for Langeland"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000016"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000017",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 3,
+      "shortId": "NM-003-26",
+      "mainType": "NM",
+      "type": "TEMPORARY_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Sound"
+            },
+            {
+              "lang": "da",
+              "name": "Sundet"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Light damaged"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Light"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "131"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1789718400000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1789718400000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    12.62,
+                    56.03
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Light damaged",
+              "details": "<p>The light structure SAMPLE-9 in pos. 56° 01.8'N - 012° 37.2'E is damaged. The light shows with reduced range until repaired. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Fyr beskadiget",
+              "details": "<p>Fyrkonstruktionen SAMPLE-9 på pos. 56° 01,8'N - 012° 37,2'E er beskadiget. Fyret viser med nedsat lysvidde, indtil det er repareret. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Sound. Off Helsingør. Light SAMPLE-9 damaged.",
+          "vicinity": "Off Helsingør"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Sundet. Ud for Helsingør. Fyr SAMPLE-9 beskadiget.",
+          "vicinity": "Ud for Helsingør"
+        }
+      ],
+      "attachments": [
+        {
+          "type": "image/png",
+          "path": "messages/5/a3/5a301e00-0000-4000-8000-000000000017/1/sample-light-damaged.png",
+          "fileName": "sample-light-damaged.png",
+          "fileSize": 32298,
+          "descs": [
+            {
+              "lang": "en",
+              "caption": "Sketch of the damaged sample light (generated)"
+            },
+            {
+              "lang": "da",
+              "caption": "Skitse af det beskadigede eksempelfyr (genereret)"
+            }
+          ]
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000017"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000018",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 4,
+      "shortId": "NM-004-26",
+      "mainType": "NM",
+      "type": "TEMPORARY_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Skagerrak"
+            },
+            {
+              "lang": "da",
+              "name": "Skagerrak"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Reduced depth"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "92"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1790323200000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1790323200000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        10.55,
+                        57.62
+                      ],
+                      [
+                        10.62,
+                        57.62
+                      ],
+                      [
+                        10.62,
+                        57.58
+                      ],
+                      [
+                        10.55,
+                        57.58
+                      ],
+                      [
+                        10.55,
+                        57.62
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Reduced depth",
+              "details": "<p>A depth of 6.2 metres, less than charted, has been found in the area shown. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Mindre vanddybde",
+              "details": "<p>Der er fundet en vanddybde på 6,2 meter, mindre end angivet i søkortet, i det viste område. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Skagerrak. Off Ålbæk. Reduced depth.",
+          "vicinity": "Off Ålbæk"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Skagerrak. Ud for Ålbæk. Mindre vanddybde.",
+          "vicinity": "Ud for Ålbæk"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000018"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000019",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 5,
+      "shortId": "NM-005-26",
+      "mainType": "NM",
+      "type": "PRELIMINARY_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Little Belt"
+            },
+            {
+              "lang": "da",
+              "name": "Lillebælt"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Hydrographic survey"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "152"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1790928000000,
+      "references": [
+        {
+          "messageId": "NW-006-26",
+          "type": "REFERENCE",
+          "descs": [
+            {
+              "lang": "en",
+              "description": "the cable operations"
+            },
+            {
+              "lang": "da",
+              "description": "kabelarbejdet"
+            }
+          ]
+        }
+      ],
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1793606400000,
+              "toDate": 1796976000000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        9.85,
+                        55.22
+                      ],
+                      [
+                        9.95,
+                        55.22
+                      ],
+                      [
+                        9.95,
+                        55.16
+                      ],
+                      [
+                        9.85,
+                        55.16
+                      ],
+                      [
+                        9.85,
+                        55.22
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Planned hydrographic survey",
+              "details": "<p>A hydrographic survey of the area shown is planned for November and December, after the cable operations of NW-006-26. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Planlagt opmåling",
+              "details": "<p>En opmåling af det viste område er planlagt i november og december, efter kabelarbejdet i NW-006-26. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Little Belt. Southern part. Planned hydrographic survey.",
+          "vicinity": "Southern part"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Lillebælt. Sydlige del. Planlagt opmåling.",
+          "vicinity": "Sydlige del"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000019"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000020",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 6,
+      "shortId": "NM-006-26",
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Waters South of Zealand"
+            },
+            {
+              "lang": "da",
+              "name": "Smålandsfarvandet"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "AIS"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Radio navigation"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "161"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1791532800000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1792396800000,
+              "toDate": 1793952000000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    12.15,
+                    54.85
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "AIS test transmissions",
+              "details": "<p>A temporary AIS station in pos. 54° 51.0'N - 012° 09.0'E transmits test messages. The messages may be disregarded. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "AIS-testudsendelser",
+              "details": "<p>En midlertidig AIS-station på pos. 54° 51,0'N - 012° 09,0'E udsender testmeddelelser. Meddelelserne kan ses bort fra. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Waters South of Zealand. AIS test transmissions.",
+          "vicinity": "Grønsund"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Smålandsfarvandet. AIS-testudsendelser.",
+          "vicinity": "Grønsund"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000020"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000021",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "mainType": "NM",
+      "type": "PERMANENT_NOTICE",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Baltic Sea"
+            },
+            {
+              "lang": "da",
+              "name": "Østersøen"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Beacon damaged"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Beacon"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "188"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    12.05,
+                    54.62
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Beacon damaged",
+              "details": "<p>The beacon SAMPLE-10 in pos. 54° 37.2'N - 012° 03.0'E is damaged. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Båke beskadiget",
+              "details": "<p>Båken SAMPLE-10 på pos. 54° 37,2'N - 012° 03,0'E er beskadiget. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Baltic Sea. Off Gedser. Beacon SAMPLE-10 damaged.",
+          "vicinity": "Off Gedser"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Østersøen. Ud for Gedser. Båke SAMPLE-10 beskadiget.",
+          "vicinity": "Ud for Gedser"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000021"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000022",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "mainType": "NM",
+      "type": "PRELIMINARY_NOTICE",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The North Sea"
+            },
+            {
+              "lang": "da",
+              "name": "Nordsøen"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Underwater survey"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "94"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        7.85,
+                        55.48
+                      ],
+                      [
+                        8,
+                        55.48
+                      ],
+                      [
+                        8,
+                        55.4
+                      ],
+                      [
+                        7.85,
+                        55.4
+                      ],
+                      [
+                        7.85,
+                        55.48
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Planned seabed survey",
+              "details": "<p>A seabed survey of the area shown is planned for the spring. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Planlagt havbundsundersøgelse",
+              "details": "<p>En havbundsundersøgelse af det viste område er planlagt i foråret. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The North Sea. Horns Rev. Planned seabed survey.",
+          "vicinity": "Horns Rev"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Nordsøen. Horns Rev. Planlagt havbundsundersøgelse.",
+          "vicinity": "Horns Rev"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000022"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000023",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "mainType": "NM",
+      "type": "TEMPORARY_NOTICE",
+      "status": "VERIFIED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Waters South of Funen"
+            },
+            {
+              "lang": "da",
+              "name": "Farvandet syd for Fyn"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Light buoy replaced"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Light buoy"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "171"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    10.62,
+                    55.05
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Light buoy replaced",
+              "details": "<p>The light buoy SAMPLE-11 in pos. 55° 03.0'N - 010° 37.2'E has been temporarily replaced by an unlit buoy. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Lystønde erstattet",
+              "details": "<p>Lystønden SAMPLE-11 på pos. 55° 03,0'N - 010° 37,2'E er midlertidigt erstattet af en tønde uden lys. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Waters South of Funen. Svendborg Sound. Light buoy SAMPLE-11 replaced.",
+          "vicinity": "Svendborg Sound"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Farvandet syd for Fyn. Svendborg Sund. Lystønde SAMPLE-11 erstattet.",
+          "vicinity": "Svendborg Sund"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000023"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000024",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 7,
+      "shortId": "NM-007-26",
+      "mainType": "NM",
+      "type": "TEMPORARY_NOTICE",
+      "status": "EXPIRED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Waters South of Zealand"
+            },
+            {
+              "lang": "da",
+              "name": "Smålandsfarvandet"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Buoy off station"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Buoy"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "160"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1785484800000,
+      "publishDateTo": 1787644800000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1785484800000,
+              "toDate": 1787644800000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    11.235,
+                    55.2
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Buoy off station",
+              "details": "<p>The buoy SAMPLE-12 was off station in pos. 55° 12.0'N - 011° 14.1'E. It has been put back. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Tønde ude af position",
+              "details": "<p>Tønden SAMPLE-12 var ude af position på pos. 55° 12,0'N - 011° 14,1'E. Den er lagt på plads igen. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Waters South of Zealand. Buoy SAMPLE-12 off station.",
+          "vicinity": "Agersø Sound"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Smålandsfarvandet. Tønde SAMPLE-12 ude af position.",
+          "vicinity": "Agersø Sund"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000024"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000025",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "number": 8,
+      "shortId": "NM-008-26",
+      "mainType": "NM",
+      "type": "PERMANENT_NOTICE",
+      "status": "CANCELLED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "The Liim Fiord"
+            },
+            {
+              "lang": "da",
+              "name": "Limfjorden"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Beacon missing"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Beacon"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "109"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1786089600000,
+      "publishDateTo": 1788249600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1786089600000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    9.05,
+                    56.95
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Beacon missing",
+              "details": "<p>The beacon SAMPLE-13 in pos. 56° 57.0'N - 009° 03.0'E was reported missing. The notice is cancelled. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Båke savnet",
+              "details": "<p>Båken SAMPLE-13 på pos. 56° 57,0'N - 009° 03,0'E blev meldt savnet. Efterretningen er annulleret. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — The Liim Fiord. Løgstør Broad. Beacon SAMPLE-13 missing.",
+          "vicinity": "Løgstør Broad"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Limfjorden. Løgstør Bredning. Båke SAMPLE-13 savnet.",
+          "vicinity": "Løgstør Bredning"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000025"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000026",
+      "messageSeries": {
+        "seriesId": "dma-nm"
+      },
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "DELETED",
+      "areas": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Kattegat"
+            },
+            {
+              "lang": "da",
+              "name": "Kattegat"
+            }
+          ],
+          "parent": {
+            "mrn": "urn:mrn:iho:country:dk"
+          }
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Uncharted obstruction"
+            }
+          ],
+          "parent": {
+            "descs": [
+              {
+                "lang": "en",
+                "name": "Obstruction"
+              }
+            ]
+          }
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "123"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    10.7,
+                    57.22
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Uncharted obstruction",
+              "details": "<p>An uncharted obstruction was reported in pos. 57° 13.2'N - 010° 42.0'E. The draft was deleted. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Ukortlagt hindring",
+              "details": "<p>En ukortlagt hindring blev meldt på pos. 57° 13,2'N - 010° 42,0'E. Udkastet blev slettet. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Kattegat. Læsø Channel. Uncharted obstruction.",
+          "vicinity": "Læsø Channel"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Kattegat. Læsø Rende. Ukortlagt hindring.",
+          "vicinity": "Læsø Rende"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000026"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000027",
+      "messageSeries": {
+        "seriesId": "dma-fa"
+      },
+      "shortId": "FA-001-26",
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:fa:dk:ek-r-11"
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Firing Exercises"
+            }
+          ]
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "129"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788249600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788249600000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        11.2,
+                        55.98
+                      ],
+                      [
+                        11.32,
+                        55.98
+                      ],
+                      [
+                        11.32,
+                        55.92
+                      ],
+                      [
+                        11.2,
+                        55.92
+                      ],
+                      [
+                        11.2,
+                        55.98
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Firing exercises",
+              "details": "<p>Firing exercises take place in the firing area EK R 11 Sjællands Odde W. on the days announced. The area is shown on the map. Ships are requested to keep clear while the warning flags are hoisted. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Skydeøvelser",
+              "details": "<p>Der afholdes skydeøvelser i skydeområdet EK R 11 Sjællands Odde W. på de bekendtgjorte dage. Området er vist på kortet. Skibe anmodes om at holde klar, mens advarselsflagene er hejst. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — EK R 11 Sjællands Odde W. Firing exercises.",
+          "vicinity": "EK R 11 Sjællands Odde W."
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — EK R 11 Sjællands Odde W. Skydeøvelser.",
+          "vicinity": "EK R 11 Sjællands Odde W."
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000027"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000028",
+      "messageSeries": {
+        "seriesId": "dma-fa"
+      },
+      "shortId": "FA-002-26",
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:fa:dk:ek-d-389"
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Firing Exercises"
+            }
+          ]
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "92"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788249600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788249600000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        10.4,
+                        57.85
+                      ],
+                      [
+                        10.62,
+                        57.85
+                      ],
+                      [
+                        10.62,
+                        57.78
+                      ],
+                      [
+                        10.4,
+                        57.78
+                      ],
+                      [
+                        10.4,
+                        57.85
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Firing exercises",
+              "details": "<p>Firing exercises take place in the firing area EK D 389 Skagen N. on the days announced. The area is shown on the map. Ships are requested to keep clear while the warning flags are hoisted. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Skydeøvelser",
+              "details": "<p>Der afholdes skydeøvelser i skydeområdet EK D 389 Skagen N. på de bekendtgjorte dage. Området er vist på kortet. Skibe anmodes om at holde klar, mens advarselsflagene er hejst. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — EK D 389 Skagen N. Firing exercises.",
+          "vicinity": "EK D 389 Skagen N."
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — EK D 389 Skagen N. Skydeøvelser.",
+          "vicinity": "EK D 389 Skagen N."
+        }
+      ],
+      "attachments": [
+        {
+          "type": "image/png",
+          "path": "messages/5/a3/5a301e00-0000-4000-8000-000000000028/1/sample-firing-area.png",
+          "fileName": "sample-firing-area.png",
+          "fileSize": 32298,
+          "descs": [
+            {
+              "lang": "en",
+              "caption": "Overview of the sample firing area (generated)"
+            },
+            {
+              "lang": "da",
+              "caption": "Oversigt over eksempelskydeområdet (genereret)"
+            }
+          ]
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000028"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000029",
+      "messageSeries": {
+        "seriesId": "dma-fa"
+      },
+      "shortId": "FA-003-26",
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:fa:dk:ek-d-371"
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Firing Exercises"
+            }
+          ]
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "152"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788249600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788249600000
+            }
+          ],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        10.48,
+                        54.86
+                      ],
+                      [
+                        10.6,
+                        54.86
+                      ],
+                      [
+                        10.6,
+                        54.8
+                      ],
+                      [
+                        10.48,
+                        54.8
+                      ],
+                      [
+                        10.48,
+                        54.86
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Firing exercises",
+              "details": "<p>Firing exercises take place in the firing area EK D 371 Marstal Bugt on the days announced. The area is shown on the map. Ships are requested to keep clear while the warning flags are hoisted. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Skydeøvelser",
+              "details": "<p>Der afholdes skydeøvelser i skydeområdet EK D 371 Marstal Bugt på de bekendtgjorte dage. Området er vist på kortet. Skibe anmodes om at holde klar, mens advarselsflagene er hejst. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — EK D 371 Marstal Bugt. Firing exercises.",
+          "vicinity": "EK D 371 Marstal Bugt"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — EK D 371 Marstal Bugt. Skydeøvelser.",
+          "vicinity": "EK D 371 Marstal Bugt"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000029"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000030",
+      "messageSeries": {
+        "seriesId": "dma-fa"
+      },
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:fa:dk:ek-r-33"
+        }
+      ],
+      "categories": [
+        {
+          "descs": [
+            {
+              "lang": "en",
+              "name": "Firing Exercises"
+            }
+          ]
+        }
+      ],
+      "charts": [
+        {
+          "chartNumber": "93"
+        }
+      ],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "geometry": {
+            "type": "FeatureCollection",
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Polygon",
+                  "coordinates": [
+                    [
+                      [
+                        7.95,
+                        55.64
+                      ],
+                      [
+                        8.08,
+                        55.64
+                      ],
+                      [
+                        8.08,
+                        55.58
+                      ],
+                      [
+                        7.95,
+                        55.58
+                      ],
+                      [
+                        7.95,
+                        55.64
+                      ]
+                    ]
+                  ]
+                },
+                "properties": {}
+              }
+            ]
+          },
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Firing exercises",
+              "details": "<p>Firing exercises take place in the firing area EK R 33 Vejers on the days announced. The area is shown on the map. Ships are requested to keep clear while the warning flags are hoisted. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Skydeøvelser",
+              "details": "<p>Der afholdes skydeøvelser i skydeområdet EK R 33 Vejers på de bekendtgjorte dage. Området er vist på kortet. Skibe anmodes om at holde klar, mens advarselsflagene er hejst. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — EK R 33 Vejers. Firing exercises.",
+          "vicinity": "EK R 33 Vejers"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — EK R 33 Vejers. Skydeøvelser.",
+          "vicinity": "EK R 33 Vejers"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000030"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000031",
+      "messageSeries": {
+        "seriesId": "dma-nm-almanac"
+      },
+      "number": 1,
+      "shortId": "A/1 2026",
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:country:dk"
+        }
+      ],
+      "categories": [],
+      "charts": [],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788249600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788249600000
+            }
+          ],
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Abbreviations",
+              "details": "<p>Fl = flashing, Q = quick flashing, Oc = occulting, Iso = isophase, F = fixed. The list is an example of almanac content. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Forkortelser",
+              "details": "<p>Fl = blink, Q = hurtigblink, Oc = formørkelser, Iso = isofase, F = fast. Listen er et eksempel på almanakindhold. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Almanac. Abbreviations used in the notices.",
+          "vicinity": "Danish waters"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Almanak. Forkortelser i efterretningerne.",
+          "vicinity": "Danske farvande"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000031"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000032",
+      "messageSeries": {
+        "seriesId": "dma-nm-almanac"
+      },
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:country:dk"
+        }
+      ],
+      "categories": [],
+      "charts": [],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Reporting a hazard",
+              "details": "<p>Mariners who observe a hazard to navigation are asked to report it to the nearest coast radio station. The text is an example of almanac content. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Indberetning af fare",
+              "details": "<p>Søfarende, der observerer en fare for sejladsen, bedes melde den til nærmeste kystradiostation. Teksten er et eksempel på almanakindhold. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Almanac. Reporting a hazard to navigation.",
+          "vicinity": "Danish waters"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Almanak. Indberetning af fare for sejladsen.",
+          "vicinity": "Danske farvande"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000032"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000033",
+      "messageSeries": {
+        "seriesId": "dma-nm-annex"
+      },
+      "number": 1,
+      "shortId": "B/1 2026",
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "PUBLISHED",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:country:dk"
+        }
+      ],
+      "categories": [],
+      "charts": [],
+      "horizontalDatum": "WGS84",
+      "publishDateFrom": 1788249600000,
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [
+            {
+              "allDay": false,
+              "fromDate": 1788249600000
+            }
+          ],
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Firing areas",
+              "details": "<p>The attached overview shows where the sample's firing areas lie. The annex is an example of annex content. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Skydeområder",
+              "details": "<p>Den vedhæftede oversigt viser, hvor eksemplets skydeområder ligger. Bilaget er et eksempel på bilagsindhold. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Annex. Overview of the sample firing areas.",
+          "vicinity": "Danish waters"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Bilag. Oversigt over eksemplets skydeområder.",
+          "vicinity": "Danske farvande"
+        }
+      ],
+      "attachments": [
+        {
+          "type": "image/png",
+          "path": "messages/5/a3/5a301e00-0000-4000-8000-000000000033/1/sample-annex-overview.png",
+          "fileName": "sample-annex-overview.png",
+          "fileSize": 32298,
+          "descs": [
+            {
+              "lang": "en",
+              "caption": "Overview of the sample annex (generated)"
+            },
+            {
+              "lang": "da",
+              "caption": "Oversigt over eksempelbilaget (genereret)"
+            }
+          ]
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000033"
+    },
+    {
+      "id": "5a301e00-0000-4000-8000-000000000034",
+      "messageSeries": {
+        "seriesId": "dma-nm-annex"
+      },
+      "mainType": "NM",
+      "type": "MISCELLANEOUS_NOTICE",
+      "status": "DRAFT",
+      "areas": [
+        {
+          "mrn": "urn:mrn:iho:country:dk"
+        }
+      ],
+      "categories": [],
+      "charts": [],
+      "horizontalDatum": "WGS84",
+      "originalInformation": false,
+      "parts": [
+        {
+          "indexNo": 0,
+          "type": "DETAILS",
+          "eventDates": [],
+          "descs": [
+            {
+              "lang": "en",
+              "subject": "Chart corrections",
+              "details": "<p>The annex explains how the chart corrections of the notices are to be read. The text is an example of annex content. This is sample content for trying Niord, not a real notice.</p>"
+            },
+            {
+              "lang": "da",
+              "subject": "Søkortrettelser",
+              "details": "<p>Bilaget forklarer, hvordan efterretningernes søkortrettelser skal læses. Teksten er et eksempel på bilagsindhold. Dette er eksempelindhold til at prøve Niord, ikke en rigtig efterretning.</p>"
+            }
+          ],
+          "hideSubject": true
+        }
+      ],
+      "descs": [
+        {
+          "lang": "en",
+          "title": "SAMPLE — Annex. Explanation of the chart corrections.",
+          "vicinity": "Danish waters"
+        },
+        {
+          "lang": "da",
+          "title": "SAMPLE — Bilag. Forklaring til søkortrettelserne.",
+          "vicinity": "Danske farvande"
+        }
+      ],
+      "revision": 1,
+      "autoTitle": false,
+      "repoPath": "messages/5/a3/5a301e00-0000-4000-8000-000000000034"
+    }
+  ],
+  "total": 34,
+  "size": 34,
+  "description": "The sample's messages, written for the sample (be/niord/sample/README.md)"
+}

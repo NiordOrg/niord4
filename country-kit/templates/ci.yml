@@ -1,0 +1,234 @@
+name: CI
+
+# Written by the base product's country kit (init) from .niord/kit/templates/ci.yml; the upgrade
+# report compares a later template with it, and what to adopt is the country's call.
+#
+# Two jobs, beside each other, on every pull request and on a push to main that changed the backend,
+# the frontend or a workflow:
+#   - `tests`: set-up first (it stages the packs whose backend halves the pom copies into the jar),
+#     then ./mvnw verify, the unit tests and the integration suite, built against the base
+#     product's parent pom and niord-base from its GitHub Packages (be/pom.xml: the <parent>
+#     version is the pin, the `github` repository the registry), then the override check and the
+#     group count;
+#   - `frontend`: the country workspace on the pinned source zip: set-up, the specs, lint, the
+#     end-to-end specs listed and the build of both applications with the checks on every country
+#     build.
+# Two jobs rather than one: the frontend needs neither the backend's suite nor Docker, and a
+# frontend failure should not hide a backend result or the other way round.
+#
+# Reading GitHub Packages needs a token even for a public package. The workflow's own token reads
+# it: setup-java writes a settings.xml whose `github` server reads GITHUB_ACTOR and GITHUB_TOKEN
+# from the environment, and the token is bound on the steps that run Maven only.
+#
+# After the suite, two checks fail the run (.niord/kit/docs/country-api.md): the override check,
+# the pinned base version's check-overrides.sh over the packaged jar against be/overrides.json, and
+# the group count, be/scripts/check-country-build-group.sh, which fails unless niord-base's country
+# build group ran tests: a suite that finds no Docker skips every test and still reports success.
+#
+# The Base bump workflow (base-bump.yml) dispatches this workflow on the branch it re-pinned, since
+# a push with the workflow's token starts no workflow: so it takes workflow_dispatch.
+
+on:
+  pull_request:
+    branches: [main]
+  # A push to main runs CI only when it changed the backend, the frontend or a workflow. The Image
+  # workflow (image.yml) runs on demand only, as the kit writes it; once the country gives it a
+  # workflow_run trigger on a green push run of CI, this filter also decides which push makes an
+  # image. Markdown under be/ and fe/ is documentation. pull_request stays unfiltered, so a pull
+  # request's check always reports.
+  push:
+    branches: [main]
+    paths:
+      - 'be/**'
+      - 'fe/**'
+      - '.github/workflows/**'
+      - '!be/**/*.md'
+      - '!fe/**/*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  MVN_FLAGS: '-B -ntp -e'
+  MAVEN_OPTS: '-Xmx2g'
+
+jobs:
+  tests:
+    name: Unit + integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: be
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # server-id `github` matches be/pom.xml's `github` repository; setup-java writes a settings.xml
+      # whose server reads GITHUB_ACTOR and GITHUB_TOKEN from the environment.
+      - name: Set up JDK 25 (Temurin) + GitHub Packages credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Maven repository cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+
+      # No npm cache: this job runs no npm.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Set-up stages the packs whose backend halves the pom copies into the jar; the pom's
+      # require-staged-packs check refuses a build without them, so it runs before the suite. It
+      # runs Maven (../be/mvnw dependency:copy) for the pinned packages, so the token is bound here.
+      - name: Set up the workspace
+        working-directory: fe
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node setup.mjs
+
+      - name: Build, unit and integration tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ./mvnw $MVN_FLAGS verify
+
+      # The checks of a country build after the suite. No `if: always()`: a red build skips them.
+      # The pin is the <parent> version of be/pom.xml, read as image.yml reads it; it reaches the
+      # later steps through $GITHUB_ENV, after the pattern check, and never as an expression, since
+      # a pull request controls the file it comes from.
+      - name: Read the base version
+        run: |
+          set -euo pipefail
+          base=$(grep -A2 '<artifactId>niord-parent</artifactId>' pom.xml | sed -n 's|.*<version>\(.*\)</version>.*|\1|p' | head -1)
+          [[ "$base" =~ ^4\.0\.[0-9]+$ ]] || { echo "::error::no 4.0.<run> base version in be/pom.xml (got '$base')"; exit 1; }
+          echo "BASE=$base" >> "$GITHUB_ENV"
+          echo "base $base"
+
+      # The image tools of the pinned base, unpacked into target/k8s/ as image.yml unpacks them.
+      # -N: the pom is read for its repositories and credentials only.
+      - name: Fetch the image tools
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ./mvnw $MVN_FLAGS -N org.apache.maven.plugins:maven-dependency-plugin:unpack \
+            -Dartifact="org.niord:niord-image-tools:$BASE:zip" \
+            -DoutputDirectory=target/k8s
+          chmod +x target/k8s/scripts/*.sh
+          test -f target/k8s/scripts/check-overrides.sh
+
+      # Every shadow of a niord-base file in the jar the suite packaged, against be/overrides.json:
+      # exit 1 on a finding, and every run prints the listed overrides.
+      - name: Override check
+        run: |
+          set -euo pipefail
+          target/k8s/scripts/check-overrides.sh "target/niord-{{cc}}-$BASE.jar" .
+
+      # The group's executions have no failIfNoTests, so a test class path without niord-base's
+      # test-jar runs it with 0 tests and no failure; the script reads the reports the suite left.
+      - name: Country build group ran
+        run: |
+          set -euo pipefail
+          scripts/check-country-build-group.sh
+
+      - name: Test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            be/target/surefire-reports/
+            be/target/failsafe-reports/
+          retention-days: 3
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend (set-up, test, lint, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 25 (Temurin) + GitHub Packages credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      # The generated workspace's lockfile is the pinned base product's, so the pins file keys
+      # npm's cache.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: fe/niord-pins.lock.json
+
+      # Set-up runs Maven (../be/mvnw dependency:copy) for the pinned zip, which GitHub Packages
+      # serves only with a token: the workflow token is bound on this one step and nowhere else.
+      - name: Set up the workspace
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node setup.mjs
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Unit tests
+        run: |
+          set -euo pipefail
+          npm test
+
+      - name: Lint
+        run: |
+          set -euo pipefail
+          npm run lint
+
+      # The specs compile and are found; they run against a running start:admin with a Keycloak,
+      # which this job has not. Before the build, so a red build check still leaves this result.
+      - name: End-to-end specs listed
+        run: |
+          set -euo pipefail
+          npm run e2e -- --list
+
+      # Both applications, then the checks on every country build.
+      - name: Build both applications
+        run: |
+          set -euo pipefail
+          npm run build

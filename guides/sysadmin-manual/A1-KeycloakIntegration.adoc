@@ -1,0 +1,160 @@
+
+:imagesdir: images
+
+[#keycloak-integration]
+== Keycloak Integration
+
+Niord signs its users in with Keycloak, an open source identity and access management server, which is documented
+at https://www.keycloak.org. Keycloak holds Niord's users, their passwords and their roles; Niord asks Keycloak who
+a user is and what the user may do.
+
+Once Niord has been set up, administrators seldom need Keycloak's own administration console: Niord's
+<<domains,Domains>> page creates what a domain needs in Keycloak, and the
+link:../admin-manual/manual.html#users-contacts[Users & Contacts] page of the administrators' manual manages users
+and their groups. This appendix explains how Niord uses Keycloak, for the system administrator who sets it up. It
+assumes you know Keycloak's basic terms: realm, client, role, user and group.
+
+The pictures of this appendix are taken in the administration console of the Keycloak that Niord's local
+development stack runs, with its development realm "niord".
+
+[#keycloak-realm]
+=== The Realm
+
+A deployment of Niord uses one Keycloak _realm_: a separate set of users, clients and roles. One Keycloak server can
+serve several deployments, each in a realm of its own. The deployment's configuration names the realm and the
+Keycloak server, and the setting `authServerUrl` gives Keycloak's address (see <<settings,Settings>>).
+
+The realm holds:
+
+* a _client_ for each domain of Niord, which carries the roles of that domain (below);
+* the client `niord-web`, through which the administration application signs users in;
+* the users, and the groups that give them their roles.
+
+[#niord-domains]
+=== Niord Domains
+
+Domains are described in the <<domains,Domains>> chapter. For each domain there is a client in Keycloak whose
+client id is the domain's id, and whose name is the domain's name. For example, the domain "NW" has the client
+`niord-nw`:
+
+image::KeycloakClients.png[Keycloak Clients, 800]
+
+The list also has the client `niord-client-master` ("Master"): the client of the domain "Master" that the bootstrap
+of a new deployment makes (see <<bootstrap,The Bootstrap of a New Deployment>>). The deployment in the pictures has
+no domain "Master" any more, which is why its Domains page does not list it, but the realm keeps the client.
+
+The domain clients are _bearer-only_: nobody signs in through them; they only hold the domain's roles. The users
+sign in through the client `niord-web`, a _public_ client of the web application.
+
+When you create a domain on the <<domains,Domains>> page, Niord creates its client in Keycloak, with the roles
+below. The domain's editor shows whether the client exists in Keycloak, and *Create in Keycloak* creates it when it
+does not, for example after a domain was imported. The *Keycloak…* button of the Domains page opens Keycloak's
+administration console.
+
+[#roles]
+==== Roles
+
+As described in the <<system-administrators-manual,System Administrators Manual>> chapter, a user has a role in
+each domain: _user_, _editor_, _admin_ or _sysadmin_. These roles are roles of the domain's client in Keycloak:
+
+image::KeycloakClientRoles.png[Keycloak Client Roles, 800]
+
+The roles are _composite_: each includes the roles below it. A user with the _sysadmin_ role also has the _admin_
+role, a user with _admin_ also has _editor_, and a user with _editor_ also has _user_.
+
+One more client role, _publication-curate_, gives a user the right to add messages to, and remove them from, a
+publication issue by hand (see the link:../admin-manual/manual.html#publications[Publications] chapter of the
+administrators' manual). It is not part of the ladder above: give it to the users who curate publications. Niord
+does not create it for a new domain: add it to the domain's client in Keycloak (*Create role*, named
+`publication-curate`), and give it to a group. For the time being, Niord also lets a user with the _admin_ role
+curate publications, so that the function works in a realm that does not have the role yet.
+
+[#niord-users]
+=== Niord Users
+
+Niord's users are created and kept in Keycloak. Niord's
+link:../admin-manual/manual.html#users-contacts[Users & Contacts] page lets an administrator add, change and
+delete users, and manage their groups, without opening Keycloak. Niord keeps a copy of a user's name and e-mail
+address, which it updates when the user signs in.
+
+image::KeycloakUsers.png[Keycloak Users, 800]
+
+Keycloak can also sign users in through another identity provider, such as an organisation's Active Directory
+Federation Services, another Keycloak, or an LDAP directory. A user who signs in that way for the first time is then
+created in Keycloak automatically. See Keycloak's documentation of _identity providers_ and _user federation_.
+
+[#user-groups]
+==== User Groups
+
+Giving each user roles in each domain would be tedious. Instead, give the roles to Keycloak _groups_, and make the
+users members of the groups. For example, the realm in the pictures has these groups:
+
+* _Sysadmin_: the _sysadmin_ role in every domain.
+* _Admins_: the _admin_ role in the domains "NW", "NM", "Firing Areas", "NM Almanac", "NM Annex" and "NW Greenland".
+* _Editors_: the _editor_ role in the same domains.
+* _Case Officers_: the _user_ role in the same domains.
+* _FE Editors_: the _editor_ role in the "Firing Areas" domain only.
+* _MAS duty_: the _editor_ role in the "NW" domain, for a duty team that writes navigational warnings.
+* _AOK Editor_: the _editor_ role in the "NW Greenland" domain only.
+
+Niord creates a domain's client, and manages users and their groups, in Keycloak with the access token of the user
+who does it. So the groups of the people who do that, _Admins_ and _Sysadmin_ here, also have the roles
+_manage-users_ and _manage-clients_ of Keycloak's own client "realm-management".
+
+The groups are kept in Keycloak:
+
+image::KeycloakGroups.png[Keycloak Groups, 800]
+
+Each group is given the roles of the domain clients on its _Role mapping_ tab. In the example below, the group "MAS
+duty" has the _editor_ role of the client `niord-nw`, that is, of the "NW" domain:
+
+image::KeycloakGroupRoles.png[Keycloak Group Roles, 800]
+
+Groups are made and changed seldom, while users join and leave groups often. So Niord lets an administrator manage a
+user's groups on its own pages, as described in the
+link:../admin-manual/manual.html#managing-user-group-membership[Managing User Group Membership] section of the
+administrators' manual.
+
+[#user-specific-editor-fields]
+=== User-Specific Editor Fields
+
+Which fields the message editor shows can be set in many places: settings give a base set and a set for each main
+type (`editorFieldsBase`, `editorFieldsNw` and `editorFieldsNm`), and areas, categories and message series can add
+fields for their messages. On top of that, Keycloak can give a user, or a group, fields of their own, which come
+last and so win over the others.
+
+Step 1: the client `niord-web` needs two mappers of the type _User Attribute_, which put the user attributes
+"editorFieldsNw" and "editorFieldsNm" into the user's access token as claims of the same names. You find them on the
+client's _Client scopes_ tab, in its dedicated scope ("niord-web-dedicated"). The development realm has them:
+
+image::KeycloakClientMapper.png[Keycloak Client Mapper, 800]
+
+Step 2: give the user, or more likely a group, the attribute "editorFieldsNw" (for navigational warnings) or
+"editorFieldsNm" (for notices to mariners). Its value is a JSON object that turns fields on (`true`) or off
+(`false`). In the example below, the group "MAS duty" turns off the _publication_ and _references_ fields:
+`{ "publication": false, "references": false }`.
+
+image::KeycloakGroupAttribute.png[Keycloak Group Attribute, 800]
+
+[#niord-security]
+=== Niord Security
+
+The administration application, like every client of Niord, calls Niord's REST interface. Each call carries the
+user's access token from Keycloak and names the current domain in the request header `NiordDomain`. Niord gives the
+caller the roles the token holds for that domain's client.
+
+So the server checks access with standard annotations. In the simplified example below, `@RolesAllowed(Roles.ADMIN)`
+lets the call through only when the caller has the _admin_ role in the current domain, and refuses it otherwise:
+
+[source,java]
+----
+@PutMapping(value = "/area/{areaId}",
+        consumes = "application/json;charset=UTF-8",
+        produces = "application/json;charset=UTF-8")
+@RolesAllowed(Roles.ADMIN)
+public SystemAreaVo updateArea(@PathVariable("areaId") Integer areaId,
+                               @RequestBody SystemAreaVo areaVo) {
+    Area area = new Area(areaVo);
+    return areaService.updateAreaData(area).toVo(SystemAreaVo.class, DataFilter.get());
+}
+----

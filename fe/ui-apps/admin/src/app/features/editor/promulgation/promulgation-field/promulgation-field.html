@@ -1,0 +1,73 @@
+@if (present()) {
+  <app-editor-field-row
+    fieldId="promulgation"
+    label="msg.field.promulgation"
+    [edited]="edited()"
+    [invalid]="invalid()"
+    [empty]="onChannelSummary() === ''"
+    emptyLabel="editor.promulgation.none"
+  >
+    <span fieldViewer>{{ onChannelSummary() }}</span>
+
+    <div fieldEditor>
+      @if (promulgations().length > 0) {
+        <div class="relative">
+          <button
+            type="button"
+            class="absolute right-0 top-0 z-10 inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs text-fg-muted hover:text-fg disabled:opacity-50"
+            [disabled]="!facade.editableNow()"
+            (click)="generateAll()"
+          >
+            <app-icon name="lucideRefreshCw" />
+            <span>{{ 'term.generate_all' | transloco }}</span>
+          </button>
+
+          <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))">
+            <app-tab-list>
+              @for (entry of promulgations(); track entry.type.typeId) {
+                <app-tab [value]="entry.type.typeId">
+                  <span class="inline-flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      class="checkbox"
+                      [checked]="entry.promulgate"
+                      [disabled]="checkboxDisabled(entry)"
+                      [attr.aria-label]="entry.type.name"
+                      (click)="$event.stopPropagation()"
+                      (keydown)="onCheckboxKeydown($event)"
+                      (change)="onToggle(entry.type.typeId, $any($event.target).checked)"
+                    />
+                    <span [class.text-danger]="isMandatoryMissing(entry)">{{
+                      entry.type.name
+                    }}</span>
+                    @if (isMandatoryMissing(entry)) {
+                      <app-icon
+                        name="lucideTriangleAlert"
+                        class="text-danger"
+                        [attr.aria-label]="'editor.promulgation.mandatory' | transloco"
+                      />
+                    }
+                  </span>
+                </app-tab>
+              }
+            </app-tab-list>
+
+            <app-tab-panels>
+              @for (entry of promulgations(); track entry.type.typeId) {
+                <app-tab-panel [value]="entry.type.typeId">
+                  <fieldset
+                    class="m-0 min-w-0 border-0 p-0"
+                    [disabled]="!facade.editableNow() || !entry.promulgate"
+                    [class.opacity-50]="!entry.promulgate"
+                  >
+                    <app-promulgation-editor-outlet [promulgation]="entry" [context]="context" />
+                  </fieldset>
+                </app-tab-panel>
+              }
+            </app-tab-panels>
+          </app-tabs>
+        </div>
+      }
+    </div>
+  </app-editor-field-row>
+}

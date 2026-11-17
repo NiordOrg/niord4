@@ -1,0 +1,144 @@
+/* The utility scan is pinned to this application's own sources. Without `source(…)` the
+   compiler's base is the directory the build runs from — the whole workspace — so it reads
+   the other application's templates and the class names that appear in prose in the
+   documentation, and emits a utility for each. `source(none)` turns the automatic scan off
+   and the `@source` lines below say what to read instead. They belong in this file because a
+   relative `@source` inside an imported stylesheet is rewritten against the entry file
+   anyway, and they are relative to this file's own directory.
+
+   The shared map kit is scanned too: its components carry their own utilities, and they have
+   to survive in both applications' builds. `../../../styles` is deliberately NOT scanned — `@apply`
+   resolves utilities directly, and scanning a stylesheet only invites phantom candidates. */
+@import 'tailwindcss' source(none);
+@source '../../../ui-apps/admin/src';
+@source '../../../shared-map';
+
+@import 'ol/ol.css';
+/* CDK overlay structural CSS — positions the cdk overlays (picker/menu/dialog/
+   confirm/drawer panels). Required or the panels render unpositioned.
+
+   Imported into `base` (the lowest declared layer) so the Layer-3 classes and
+   the utilities a call site puts on `panelClass` / `backdropClass` can override
+   pane and backdrop chrome. Unlayered, this vendor CSS would outrank both,
+   contradicting the cascade order below. Inside `base` it still follows
+   Tailwind's preflight in source order, so its class rules keep winning over
+   preflight's element/universal resets as before. Note that a pane's SIZE is
+   written by the CDK as inline styles, which no stylesheet beats — size a pane
+   through `OverlayRef.updateSize`, as the drawer does. */
+@import '@angular/cdk/overlay-prebuilt.css' layer(base);
+
+/* Styling architecture — the live
+   system spans Layers 2–4: Layer 2 is the CSS tokens; Layer 3 is the semantic component
+   classes; Layer 4 is per-component styles. fe/styles/tokens.base.css is country-locked;
+   components-admin.css holds this application's Layer 3 classes. Both are always loaded.
+
+   The tokens live in fe/styles/, which belongs to neither application: the public site
+   ships the same brand vocabulary, and neither application may import from the other.
+   The path out of ui-apps/admin/src reaches it, and the entry file's own directory is what a
+   relative @import resolves against.
+
+   The active-brand token file (tokens.active.css → tokens.default.css in the base product; a
+   country workspace lists its own tokens.<cc>.css in its place) is loaded via the angular.json
+   `styles[]` array, not via @import here. Reason: Angular's `fileReplacements` only
+   accepts JS/TS/JSON files (CSS is rejected by schema validation), so the swap is done
+   at the styles-array level in build configurations instead. The cascade order is
+   preserved because CSS custom properties are unlayered and resolve at use time. */
+@import '../../../styles/tokens.base.css';
+@import '../../../styles/components-core.css';
+@import './styles/components-admin.css';
+
+@import '../../../styles/theme.css';
+
+/* font-size-adjust is not a Tailwind-managed token. Apply at the root so
+   a country's face (a brand that sets --niord-font-size-adjust, 0.49 for Verdana, say)
+   renders at parity with system-ui; `none` in Default. One value, normalizes x-height globally without
+   per-component font-size edits. */
+html {
+  font-size-adjust: var(--niord-font-size-adjust, none);
+
+  /* Always show the root scrollbar so the centered area columns (messages/editor) and
+     the full-width chrome (header/footer/admin) don't shift left when a section gains a
+     vertical scrollbar (short overview page vs. long table). A real (greyed) scrollbar,
+     not `scrollbar-gutter: stable`: with a reserved but empty gutter Chrome reports
+     `documentElement.clientWidth` without it while the layout excludes it, and CDK places
+     every overlay aligned to its trigger's right edge from that width — 15 px too far left. */
+  overflow-y: scroll;
+}
+
+/* Cascade-layer order: Tailwind base (preflight) → components → utilities. Layer names
+   match Tailwind v4's defaults so the Layer-3 component classes sit below utilities and a
+   utility class always wins over a semantic class. */
+@layer base, components, utilities;
+
+/* Tailwind v4 leaves <button> on the UA default (arrow) cursor; restore the pointer
+   affordance for every enabled button. `:not(:disabled)` keeps disabled buttons on the
+   default cursor. Authored in the `base` layer so an explicit `cursor-*` utility on a
+   specific button still wins. */
+@layer base {
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Tailwind's preflight sets no `color` on the document, so any node without an explicit color
+     class fell back to the UA default — pure black, which is in no brand's palette. That
+     made visual hierarchy depend on how far a brand's --niord-fg happened to sit from black:
+     visible in the default brand (a navy #0e2033), invisible in a brand whose text is a near-neutral #1a1c22.
+     Anchor the document at the body text token instead. `base` is the lowest declared layer, so
+     both the `color:` rules in the Layer-3 component classes and any `text-*` utility still win. */
+  body {
+    color: var(--niord-fg);
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+/* `<router-outlet>` is an Angular built-in we can't decorate from our own
+   code; Angular renders the routed component as a SIBLING of the outlet,
+   not inside it, so the outlet element itself is always a 0-height empty
+   element. In a flex/grid parent with `gap`, it still counts as an item and
+   triggers phantom gap spacing. `display: contents` removes it from layout.
+   First-party transparent-wrapper components (those whose template renders
+   nothing under some inputs) should do the same via `class: 'contents'` in
+   their `host` metadata, for the same reason. */
+router-outlet {
+  display: contents;
+}
+
+/* Modal scroll-lock is handled by the CDK overlays themselves: app-dialog,
+   app-drawer and app-confirm all open with `scrollStrategies.block()`, which
+   locks the page scroll without layout shift (the always-shown root
+   scrollbar above keeps the width constant). No global mask rule is needed. */
+
+@import '../../../styles/message-html.css';
+
+/* A legal document of the country's branding (`assets/legal/<doc>.<lang>.html`), bound with
+   [innerHTML] in the legal-document dialog. Component styles cannot reach bound content, so it
+   is styled here under its wrapper class, as message HTML is: preflight zeroes the heading
+   weight and the term list's layout. */
+@layer components {
+  .legal-document h3 {
+    font-weight: 600;
+  }
+
+  .legal-document dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 1rem;
+    row-gap: 0.25rem;
+  }
+
+  .legal-document dt {
+    font-weight: 500;
+  }
+}
+
+/* OL's default zoom control sits top-left, where the result-list overlay
+   would cover it. Move it to bottom-right, just above the attribution. */
+app-ol-map .ol-zoom {
+  top: auto;
+  left: auto;
+  bottom: 2.5em;
+  right: 0.5em;
+}

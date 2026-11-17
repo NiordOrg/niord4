@@ -1,0 +1,339 @@
+# AIS  [templates/tmpl/radio-navigation.ftl]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=ais, type=ais, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 56-00.0N
+  | 012-00.0E UNRELIABLE.
+AUDIO:   AIS on the light Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is unreliable.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light Hals Barre in pos. 56° 00.0'N - 012° 00.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 56-00.0N
+  | 012-00.0E UNRELIABLE.
+AUDIO:   AIS on the light Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East is unreliable.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light Hals Barre in pos. 61° 06.0'N - 045° 15.0'W is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 61-06.0N
+  | 045-15.0W UNRELIABLE.
+AUDIO:   AIS on the light Hals Barre in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West is unreliable.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. AIS unreliable. AIS unreliable. AIS unreliable.
+SUBJECT: AIS unreliable. AIS unreliable. AIS unreliable.
+DETAILS: AIS on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. / AIS on the light Hals Barre in pos. 55° 36.0'N - 010° 45.0'E is unreliable. / AIS on the light Hals Barre in pos. 55° 42.0'N - 011° 00.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+  | AIS ON LIGHT HALS BARRE 55-36.0N
+  | 010-45.0E UNRELIABLE.
+  | AIS ON LIGHT HALS BARRE 55-42.0N
+  | 011-00.0E UNRELIABLE.
+AUDIO:   AIS on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable. AIS on the light Hals Barre in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East is unreliable. AIS on the light Hals Barre in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East is unreliable.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea.
+SUBJECT: 
+
+DETAILS: 
+NAVTEX:
+  | 
+  |     
+AUDIO:   null
+LINT:    subject: empty
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.type.light
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.north_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON NORTH CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.south_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the south cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON SOUTH CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the south cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.east_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the east cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON EAST CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the east cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.west_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the west cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON WEST CARDINAL BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the west cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.port_hand
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the port hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON PORT HAND BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the port hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.starboard_hand
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the starboard hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON STARBOARD HAND BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the starboard hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the preferred channel to port hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON PREFERRED CHANNEL TO PORT HAND
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   AIS on the preferred channel to port hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the preferred channel to starboard hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON PREFERRED CHANNEL TO STARBOARD
+  | HAND BUOY HALS BARRE 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   AIS on the preferred channel to starboard hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.safe_water
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the safe water buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON SAFE WATER BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the safe water buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.isolated_danger
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the isolated danger buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON ISOLATED DANGER BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the isolated danger buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.buoy.special
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the special buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON SPECIAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the special buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.north_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the north cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON NORTH CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the north cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.south_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the south cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON SOUTH CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the south cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.east_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the east cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON EAST CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the east cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.west_cardinal
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the west cardinal light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON WEST CARDINAL LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the west cardinal light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.port_hand
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON PORT HAND LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.starboard_hand
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON STARBOARD HAND LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the preferred channel to port hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON PREFERRED CHANNEL TO PORT HAND
+  | LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the preferred channel to port hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the preferred channel to starboard hand light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON PREFERRED CHANNEL TO STARBOARD
+  | HAND LIGHT BUOY HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the preferred channel to starboard hand light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.safe_water
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the safe water light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON SAFE WATER LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the safe water light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.isolated_danger
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the isolated danger light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON ISOLATED DANGER LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the isolated danger light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.special
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the special light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON SPECIAL LIGHT BUOY HALS BARRE
+  | 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the special light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = aton.function.light_buoy.emergency_wreck
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the emergency wreck light buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON EMERGENCY WRECK LIGHT BUOY HALS
+  | BARRE 55-30.0N 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the emergency wreck light buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on AtoN Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON ATON HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on AtoN Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT 55-30.0N 010-30.0E
+  | UNRELIABLE.
+AUDIO:   AIS on the light in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light St. John's Point in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT ST. JOHN'S POINT 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the light St. John's Point in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param ais_status = radio_navigation.status.unreliable
+TITLE:   Denmark. The Baltic Sea. AIS unreliable.
+SUBJECT: AIS unreliable.
+DETAILS: AIS on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is unreliable. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E UNRELIABLE.
+AUDIO:   AIS on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is unreliable.
+
+### param ais_status = radio_navigation.status.inoperative
+TITLE:   Denmark. The Baltic Sea. AIS inoperative.
+SUBJECT: AIS inoperative.
+DETAILS: AIS on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E is inoperative. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E INOPERATIVE.
+AUDIO:   AIS on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East is inoperative.
+
+### param ais_status = empty
+TITLE:   Denmark. The Baltic Sea. AIS.
+SUBJECT: AIS.
+DETAILS: AIS on the light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | AIS ON LIGHT HALS BARRE 55-30.0N
+  | 010-30.0E.
+AUDIO:   AIS on the light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+

@@ -1,0 +1,316 @@
+name: Retract version
+
+# Removes one published 4.0.<run> version from what the publish workflow writes:
+#
+#   GitHub Packages   org.niord:niord-parent, org.niord.base:niord-base (the Maven artefacts),
+#                     org.niord:niord-bootstrap (the base product's bootstrap zip, since C4.2a),
+#                     org.niord.web:niord-web-admin (the administration app's bundle, with dk
+#                     and gl beside en up to P7), org.niord:niord-image-tools (the Dockerfile,
+#                     the image scripts and the override check), org.niord:niord-local-run (the
+#                     files of a country's local run, since P8a), org.niord.web:niord-fe-src
+#                     (the base product's frontend source zip) and org.niord:niord-country-kit
+#                     (the country kit, since the kit move) — in the registry of
+#                     NiordOrg/niord, where publish.yml deploys since 2026-10-06. The versions up
+#                     to 4.0.54 are in THIS repository's registry and are not reached from here
+#                     any more: delete them by hand on the package's page, if ever. Every page
+#                     of a package's versions is read; a package that does not exist
+#                     (niord-bootstrap before C4.2a, niord-fe-src before P4, niord-local-run and
+#                     niord-country-kit before their first publish: the registry answers 404)
+#                     and a version a package does not have (a version from before P8a has no
+#                     niord-local-run, a version from before the kit move has no
+#                     niord-country-kit) are reported as not present, and any other answer of
+#                     the registry (an expired NIORD_DELETE_TOKEN, a server error) fails the
+#                     step.
+#   GitHub release    the release on v4.0.<run>, with its niord-fe-src and niord-country-kit zips
+#                     attached (the record of the zips' sha256 and the copy of the source zip
+#                     Frontend CI's upgrade test reads)
+#   git               the v4.0.<run> tag
+#   Harbor            NOT deleted here: niord/niord-app-en and charts/niord are listed in the
+#                     summary for deletion by hand in the Harbor UI, and after them, as history,
+#                     niord/niord-app-dk and niord/niord-app-gl (which niord-ng built from 4.0.50
+#                     until the country modules left on 2026-10-06) and the names up to 4.0.49
+#                     (niord/niord-app-be, niord/niord-dk-be, niord/niord-gl-be), which a
+#                     retraction of an old version may need. A country's own images are tagged
+#                     <base>.<run> and are retracted in its repository. The `github-push` robot
+#                     the `harbor` environment holds has Pull + Push only (devops-shared
+#                     runbooks/bootstrap.md, Robots), and a CI credential that can delete
+#                     published artefacts is not worth having for a manual, rare operation.
+#
+# For a version that must not be consumed any more (a bad build, a proof run from a branch). It
+# does not touch the deploy repo: if an environment already pins the version, the next
+# staging-bump.py pin or a manual revert there is the way out, and Argo CD keeps running the pods
+# it has. Nor does it reach a country repository already pinned to the version: its builds go on
+# from Maven's local cache and from the base product it unpacked (the zip's hash still matches its
+# pin), as its backend does for the same version, so the summary tells DK and GL to bump.
+#
+# Manual only, and loud about it: the run name carries the version and the reason.
+#
+# From main only, and by a maintainer only: the authorise job fails a run of any other ref, a run
+# whose triggering actor is not a login on .github/maintainers (the file as it is on main, never
+# the dispatched ref's copy), and a run while the `retract` environment is missing or allows any
+# other branch than main (GitHub would create a missing one, with no rule, for the retract job).
+# A dispatch runs the dispatched ref's own copy of this file; what holds for every copy is that
+# environment's deployment branch rule, main only, a repository setting.
+#
+# The packages belong to NiordOrg/niord, so the GITHUB_TOKEN cannot touch them: the Packages step
+# uses NIORD_DELETE_TOKEN, a secret of the `retract` environment — a classic personal access token
+# of the NiordOrg machine user publish.yml deploys as, with delete:packages and read:packages only
+# (publish.yml's token cannot delete). Rotated at the repository move and yearly. The release
+# and the tag go with the workflow token, the release first (deleting a release leaves its tag).
+# A version that is the last one of a package cannot be deleted on its own — the package is
+# deleted instead.
+
+run-name: "Retract ${{ inputs.version }}: ${{ inputs.reason }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The 4.0.<run> version to remove from GitHub Packages, the release and the tag; the Harbor artifacts to delete by hand are listed'
+        required: true
+        type: string
+      reason:
+        description: 'Why (goes into the run name and the summary)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: reg.sitcloud.dk
+  HARBOR_PROJECT: cu3504-mssb-brs
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Who may retract, before any job enters the environment that holds the
+  # delete token. No environment of its own, so a refused run never enters one.
+  # ---------------------------------------------------------------------------
+  authorise:
+    name: Authorise
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read    # read .github/maintainers from main
+      actions: read     # read the retract environment and its branch rules
+    steps:
+      - name: Maintainer, main, and a main-only environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # Who started this attempt: on a re-run the person re-running it, not the first actor.
+          ACTOR: ${{ github.triggering_actor }}
+        run: |
+          set -euo pipefail
+
+          # The triggering actor must be a login on .github/maintainers as main has it — never the
+          # dispatched ref's copy. Comments, CRs, blanks and surrounding spaces are dropped; the
+          # match is a whole line, ignoring case (logins are case-insensitive). Same in
+          # publish.yml.
+          require_maintainer() {
+            local list logins
+            if ! list=$(gh api -H 'Accept: application/vnd.github.raw' "repos/$REPO/contents/.github/maintainers?ref=main"); then
+              echo "::error::Could not read .github/maintainers from main; nobody is a maintainer until it can be read."
+              exit 1
+            fi
+            logins=$(printf '%s\n' "$list" | tr -d '\r' | sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^$' || true)
+            if [ -z "$ACTOR" ] || [ -z "$logins" ] || ! grep -Fxiq -- "$ACTOR" <<< "$logins"; then
+              echo "::error::'$ACTOR' is not on .github/maintainers (main). Only a maintainer may $1."
+              exit 1
+            fi
+            echo "  $ACTOR is a maintainer (.github/maintainers on main)"
+          }
+
+          # The environment must exist and allow deployments from main and nothing else: GitHub
+          # creates a missing one, without any rule, when a job names it. The shapes are those of
+          # GET .../environments/<env> and .../deployment-branch-policies (Actions: read).
+          require_main_only() {
+            local policy branches
+            if ! policy=$(gh api "repos/$REPO/environments/$1" \
+                            --jq '.deployment_branch_policy | "\(.protected_branches) \(.custom_branch_policies)"'); then
+              echo "::error::Environment '$1' does not exist or cannot be read. Create it with the deployment branch rule main only (Settings → Environments)."
+              exit 1
+            fi
+            if [ "$policy" != "false true" ]; then
+              echo "::error::Environment '$1' does not limit deployments to selected branches (protected_branches custom_branch_policies: $policy). It must allow main only."
+              exit 1
+            fi
+            if ! branches=$(gh api "repos/$REPO/environments/$1/deployment-branch-policies" \
+                              --jq '[.branch_policies[] | "\(.type):\(.name)"] | join(" ")'); then
+              echo "::error::Could not read the deployment branch rules of environment '$1'."
+              exit 1
+            fi
+            if [ "$branches" != "branch:main" ]; then
+              echo "::error::Environment '$1' allows '$branches'. It must allow the branch main and nothing else."
+              exit 1
+            fi
+            echo "  environment $1: main only"
+          }
+
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::A version is retracted only from main (got $GITHUB_REF)."
+            exit 1
+          fi
+          require_maintainer "retract a version"
+          require_main_only retract
+
+  retract:
+    name: Retract ${{ inputs.version }}
+    needs: authorise
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The delete token lives on this environment (main only) and nowhere else.
+    environment: retract
+    permissions:
+      contents: write   # delete the tag and the release
+    # The inputs reach the scripts as environment variables (VERSION above, REASON below), never
+    # as template expressions inside a script, so they stay data. Every step after the validation runs
+    # only once it succeeded; the later ones also after a failed Packages step, so the release and
+    # the tag go and the Harbor list is written whatever happened to the Maven versions.
+    steps:
+      - name: Validate input
+        id: validate
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^4\.0\.[0-9]+$ ]]; then
+            echo "::error::'$VERSION' is not a 4.0.<run> version"
+            exit 1
+          fi
+          {
+            echo "## Retract $VERSION"
+            echo ""
+            printf 'Reason: %s\n' "$REASON"
+            echo ""
+            echo "A country repository pinned to $VERSION (niord-dk, niord-gl) keeps building from Maven's cache and the base product it unpacked: tell it to bump."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: GitHub Packages of NiordOrg/niord
+        env:
+          GH_TOKEN: ${{ secrets.NIORD_DELETE_TOKEN }}
+        run: |
+          set -euo pipefail
+          base="orgs/NiordOrg"
+          err="$RUNNER_TEMP/packages.err"
+          echo "### GitHub Packages of NiordOrg/niord" >> "$GITHUB_STEP_SUMMARY"
+          for pkg in org.niord.niord-parent org.niord.base.niord-base org.niord.niord-bootstrap org.niord.web.niord-web-admin org.niord.niord-image-tools org.niord.niord-local-run org.niord.web.niord-fe-src org.niord.niord-country-kit; do
+            # A package that does not exist yet is a 404 and nothing else: any other failure
+            # (an expired token, a server error) fails the step rather than reading as absent.
+            if ! gh api "$base/packages/maven/$pkg" --jq .name > /dev/null 2> "$err"; then
+              if grep -q 'HTTP 404' "$err"; then
+                echo "- $pkg $VERSION: not present (no such package)" | tee -a "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+              cat "$err" >&2
+              echo "::error::Could not read the package $pkg; nothing more is deleted from GitHub Packages."
+              exit 1
+            fi
+            # Every version, page by page, as `<id> <name>` lines.
+            if ! versions=$(gh api --paginate "$base/packages/maven/$pkg/versions?per_page=100" \
+                              --jq '.[] | "\(.id) \(.name)"'); then
+              echo "::error::Could not read the versions of $pkg; nothing more is deleted from GitHub Packages."
+              exit 1
+            fi
+            id=$(awk -v v="$VERSION" '$2 == v { print $1 }' <<< "$versions")
+            count=$(grep -c . <<< "$versions" || true)
+            if [ -z "$id" ]; then
+              echo "- $pkg $VERSION: not present" | tee -a "$GITHUB_STEP_SUMMARY"
+            elif [ "$count" -eq 1 ]; then
+              # The API refuses to delete the last version of a package; the package goes instead.
+              gh api -X DELETE "$base/packages/maven/$pkg"
+              echo "- $pkg $VERSION: was the only version — package deleted" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              gh api -X DELETE "$base/packages/maven/$pkg/versions/$id"
+              echo "- $pkg $VERSION (id $id): deleted" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      - name: Harbor (by hand)
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Harbor — delete by hand"
+            echo ""
+            echo "Project \`$HARBOR_PROJECT\` on https://$REGISTRY — each repository's artifact tagged \`$VERSION\`, where present:"
+            echo ""
+            # The current set first: niord-app-en and the chart. Then the history: niord-app-dk
+            # and niord-app-gl, which niord-ng built from 4.0.50 until the country modules left
+            # on 2026-10-06, and the niord/<module>-be names up to 4.0.49
+            # (docs/image-split-plan.md, step 2). They stay for a retraction of an old version, and
+            # go out of this list when their repositories are deleted (step 4). A country's own
+            # images are tagged <base>.<run> and are retracted in its repository.
+            for repo in niord/niord-app-en charts/niord; do
+              echo "- \`$repo:$VERSION\`"
+            done
+            echo "- history, versions up to the split only:"
+            for repo in niord/niord-app-dk niord/niord-app-gl \
+                        niord/niord-app-be niord/niord-dk-be niord/niord-gl-be; do
+              echo "  - \`$repo:$VERSION\`"
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Harbor still holds $VERSION — delete the artifacts listed in the summary in the Harbor UI."
+
+      # The release on the tag, with its attached niord-fe-src and niord-country-kit zips (deleting
+      # a release deletes its assets, not its tag), before the Tag step deletes the tag. Found by
+      # its tag name, which the version is checked again for; a 404 is a release that never was or
+      # is gone already.
+      - name: GitHub release
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^4\.0\.[0-9]+$ ]]; then
+            echo "::error::'$VERSION' is not a 4.0.<run> version"
+            exit 1
+          fi
+          echo "### GitHub release" >> "$GITHUB_STEP_SUMMARY"
+          err="$RUNNER_TEMP/release.err"
+          if id=$(gh api "repos/$REPO/releases/tags/v$VERSION" --jq .id 2> "$err"); then
+            gh api -X DELETE "repos/$REPO/releases/$id"
+            echo "- release v$VERSION (with its niord-fe-src and niord-country-kit assets): deleted" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif grep -q 'HTTP 404' "$err"; then
+            echo "- release v$VERSION: not present" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            cat "$err" >&2
+            echo "::error::Could not read the release of v$VERSION."
+            exit 1
+          fi
+
+      # The checkout keeps its git credential: the Tag step pushes the delete with it.
+      - uses: actions/checkout@v4
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
+        with:
+          sparse-checkout: .github
+
+      # The version is checked again right where it names what is deleted, and the tag goes by
+      # its full ref, so nothing but a refs/tags/v4.0.<run> can be removed here. Asked first
+      # whether it exists: a delete by full ref of a missing tag succeeds with a warning, so git's
+      # "remote ref does not exist" (which only a short name gets) cannot tell the two apart.
+      - name: Tag
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^4\.0\.[0-9]+$ ]]; then
+            echo "::error::'$VERSION' is not a 4.0.<run> version"
+            exit 1
+          fi
+          tag_ref="refs/tags/v$VERSION"
+          echo "### Tag" >> "$GITHUB_STEP_SUMMARY"
+          present=0
+          git ls-remote --exit-code origin "$tag_ref" > /dev/null || present=$?
+          case "$present" in
+            0)
+              git push origin --delete "$tag_ref"
+              echo "- v$VERSION: deleted" | tee -a "$GITHUB_STEP_SUMMARY" ;;
+            2)
+              echo "- v$VERSION: not present" | tee -a "$GITHUB_STEP_SUMMARY" ;;
+            *)
+              echo "::error::Could not read the tags of origin (git ls-remote exit $present)."
+              exit 1 ;;
+          esac

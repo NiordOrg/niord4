@@ -1,0 +1,119 @@
+# The frontend, built where no credential beyond the workflow's own token is: set-up verifies the
+# pinned base product zip and packs by their hashes and generates the workspace, then the
+# country's specs, lint and the build of both applications run, the build ending with the checks
+# on every country build. The public site's image is built and checked here too, from the built
+# output (npm run image:info): the container test in a browser, the layout check and the
+# separation check against the image (fe-country-split-plan §4.11 rule 5). The output and the image
+# leave this job only as artifacts with their SHA-256, which the push job verifies; that job runs
+# no npm and no kit code. GitHub Packages (the base product's registry) is read with the
+# workflow's token, which only the set-up step holds. The image's name comes from the REGISTRY and
+# HARBOR_PROJECT of this workflow's env, which the country sets as it does for its other images.
+frontend:
+  name: Frontend (set-up, test, lint, build, public-site image)
+  runs-on: ubuntu-latest
+  timeout-minutes: 45
+  permissions:
+    contents: read
+    packages: read
+  outputs:
+    info-image: ${{ steps.image.outputs.ref }}
+  defaults:
+    run:
+      working-directory: fe
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Set up JDK 25 (Temurin) + GitHub Packages credentials
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '25'
+        cache: maven
+        server-id: github
+        server-username: GITHUB_ACTOR
+        server-password: GITHUB_TOKEN
+    # The generated workspace's lockfile is the pinned base product's, so the pins file keys
+    # npm's cache.
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: npm
+        cache-dependency-path: fe/niord-pins.lock.json
+    # Set-up runs Maven (../be/mvnw dependency:copy) for the pinned zip. setup-java's settings.xml
+    # gives the server `github` the password ${env.GITHUB_TOKEN}, which GitHub never exports by
+    # itself, and GitHub Packages refuses a read without a token even of a public package: so the
+    # workflow token is bound here, on the one step that runs Maven, and nowhere else.
+    # GITHUB_ACTOR, the user name, is a variable every runner sets.
+    - name: Set up the workspace
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        node setup.mjs
+    - name: Install dependencies
+      run: |
+        set -euo pipefail
+        npm ci --ignore-scripts --no-audit --no-fund
+    - name: Unit tests
+      run: |
+        set -euo pipefail
+        npm test
+    - name: Lint
+      run: |
+        set -euo pipefail
+        npm run lint
+    - name: Build both applications
+      run: |
+        set -euo pipefail
+        npm run build
+    - name: Pack the output with its SHA-256
+      run: |
+        set -euo pipefail
+        tar -cf frontend-dist.tar dist .niord/build/niord-build-report.json
+        sha256sum frontend-dist.tar | tee frontend-dist.tar.sha256
+    - uses: actions/upload-artifact@v4
+      with:
+        name: frontend-dist
+        path: |
+          fe/frontend-dist.tar
+          fe/frontend-dist.tar.sha256
+        retention-days: 5
+    - name: Install Chromium for the image checks
+      run: |
+        set -euo pipefail
+        npx playwright install --with-deps --only-shell chromium
+    # The tag is the pinned base version and this run's number, as the deployable's
+    # <base>.<run>; the version is read from the build report and held to a version's shape.
+    - name: Name the public-site image
+      run: |
+        set -euo pipefail
+        node -e "const v = require('./.niord/build/niord-build-report.json').base.version; if (!/^[0-9]+(\.[0-9]+)*$/.test(v)) throw new Error('the build report names no base version'); console.log('BASE_VERSION=' + v)" >> "$GITHUB_ENV"
+    # The repository's name is lower-cased here: GitHub allows capitals in it, an image reference
+    # does not.
+    - name: Build and check the public-site image
+      id: image
+      run: |
+        set -euo pipefail
+        if [ -z "${REGISTRY:-}" ] || [ -z "${HARBOR_PROJECT:-}" ]; then
+          echo "::error::REGISTRY and HARBOR_PROJECT are not set in this workflow's env: the public-site image has no name"
+          exit 1
+        fi
+        name="${GITHUB_REPOSITORY##*/}"
+        IMAGE="$REGISTRY/$HARBOR_PROJECT/${name,,}-info:$BASE_VERSION.$GITHUB_RUN_NUMBER"
+        npm run image:info -- --tag "$IMAGE"
+        echo "ref=$IMAGE" >> "$GITHUB_OUTPUT"
+    - name: Save the image with its SHA-256
+      env:
+        IMAGE: ${{ steps.image.outputs.ref }}
+      run: |
+        set -euo pipefail
+        docker save "$IMAGE" -o info-image.tar
+        sha256sum info-image.tar | tee info-image.tar.sha256
+    - uses: actions/upload-artifact@v4
+      with:
+        name: info-image
+        path: |
+          fe/info-image.tar
+          fe/info-image.tar.sha256
+        retention-days: 5

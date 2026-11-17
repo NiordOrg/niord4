@@ -1,0 +1,76 @@
+# Mine  [templates/tmpl/mine.ftl]
+# std fields [type, promulgation, areas, positions], params []
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Mine.
+SUBJECT: Mine
+DETAILS: A mine has been reported in pos. 55° 30.0'N - 010° 30.0'E. The mine may be dangerous. / Mariners are advised to keep well clear.
+NAVTEX:
+  | MINE REPORTED FOUND 55-30.0N 010-30.0E.
+  | MINE MAY BE DANGEROUS.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   A mine has been reported in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. The mine may be dangerous. Mariners are advised to keep well clear.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Mine.
+SUBJECT: Mine
+DETAILS: A mine has been reported in pos. 56° 00.0'N - 012° 00.0'E. The mine may be dangerous. / Mariners are advised to keep well clear.
+NAVTEX:
+  | MINE REPORTED FOUND 56-00.0N 012-00.0E.
+  | MINE MAY BE DANGEROUS.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   A mine has been reported in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East. The mine may be dangerous. Mariners are advised to keep well clear.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Mine.
+SUBJECT: Mine
+DETAILS: A mine has been reported in pos. 56° 00.0'N - 012° 00.0'E. The mine may be dangerous. / Mariners are advised to keep well clear.
+NAVTEX:
+  | MINE REPORTED FOUND 56-00.0N 012-00.0E.
+  | MINE MAY BE DANGEROUS.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   A mine has been reported in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East. The mine may be dangerous. Mariners are advised to keep well clear.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Mine.
+SUBJECT: Mine
+DETAILS: A mine has been reported in pos. 61° 06.0'N - 045° 15.0'W. The mine may be dangerous. / Mariners are advised to keep well clear.
+NAVTEX:
+  | MINE REPORTED FOUND 61-06.0N 045-15.0W.
+  | MINE MAY BE DANGEROUS.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   A mine has been reported in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West. The mine may be dangerous. Mariners are advised to keep well clear.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Mine.
+SUBJECT: Mine
+DETAILS: Mines have been reported in pos. 55° 30.0'N - 010° 30.0'E and 55° 36.0'N - 010° 45.0'E and 55° 42.0'N - 011° 00.0'E. The mines may be dangerous. / Mariners are advised to keep well clear.
+NAVTEX:
+  | MINES REPORTED FOUND 55-30.0N 010-30.0E
+  | AND 55-36.0N 010-45.0E AND 55-42.0N
+  | 011-00.0E. MINES MAY BE DANGEROUS.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Mines have been reported in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 36.0 min. North - 010 degrees 45.0 min. East and 55 degrees 42.0 min. North - 011 degrees 00.0 min. East. The mines may be dangerous. Mariners are advised to keep well clear.
+
+### geometry: an area (polygon)
+TITLE:   Denmark. The Baltic Sea. Mine.
+SUBJECT: Mine
+DETAILS: Mines have been reported in pos. 55° 30.0'N - 010° 30.0'E and 55° 30.0'N - 011° 00.0'E and 56° 00.0'N - 011° 00.0'E and 56° 00.0'N - 010° 30.0'E. The mines may be dangerous. / Mariners are advised to keep well clear.
+NAVTEX:
+  | MINES REPORTED FOUND 55-30.0N 010-30.0E
+  | AND 55-30.0N 011-00.0E AND 56-00.0N
+  | 011-00.0E AND 56-00.0N 010-30.0E. MINES
+  | MAY BE DANGEROUS.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   Mines have been reported in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 30.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 010 degrees 30.0 min. East. The mines may be dangerous. Mariners are advised to keep well clear.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Mine.
+SUBJECT: Mine
+DETAILS: A mine has been reported. The mine may be dangerous. / Mariners are advised to keep well clear.
+NAVTEX:
+  | MINE REPORTED FOUND. MINE MAY BE
+  | DANGEROUS.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   A mine has been reported. The mine may be dangerous. Mariners are advised to keep well clear.
+

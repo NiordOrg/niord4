@@ -1,0 +1,312 @@
+<div class="admin-toolbar mb-4">
+  <!-- The filter takes the whole first line while the toolbar is one column
+       wide, and returns to its fixed width as soon as the row can hold the
+       action buttons beside it. The right padding is constant, so the text a
+       reader types never runs under the clear button when it appears. -->
+  <span class="relative block w-full sm:w-auto">
+    <input
+      type="text"
+      class="w-full pr-11 text-input sm:w-64"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+      [placeholder]="'admin.publications.categories.filterPlaceholder' | transloco"
+      [attr.aria-label]="'admin.publications.categories.filterPlaceholder' | transloco"
+    />
+    @if (search() !== '') {
+      <button
+        type="button"
+        class="icon-button absolute top-1/2 right-1 -translate-y-1/2 p-1 text-xs"
+        [attr.aria-label]="'admin.publications.categories.clearFilter' | transloco"
+        (click)="search.set('')"
+      >
+        <app-icon name="lucideX" />
+      </button>
+    }
+  </span>
+  <span class="admin-toolbar-spacer"></span>
+  <app-model-language-picker [selection]="modelLanguage" />
+  <button type="button" class="btn-primary" (click)="add()">
+    <app-icon name="lucidePlus" class="mr-1 text-xs" />
+    {{ 'admin.publications.categories.add' | transloco }}
+  </button>
+  <app-menu-trigger
+    icon="lucideSettings"
+    [ariaLabel]="'admin.publications.categories.actionsAriaLabel' | transloco"
+    [menu]="categoryCogMenu"
+  />
+  <app-menu
+    #categoryCogMenu
+    [model]="cogItems()"
+    [ariaLabel]="'admin.publications.categories.actionsAriaLabel' | transloco"
+  />
+</div>
+
+<!--
+  The picker the import confirm opens. Kept off-screen rather than styled away:
+  a hidden input is still the control the file is chosen with, and it is reached
+  only after the confirm has said what the file overwrites.
+-->
+<input
+  #categoryFileInput
+  type="file"
+  accept=".json"
+  class="sr-only"
+  [attr.aria-hidden]="true"
+  tabindex="-1"
+  (change)="onFileSelected($event)"
+/>
+
+<app-progress-bar [visible]="loading()" />
+
+@if (error()) {
+  <app-error-banner
+    [title]="'admin.publications.categories.loadError' | transloco"
+    [retryLabel]="'admin.publications.retry' | transloco"
+    (retry)="refresh()"
+  />
+} @else if (!loading() && filtered().length === 0) {
+  @if (categories().length === 0) {
+    <app-empty-state
+      icon="lucideInbox"
+      [title]="'admin.publications.categories.empty.none' | transloco"
+    />
+  } @else {
+    <app-empty-state
+      icon="lucideFilterX"
+      [title]="'admin.publications.categories.empty.noMatches' | transloco"
+    />
+  }
+} @else if (!loading()) {
+  <div class="admin-card">
+    <table class="niord-table">
+      <thead>
+        <tr>
+          <th class="w-16">{{ 'admin.publications.categories.column.priority' | transloco }}</th>
+          <!-- The name only needs a floor from the width at which the id column
+               competes with it; below that it is the one flexible column and a
+               floor there would push the table wider than the screen. -->
+          <th class="md:min-w-40">{{ 'admin.publications.categories.column.name' | transloco }}</th>
+          <!-- The id and the count are what a narrow screen gives up first: the
+               id moves under the name below md, the count is the least urgent
+               number on the row and goes below lg. -->
+          <th class="max-md:hidden">
+            {{ 'admin.publications.categories.column.categoryId' | transloco }}
+          </th>
+          <th>{{ 'admin.publications.categories.column.publish' | transloco }}</th>
+          <th class="num max-lg:hidden">
+            {{ 'admin.publications.categories.column.publications' | transloco }}
+          </th>
+          <th>
+            <span class="sr-only">{{
+              'admin.publications.categories.column.actions' | transloco
+            }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (category of filtered(); track category.categoryId) {
+          @let text = name(category);
+          <tr>
+            <td class="text-fg-muted">{{ category.priority ?? '—' }}</td>
+            <!-- The name is what the row is; everything else on it qualifies the name.
+                 Where the id has no column of its own it rides under the name, so
+                 the string a series stores stays on the row it belongs to. -->
+            <td class="font-semibold">
+              <span [attr.lang]="text.lang">{{ text.value }}</span>
+              <span class="mt-0.5 block font-mono text-xs font-normal text-fg-muted md:hidden">{{
+                category.categoryId
+              }}</span>
+            </td>
+            <td class="max-md:hidden font-mono text-xs">{{ category.categoryId }}</td>
+            <!-- The flag that decides whether this category's published issues are
+                 exposed on the public site at all, so it is a column rather than
+                 something you have to open a row to see — and a word rather than a
+                 dot, because the intro sentence above the table names it and a
+                 reader has to be able to tie the two together. -->
+            <td [class.text-fg-muted]="!category.publish">
+              {{
+                (category.publish
+                  ? 'admin.publications.categories.yes'
+                  : 'admin.publications.categories.no'
+                ) | transloco
+              }}
+            </td>
+            <td class="num max-lg:hidden">{{ publicationCount(category) }}</td>
+            <td class="text-right whitespace-nowrap">
+              <!-- Edit only. Delete lives in the editor's own footer, so a list that
+                   changes a few times a year carries no destructive control beside
+                   the pencil on every row. -->
+              <button
+                type="button"
+                class="icon-button text-xs"
+                [attr.aria-label]="
+                  'admin.publications.categories.editAria' | transloco: { name: text.value }
+                "
+                (click)="edit(category)"
+              >
+                <app-icon name="lucidePencil" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<app-drawer
+  #drawerRef
+  [visible]="editorModel() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="close()"
+>
+  @if (editorModel()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="category-id" class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.categories.field.categoryId' | transloco }}
+        </label>
+        <!-- Locked on edit by the form schema, which also reflects `required`
+             onto the control so a blank id marks itself. -->
+        <input
+          id="category-id"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.categoryId"
+          [attr.aria-invalid]="categoryIdUnservable() || null"
+          [attr.aria-describedby]="categoryIdUnservable() ? 'category-id-error' : null"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <p class="text-xs text-fg-muted">
+          {{ 'admin.publications.categories.hint.categoryId' | transloco }}
+        </p>
+        @if (categoryIdUnservable()) {
+          <p id="category-id-error" class="text-xs text-danger" role="alert">
+            {{ unservableIdKey | transloco }}
+          </p>
+        }
+      </div>
+
+      <!--
+        One heading, then a flagged field per configured language -- the shape
+        every other admin editor uses for per-language text.
+
+        The server keeps a language's row only while it has a name, so a
+        description typed against a blank name is dropped with it. The hint
+        under the descriptions says so.
+      -->
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.categories.field.name' | transloco }}
+        </span>
+        <div class="flex flex-col gap-2">
+          @for (lang of installationLanguages; track lang.value) {
+            <div class="flex flex-col gap-1">
+              <app-localized-text-input
+                [lang]="lang.value"
+                [value]="names()[lang.value]"
+                (valueChange)="setName(lang.value, $event)"
+                ariaLabelKey="admin.publications.categories.field.name"
+              />
+              <app-length-counter [text]="names()[lang.value]" [limit]="textMax" />
+            </div>
+          }
+        </div>
+        <!-- Muted, not red: a new category starts without a name, and this says
+             why Save waits rather than that something went wrong. -->
+        @if (nameMissing()) {
+          <p class="text-xs text-fg-muted">
+            {{ 'admin.publications.categories.hint.nameRequired' | transloco }}
+          </p>
+        }
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.categories.field.description' | transloco }}
+        </span>
+        <div class="flex flex-col gap-2">
+          @for (lang of installationLanguages; track lang.value) {
+            <div class="flex flex-col gap-1">
+              <app-localized-text-input
+                [lang]="lang.value"
+                [value]="descriptions()[lang.value]"
+                (valueChange)="setDescription(lang.value, $event)"
+                ariaLabelKey="admin.publications.categories.field.description"
+              />
+              <app-length-counter [text]="descriptions()[lang.value]" [limit]="textMax" />
+            </div>
+          }
+        </div>
+        <p class="text-xs text-fg-muted">
+          {{ 'admin.publications.categories.hint.description' | transloco }}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="category-priority" class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.categories.field.priority' | transloco }}
+        </label>
+        <input
+          id="category-priority"
+          type="number"
+          step="1"
+          class="w-full text-input"
+          [formField]="form.priority"
+          [attr.aria-invalid]="priorityErrorKey() ? true : null"
+          [attr.aria-describedby]="priorityErrorKey() ? 'category-priority-error' : null"
+        />
+        <p class="text-xs text-fg-muted">
+          {{ 'admin.publications.categories.hint.priority' | transloco }}
+        </p>
+        <!-- One line: an empty Order first (required), then one out of range. -->
+        @if (priorityErrorKey(); as errorKey) {
+          <p id="category-priority-error" class="text-xs text-danger" role="alert">
+            {{ errorKey | transloco }}
+          </p>
+        }
+      </div>
+
+      <label class="flex items-start gap-2 text-sm">
+        <input type="checkbox" class="checkbox mt-0.5" [formField]="form.publish" />
+        <span>
+          <span class="font-medium">
+            {{ 'admin.publications.categories.field.publish' | transloco }}
+          </span>
+          <span class="block text-xs text-fg-muted">
+            {{ 'admin.publications.categories.hint.publish' | transloco }}
+          </span>
+        </span>
+      </label>
+
+      <!-- Hidden submit makes Enter in any field submit the form (gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full items-center gap-2">
+    <!-- Only for a category that exists, and set apart from the two buttons that
+         close the drawer: what it starts is a confirm, and what that confirm may
+         come back with is the refusal naming everything still pointing here. -->
+    @if (editing()) {
+      <button type="button" class="btn-tertiary text-danger" (click)="removeCurrent()">
+        {{ 'admin.publications.categories.editor.delete' | transloco }}
+      </button>
+    }
+    <span class="flex-1"></span>
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.publications.categories.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.publications.categories.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>
+
+<app-confirm />

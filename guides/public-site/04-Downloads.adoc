@@ -1,0 +1,68 @@
+
+[#downloads]
+== Downloads and Publications
+
+_Downloads_ in the menu bar lists the publications of the authority: for example the weekly Notices
+to Mariners, their annexes, a yearly almanac and other nautical publications. Each publication is
+listed under the name of its category, with a book in front of its title.
+
+The page has two tabs: _Active NtM and Publications_, with the publications that are current now,
+and _Historical NtM and Publications_, with the ones of a period you choose.
+
+[#active-publications]
+=== Current publications
+
+_Active NtM and Publications_ is the tab the page opens on. It lists the publications that are
+public at this moment.
+
+.Downloads: current publications
+image::PublicSiteDownloadsActive.png[Downloads: current publications, 800]
+
+Each publication has one or two links:
+
+* _Download_ opens the publication in a new tab: its document, usually a PDF, which you can read,
+  save or print there, or, for a publication another body publishes, that body's web page.
+* _Browse_ is there for a publication made of messages, such as a weekly edition of the Notices to
+  Mariners. It shows the messages of that edition on the site itself (see <<browse-publication>>).
+
+[#historical-publications]
+=== Older publications
+
+_Historical NtM and Publications_ finds the publications of an earlier period.
+
+.Downloads: older publications
+image::PublicSiteDownloadsHistorical.png[Downloads: older publications, 800]
+
+. Click the tab _Historical NtM and Publications_.
+. Under _Date Interval_, choose the period: either click one of the year buttons, for this year and
+  each of the four years before it, or fill in a date under _From_ and a date under _To_.
+. The list shows the publications that were public at some time in that period. It appears when
+  both dates are filled in, and changes when you change either of them.
+
+The pressed year button shows which year the list is for. The dates are days in the time zone of
+the authority, so a year runs from 1 January to 31 December there.
+
+[#browse-publication]
+=== Browsing a publication
+
+_Browse_ opens the _Details_ view with the messages of that publication only, the way they were
+published in it.
+
+.Browsing a publication
+image::PublicSiteBrowsePublication.png[Browsing a publication, 800]
+
+While you browse a publication, the filter bar changes:
+
+* The buttons _Navigational Warnings_, _Notices to Mariners_ and _Show Active Now_ are not there: the
+  list is the publication's, whatever you had chosen before.
+* _Print_ prints the publication's messages (see <<printing>>).
+* A row of area buttons shows the sea areas the messages are in. Click an area to see only its
+  messages; click more areas to add them, and click an area again to leave it out.
+
+A publication may hold messages that have since been cancelled or have run out. A cancelled message
+is marked _Cancelled_ beside its number, and one that has run out _Expired_, except a permanent
+notice, which has no mark (see <<reading-a-message>>).
+
+Nothing on the page names the publication you are browsing, so keep track of which one you opened.
+The _List_ and _Map_ buttons of the menu bar, and _Details_ as well, take you back to the site's
+current messages; to see the publication again, click _Browse_ on the _Downloads_ page once more.

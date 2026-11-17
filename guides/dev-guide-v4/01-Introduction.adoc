@@ -1,0 +1,158 @@
+
+[#introduction]
+== Introduction
+
+Niord (Nautical Information Directory) is a system for producing and publishing Navigational
+Warnings (NW) and Notices to Mariners (NM). Editors write and publish messages in an
+administration application, mariners read them on a public website, and a backend stores the
+messages and sends them out by mail and other channels. The Danish Emergency Management Agency
+is the organisation behind Niord.
+
+This guide is for developers of Niord version 4. It is short on purpose: it explains how the
+system is put together and which rules the code follows, and for the details it names the
+documents in the source repository that are kept up to date with the code. Where this guide and
+such a document disagree, the document in the repository is right.
+
+The source code of Niord 4 lives in one repository, which is not public yet; it is to move to
+the NiordOrg organisation on GitHub (https://github.com/NiordOrg). This guide therefore names
+files as paths relative to the root of that repository, such as `be/README.md`.
+
+Earlier versions have guides of their own, kept as an archive:
+link:../dev-guide-v3/guide.html[Niord v3 (Quarkus)] and
+link:../dev-guide-v2/guide.html[Niord v2 (Wildfly)]. Niord 4 replaces both.
+
+[#the-base-product-and-its-countries]
+=== The base product and its countries
+
+Niord 4 is split into a _base product_ and _countries_.
+
+* The *base product* is the whole system, the same for every country and knowing none of them.
+  It is the repository this guide describes. It is released in numbered versions,
+  `4.0.<n>`: a merge to the main branch that changes code and passes its checks becomes a new
+  version, while a merge that changes only documentation publishes nothing of its own
+  (<<releases-images-and-deployment>>).
+* A *country* is a repository of its own, built on one pinned version of the base product. It
+  adds only what makes its deployment its own: its configuration, branding, languages, texts and
+  starting data, and at most a little code through the extension points the base product offers.
+  It never edits the base product's code. On the backend it may not replace a class of the base
+  product at all; on the frontend it may, where no extension point serves, replace a single file
+  with its own copy, a guarded override that the build checks again whenever the base product
+  changes the original (<<what-a-country-is>>). The Danish and Greenland deployments are two such
+  countries.
+
+A fix or a new feature made in the base product reaches every country when that country moves
+to the new version, and a country's own choices stay in its repository through every upgrade.
+How a country is built is the subject of <<building-a-country>>.
+
+[#the-parts]
+=== The parts of the repository
+
+[cols="25,75",options="header"]
+|===
+|Path |What
+
+|`be/`
+|The backend: a Maven reactor with the parent `org.niord:niord-parent` (`be/pom.xml`) and three
+ modules. `be/niord/` is the base library, `org.niord.base:niord-base`, which holds all the
+ backend code. `be/niord-bootstrap/` packages the data a new deployment starts with
+ (`be/niord/bootstrap/`) as a zip. `be/niord-app/` is the generic English application built on the
+ library, the reference deployable.
+
+|`be/k8s/`
+|The container image of the backend (`be/k8s/docker/Dockerfile`), its build scripts and the Helm
+ chart that deploys a complete Niord stack (`be/k8s/helm/niord/`).
+
+|`fe/`
+|The frontend: one Angular workspace with two applications. `fe/ui-apps/admin/` is the
+ administration application (Angular project `niord-app`), used by editors, administrators and
+ system administrators after they sign in. `fe/ui-apps/info/` is the public site for mariners
+ (Angular project `niord-info`), anonymous and read-only, shipped in a container of its own.
+
+|`country-kit/`
+|The country kit: the set-up, the tools and the checks a country repository builds its frontend
+ with, the country guides, and an example country. It is published as a package of its own.
+
+|`docs/`
+|Plans and records of decisions taken across the repository.
+
+|`guides/`
+|The sources of this site.
+|===
+
+The two halves have their own detailed documents: `be/README.md` and `be/AGENTS.md` for the
+backend, `fe/README.md`, `fe/AGENTS.md` and `fe/docs/` for the frontend, and
+`country-kit/README.md` with `country-kit/docs/` for the kit. The `AGENTS.md` files are written as
+working rules for anyone changing the code, people and coding assistants alike.
+
+How the parts work together in a running deployment:
+
+....
+  editors, administrators             mariners
+           |                              |
+           v                              v
+  administration application       public site (own host, nginx)
+  (served by the backend)            |  passes on only the public,
+           |                         |  read-only /rest paths
+           v                         v
+  +---------------------------------------------+       Keycloak (/auth)
+  | backend: REST API under /rest               | <---  signs editors in and
+  | (Spring Boot, the niord-base library)       |       issues their tokens
+  +---------------------------------------------+
+           |                  |
+           v                  v
+  PostgreSQL + PostGIS     mail server, other channels
+  (all data, incl. files)
+....
+
+[#the-stack]
+=== The stack
+
+The backend:
+
+* Java 25 and Spring Boot 4 with Spring MVC. Every REST handler is a `@RestController` method
+  mapped under `/rest/...`.
+* PostgreSQL 18 with PostGIS. Liquibase builds and changes the schema at start-up; Hibernate ORM 7
+  then only validates it. Geometries are handled with Hibernate Spatial and GeoTools.
+* Jackson 3 for JSON (the packages `tools.jackson.*`; the annotations are still
+  `com.fasterxml.jackson.annotation.*`).
+* Keycloak for sign-in. The backend validates the tokens Keycloak issues and uses Keycloak's admin
+  API to manage users, groups and the client of each domain.
+* JBeret for batch jobs (imports and similar long-running work), FreeMarker for templates, reports
+  and mails, a full-text message index (Lucene by default; the `disableLucene` setting switches it
+  to PostgreSQL's full-text search), and an embedded ActiveMQ Artemis broker.
+
+The frontend:
+
+* Angular 22 with standalone components, without zone.js, built on signals and Signal Forms;
+  TypeScript 6 in strict mode.
+* Tailwind CSS 4 with the workspace's own design tokens, `@angular/cdk` and `@angular/aria` for
+  behaviour and Lucide icons. No component library is used, and none is to be added.
+* OpenLayers 10 for maps, Transloco 8 for translations, TipTap 3 and CodeMirror 6 for rich text
+  and code, `keycloak-js` 26 for sign-in.
+* Vitest 4 for unit tests, Playwright for end-to-end tests, ESLint and Prettier for code quality.
+
+[#the-public-site-and-niord-proxy]
+=== The public site and the old niord-proxy
+
+Earlier versions showed the active messages to mariners through a separate Java web application,
+niord-proxy. Niord 4 has no such application: the public site, `fe/ui-apps/info/`, replaces it.
+It is an Angular application served by nginx in a container of its own. The container passes only
+a fixed list of public, read-only `/rest` paths on to the backend and strips every credential on
+the way (the list is in `fe/ui-apps/info/AGENTS.md`).
+
+The Helm chart still has a component called `proxy`, whose service is named `niord-proxy` in a release
+named `niord` (other releases put their own name in front, <<the-helm-chart>>). It is an nginx reverse proxy in
+front of the backend and Keycloak (<<the-helm-chart>>), and it has nothing to do with the old
+application.
+
+[#integrating-with-niord]
+=== Integrating with Niord
+
+This guide does not cover integration. A system that reads messages from Niord uses the public
+REST API under `/rest/public/v1`, which needs no sign-in. It is described in three documents on
+this site:
+
+* link:../public-api/api.html[Niord Public API]: the endpoints and their parameters.
+* link:../model/model.html[Niord Model]: the message model the API returns.
+* link:../presentation/presentation.html[Niord Message Presentation]: how a client presents
+  the messages to mariners.

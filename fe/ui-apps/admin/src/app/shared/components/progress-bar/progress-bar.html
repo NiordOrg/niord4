@@ -1,0 +1,15 @@
+@if (visible()) {
+  <div
+    class="progress"
+    [class.is-indeterminate]="mode() === 'indeterminate'"
+    role="progressbar"
+    [attr.aria-valuenow]="mode() === 'determinate' ? (value() ?? 0) : null"
+    [attr.aria-valuemin]="mode() === 'determinate' ? 0 : null"
+    [attr.aria-valuemax]="mode() === 'determinate' ? 100 : null"
+  >
+    <div
+      class="progress-fill"
+      [style.width.%]="mode() === 'determinate' ? (value() ?? 0) : null"
+    ></div>
+  </div>
+}

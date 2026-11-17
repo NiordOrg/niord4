@@ -1,0 +1,214 @@
+{
+  "format": 1,
+  "note": "The branding contract (fe-country-split-plan §4.4): per application, every key a country may brand and every file it may ship, each with the path in the country's <app>/assets/ folder and the build's output path. `{lang}` is a UI language of the application, `{doc}` a legal document. A key's kind says what its value is: `text` plain text, `html` text the application renders as HTML (its markup held to the country's reference branding), `url` an https: URL, `file` the output path of a brandable file the country ships. A required key is in every UI language's branding; a key that `requires` others is set only with them, in each language that sets it, and a key that `recommends` others is warned of when set without them; a required file is shipped (the base product's own build stages its default copy, so no page links a file it lacks). The `country.` key namespace is the country's own. The Niord mark and the administration app's favicon are the base product's and not brandable. A file's `width` and `height` are its pixel size, read from a PNG's header (IHDR); a size the schema leaves out is free. A key that `forbids` a rule holds nothing that rule, named in lib/branding.mjs, finds: `year` a year written in, `address` an address written in or {{url}} outside an href. A legal document's `labelKey` is the footer's label that offers it: a label is set only with the document's `titleKey` and with the document shipped in some branding language, and a shipped document without its label is warned of; a legal section whose `labelCheck` is `warning` belongs to a footer a country may replace with its own (the public site's default footer), so there a label without its title or document is warned of, not failed. A legal document that `namesPreferences` names each key the public site stores in a reader's browser, with its prefix, as ui-apps/info/src/app/core/services/preference-keys.json lists them.",
+  "apps": {
+    "admin": {
+      "texts": {
+        "path": "branding/{lang}.json",
+        "output": "assets/branding/{lang}.json"
+      },
+      "keys": {
+        "footer.copyright": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The footer's copyright line; the footer shows it only when set."
+        },
+        "footer.link": {
+          "kind": "url",
+          "placeholders": [],
+          "required": false,
+          "description": "Where the copyright line links."
+        },
+        "footer.disclaimer": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The footer's label for the disclaimer; the footer offers the document only when set."
+        },
+        "footer.cookies": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The footer's label for the cookie policy; the footer offers the document only when set."
+        },
+        "main.footer.links.center.url": {
+          "kind": "url",
+          "placeholders": [],
+          "required": false,
+          "requires": ["main.footer.links.center.ariaLabel"],
+          "description": "Where the footer's logo links; set with the link's accessible name."
+        },
+        "main.footer.links.center.ariaLabel": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The logo link's accessible name."
+        },
+        "main.footer.links.center.imageAlt": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The logo's alternative text."
+        },
+        "main.footer.links.center.imageSrc": {
+          "kind": "file",
+          "placeholders": [],
+          "required": false,
+          "requires": ["main.footer.links.center.imageAlt"],
+          "description": "The footer's logo, one of the files below; the footer shows it only when set, with its alternative text."
+        },
+        "main.footer.dialogs.disclaimer.title": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The disclaimer dialog's title."
+        },
+        "main.footer.dialogs.cookies.title": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The cookie policy dialog's title."
+        }
+      },
+      "files": {
+        "branding/company-logo-{lang}.png": {
+          "output": "assets/branding/company-logo-{lang}.png",
+          "types": ["png"],
+          "required": false,
+          "description": "The authority's logo in the footer, per language."
+        }
+      },
+      "legal": {
+        "path": "legal/{doc}.{lang}.html",
+        "output": "assets/legal/{doc}.{lang}.html",
+        "documents": {
+          "disclaimer": {
+            "titleKey": "main.footer.dialogs.disclaimer.title",
+            "labelKey": "footer.disclaimer"
+          },
+          "cookies": {
+            "titleKey": "main.footer.dialogs.cookies.title",
+            "labelKey": "footer.cookies"
+          }
+        }
+      }
+    },
+    "info": {
+      "texts": {
+        "path": "branding/{lang}.json",
+        "output": "assets/branding/{lang}.json"
+      },
+      "keys": {
+        "MAP_COPYRIGHT": {
+          "kind": "html",
+          "placeholders": [],
+          "required": false,
+          "description": "The map's attribution line."
+        },
+        "MAP_ACCESSIBILITY": {
+          "kind": "html",
+          "placeholders": ["url"],
+          "required": false,
+          "forbids": ["address"],
+          "description": "The map's link to the accessibility statement, whose address the product fills into {{url}}, the link's href, from info.config.ts; the value writes no address of its own."
+        },
+        "FOOTER_COPYRIGHT": {
+          "kind": "html",
+          "placeholders": ["year"],
+          "required": false,
+          "forbids": ["year"],
+          "description": "The footer's copyright line, over the English pack's neutral one; the product fills {{year}} with the deployment's own year, so the value writes none."
+        },
+        "FOOTER_DISCLAIMER": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The country footer's label for the disclaimer."
+        },
+        "FOOTER_COOKIES": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The country footer's label for the cookie policy."
+        },
+        "FOOTER_ACCESSIBILITY": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The country footer's label for the accessibility statement."
+        },
+        "FOOTER_LOGO": {
+          "kind": "file",
+          "placeholders": [],
+          "required": false,
+          "recommends": ["FOOTER_LOGO_ALT"],
+          "description": "The country footer's logo, one of the files below; set it with its alternative text."
+        },
+        "FOOTER_LOGO_ALT": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The logo's alternative text."
+        },
+        "LEGAL_TITLE_DISCLAIMER": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The disclaimer dialog's title."
+        },
+        "LEGAL_TITLE_COOKIES": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "description": "The cookie policy dialog's title."
+        }
+      },
+      "files": {
+        "branding/favicon.png": {
+          "output": "assets/branding/favicon.png",
+          "types": ["png"],
+          "width": 32,
+          "height": 32,
+          "required": true,
+          "description": "The favicon, 32×32 px, which index.html links."
+        },
+        "branding/apple-touch-icon.png": {
+          "output": "assets/branding/apple-touch-icon.png",
+          "types": ["png"],
+          "width": 152,
+          "height": 152,
+          "required": true,
+          "description": "The touch icon, 152×152 px, which index.html links."
+        },
+        "branding/logo-gray.png": {
+          "output": "assets/branding/logo-gray.png",
+          "types": ["png"],
+          "height": 44,
+          "required": false,
+          "description": "The country footer's logo, 44 px high, twice the 22 px the footer draws; its width is free."
+        },
+        "branding/logo-gray-{lang}.png": {
+          "output": "assets/branding/logo-gray-{lang}.png",
+          "types": ["png"],
+          "height": 44,
+          "required": false,
+          "description": "The country footer's logo, per language, 44 px high, twice the 22 px the footer draws; its width is free."
+        }
+      },
+      "legal": {
+        "path": "legal/{doc}.{lang}.html",
+        "output": "assets/legal/{doc}.{lang}.html",
+        "labelCheck": "warning",
+        "documents": {
+          "disclaimer": { "titleKey": "LEGAL_TITLE_DISCLAIMER", "labelKey": "FOOTER_DISCLAIMER" },
+          "cookies": {
+            "titleKey": "LEGAL_TITLE_COOKIES",
+            "labelKey": "FOOTER_COOKIES",
+            "namesPreferences": true
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,242 @@
+
+[#administrators]
+== For Administrators
+
+These changes meet users with the _Admin_ role, who look after the base data that editors depend
+on: charts, areas, sources, publications, users and mailing lists.
+
+[#administrators-admin-area]
+=== The Admin Area
+
+[#administrators-rail-and-overview]
+==== A list of sections instead of one page of tiles
+
+The old _Admin_ page showed the base data as tiles on one page. The _Admin_ area now has a list of
+its sections down the left side and an _Overview_ page with a card for each: _Charts_, _Areas_,
+_Publications_, _Publication categories_, _Sources_, _Users & Contacts_ and _Mailing Lists_. The
+list stays on screen, so you move between sections in one click. See
+link:../admin-manual/manual.html#admin-page[Admin Page] in the administrator manual.
+
+[#administrators-domain-access]
+==== Access follows the current domain
+
+As before, you reach the _Admin_ area when you hold the _Admin_ role in the domain you are working
+in. The new application checks this against the current domain only, so switching to a domain
+where you are not an administrator takes the _Admin_ item out of the menu.
+
+[#administrators-drawers]
+==== Editing in a side panel
+
+Charts, sources, users, mailing lists and the other lists are edited in a panel that slides in from
+the right over the list, instead of on a page of their own. If you close the panel with unsaved
+changes, you are asked first. Lists are filtered by typing in the box above them and show 20 rows
+to a page.
+
+[#administrators-model-language]
+==== Seeing the data in another language
+
+_Areas_, _Sources_ and _Publication categories_ have a _Model language_ choice above the list. It
+shows the names in another of the deployment's message languages, without changing the language of
+the application.
+
+[#administrators-base-data]
+=== Charts, Areas and Sources
+
+[#administrators-charts]
+==== Charts
+
+A chart number can no longer be changed once the chart is created. The map beside the list shows
+the coverage of the charts on the current page, each labelled with its number. A chart's coverage
+can be drawn on the map or, with _Edit as text_, typed or pasted as text. See
+link:../admin-manual/manual.html#charts[Charts] in the administrator manual.
+
+[#administrators-areas-actions]
+==== New actions in the Areas menu
+
+The cog menu of the _Areas_ page has two new actions for re-indexing, and a third, for firing
+areas, that is described in the next section. _Re-index areas_ recomputes the order of the area
+tree. _Re-index published messages_ recomputes the order of every published message of the current
+domain within its area. It overwrites any order editors have set by hand, in every area: a message in an
+area that sorts its messages by position is placed by its position, and every other message,
+including one that has no position, is reset to the same neutral value, so the order among those
+messages is lost. See link:../admin-manual/manual.html#areas[Areas] in the administrator manual.
+
+[#administrators-firing-area-messages]
+==== Generating the firing area messages
+
+_Generate firing area messages…_, in the same cog menu, creates a message for each firing area. It
+asks for the message series to use and, if you like, a tag to put the messages in, and it is shown
+only in a domain that has a firing schedule. The old manuals described this function on a country's
+own integration page; it is now part of the base product.
+
+[#administrators-area-extent]
+==== Area extents as text
+
+Like a chart's coverage, an area's extent can now be typed or pasted as text with _Edit as text_,
+or imported, as well as drawn.
+
+[#administrators-users]
+=== Users and Contacts
+
+[#administrators-users-tab]
+==== Who sees the Users tab
+
+The _Users_ tab of _Users & Contacts_ is shown only to an administrator who also holds the
+_manage-users_ role of the sign-in service, Keycloak. Without that role you see the _Contacts_ tab
+only. The _Keycloak…_ link above the list opens the sign-in service's own administration pages,
+where a user can be renamed. See
+link:../admin-manual/manual.html#users-contacts[Users & Contacts] in the administrator manual.
+
+[#administrators-deleting-users]
+==== Deleting a user
+
+The old manual said a user could be deleted only if the user had never created or edited a message
+or a comment. Delete now removes the user's account from the sign-in service at once, whatever the
+user has done in Niord, and takes the user off every mailing list. To keep the account but take
+away the access, remove the user from the user groups instead.
+
+[#administrators-user-fields]
+==== Creating a user
+
+First and last name are separate fields, and the user name cannot be changed once the user is
+created. The password field is never filled in: leave it empty to keep the password. The
+_Required actions_ _Update Profile_, _Update Password_ and _Verify Email_ are sent only when the
+user is created.
+
+[#administrators-mailing-lists]
+=== Mailing Lists
+
+[#administrators-mailing-lists-one-page]
+==== One page for both administrators and system administrators
+
+_Mailing Lists_ is still a section of the _Admin_ area. An administrator manages the recipients of
+each list, and a system administrator also creates, edits, copies and deletes lists and their
+triggers on the same page. A list is edited in a side panel where each trigger is a card you can
+fold away. See link:../admin-manual/manual.html#mailing-lists[Mailing Lists] in the administrator
+manual and link:../sysadmin-manual/manual.html#mailing-lists[Mailing Lists] in the system
+administrator manual.
+
+[#administrators-mailing-list-recipients]
+==== Recipients
+
+Users and contacts are added to a list in two separate parts of the recipients panel, and each part
+has its own _Save_. The buttons that add or remove all recipients act only on the rows your filter
+shows.
+
+[#administrators-mailing-list-triggers]
+==== Triggers
+
+A scheduled trigger cannot be saved without a time zone. _Test_ runs a trigger as it stands in the
+panel, before you save it, so you can try a change first.
+
+[#administrators-publications]
+=== Publications
+
+Publications have changed more than anything else in Niord. The old model of publication
+templates, publications, file types, message tag filters and a _Recording_ status has been replaced
+by series and issues. The screens for publications are still being finished, so this section
+describes the model only in outline; see
+link:../admin-manual/manual.html#publications[Publications] in the administrator manual for the
+screens.
+
+[#administrators-publications-model]
+==== Series, issues, one-off publications and categories
+
+A _series_ is a publication as a standing thing, for example a weekly Notices to Mariners. It holds
+the settings that all its issues follow: its category, how often it comes out, how its content is
+made, which messages it selects and how its files are named. An _issue_ is one released document of
+a series, for example the Notices to Mariners of one week. A _one-off publication_ is a publication
+that comes out once, such as a single uploaded document or a link to one. A _category_ groups
+publications, and decides whether they are shown on the public site.
+
+....
+Category  "Notices to Mariners"     (shown on the public site, or not)
+ |
+ +-- Series  "Weekly Notices to Mariners"
+ |     +-- Issue  week 26    published
+ |     +-- Issue  week 27    published
+ |     +-- Issue  week 28    open: being prepared
+ |
+ +-- One-off publication  "List of firing areas"
+       +-- its single issue
+....
+
+[#administrators-publications-content]
+==== How a series gets its content
+
+A series' content is _Generated from criteria_, an _Uploaded PDF_, an _External link_ or
+_Reference only_. A generated series chooses its messages by criteria, such as message series,
+areas and categories, instead of the old message tag filter. It also says how a message belongs to
+an issue: _Published in the issue's interval_, _In force at the cut-off_, or _Compiled from another
+series_, which builds, for example, a yearly list from the weekly issues.
+
+[#administrators-publications-issues]
+==== Preparing and publishing an issue
+
+An issue is prepared while it is open: it shows which messages it will hold and which the criteria
+leave out, and why. Before you publish it, a _Checklist_ shows what is ready and what needs
+your attention. When you publish it, its list of messages is frozen and its document is made; in a series that comes out regularly, the next issue then opens by
+itself. A published issue can be amended, given a new edition or withdrawn from the public site,
+and every change is kept in its history.
+
+[#administrators-publications-curation]
+==== Adding or leaving out a message by hand
+
+On an open issue, a message can be added by hand or left out of the issue, always with a reason
+that is kept in the history. An administrator may do this from the issue's page in the _Admin_
+area. The server also accepts a separate role for it, _publication-curate_, but because the pages
+for publications are in the _Admin_ area, that role on its own gives no page to work from; see
+<<sysadmin-roles>>.
+
+[#administrators-publications-domains]
+==== Publications belong to a domain
+
+The _Publications_ page lists the series and one-off publications of the current domain only, and
+a publication can be changed only from the domain that owns it. A setting on each publication
+decides from which domains its issues can be cited in a message.
+
+[#administrators-publication-categories]
+==== Publication categories have a section of their own
+
+Publication categories were a tab of the old _Publications_ page. They are now the section
+_Publication categories_, with the fields _Category ID_, _Name_, _Description_, _Show on the public
+site_ and _Order_, and a column that counts the publications in each. A category cannot be deleted
+while a series or a publication belongs to it. See
+link:../admin-manual/manual.html#publication-categories[Publication Categories] in the
+administrator manual.
+
+[#administrators-gone]
+=== Gone, and What to Use Instead
+
+[cols="35,65",options="header"]
+|===
+| Gone
+| Use instead
+
+| The _Admin_ page with tiles
+| The _Admin_ area's list of sections and its _Overview_ page. See
+  <<administrators-rail-and-overview>>.
+
+| Publication templates
+| A series: it holds the settings every issue follows. See <<administrators-publications-model>>.
+
+| The file types _None_, _Link_, _Uploaded File_ and _Message_ of a publication
+| A series' content: _Reference only_, _External link_, _Uploaded PDF_ or _Generated from
+  criteria_. See <<administrators-publications-content>>.
+
+| The _Message Tag Filter_ of a publication
+| The criteria of a series. See <<administrators-publications-content>>.
+
+| The _Recording_ status and _Release Publication..._
+| An open issue, and publishing it after the checklist. See <<administrators-publications-issues>>.
+
+| The _Publication Categories_ tab of the _Publications_ page
+| The _Publication categories_ section. See <<administrators-publication-categories>>.
+
+| Deleting a user only when the user has no history
+| Delete removes the account at once; to keep it, remove the user from the groups. See
+  <<administrators-deleting-users>>.
+
+| Importing charts, areas or sources by copying a file into a folder on the server
+| _Import..._ in the cog menu of the section. See <<sysadmin-no-folders>>.
+|===

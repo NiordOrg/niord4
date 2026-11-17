@@ -1,0 +1,5 @@
+{
+  "format": 1,
+  "note": "The files each base product version changed for a security fix (fe-country-split-plan §4.11 rules 3 and 6), carried in the source zip with the kit. Each fix is { version, files, summary }, the files relative to fe/. A country override whose basedOn names a file a fix changed fails set-up with a SECURITY message, before the ordinary basedOn mismatch, until the country has merged the fix into its copy and recorded the fixed fingerprints with node setup.mjs --accept-override <file>. A fix is added in the pull request that makes it; an entry is never removed.",
+  "fixes": []
+}

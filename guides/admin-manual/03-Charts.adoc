@@ -1,0 +1,141 @@
+
+:imagesdir: images
+
+[#charts]
+== Charts
+
+The _Charts_ page keeps the list of nautical charts. Editors add charts to notices to mariners and
+navigational warnings, and readers can filter messages by chart. Open it with *Admin* > *Charts*.
+Charts are shared by all domains.
+
+image::ChartsPage.png[The Charts page, 800]
+
+The list shows each chart's *Number*, its international number (*Int. No.*), its *Name* and its
+*Scale*. The dot at the start of a row is coloured for an active chart and grey for an inactive one.
+The list shows 20 charts at a time; the pager below it moves between the pages.
+
+To find a chart, type in *Filter charts* above the list. The text is looked for, in any case, in
+the chart number, the international number, the name and the horizontal datum. The cross in the
+field clears it.
+
+The map beside the list shows the extents of the charts on the current page, each labelled with
+its number (and its international number, after _INT_). Drag the map to move it, and zoom with the
+mouse wheel or the *+* and *−* buttons.
+
+[#adding-or-editing-a-chart]
+=== Adding or Editing a Chart
+
+Click *New Chart* above the list to add a chart, or the pencil, *Edit chart*, on a chart's row to
+change it. The chart opens in a drawer, _New Chart_ or _Edit Chart_:
+
+image::ChartsEditPage.png[The Edit Chart drawer, 324]
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Active
+| Only an active chart can be given to a message. A new chart is active.
+
+| Chart number
+| The national number of the chart. It must be unique, and it is required. It is set when you add
+  the chart and cannot be changed afterwards: to renumber a chart, add a new one and make the old
+  one inactive.
+
+| International number
+| The international number of the chart, when it has one.
+
+| Name
+| The name of the chart.
+
+| Scale
+| The scale of the chart, written after "1:". It can be used to sort the charts of a message.
+
+| Horizontal datum
+| The horizontal datum of the chart, _WGS84_ for a new chart. Niord does not use it otherwise.
+|===
+
+*Save Chart* saves the chart and closes the drawer; it can be clicked once you have changed
+something and the chart has a number. *Cancel* closes the drawer without saving.
+
+[#chart-extent]
+==== Chart Extent
+
+The _Chart extent_ map at the bottom of the drawer shows the area the chart covers. A chart without
+an extent says _No extent defined yet._ Two buttons on the map change it:
+
+* *Edit* opens the extent in the position editor, which fills almost the whole window. Draw the
+  extent with *Box* (a rectangle) or *Area* (a polygon); *Select* moves and changes what is drawn,
+  and *Delete* removes it. A chart may have more than one box or polygon. *OK* puts the extent
+  into the drawer, and *Cancel* leaves it as it was.
++
+image::ChartsEditExtentPage.png[The position editor on a chart's extent, 759]
+* *Edit as text* opens the extent as text, with a small map that shows what you type. You can
+  paste the corners of the chart from another document, for example. *Save geometry* puts the
+  extent into the drawer; it replaces the extent the chart had.
++
+image::ChartsEditAsText.png[The Edit as text dialog on a chart's extent, 560]
+
+The position editor and its text format are described in the
+link:../editor-manual/manual.html#position-editor[Position Editor] chapter of the User Manual for
+Editors; for a chart it has only the drawing tools listed here. Its *Actions* menu, the cog, holds
+*Clear all*, *Zoom to extent*, *Edit as text* and *Import geometry* and, once something is selected,
+*Merge geometries*, *Split geometries* and *Convert* where they apply. _Import geometry_ takes the
+extent from another area (*From Area*), from GeoJSON pasted as text (*From Text*) or from a list of
+UTM coordinates (*From UTM*)
+(link:../editor-manual/manual.html#position-editor-import-dialog[Importing Positions]).
+
+The extent is part of the chart: it is saved with *Save Chart*, like the other fields.
+
+[#deleting-a-chart]
+=== Deleting a Chart
+
+Click the bin, *Delete chart*, on a chart's row, and confirm with _Delete Chart?_. A chart that is
+given to a message, in any status, cannot be deleted: Niord says _Error deleting chart_ and keeps
+it. Make such a chart inactive instead, so it can no longer be given to new messages.
+
+[#importing-and-exporting-charts]
+=== Importing and Exporting Charts
+
+The cog, _Chart actions_, beside *New Chart* holds the export and the import:
+
+image::ChartsActionMenu.png[The Chart actions menu, 130]
+
+* *Export…* opens every chart, as JSON, in a new browser tab, where you can save it as a file.
+* *Import…* opens _Upload Charts File_. Choose a JSON file, or drop it on the dialog. The file is
+  imported by a batch job, the _chart-import_, which runs in the background: _Upload Result_ shows
+  the answer to the upload, and a system administrator can follow the job on the
+  link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] page. A chart in the file that has the
+  number of an existing chart updates it; any other is added.
+
+The file holds a list of charts in the format of the export. For example:
+
+[source,json]
+----
+[
+  {
+    "chartNumber": "198",
+    "internationalNumber": 1301,
+    "active": true,
+    "scale": 75000,
+    "name": "The Baltic Sea, Fakse Bugt and Hjelm Bugt",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [ 12.0, 54.74166667 ],
+          [ 12.76666667, 54.74166667 ],
+          [ 12.76666667, 55.38333333 ],
+          [ 12.0, 55.38333333 ],
+          [ 12.0, 54.74166667 ]
+        ]
+      ]
+    },
+    "horizontalDatum": "WGS84"
+  },
+  ...
+]
+----
+
+The `geometry` is GeoJSON, in longitude and latitude (WGS 84).

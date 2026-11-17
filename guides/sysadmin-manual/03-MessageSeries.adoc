@@ -1,0 +1,158 @@
+
+:imagesdir: images
+
+[#message-series]
+== Message Series
+
+A _message series_ is a numbered run of messages, such as the coastal warnings of one authority or
+its notices to mariners. Every message belongs to one series, which the editor chooses in the
+message's ID field. The series decides which messages it can hold (navigational warnings or notices
+to mariners, and which types of them), how its messages are numbered, and the format of their
+_short ID_, the identifier a message is known by once it is published, such as "NW-012-26". A domain
+lists the series its editors may use (see <<domains,Domains>>).
+
+The _Message Series_ page lists the series of all domains. To open it, click *Sysadmin* in the main
+menu, then *Message Series*.
+
+image::MessageSeriesPage.png[The Message Series page, 800]
+
+The columns are:
+
+* *Series ID*: the series' identifier.
+* *Type*: the main type, NW (navigational warnings) or NM (notices to mariners), and in brackets the
+  types the series is restricted to, if any.
+* *Sequence*: how the series numbers its messages (below).
+* *Short Format*: the format of the short ID.
+* *Next Number*: for a series that numbers its messages itself, the number the next message
+  published this year will get. The heading names the year, as the clock of the current domain reads
+  it.
+
+The *Filter* field matches the series ID only. Message series have no import or export.
+
+[#adding-or-editing-a-message-series]
+=== Adding or Editing a Message Series
+
+Click *New Message Series* to add a series, the pencil of a row (*Edit Message Series*) to edit one,
+or the double square (*Copy Message Series*) to start a new series from a copy of one. Each opens the
+editor drawer:
+
+image::MessageSeriesEditPage.png[The Edit Message Series drawer, 324]
+
+[cols="30,70", options="header"]
+|===
+| Field
+| Description
+
+| Message Series ID
+| A unique identifier, which should be unique across Niord installations too. It cannot be changed
+  once the series is saved; a copy starts with it empty.
+
+| Main Type
+| _Navigational Warnings_ or _Notices to Mariners_: the main type of the series' messages.
+
+| Restrict Types
+| The types of the main type the series may hold: for navigational warnings _Local_, _Coastal_,
+  _Sub-area_ and _Navarea_, for notices to mariners _Preliminary_, _Temporary_, _Permanent_ and
+  _Misc_. With none ticked, the series may hold every type of its main type.
+
+| Number Sequence Type
+a| How a message of the series gets its number, which is assigned when the message is published:
+
+  * _Yearly_: the first message published in a year gets number 1, the next 2, and so on; a new
+    year starts again at 1.
+  * _Continuous_: the numbers run on from year to year.
+  * _Manual_: the editor gives the number in the message's ID field (see the
+    link:../editor-manual/manual.html#id-editor-field[ID editor field] in the Editors Manual).
+  * _None_: the messages get no number and no short ID from the series.
+
+| Short Format
+| The format of the short ID (below). Not shown for the sequence type _None_.
+
+| Next number
+| Shown when you edit a saved series that numbers its messages itself (_Yearly_ or _Continuous_):
+  the number the next message published this year will get. The pencil beside it opens the
+  _Next Message Number_ panel (below).
+
+| Additional Editor Fields
+| Editor fields that are hidden by default and that the message editor shows for every message of
+  the series: _Org. Information_, _Charts_, _Event dates_, _Attachments_, _Source_, _Part Types_,
+  _Prohibition_, _Signals_ and _Layout_. A series used only for firing exercise warnings could, for
+  instance, add _Signals_. Areas and categories can add editor fields in the same way; see the
+  link:../editor-manual/manual.html#editor[Editor] chapter of the Editors Manual.
+
+| NAVTEX Preamble
+| Shown for navigational warnings only. The first lines of the NAVTEX text of the series' messages
+  (see <<promulgation-types,Promulgation Types>>), with the tokens below.
+
+| Search Index
+| *Exclude messages from free-text search index*: the series' messages are left out of the index
+  behind the free-text filter of the message lists, so a text search does not find them. This suits
+  a series of messages Niord generates in large numbers, such as firing exercise warnings.
+|===
+
+Click *Save Message Series* to save.
+
+[#short-id-format]
+==== The Short ID Format
+
+The _Short Format_ is text with _tokens_ that Niord replaces by values when it gives a message its
+short ID. The *Insert* menu beside the field adds a token where the cursor is:
+
+[cols="35,65", options="header"]
+|===
+| Token
+| Replaced by
+
+| `${year}`, `${year-2-digits}`
+| The year of the message's publish date: "2026" or "26".
+
+| `${week}`, `${week-2-digits}`
+| The ISO week number of the publish date, in two digits.
+
+| `${number}`, `${number-3-digits}`
+| The message's number: "7", or "007" in three digits.
+
+| `${id}`
+| The message's internal identifier in the database.
+
+| `${legacy-id}`
+| The message's identifier in the system it was imported from, if any.
+
+| `${t-or-p}`
+| Offered for notices to mariners only: "(T)" for a temporary notice, "(P)" for a preliminary one,
+  and nothing for the other types.
+|===
+
+For example, the format `NW-${number-3-digits}-${year-2-digits}` gives the twelfth warning of
+2026 the short ID "NW-012-26". For a series with the sequence type _Manual_, Niord forms the short ID
+from the format when the editor gives the number; with no format, the editor types the short ID
+itself, and a message without one cannot be published.
+
+The *Insert* menu of the _NAVTEX Preamble_ offers `${publish-date}`, the publish date in the NAVTEX
+form (such as "111200 UTC NOV 26"), and `${short-id}`, the short ID. The preamble also understands
+`${number-year-id}`, the number and the two-digit year ("012/26"). Niord fills in the tokens when
+the message is published, and writes the preamble in capitals.
+
+[#next-message-number]
+==== Next Message Number
+
+image::MessageSeriesNextNumber.png[The Next Message Number panel, 155]
+
+The pencil beside _Next number_ opens the _Next Message Number_ panel, where you set the number the
+next published message will get:
+
+* *Year*: shown for a _Yearly_ series; the year the number belongs to. It starts at the current year.
+* *Next number*: the number. *Compute* fills in the number that follows the highest number of the
+  series' messages published in that year (for a _Continuous_ series, whose numbers run on from
+  year to year, in any year), or 1 when there are none. Check the number before you click *Update*.
+* *Update* stores the number at once; *Cancel* closes the panel without storing it.
+
+The pencil is disabled while the drawer has changes that are not saved: save them first.
+
+[#deleting-a-message-series]
+=== Deleting a Message Series
+
+Click the bin of a row (*Delete Message Series*) and confirm with *Yes*. A series that is still in
+use, by messages, by a domain or by a firing schedule, cannot be deleted: Niord answers "Error
+deleting message series". Take a series out of use by removing it from its domains instead (see
+<<domains,Domains>>).

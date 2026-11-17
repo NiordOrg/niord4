@@ -1,0 +1,598 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.niord</groupId>
+        <artifactId>niord-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- Reusable base Niord library (Spring Boot 4 port of the Quarkus
+         `niord-base` jar). Plain library jar — NOT a bootable application. -->
+    <groupId>org.niord.base</groupId>
+    <artifactId>niord-base</artifactId>
+    <packaging>jar</packaging>
+    <name>Niord Base (Spring Boot 4 port)</name>
+
+    <properties>
+        <!-- Versions for retained libraries that Spring Boot's BOM does not manage. -->
+        <!-- Apache Lucene: MessageLuceneIndex uses raw Lucene directly for the message free-text
+             index. It previously arrived transitively via hibernate-search-backend-lucene; now that
+             Hibernate Search has been removed (AtoN search runs on SQL LIKE — see AtonService), the
+             dependency is declared explicitly. 9.12.3 is the exact version Hibernate Search 8.2.2
+             resolved, so message-search behaviour is unchanged. -->
+        <lucene.version>9.12.3</lucene.version>
+        <!-- Infinispan 16.x is the first line that officially supports Java 25.
+             14.x calls the JDK-24-removed javax.security.auth.Subject.getSubject()
+             during cache startup (UnsupportedOperationException on JDK 24+), which
+             prevents the application context from starting. 16.x is Jakarta-native,
+             so the artifact is infinispan-core (no -jakarta classifier). -->
+        <infinispan.version>16.2.1</infinispan.version>
+        <!-- keycloak-admin-client only (the Java admin REST client + shared representation POJOs).
+             26.0.10 is the latest published admin client and targets the Keycloak 26 server the app
+             deploys against; the admin REST API is stable across 26.x point releases. -->
+        <keycloak.version>26.0.10</keycloak.version>
+        <geotools.version>26.2</geotools.version>
+        <!-- GRAD SECOMLib, SECOM v2 line (org.grad.secomv2). 0.1.0 is pinned until IEC CD
+             63173-2 is published and the peer fleet coordinates a bump (docs/secom-design.md R1). -->
+        <secomlib.version>0.1.0</secomlib.version>
+        <!-- Must track the RESTEasy version keycloak-admin-client drags in transitively:
+             the SECOM protocol adapter (org.niord.secom.rest) mounts a RESTEasy servlet and
+             reuses those jars; declaring the directly-imported artifacts explicitly protects
+             against a future keycloak upgrade silently dropping them. -->
+        <resteasy.version>6.2.15.Final</resteasy.version>
+        <testcontainers-keycloak.version>3.4.0</testcontainers-keycloak.version>
+        <!-- Override the Spring Boot 4.0.7 BOM's Artemis 2.43.0: that version's
+             AuditLogger.getCaller() calls the JDK-24-removed Subject.getSubject()
+             while the embedded broker initialises, so the broker fails to start on
+             Java 25 (ARTEMIS-5374). 2.44.0 was the first release with that fix;
+             2.54.0 additionally carries the CVE-2026-27446 (critical) fix from
+             2.52.0 while staying above the Java-25 floor. Mirrors niord-dk's
+             override so the IT suite here tests the version the deployable runs. -->
+        <artemis.version>2.54.0</artemis.version>
+        <!-- niord-parent's country build group stays off here: these tests are niord-base's own and run
+             in its default Surefire and Failsafe executions, so with the group on they would run twice. -->
+        <niord.countryGroup.skip>true</niord.countryGroup.skip>
+    </properties>
+
+    <dependencies>
+
+        <!-- ============================================================== -->
+        <!--  Spring framework seams (replacing Quarkus extensions)         -->
+        <!-- ============================================================== -->
+
+        <!-- CDI -> Spring DI, @Transactional, lifecycle, scheduling, events. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- quarkus-hibernate-orm -> Spring Data JPA (Hibernate ORM 7,
+             spring-orm @PersistenceContext, transaction manager). Persistence
+             is plain EntityManager + Criteria + @NamedQuery (zero Panache). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- The JAX-RS REST layer was migrated to Spring MVC; spring-boot-starter-jersey is removed.
+             jakarta.ws.rs-api is retained because the ported resources still throw
+             jakarta.ws.rs.WebApplicationException (mapped to its HTTP status by RestSecurityExceptionAdvice). -->
+        <dependency>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
+        <!-- jakarta.inject (@Inject) — used app-wide for CDI-style injection; it was previously supplied
+             transitively by spring-boot-starter-jersey, so declare it explicitly now that Jersey is gone. -->
+        <dependency>
+            <groupId>jakarta.inject</groupId>
+            <artifactId>jakarta.inject-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- Jackson 3 (tools.jackson) is the Spring Boot 4 default and is what the app now uses
+             throughout (ObjectMapper/JsonMapper, custom ValueSerializer/ValueDeserializer, @JsonXxx).
+             No spring-boot-jackson2 opt-in: the migration off Jackson 2 is complete. jackson-databind 3.x
+             still depends on jackson-annotations 2.x, so the com.fasterxml.jackson.annotation.* annotations
+             (which did not move packages in Jackson 3) keep resolving. -->
+
+        <!-- Spring MVC (DispatcherServlet) — the framework the JAX-RS resources were migrated to. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- quarkus-oidc -> Spring Security OAuth2 resource server (JWT/Keycloak)
+             + JSR-250 @RolesAllowed method security. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- quarkus-mailer -> Spring Mail (jakarta.mail). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- bean validation (jakarta.validation) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Health/metrics (replaces quarkus-smallrye-health). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- ============================================================== -->
+        <!--  Persistence / search / spatial                                -->
+        <!-- ============================================================== -->
+
+        <!-- Hibernate Spatial: version managed by Spring Boot to match ORM 7. -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-spatial</artifactId>
+        </dependency>
+
+        <!-- Apache Lucene — raw Lucene backing the message free-text index (MessageLuceneIndex).
+             Formerly transitive via hibernate-search-backend-lucene, now that Hibernate Search has
+             been removed. lucene-queryparser pulls lucene-core/queries/sandbox transitively. -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>${lucene.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+            <version>${lucene.version}</version>
+        </dependency>
+
+        <!-- GeoTools (spatial geometry helpers) — retained verbatim. -->
+        <dependency>
+            <groupId>org.geotools</groupId>
+            <artifactId>gt-main</artifactId>
+            <version>${geotools.version}</version>
+        </dependency>
+
+        <!-- ============================================================== -->
+        <!--  Caching: keep Infinispan (minimal change).                    -->
+        <!-- ============================================================== -->
+        <dependency>
+            <groupId>org.infinispan</groupId>
+            <artifactId>infinispan-core</artifactId>
+            <version>${infinispan.version}</version>
+        </dependency>
+
+        <!-- ============================================================== -->
+        <!--  Keycloak admin client (plain, replaces quarkus extension).    -->
+        <!--  Provides the Keycloak Java admin REST client + the shared     -->
+        <!--  representation POJOs (keycloak-core/keycloak-common) used by   -->
+        <!--  KeycloakIntegrationService. The legacy keycloak-adapter-core / -->
+        <!--  keycloak-adapter-spi artifacts were dropped: they were only    -->
+        <!--  needed by now-removed deployment/config-resolver code and have -->
+        <!--  no release for Keycloak 24+.                                   -->
+        <!-- ============================================================== -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
+            <version>${keycloak.version}</version>
+        </dependency>
+
+        <!-- ============================================================== -->
+        <!--  SECOM/S-124 integration (org.niord.secom, gated on            -->
+        <!--  niord.secom.enabled). GRAD SECOMLib v2 supplies the SECOM     -->
+        <!--  models, envelope/signature helpers, JAX-RS interfaces and     -->
+        <!--  protocol filters; the adapter mounts them on a RESTEasy       -->
+        <!--  servlet at /api/secom (docs/secom-design.md D1).              -->
+        <!--  resteasy-core + resteasy-jackson2-provider are already on the -->
+        <!--  classpath transitively via keycloak-admin-client; declared    -->
+        <!--  explicitly (same version) because org.niord.secom.rest        -->
+        <!--  imports them directly.                                        -->
+        <!-- ============================================================== -->
+        <dependency>
+            <groupId>org.grad.secom</groupId>
+            <artifactId>secom-v2-core-jakarta</artifactId>
+            <version>${secomlib.version}</version>
+            <exclusions>
+                <!-- Legacy javax bean-validation API; the jakarta one is already present. -->
+                <exclusion>
+                    <groupId>javax.validation</groupId>
+                    <artifactId>validation-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-core</artifactId>
+            <version>${resteasy.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-jackson2-provider</artifactId>
+            <version>${resteasy.version}</version>
+        </dependency>
+
+        <!-- ============================================================== -->
+        <!--  S-124 v2.0.0 JAXB bindings (https://github.com/NiordOrg/      -->
+        <!--  niord-xml-bindings, via JitPack). Used by the org.niord.s124  -->
+        <!--  generator; also carries the S-124/S-100 XSDs on the classpath -->
+        <!--  (/xsd), the marshalling/validation utilities and the S-100    -->
+        <!--  Part 17 exchange-set factory (incl. fileless dataset          -->
+        <!--  cancellations and XSD-valid catalogues as of 0.0.11; as of    -->
+        <!--  0.3.1 the catalogue announces each dataset at its archive     -->
+        <!--  path, file:/S-124/DATASET_FILES/<name>.GML).                  -->
+        <!-- ============================================================== -->
+        <dependency>
+            <groupId>com.github.NiordOrg.niord-xml-bindings</groupId>
+            <artifactId>s124-2_0_1-xml-bindings</artifactId>
+            <version>0.3.3</version>
+        </dependency>
+
+        <!-- ============================================================== -->
+        <!--  Retained, framework-neutral third-party libraries             -->
+        <!--  (versions pinned by the parent dependencyManagement).         -->
+        <!-- ============================================================== -->
+        <dependency>
+            <groupId>org.eclipse.microprofile.openapi</groupId>
+            <artifactId>microprofile-openapi-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.xhtmlrenderer</groupId>
+            <artifactId>flying-saucer-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.xhtmlrenderer</groupId>
+            <artifactId>flying-saucer-pdf-itext5</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.sourceforge.cssparser</groupId>
+            <artifactId>cssparser</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.sf.jtidy</groupId>
+            <artifactId>jtidy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.twitter4j</groupId>
+            <artifactId>twitter4j-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xmlgraphics</groupId>
+            <artifactId>batik-transcoder</artifactId>
+            <exclusions>
+                <exclusion><groupId>xalan</groupId><artifactId>xalan</artifactId></exclusion>
+                <exclusion><groupId>xml-apis</groupId><artifactId>xml-apis</artifactId></exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xmlgraphics</groupId>
+            <artifactId>batik-svggen</artifactId>
+            <exclusions>
+                <exclusion><groupId>xalan</groupId><artifactId>xalan</artifactId></exclusion>
+                <exclusion><groupId>xml-apis</groupId><artifactId>xml-apis</artifactId></exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xmlgraphics</groupId>
+            <artifactId>xmlgraphics-commons</artifactId>
+            <exclusions>
+                <exclusion><groupId>xalan</groupId><artifactId>xalan</artifactId></exclusion>
+                <exclusion><groupId>xml-apis</groupId><artifactId>xml-apis</artifactId></exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.github.NiordOrg</groupId>
+            <artifactId>josm-seachart</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+        <!-- commons-lang3 (Spring Boot BOM-managed 3.19.0), migrated from the EOL
+             commons-lang:2.6 (vulnerable to CVE-2025-48924, no 2.x fix). The
+             org.apache.commons.lang.* imports were rewritten to org.apache.commons.lang3.*. -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <!-- Pin a modern commons-io: GeoTools/Batik/jtidy drag in the ancient
+             1.3.1 (no FileUtils.deleteQuietly), while Liquibase 5.0.3 requires
+             2.22.0. Override the transitives with the newest required version. -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.22.0</version>
+        </dependency>
+
+        <!-- ============================================================== -->
+        <!--  Jakarta APIs for retained subsystems. The interfaces are kept;  -->
+        <!--  the providers (JBeret for batch, qpid for JMS, Parsson for      -->
+        <!--  JSON-P) are wired as Spring beans in later stages. Units don't   -->
+        <!--  run these subsystems, so the API jars suffice to compile.        -->
+        <!-- ============================================================== -->
+        <!-- quarkus-jberet -> JBeret on Spring; jakarta.batch API for compile. -->
+        <dependency>
+            <groupId>jakarta.batch</groupId>
+            <artifactId>jakarta.batch-api</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+        <!-- JBeret (JSR-352 batch) runtime — replaces quarkus-jberet. The batch jobs
+             are kept as-is; a Spring-aware ArtifactFactory (see BatchConfig) resolves
+             @Named batchlets/readers/writers from the Spring context. -->
+        <dependency>
+            <groupId>org.jberet</groupId>
+            <artifactId>jberet-core</artifactId>
+            <version>${jberet.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jberet</groupId>
+            <artifactId>jberet-se</artifactId>
+            <version>${jberet.version}</version>
+        </dependency>
+        <!-- JBeret SE references the CDI API (jakarta.enterprise.context.spi.*) even when
+             run outside a CDI container. The API jar only (no CDI container is started). -->
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+        <!-- JBeret's JobExecutionImpl references org.wildfly.security.manager.WildFlySecurityManager
+             when a batch job actually executes; it is not pulled transitively. -->
+        <dependency>
+            <groupId>org.wildfly.security</groupId>
+            <artifactId>wildfly-elytron-security-manager</artifactId>
+            <version>2.6.4.Final</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- quarkus-qpid-jms -> qpid + Spring JMS; jakarta.jms API for compile. -->
+        <dependency>
+            <groupId>jakarta.jms</groupId>
+            <artifactId>jakarta.jms-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+        <!-- Jakarta JSON-P (jakarta.json) used by some core helpers. -->
+        <dependency>
+            <groupId>jakarta.json</groupId>
+            <artifactId>jakarta.json-api</artifactId>
+            <version>2.1.3</version>
+        </dependency>
+        <!-- JAX-WS SOAP annotations (jakarta.jws) for web/api/ApiWebService — the
+             same jakarta.jws-api the Quarkus parent declared. -->
+        <dependency>
+            <groupId>jakarta.jws</groupId>
+            <artifactId>jakarta.jws-api</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <!-- JAXB runtime (the model VOs + some core code use jakarta.xml.bind). -->
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+        </dependency>
+
+        <!-- ===== Test ===== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ===== Integration test (the @SpringBootTest + Testcontainers IT suite lives here;
+                   the tests boot the library through the NiordTestApplication test twin) ===== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Testcontainers 2.0.5 (managed by Spring Boot 4); TC 2.x module
+             artifacts are testcontainers-postgresql / testcontainers-junit-jupiter. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <!-- TC 2.0.5 drags in a FAKE junit4 (quarkus-junit4-mock) providing legacy
+                     org.junit.* classes. The test suite is pure JUnit 5 (Jupiter), so exclude it
+                     to keep all of JUnit 4 off the test classpath. -->
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-junit4-mock</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Keycloak Testcontainer (dasniko) for the OIDC/security ITs. -->
+        <dependency>
+            <groupId>com.github.dasniko</groupId>
+            <artifactId>testcontainers-keycloak</artifactId>
+            <version>${testcontainers-keycloak.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <!-- See note on testcontainers-junit-jupiter: keep the fake junit4 off the classpath. -->
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-junit4-mock</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>6.0.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- RestAssured 6.0.0 is built against Groovy 5, so the explicit Groovy 4 pin that RestAssured
+             5.5.1 required is no longer needed: the Groovy 5.0.x managed by the Spring Boot 4 BOM
+             (groovy.version) now flows in transitively via RestAssured and works with its request sending. -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Deployment-tier pieces the ITs exercise. The library jar deliberately does NOT ship
+             them (the deployable declares its own compile/runtime copies — see niord-dk/pom.xml);
+             test scope here gives the IT suite the same JDBC driver, schema bootstrap and embedded
+             JMS broker the application runs with. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-liquibase</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-artemis</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.artemis</groupId>
+            <artifactId>artemis-jakarta-server</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <!-- Declared here, so the list inherited from spring-boot-starter-parent no longer applies: that list
+             filters only application*.yml/.properties, which this library does not have. Everything under
+             src/main/resources is copied as it is - its templates, SQL and JSON carry ${...} and @ text that is
+             not the build's to replace - except org/niord/core/niord-base.properties, which is filtered with
+             the parent's @..@ delimiter so that it carries this library's version (NiordBaseVersion reads it
+             for the User-Agent of the backend's map tile requests). The third entry copies the portrayal
+             definition and its symbols from fe/shared-map/portrayal into portrayal/ on the class path, as they
+             are: the backend's map-image renderer reads the same definition as the web maps (PortrayalDefinition),
+             and a copy made here travels in the niord-base jar to every deployable. Not under META-INF/resources,
+             which is served. No template or script is a resource: they are bootstrap data in bootstrap/templates/
+             (docs/code-data-config-plan.md §6.3, §7.1), in no jar since C4.2a (CoreResourcePackagingTest). -->
+        <resources>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <excludes>
+                    <exclude>org/niord/core/niord-base.properties</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>org/niord/core/niord-base.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../../fe/shared-map/portrayal</directory>
+                <targetPath>portrayal</targetPath>
+                <filtering>false</filtering>
+                <includes>
+                    <include>*.json</include>
+                    <include>*.svg</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- Publish the shared IT harness (org.niord.test: ITTest, NiordTestContainers, the
+                 Keycloak token helpers, stubs and factories) as a test-jar so a country deployable's
+                 ITs can extend it without duplicating the harness. The jar also carries the country
+                 build group: the classes tagged @CountryBuildGroup (the JUnit tag niord-country-build,
+                 listed by CountryBuildGroupTest) with their fixtures under country-contract/ and
+                 org/example/country/, which niord-parent runs in every country build
+                 (be/docs/country-api.md).
+                 application.yml and niord.json are excluded: they are THIS module's test-side
+                 stand-ins for a deployable's configuration — on a country's test classpath they
+                 would shadow-or-race the deployable's real application.yml / niord.json (Spring's
+                 config loading and SettingsService both resolve a single classpath resource, so
+                 first-on-classpath would win). The root-level *.properties are this module's own
+                 test bundles (fm-test-messages_en) and stay excluded. defaults/** is excluded
+                 because the test tree's defaults/packs/da/ is a stand-in da pack (DK's Danish
+                 bundles, test data) that this module's integration tests read as a country's
+                 staged pack: on a country's test classpath DefaultsGuard would refuse it beside
+                 the country's own staged defaults/packs/da/, and it would add Danish texts beside
+                 the country's.
+                 The reference dump is excluded as dead weight (nothing loads it; it documents
+                 the fixture and is regenerated with it by scripts/regen-test-seed-postgres.sh).
+                 templates/, test-scripts/ and bootstrap-fixtures/ are this module's own test templates,
+                 scripts and bootstrap archives: no jar holds a template since C4.2a (plan §6.3), and no
+                 country test reads them (a country's test sources name none). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                        <configuration>
+                            <excludes>
+                                <exclude>application.yml</exclude>
+                                <exclude>niord.json</exclude>
+                                <exclude>*.properties</exclude>
+                                <exclude>defaults/**</exclude>
+                                <exclude>db/niord-test-seed.sql</exclude>
+                                <exclude>templates/**</exclude>
+                                <exclude>test-scripts/**</exclude>
+                                <exclude>bootstrap-fixtures/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

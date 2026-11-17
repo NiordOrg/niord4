@@ -1,0 +1,143 @@
+/* chrome.css — the public site's own Layer 4.
+
+   What is left of the stylesheet the site arrived with: the surfaces no shared class covers
+   and no utility expresses. Everything a template can carry is a utility on the template, and
+   everything both applications draw comes from fe/styles/. */
+
+:root {
+  /* The sea behind the tiles, and the plum both listings and the print sheet write their group
+     headings in. They belong to this site: the shared token files carry the brand's own
+     surfaces, and the administration application has no equivalent of either. A brand file may
+     still set either, since it loads after this one; templates reach the sea as `bg-map-sea`. */
+  --niord-map-sea: #b5d0d0;
+  --niord-site-heading: #8f2f7b;
+}
+
+@layer components {
+  /* The menu bar and the filter bar under it stay at the top of the viewport while the page
+     scrolls. They are sticky rather than fixed, so each takes its own room in the flow and
+     nothing below them has to be told how tall they are to clear them; the menu bar is above
+     the filter bar, so none of its controls is ever covered. */
+  .menu-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .filter-bar {
+    position: sticky;
+    top: var(--niord-menu-bar-height, 2.5rem);
+    z-index: 40;
+  }
+
+  /* How much of the top of the viewport the pinned bars cover. Each bar measures itself and
+     publishes its height, because both wrap to more rows on a narrow screen and in a long
+     language; a route without the filter bar has the menu bar alone, and a route with neither
+     (the print sheet, the teaser) has nothing pinned. The map view is sized against it. */
+  :root {
+    --niord-pinned-bars-height: calc(
+      var(--niord-menu-bar-height, 0px) + var(--niord-filter-bar-height, 0px)
+    );
+  }
+
+  /* A control that takes focus is scrolled clear of the pinned bars, with room for its focus
+     ring, rather than to the top edge where the bars would cover it. */
+  html {
+    scroll-padding-top: calc(var(--niord-pinned-bars-height) + 0.5rem);
+  }
+
+  /* On a short viewport nothing is pinned: at 400 % zoom, or on a phone held sideways, the two
+     bars would cover most of the screen, so they scroll away with the page. A media query
+     cannot read a custom property, so this is the one place the threshold is written. */
+  @media (height <= 30rem) {
+    .menu-bar,
+    .filter-bar {
+      position: static;
+    }
+    :root {
+      --niord-pinned-bars-height: 0px;
+    }
+  }
+
+  /* OpenLayers writes these three elements itself, so no template can put a utility on them. */
+  .olControlNoSelect {
+    display: none;
+  }
+  .ol-rotate {
+    visibility: hidden;
+  }
+  .ol-attribution {
+    visibility: visible;
+  }
+
+  /* The two page wrappers. The bars above them take their own room in the flow, so neither
+     wrapper clears them with a margin; the top margin is a class rather than a utility because
+     the print stylesheet sets it by name. */
+  .message-details-list,
+  .publication-list {
+    max-width: 820px;
+    padding: 0 10px;
+    font-size: 0.875rem;
+    /* A block formatting context, so the first heading's own margin stays inside the wrapper
+       instead of collapsing through it. */
+    display: flow-root;
+  }
+  /* The message list starts directly under the filter bar; its first area heading carries the
+     gap. */
+  .message-details-list {
+    margin: 0 auto 40px;
+  }
+  /* The publications page shows no filter bar: a gap under the menu bar as tall as the bar. */
+  .publication-list {
+    margin: 2.5rem auto 40px;
+  }
+
+  /* One message, as a card. The print stylesheet frames it and keeps it on one page. */
+  .message-details-item {
+    margin: 5px auto;
+    padding: 20px;
+    background: var(--niord-surface);
+    box-shadow: var(--niord-shadow);
+  }
+
+  /* The group heading of a message area and of a publication category — one look, so the two
+     listings read as one site. */
+  .message-area-heading,
+  .publication-category-heading {
+    margin-top: 1.875rem;
+    color: var(--niord-site-heading);
+    font-size: 1.25rem;
+  }
+
+  /* A legal document is country content: the file supplies the prose and its own markup, so
+     the typography is written here rather than in the asset. The definition list is the
+     cookie statement's two-column table of purposes. */
+  .legal-document h3 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--niord-fg);
+  }
+  .legal-document p {
+    margin: 0.5rem 0;
+  }
+  .legal-document a {
+    color: var(--niord-primary);
+    text-decoration: underline;
+  }
+  .legal-document dl {
+    display: grid;
+    gap: 0.25rem 1rem;
+    margin: 0.5rem 0;
+  }
+  .legal-document dt {
+    font-weight: 600;
+  }
+  .legal-document dd {
+    margin: 0;
+  }
+  @media (width >= 40rem) {
+    .legal-document dl {
+      grid-template-columns: minmax(0, 12rem) 1fr;
+    }
+  }
+}

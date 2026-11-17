@@ -1,0 +1,98 @@
+<app-dialog
+  [visible]="mail() !== undefined"
+  (closed)="closed.emit()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [style]="{ width: '40rem', maxWidth: '94vw' }"
+  [header]="
+    'admin.mails.details.title'
+      | transloco: { id: mail()?.id ?? '', status: (statusKey() | transloco) }
+  "
+>
+  @if (mail(); as m) {
+    <table class="w-full text-sm">
+      <tbody class="align-top">
+        <tr>
+          <th class="w-24 py-1 pr-3 text-left font-medium text-fg-muted">
+            {{ 'admin.mails.details.from' | transloco }}
+          </th>
+          <td class="py-1">{{ m.sender }}</td>
+        </tr>
+        @if (to()) {
+          <tr>
+            <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+              {{ 'admin.mails.details.to' | transloco }}
+            </th>
+            <td class="py-1">{{ to() }}</td>
+          </tr>
+        }
+        @if (cc()) {
+          <tr>
+            <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+              {{ 'admin.mails.details.cc' | transloco }}
+            </th>
+            <td class="py-1">{{ cc() }}</td>
+          </tr>
+        }
+        @if (bcc()) {
+          <tr>
+            <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+              {{ 'admin.mails.details.bcc' | transloco }}
+            </th>
+            <td class="py-1">{{ bcc() }}</td>
+          </tr>
+        }
+        <tr>
+          <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+            {{ 'admin.mails.details.created' | transloco }}
+          </th>
+          <td class="py-1">{{ createdLabel() }}</td>
+        </tr>
+        <!-- The Sent row deliberately keeps its label even while PENDING (empty value). -->
+        <tr>
+          <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+            {{ 'admin.mails.details.sent' | transloco }}
+          </th>
+          <td class="py-1">{{ sentLabel() }}</td>
+        </tr>
+        @if (m.lastError) {
+          <tr>
+            <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+              {{ 'admin.mails.details.error' | transloco }}
+            </th>
+            <td class="py-1">
+              <span class="text-danger">{{ m.lastError }}</span>
+              <span class="ml-1 text-fg-subtle">
+                {{ 'admin.mails.details.attempts' | transloco: { attempts: m.attempts ?? 0 } }}
+              </span>
+            </td>
+          </tr>
+        }
+        <tr>
+          <th class="py-2 pr-3 text-left font-medium text-fg-muted">
+            {{ 'admin.mails.details.subject' | transloco }}
+          </th>
+          <td class="py-2 font-semibold">{{ m.subject }}</td>
+        </tr>
+        <tr>
+          <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+            {{ 'admin.mails.details.details' | transloco }}
+          </th>
+          <td class="py-1">
+            <app-sandboxed-html
+              [html]="m.contents ?? ''"
+              [injectedCss]="mailPreviewCss"
+              [title]="'admin.mails.details.details' | transloco"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  }
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary text-sm" (click)="closed.emit()">
+      <span>{{ 'admin.mails.details.close' | transloco }}</span>
+    </button>
+  </ng-template>
+</app-dialog>

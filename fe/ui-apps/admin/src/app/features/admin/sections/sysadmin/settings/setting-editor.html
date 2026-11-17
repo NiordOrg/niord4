@@ -1,0 +1,151 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  header="admin.settings.editor.editTitle"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model(); as m) {
+    <form (submit)="$event.preventDefault(); save()" class="flex h-full flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="setting-key" class="text-sm font-medium text-fg-title">
+          {{ 'admin.settings.editor.key' | transloco }}
+        </label>
+        <input
+          id="setting-key"
+          type="text"
+          class="w-full text-input"
+          [value]="m.setting.key"
+          [disabled]="true"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="setting-description" class="text-sm font-medium text-fg-title">
+          {{ 'admin.settings.editor.description' | transloco }}
+        </label>
+        <input
+          id="setting-description"
+          type="text"
+          class="w-full text-input"
+          [value]="m.setting.description ?? ''"
+          [disabled]="true"
+        />
+      </div>
+
+      <!-- For the multi-line json editor the value section grows to fill the
+           drawer (min-h-0 lets the textarea scroll internally); other kinds keep
+           their intrinsic height. -->
+      <div
+        class="flex flex-col gap-1"
+        [class.min-h-0]="editKind() === 'json'"
+        [class.flex-1]="editKind() === 'json'"
+      >
+        <label for="setting-value" class="text-sm font-medium text-fg-title">
+          {{ 'admin.settings.editor.value' | transloco }}
+        </label>
+
+        @switch (editKind()) {
+          @case ('boolean') {
+            <input
+              type="checkbox"
+              [formField]="$any(form.value)"
+              id="setting-value"
+              class="checkbox"
+            />
+          }
+          @case ('integer') {
+            <input
+              id="setting-value"
+              type="number"
+              class="w-full text-input"
+              [formField]="$any(form.value)"
+              [attr.aria-label]="'admin.settings.editor.value' | transloco"
+              aria-describedby="setting-value-default-hint"
+            />
+          }
+          @case ('decimal') {
+            <input
+              id="setting-value"
+              type="number"
+              step="any"
+              class="w-full text-input"
+              [formField]="$any(form.value)"
+              [attr.aria-label]="'admin.settings.editor.value' | transloco"
+              aria-describedby="setting-value-default-hint"
+            />
+          }
+          @case ('password') {
+            <input
+              id="setting-value"
+              type="password"
+              class="w-full text-input"
+              [formField]="$any(form.value)"
+              autocapitalize="off"
+              autocomplete="off"
+              autocorrect="off"
+              [attr.aria-label]="'admin.settings.editor.value' | transloco"
+            />
+          }
+          @case ('json') {
+            <app-code-text-input
+              [formField]="$any(form.value)"
+              [rows]="10"
+              [fill]="true"
+              [ariaLabel]="'admin.settings.editor.value' | transloco"
+            />
+            @if (jsonInvalid()) {
+              <span class="text-xs text-danger">
+                {{ 'admin.settings.editor.jsonError' | transloco }}
+              </span>
+            }
+          }
+          @default {
+            <input
+              id="setting-value"
+              type="text"
+              class="w-full text-input"
+              [formField]="$any(form.value)"
+              autocapitalize="off"
+              autocomplete="off"
+              autocorrect="off"
+              [attr.aria-label]="'admin.settings.editor.value' | transloco"
+              aria-describedby="setting-value-counter"
+            />
+            <app-length-counter
+              counterId="setting-value-counter"
+              [text]="textValue()"
+              [limit]="textValueMax"
+            />
+          }
+        }
+
+        <!-- An emptied number is saved empty, and the backend reads it as the
+             setting's default; only the number kinds say so. -->
+        @if (emptyMeansDefault()) {
+          <p
+            id="setting-value-default-hint"
+            class="text-xs text-fg-muted"
+            data-testid="setting-value-default-hint"
+          >
+            {{ 'admin.settings.editor.emptyMeansDefault' | transloco }}
+          </p>
+        }
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.settings.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.settings.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

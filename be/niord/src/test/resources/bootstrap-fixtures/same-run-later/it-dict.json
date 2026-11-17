@@ -1,0 +1,104 @@
+[
+  {
+    "name": "it-same-run",
+    "entries": [
+      {
+        "key": "k1",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "ONE",
+            "longValue": "the ONE"
+          },
+          {
+            "lang": "da",
+            "value": "en",
+            "longValue": "den ene"
+          }
+        ]
+      },
+      {
+        "key": "k2",
+        "descs": [
+          {
+            "lang": "da",
+            "value": "TO"
+          }
+        ]
+      },
+      {
+        "key": "k3",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "three"
+          }
+        ]
+      },
+      {
+        "key": "k5",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "five"
+          }
+        ]
+      },
+      {
+        "key": "k6",
+        "descs": [
+          {
+            "lang": "EN",
+            "value": "six"
+          }
+        ]
+      },
+      {
+        "key": "k7",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "SEVEN"
+          }
+        ]
+      },
+      {
+        "key": "k8",
+        "atonFilter": "f2",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "eight"
+          }
+        ]
+      },
+      {
+        "key": "k9",
+        "descs": [
+          {
+            "lang": "en",
+            "value": ""
+          },
+          {
+            "lang": "da",
+            "value": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "web",
+    "entries": [
+      {
+        "key": "menu.atons",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Aids to navigation"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,23 @@
+# Normalize all text files to LF in the repo. Working trees on Windows may still see
+# CRLF if core.autocrlf=true is set globally, but the canonical stored form is LF,
+# so prettier --write or any other LF-emitting tool no longer produces a CRLF→LF
+# churn diff on commit.
+* text=auto eol=lf
+
+# Binary file types — never line-ending-convert.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+
+# Git hooks ship with LF endings and a POSIX shebang so they spawn cleanly
+# under git's bundled sh on Windows. Without this, core.autocrlf=true would
+# re-introduce CRLF on checkout and break the hook with "Exec format error".
+.husky/* text eol=lf

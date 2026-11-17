@@ -1,0 +1,54 @@
+{
+  "catalogue": "IHO S-124 Ed 2.0.0 portrayal, Day palette",
+  "colours": {
+    "NWMGD": "#C045D1",
+    "bufferFill": "rgba(192, 69, 209, 0.15)",
+    "bufferStroke": "rgba(192, 69, 209, 0.6)"
+  },
+  "symbols": {
+    "nw-point": { "file": "nw-point.svg", "anchor": [0.499284, 0.498567] },
+    "nw-tag": { "file": "nw-tag.svg", "anchor": [0.512966, 0.494336] },
+    "nw-approx": { "file": "nw-approx.svg", "anchor": [0.893048, 0.893048] },
+    "nm-point": { "file": "nm-point.svg", "anchor": [0.499284, 0.498567] },
+    "nm-tag": { "file": "nm-tag.svg", "anchor": [0.512966, 0.494336] },
+    "nm-approx": { "file": "nm-approx.svg", "anchor": [0.893048, 0.893048] }
+  },
+  "lineStyle": { "cap": "round", "join": "round", "miterLimit": 10 },
+  "sizes": {
+    "screen": {
+      "unit": "css-px",
+      "symbols": {
+        "nw-point": [32, 32],
+        "nw-tag": [44, 27],
+        "nw-approx": [43, 43],
+        "nm-point": [32, 32],
+        "nm-tag": [44, 27],
+        "nm-approx": [43, 43]
+      },
+      "line": { "width": 2, "dash": [13.6, 6.8] },
+      "tagSpacing": 140,
+      "buffer": { "width": 1, "dash": [4, 4] }
+    },
+    "print": {
+      "unit": "image-px",
+      "referenceImageSize": 256,
+      "symbols": {
+        "nw-point": [34, 34],
+        "nw-tag": [53, 33],
+        "nw-approx": [46, 46],
+        "nm-point": [34, 34],
+        "nm-tag": [53, 33],
+        "nm-approx": [46, 46]
+      },
+      "line": { "width": 2, "dash": [12, 6] },
+      "tagSpacing": 160,
+      "buffer": { "width": 1, "dash": [4, 4] }
+    }
+  },
+  "styles": {
+    "s124-nw": { "stroke": "NWMGD", "point": "nw-point", "tag": "nw-tag", "approx": "nw-approx" },
+    "s124-nm": { "stroke": "NWMGD", "point": "nm-point", "tag": "nm-tag", "approx": "nm-approx" }
+  },
+  "buffer": { "fill": "bufferFill", "stroke": "bufferStroke" },
+  "select": [{ "mainType": "NM", "style": "s124-nm" }, { "style": "s124-nw" }]
+}

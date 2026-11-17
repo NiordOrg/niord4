@@ -1,0 +1,21 @@
+# Normalise all text files to LF in the repository. Working trees on Windows may still see CRLF
+# if core.autocrlf=true is set globally, but the stored form is LF, so a moved pack, branding file
+# or legal document keeps the bytes the kit compares and hashes (a pack's canonical archive, the
+# legal documents' fingerprints), and an LF-emitting tool makes no CRLF-to-LF churn on commit.
+# Written by the base product's country kit (init), from the base product's own fe/.gitattributes, with one rule more:
+* text=auto eol=lf
+# Windows command scripts, such as be/mvnw.cmd, keep CRLF.
+*.cmd text eol=crlf
+
+# Binary file types — never line-ending-convert.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary

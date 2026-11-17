@@ -1,0 +1,130 @@
+/* theme.css — the Tailwind @theme bridge
+   Re-exports the Layer 2 --niord-* tokens as first-class utilities.
+   Shared: both applications' entry stylesheets import this file. Nothing here may name an
+   application, and a rule that only one of them needs belongs in that application's own
+   stylesheet. */
+
+/* Tailwind v4 dark-variant: bind `dark:` to a `.app-dark` class on <html> rather than the
+   default `prefers-color-scheme`. Dark mode is out of scope (no dark tokens are authored), but
+   pre-picking the class selector keeps a future dark mode non-structural — author
+   `tokens.dark.css` scoped under `.app-dark`, flip the class, no per-component rewrites. Binding
+   to the OS preference instead would switch the `dark:` utilities on for every reader whose
+   device is in dark mode, over tokens that have no dark values.
+
+   It is bound here, in the file both entry stylesheets import, because the map kit's components
+   carry `dark:` utilities and both applications compile them: bound in one entry only, the
+   same layer switcher turned dark on a light page in the other. `npm run test:guards` holds
+   both entries to this file. */
+@custom-variant dark (&:where(.app-dark, .app-dark *));
+
+/* Tailwind v4 @theme — surface project --niord-* Layer 2 tokens as first-class
+   utility classes. Components can write `text-fg-muted` / `bg-chrome` /
+   `rounded-niord-md` / `font-sans` (a country's face) instead of arbitrary-value
+   brackets like `text-[var(--niord-fg-muted)]`.
+
+   Naming convention:
+   - Token names that don't collide with Tailwind defaults use the role name
+     directly (`text-fg`, `bg-chrome`).
+   - Tokens that WOULD override Tailwind defaults (radii, shadows) use a
+     `niord-` infix so the Tailwind defaults stay available: `rounded-niord-md`
+     vs `rounded-md`. Components migrate site-by-site during the sweep.
+   - `--font-sans` / `--font-mono` are intentionally overridden so the global
+     `font-sans` / `font-mono` utilities (and Tailwind's preflight `body`
+     font-family) pick up the project's brand font automatically. The country
+     overlay swap of `--niord-font-family` propagates through.
+
+   Country overlays edit `tokens.<country>.css`; values cascade through here. */
+@theme {
+  /* Foreground (text) levels */
+  --color-fg: var(--niord-fg);
+  --color-fg-muted: var(--niord-fg-muted);
+  --color-fg-subtle: var(--niord-fg-subtle);
+  --color-fg-on-primary: var(--niord-fg-on-primary);
+  --color-fg-title: var(--niord-fg-title);
+
+  /* App background (the page-level bg behind all content). Use `bg-bg`
+     on layout shells. White surfaces (cards, dialogs) use `bg-surface-0`
+     — both themes resolve that to `#ffffff` through the surface scale below. */
+  --color-bg: var(--niord-bg);
+
+  /* Surface scale — the neutral ramp behind `bg-surface-*` / `border-surface-*` /
+     `text-surface-*` utilities. Wired straight to the Layer 2 `--niord-surface-*`
+     tokens (Default is a cool slate; a country may swap it, to warm paper, say), so
+     every surface utility flips per country. A first-class Tailwind scale. */
+  --color-surface-0: var(--niord-surface-0);
+  --color-surface-50: var(--niord-surface-50);
+  --color-surface-100: var(--niord-surface-100);
+  --color-surface-200: var(--niord-surface-200);
+  --color-surface-300: var(--niord-surface-300);
+  --color-surface-400: var(--niord-surface-400);
+  --color-surface-500: var(--niord-surface-500);
+  --color-surface-600: var(--niord-surface-600);
+  --color-surface-700: var(--niord-surface-700);
+  --color-surface-800: var(--niord-surface-800);
+  --color-surface-900: var(--niord-surface-900);
+  --color-surface-950: var(--niord-surface-950);
+
+  /* Sunken surface — the recessed gray used for area group headers and
+     row hover. Matches the page `--color-bg` family but is a distinct
+     token so surface depth stays adjustable per country. Exposed as
+     `bg-surface-sunken` / `text-surface-sunken`. */
+  --color-surface-sunken: var(--niord-surface-sunken);
+
+  /* Header band — the ONE shared fill for card header bands and every
+     list-table header (messages + admin/sysadmin). Exposed as
+     `bg-header-band`; the Layer-3 table rules read the --niord-* token
+     directly. */
+  --color-header-band: var(--niord-header-band);
+
+  /* Primary (brand action) scale — powers `bg-primary` / `text-primary` (bare →
+     the 500 tone) and the `*-primary-{50..950}` utilities. Wired to the Layer 2
+     `--niord-primary-*` tokens (navy in both countries). */
+  --color-primary: var(--niord-primary);
+  --color-primary-50: var(--niord-primary-50);
+  --color-primary-100: var(--niord-primary-100);
+  --color-primary-200: var(--niord-primary-200);
+  --color-primary-300: var(--niord-primary-300);
+  --color-primary-400: var(--niord-primary-400);
+  --color-primary-500: var(--niord-primary-500);
+  --color-primary-600: var(--niord-primary-600);
+  --color-primary-700: var(--niord-primary-700);
+  --color-primary-800: var(--niord-primary-800);
+  --color-primary-900: var(--niord-primary-900);
+  --color-primary-950: var(--niord-primary-950);
+
+  /* Accent (project brand secondary) — flips per country (teal in Default,
+     a country's own accent in its brand). Use `text-accent` / `bg-accent` / `border-accent` for
+     the "marked / branded" affordance (star icon when on, selection-badge
+     count, etc.). The accent SCALE (`--niord-accent-*`) is not exposed as
+     utilities — reference those shades via arbitrary-value brackets when needed. */
+  --color-accent: var(--niord-accent);
+
+  /* Semantic alert colors — `text-danger` / `text-warning` route the alert hue
+     through one place rather than hard-coding `text-red-600` / `text-yellow-700`
+     per site. (Tailwind's red-600 / yellow-700 values.) */
+  --color-danger: #dc2626;
+  --color-warning: #a16207;
+
+  /* Chrome colors — for components that match the header aesthetic
+     (sticky toolbars, banners, etc.). The header itself is styled
+     directly via header.css; this exposes the same palette to other call
+     sites without each owning a copy. */
+  --color-chrome: var(--niord-header-bg);
+  --color-chrome-fg: var(--niord-header-fg);
+  --color-chrome-muted: var(--niord-header-muted);
+  --color-chrome-active: var(--niord-header-active);
+
+  /* Project radii — `niord-` infix preserves Tailwind defaults. */
+  --radius-niord-sm: var(--niord-radius-sm);
+  --radius-niord-md: var(--niord-radius);
+  --radius-niord-lg: var(--niord-radius-lg);
+
+  /* Project shadows — `niord-` infix preserves Tailwind defaults. */
+  --shadow-niord-sm: var(--niord-shadow-sm);
+  --shadow-niord-md: var(--niord-shadow);
+  --shadow-niord-lg: var(--niord-shadow-lg);
+
+  /* Fonts — intentionally override Tailwind defaults. */
+  --font-sans: var(--niord-font-family);
+  --font-mono: var(--niord-font-mono);
+}

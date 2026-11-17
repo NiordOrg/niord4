@@ -1,0 +1,4 @@
+# What the build writes, never committed: target/, and niord-parent's flatten plugin's
+# .flattened-pom.xml beside the pom.
+target/
+.flattened-pom.xml

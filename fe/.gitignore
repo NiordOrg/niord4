@@ -1,0 +1,47 @@
+# Build output
+dist/
+out-tsc/
+# Written by the staging step (country-kit/stage-languages.mjs) from the language packs; never committed
+.niord/
+
+# Angular cache
+.angular/
+
+# Coverage and test artifacts
+coverage/
+playwright-report/
+test-results/
+# Playwright MCP server's session-local snapshots, console logs, and any
+# ad-hoc screenshots an interactive Claude Code session writes here.
+.playwright-mcp/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and local overrides
+.env
+.env.*
+
+# IDEs/editors
+.idea/
+*.iml
+# Per-developer Claude Code permissions — machine-local, never shared
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# S-100 stuff
+S-124_S-125_PS/
+
+# MSYS/Git Bash crash dumps left by tool runs
+*.stackdump
+
+# perf budget check output (scripts/perf/publications-requests.mjs)
+scripts/perf/last-run.json

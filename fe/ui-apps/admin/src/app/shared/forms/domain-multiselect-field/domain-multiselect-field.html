@@ -1,0 +1,67 @@
+<div class="flex flex-wrap items-center gap-1">
+  @for (domain of value(); track domain.domainId) {
+    <button
+      type="button"
+      class="chip"
+      [style.background-color]="chipBackground(domain.color)"
+      [style.border-color]="chipBorder(domain.color)"
+      [disabled]="disabled()"
+      (click)="remove(domain)"
+      [attr.aria-label]="(domain.name ?? domain.domainId) + ' — ' + ('common.remove' | transloco)"
+      [title]="(domain.name ?? domain.domainId) + ' — ' + ('common.remove' | transloco)"
+    >
+      <span
+        class="inline-block h-2 w-2 shrink-0 rounded-full"
+        [style.background-color]="domain.color || 'var(--niord-fg-subtle)'"
+      ></span>
+      {{ domain.name ?? domain.domainId }}
+      @if (domain.active === false) {
+        <span class="text-xs">({{ 'common.inactive' | transloco }})</span>
+      }
+      <app-icon name="lucideX" class="text-xs" aria-hidden="true" />
+    </button>
+  }
+  <button
+    type="button"
+    class="icon-button text-xs"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel() || placeholder()"
+    [title]="ariaLabel() || placeholder()"
+    (click)="openPicker($event)"
+  >
+    <app-icon name="lucideGlobe" />
+  </button>
+</div>
+
+<app-picker-popover #shell>
+  <!-- Fixed, viewport-bounded scroll region keeps the popover box stable (see PickerPopover). -->
+  <div class="h-[min(18rem,45vh)] overflow-y-auto">
+    <ul class="m-0 list-none divide-y divide-surface-100 p-0 dark:divide-surface-800">
+      @for (domain of availableDomains(); track domain.domainId) {
+        <li>
+          <label
+            [for]="'domain-option-' + domain.domainId"
+            class="flex w-full cursor-pointer items-center gap-2 px-1 py-2 text-sm"
+          >
+            <input
+              type="checkbox"
+              class="checkbox"
+              [id]="'domain-option-' + domain.domainId"
+              [ngModel]="isChecked(domain)"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="toggleDomain(domain)"
+            />
+            <span
+              class="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+              [style.background-color]="domain.color || 'var(--niord-fg-subtle)'"
+            ></span>
+            <span class="min-w-0 flex-1 truncate">{{ domain.name ?? domain.domainId }}</span>
+            @if (domain.active === false) {
+              <span class="text-xs text-danger">({{ 'common.inactive' | transloco }})</span>
+            }
+          </label>
+        </li>
+      }
+    </ul>
+  </div>
+</app-picker-popover>

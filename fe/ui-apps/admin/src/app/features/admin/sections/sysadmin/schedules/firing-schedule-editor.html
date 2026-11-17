@@ -1,0 +1,95 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="schedule-source-domain" class="text-sm font-medium text-fg-title">
+          {{ 'admin.schedules.field.domain' | transloco }}
+        </label>
+        <app-select
+          inputId="schedule-source-domain"
+          class="w-full"
+          [formField]="form.sourceDomainId"
+          [options]="domainOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'admin.schedules.field.domainPlaceholder' | transloco"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="schedule-target-domain" class="text-sm font-medium text-fg-title">
+          {{ 'admin.schedules.field.targetDomain' | transloco }}
+        </label>
+        <app-select
+          inputId="schedule-target-domain"
+          class="w-full"
+          [formField]="form.targetDomainId"
+          [options]="domainOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'admin.schedules.field.targetDomainPlaceholder' | transloco"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="schedule-target-series" class="text-sm font-medium text-fg-title">
+          {{ 'admin.schedules.field.targetSeries' | transloco }}
+        </label>
+        <app-select
+          inputId="schedule-target-series"
+          class="w-full"
+          [formField]="form.targetSeriesId"
+          [options]="seriesOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'admin.schedules.field.targetSeriesPlaceholder' | transloco"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="schedule-days" class="text-sm font-medium text-fg-title">
+          {{ 'admin.schedules.field.scheduleDays' | transloco }}
+        </label>
+        <input
+          type="number"
+          id="schedule-days"
+          class="text-input w-full"
+          [formField]="form.scheduleDays"
+          [step]="1"
+          [attr.aria-invalid]="scheduleDaysInvalid() || null"
+          [attr.aria-describedby]="scheduleDaysInvalid() ? 'schedule-days-error' : null"
+        />
+        @if (scheduleDaysInvalid()) {
+          <p id="schedule-days-error" class="text-xs text-danger" role="alert">
+            {{ 'admin.schedules.field.scheduleDaysInvalid' | transloco }}
+          </p>
+        }
+      </div>
+
+      <div class="flex items-center gap-2 text-sm">
+        <input type="checkbox" [formField]="form.active" id="schedule-active" class="checkbox" />
+        <label for="schedule-active">{{ 'admin.schedules.field.active' | transloco }}</label>
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.schedules.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.schedules.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

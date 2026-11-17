@@ -1,0 +1,224 @@
+@if (model(); as m) {
+  <form (submit)="$event.preventDefault(); save()" class="flex min-h-0 flex-1 flex-col">
+    <!-- flex+gap, not space-y: `space-y` hangs the spacing off the PRECEDING sibling's margin,
+         and `<app-editor-fields-grid>` is a `display: contents` host, which generates no box and
+         so silently drops that margin — collapsing the gap under it to zero. A container `gap`
+         spaces the real boxes instead, so a transparent-wrapper child costs no spacing. -->
+    <div class="flex flex-1 flex-col gap-5 overflow-y-auto p-5">
+      <h2 class="text-base font-semibold text-fg">
+        {{
+          (m.mode === 'add' ? 'admin.areas.editor.addTitle' : 'admin.areas.editor.editTitle')
+            | transloco
+        }}
+      </h2>
+
+      <!-- Parent (read-only) — shown in add-mode so the new node's placement is clear.
+           Reparenting an existing area is drag-only, so no parent control in edit-mode. -->
+      @if (m.mode === 'add' && parentName()) {
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.areas.field.parent' | transloco }}
+          </span>
+          <span class="text-input bg-surface-100 text-fg-muted dark:bg-surface-800">
+            {{ parentName() }}
+          </span>
+        </div>
+      }
+
+      <div class="flex items-center gap-2 text-sm">
+        <input type="checkbox" id="area-active" class="checkbox" [formField]="form.active" />
+        <label for="area-active">{{ 'admin.areas.field.active' | transloco }}</label>
+      </div>
+
+      <!-- Per-language names: one heading, then a flagged field per configured language (first
+           language required, gated on Save). Mirrors the Sources / Mailing-list editors. -->
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.areas.field.name' | transloco }}
+        </span>
+        <div class="flex flex-col gap-2">
+          @for (lang of languages; track lang.value) {
+            <div class="flex flex-col gap-1">
+              <app-localized-text-input
+                [lang]="lang.value"
+                [value]="names()[lang.value]"
+                (valueChange)="setName(lang.value, $event)"
+                ariaLabelKey="admin.areas.field.name"
+              />
+              <app-length-counter [text]="names()[lang.value]" [limit]="nameMax" />
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="area-mrn" class="text-sm font-medium text-fg-title">
+          {{ 'admin.areas.field.mrn' | transloco }}
+        </label>
+        <input class="text-input" id="area-mrn" type="text" [formField]="form.mrn" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="area-type" class="text-sm font-medium text-fg-title">
+          {{ 'admin.areas.field.type' | transloco }}
+        </label>
+        <select id="area-type" class="text-input" [formField]="form.type">
+          <option value="">{{ 'admin.areas.type.none' | transloco }}</option>
+          @for (type of areaTypes; track type) {
+            <option [value]="type">{{ 'admin.areas.type.' + type | transloco }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Additional editor fields: the message-editor fields this area force-enables. -->
+      <app-editor-fields-grid
+        label="admin.areas.field.editorFields"
+        [candidates]="editorFieldCandidates"
+        [(value)]="editorFields"
+      />
+
+      <!-- Message sorting — only settable when NO ancestor already defines a strategy
+           (a child inherits its nearest ancestor's sorting). -->
+      @if (defineMessageSorting()) {
+        <div class="flex flex-col gap-1">
+          <label for="area-sorting" class="text-sm font-medium text-fg-title">
+            {{ 'admin.areas.field.messageSorting' | transloco }}
+          </label>
+          <select id="area-sorting" class="text-input" [formField]="form.messageSorting">
+            <option value="">{{ 'admin.areas.sorting.none' | transloco }}</option>
+            @for (sort of sortingTypes; track sort) {
+              <option [value]="sort">{{ 'admin.areas.sorting.' + sort | transloco }}</option>
+            }
+          </select>
+        </div>
+
+        @if (showOrigin()) {
+          <div class="grid grid-cols-3 gap-3">
+            <div class="flex flex-col gap-1">
+              <label for="area-origin-lat" class="text-sm font-medium text-fg-title">
+                {{ 'admin.areas.field.originLatitude' | transloco }}
+              </label>
+              <input
+                class="text-input"
+                id="area-origin-lat"
+                type="number"
+                step="any"
+                [formField]="form.originLatitude"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="area-origin-lon" class="text-sm font-medium text-fg-title">
+                {{ 'admin.areas.field.originLongitude' | transloco }}
+              </label>
+              <input
+                class="text-input"
+                id="area-origin-lon"
+                type="number"
+                step="any"
+                [formField]="form.originLongitude"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="area-origin-angle" class="text-sm font-medium text-fg-title">
+                {{ 'admin.areas.field.originAngle' | transloco }}
+              </label>
+              <input
+                class="text-input"
+                id="area-origin-angle"
+                type="number"
+                step="any"
+                [formField]="form.originAngle"
+              />
+            </div>
+          </div>
+        }
+      }
+
+      <!-- Extent geometry — read-only preview with Edit / Edit-as-text overlaid (Charts pattern). -->
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.areas.editor.extent.label' | transloco }}
+        </span>
+        <div
+          class="relative h-64 overflow-hidden rounded border border-surface-200 dark:border-surface-700"
+        >
+          <app-ol-map class="block h-full w-full" [readOnly]="true" [view]="initialView()">
+            <app-ol-tile-layer source="OSM" />
+            <app-ol-geometry-preview-layer [featureCollection]="currentFc()" />
+          </app-ol-map>
+          @if (!hasExtent()) {
+            <span
+              class="pointer-events-none absolute inset-x-0 top-2 text-center text-xs text-fg-muted"
+            >
+              {{ 'admin.areas.editor.extent.none' | transloco }}
+            </span>
+          }
+          <div class="absolute top-2 right-2 z-10 flex gap-2">
+            <button type="button" class="btn-secondary shadow" (click)="openGeometryEditor()">
+              <app-icon name="lucidePencil" class="mr-1 text-xs" />
+              {{ 'admin.areas.editor.extent.edit' | transloco }}
+            </button>
+            <button type="button" class="btn-secondary shadow" (click)="openEditAsText()">
+              <app-icon name="lucideAlignLeft" class="mr-1 text-xs" />
+              {{ 'admin.areas.editor.extent.editAsText' | transloco }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </div>
+
+    <div class="flex justify-end gap-2 border-t border-surface-200 p-3 dark:border-surface-700">
+      <button type="button" class="btn-tertiary" (click)="cancelled.emit()">
+        {{ 'admin.areas.editor.cancel' | transloco }}
+      </button>
+      <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+        {{ 'admin.areas.editor.save' | transloco }}
+      </button>
+    </div>
+  </form>
+
+  <!-- The extent geometry editor: a near-full-window modal (Charts shape). -->
+  <app-dialog
+    [visible]="geometryEditorOpen()"
+    [modal]="true"
+    [closable]="false"
+    [closeOnEscape]="false"
+    [dismissableMask]="false"
+    top="1rem"
+    [style]="{
+      width: 'calc(100vw - 2rem)',
+      maxWidth: 'calc(100vw - 2rem)',
+      height: 'calc(100vh - 2rem)',
+      maxHeight: 'calc(100vh - 2rem)',
+      overflow: 'hidden',
+    }"
+  >
+    @if (geometryEditorOpen()) {
+      <!-- Area extents allow POINT, POLYLINE, and box/polygon drawing
+           (chart extents are box/polygon only). -->
+      <app-geometry-editor
+        class="block h-full"
+        [geometry]="currentFc()"
+        editType="features"
+        [showImport]="true"
+        drawControls="point,polyline,polygon,box,select,remove"
+        (geometryChange)="onGeometryCommit($event)"
+        (cancelled)="onGeometryCancelled()"
+      />
+    }
+  </app-dialog>
+
+  <app-edit-as-text-dialog
+    [visible]="editAsTextOpen()"
+    (visibleChange)="editAsTextOpen.set($event)"
+    [featureCollection]="currentFc()"
+    (saved)="onGeometryCommit($event)"
+  />
+} @else {
+  <div class="flex flex-1 items-center justify-center p-8 text-sm text-fg-muted">
+    {{ 'admin.areas.editor.empty' | transloco }}
+  </div>
+}

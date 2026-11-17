@@ -1,0 +1,215 @@
+<app-drawer
+  #drawerRef
+  size="wide"
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model(); as m) {
+    <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))">
+      <app-tab-list>
+        <app-tab value="details">{{ 'admin.users.editor.tab.details' | transloco }}</app-tab>
+        @if (isEdit()) {
+          <app-tab value="groups">{{ 'admin.users.editor.tab.groups' | transloco }}</app-tab>
+          <app-tab value="lists">{{ 'admin.users.editor.tab.mailingLists' | transloco }}</app-tab>
+        }
+      </app-tab-list>
+      <app-tab-panels>
+        <app-tab-panel value="details">
+          <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5 pt-2">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label for="user-username" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.users.field.username' | transloco }}
+                </label>
+                <input
+                  class="text-input"
+                  id="user-username"
+                  type="text"
+                  [formField]="form.username"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label for="user-email" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.users.field.email' | transloco }}
+                </label>
+                <input class="text-input" id="user-email" type="email" [formField]="form.email" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label for="user-first-name" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.users.field.firstName' | transloco }}
+                </label>
+                <input
+                  class="text-input"
+                  id="user-first-name"
+                  type="text"
+                  [formField]="form.firstName"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label for="user-last-name" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.users.field.lastName' | transloco }}
+                </label>
+                <input
+                  class="text-input"
+                  id="user-last-name"
+                  type="text"
+                  [formField]="form.lastName"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label for="user-password" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.users.field.password' | transloco }}
+                </label>
+                <input
+                  class="text-input"
+                  id="user-password"
+                  type="password"
+                  [formField]="form.keycloakPassword"
+                  autocomplete="new-password"
+                  [attr.placeholder]="
+                    isEdit() ? ('admin.users.field.passwordUnchanged' | transloco) : null
+                  "
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label for="user-language" class="text-sm font-medium text-fg-title">
+                  {{ 'admin.users.field.language' | transloco }}
+                </label>
+                <!-- Blank option ⇒ the language is OMITTED from the save payload. -->
+                <select id="user-language" [formField]="form.language" class="w-full text-input">
+                  <option value=""></option>
+                  @for (lang of languages; track lang.value) {
+                    <option [value]="lang.value">{{ lang.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <hr class="border-surface-200 dark:border-surface-700" />
+
+            <fieldset class="flex flex-col gap-2">
+              <legend class="mb-1 text-sm font-medium text-fg-title">
+                {{ 'admin.users.field.requiredActions' | transloco }}
+              </legend>
+              <div class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  id="ra-profile"
+                  class="checkbox"
+                  [formField]="form.requiredActions.updateProfile"
+                />
+                <label for="ra-profile">{{ 'admin.users.field.updateProfile' | transloco }}</label>
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  id="ra-password"
+                  class="checkbox"
+                  [formField]="form.requiredActions.updatePassword"
+                />
+                <label for="ra-password">{{
+                  'admin.users.field.updatePassword' | transloco
+                }}</label>
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  id="ra-verify"
+                  class="checkbox"
+                  [formField]="form.requiredActions.verifyEmail"
+                />
+                <label for="ra-verify">{{ 'admin.users.field.verifyEmail' | transloco }}</label>
+              </div>
+            </fieldset>
+
+            <!-- Hidden submit makes Enter in any field submit (validity-gated in save()). -->
+            <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+          </form>
+        </app-tab-panel>
+
+        @if (isEdit()) {
+          <app-tab-panel value="groups">
+            <div class="grid grid-cols-1 gap-4 pt-2 md:grid-cols-2">
+              <app-card [header]="'admin.users.groupsTab.memberships' | transloco" [padded]="false">
+                @if (userGroups(); as memberships) {
+                  @if (memberships.length === 0) {
+                    <p class="px-4 py-3 text-sm text-fg-muted">
+                      {{ 'admin.users.groupsTab.noMemberships' | transloco }}
+                    </p>
+                  } @else {
+                    <ul class="divide-y divide-surface-100 dark:divide-surface-800">
+                      @for (group of memberships; track group.id) {
+                        <li class="flex items-center justify-between px-4 py-2 text-sm">
+                          <span class="font-mono">{{ group.path }}</span>
+                          @if (group.active) {
+                            <button
+                              type="button"
+                              class="icon-button text-xs hover:text-danger"
+                              [attr.aria-label]="'admin.users.groupsTab.leave' | transloco"
+                              (click)="leaveGroup(group)"
+                            >
+                              <app-icon name="lucideTrash2" />
+                            </button>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
+                } @else {
+                  <p class="px-4 py-3 text-sm text-fg-muted">{{ 'common.loading' | transloco }}</p>
+                }
+              </app-card>
+
+              <app-card [header]="'admin.users.groupsTab.available' | transloco">
+                <button
+                  cardActions
+                  type="button"
+                  class="btn-secondary h-7 px-3 text-xs"
+                  [disabled]="selectedGroup() === undefined"
+                  (click)="joinSelectedGroup()"
+                >
+                  {{ 'admin.users.groupsTab.join' | transloco }}
+                </button>
+                <app-entity-tree
+                  [entities]="availableGroups()"
+                  [expandFirstLevel]="true"
+                  [selectedIds]="selectedGroupIds()"
+                  (entitySelected)="onGroupSelected($event)"
+                />
+              </app-card>
+            </div>
+          </app-tab-panel>
+
+          <app-tab-panel value="lists">
+            <div class="pt-2">
+              <app-mailing-list-membership-panel
+                [lists]="mailingLists()"
+                [memberIds]="memberIds()"
+                (toggled)="onMembershipToggle($event)"
+              />
+            </div>
+          </app-tab-panel>
+        }
+      </app-tab-panels>
+    </app-tabs>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.users.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.users.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

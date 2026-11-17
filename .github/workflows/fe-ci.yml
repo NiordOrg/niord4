@@ -1,0 +1,616 @@
+name: Frontend CI
+
+# CI for the Angular administration app under fe/.
+#
+# Two work jobs run side by side, each after its own `npm ci`:
+#
+#   Checks + builds    npm run format:check, docs:check, paths:check, contents:check (what each
+#                      build configuration ships, against its language configuration), lint,
+#                      lint:scripts (ESLint over the kit's and the workspace's scripts),
+#                      test:guards (the guards' own negative tests), then build (production, the
+#                      base product) followed by urls:check (no font or stylesheet from another
+#                      origin in what it built); the country builds were removed in P7, and a
+#                      country builds in its own repository
+#   Admin unit tests   the Vitest suite, in one shard (fe/scripts/ci-test-shard.mjs)
+#   Example country    the example country (country-kit/example/) set up as a country does,
+#                      from a folder outside the tree, against a source zip built from the commit
+#                      under test and installed into the job's Maven repository, then npm ci,
+#                      the build of both applications with the checks on every country build
+#                      (country-kit/check-build.mjs), its specs, its lint, and its public-site
+#                      image packaged from that build (npm run image:info) with the container
+#                      test, the layout check and the separation check against the image
+#                      (country-kit/example/run.mjs); then the new-country acceptance tests
+#                      against the same zip: an untouched `init` (set-up, build, specs, lint,
+#                      e2e listing, its bundle baseline started, its image), with, when a
+#                      scaffold input changed (`Detect`'s scaffold rule), the generated
+#                      country's backend straight after its set-up (--backend: niord-base and
+#                      its test-jar installed from the commit, be/mvnw verify on Docker, the
+#                      group check and the override check); publishing and
+#                      pinning (a registry:2.8.3 container from Docker Hub on 127.0.0.1: the
+#                      example's pack zz published with the two commands pack.yml's token jobs
+#                      run, anonymously, pinned in the untouched country with --update-pins, set
+#                      up and built for production from the pin, then withdrawn, after which its
+#                      set-up stops with the reason); and the fixture
+#                      upgrade (a derived next zip: set-up red on the override alone with the
+#                      upgrade report, then green after the routine actions, and built); then the
+#                      upgrade test from the latest release's niord-fe-src (publish.yml attaches
+#                      the zip to the release on v4.0.<run>), verified against the sha256 in that
+#                      release's notes — with no release yet it is skipped, and the job summary
+#                      says so — on a change to what its zip or its harness reads (see `Detect`),
+#                      the public site's folder included, since the example builds it too, and
+#                      the parent pom, the base settings files, the PDF logo and the English
+#                      backend bundles
+#   Frontend gate      the one job for branch protection to require
+#
+# Why two work jobs: GitHub bills every job rounded UP to a whole minute, and every job pays its own
+# checkout + `npm ci` (~20 s) before it does anything. Measured on the runs of September 2026, the
+# nine work jobs this workflow used to have (format + docs, lint, four test shards, three builds)
+# took ~11 runner-minutes and were billed 14; the same steps in two jobs should bill about 8, with
+# the run taking about four minutes instead of three. Every step of `Checks + builds` runs even
+# when an earlier one failed, so one red check never hides another.
+#
+# Branch protection is not enabled on main yet: it is switched on before production go-live, and
+# until then this gate reports but blocks no merge.
+#
+# The Playwright suite is deliberately not here: it needs a live backend and a real Keycloak
+# (fe/docs/testing.md).
+#
+# The public site under fe/ui-apps/info/ has its own workflow, info-ci.yml, with its own gate
+# ("Info gate"). A change confined to that folder therefore skips every job below but the example
+# country, which builds the public site too — see `Detect`.
+#
+# ---------------------------------------------------------------------------------------------
+# Why this file lives at the repository root
+# ---------------------------------------------------------------------------------------------
+# GitHub only reads workflows from `.github/workflows/` at the root of the repository. A copy under
+# fe/ is never registered. Every job therefore sets `working-directory: fe` and points the npm
+# cache at fe/package-lock.json.
+#
+# ---------------------------------------------------------------------------------------------
+# Which pull requests
+# ---------------------------------------------------------------------------------------------
+# Only pull requests into main, and only once they are ready for review — the reasons are in
+# be-ci.yml. Sub-PRs into `feature/**` run no CI (./verify-local instead); a push to a draft starts
+# a run in which every job skips itself, which costs nothing; `ready_for_review` starts the real run.
+#
+# ---------------------------------------------------------------------------------------------
+# Why `pull_request` is not path-filtered, and why there is a gate job
+# ---------------------------------------------------------------------------------------------
+# A workflow that a `paths:` filter skips never reports its checks, so a required check would sit
+# at "Expected — waiting for status to be reported" forever on a backend-only PR. The filter
+# therefore lives in the `changes` job, and the work jobs are skipped with a job-level `if:` when
+# the frontend is untouched — a skipped job costs no runner time.
+#
+# A matrix changes its check names with its size, and the work jobs change as they are merged or
+# split, so the `gate` job is the ONLY name branch protection needs: "Frontend gate". It fails
+# unless every work job that detection asked for succeeded. Adding, removing or re-sharding jobs
+# never touches branch protection.
+#
+# What a skipped job means for a required check: GitHub reports a job that its `if:` skipped as
+# "skipped", and branch protection counts "skipped" as passing. The gate uses that in exactly two
+# cases and runs in every other (a failed work job, a failed or cancelled detection, a push):
+#
+#   - Detection succeeded and found that neither the administration app's jobs nor the example
+#     country had to run. Nothing needed to run, and a gate that ran would only have confirmed
+#     that; skipped, it costs no runner minute, so a backend-only PR costs this workflow its
+#     detection job alone — unless it changes the parent pom, the Maven wrapper, the base
+#     settings file or its catalog, the PDF logo or an English backend bundle, which the example
+#     reads, or the endpoint table, which the administration jobs read. A change confined to fe/ui-apps/info/ runs the example country (it builds the
+#     public site) and the gate with it, but not the administration jobs.
+#   - The PR is a draft, on the run's first attempt. Nothing ran, and "passing" there is harmless
+#     because GitHub does not merge a draft. Marking it ready for review starts a new run on the
+#     same commit whose gate replaces the skipped one. That gate may only appear on the PR once its
+#     work jobs finish, so for those few minutes the draft's skipped gate is still the newest on
+#     the commit: merge on the ready run's gate, not before it has reported.
+#
+# A re-run is never skipped as a draft (`github.run_attempt > 1` in each draft condition). It reuses
+# the event payload of the run it repeats, draft flag included, so re-running a draft-era run after
+# the ready run's gate went red would otherwise post a newer skipped — passing — gate on the same
+# commit. Re-run, a draft-era run does the real work and its gate reports what that work found.
+#
+# `push` has no such constraint, so it is path-filtered the cheap way, at the trigger — with the
+# same exclusion `Detect` makes: a merge confined to fe/ui-apps/info/ runs Info CI alone, and Info
+# CI then starts the publish run itself (publish.yml follows Backend CI, Frontend CI and Info CI
+# on main, since the source zip carries the public site). publish.yml and retract-version.yml are
+# in this filter and in Detect's rule because the guard tests run their bash
+# (fe/scripts/release-workflows.test.mjs); a change to publish.yml runs Backend CI as well.
+# The backend's endpoint table (be/niord/src/test/resources/endpoints/) is in both for the same
+# reason: the guard tests and the administration app's specs hold every HTTP call and every
+# role-gated item to it (fe/scripts/endpoint-roles.test.mjs), so a change to the table alone can
+# break them. Backend CI runs for it as well.
+on:
+  pull_request:
+    branches: [ main ]
+    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  push:
+    branches: [ main ]
+    paths:
+      - 'fe/**'
+      - '!fe/ui-apps/info/**'
+      - 'country-kit/**'
+      - 'be/niord/src/test/resources/endpoints/**'
+      - '.github/workflows/fe-ci.yml'
+      - '.github/workflows/publish.yml'
+      - '.github/workflows/retract-version.yml'
+  workflow_dispatch:
+
+# A newer push to the same pull request cancels its in-flight run, so superseded builds are not
+# paid for. Push and dispatch runs get a group of their own (their run id) and are never cancelled
+# or replaced: publish.yml needs every main commit's CI to conclude (see be-ci.yml).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # The `prepare` script installs git hooks through husky; a CI checkout has no use for them.
+  HUSKY: 0
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Does this change touch the frontend at all? See the trigger comment above for
+  # why this is a job rather than a `paths:` filter on `pull_request`. Skipped on
+  # a draft's first attempt, and with it every job below.
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect frontend changes
+    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
+      example: ${{ steps.detect.outputs.example }}
+      scaffold: ${{ steps.detect.outputs.scaffold }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so `git merge-base` with the target branch resolves on pull_request runs
+          # (same reasoning as be-ci.yml), as a partial clone with .github alone on disk: the step
+          # reads commits and trees, no file (be-ci.yml's header, What a job checks out).
+          fetch-depth: 0
+          sparse-checkout: .github
+
+      - name: Detect
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            # `git diff A...B` semantics — the same "changed by this PR" set GitHub's own path
+            # filters use, so a change already on main does not count as a frontend change here.
+            base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+            # --no-renames: a moved file is listed under BOTH its paths. Rename detection would
+            # list only the new one, so a file moved out of ui-apps/admin/ into ui-apps/info/
+            # would read as a public-site change alone and skip the suite whose build it broke.
+            changed=$(git diff --name-only --no-renames "$base" "$HEAD_SHA")
+            echo "Files changed by this PR:"
+            echo "$changed" | sed 's/^/  /'
+            # A change confined to fe/ui-apps/info/ is the public site's business and info-ci.yml runs
+            # for it; the administration suite would be about eight runner-minutes for nothing.
+            # Everything else under fe/ (package.json, angular.json, the lint config, docs/,
+            # scripts/) and the kit, country-kit/, runs this suite; info-ci.yml's own filter
+            # decides whether it runs too.
+            # ./verify-local applies the same rule to a local branch.
+            relevant=$(grep -vE '^fe/ui-apps/info/' <<< "$changed" || true)
+            # The two release workflows count as well: the guard tests run their bash
+            # (fe/scripts/release-workflows.test.mjs). So does the backend's endpoint table, which
+            # the guard tests and the specs hold the frontend's calls and role gates to
+            # (fe/scripts/endpoint-roles.test.mjs).
+            # A here-string, not `echo | grep -q`: under pipefail that pipe reads FALSE for a large
+            # PR (grep exits on its first match, echo takes SIGPIPE past the 64 KiB pipe buffer).
+            if grep -qE '^(fe/|country-kit/|be/niord/src/test/resources/endpoints/|\.github/workflows/(fe-ci|publish|retract-version)\.yml$)' <<< "$relevant"; then
+              frontend=true
+            else
+              frontend=false
+            fi
+            # The example country runs on a change to what its zip and its harness read: the zip's
+            # include list (country-kit/zip-include.json, widened to whole folders, so
+            # fe/ui-apps/info/ too), the kit, the backend contract be/docs/country-api.md, the
+            # parent pom and Maven wrapper the harness installs and runs, the base settings file, its
+            # catalog and the PDF logo the kit package carries under backend/, and the English
+            # backend bundles the zip's catalog.json is built from. Of
+            # fe/scripts/ only what the zip carries: the public site's checks, the URL check with its
+            # glob matcher scripts/glob.mjs and the URL allow-list the example's build and image run
+            # from .niord/base/scripts/; of the root files also eslint-shared.cjs, the lint lists
+            # eslint.config.js takes, and playwright.config.ts, which the generated workspace's own
+            # configuration extends. Not fe/docs/, the other scripts, fe/README.md or another
+            # language's pack, which nothing of the example reads. ./verify-local's EXAMPLE_RULE is
+            # the same expression.
+            if grep -qE '^(fe/ui-apps/|fe/shared-map/|fe/shared-html/|fe/styles/|fe/languages/en/|country-kit/|fe/scripts/(info-(separation-check|layout-check|bundle-report|container-test)|build-urls-check|glob)\.mjs$|fe/scripts/build-urls-allowed\.json$|fe/(package\.json|package-lock\.json|\.npmrc|\.nvmrc|\.postcssrc\.json|tsconfig\.json|angular\.json|eslint\.config\.js|eslint-shared\.cjs|vitest\.config\.ts|proxy\.conf\.mjs|LICENSE|playwright\.config\.ts)$|be/pom\.xml$|be/mvnw(\.cmd)?$|be/\.mvn/|be/docs/country-api\.md$|be/niord/src/main/resources/([a-z]+_en\.properties$|defaults/base/texts/en/|defaults/base/settings(-catalog)?\.json$|META-INF/resources/img/company-logo\.png$)|\.github/workflows/fe-ci\.yml$)' <<< "$changed"; then
+              example=true
+            else
+              example=false
+            fi
+            # The scaffold rule: what the generated country's backend build reads — the parent pom,
+            # niord-base's and niord-app's poms, the bootstrap, the base settings, the country build
+            # group, the backend contract, the Maven wrapper init copies, the override check, and
+            # the kit's init, answers, scaffold and templates with the harness that builds them.
+            # When it matches, the Example job runs the harness with --backend: yy's be/mvnw verify
+            # on Docker, the group check and the override check (country-kit/example/run.mjs). A
+            # match the example rule above does not take runs no Example job here; Backend CI's
+            # Generated country job builds it on the same pull request. be-ci.yml's Detect and
+            # ./verify-local's SCAFFOLD_RULE are the same expression.
+            scaffold_rule='^(be/pom\.xml$|be/niord/pom\.xml$|be/niord-app/|be/niord-bootstrap/|be/niord/bootstrap/|be/niord/src/main/resources/defaults/base/|be/niord/src/test/java/org/niord/test/CountryBuildGroup(Test)?\.java$|be/docs/country-api\.md$|be/mvnw(\.cmd)?$|be/\.mvn/|be/k8s/scripts/(check-overrides\.sh|CheckOverrides\.java)$|country-kit/init\.mjs$|country-kit/init-answers\.schema\.json$|country-kit/lib/(scaffold|answers|where)\.mjs$|country-kit/templates/be/|country-kit/templates/ci\.yml$|country-kit/example/(run|acceptance)\.mjs$|\.github/workflows/(be-ci|fe-ci)\.yml$)'
+            if grep -qE "$scaffold_rule" <<< "$changed"; then scaffold=true; else scaffold=false; fi
+          elif [ "$EVENT" = "push" ]; then
+            # push is already path-filtered at the trigger. The generated backend on main is
+            # Backend CI's Generated country job, which runs on every push to main.
+            frontend=true
+            example=true
+            scaffold=false
+          else
+            # workflow_dispatch is explicit: everything, the generated backend included.
+            frontend=true
+            example=true
+            scaffold=true
+          fi
+
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "example=$example" >> "$GITHUB_OUTPUT"
+          echo "scaffold=$scaffold" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Frontend CI"
+            echo ""
+            echo "Frontend changed: **$frontend**"
+            echo ""
+            echo "Example country runs: **$example**"
+            echo ""
+            echo "Generated country's backend in the example: **$scaffold**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Everything but the unit tests, one step after another after one `npm ci`:
+  # Prettier over the whole tree, the documentation guard (dead relative links
+  # and retired vocabulary in README.md, the AGENTS.md files and docs/**), the
+  # angular.json paths guard (every path exists and lies in its project's folder
+  # or a shared one), the contents guard (every build configuration ships the
+  # bundles and flags its languages name and nothing else), lint, the scripts'
+  # lint and the guard tests, and the production build with the external-URL
+  # check of its output. Each step runs whenever the install succeeded
+  # (`!cancelled()`) — the URL check whenever the build succeeded — so the job
+  # lists every failing check, not just the first.
+  # ---------------------------------------------------------------------------
+  checks:
+    name: Checks + builds
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      # Everything but the guides' pictures (be-ci.yml's header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+      # fe/.npmrc sets legacy-peer-deps=true, so `npm ci` resolves the typescript-eslint <->
+      # TypeScript peer mismatch without extra flags.
+      - name: Install dependencies
+        id: install
+        run: npm ci
+      - name: Check formatting
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run format:check
+      - name: Check documentation
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run docs:check
+      - name: Check the workspace paths
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run paths:check
+      # Read from angular.json through the builder's own asset code, so it needs no build and
+      # covers every configuration, not only the one built below: one source per output file,
+      # the bundles and flags the language configuration names (en among them), no other
+      # country's overlay, no attribution file or translation review list.
+      - name: Check what each build ships
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run contents:check -- --project niord-app
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint
+      - name: Lint the scripts
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint:scripts
+      # A boundary pattern that stops matching fails nothing by itself, so each guard is run
+      # against crafted input it must reject: a cross-application import in every spelling, a
+      # layer or country import, a broken angular.json, a bundle grown past its tolerance, a
+      # configuration shipping a file its languages do not name, an external font URL.
+      - name: Guard tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run test:guards
+      # Bundle budgets are a build gate (fe/docs/platform.md): an oversized initial chunk fails here.
+      - name: Build
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build
+      # The application ships its fonts and styles itself: no reader's browser asks a third
+      # party for them, and a Content-Security-Policy needs no font or style origin.
+      - name: No external font or style URL
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run urls:check -- --dist dist/niord-app/browser
+
+  # ---------------------------------------------------------------------------
+  # The Vitest suite runs with file parallelism off (fe/vitest.config.ts), so the
+  # spec files execute strictly one after another. The shard script takes the
+  # builder's own `--list-tests` discovery and assigns file i to shard i mod N —
+  # every spec lands in exactly one shard by construction, and a new spec needs no
+  # registration.
+  #
+  # One shard, by measurement: every shard first compiled the whole test bundle
+  # (~36 s whatever its share of the specs) and paid its own `npm ci`, so the four
+  # shards this job used to have took ~6 runner-minutes and billed 8 for about
+  # two minutes of running specs. One job does it all in an estimated 3½ minutes
+  # (one bundle build, then the specs back to back) and bills 4 — no longer than
+  # `Checks + builds` beside it. To shard again, add `strategy.matrix.shard`
+  # (1..N, with `fail-fast: false`), name the job "Admin unit tests (<shard>/N)"
+  # and pass the shard and N to the script below.
+  #
+  # Not named plain `Unit tests`: that is the backend's job (be-ci.yml), which
+  # branch protection will require, and a required check matches a check run by
+  # its name in any workflow — a frontend job of that name would answer for it.
+  # ---------------------------------------------------------------------------
+  unit-tests:
+    name: Admin unit tests
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      # Everything but the guides' pictures (be-ci.yml's header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Unit tests
+        run: node scripts/ci-test-shard.mjs 1 1
+
+  # ---------------------------------------------------------------------------
+  # The example country, set up the way a country is: run.mjs builds the source
+  # zip and the kit package from this commit, installs both and niord-parent as
+  # 4.0.0-example into a scratch Maven repository under $RUNNER_TEMP (reading
+  # through to the job's own, restored from Backend CI's cache), copies the
+  # example out of the tree with the base product's Maven wrapper and its
+  # generated pack, pins both packages by their SHA-256, and runs the example's
+  # set-up (with its secret scan), npm ci, the
+  # build of both applications (ending in the checks on every country build), its
+  # specs and its lint there. With --image it then installs Chromium in the example's work copy
+  # (--with-deps: the runner has apt) and runs the example's `npm run image:info`,
+  # as a country's pipeline does: the image packaged from the example's dist, its
+  # files compared with that dist, then the container test --browser, the layout
+  # check under the policy taken from the image and the separation check of that
+  # build; the harness removes its tag afterwards. Docker is on the runner. Then,
+  # against the same zip, the new-country acceptance tests (country-kit/example/
+  # acceptance.mjs): `yy`, made by the kit package's own init and never edited,
+  # sets up pinned by both hashes, builds with check-build's no-baseline warning, runs
+  # its specs, lint and `npm run e2e -- --list`, starts its bundle baseline and
+  # builds its image. When Detect's scaffold rule matched, the harness gets
+  # --backend: straight after yy's init and set-up it installs niord-base and its
+  # test-jar from this commit into the scratch repository, then runs yy's own
+  # be/mvnw verify (the country build group on Testcontainers, Docker on the
+  # runner), the group check and the override check as a country's ci.yml runs
+  # them. Publishing and pinning: the harness starts a registry:2.8.3
+  # container from Docker Hub on 127.0.0.1 and, with the two commands pack.yml's
+  # token jobs run (pack.mjs validate, then oci.mjs publish), anonymously, publishes
+  # the example's pack zz, pins it in the untouched yy (--update-pins), sets up and
+  # builds yy for production from the pin, then withdraws it (oci.mjs withdraw) and
+  # sees yy's set-up stop with the reason; it removes the container afterwards, and
+  # one an interrupted run left. Then the example's work copy is bumped to a zip
+  # derived from the first (one English text, its overridden template and a
+  # deprecation changed),
+  # where set-up must fail on the override alone and write the upgrade report, and
+  # after the routine actions sets up and builds green. Last, the upgrade test
+  # (--upgrade-from, --upgrade-kit-from): the example of the latest release, bumped to
+  # the zip and kit package under test. publish.yml attaches that zip and the kit
+  # package to the release on v4.0.<run> and writes their sha256 lines into the
+  # release's notes; the step before the harness downloads them with the workflow
+  # token (`contents: read` reads a release of this repository, where the
+  # registry's main-only publish token is out of a pull request's reach — decided
+  # 2026-10-22, docs/fe-country-split-plan.md §4.8) and refuses each unless exactly
+  # one notes line gives its sha256. A release whose notes name no kit package
+  # fails the job: every release since 4.0.109 publishes it, and the harness is
+  # given both with --upgrade-from and --upgrade-kit-from. With no
+  # release yet the test is skipped and the job summary says so; the harness
+  # writes the fixture upgrade's result and the upgrade test's to the job
+  # summary. No `npm ci` in fe/: the kit is Node built-ins only, and the
+  # example's own installs read npm's cache, keyed on the same lockfile. Never
+  # NIORD_BASE, which set-up and image:info refuse when CI is set.
+  # ---------------------------------------------------------------------------
+  example:
+    name: Example country
+    needs: changes
+    if: needs.changes.outputs.example == 'true'
+    runs-on: ubuntu-latest
+    # Room for the generated country's backend (--backend, about ten minutes) beside the rest.
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      # Everything but the guides' pictures (be-ci.yml's header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      # Backend CI's Maven repository, restored and never saved: run.mjs reads it as the read-only
+      # tail of its scratch repository, so the job downloads only what Backend CI never needs (the
+      # install and dependency plugins). Not setup-java's `cache: maven`, which restores nothing
+      # when the pom hash misses (be-ci.yml, #40/#41), and not a save: this job leaves the
+      # repository as it found it, and a save under Backend CI's key could put a near-empty
+      # repository where Backend CI would then never save its full one. Key and path as be-ci.yml.
+      - name: Maven repository cache (Backend CI's, restore only)
+        uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+            setup-java-${{ runner.os }}-x64-maven-
+      # The previous published zip: the latest release (the first that is neither a draft nor a
+      # prerelease, newest first), its niord-fe-src asset, and the one notes line in sha256sum's
+      # form that names it. No release: `zip` and `kit` are empty and the harness skips the upgrade
+      # test. A release without the asset or the line, or with a zip that does not match it, fails.
+      # Then its kit package, niord-country-kit, the same way: notes without its line, a kit line
+      # without the asset, two kit lines or a kit package that does not match its line fail.
+      - name: The previous published zip and kit package (the latest release's niord-fe-src and niord-country-kit)
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=$(gh api "repos/$REPO/releases?per_page=20" \
+                  --jq '[.[] | select(.draft == false and .prerelease == false)][0].tag_name // ""')
+          if [ -z "$tag" ]; then
+            echo "Upgrade test: skipped — no release of this repository carries a niord-fe-src yet (the first is PR A's publish, docs/fe-country-split-plan.md)" >> "$GITHUB_STEP_SUMMARY"
+            echo "zip=" >> "$GITHUB_OUTPUT"
+            echo "kit=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$tag" =~ ^v4\.0\.[0-9]+$ ]]; then
+            echo "::error::The latest release is '$tag', not a v4.0.<run> of publish.yml."
+            exit 1
+          fi
+          version="${tag#v}"
+          name="niord-fe-src-$version.zip"
+          dir="$RUNNER_TEMP/previous"
+          rm -rf "$dir"
+          if ! gh release download "$tag" --repo "$REPO" --pattern "$name" --dir "$dir"; then
+            echo "::error::The release $tag has no asset $name."
+            exit 1
+          fi
+          notes=$(gh api "repos/$REPO/releases/tags/$tag" --jq .body | tr -d '\r')
+          # The version's dots as `[.]`, which needs no backslash: how a backslash in a pattern
+          # substitution's replacement is read changed in bash 5.2 (patsub_replacement), and a
+          # bracket reads the same under every bash. fe/scripts/release-workflows.test.mjs runs
+          # this step on the notes publish.yml writes, and on a look-alike name.
+          lines=$(grep -E "^[0-9a-f]{64}  niord-fe-src-${version//./[.]}[.]zip\$" <<< "$notes" || true)
+          if [ -z "$lines" ] || [ "$(wc -l <<< "$lines")" -ne 1 ]; then
+            echo "::error::The notes of $tag do not give $name's sha256 on exactly one line '<sha256>  $name': refusing an unverified previous zip."
+            exit 1
+          fi
+          expected="${lines%% *}"
+          actual=$(sha256sum "$dir/$name" | cut -d' ' -f1)
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::$name of $tag has sha256 $actual, but its release notes record $expected: refusing an unverified previous zip."
+            exit 1
+          fi
+          echo "Upgrade test: from $tag ($name, sha256 $actual, as its release notes record)"
+          kit_name="niord-country-kit-$version.zip"
+          kit_lines=$(grep -E "^[0-9a-f]{64}  niord-country-kit-${version//./[.]}[.]zip\$" <<< "$notes" || true)
+          if [ -z "$kit_lines" ]; then
+            echo "::error::$tag names no niord-country-kit line in its notes ('<sha256>  $kit_name'): every release since 4.0.109 publishes its kit package, which the upgrade test needs."
+            exit 1
+          fi
+          if [ "$(wc -l <<< "$kit_lines")" -ne 1 ]; then
+            echo "::error::The notes of $tag do not give $kit_name's sha256 on exactly one line '<sha256>  $kit_name': refusing an unverified previous kit."
+            exit 1
+          fi
+          if ! gh release download "$tag" --repo "$REPO" --pattern "$kit_name" --dir "$dir"; then
+            echo "::error::The release $tag has no asset $kit_name, which its notes name."
+            exit 1
+          fi
+          kit_expected="${kit_lines%% *}"
+          kit_actual=$(sha256sum "$dir/$kit_name" | cut -d' ' -f1)
+          if [ "$kit_actual" != "$kit_expected" ]; then
+            echo "::error::$kit_name of $tag has sha256 $kit_actual, but its release notes record $kit_expected: refusing an unverified previous kit."
+            exit 1
+          fi
+          echo "Upgrade test: with its kit package ($kit_name, sha256 $kit_actual, as its release notes record)"
+          echo "zip=$dir/$name" >> "$GITHUB_OUTPUT"
+          echo "kit=$dir/$kit_name" >> "$GITHUB_OUTPUT"
+      # BACKEND is set when Detect's scaffold rule matched (or on a dispatch): the harness then
+      # builds the generated country's backend too (--backend). Without it the harness writes to
+      # the job summary that the backend was not built here.
+      - name: Set up, build, test and lint the example country and its image; the untouched init, publishing and pinning, the fixture upgrade and the upgrade test
+        env:
+          UPGRADE_FROM: ${{ steps.previous.outputs.zip }}
+          UPGRADE_KIT_FROM: ${{ steps.previous.outputs.kit }}
+          BACKEND: ${{ needs.changes.outputs.scaffold == 'true' && 'yes' || '' }}
+        run: node ../country-kit/example/run.mjs --work "$RUNNER_TEMP/example" --image --with-deps ${BACKEND:+--backend} ${UPGRADE_FROM:+--upgrade-from "$UPGRADE_FROM"} ${UPGRADE_KIT_FROM:+--upgrade-kit-from "$UPGRADE_KIT_FROM"}
+
+  # ---------------------------------------------------------------------------
+  # The status check for branch protection to require. Runs also when a work job
+  # failed or change detection did not succeed, and is green only if detection
+  # succeeded and every work job that should have run succeeded. Skipped — which
+  # counts as passing, see the trigger comment — on a draft's first attempt and
+  # when detection found neither the administration app nor the example country
+  # to run.
+  # ---------------------------------------------------------------------------
+  gate:
+    name: Frontend gate
+    needs: [ changes, checks, unit-tests, example ]
+    if: >-
+      ${{ always() && (!github.event.pull_request.draft || github.run_attempt > 1)
+      && !(needs.changes.result == 'success' && needs.changes.outputs.frontend != 'true'
+      && needs.changes.outputs.example != 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          FRONTEND: ${{ needs.changes.outputs.frontend }}
+          EXAMPLE: ${{ needs.changes.outputs.example }}
+          FRONTEND_RESULTS: >-
+            checks=${{ needs.checks.result }}
+            unit-tests=${{ needs.unit-tests.result }}
+          EXAMPLE_RESULTS: >-
+            example=${{ needs.example.result }}
+        run: |
+          set -euo pipefail
+          echo "changes=$CHANGES frontend=$FRONTEND example=$EXAMPLE"
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::Change detection did not succeed ($CHANGES)."
+            exit 1
+          fi
+          # Every work job that detection asked for must have run and passed. Anything else
+          # (failure, cancelled, a skip) is red; a job detection did not ask for is not read.
+          results=""
+          [ "$FRONTEND" = "true" ] && results="$results $FRONTEND_RESULTS"
+          [ "$EXAMPLE" = "true" ] && results="$results $EXAMPLE_RESULTS"
+          failed=0
+          for entry in $results; do
+            echo "  $entry"
+            if [ "${entry#*=}" != "success" ]; then
+              echo "::error::${entry%%=*} is '${entry#*=}', expected 'success'."
+              failed=1
+            fi
+          done
+          exit $failed

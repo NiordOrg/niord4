@@ -1,0 +1,19 @@
+--liquibase formatted sql
+--changeset niord:005-retire-map-image-settings splitStatements:true endDelimiter:;
+-- Retires three Setting rows that nothing reads any more. The backend draws a message's map image itself,
+-- on OpenStreetMap tiles it fetches from the address in the osmUrl setting, so the address of the external
+-- static-map service it used to call (mapImageServer) and the margin it cropped off that service's images
+-- (mapImageIndent) have no consumer; osmSourceUrl was an older name for a base-map tile address that no
+-- application read (the web applications read osmUrl).
+--
+-- On a bare deployment this is the whole retirement (on an empty database it deletes nothing). A seeded
+-- deployment loads the captured base-data dump AFTER this master changelog, and the dump inserts all three
+-- rows again, so db/changelog/changelog-with-seed.yaml repeats this DELETE in its own changeset after the
+-- seed. The dump (db/niord-base-data.sql) and the test seed are deliberately left as captured: editing
+-- the dump changes the checksum of the seed-base-data changeset every seeded database has already applied,
+-- and Liquibase refuses to start on a checksum mismatch.
+--
+-- SettingsService persists, at startup, every niord.json key the database lacks, so the keys also left the
+-- bundled niord.json files; an external niord.json in the Niord home directory that still declares one
+-- brings its row back.
+DELETE FROM public."Setting" WHERE setting_key IN ('mapImageServer', 'mapImageIndent', 'osmSourceUrl');

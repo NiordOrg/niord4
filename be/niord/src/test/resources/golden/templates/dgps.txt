@@ -1,0 +1,255 @@
+# DGPS  [templates/tmpl/dgps.js, templates/tmpl/dgps.ftl]
+# std fields [type, promulgation, event_dates], params [ParamDef[paramId=dgps, type=dgps, positionList=false]]
+
+### ordinary
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### geometry: three positions
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### geometry: an area (polygon)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### geometry: no position
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### param dgps_station = radio_navigation.dgps.skagen
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### param dgps_station = radio_navigation.dgps.blåvand
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Blåvand DGPS-station in pos. 55° 33.5'N - 008° 05.0'E and frequency 290.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION BLAAVAND 290.0 KHZ 55-33.5N
+  | 008-05.0E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Blåvand DGPS-station på pos. 55 grader 33,5 min. nord 8 grader 5,0 min. øst og frekvens 290,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### param dgps_station = radio_navigation.dgps.hammer_odde
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Hammer Odde DGPS-station in pos. 55° 17.9'N - 014° 46.4'E and frequency 289.5 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION HAMMER ODDE 289.5 KHZ
+  | 55-17.9N 014-46.4E UNRELIABLE 120800
+  | UTC MAY 26 - 121200 UTC MAY 26.
+AUDIO:   Hammer Odde DGPS-station på pos. 55 grader 17,9 min. nord 14 grader 46,4 min. øst og frekvens 289,5 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### param dgps_station = empty
+TITLE:   Denmark.
+SUBJECT: null
+DETAILS: null
+NAVTEX:
+AUDIO:   null
+LINT:    subject: empty
+LINT:    details: empty
+LINT:    navtex: none
+
+### param dgps_status = radio_navigation.status.unreliable
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### param dgps_status = radio_navigation.status.inoperative
+TITLE:   Denmark. DGPS inoperative.
+SUBJECT: DGPS inoperative
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is inoperative the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E INOPERATIVE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er ude af drift d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### param dgps_status = empty
+TITLE:   Denmark. DGPS.
+SUBJECT: DGPS
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E120800 UTC MAY 26 - 121200 UTC
+  | MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: within a day (12 May 10:00-14:00 CEST)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: across midnight (12 May 22:00 - 13 May 02:00 CEST)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable from the 12 th May 2026 at 2000 UTC to the 13 th May 2026 at 0000 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 122000 UTC MAY 26
+  | - 130000 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig fra d. 12. maj 2026 kl. 2200 til d. 13. maj 2026 kl. 0200.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: across a month end (31 May 20:00 - 1 Jun 06:00 CEST)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable from the 31 st May 2026 at 1800 UTC to the 1 st June 2026 at 0400 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 311800 UTC MAY 26
+  | - 010400 UTC JUN 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig fra d. 31. maj 2026 kl. 2000 til d. 1. juni 2026 kl. 0600.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: across the spring clock change (28 Mar 22:00 CET - 29 Mar 04:00 CEST)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable from the 28 th March 2026 at 2100 UTC to the 29 th March 2026 at 0200 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 282100 UTC MAR 26
+  | - 290200 UTC MAR 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig fra d. 28. marts 2026 kl. 2200 til d. 29. marts 2026 kl. 0400.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: across New Year (31 Dec 22:00 - 1 Jan 02:00 CET)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable from the 31 st December 2026 at 2100 UTC to the 1 st January 2027 at 0100 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 312100 UTC DEC 26
+  | - 010100 UTC JAN 27.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig fra d. 31. december 2026 kl. 2200 til d. 1. januar 2027 kl. 0200.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: open-ended (from 12 May 10:00 CEST)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable from the 12 th May 2026 at 0800 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE FROM 120800 UTC
+  | MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig fra d. 12. maj 2026 kl. 1000.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: all-day (12 May - 14 May)
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable from the 12 th to the 14 th May 2026.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE FROM 12TH TO 14TH
+  | MAY 2026.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig fra d. 12. til d. 14. maj 2026.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: two intervals
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable the 12 th May 2026 from 0800 to 1200 UTC and the 14 th May 2026 from 0600 to 1500 UTC.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE 120800 UTC MAY 26
+  | - 121200 UTC MAY 26 AND 140600 UTC MAY
+  | 26 - 141500 UTC MAY 26.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig d. 12. maj 2026 fra kl. 1000 til kl. 1400 og d. 14. maj 2026 fra kl. 0800 til kl. 1700.
+LINT:    audio: a sentence that starts in lower case
+
+### event dates: no event dates
+TITLE:   Denmark. DGPS unreliable.
+SUBJECT: DGPS unreliable
+DETAILS: Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E and frequency 296.0 kHz is unreliable.
+NAVTEX:
+  | DGPS-STATION SKAGEN 296.0 KHZ 57-44.9N
+  | 010-35.7E UNRELIABLE.
+AUDIO:   Skagen DGPS-station på pos. 57 grader 44,9 min. nord 10 grader 35,7 min. øst og frekvens 296,0 kHz er uregelmæssig.
+LINT:    audio: a sentence that starts in lower case
+

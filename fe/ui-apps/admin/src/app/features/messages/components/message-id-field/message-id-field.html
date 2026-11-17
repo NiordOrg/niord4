@@ -1,0 +1,54 @@
+@if (showAsChip()) {
+  <div
+    class="flex items-center px-2 min-h-10.5 rounded-md border border-surface-300 bg-surface-0 dark:bg-surface-900 dark:border-surface-700"
+  >
+    <button
+      type="button"
+      [class]="'status-chip is-active py-1 px-3 ' + statusStateClass()"
+      [attr.aria-label]="value() ?? ''"
+      [title]="value() ?? ''"
+      (click)="onClear()"
+    >
+      <span>{{ value() }}</span>
+      <app-icon name="lucideCircleX" aria-hidden="true" />
+    </button>
+  </div>
+} @else {
+  <app-autocomplete
+    [suggestions]="suggestions()"
+    [itemLabel]="messageIdLabel"
+    [multiple]="false"
+    [allowFreeText]="allowFreeText()"
+    [minLength]="minSearchLength()"
+    [text]="value() ?? ''"
+    [placeholder]="placeholder() | transloco"
+    [ariaLabel]="placeholder() | transloco"
+    [fetchError]="fetchError()"
+    [emptyMessage]="'common.emptyMessage' | transloco"
+    [errorMessage]="'common.fetchError' | transloco"
+    [clearLabel]="'common.clear' | transloco"
+    [removeLabel]="'common.remove' | transloco"
+    [disabled]="disabled()"
+    (query)="onType($event)"
+    (selectionChange)="onPanelSelect($event)"
+    (clear)="onClear()"
+    (touched)="markTouched()"
+  >
+    <ng-template #option let-result>
+      <div class="flex flex-col gap-0.5">
+        <div class="flex items-center gap-2">
+          <span class="font-medium">{{ result.messageId }}</span>
+          @if (result.type) {
+            <span class="text-xs text-surface-500">{{ matchTypeLabel(result.type) }}</span>
+          }
+          @if (result.status) {
+            <span class="text-xs text-surface-400">{{ statusLabel(result.status) }}</span>
+          }
+        </div>
+        @if (result.title) {
+          <span class="text-sm text-surface-600">{{ result.title }}</span>
+        }
+      </div>
+    </ng-template>
+  </app-autocomplete>
+}

@@ -1,0 +1,302 @@
+{
+  "AdminPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 575,
+    "printWidth": 800
+  },
+  "AreasActionMenu.png": {
+    "cssWidth": 267,
+    "cssHeight": 276,
+    "printWidth": 167
+  },
+  "AreasEditExtentPage.png": {
+    "cssWidth": 1214,
+    "cssHeight": 709,
+    "printWidth": 759
+  },
+  "AreasFiringGenerateDialog.png": {
+    "cssWidth": 448,
+    "cssHeight": 282,
+    "printWidth": 280
+  },
+  "AreasPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 1220,
+    "printWidth": 800
+  },
+  "ChartsActionMenu.png": {
+    "cssWidth": 208,
+    "cssHeight": 138,
+    "printWidth": 130
+  },
+  "ChartsEditAsText.png": {
+    "cssWidth": 896,
+    "cssHeight": 556,
+    "printWidth": 560
+  },
+  "ChartsEditExtentPage.png": {
+    "cssWidth": 1214,
+    "cssHeight": 709,
+    "printWidth": 759
+  },
+  "ChartsEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 880,
+    "printWidth": 324
+  },
+  "ChartsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 1162,
+    "printWidth": 800
+  },
+  "ContactDetailsPanel.png": {
+    "cssWidth": 819,
+    "cssHeight": 440,
+    "printWidth": 512
+  },
+  "ContactMailingListsPanel.png": {
+    "cssWidth": 819,
+    "cssHeight": 800,
+    "printWidth": 512
+  },
+  "ContactsPanel.png": {
+    "cssWidth": 1280,
+    "cssHeight": 1140,
+    "printWidth": 800
+  },
+  "MailingListEditPage.png": {
+    "cssWidth": 819,
+    "cssHeight": 580,
+    "printWidth": 512
+  },
+  "MailingListRecipients.png": {
+    "cssWidth": 1099,
+    "cssHeight": 660,
+    "printWidth": 687
+  },
+  "MailingListScheduledTrigger.png": {
+    "cssWidth": 803,
+    "cssHeight": 536,
+    "printWidth": 502
+  },
+  "MailingListsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 689,
+    "printWidth": 800
+  },
+  "MailingListStatusChangeTrigger.png": {
+    "cssWidth": 803,
+    "cssHeight": 484,
+    "printWidth": 502
+  },
+  "MailingListTest.png": {
+    "cssWidth": 896,
+    "cssHeight": 1377,
+    "printWidth": 560
+  },
+  "PublicationAddMessageDialog.png": {
+    "cssWidth": 640,
+    "cssHeight": 370,
+    "printWidth": 400
+  },
+  "PublicationAmendDialog.png": {
+    "cssWidth": 544,
+    "cssHeight": 403,
+    "printWidth": 340
+  },
+  "PublicationAvailabilityField.png": {
+    "cssWidth": 210,
+    "cssHeight": 297,
+    "printWidth": 131
+  },
+  "PublicationCategoriesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 453,
+    "printWidth": 800
+  },
+  "PublicationCategoryEditor.png": {
+    "cssWidth": 519,
+    "cssHeight": 800,
+    "printWidth": 324
+  },
+  "PublicationChecklist.png": {
+    "cssWidth": 356,
+    "cssHeight": 486,
+    "printWidth": 223
+  },
+  "PublicationCompilationOpen.png": {
+    "cssWidth": 986,
+    "cssHeight": 349,
+    "printWidth": 616
+  },
+  "PublicationCompilationPublished.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "PublicationExcludeDialog.png": {
+    "cssWidth": 512,
+    "cssHeight": 363,
+    "printWidth": 320
+  },
+  "PublicationForeignDomain.png": {
+    "cssWidth": 1280,
+    "cssHeight": 361,
+    "printWidth": 800
+  },
+  "PublicationImportSeriesConfirm.png": {
+    "cssWidth": 384,
+    "cssHeight": 276,
+    "printWidth": 240
+  },
+  "PublicationIssueDocument.png": {
+    "cssWidth": 356,
+    "cssHeight": 201,
+    "printWidth": 223
+  },
+  "PublicationIssueHistory.png": {
+    "cssWidth": 356,
+    "cssHeight": 353,
+    "printWidth": 223
+  },
+  "PublicationIssueLeftOut.png": {
+    "cssWidth": 642,
+    "cssHeight": 368,
+    "printWidth": 401
+  },
+  "PublicationNewIssueDialog.png": {
+    "cssWidth": 640,
+    "cssHeight": 371,
+    "printWidth": 400
+  },
+  "PublicationNewOneOffDialog.png": {
+    "cssWidth": 819,
+    "cssHeight": 1040,
+    "printWidth": 512
+  },
+  "PublicationOneOffPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 629,
+    "printWidth": 800
+  },
+  "PublicationOneOffTable.png": {
+    "cssWidth": 1024,
+    "cssHeight": 452,
+    "printWidth": 640
+  },
+  "PublicationOpenIssue.png": {
+    "cssWidth": 1280,
+    "cssHeight": 746,
+    "printWidth": 800
+  },
+  "PublicationPublicPeriodDialog.png": {
+    "cssWidth": 608,
+    "cssHeight": 263,
+    "printWidth": 380
+  },
+  "PublicationPublishDialog.png": {
+    "cssWidth": 640,
+    "cssHeight": 331,
+    "printWidth": 400
+  },
+  "PublicationPublishedIssue.png": {
+    "cssWidth": 1280,
+    "cssHeight": 777,
+    "printWidth": 800
+  },
+  "PublicationSeriesBasics.png": {
+    "cssWidth": 819,
+    "cssHeight": 960,
+    "printWidth": 512
+  },
+  "PublicationSeriesCard.png": {
+    "cssWidth": 338,
+    "cssHeight": 242,
+    "printWidth": 211
+  },
+  "PublicationSeriesCheckRules.png": {
+    "cssWidth": 819,
+    "cssHeight": 1080,
+    "printWidth": 512
+  },
+  "PublicationSeriesCompiledFrom.png": {
+    "cssWidth": 803,
+    "cssHeight": 249,
+    "printWidth": 502
+  },
+  "PublicationSeriesContent.png": {
+    "cssWidth": 803,
+    "cssHeight": 699,
+    "printWidth": 502
+  },
+  "PublicationSeriesCriteria.png": {
+    "cssWidth": 803,
+    "cssHeight": 707,
+    "printWidth": 502
+  },
+  "PublicationSeriesFrequency.png": {
+    "cssWidth": 803,
+    "cssHeight": 762,
+    "printWidth": 502
+  },
+  "PublicationSeriesHistory.png": {
+    "cssWidth": 1024,
+    "cssHeight": 259,
+    "printWidth": 640
+  },
+  "PublicationSeriesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 783,
+    "printWidth": 800
+  },
+  "PublicationsOverview.png": {
+    "cssWidth": 1280,
+    "cssHeight": 943,
+    "printWidth": 800
+  },
+  "PublicationTailorIssue.png": {
+    "cssWidth": 819,
+    "cssHeight": 800,
+    "printWidth": 512
+  },
+  "PublicSitePublicationBrowse.png": {
+    "cssWidth": 1280,
+    "cssHeight": 673,
+    "printWidth": 800
+  },
+  "PublicSitePublications.png": {
+    "cssWidth": 1280,
+    "cssHeight": 756,
+    "printWidth": 800
+  },
+  "SourcesEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 440,
+    "printWidth": 324
+  },
+  "SourcesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 1082,
+    "printWidth": 800
+  },
+  "UserDetailsPanel.png": {
+    "cssWidth": 819,
+    "cssHeight": 580,
+    "printWidth": 512
+  },
+  "UserGroupsPanel.png": {
+    "cssWidth": 819,
+    "cssHeight": 580,
+    "printWidth": 512
+  },
+  "UserMailingListsPanel.png": {
+    "cssWidth": 819,
+    "cssHeight": 800,
+    "printWidth": 512
+  },
+  "UsersPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 464,
+    "printWidth": 800
+  }
+}

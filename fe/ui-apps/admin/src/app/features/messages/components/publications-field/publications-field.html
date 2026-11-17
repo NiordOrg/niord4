@@ -1,0 +1,51 @@
+<app-entity-multiselect-control [field]="this" [optionTemplate]="publicationRow" />
+
+<!--
+  What the page does not show. The picker asks for one page, not the whole
+  catalogue, so a search that matched more than fits has to say so — otherwise a
+  publication that is merely on the next page reads as one that does not exist.
+
+  Tied to the suggestion list it describes: a count left standing after the list
+  has been cleared is a claim about a search nobody is running any more.
+-->
+@if (overflow() > 0 && suggestions().length > 0) {
+  <p class="mt-1 text-xs text-fg-subtle">
+    {{ 'messages.filter.publication.more' | transloco: { count: overflow() } }}
+  </p>
+}
+
+<!--
+  Status badge · title · the series it belongs to and the date it went out.
+
+  The series is NAMED rather than keyed. Its id is a database key (`weekly-ntm`),
+  which identifies the series only to a reader who already knows the catalogue.
+
+  Under `nameOnly` the row is the title and nothing else — see the input for why
+  the qualifiers are worth their width on one surface and not on the other.
+-->
+<ng-template #publicationRow let-item>
+  @if (nameOnly()) {
+    <span class="block w-full min-w-0 truncate">{{ labelOf(item) }}</span>
+  } @else {
+    @let series = seriesLabel(item);
+    <span class="flex w-full min-w-0 items-center gap-2">
+      @if (statusKey(item); as key) {
+        <span class="status-badge shrink-0" [class]="statusClass(item)">{{ key | transloco }}</span>
+      }
+      <span class="min-w-0 flex-1 truncate">{{ labelOf(item) }}</span>
+      @if (series || item.publicFrom) {
+        <span class="shrink-0 text-xs text-fg-subtle">
+          @if (series) {
+            {{ series }}
+          }
+          @if (series && item.publicFrom) {
+            ·
+          }
+          @if (item.publicFrom) {
+            {{ item.publicFrom | localeDate: 'date' }}
+          }
+        </span>
+      }
+    </span>
+  }
+</ng-template>

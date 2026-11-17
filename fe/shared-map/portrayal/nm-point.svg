@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="-6.97 -6.96 13.96 13.96">
+  <!-- Notice to Mariners point symbol — the S-124 NW-in-circle form with "NM". Separate file so NM can diverge later (e.g. an S-125 red palette). The NM glyph is an outline of Liberation Sans Bold 2.1.5 (SIL OFL) at font-size 4.5, centred on x=0 with its baseline at y=1.58. -->
+  <circle cx="0" cy="0" r="5" fill="none" stroke="#C045D1" stroke-width="0.96" />
+  <path d="M -1.313,1.58 L -2.662,-0.804 Q -2.622,-0.457 -2.622,-0.246 L -2.622,1.58 L -3.198,1.58 L -3.198,-1.516 L -2.458,-1.516 L -1.089,0.888 Q -1.128,0.556 -1.128,0.284 L -1.128,-1.516 L -0.553,-1.516 L -0.553,1.58 L -1.313,1.58 Z M 2.622,1.58 L 2.622,-0.296 Q 2.622,-0.36 2.624,-0.424 Q 2.625,-0.488 2.644,-0.971 Q 2.488,-0.38 2.414,-0.147 L 1.856,1.58 L 1.394,1.58 L 0.836,-0.147 L 0.601,-0.971 Q 0.627,-0.461 0.627,-0.296 L 0.627,1.58 L 0.052,1.58 L 0.052,-1.516 L 0.92,-1.516 L 1.473,0.215 L 1.522,0.382 L 1.627,0.798 L 1.766,0.301 L 2.335,-1.516 L 3.198,-1.516 L 3.198,1.58 L 2.622,1.58 Z" fill="#C045D1" />
+</svg>

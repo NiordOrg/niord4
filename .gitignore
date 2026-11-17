@@ -1,0 +1,17 @@
+# macOS Finder metadata
+.DS_Store
+.idea
+.playwright-mcp
+# Logs of ./start-local.sh
+.local-run/
+# Angular CLI cache left by an ng command run from the root instead of fe/
+.angular/
+# Stray files under country-kit/ (which fe/.gitignore does not cover): a file neither tracked nor
+# ignored would be packed into the source zip and read by the guards
+node_modules/
+.niord/
+coverage/
+dist/
+*.stackdump
+Thumbs.db
+*.iml

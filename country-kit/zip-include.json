@@ -1,0 +1,25 @@
+{
+  "format": 1,
+  "note": "What the base product's source zip, org.niord.web:niord-fe-src, holds: a path relative to fe/ that an include glob matches and no exclude glob does, and catalog.json at the root. The applications' sources and public assets (the base product's tree holds no country overlay; its own test:guards keeps it so), the shared folders, the workspace files the kit generates from, the base tokens, the en pack, the administration app's end-to-end suite with its login fixtures and the Playwright configuration (a country's generated e2e script runs its own specs with them, now that they name no country's test environment; the kit's own tests hold them to that), of scripts/ only the public site's checks a country calls with parameters, the absolute-URL rule's allow-list and glob.mjs (the base product's own copy of the glob matcher, which build-urls-check.mjs imports), and eslint-shared.cjs, the lint lists eslint.config.js takes. The kit is its own package, org.niord:niord-country-kit (kit-include.json), and nothing of it is in this zip. No file outside the kit imports the kit, and verify checks it. Never another pack, fe/docs/, another scripts/ file, an AGENTS.md or a CLAUDE.md, a README under ui-apps/ or a backlog. Loosened when the repositories go public (fe-country-split-plan §4.11 rule 6).",
+  "include": [
+    "ui-apps/admin/{src,public}/**",
+    "ui-apps/admin/{ngsw-config.json,tsconfig.app.json,tsconfig.spec.json}",
+    "ui-apps/admin/e2e/**",
+    "ui-apps/info/{src,public,nginx}/**",
+    "ui-apps/info/{tsconfig.app.json,tsconfig.spec.json,Dockerfile,bundle-baseline.json}",
+    "scripts/{info-separation-check,info-layout-check,info-bundle-report,info-container-test,build-urls-check,glob}.mjs",
+    "scripts/build-urls-allowed.json",
+    "shared-map/**",
+    "shared-html/**",
+    "styles/**",
+    "languages/en/**",
+    "{package.json,package-lock.json,.npmrc,.nvmrc,.postcssrc.json,tsconfig.json,angular.json,eslint.config.js,eslint-shared.cjs,vitest.config.ts,proxy.conf.mjs,playwright.config.ts,LICENSE}"
+  ],
+  "exclude": [
+    "ui-apps/*/src/app/country-specific/*.spec.ts",
+    "{CLAUDE.md,AGENTS.md,ui-apps/**/CLAUDE.md,ui-apps/**/AGENTS.md,shared-map/**/CLAUDE.md,shared-map/**/AGENTS.md,shared-html/**/CLAUDE.md,shared-html/**/AGENTS.md,styles/**/CLAUDE.md,styles/**/AGENTS.md,languages/**/CLAUDE.md,languages/**/AGENTS.md}",
+    "ui-apps/**/README.md",
+    "ui-apps/admin/src/app/core/auth/endpoint-roles/**",
+    "**/{node_modules,.niord,dist,.angular,coverage}/**"
+  ]
+}

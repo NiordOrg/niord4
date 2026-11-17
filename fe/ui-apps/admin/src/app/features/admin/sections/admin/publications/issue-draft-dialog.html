@@ -1,0 +1,179 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="cancel()"
+  [header]="'admin.publications.issueDraft.title' | transloco"
+  [style]="{ width: '40rem' }"
+>
+  <div class="flex flex-col gap-4">
+    <p class="text-sm text-fg-muted">
+      {{ 'admin.publications.issueDraft.intro' | transloco }}
+    </p>
+
+    <!--
+      The period, editable, with each bound's provenance beside its own label.
+      A reconstructed date and one somebody stamped at a release look identical
+      in a date field, and the difference is the whole reason this dialog exists.
+    -->
+    <!--
+      Two columns only where each bound actually has room for a date and a time
+      side by side; the panel, not the viewport, decides — on a narrow screen
+      the dialog itself shrinks and the pair falls into one column.
+    -->
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(17rem,1fr))] gap-3">
+      <div class="flex flex-col gap-1">
+        <label for="issue-draft-from" class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.issueDraft.from' | transloco }}
+          <app-bound-source-marker [source]="draft()?.intervalFromSource" />
+        </label>
+        <app-date-time-field
+          inputId="issue-draft-from"
+          [formField]="boundsForm.from"
+          [ariaLabel]="'admin.publications.issueDraft.from' | transloco"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="issue-draft-to" class="text-sm font-medium text-fg-title">
+          {{ 'admin.publications.issueDraft.to' | transloco }}
+          <app-bound-source-marker [source]="draft()?.intervalToSource" />
+        </label>
+        <app-date-time-field
+          inputId="issue-draft-to"
+          [formField]="boundsForm.to"
+          [ariaLabel]="'admin.publications.issueDraft.to' | transloco"
+        />
+      </div>
+    </div>
+
+    @if (inverted()) {
+      <p class="text-sm text-danger">
+        {{ 'admin.publications.issueDraft.inverted' | transloco }}
+      </p>
+    }
+
+    @if (loading()) {
+      <p class="text-sm text-fg-subtle">
+        {{ 'admin.publications.issueDraft.loading' | transloco }}
+      </p>
+    }
+
+    @if (draftErrorKey(); as key) {
+      <p class="text-sm text-danger">{{ key | transloco }}</p>
+    } @else if (draft(); as draft) {
+      <!--
+        What the issue will be called, in every language the series carries, and
+        editable here.
+
+        The suggestion derives from the ISO week of the CUT-OFF, so it moves when
+        the end bound does — and a box somebody has typed in keeps what they
+        typed while the untouched ones follow the suggestion. This is also the
+        cheapest moment to correct a name: nothing has been rendered under it yet.
+      -->
+      <div class="flex flex-col gap-3">
+        @for (desc of names(); track desc.lang) {
+          <label class="flex flex-col gap-1">
+            <span class="text-xs font-semibold text-fg-muted">
+              {{ 'admin.publications.issue.name' | transloco }} ({{ desc.lang.toUpperCase() }})
+            </span>
+            <input
+              [id]="'issue-draft-name-' + desc.lang"
+              type="text"
+              class="text-input"
+              [value]="nameDraft(desc.lang)"
+              [disabled]="working()"
+              (input)="onNameInput(desc.lang, $any($event.target).value)"
+            />
+            @if (nameMissing(desc.lang)) {
+              <span class="text-xs text-danger">
+                {{ 'admin.publications.issueDraft.nameRequired' | transloco }}
+              </span>
+            }
+          </label>
+        }
+      </div>
+
+      <dl class="grid grid-cols-[max-content_1fr] items-start gap-x-4 gap-y-1 text-sm">
+        <!--
+          The edition the server proposes, read-only, and only where it is not
+          the first one: this dialog opens a FRESH period, whose document is the
+          first of it, and a row saying "Edition 1" on every create would say
+          nothing. A later edition comes from superseding an issue that is
+          already out, which is its own action on the issue's own page — which is
+          also where the box that changes an edition lives, because there is
+          nothing to decide about it until the issue exists.
+        -->
+        @if (proposedEdition(); as edition) {
+          <dt class="font-medium text-fg-title">
+            {{ 'admin.publications.issue.edition' | transloco }}
+          </dt>
+          <dd class="text-fg" data-testid="issue-draft-edition">{{ edition }}</dd>
+        }
+
+        <dt class="font-medium text-fg-title">
+          {{ 'admin.publications.issueDraft.wouldMatch' | transloco }}
+        </dt>
+        <dd class="text-fg">
+          <!--
+            Null is not zero. Zero says the period is empty; null says nothing
+            counted it, and a screen that showed them alike would report an
+            unmeasured week as an empty one.
+          -->
+          @if (draft.wouldMatchCount === null || draft.wouldMatchCount === undefined) {
+            <span class="text-fg-muted">{{
+              'admin.publications.issueDraft.wouldMatchUnknown' | transloco
+            }}</span>
+          } @else {
+            {{
+              'admin.publications.issueDraft.wouldMatchCount'
+                | transloco: { count: draft.wouldMatchCount }
+            }}
+          }
+        </dd>
+
+        <!--
+          Which issue's close this period follows on from, by name. The draft
+          also carries the id that addresses that issue, and an id names nothing
+          to the person deciding whether the period is right — so the row stands
+          only where a name came with it.
+        -->
+        @if (draft.chainedFromName; as chained) {
+          <dt class="font-medium text-fg-title">
+            {{ 'admin.publications.issueDraft.chainedFrom' | transloco }}
+          </dt>
+          <dd class="text-fg" data-testid="issue-draft-chained-from">{{ chained }}</dd>
+        }
+      </dl>
+    }
+
+    <!--
+      What to know before creating this. A warning is not a refusal: the draft
+      still stands and the create is still offered.
+    -->
+    @if (warnings().length > 0) {
+      <ul class="flex flex-col gap-1">
+        @for (warning of warnings(); track warning.code) {
+          <li class="text-sm text-warning">
+            @if (warning.labelKey; as key) {
+              {{ key | transloco }}
+            } @else {
+              <span class="font-mono text-xs">{{ warning.code }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    @if (errorKey(); as key) {
+      <p class="text-sm text-danger">{{ key | transloco }}</p>
+    }
+  </div>
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="cancel()">
+      {{ 'admin.publications.issueDraft.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="submitDisabled()" (click)="submit()">
+      {{ 'admin.publications.issueDraft.confirm' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

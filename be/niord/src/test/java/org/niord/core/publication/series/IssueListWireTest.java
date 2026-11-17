@@ -1,0 +1,689 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.JsonNode;
+
+import org.junit.jupiter.api.Test;
+import org.niord.core.domain.Domain;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.series.vo.IssueListResultVo;
+import org.niord.core.publication.series.vo.IssueTimelineRowVo;
+import org.niord.core.publication.series.vo.IssueTimelineVo;
+import org.niord.core.publication.series.vo.SystemPublicationIssueVo;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * What the issue list actually puts on the wire.
+ *
+ * Asserted on SERIALIZED JSON rather than on the VO, because the distinction the
+ * whole envelope exists for is a distinction between an absent key and a present
+ * one. A getter returning null and a key that is not there look identical from
+ * Java and completely different from a client, and it is the client that has to
+ * tell "no gaps" from "nobody looked".
+ *
+ * No Quarkus and no database: the mapper is configured the same way the running
+ * server configures it (the customizer touches only promulgation polymorphism),
+ * so a plain ObjectMapper is faithful here and the assertions keep running on a
+ * build machine with no MySQL.
+ */
+public class IssueListWireTest {
+
+    private static final ObjectMapper JSON = JsonMapper.builderWithJackson2Defaults().build();
+    private static final ZoneId CPH = ZoneId.of("Europe/Copenhagen");
+    private static final long WEEK = 7L * 24 * 3600_000L;
+
+    /** A Wednesday noon in 2026, by ISO week. */
+    private static Date wed(int isoWeek) {
+        return Date.from(ZonedDateTime.of(2026, 1, 7, 12, 0, 0, 0, ZoneId.of("UTC"))
+                .plusWeeks(isoWeek - 2L).toInstant());
+    }
+
+    private static PublicationSeries series(SeriesStatus status, SeriesCadence cadence,
+                                            TimeRelation relation) {
+        PublicationSeries s = new PublicationSeries();
+        s.setSeriesId("weekly-ntm");
+        s.setStatus(status);
+        s.setCadence(cadence);
+        s.setTimeRelation(relation);
+        s.setNominalCutoffTimeZone("Europe/Copenhagen");
+        PublicationSeriesDesc desc = s.createDesc("en");
+        desc.setNameSuggestionPattern("NtM Week ${week} - ${year}");
+        desc.setFileNamePattern("ntm-${year}-${week}.pdf");
+        return s;
+    }
+
+    /** A published issue whose cut-off was stamped at that Wednesday. */
+    private static PublicationIssue published(PublicationSeries series, String publicId, Date cutoff) {
+        PublicationIssue i = new PublicationIssue();
+        i.setSeries(series);
+        i.setPublicId(publicId);
+        i.setStatus(IssueStatus.PUBLISHED);
+        i.setCutoffStampedAt(cutoff);
+        i.setIntervalTo(cutoff);
+        i.setIntervalToSource(IntervalBoundSource.STAMPED);
+        return i;
+    }
+
+    /** Newest first, as the query returns them and as build() expects them. */
+    private static List<PublicationIssue> newestFirst(PublicationIssue... issues) {
+        List<PublicationIssue> out = new ArrayList<>(List.of(issues));
+        out.sort((a, b) -> b.effectiveCutoff().compareTo(a.effectiveCutoff()));
+        return out;
+    }
+
+    private static JsonNode wire(IssueListResultVo result) throws Exception {
+        return JSON.readTree(JSON.writeValueAsString(result));
+    }
+
+    // ------------------------------------------------- the pair this exists for
+
+    /**
+     * A DRAFT series says detection did not run. It does NOT say zero gaps.
+     *
+     * This is the branch that runs for the entire imported estate -- every one of
+     * the twenty series lands as DRAFT -- so it is not an edge case, it is the
+     * default view of the archive on the day of the import. A gapCount of 0 here
+     * would render as a clean bill of health for an archive nothing examined,
+     * which is exactly the reassurance nobody is entitled to.
+     */
+    @Test
+    public void aDraftSeriesReportsThatGapDetectionDidNotRunRatherThanZeroGaps() throws Exception {
+        PublicationSeries draft = series(SeriesStatus.DRAFT, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        JsonNode json = wire(IssueListService.build(draft,
+                newestFirst(published(draft, "a", wed(10)), published(draft, "b", wed(14))),
+                wed(15)));
+
+        assertFalse(json.has("gapCount"),
+                "gapCount must be ABSENT when the gate is closed. Present as 0 it reads as "
+                        + "\"every period was checked and none was missing\", and nothing was checked");
+        assertTrue(json.get("gapDetection").get("enabled").isBoolean());
+        assertFalse(json.get("gapDetection").get("enabled").asBoolean());
+        assertEquals("SERIES_NOT_ACTIVE", json.get("gapDetection").get("reasonCode").asText(),
+                "the reason is a code a UI can translate, not a sentence it has to match on");
+        assertFalse(json.get("gapDetection").get("reason").asText().isBlank());
+
+        // And no pseudo-rows leaked past the closed gate: weeks 11 to 13 are
+        // plainly absent from that fixture, and a closed gate must not report them.
+        for (JsonNode row : json.get("data")) {
+            assertFalse(row.has("pseudo"), "a closed gate synthesized a row anyway");
+        }
+        assertEquals(2, json.get("total").asInt());
+    }
+
+    /**
+     * An ACTIVE series with nothing missing reports zero gaps, with detection on.
+     *
+     * The other half of the pair. Zero here is a finding -- somebody looked at
+     * every period and every one had an issue -- and it has to be distinguishable
+     * from the case above by the JSON alone.
+     */
+    @Test
+    public void aGapFreeActiveSeriesReportsZeroGapsWithDetectionEnabled() throws Exception {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        // Consecutive weeks, and "now" inside the period after the newest, so the
+        // only synthesized row is the UPCOMING one -- which is not a gap.
+        JsonNode json = wire(IssueListService.build(active,
+                newestFirst(published(active, "a", wed(20)), published(active, "b", wed(21)),
+                        published(active, "c", wed(22))),
+                new Date(wed(23).getTime() - 3600_000L)));
+
+        assertTrue(json.has("gapCount"), "detection ran, so the count is a real answer and is present");
+        assertEquals(0, json.get("gapCount").asInt());
+        assertTrue(json.get("gapDetection").get("enabled").asBoolean());
+        assertEquals("CADENCED_SERIES", json.get("gapDetection").get("reasonCode").asText());
+
+        assertEquals(1, count(json, "UPCOMING"), "the period being worked toward is shown");
+        assertEquals(0, count(json, "MISSING"));
+        assertEquals(3, json.get("total").asInt(), "total counts real issues, never the pseudo-row");
+    }
+
+    // ------------------------------------------------------------ the pseudo-row
+
+    /**
+     * A missing week arrives as a full row with no publicId and no gap vocabulary
+     * on its neighbours.
+     *
+     * The absent-versus-null discipline runs both ways: a real row must carry no
+     * trace of the pseudo fields, or a client testing for their presence to spot a
+     * gap would flag every issue in the list.
+     */
+    @Test
+    public void aMissingWeekIsAFullRowAndRealRowsCarryNoTraceOfIt() throws Exception {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        JsonNode json = wire(IssueListService.build(active,
+                newestFirst(published(active, "before", wed(30)), published(active, "after", wed(32))),
+                new Date(wed(33).getTime() - 3600_000L)));
+
+        assertEquals(1, json.get("gapCount").asInt(), "week 31 came and went");
+
+        JsonNode gap = null;
+        for (JsonNode row : json.get("data")) {
+            if ("MISSING".equals(row.path("pseudo").asText(null))) {
+                gap = row;
+            } else if (!row.has("pseudo")) {
+                assertFalse(row.has("suggestedDescs"));
+                assertFalse(row.has("precedingPublicId"));
+                assertFalse(row.has("followingPublicId"));
+            }
+        }
+
+        assertNotNull(gap, "the missing week produced no row");
+        assertFalse(gap.has("publicId"),
+                "a gap has no entity, so no public id is emitted at all -- every VO here omits its "
+                        + "nulls, and a client must not be handed a key it could read as an id");
+        assertEquals("MISSING", gap.get("computedStatus").asText());
+        assertEquals("before", gap.get("precedingPublicId").asText());
+        assertEquals("after", gap.get("followingPublicId").asText());
+        assertEquals("weekly-ntm", gap.get("seriesId").asText());
+        assertFalse(gap.has("memberCount"),
+                "a period nobody published has no membership; 0 would read as \"resolved, empty\"");
+
+        JsonNode suggestion = gap.get("suggestedDescs").get(0);
+        assertEquals("en", suggestion.get("lang").asText());
+        assertFalse(suggestion.get("name").asText().isBlank());
+        assertFalse(suggestion.get("fileName").asText().isBlank());
+    }
+
+    /**
+     * Real and synthesized rows arrive as ONE descending sequence.
+     *
+     * They share a sort key space so a client renders one list. If the merge were
+     * wrong the gap would appear at the end of the archive rather than between the
+     * two issues it sits between, and it would read as an old gap rather than a
+     * recent one.
+     */
+    @Test
+    public void theMergedListIsOneSequenceNewestFirst() throws Exception {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        JsonNode json = wire(IssueListService.build(active,
+                newestFirst(published(active, "before", wed(40)), published(active, "after", wed(42))),
+                new Date(wed(43).getTime() - 3600_000L)));
+
+        long previous = Long.MAX_VALUE;
+        List<String> order = new ArrayList<>();
+        for (JsonNode row : json.get("data")) {
+            long key = row.get("sortKey").asLong();
+            assertTrue(key <= previous, "the merged list is not sorted newest first");
+            previous = key;
+            order.add(row.path("pseudo").asText(row.path("publicId").asText()));
+        }
+        assertEquals(List.of("UPCOMING", "after", "MISSING", "before"), order);
+    }
+
+    // ------------------------------------------------------------- the other gates
+
+    /**
+     * An IN_FORCE_AT_CUTOFF series is examined like any other cadenced series, and
+     * nothing is missing between two consecutive editions.
+     *
+     * Its issues overlap rather than tile -- the 2026 and 2027 firing-areas issues
+     * share 31 of their 32 members -- so a "missing year" between them would be a
+     * category error, and the row would offer to retro-create something that was
+     * never absent. The period after the newest edition is still the one being
+     * worked toward, so the UPCOMING row is there as it is for every series with
+     * a calendar.
+     */
+    @Test
+    public void anInForceSeriesIsExaminedAndHasNothingMissingBetweenEditions() throws Exception {
+        PublicationSeries inForce = series(SeriesStatus.ACTIVE, SeriesCadence.YEARLY,
+                TimeRelation.IN_FORCE_AT_CUTOFF);
+
+        JsonNode json = wire(IssueListService.build(inForce,
+                newestFirst(published(inForce, "y2026", wed(2)), published(inForce, "y2027", wed(54))),
+                wed(60)));
+
+        assertTrue(json.get("gapDetection").get("enabled").asBoolean());
+        assertEquals("CADENCED_SERIES", json.get("gapDetection").get("reasonCode").asText());
+        assertEquals(0, json.get("gapCount").asInt(), "the year between two in-force editions is not a gap");
+        assertEquals(0, count(json, "MISSING"));
+        assertEquals(1, count(json, "UPCOMING"), "the next edition is still owed");
+        assertEquals(3, json.get("data").size());
+    }
+
+    /**
+     * A series nobody has published to in months says DORMANT, not "n gaps".
+     *
+     * Listing every week since as its own MISSING row would bury the one fact that
+     * matters, which is that the series stopped.
+     */
+    @Test
+    public void aDormantSeriesSaysSoInsteadOfListingEveryMissedWeek() throws Exception {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        JsonNode json = wire(IssueListService.build(active,
+                newestFirst(published(active, "last", wed(10))),
+                new Date(wed(10).getTime() + 10 * WEEK)));
+
+        assertFalse(json.has("gapCount"));
+        assertEquals("SERIES_DORMANT", json.get("gapDetection").get("reasonCode").asText());
+        assertEquals(1, json.get("data").size());
+    }
+
+    /**
+     * A cadence-less publication has no period to be missing one of.
+     *
+     * WITH NO TIME RELATION, which is the shape S-1 actually produces and the
+     * reason this assertion used to pass while the running system got it wrong.
+     * Passing PUBLISHED_IN_INTERVAL here built a series that cannot exist, and
+     * that impossible input was the only one that reached NO_CADENCE: every real
+     * cadence-less series has a null relation, so the gate of the day answered
+     * it with the overlap explanation meant for in-force series.
+     */
+    @Test
+    public void aOneOffIsGatedOffBecauseThereIsNoPeriodToMiss() throws Exception {
+        PublicationSeries oneOff = series(SeriesStatus.ACTIVE, SeriesCadence.NONE, null);
+
+        JsonNode json = wire(IssueListService.build(oneOff,
+                newestFirst(published(oneOff, "only", wed(10))), wed(30)));
+
+        assertFalse(json.has("gapCount"));
+        assertEquals("NO_CADENCE", json.get("gapDetection").get("reasonCode").asText());
+    }
+
+    /** An empty series still answers the question rather than returning a bare array. */
+    @Test
+    public void aSeriesWithNoIssuesStillReportsWhetherAnybodyLooked() throws Exception {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        JsonNode json = wire(IssueListService.build(active, List.of(), wed(10)));
+
+        assertEquals(0, json.get("total").asInt());
+        assertEquals(0, json.get("data").size());
+        assertNotNull(json.get("gapDetection"), "the gate is reported even when there is nothing to gate");
+        assertTrue(json.get("gapDetection").get("enabled").asBoolean());
+        // Nothing has been published, so there is no cut-off to count periods from
+        // and nothing to call missing -- as opposed to nobody having looked.
+        assertEquals(0, json.get("gapCount").asInt());
+    }
+
+    // ------------------------------------------------------------------- ordering
+
+    /**
+     * An OPEN issue is the newest row of its series, not the oldest.
+     *
+     * It has no stamped cut-off, so ordering on the stamp alone sorted the issue
+     * being worked on below issues published years earlier -- at the bottom of its
+     * own archive. The list orders on the effective cut-off instead.
+     */
+    @Test
+    public void theOpenIssueSortsAsTheNewestRowRatherThanTheOldest() {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        PublicationIssue open = new PublicationIssue();
+        open.setSeries(active);
+        open.setPublicId("open");
+        open.setStatus(IssueStatus.OPEN);
+        open.setIntervalTo(wed(51));
+        open.setIntervalToSource(IntervalBoundSource.NOMINAL);
+        assertNull(open.getCutoffStampedAt(), "the fixture is pointless if it has a stamp");
+
+        IssueListResultVo result = IssueListService.build(active,
+                newestFirst(published(active, "older", wed(50)), open),
+                new Date(wed(51).getTime() - 3600_000L));
+
+        assertEquals("open", result.getData().get(0).getPublicId());
+        assertEquals("OPEN", result.getData().get(0).getComputedStatus());
+    }
+
+    // ------------------------------------------------------- the expected window
+
+    /**
+     * An issue still being assembled has no window, and the list says when one is
+     * expected.
+     *
+     * WHY THE PAIR EXISTS. publicFrom and publicTo record what happened: the
+     * publish action writes them and nothing else does, so an unreleased issue has
+     * neither and the current edition's end is absent because nothing has
+     * superseded it. Both are true and both leave the screen blank exactly where
+     * somebody planning the week is looking. Writing the expectation into the
+     * columns instead would put a publication on the public site from a date
+     * nothing decided, which is the failure the absence is there to prevent -- so
+     * it is PROJECTED, beside the stored pair rather than into it.
+     */
+    private static PublicationIssue open(PublicationSeries series, String publicId, Date plannedCutoff) {
+        PublicationIssue i = new PublicationIssue();
+        i.setSeries(series);
+        i.setPublicId(publicId);
+        i.setStatus(IssueStatus.OPEN);
+        i.setIntervalTo(plannedCutoff);
+        i.setIntervalToSource(IntervalBoundSource.NOMINAL);
+        return i;
+    }
+
+    private static SystemPublicationIssueVo row(IssueListResultVo result, String publicId) {
+        return result.getData().stream()
+                .filter(r -> publicId.equals(r.getPublicId()))
+                .findFirst().orElseThrow(() -> new AssertionError(publicId + " is not in the list"));
+    }
+
+    /**
+     * The unreleased issue expects to open at its planned cut-off and to run one
+     * period.
+     *
+     * Its own cut-off, not "now" plus a period: the cut-off is the bound the
+     * shaping already gave it, and it is what the publish action will close the
+     * period at. Two answers to "when does this week end" would disagree the first
+     * time a release ran late.
+     */
+    @Test
+    public void anUnreleasedIssueOfACadencedSeriesForecastsItsOwnWindow() {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        IssueListResultVo result = IssueListService.build(active,
+                newestFirst(published(active, "current", wed(50)), open(active, "next", wed(51))),
+                new Date(wed(51).getTime() - 3600_000L));
+
+        SystemPublicationIssueVo next = row(result, "next");
+        assertNull(next.getPublicFrom(), "an unreleased issue is on no public site");
+        assertEquals(wed(51), next.getExpectedPublicFrom(),
+                "it expects to go public at its own planned cut-off");
+        assertEquals(new Date(wed(51).getTime() + WEEK), next.getExpectedPublicTo(),
+                "and to be current for one cadence period after that");
+    }
+
+    /**
+     * And the current edition expects to end where that one opens.
+     *
+     * The same instant seen from the other side, and it is emitted although the
+     * stored publicTo is absent -- which is the whole point: "no end recorded" is
+     * what a current edition's window says, and the answer the screen needs is
+     * "until the next one comes out". It is also the value the publish action will
+     * cap this window at, so the forecast and what eventually happens come from one
+     * number.
+     */
+    @Test
+    public void theCurrentEditionForecastsBeingSupersededByTheUnreleasedOne() {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        IssueListResultVo result = IssueListService.build(active,
+                newestFirst(published(active, "current", wed(50)), open(active, "next", wed(51))),
+                new Date(wed(51).getTime() - 3600_000L));
+
+        SystemPublicationIssueVo current = row(result, "current");
+        assertNull(current.getPublicTo(), "the fixture is pointless if the window already ends");
+        assertNull(current.getExpectedPublicFrom(),
+                "it is already public; when it opened is recorded, not forecast");
+        assertEquals(wed(51), current.getExpectedPublicTo(),
+                "it expects to stop being current when the week after it is released");
+    }
+
+    /**
+     * A published issue whose successor is also published forecasts nothing.
+     *
+     * Nothing is waiting to take over, so there is nothing to expect: the pair's
+     * absence is what tells a screen to render the stored window and stop.
+     */
+    @Test
+    public void aPublishedIssueBehindAnotherPublishedOneForecastsNothing() {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        IssueListResultVo result = IssueListService.build(active,
+                newestFirst(published(active, "older", wed(50)), published(active, "newer", wed(51))),
+                new Date(wed(51).getTime() + 3600_000L));
+
+        for (String publicId : List.of("older", "newer")) {
+            assertNull(row(result, publicId).getExpectedPublicFrom(), publicId + " forecasts a start");
+            assertNull(row(result, publicId).getExpectedPublicTo(), publicId + " forecasts an end");
+        }
+    }
+
+    /**
+     * A series with no cadence forecasts nothing either, and the reason is not
+     * caution.
+     *
+     * There is no period to add. A one-off's window is a decision somebody makes,
+     * and the one-off screens are where it is made by hand; inventing a length for
+     * it here would put a date on the screen that nothing in the model supports.
+     */
+    @Test
+    public void anUnreleasedIssueOfACadencelessSeriesForecastsNothing() {
+        PublicationSeries oneOff = series(SeriesStatus.ACTIVE, SeriesCadence.NONE,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        IssueListResultVo result = IssueListService.build(oneOff,
+                newestFirst(published(oneOff, "first", wed(50)), open(oneOff, "next", wed(51))),
+                new Date(wed(51).getTime() - 3600_000L));
+
+        SystemPublicationIssueVo next = row(result, "next");
+        assertNull(next.getExpectedPublicFrom(),
+                "a series with no cadence has no period to place a window in");
+        assertNull(next.getExpectedPublicTo());
+        // The predecessor's forecast does not depend on the cadence: the successor
+        // still states when it plans to take over, and the publish action will
+        // still cap this window there.
+        assertEquals(wed(51), row(result, "first").getExpectedPublicTo());
+    }
+
+    /**
+     * Neither field ever appears on a synthesized row, and neither is ever null on
+     * the wire.
+     *
+     * A period nobody published has nothing planned about it -- what it offers is a
+     * retro-create, not a forecast -- and a `null` under either key would read as
+     * "we looked and there is no expectation", which is a different claim from
+     * "this row does not have one".
+     */
+    @Test
+    public void aSynthesizedRowCarriesNoForecastAndNoNullUnderEitherKey() throws Exception {
+        PublicationSeries active = series(SeriesStatus.ACTIVE, SeriesCadence.WEEKLY,
+                TimeRelation.PUBLISHED_IN_INTERVAL);
+
+        JsonNode json = wire(IssueListService.build(active,
+                newestFirst(published(active, "a", wed(10)), open(active, "next", wed(14))),
+                new Date(wed(14).getTime() - 3600_000L)));
+
+        assertTrue(count(json, "MISSING") > 0, "the fixture is missing weeks 11 to 13");
+        for (JsonNode row : json.get("data")) {
+            for (String key : List.of("expectedPublicFrom", "expectedPublicTo")) {
+                if (row.path("pseudo").asText(null) != null) {
+                    assertFalse(row.has(key),
+                            "a synthesized period claims a forecast under " + key + ": " + row);
+                }
+                assertFalse(row.has(key) && row.get(key).isNull(),
+                        "a null under " + key + " reads as 'we looked and there is none', which is "
+                                + "a different claim from 'this row does not have one': " + row);
+            }
+        }
+
+        // And the real rows do carry it, so the assertion above is not passing over
+        // a feature that never emits anything.
+        JsonNode next = null;
+        for (JsonNode candidate : json.get("data")) {
+            if ("next".equals(candidate.path("publicId").asText(null))) {
+                next = candidate;
+            }
+        }
+        assertNotNull(next);
+        assertEquals(wed(14).getTime(), next.get("expectedPublicFrom").asLong(),
+                "the forecast reaches the wire as epoch milliseconds");
+        assertEquals(wed(14).getTime() + WEEK, next.get("expectedPublicTo").asLong());
+    }
+
+    // ------------------------------------------- a clock change in the series' zone
+
+    /*
+     * TZ6. The series above have no domain, so cutoffZone() answers UTC and no
+     * row of theirs crosses a clock change (setNominalCutoffTimeZone is not read
+     * by cutoffZone). These go through build() and buildRecent() on a series
+     * whose DOMAIN is in Europe/Copenhagen, which is the path the issue list and
+     * the timeline take in a running server: a missing or upcoming row that
+     * holds the March or October change must still open and close at the
+     * series' 12:00 cut-off clock, and a row that does not hold one must not be
+     * moved by the newest issue's change.
+     */
+
+    /** A series of a domain in Europe/Copenhagen, ACTIVE and PUBLISHED_IN_INTERVAL. */
+    private static PublicationSeries copenhagenSeries(SeriesCadence cadence) {
+        Domain domain = new Domain();
+        domain.setTimeZone("Europe/Copenhagen");
+        PublicationSeries s = series(SeriesStatus.ACTIVE, cadence, TimeRelation.PUBLISHED_IN_INTERVAL);
+        s.setDomain(domain);
+        return s;
+    }
+
+    /** Noon on a day of 2027, in Copenhagen. */
+    private static Date noon2027(int month, int day) {
+        return at2027(month, day, 12);
+    }
+
+    private static Date at2027(int month, int day, int hour) {
+        return Date.from(ZonedDateTime.of(2027, month, day, hour, 0, 0, 0, CPH).toInstant());
+    }
+
+    /** "KIND from to" of every synthesized row, oldest first. */
+    private static List<String> pseudoRows(IssueListResultVo result) {
+        List<String> out = new ArrayList<>();
+        for (SystemPublicationIssueVo row : result.getData()) {
+            if (row.getPseudo() != null) {
+                out.add(0, row.getPseudo() + " " + local(row.getIntervalFrom()) + " " + local(row.getIntervalTo()));
+            }
+        }
+        return out;
+    }
+
+    private static String local(Date d) {
+        return d == null ? "null" : ZonedDateTime.ofInstant(d.toInstant(), CPH).toLocalDateTime().toString();
+    }
+
+    /**
+     * A missing week that holds the spring change closes at 12:00, not 13:00.
+     *
+     * Cut-offs 26 March and 9 April 2027; 28 March is the change. The week after
+     * 26 March is 167 hours long; tiled with the 168 hours of the newest issue's
+     * week, it ended at 13:00 on 2 April.
+     */
+    @Test
+    public void aMissingWeekAcrossTheSpringChange_closesAtTheSeriesClockOnTheIssueList() {
+        PublicationSeries s = copenhagenSeries(SeriesCadence.WEEKLY);
+
+        IssueListResultVo result = IssueListService.build(s,
+                newestFirst(published(s, "w12", noon2027(3, 26)), published(s, "w14", noon2027(4, 9))),
+                at2027(4, 10, 9));
+
+        assertEquals(List.of(
+                        "MISSING 2027-03-26T12:00 2027-04-02T12:00",
+                        "UPCOMING 2027-04-09T12:00 2027-04-16T12:00"),
+                pseudoRows(result));
+        assertEquals(1, result.getGapCount());
+    }
+
+    /** The same week on the timeline strip, which shares the synthesis. */
+    @Test
+    public void aMissingWeekAcrossTheSpringChange_closesAtTheSeriesClockOnTheTimeline() {
+        PublicationSeries s = copenhagenSeries(SeriesCadence.WEEKLY);
+
+        IssueTimelineVo timeline = IssueListService.buildRecent(s,
+                newestFirst(published(s, "w12", noon2027(3, 26)), published(s, "w14", noon2027(4, 9))),
+                10, at2027(4, 10, 9), "en");
+
+        List<String> cells = new ArrayList<>();
+        for (IssueTimelineRowVo row : timeline.getRows()) {
+            if (row.getPublicId() == null) {
+                cells.add(0, row.getComputedStatus() + " " + local(row.getIntervalFrom())
+                        + " " + local(row.getIntervalTo()));
+            }
+        }
+        assertEquals(List.of(
+                        "MISSING 2027-03-26T12:00 2027-04-02T12:00",
+                        "UPCOMING 2027-04-09T12:00 2027-04-16T12:00"),
+                cells);
+    }
+
+    /**
+     * An ordinary missing week is not shortened because the NEWEST issue's week
+     * holds the change.
+     *
+     * Cut-offs 5, 19 and 26 March 2027. The newest week (19 to 26 March) holds no
+     * change, but the upcoming one (26 March to 2 April) does; neither the missing
+     * week of 5 to 12 March nor the upcoming week may borrow another week's length.
+     */
+    @Test
+    public void anOrdinaryMissingWeekIsNotMovedByAnotherWeeksClockChange() {
+        PublicationSeries s = copenhagenSeries(SeriesCadence.WEEKLY);
+
+        IssueListResultVo result = IssueListService.build(s,
+                newestFirst(published(s, "w09", noon2027(3, 5)), published(s, "w11", noon2027(3, 19)),
+                        published(s, "w12", noon2027(3, 26))),
+                at2027(3, 27, 9));
+
+        assertEquals(List.of(
+                        "MISSING 2027-03-05T12:00 2027-03-12T12:00",
+                        "UPCOMING 2027-03-26T12:00 2027-04-02T12:00"),
+                pseudoRows(result));
+    }
+
+    /**
+     * Daily rows across the spring change keep 12:00, one day each.
+     *
+     * One cut-off on 27 March 2027 and now 29 March 13:00: 27 to 28 and 28 to 29
+     * March are missing (the second holds the change and is 23 hours long), and
+     * 29 to 30 March is upcoming. Tiled with one length they drifted an hour a row.
+     */
+    @Test
+    public void dailyRowsAcrossTheSpringChangeKeepTheSeriesClock() {
+        PublicationSeries s = copenhagenSeries(SeriesCadence.DAILY);
+
+        IssueListResultVo result = IssueListService.build(s,
+                newestFirst(published(s, "d086", noon2027(3, 27))),
+                at2027(3, 29, 13));
+
+        assertEquals(List.of(
+                        "MISSING 2027-03-27T12:00 2027-03-28T12:00",
+                        "MISSING 2027-03-28T12:00 2027-03-29T12:00",
+                        "UPCOMING 2027-03-29T12:00 2027-03-30T12:00"),
+                pseudoRows(result));
+        assertEquals(2, result.getGapCount());
+    }
+
+    private static int count(JsonNode json, String pseudoKind) {
+        int n = 0;
+        for (JsonNode row : json.get("data")) {
+            if (pseudoKind.equals(row.path("pseudo").asText(null))) {
+                n++;
+            }
+        }
+        return n;
+    }
+}

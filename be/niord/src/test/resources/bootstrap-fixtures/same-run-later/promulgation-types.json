@@ -1,0 +1,54 @@
+[
+  {
+    "typeId": "it-navtex",
+    "serviceId": "navtex",
+    "name": "It NAVTEX",
+    "priority": 5,
+    "active": true,
+    "language": "en",
+    "domains": [
+      {
+        "domainId": "it-later"
+      },
+      {
+        "domainId": "it-later"
+      },
+      {
+        "domainId": "it-missing"
+      }
+    ]
+  },
+  {
+    "typeId": "it-domains-only",
+    "domains": [
+      {
+        "domainId": "it-later"
+      }
+    ]
+  },
+  {
+    "typeId": "it-flags",
+    "priority": 0,
+    "active": false,
+    "requirement": "MANDATORY"
+  },
+  {
+    "typeId": "it-changes",
+    "serviceId": "twitter",
+    "name": "It changes renamed",
+    "language": "da",
+    "requirement": "MANDATORY",
+    "messageTypes": [
+      "COASTAL_WARNING",
+      "NAVAREA_WARNING"
+    ],
+    "scriptResourcePaths": [
+      "templates/it/same-run-b.ftl"
+    ]
+  },
+  {
+    "typeId": "it-emptied",
+    "messageTypes": [],
+    "scriptResourcePaths": []
+  }
+]

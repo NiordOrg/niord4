@@ -1,0 +1,71 @@
+
+Niord has been deployed to namespace "{{ .Release.Namespace }}" (release "{{ .Release.Name }}").
+
+Components rendered by this release (others, if any, come from another release in the
+same namespace — see the *.host values):
+{{- if .Values.proxy.enabled }}
+  - proxy     {{ include "niord.componentName" (list . "proxy") }}   (nginx, the single public entry point)
+{{- end }}
+{{- if .Values.app.enabled }}
+  - app       {{ include "niord.app.host" . }}        (Spring Boot port; db {{ include "niord.db.host" . }}, keycloak {{ include "niord.keycloak.host" . }}, smtp {{ include "niord.smtp.host" . }}:{{ include "niord.smtp.port" . }})
+{{- end }}
+{{- if .Values.postgres.enabled }}
+  - db        {{ include "niord.componentName" (list . "db") }}         (PostgreSQL 18 + PostGIS; database {{ .Values.postgres.database }}{{ with .Values.postgres.databases }}, plus {{ join ", " . }}{{ end }})
+{{- end }}
+{{- if .Values.keycloak.enabled }}
+  - keycloak  {{ include "niord.componentName" (list . "keycloak") }}   (realm "{{ .Values.keycloak.realm }}")
+{{- end }}
+{{- if .Values.mailhog.enabled }}
+  - smtp      {{ include "niord.componentName" (list . "smtp") }}        (MailHog)
+{{- end }}
+{{- if (.Values.info | default dict).enabled }}
+  - info      {{ include "niord.componentName" (list . "info") }}       (the public site, {{ include "niord.image" (list . "info") }})
+{{- end }}
+
+Watch startup:
+  kubectl -n {{ .Release.Namespace }} get pods -w
+{{- if .Values.proxy.enabled }}
+
+Everything is served through the nginx proxy on a single origin (published on the
+host's localhost by OrbStack):
+
+  REST             {{ .Values.externalBaseUri }}/rest
+  Keycloak         {{ .Values.externalKeycloakUrl }}            (admin console: {{ .Values.externalKeycloakUrl }}/admin/{{ if and .Values.keycloak.enabled (not .Values.keycloak.existingSecret) }} , {{ .Values.keycloak.adminUser }}/{{ .Values.keycloak.adminPassword }}{{ end }})
+  Health           {{ .Values.externalBaseUri }}/rest/actuator/health
+{{- if .Values.secom.enabled }}
+  SECOM            {{ .Values.externalBaseUri }}/api/secom     (ping is open; everything else needs a signed envelope)
+{{- end }}
+{{- end }}
+{{- if .Values.mailhog.enabled }}
+  MailHog UI       http://localhost:{{ .Values.mailhog.uiPort }}
+{{- end }}
+{{- if .Values.app.enabled }}
+
+The app image serves the administration app at the root of this origin, next to the REST
+API and Keycloak (an image built with --no-web serves none); seeded realm users
+(e.g. sysadmin / sysadmin) sign in through it.
+{{- end }}
+{{- if (.Values.info | default dict).enabled }}
+
+The public site (fe/ui-apps/info) is served on an origin of its own, by its container, which
+passes only its allow-listed, read-only /rest/ paths on to the app:
+{{- if .Values.info.ingress.enabled }}
+
+  Public site      https://{{ .Values.info.ingress.host }}
+{{- else }}
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "niord.componentName" (list . "info") }} 18400:{{ .Values.info.service.port }}
+  Public site      http://localhost:18400
+
+(18400 locally, in the 1xxxx range like the ports below: docker-compose.yml's Keycloak holds 8080.)
+{{- end }}
+{{- else }}
+
+The public site (fe/ui-apps/info) is not rendered: info.enabled turns it on, with a country's
+image of it (info.image.repository, e.g. niord-dk-info).
+{{- end }}
+{{- if or .Values.proxy.enabled .Values.mailhog.enabled }}
+
+The host-published ports ({{ if .Values.proxy.enabled }}{{ .Values.proxy.service.port }}{{ end }}{{ if and .Values.proxy.enabled .Values.mailhog.enabled }} / {{ end }}{{ if .Values.mailhog.enabled }}{{ .Values.mailhog.uiPort }}{{ end }}) are in the
+1xxxx range and do not clash with the repo's docker-compose.yml (8888/8080/8025).
+{{- end }}

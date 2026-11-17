@@ -1,0 +1,21 @@
+<app-dialog
+  [(visible)]="visible"
+  [header]="'main.footer.dialogs.' + document() + '.title' | transloco"
+  [style]="{ width: '42rem', maxWidth: '92vw' }"
+>
+  @if (failed()) {
+    <app-error-banner [title]="'common.fetchError' | transloco" />
+  }
+  <!-- The document's own markup is styled by the `.legal-document` rules in styles.css:
+       component styles cannot reach content bound with [innerHTML]. -->
+  <div
+    class="legal-document flex flex-col gap-3 text-sm"
+    [attr.lang]="bodyLang()"
+    [innerHTML]="content()"
+  ></div>
+  <ng-template #footer>
+    <button type="button" class="btn-secondary" (click)="visible.set(false)">
+      {{ 'main.footer.dialogs.close' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

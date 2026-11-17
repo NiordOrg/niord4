@@ -1,0 +1,957 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import jakarta.validation.constraints.NotNull;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.ElementCollection;
+import org.niord.core.publication.series.vo.PublicationSeriesVo;
+import org.niord.core.publication.series.vo.PublicationSeriesDescVo;
+import org.niord.core.publication.series.vo.SystemPublicationSeriesVo;
+import java.util.LinkedHashMap;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderColumn;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import org.niord.core.db.JpaPropertiesAttributeConverter;
+import org.niord.core.domain.Domain;
+import org.niord.core.model.VersionedEntity;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.criteria.JpaCriteriaAttributeConverter;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.vo.MessagePublication;
+import org.niord.model.DataFilter;
+import org.niord.model.ILocalizable;
+import org.niord.model.search.PagedSearchParamsVo;
+
+/**
+ * The definition of a publication: what an issue of it IS, how often, over which query, and
+ * rendered by which report. Replaces the legacy template publication.
+ *
+ * Identity comes from VersionedEntity and nothing else. Every id in this
+ * system is drawn from one shared sequence row, and inheriting the base class IS the whole
+ * contract. Giving this table its own id generator would break that silently, for this
+ * table alone. EntityContractTest.noEntityBringsItsOwnIdGenerator() enforces it.
+ */
+@Entity
+// Named because two unrelated callers ask for it: the admin list and the import
+// check, which has to walk the estate in the same order the sheet a human
+// checks it against is printed in.
+//
+// NO INDEXES ARE DECLARED, and that is a decision rather than an omission. The
+// reads here filter on status and would look like an index candidate from the
+// annotations alone, but the table holds one row per publication the authority
+// produces and is not on a growth curve. V12 records the sizing and what to
+// index if that ever stops being true.
+@NamedQuery(name = "PublicationSeries.findAllOrdered",
+        query = "SELECT s FROM PublicationSeries s ORDER BY s.seriesId")
+public class PublicationSeries extends VersionedEntity<Integer> implements ILocalizable<PublicationSeriesDesc> {
+
+    @NotNull
+    @Column(length = 64, nullable = false, unique = true)
+    private String seriesId;
+
+    @Column(length = 36, unique = true)
+    private String legacyTemplateId;
+
+    @Column(length = 255)
+    private String importSource;
+
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private SeriesStatus status = SeriesStatus.DRAFT;
+
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private ContentMode contentMode = ContentMode.GENERATED_FROM_QUERY;
+
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private SeriesCadence cadence = SeriesCadence.NONE;
+
+    /**
+     * What kind of publication this is. Separate from cadence, which only says
+     * how often -- see {@link SeriesKind}, and note that cadence = NONE covers
+     * both an irregular series and something published once.
+     *
+     * Defaults to SCHEDULED because that is what the create form produces; the
+     * import decides the kind for everything it writes.
+     */
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private SeriesKind kind = SeriesKind.SCHEDULED;
+
+    @Enumerated(EnumType.STRING)
+    private CutoffDay nominalCutoffDay;
+
+    private Integer nominalCutoffDayOfMonth;
+
+    private Integer nominalCutoffMonth;
+
+    @Column(length = 5)
+    private String nominalCutoffTime;
+
+    @Column(length = 64)
+    private String nominalCutoffTimeZone;
+
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private NumberingScheme numberingScheme = NumberingScheme.NONE;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date firstIssueStartsAt;
+
+    @Enumerated(EnumType.STRING)
+    private TimeRelation timeRelation;
+
+    private Boolean aliveAtCutoff;
+
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = JpaCriteriaAttributeConverter.class)
+    private IssueCriteriaVo criteria;
+
+    /**
+     * The series this one COMPILES, under COMPILED_FROM_SOURCE and nowhere else.
+     *
+     * An entity reference rather than a seriesId text, unlike the publicId a
+     * compiled member row carries, and the two differ because they answer
+     * different kinds of question. This is live configuration: the derivation
+     * reads the source's issues on every resolve, so a source that has been
+     * deleted is a broken series and the database saying so is the right outcome.
+     * The member row is a frozen record of what was printed, which has to survive
+     * the source issue being deleted.
+     *
+     * S-24 requires it exactly where the relation is COMPILED_FROM_SOURCE, and
+     * S-25 refuses a source that is this series, is not query-backed, or is
+     * itself a compilation -- no chains, because a chain would make one issue's
+     * contents depend on a derivation two levels away with nothing recording the
+     * middle one.
+     */
+    // The constraint is NAMED so that every shape of this schema names it the
+    // same: the migration adds it by that name and skips it when it is already
+    // there, and a database whose tables were created from these annotations
+    // instead would otherwise carry a generated name and gain a second identical
+    // constraint the first time the migration ran over it.
+    @ManyToOne
+    @JoinColumn(foreignKey = @ForeignKey(name = "FK_pub_series_source_series"))
+    private PublicationSeries sourceSeries;
+
+    @ManyToOne(optional = false)
+    @NotNull
+    @JoinColumn(nullable = false)
+    private PublicationCategory category;
+
+    /**
+     * THE OWNER: the one domain this publication is listed in, administered from,
+     * and whose timezone its cut-offs are reckoned in.
+     *
+     * Required for every kind. It used to be optional, and a null read as "visible
+     * from every domain" -- which conflated two questions. Where a publication is
+     * ADMINISTERED and where it may be CITED are different facts, and answering
+     * both with one nullable column meant a publication that had to be reachable
+     * everywhere could not have a timezone at all. The second question now has its
+     * own answer in {@link #availability}, and this one is single-valued.
+     */
+    @ManyToOne(optional = false)
+    @NotNull
+    @JoinColumn(name = "domain_id", nullable = false)
+    private Domain domain;
+
+    /**
+     * Who else may see and cite this publication. Read-only wherever it is shared.
+     */
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private SeriesAvailability availability = SeriesAvailability.OWNER_ONLY;
+
+    /**
+     * The domains named by SELECTED_DOMAINS, never including the owner.
+     *
+     * The join table is DECLARED rather than left to the default naming, because
+     * the schema is Flyway's and a migration has to name the table and its columns
+     * exactly. A default-named table is a name two independent sources have to
+     * agree on with nothing checking that they do.
+     */
+    @ManyToMany
+    @JoinTable(name = "PublicationSeries_AvailableDomain",
+            joinColumns = @JoinColumn(name = "series_id"),
+            inverseJoinColumns = @JoinColumn(name = "domain_id"))
+    private List<Domain> availableDomains = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private MessagePublication messagePublication = MessagePublication.NONE;
+
+    private Integer sortOrder;
+
+    @Column(length = 64)
+    private String reportId;
+
+    @Enumerated(EnumType.STRING)
+    private PageSize pageSize;
+
+    @Enumerated(EnumType.STRING)
+    private PageOrientation pageOrientation;
+
+    private Boolean mapThumbnails;
+
+    @Column(length = 32)
+    private String messageSortBy;
+
+    @Enumerated(EnumType.STRING)
+    private PagedSearchParamsVo.SortOrder messageSortOrder;
+
+    // Initialised, not left null. JpaPropertiesAttributeConverter returns an empty
+    // map for a null column, so an entity LOADED from the database always has a
+    // map; only a freshly constructed one did not, which made the create path the
+    // single place updateFromVo could dereference null. Publication does the same
+    // for its two maps, and descs and languages below do it for the same reason.
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = JpaPropertiesAttributeConverter.class)
+    private Map<String, Object> reportParams = new LinkedHashMap<>();
+
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private ReleaseMode releaseMode = ReleaseMode.MANUAL_GATE;
+
+    /**
+     * Where an issue's cut-off falls by default when it is published -- see
+     * {@link CutoffDefault}. RELEASE_MOMENT for the weekly shape; the yearly
+     * shapes are calendar-driven, and the importer and the create form decide
+     * them from cadence and time relation.
+     */
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private CutoffDefault cutoffDefault = CutoffDefault.RELEASE_MOMENT;
+
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false)
+    private NextIssueCreation nextIssueCreation = NextIssueCreation.AUTO_ON_PUBLISH;
+
+    @Column(nullable = false)
+    private boolean languageSpecific = true;
+
+    public String getSeriesId() {
+        return seriesId;
+    }
+
+    public void setSeriesId(String seriesId) {
+        this.seriesId = seriesId;
+    }
+
+    public String getLegacyTemplateId() {
+        return legacyTemplateId;
+    }
+
+    public void setLegacyTemplateId(String legacyTemplateId) {
+        this.legacyTemplateId = legacyTemplateId;
+    }
+
+    public String getImportSource() {
+        return importSource;
+    }
+
+    public void setImportSource(String importSource) {
+        this.importSource = importSource;
+    }
+
+    public SeriesStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SeriesStatus status) {
+        this.status = status;
+    }
+
+    public ContentMode getContentMode() {
+        return contentMode;
+    }
+
+    public void setContentMode(ContentMode contentMode) {
+        this.contentMode = contentMode;
+    }
+
+    public SeriesCadence getCadence() {
+        return cadence;
+    }
+
+    public void setCadence(SeriesCadence cadence) {
+        this.cadence = cadence;
+    }
+
+    public SeriesKind getKind() {
+        return kind;
+    }
+
+    public void setKind(SeriesKind kind) {
+        this.kind = kind;
+    }
+
+    /** A one-off holds exactly one issue; everything else may hold many. */
+    public boolean isOneOff() {
+        return kind == SeriesKind.ONE_OFF;
+    }
+
+    public CutoffDay getNominalCutoffDay() {
+        return nominalCutoffDay;
+    }
+
+    public void setNominalCutoffDay(CutoffDay nominalCutoffDay) {
+        this.nominalCutoffDay = nominalCutoffDay;
+    }
+
+    public Integer getNominalCutoffDayOfMonth() {
+        return nominalCutoffDayOfMonth;
+    }
+
+    public void setNominalCutoffDayOfMonth(Integer nominalCutoffDayOfMonth) {
+        this.nominalCutoffDayOfMonth = nominalCutoffDayOfMonth;
+    }
+
+    public Integer getNominalCutoffMonth() {
+        return nominalCutoffMonth;
+    }
+
+    public void setNominalCutoffMonth(Integer nominalCutoffMonth) {
+        this.nominalCutoffMonth = nominalCutoffMonth;
+    }
+
+    public String getNominalCutoffTime() {
+        return nominalCutoffTime;
+    }
+
+    public void setNominalCutoffTime(String nominalCutoffTime) {
+        this.nominalCutoffTime = nominalCutoffTime;
+    }
+
+    public String getNominalCutoffTimeZone() {
+        return nominalCutoffTimeZone;
+    }
+
+    public void setNominalCutoffTimeZone(String nominalCutoffTimeZone) {
+        this.nominalCutoffTimeZone = nominalCutoffTimeZone;
+    }
+
+    public NumberingScheme getNumberingScheme() {
+        return numberingScheme;
+    }
+
+    public void setNumberingScheme(NumberingScheme numberingScheme) {
+        this.numberingScheme = numberingScheme;
+    }
+
+    public Date getFirstIssueStartsAt() {
+        return firstIssueStartsAt;
+    }
+
+    public void setFirstIssueStartsAt(Date firstIssueStartsAt) {
+        this.firstIssueStartsAt = firstIssueStartsAt;
+    }
+
+    public CutoffDefault getCutoffDefault() {
+        return cutoffDefault;
+    }
+
+    public void setCutoffDefault(CutoffDefault cutoffDefault) {
+        this.cutoffDefault = cutoffDefault;
+    }
+
+    public TimeRelation getTimeRelation() {
+        return timeRelation;
+    }
+
+    public void setTimeRelation(TimeRelation timeRelation) {
+        this.timeRelation = timeRelation;
+    }
+
+    public Boolean getAliveAtCutoff() {
+        return aliveAtCutoff;
+    }
+
+    public void setAliveAtCutoff(Boolean aliveAtCutoff) {
+        this.aliveAtCutoff = aliveAtCutoff;
+    }
+
+    public IssueCriteriaVo getCriteria() {
+        return criteria;
+    }
+
+    public void setCriteria(IssueCriteriaVo criteria) {
+        this.criteria = criteria;
+    }
+
+    public PublicationSeries getSourceSeries() {
+        return sourceSeries;
+    }
+
+    public void setSourceSeries(PublicationSeries sourceSeries) {
+        this.sourceSeries = sourceSeries;
+    }
+
+    public PublicationCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(PublicationCategory category) {
+        this.category = category;
+    }
+
+    public Domain getDomain() {
+        return domain;
+    }
+
+    public void setDomain(Domain domain) {
+        this.domain = domain;
+    }
+
+    public SeriesAvailability getAvailability() {
+        return availability;
+    }
+
+    public void setAvailability(SeriesAvailability availability) {
+        this.availability = availability;
+    }
+
+    public List<Domain> getAvailableDomains() {
+        return availableDomains;
+    }
+
+    public void setAvailableDomains(List<Domain> availableDomains) {
+        this.availableDomains = availableDomains == null ? new ArrayList<>() : availableDomains;
+    }
+
+    public MessagePublication getMessagePublication() {
+        return messagePublication;
+    }
+
+    public void setMessagePublication(MessagePublication messagePublication) {
+        this.messagePublication = messagePublication;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
+
+    public String getReportId() {
+        return reportId;
+    }
+
+    public void setReportId(String reportId) {
+        this.reportId = reportId;
+    }
+
+    public PageSize getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(PageSize pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    public PageOrientation getPageOrientation() {
+        return pageOrientation;
+    }
+
+    public void setPageOrientation(PageOrientation pageOrientation) {
+        this.pageOrientation = pageOrientation;
+    }
+
+    public Boolean getMapThumbnails() {
+        return mapThumbnails;
+    }
+
+    public void setMapThumbnails(Boolean mapThumbnails) {
+        this.mapThumbnails = mapThumbnails;
+    }
+
+    public String getMessageSortBy() {
+        return messageSortBy;
+    }
+
+    public void setMessageSortBy(String messageSortBy) {
+        this.messageSortBy = messageSortBy;
+    }
+
+    public PagedSearchParamsVo.SortOrder getMessageSortOrder() {
+        return messageSortOrder;
+    }
+
+    public void setMessageSortOrder(PagedSearchParamsVo.SortOrder messageSortOrder) {
+        this.messageSortOrder = messageSortOrder;
+    }
+
+    public Map<String, Object> getReportParams() {
+        return reportParams;
+    }
+
+    public void setReportParams(Map<String, Object> reportParams) {
+        this.reportParams = reportParams;
+    }
+
+    public ReleaseMode getReleaseMode() {
+        return releaseMode;
+    }
+
+    public void setReleaseMode(ReleaseMode releaseMode) {
+        this.releaseMode = releaseMode;
+    }
+
+    public NextIssueCreation getNextIssueCreation() {
+        return nextIssueCreation;
+    }
+
+    public void setNextIssueCreation(NextIssueCreation nextIssueCreation) {
+        this.nextIssueCreation = nextIssueCreation;
+    }
+
+    public boolean isLanguageSpecific() {
+        return languageSpecific;
+    }
+
+    public void setLanguageSpecific(boolean languageSpecific) {
+        this.languageSpecific = languageSpecific;
+    }
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "entity", orphanRemoval = true)
+    private List<PublicationSeriesDesc> descs = new ArrayList<>();
+
+    @Override
+    public List<PublicationSeriesDesc> getDescs() {
+        return descs;
+    }
+
+    @Override
+    public void setDescs(List<PublicationSeriesDesc> descs) {
+        this.descs = descs;
+    }
+
+    /** Creates and attaches a desc for the given language. */
+    public PublicationSeriesDesc createDesc(String lang) {
+        PublicationSeriesDesc desc = new PublicationSeriesDesc();
+        desc.setLang(lang);
+        desc.setEntity(this);
+        getDescs().add(desc);
+        return desc;
+    }
+
+    /**
+     * The configured language list, ordered. DECLARED, never inferred from which desc
+     * rows happen to exist: "this series has no Danish name yet" and "this series is not
+     * published in Danish" are different facts.
+     */
+    @ElementCollection
+    @OrderColumn(name = "indexNo")
+    private List<String> languages = new ArrayList<>();
+
+    public List<String> getLanguages() {
+        return languages;
+    }
+
+    public void setLanguages(List<String> languages) {
+        this.languages = languages;
+    }
+
+
+    /**
+     * Converts to a value object, public fields first and operational fields
+     * only for the system type.
+     *
+     * The branch on instanceof is the whole access control. A field that is not
+     * declared on the public type cannot be serialised from it, however the
+     * caller got hold of the object -- which is a stronger guarantee than a flag
+     * checked at every serialisation point, where the one that forgets leaks
+     * everything.
+     */
+    /**
+     * The inverse of {@link #toVo}: a system value object onto this entity.
+     *
+     * The category and the domain are NOT resolved here -- they are references to
+     * other entities and this class has no persistence context. The caller
+     * resolves them and sets them, and `SeriesValidator` refuses a series with no
+     * category, so a caller that forgets cannot save.
+     *
+     * ENUMS FAIL LOUDLY. A value the enum does not know is a client sending a
+     * name this build does not have -- a stale frontend, or a typo -- and the
+     * quiet alternative is to leave the field null, which for `contentMode` or
+     * `timeRelation` means the issue silently resolves nothing. `SeriesValidator`
+     * would then report "required field missing" for a field the client did send,
+     * which sends whoever is debugging it to the wrong place entirely.
+     */
+    public void updateFromVo(SystemPublicationSeriesVo vo) {
+        // vo.getVersion() IS DELIBERATELY NOT READ HERE. The revision is compared
+        // before this method runs and then dropped; assigning it would let a
+        // client name any revision it liked -- including the one it is about to
+        // overwrite -- which turns the concurrency guard into a field the caller
+        // controls, and a guard the caller controls is not a guard.
+        seriesId = vo.getSeriesId();
+        sortOrder = vo.getSortOrder();
+
+        status = enumOf(SeriesStatus.class, vo.getStatus(), "status");
+        contentMode = enumOf(ContentMode.class, vo.getContentMode(), "contentMode");
+        cadence = enumOf(SeriesCadence.class, vo.getCadence(), "cadence");
+        // A VO that omits the kind KEEPS the one already set, rather than
+        // nulling a NOT NULL column. Every series PUT written before this field
+        // existed omits it, and the kind is not something those forms edit --
+        // so silence means "unchanged", not "clear it".
+        SeriesKind sentKind = enumOf(SeriesKind.class, vo.getKind(), "kind");
+        if (sentKind != null) {
+            kind = sentKind;
+        }
+        // Same silence rule as the kind: a form written before this field
+        // existed omits it, and omission keeps the stored default.
+        CutoffDefault sentCutoffDefault = enumOf(CutoffDefault.class, vo.getCutoffDefault(), "cutoffDefault");
+        if (sentCutoffDefault != null) {
+            cutoffDefault = sentCutoffDefault;
+        }
+        nominalCutoffDay = enumOf(CutoffDay.class, vo.getNominalCutoffDay(), "nominalCutoffDay");
+        nominalCutoffDayOfMonth = vo.getNominalCutoffDayOfMonth();
+        nominalCutoffMonth = vo.getNominalCutoffMonth();
+        nominalCutoffTime = vo.getNominalCutoffTime();
+        numberingScheme = enumOf(NumberingScheme.class, vo.getNumberingScheme(), "numberingScheme");
+        timeRelation = enumOf(TimeRelation.class, vo.getTimeRelation(), "timeRelation");
+        aliveAtCutoff = vo.getAliveAtCutoff();
+        firstIssueStartsAt = vo.getFirstIssueStartsAt();
+        reportId = vo.getReportId();
+        pageSize = enumOf(PageSize.class, vo.getPageSize(), "pageSize");
+        pageOrientation = enumOf(PageOrientation.class, vo.getPageOrientation(), "pageOrientation");
+        mapThumbnails = vo.getMapThumbnails();
+        messageSortBy = vo.getMessageSortBy();
+        messageSortOrder = enumOf(PagedSearchParamsVo.SortOrder.class, vo.getMessageSortOrder(),
+                "messageSortOrder");
+        // THREE NOT NULL COLUMNS, and absent therefore means UNCHANGED rather than
+        // cleared -- the same silence rule the kind and the cut-off default carry.
+        // Every other field on this VO is nullable, so a client that omits one
+        // stores a null and nothing breaks; these three take the save down with a
+        // constraint violation naming a Java field, from a body that was merely
+        // incomplete. The lean series shape does not carry releaseMode or
+        // nextIssueCreation at all, so any client assembling a save from what it
+        // read back hits exactly this.
+        MessagePublication sentMessagePublication =
+                enumOf(MessagePublication.class, vo.getMessagePublication(), "messagePublication");
+        if (sentMessagePublication != null) {
+            messagePublication = sentMessagePublication;
+        }
+        ReleaseMode sentReleaseMode = enumOf(ReleaseMode.class, vo.getReleaseMode(), "releaseMode");
+        if (sentReleaseMode != null) {
+            releaseMode = sentReleaseMode;
+        }
+        NextIssueCreation sentNextIssueCreation =
+                enumOf(NextIssueCreation.class, vo.getNextIssueCreation(), "nextIssueCreation");
+        if (sentNextIssueCreation != null) {
+            nextIssueCreation = sentNextIssueCreation;
+        }
+        normaliseDerivedFields();
+        // The same silence rule again, and here it matters most on the create path:
+        // a client that says nothing about who may cite this publication is not
+        // asking for it to be narrowed to one desk. The REST layer picks the
+        // default for a NEW series from its content mode; an existing one keeps
+        // whatever it already carried.
+        //
+        // availableDomains is deliberately NOT read here. It is a list of entity
+        // references the value object carries by id, exactly as the owner and the
+        // category are, and this class has no persistence context to resolve them
+        // in -- the resource does it and refuses an id that names nothing.
+        // sourceSeries is the same kind of thing for the same reason: the wire
+        // carries a seriesId, and resolving it is the resource's job, which
+        // refuses an id naming no series rather than quietly leaving a
+        // compilation with nothing to compile.
+        SeriesAvailability sentAvailability =
+                enumOf(SeriesAvailability.class, vo.getAvailability(), "availability");
+        if (sentAvailability != null) {
+            availability = sentAvailability;
+        }
+        // Absent means "unchanged": an older client that does not send it must not
+        // silently flip a series to one file for every language.
+        if (vo.getLanguageSpecific() != null) {
+            languageSpecific = vo.getLanguageSpecific();
+        }
+        legacyTemplateId = vo.getLegacyTemplateId();
+        importSource = vo.getImportSource();
+
+        criteria = criteriaOf(vo.getCriteria());
+
+        languages.clear();
+        if (vo.getLanguages() != null) {
+            languages.addAll(vo.getLanguages());
+        }
+        if (vo.getReportParams() != null) {
+            reportParams.clear();
+            reportParams.putAll(vo.getReportParams());
+        }
+
+        // MERGED IN PLACE, keeping the row that already exists for a language.
+        //
+        // The semantics are the wholesale ones -- a desc the client did not send is
+        // a desc the client deleted -- but the MECHANISM has to differ. The table is
+        // unique on (lang, entity_id) and Hibernate orders inserts before deletes
+        // within a flush, so clearing the list and re-adding "da" inserts a second
+        // "da" while the first is still awaiting deletion: "Duplicate entry da-72488".
+        //
+        // Every save after the FIRST failed on it. It went unseen because the flush
+        // lands wherever the next query runs, which was a category lookup that caught
+        // Exception and returned null -- so an admin editing a series was told their
+        // perfectly good publication category did not exist.
+        List<String> sent = new ArrayList<>();
+        if (vo.getDescs() != null) {
+            for (PublicationSeriesDescVo dv : vo.getDescs()) {
+                sent.add(dv.getLang());
+            }
+        }
+        descs.removeIf(d -> !sent.contains(d.getLang()));
+
+        if (vo.getDescs() != null) {
+            for (PublicationSeriesDescVo dv : vo.getDescs()) {
+                // checkCreateDesc rather than a hand-rolled search: it matches the
+                // language case-insensitively and tolerates a null one, where an
+                // equals() over the list throws on a desc row that has no lang.
+                checkCreateDesc(dv.getLang()).updateFromVo(dv);
+            }
+        }
+    }
+
+    /**
+     * The fields the series does not choose, brought into line with the ones it
+     * does.
+     *
+     * DERIVED FROM THE CADENCE, not chosen beside it. A publication that comes out
+     * every week opens next week's issue when this week's publishes -- that IS
+     * what a cadence means -- so the pair "weekly, created by hand" is not a
+     * configuration anybody wants, it is a series that silently stops scheduling
+     * itself. S-8 says so in both directions.
+     *
+     * REACHED FROM EVERY PATH THAT VALIDATES, which is the whole reason it is a
+     * method rather than two lines inside {@link #updateFromVo}. A save heals the
+     * stored value; an activation validates the entity as it stands and never
+     * passes through a save, so a series carrying the old value could pass "check
+     * rules" -- which reports on a candidate built through updateFromVo -- and
+     * then be refused activation on the very rule the report had just healed. Two
+     * definitions of a valid series, and the one on screen would be the wrong one.
+     *
+     * NOT a JPA lifecycle callback: @PreUpdate runs at flush, which is after every
+     * one of those validations has already read the field.
+     */
+    void normaliseDerivedFields() {
+        if (cadence != null && cadence != SeriesCadence.NONE) {
+            nextIssueCreation = NextIssueCreation.AUTO_ON_PUBLISH;
+        }
+    }
+
+    /** Null stays null; anything else must be a name the enum knows. */
+    private static <E extends Enum<E>> E enumOf(Class<E> type, String name, String field) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(type, name.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    field + " = '" + name + "' is not one of " + java.util.Arrays.toString(type.getEnumConstants()));
+        }
+    }
+
+    /**
+     * The criteria document, which arrives as whatever JSON-B made of it.
+     *
+     * Round-tripped through the mapper rather than cast, because a POST body
+     * deserialises to maps and lists while the column holds an IssueCriteriaVo,
+     * and a cast would succeed on the way in and fail at flush time -- far from
+     * the request that caused it.
+     */
+    private static IssueCriteriaVo criteriaOf(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof IssueCriteriaVo already) {
+            return already;
+        }
+        try {
+            // PORT: was new com.fasterxml.jackson.databind.ObjectMapper() (Jackson 2). Built with
+            // Jackson 2 defaults rather than Jackson 3's, because Jackson 3 turns
+            // FAIL_ON_UNKNOWN_PROPERTIES off by default: without this an unknown field in the
+            // criteria document would be dropped in silence instead of refused as CRITERIA_INVALID.
+            // This is a read INTO the value object, not the canonical serialization -- the stored
+            // bytes are still written by CriteriaSerialization, which stays on Jackson 2.
+            tools.jackson.databind.ObjectMapper m =
+                    tools.jackson.databind.json.JsonMapper.builderWithJackson2Defaults().build();
+            return m.convertValue(raw, IssueCriteriaVo.class);
+        } catch (RuntimeException e) {
+            throw new IssueLifecycleService.TransitionRefusedException("CRITERIA_INVALID",
+                    "the criteria document could not be read: " + e.getMessage());
+        }
+    }
+
+    public <V extends PublicationSeriesVo> V toVo(Class<V> clz) {
+        return toVo(clz, null);
+    }
+
+    /**
+     * The same conversion, narrowed to one language.
+     *
+     * The overload exists because narrowing is a rule about the data and belongs
+     * with it: a caller that asked for a language this series does not carry is
+     * better served the name that exists than an empty desc list it has to invent
+     * a label for. A one-language series is entirely legitimate, and every other
+     * localized read in the product falls back the same way. Done in the resource
+     * instead, it would be a rule this module has no way to assert.
+     *
+     * A null filter, or one carrying no language, keeps every language.
+     */
+    public <V extends PublicationSeriesVo> V toVo(Class<V> clz, DataFilter filter) {
+        V vo = newInstance(clz);
+
+        vo.setSeriesId(seriesId);
+        vo.setCreated(getCreated());
+        vo.setUpdated(getUpdated());
+        vo.setCategoryId(category == null ? null : category.getCategoryId());
+        vo.setSortOrder(sortOrder);
+
+        // The patterns travel only on the system shape; PublicationSeriesDesc.toVo
+        // says why.
+        boolean system = vo instanceof SystemPublicationSeriesVo;
+        for (PublicationSeriesDesc d : descsFor(filter)) {
+            vo.getDescs().add(d.toVo(system));
+        }
+
+        if (system) {
+            SystemPublicationSeriesVo sys = (SystemPublicationSeriesVo) vo;
+            // The revision this read is of, so the save it feeds can name it and
+            // be refused when somebody else got there first. Admin-tier only:
+            // nothing on the lean shape may be saved back, so a revision on it
+            // would be a token with no write to present it to.
+            sys.setVersion(getVersion());
+            sys.setStatus(status == null ? null : status.name());
+            sys.setContentMode(contentMode == null ? null : contentMode.name());
+            sys.setCadence(cadence == null ? null : cadence.name());
+            sys.setKind(kind == null ? null : kind.name());
+            sys.setCutoffDefault(cutoffDefault == null ? null : cutoffDefault.name());
+            sys.setNominalCutoffDay(nominalCutoffDay == null ? null : nominalCutoffDay.name());
+            sys.setNominalCutoffDayOfMonth(nominalCutoffDayOfMonth);
+            sys.setNominalCutoffMonth(nominalCutoffMonth);
+            sys.setNominalCutoffTime(nominalCutoffTime);
+            sys.setNumberingScheme(numberingScheme == null ? null : numberingScheme.name());
+            sys.setTimeRelation(timeRelation == null ? null : timeRelation.name());
+            sys.setAliveAtCutoff(aliveAtCutoff);
+            sys.setFirstIssueStartsAt(firstIssueStartsAt);
+            sys.setCriteria(criteria);
+            // BY ITS IMMUTABLE seriesId, like every other reference on this shape.
+            // The row id is an internal number that means nothing across an export
+            // and an import into another installation, which is the one journey
+            // this field has to survive.
+            sys.setSourceSeriesId(sourceSeries == null ? null : sourceSeries.getSeriesId());
+            sys.setDomainId(domain == null ? null : domain.getDomainId());
+            sys.setAvailability(availability == null ? null : availability.name());
+            // The owner is never in the list, on the wire or in the table: it is
+            // already the strongest form of "visible from here", and carrying it
+            // twice would let an editor tick and untick a box that changes nothing.
+            for (Domain d : availableDomains) {
+                if (d != null && d.getDomainId() != null
+                        && (domain == null || !d.getDomainId().equals(domain.getDomainId()))) {
+                    sys.getAvailableDomainIds().add(d.getDomainId());
+                }
+            }
+            sys.getLanguages().addAll(languages);
+            sys.setReportId(reportId);
+            sys.setPageSize(pageSize == null ? null : pageSize.name());
+            sys.setPageOrientation(pageOrientation == null ? null : pageOrientation.name());
+            sys.setMapThumbnails(mapThumbnails);
+            sys.setMessageSortBy(messageSortBy);
+            sys.setMessageSortOrder(messageSortOrder == null ? null : messageSortOrder.name());
+            sys.setMessagePublication(messagePublication == null ? null : messagePublication.name());
+            sys.setReleaseMode(releaseMode == null ? null : releaseMode.name());
+            sys.setNextIssueCreation(nextIssueCreation == null ? null : nextIssueCreation.name());
+            sys.setLanguageSpecific(languageSpecific);
+            sys.setLegacyTemplateId(legacyTemplateId);
+            sys.setImportSource(importSource);
+            if (reportParams != null) {
+                sys.setReportParams(new LinkedHashMap<>(reportParams));
+            }
+        }
+        return vo;
+    }
+
+    /**
+     * The zone this series' cut-offs are read and written in.
+     *
+     * THE DOMAIN AND NOTHING ELSE. Timezone is a domain setting and the domains
+     * really do differ -- Atlantic/Faeroe, UTC for Greenland, Europe/Copenhagen for
+     * the rest -- so a series that answered from anywhere else would schedule its
+     * cut-off in a zone nobody configured. A per-series timezone column would be a
+     * second source that can disagree with the domain, which is why this no longer
+     * consults one.
+     *
+     * The UTC branch is a last resort for a series with no domain, which S-20a
+     * refuses -- along with a domain whose zone is blank or unreadable, because
+     * TimeZone.getTimeZone answers GMT for anything it does not recognise and
+     * would otherwise shift every cut-off silently. It is reachable only by a
+     * series that is already invalid, and it is here so that naming a week cannot
+     * throw rather than as a policy about zones.
+     */
+    public ZoneId cutoffZone() {
+        return domain == null ? ZoneId.of("UTC") : domain.timeZone().toZoneId();
+    }
+
+    /**
+     * The desc rows a conversion should carry, given the requested language.
+     *
+     * Everything, unless a language was asked for and this series has more than
+     * one -- narrowing a single-language series is a no-op that only risks
+     * emptying it. When the requested language is one this series does not have,
+     * the FIRST row stands in, rather than nothing.
+     */
+    private List<PublicationSeriesDesc> descsFor(DataFilter filter) {
+        String lang = filter == null ? null : filter.getLang();
+        if (lang == null || lang.isBlank() || getDescs().size() < 2) {
+            return getDescs();
+        }
+        List<PublicationSeriesDesc> wanted = getDescs().stream()
+                .filter(d -> lang.equalsIgnoreCase(d.getLang()))
+                .toList();
+        return wanted.isEmpty() ? List.of(getDescs().get(0)) : wanted;
+    }
+
+}

@@ -1,0 +1,283 @@
+{{- if .Values.app.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "niord.componentName" (list . "app") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "app") | nindent 4 }}
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  # Single writer to the RWO NIORD_HOME volume / Lucene index.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "niord.componentSelectorLabels" (list . "app") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "niord.componentSelectorLabels" (list . "app") | nindent 8 }}
+      annotations:
+        # Restart the app when its rendered configuration changes.
+        checksum/config: {{ include (print $.Template.BasePath "/app/configmap.yaml") . | sha256sum }}
+    spec:
+      # Disable Kubernetes' legacy Docker-link service env vars (e.g.
+      # NIORD_SMTP_PORT=tcp://10.x.x.x:1025). Spring's relaxed binding would otherwise
+      # map NIORD_SMTP_PORT onto the `niord.smtp.port` property (env vars outrank config
+      # files), feeding "tcp://...:1025" into an int field and failing the context start.
+      enableServiceLinks: false
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # With renewal: the scoped ServiceAccount whose token lets the renewal job PATCH
+      # the SECOM secrets (see app/rbac.yaml). Always rendered explicitly — if the field
+      # were omitted when renewal is off, a disable-upgrade would leave the live object's
+      # deprecated `serviceAccount` twin pointing at the deleted SA (helm's three-way
+      # merge cannot clear what it never rendered) and no app pod could be created.
+      serviceAccountName: {{ and .Values.secom.enabled .Values.secom.renewal.enabled | ternary (include "niord.componentName" (list . "app")) "default" }}
+      # The image runs as uid/gid 1000 (the wait containers too, as busybox's nc needs no root);
+      # fsGroup makes the mounted NIORD_HOME volume group-writable so the app can create cache/,
+      # batch-jobs/, message-index/. Pod Security `restricted`, see niord.podSecurityContext.
+      securityContext:
+        {{- include "niord.podSecurityContext" 1000 | nindent 8 }}
+        fsGroup: 1000
+      {{- if or .Values.app.waitForDependencies (include "niord.postgres.ownUser" .) }}
+      initContainers:
+        {{- if .Values.app.waitForDependencies }}
+        - name: wait-for-db
+          image: {{ include "niord.image" (list . "busybox") | quote }}
+          imagePullPolicy: {{ .Values.busybox.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "waiting for {{ include "niord.db.host" . }}:{{ .Values.postgres.service.port }} ..."
+              until nc -z {{ include "niord.db.host" . }} {{ .Values.postgres.service.port }}; do sleep 2; done
+              echo "database is reachable"
+        {{- end }}
+        {{- if include "niord.postgres.ownUser" . }}
+        # The app's database user (postgres.existingSecret) on this release's Postgres: made when
+        # missing, its password set to the Secret's, and the app's database and the tables in it
+        # made its own (niord.postgres.userScript, _helpers.tpl). Before every start, so a new
+        # volume, a changed Secret and a database the superuser recreated or restored are all put
+        # right by starting the app. It connects as the superuser (postgres.admin), which this
+        # container alone holds: the app's container has the app's user and nothing else. Here and
+        # not in the databases Job: Argo CD runs that hook after the sync, once every resource is
+        # healthy, and the app cannot be healthy without its user.
+        - name: database-user
+          # The Postgres image itself: it brings psql and pg_isready.
+          image: {{ include "niord.image" (list . "postgres") | quote }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+            # The image's own postgres user, as the databases Job runs.
+            runAsUser: 999
+            runAsGroup: 999
+          env:
+            - name: PGHOST
+              value: {{ include "niord.db.host" . | quote }}
+            - name: PGPORT
+              value: {{ .Values.postgres.service.port | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.adminSecretName" . }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.adminSecretName" . }}
+                  key: password
+            - name: PGDATABASE
+              value: postgres
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.secretName" . }}
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.secretName" . }}
+                  key: password
+            - name: DATABASE
+              value: {{ .Values.postgres.database | quote }}
+            # A missing database is made from the image's template_postgis, as the databases Job
+            # makes one, so it carries the PostGIS extension.
+            - name: TEMPLATE
+              value: template_postgis
+          command:
+            - sh
+            - -c
+            - |
+              {{- include "niord.postgres.userScript" . | nindent 14 }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+        {{- end }}
+        {{- if and .Values.app.waitForDependencies .Values.keycloak.enabled }}
+        # Only for a Keycloak of this release. A shared Keycloak (keycloak.enabled false) is
+        # stopped for its upgrades; an app pod that restarts then must still serve the site and
+        # the API, and the signing keys are fetched when the first token arrives.
+        - name: wait-for-keycloak
+          image: {{ include "niord.image" (list . "busybox") | quote }}
+          imagePullPolicy: {{ .Values.busybox.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "waiting for {{ include "niord.keycloak.host" . }}:{{ .Values.keycloak.service.port }} ..."
+              until nc -z {{ include "niord.keycloak.host" . }} {{ .Values.keycloak.service.port }}; do sleep 2; done
+              echo "keycloak is reachable"
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: niord
+          image: {{ include "niord.image" (list . "app") | quote }}
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          env:
+            # The deployment's Spring profile. No bean is gated on it today; it is "k8s" rather than
+            # "local" so that application-local.yml's localhost datasource/issuer/mail hardcodes are
+            # never loaded.
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            # Load the mounted override config on top of the packaged application.yml.
+            - name: SPRING_CONFIG_ADDITIONAL_LOCATION
+              value: "optional:file:/config/"
+            - name: NIORD_HOME
+              value: "/niord-home"
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ .Values.app.javaOpts | quote }}
+            # The app's database user, from postgres.existingSecret (or the chart's local default).
+            # Spring binds them to spring.datasource.username / .password.
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.secretName" . }}
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.secretName" . }}
+                  key: password
+            # The Keycloak URL the backend's own admin calls use (domain clients, users, groups):
+            # the in-cluster Service. SettingsService checks System.getenv(<setting key>) before
+            # the database, also while @Setting fields are injected, so the env-var NAME is the
+            # setting key verbatim. A relative authServerUrl would resolve against the baseUri
+            # setting, the public origin, which a pod may not reach. Token validation is wired
+            # via the standard Spring properties in the app ConfigMap.
+            - name: authServerUrl
+              value: {{ include "niord.keycloak.internalUrl" . | quote }}
+            {{- if .Values.secom.enabled }}
+            # The PKCS12 store passwords, from keys of the SECOM secrets themselves (created
+            # outside Helm; the renewal job's merge PATCH leaves these keys alone). Spring binds
+            # them to niord.secom.keystore.password, .truststore.password and
+            # .renewal.keystore.password.
+            - name: NIORD_SECOM_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secom.storesSecret }}
+                  key: keystore-password
+            - name: NIORD_SECOM_TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secom.storesSecret }}
+                  key: truststore-password
+            {{- if .Values.secom.renewal.enabled }}
+            - name: NIORD_SECOM_RENEWAL_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secom.renewal.robotSecret }}
+                  key: robot-password
+            {{- end }}
+            # Deploy-time overrides of the DB-backed SECOM settings. SettingsService
+            # checks System.getenv(<exact setting key>) before the DB, so the env-var
+            # NAME must be the camelCase setting key verbatim (enableServiceLinks=false
+            # above keeps k8s from polluting the env). Empty values are skipped -> the
+            # app/DB defaults apply.
+            {{- range $key, $value := .Values.secom.settings }}
+            {{- if $value }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.app.service.port }}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: niord-home
+              mountPath: /niord-home
+            {{- if .Values.secom.enabled }}
+            - name: secom-stores
+              mountPath: /run/secrets/secom
+              readOnly: true
+            {{- if .Values.secom.renewal.enabled }}
+            - name: secom-renewal
+              mountPath: /run/secrets/secom-renewal
+              readOnly: true
+            {{- end }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /rest/actuator/health/liveness
+              port: http
+            periodSeconds: {{ .Values.app.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.app.startupProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /rest/actuator/health/readiness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /rest/actuator/health/liveness
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.app.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "niord.componentName" (list . "app-config") }}
+        {{- if .Values.secom.enabled }}
+        # Created outside Helm (scripts/secom-test-secrets.sh locally, real MCP stores in
+        # production). The app can hot-swap rotated stores via the sysadmin SECOM page
+        # (POST /rest/secom/security/reload) — no pod restart needed for same-password
+        # in-place secret updates.
+        - name: secom-stores
+          secret:
+            secretName: {{ .Values.secom.storesSecret }}
+        {{- if .Values.secom.renewal.enabled }}
+        # The renewal robot-user credential (key: robot.p12), also created outside Helm.
+        - name: secom-renewal
+          secret:
+            secretName: {{ .Values.secom.renewal.robotSecret }}
+        {{- end }}
+        {{- end }}
+        - name: niord-home
+          {{- if .Values.app.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "niord.componentName" (list . "app") }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- end }}

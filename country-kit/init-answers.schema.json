@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "init's answers, the file init.mjs --answers reads",
+  "description": "The handful of answers a new country repository is generated from, given at init's questions or in a file. country, name, organisation, timeZone, map.lat, map.lon and owners are required; every other answer is optional and its standard default is in its description. An unknown answer fails. The kit's reader (country-kit/lib/answers.mjs) adds the rules a schema cannot say: English is not among the languages, a producer code that belongs to another authority, the time zone's two checks, the refused domain and series ids, the short format's tokens and the map's ranges.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["country", "name", "organisation", "timeZone", "map", "owners"],
+  "properties": {
+    "country": {
+      "description": "Required. The country's ISO 3166-1 alpha-2 code, two letters a-z: niord-<country>, org.niord.<country>, niord_<country>. Choose it once.",
+      "type": "string",
+      "pattern": "^[a-z]{2}$"
+    },
+    "name": {
+      "description": "Required. The country's name, plain text, at most 60 characters: the manifest's name and the root README.",
+      "type": "string",
+      "pattern": "^[^<>&\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "maxLength": 60
+    },
+    "organisation": {
+      "description": "Required. The authority that runs the deployment, plain text, at most 100 characters: the settings file's organisation.",
+      "type": "string",
+      "pattern": "^[^<>&\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "maxLength": 100
+    },
+    "languages": {
+      "description": "Optional; standard default [] (English only). The languages besides English, each a published pack pinned from its home, applied as UI and content language of both applications. English is always there and is not listed.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z]{2,3}$" }
+    },
+    "producerCode": {
+      "description": "Optional; standard default '' (none yet). The IHO S-62 producer code, four upper-case letters or digits, written to application.yml as niord.s124.producer-code. Another authority's code and the guide's placeholder are refused.",
+      "type": "string",
+      "pattern": "^([A-Z0-9]{4})?$"
+    },
+    "timeZone": {
+      "description": "Required. The IANA time zone of the first domain and the public site, spelt as the tz database spells it: Intl must take it, and it must have the case-sensitive shape (UTC, or Area/Location with capitals), since Java reads a spelling it does not know as GMT. The spelling given is written.",
+      "type": "string"
+    },
+    "map": {
+      "description": "Required. The map's default centre and zoom: the settings file's mapDefault* and the first domain's.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": {
+          "description": "Required. The latitude, whole degrees from -90 to 90.",
+          "type": "integer"
+        },
+        "lon": {
+          "description": "Required. The longitude, whole degrees from -180 to 180.",
+          "type": "integer"
+        },
+        "zoom": {
+          "description": "Optional; standard default 6. The zoom level, a whole number from 1 to 18.",
+          "type": "integer"
+        }
+      }
+    },
+    "domain": {
+      "description": "Optional; each part has its standard default. The first domain, written to be/bootstrap/domains.json.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Optional; standard default <country>-nw (<country>-nm for an NM domain). Lower-case letters, digits and '-', starting with a letter, 2 to 63 characters; not niord-client-master, nor a Keycloak built-in or shared client id.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}$"
+        },
+        "name": {
+          "description": "Optional; standard default '<name> Navigational Warnings' ('<name> Notices to Mariners' for an NM domain). Plain text, at most 100 characters.",
+          "type": "string",
+          "pattern": "^[^<>&\\u0000-\\u001f\\u007f-\\u009f]+$",
+          "maxLength": 100
+        },
+        "mainType": {
+          "description": "Optional; standard default NW. NW for navigational warnings, NM for notices to mariners; the first series has the same.",
+          "enum": ["NW", "NM"]
+        }
+      }
+    },
+    "series": {
+      "description": "Optional; each part has its standard default. The first domain's one message series.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Optional; standard default <country>-nw (<country>-nm for an NM domain). The domain id's rule.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}$"
+        },
+        "shortFormat": {
+          "description": "Optional; standard default <COUNTRY>-NW-${number-3-digits}-${year-2-digits} (-NM- for an NM domain). Plain text with the backend's tokens only, a number token among them unless numberSequenceType is NONE.",
+          "type": "string",
+          "pattern": "^[^<>&\\u0000-\\u001f\\u007f-\\u009f]+$"
+        },
+        "numberSequenceType": {
+          "description": "Optional; standard default YEARLY.",
+          "enum": ["YEARLY", "CONTINUOUS", "MANUAL", "NONE"]
+        }
+      }
+    },
+    "owners": {
+      "description": "Required. The repository's owners for .github/CODEOWNERS, one or more, each a GitHub @user or @org/team.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^@[A-Za-z0-9][A-Za-z0-9-]{0,38}(/[A-Za-z0-9][A-Za-z0-9_.-]*)?$"
+      }
+    },
+    "defaultLanguage": {
+      "description": "Not an answer: the default language is English. Tolerated as en only; another default language is the country guide's in-depth recipe.",
+      "const": "en"
+    }
+  }
+}

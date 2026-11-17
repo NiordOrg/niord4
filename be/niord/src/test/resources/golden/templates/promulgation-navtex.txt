@@ -1,0 +1,26 @@
+# navtex.ftl linked to the NAVTEX type, for the Wreck template
+
+### ordinary, no publication end, no reference
+TITLE:   Denmark. The Baltic Sea. Unmarked Wreck.
+SUBJECT: Unmarked Wreck
+DETAILS: A vessel has sunk in pos. 55° 30.0'N - 010° 30.0'E. The depth above the wreck is 12m. The wreck is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | DENMARK. BALTIC SEA.
+  | VESSEL SUNK 55-30.0N 010-30.0E. DEPTH
+  | ABOVE WRECK 12M. WRECK UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   A vessel has sunk in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. The depth above the wreck is 12m. The wreck is unmarked. Mariners are advised to keep well clear.
+
+### a publication end (31 Dec 23:30 local) and a cancellation reference
+TITLE:   Denmark. The Baltic Sea. Unmarked Wreck.
+SUBJECT: Unmarked Wreck
+DETAILS: A vessel has sunk in pos. 55° 30.0'N - 010° 30.0'E. The depth above the wreck is 12m. The wreck is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | DENMARK. BALTIC SEA.
+  | VESSEL SUNK 55-30.0N 010-30.0E. DEPTH
+  | ABOVE WRECK 12M. WRECK UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+  | CANCEL MESSAGE NW-001-26.
+  | CANCEL THIS MESSAGE 312230 UTC DEC 26.
+AUDIO:   A vessel has sunk in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. The depth above the wreck is 12m. The wreck is unmarked. Mariners are advised to keep well clear.
+

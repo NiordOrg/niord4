@@ -1,0 +1,11 @@
+<app-filter-panel label="messages.filter.tag.label" appFilterAutofocus="tag" (clear)="clear()">
+  <app-message-tags-field
+    placeholder="messages.filter.tag.placeholder"
+    [includeLocked]="true"
+    [browse]="openPicker"
+    [initialIds]="initialIds()"
+    [value]="value()"
+    (valueChange)="onChange($event)"
+  />
+  <app-tag-picker mode="filter" [selectedIds]="initialIds()" (toggled)="onPickerToggle($event)" />
+</app-filter-panel>

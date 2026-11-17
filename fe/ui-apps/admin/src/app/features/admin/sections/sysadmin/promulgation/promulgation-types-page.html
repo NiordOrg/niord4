@@ -1,0 +1,163 @@
+<app-admin-section-page
+  titleKey="admin.sections.promulgation.label"
+  descriptionKey="admin.promulgation.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.promulgation.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.promulgation.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.promulgation.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <!-- One entry per registered backend service (a country's backend may add its own) — never hardcoded. -->
+    <app-menu-trigger
+      icon="lucidePlus"
+      variant="primary"
+      [label]="'admin.promulgation.add' | transloco"
+      [menu]="addMenu"
+    />
+    <app-menu #addMenu [model]="addItems()" [ariaLabel]="'admin.promulgation.add' | transloco" />
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.promulgation.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.promulgation.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.promulgation.loadError' | transloco"
+      [retryLabel]="'admin.promulgation.retry' | transloco"
+      (retry)="facade.retry()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.types().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.promulgation.empty.none' | transloco" />
+    } @else {
+      <app-empty-state
+        icon="lucideFilterX"
+        [title]="'admin.promulgation.empty.noMatches' | transloco"
+      />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-16">{{ 'admin.promulgation.column.active' | transloco }}</th>
+            <th class="w-28">{{ 'admin.promulgation.column.serviceId' | transloco }}</th>
+            <th class="w-40">{{ 'admin.promulgation.column.typeId' | transloco }}</th>
+            <th>{{ 'admin.promulgation.column.name' | transloco }}</th>
+            <th class="w-28">{{ 'admin.promulgation.column.requirement' | transloco }}</th>
+            <th class="w-20">{{ 'admin.promulgation.column.priority' | transloco }}</th>
+            <th class="w-24">{{ 'admin.promulgation.column.language' | transloco }}</th>
+            <th>{{ 'admin.promulgation.column.domains' | transloco }}</th>
+            <th>{{ 'admin.promulgation.column.types' | transloco }}</th>
+            <th class="w-24">
+              <span class="sr-only">{{ 'admin.promulgation.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (type of pager.paged(); track type.typeId) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="type.active"
+                  [class.is-inactive]="!type.active"
+                  [attr.aria-label]="
+                    (type.active ? 'admin.promulgation.column.active' : 'common.inactive')
+                      | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td>{{ type.serviceId }}</td>
+              <td>{{ type.typeId }}</td>
+              <td>{{ type.name }}</td>
+              <td>
+                @if (type.requirement; as requirement) {
+                  {{ 'admin.promulgation.requirement.' + requirement | transloco }}
+                }
+              </td>
+              <td>{{ type.priority }}</td>
+              <td>{{ type.language }}</td>
+              <td>{{ domainNames(type) }}</td>
+              <td class="text-sm">
+                <!-- Absent/empty set = no restriction: the cell stays blank. -->
+                @for (messageType of type.messageTypes ?? []; track messageType) {
+                  <div>{{ 'msg.type.' + messageType | transloco }}</div>
+                }
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.promulgation.action.edit' | transloco"
+                  (click)="editType(type)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.promulgation.action.delete' | transloco"
+                  (click)="deleteType(type)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-promulgation-type-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="onEditorClosed()"
+  />
+
+  <app-json-import-dialog
+    titleKey="admin.promulgation.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.promulgation.label"
+    jobLink="/sysadmin/batch/promulgation-type-import"
+    (closed)="onImportClosed()"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

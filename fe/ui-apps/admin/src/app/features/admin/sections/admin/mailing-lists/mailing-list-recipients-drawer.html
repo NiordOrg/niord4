@@ -1,0 +1,67 @@
+<app-drawer
+  #drawerRef
+  [visible]="mailingList() !== undefined"
+  header="admin.mailingLists.recipients.title"
+  size="xwide"
+  [dirty]="dirty()"
+  (closed)="closed.emit()"
+>
+  @if (mailingList()) {
+    <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))">
+      <app-tab-list>
+        <app-tab value="users">
+          {{ 'admin.mailingLists.recipients.users' | transloco }}
+          <span class="badge-accent ml-1">{{ usersSelection().selected.length }}</span>
+        </app-tab>
+        <app-tab value="contacts">
+          {{ 'admin.mailingLists.recipients.contacts' | transloco }}
+          <span class="badge-accent ml-1">{{ contactsSelection().selected.length }}</span>
+        </app-tab>
+      </app-tab-list>
+      <app-tab-panels>
+        <app-tab-panel value="users">
+          <div class="flex flex-col gap-4 pt-4">
+            <app-recipient-transfer
+              [value]="usersSelection()"
+              (valueChange)="usersSelection.set($event)"
+            />
+            <div class="flex justify-end">
+              <button
+                type="button"
+                class="btn-primary"
+                [disabled]="!usersDirty() || savingUsers()"
+                (click)="saveUsers()"
+              >
+                {{ 'admin.mailingLists.recipients.saveUsers' | transloco }}
+              </button>
+            </div>
+          </div>
+        </app-tab-panel>
+        <app-tab-panel value="contacts">
+          <div class="flex flex-col gap-4 pt-4">
+            <app-recipient-transfer
+              [value]="contactsSelection()"
+              (valueChange)="contactsSelection.set($event)"
+            />
+            <div class="flex justify-end">
+              <button
+                type="button"
+                class="btn-primary"
+                [disabled]="!contactsDirty() || savingContacts()"
+                (click)="saveContacts()"
+              >
+                {{ 'admin.mailingLists.recipients.saveContacts' | transloco }}
+              </button>
+            </div>
+          </div>
+        </app-tab-panel>
+      </app-tab-panels>
+    </app-tabs>
+  }
+
+  <div drawerFooter class="flex w-full justify-end">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.mailingLists.recipients.close' | transloco }}
+    </button>
+  </div>
+</app-drawer>

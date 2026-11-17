@@ -1,0 +1,20 @@
+<app-filter-panel label="messages.filter.reference.label" (clear)="clear()">
+  <div class="flex items-center gap-3">
+    <app-message-id-field
+      class="flex-1"
+      placeholder="messages.filter.reference.messageIdPlaceholder"
+      [value]="messageId()"
+      (valueChange)="onMessageIdChange($any($event))"
+    />
+    <input
+      type="number"
+      class="text-input w-20"
+      [min]="minLevels"
+      [max]="maxLevels"
+      [attr.aria-label]="'messages.filter.reference.levels' | transloco"
+      [step]="1"
+      [ngModel]="referenceLevels()"
+      (ngModelChange)="onLevelsChange($event)"
+    />
+  </div>
+</app-filter-panel>

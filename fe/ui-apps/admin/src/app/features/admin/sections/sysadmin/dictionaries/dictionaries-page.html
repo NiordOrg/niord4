@@ -1,0 +1,178 @@
+<app-admin-section-page
+  titleKey="admin.sections.dictionaries.label"
+  descriptionKey="admin.dictionaries.intro"
+>
+  <div class="admin-toolbar">
+    <app-select
+      class="w-52"
+      [options]="names()"
+      [value]="facade.currentName()"
+      (valueChange)="onDictionaryChange($any($event))"
+      [scrollHeight]="'min(20rem, 60vh)'"
+      [ariaLabel]="'admin.dictionaries.selectorAriaLabel' | transloco"
+    />
+    <div class="flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        id="dict-show-extended"
+        class="checkbox"
+        [ngModel]="showExtended()"
+        (ngModelChange)="extendedOverride.set($event)"
+      />
+      <label for="dict-show-extended">{{ 'admin.dictionaries.showExtended' | transloco }}</label>
+    </div>
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.dictionaries.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.dictionaries.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.dictionaries.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <button type="button" class="btn-primary" (click)="addEntry()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.dictionaries.newEntry' | transloco }}
+    </button>
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.dictionaries.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.dictionaries.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.dictionaries.loadError' | transloco"
+      [retryLabel]="'admin.dictionaries.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.entries().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.dictionaries.empty.none' | transloco" />
+    } @else {
+      <app-empty-state
+        icon="lucideFilterX"
+        [title]="'admin.dictionaries.empty.noMatches' | transloco"
+      />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-64">{{ 'admin.dictionaries.column.key' | transloco }}</th>
+            <th>{{ 'admin.dictionaries.column.value' | transloco }}</th>
+            @if (showExtended()) {
+              <th>{{ 'admin.dictionaries.column.longValue' | transloco }}</th>
+            }
+            <th class="w-32">
+              <span class="sr-only">{{ 'admin.dictionaries.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of pageRows(); track entry.key) {
+            <tr>
+              <td class="font-mono text-xs">{{ entry.key }}</td>
+              <td>
+                @for (desc of orderedDescs(entry); track desc.lang) {
+                  <div class="flex items-center gap-1.5">
+                    <app-language-flag
+                      class="h-3.5 w-5 rounded-xs"
+                      [lang]="desc.lang"
+                      [flagPath]="flagPathFor(desc.lang)"
+                      [alt]="langLabelFor(desc.lang)"
+                    />
+                    <span>{{ desc.value }}</span>
+                  </div>
+                }
+              </td>
+              @if (showExtended()) {
+                <td>
+                  @for (desc of orderedDescs(entry); track desc.lang) {
+                    <!-- Flag-only lines clamp together — only languages that HAVE a long value get a line. -->
+                    @if (desc.longValue) {
+                      <div class="flex items-center gap-1.5">
+                        <app-language-flag
+                          class="h-3.5 w-5 rounded-xs"
+                          [lang]="desc.lang"
+                          [flagPath]="flagPathFor(desc.lang)"
+                          [alt]="langLabelFor(desc.lang)"
+                        />
+                        <span>{{ desc.longValue }}</span>
+                      </div>
+                    }
+                  }
+                </td>
+              }
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.dictionaries.editEntry' | transloco"
+                  (click)="editEntry(entry)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.dictionaries.copyEntry' | transloco"
+                  (click)="copyEntry(entry)"
+                >
+                  <app-icon name="lucideCopy" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.dictionaries.deleteEntry' | transloco"
+                  (click)="deleteEntry(entry)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-dictionary-entry-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="editorModel.set(undefined)"
+  />
+
+  <app-dictionary-import-dialog (closed)="onImportClosed()" />
+
+  <app-confirm />
+</app-admin-section-page>

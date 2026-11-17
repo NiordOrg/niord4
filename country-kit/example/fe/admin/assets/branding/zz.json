@@ -1,0 +1,18 @@
+{
+  "footer.copyright": "© [Éxámplé Máŕíţímé Áúţĥóŕíţý]",
+  "footer.link": "https://example.org/",
+  "footer.disclaimer": "[Ðíšçłáíméŕ]",
+  "main.footer.links.center.url": "https://example.org/",
+  "main.footer.links.center.ariaLabel": "[Éxámplé Máŕíţímé Áúţĥóŕíţý]",
+  "main.footer.links.center.imageAlt": "[Éxámplé Máŕíţímé Áúţĥóŕíţý łóĝó]",
+  "main.footer.links.center.imageSrc": "assets/branding/company-logo-zz.png",
+  "main.footer.dialogs.disclaimer.title": "[Ðíšçłáíméŕ]",
+  "country.motto": "[Šáƒé pášŝáĝé, płáíñłý çĥáŕţéð]",
+  "country.harbour.menu": "[Ĥáŕƀóúŕ]",
+  "country.harbour.title": "[Ĥáŕƀóúŕ ñóţéš]",
+  "country.harbour.text": "[Ɓéŕţĥš, ǫúáý ŵóŕķš áñð ţĥé ĥáŕƀóúŕ óƒƒíçé'š ñóţíçéš ƒóŕ ţĥíš ŵééķ.]",
+  "country.harbour.size": "[Ţĥíš ŵééķ'š ñóţéš: {{ size }}]",
+  "country.welcome.note": "[Ĥáŕƀóúŕ ñóţéš áŕé úñðéŕ Ĥáŕƀóúŕ íñ ţĥé méñú.]",
+  "country.bulletin.title": "[Ĥáŕƀóúŕ ƀúłłéţíñ]",
+  "country.bulletin.text": "[Ɓúłłéţíñ ţéxţ]"
+}

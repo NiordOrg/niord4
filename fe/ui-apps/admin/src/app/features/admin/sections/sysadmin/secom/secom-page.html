@@ -1,0 +1,54 @@
+<app-admin-section-page titleKey="admin.sections.secom.label" descriptionKey="admin.secom.intro">
+  @if (facade.unavailable()) {
+    <!-- The backend runs without niord.secom.enabled, so the whole /secom API is
+         absent. Enabling it is a deployment change + restart, not a UI toggle. -->
+    <div class="message message-warn" role="alert">
+      <app-icon name="lucideTriangleAlert" class="message-icon" />
+      <span>{{ 'admin.secom.disabled' | transloco }}</span>
+    </div>
+  } @else {
+    <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))">
+      <app-tab-list>
+        <app-tab value="overview">
+          <app-icon name="lucideLayoutGrid" class="mr-1 text-xs" />
+          {{ 'admin.secom.tab.overview' | transloco }}
+        </app-tab>
+        <app-tab value="certificates">
+          <app-icon name="lucideShield" class="mr-1 text-xs" />
+          {{ 'admin.secom.tab.certificates' | transloco }}
+        </app-tab>
+        <app-tab value="datasets">
+          <app-icon name="lucideList" class="mr-1 text-xs" />
+          {{ 'admin.secom.tab.datasets' | transloco }}
+        </app-tab>
+        <app-tab value="subscribers">
+          <app-icon name="lucideUsers" class="mr-1 text-xs" />
+          {{ 'admin.secom.tab.subscribers' | transloco }}
+        </app-tab>
+        <app-tab value="outbox">
+          <app-icon name="lucideSend" class="mr-1 text-xs" />
+          {{ 'admin.secom.tab.outbox' | transloco }}
+        </app-tab>
+      </app-tab-list>
+      <app-tab-panels>
+        <app-tab-panel value="overview">
+          <app-secom-overview-tab />
+        </app-tab-panel>
+        <app-tab-panel value="certificates">
+          <app-secom-certificates-tab />
+        </app-tab-panel>
+        <app-tab-panel value="datasets">
+          <app-secom-datasets-tab />
+        </app-tab-panel>
+        <app-tab-panel value="subscribers">
+          <app-secom-subscribers-tab />
+        </app-tab-panel>
+        <app-tab-panel value="outbox">
+          <app-secom-outbox-tab />
+        </app-tab-panel>
+      </app-tab-panels>
+    </app-tabs>
+  }
+
+  <app-confirm />
+</app-admin-section-page>

@@ -1,0 +1,23 @@
+# The owners of the files a reviewer has to see changed: what the build replaces in the base
+# product, what it ships in English, which packages it adds, what it pins and the workflow that
+# moves its pins, the addresses and texts it lets through unaccepted, and the packs it
+# publishes for other countries. Replace @OWNER with this country's maintainers. A gate only with
+# the branch rule "Require review from Code Owners"; until then this file documents who reviews
+# them.
+/fe/niord-country.json                  @OWNER
+/fe/niord-pins.lock.json                @OWNER
+/fe/missing-keys-accepted.json          @OWNER
+/fe/audit-accepted.json                 @OWNER
+/fe/build-urls-allowed.json             @OWNER
+/fe/admin/branding-unaccepted.json      @OWNER
+/fe/info/branding-unaccepted.json       @OWNER
+/fe/text-overrides/                     @OWNER
+/fe/admin/overrides/                    @OWNER
+/fe/info/overrides/                     @OWNER
+/fe/country/                            @OWNER
+/fe/packs/                              @OWNER
+/pack-releases.md                       @OWNER
+/.github/workflows/pack.yml             @OWNER
+/.github/workflows/base-bump.yml        @OWNER
+/be/overrides.json                      @OWNER
+/be/pom.xml                             @OWNER

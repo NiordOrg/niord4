@@ -1,0 +1,120 @@
+POTENTIAL BUGS — niord-app frontend
+===================================
+
+Suspected bugs, broken assumptions and traps found while working on the frontend, in code that
+was NOT the task at hand. Production code was deliberately left alone: an item is recorded here
+instead of being fixed inline, so the fix can be scoped, reviewed and tested on its own.
+
+This is the frontend counterpart of be/docs/potential-errors.md, and it follows the same
+maintenance rule:
+
+  This file lists OPEN items only — never progress. Do not record fixes, "done" notes or
+  status banners. When an item is resolved, DELETE its entry. Git history is the record of
+  what was fixed; a regression test is the durable guard.
+
+Each entry gives: location, what is wrong, why it is wrong, how it was found, and — where the
+behaviour is not obvious — a reproduction.
+
+
+------------------------------------------------------------------------------------------
+FE2. Stale body under a new title: toSignal + switchMap with no per-key reset
+                                                                   SEVERITY: MEDIUM (2 sites)
+                                                                             LOW    (1 site)
+------------------------------------------------------------------------------------------
+The pattern
+  A reactive load shaped as
+
+      toSignal(toObservable(key).pipe(switchMap(k => fetch(k))), { initialValue: X })
+
+  cancels the previous REQUEST but keeps the previously EMITTED value. When the key changes,
+  the surrounding UI (title, selection, header) updates immediately while the body still shows
+  the PREVIOUS key's content, until the new fetch resolves. The operator reads one record's
+  content believing it belongs to another.
+
+  The fix in each case is a `startWith(<empty/loading>)` inside the switchMap projection, so a
+  key change clears the body at the moment the label changes. (Already applied in
+  secom-gml-dialog.ts, where the class doc notes it is load-bearing rather than cosmetic — do
+  not let a later cleanup delete it as redundant.)
+
+Sites still affected
+
+  a) src/app/features/admin/sections/sysadmin/batch/batch-log-file-dialog.ts:44-56
+     Key is (instanceId, file). Selecting a different log file shows the PREVIOUS file's
+     contents under the newly-selected file name until the new content lands. Medium: batch
+     logs are read to diagnose failures, and attributing one job's log lines to another file
+     is exactly the wrong outcome.
+
+  b) src/app/features/admin/sections/sysadmin/param-types/list-values-editor.ts:53-59
+     Key is currentDictionaryName. Switching dictionary lists the previous dictionary's
+     entries until the new fetch resolves — and these entries are pickable, so a value can be
+     chosen from the wrong dictionary. Medium.
+
+  c) src/app/shared/forms/localized-inputs/localized-inputs.ts:144-152
+     Key is (placeholderKey, effectiveLanguages). Stale PLACEHOLDER text only — cosmetic,
+     no data is misattributed. Low; listed for completeness.
+
+Not affected (checked)
+  src/app/features/messages/components/message-print-settings/message-print-settings.ts uses a
+  monotonic request-id guard (loadRequestId) instead, which discards superseded responses
+  correctly. Different shape, no defect.
+
+Found while
+  Fixing the same defect in the SECOM GML dialog, then sweeping for other toSignal+switchMap
+  pipelines with no reset emission.
+
+
+------------------------------------------------------------------------------------------
+FE3. Unit suite is not green from a clean checkout on Node 26          SEVERITY: LOW
+                                                                      (tooling, not product)
+------------------------------------------------------------------------------------------
+Location
+  Environment / test harness. Affects 9 spec files, ~59 tests.
+
+What happens
+  `npm test -- --watch=false` fails 59 tests on an UNMODIFIED checkout. Every failure is
+
+      TypeError: Cannot read properties of undefined (reading 'clear')
+
+  at a `localStorage.clear()` in a beforeEach/afterEach, preceded by the Node warning
+
+      ExperimentalWarning: localStorage is not available because --localstorage-file was not
+      provided
+
+  Node 26 gates globalThis.localStorage behind --localstorage-file, and the Angular Vitest
+  builder's jsdom environment does not supply it.
+
+Affected specs
+  domain.service, language.service, trigger-test-dialog, format-location-prefs,
+  insert-locations-dialog, format-time-prefs, insert-time-dialog, print-settings-storage.service,
+  messages-table-view — i.e. exactly the specs that touch localStorage.
+
+Why it is worth recording
+  A first full-suite run reads as "my change broke 59 tests". Nothing in .claude/ or the READMEs
+  mentions it. Establish the baseline (stash and re-run, or check that every failure is a
+  localStorage one) before attributing failures to a change.
+
+Fix sketch
+  Provide the flag to the test runner, stub localStorage in a setup file, or pin the supported
+  Node major. package.json engines currently allows ^26.0.0.
+
+
+------------------------------------------------------------------------------------------
+FE4. .claude/styling-reference.md line numbers have drifted             SEVERITY: TRIVIAL
+------------------------------------------------------------------------------------------
+Location
+  fe/.claude/styling-reference.md
+
+What is wrong
+  The index maps each token/class to a line number in its source file, and the file itself warns
+  "Line numbers are accurate at time of writing". Several have drifted (the monospace-viewer
+  entry pointed at 1703 while the rule sat at 1713). Entries touched during a change get fixed;
+  the rest are stale by an unknown amount.
+
+Why it matters (mildly)
+  The document's stated purpose is "where is X defined". Wrong line numbers push a reader to
+  grep anyway, which is the documented fallback, so this degrades gracefully.
+
+Fix sketch
+  Either regenerate the line numbers mechanically as part of a lint step, or drop them and rely
+  on class/token names alone (which is what the file already tells you to do when a lookup
+  fails).

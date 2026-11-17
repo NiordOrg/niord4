@@ -1,0 +1,154 @@
+<!-- Execution header: Back/Cancel + title, with Execute where the edit form's Save sits. -->
+<header
+  class="flex items-center gap-3 border-b border-surface-200 px-4 py-2 dark:border-surface-700"
+>
+  <button type="button" class="btn-tertiary" (click)="cancel()">
+    <app-icon name="lucideArrowLeft" />
+    <span>{{ 'term.cancel' | transloco }}</span>
+  </button>
+
+  <div class="flex min-w-0 flex-1 items-center gap-2">
+    <span class="truncate font-semibold">{{ 'editor.template.execTitle' | transloco }}</span>
+    <!-- Route-based: the execute-template route carries data.help.section (see editor.routes.ts). -->
+    <app-help-anchor />
+  </div>
+
+  @if (narrow()) {
+    <button type="button" class="btn-tertiary" (click)="previewOpen.set(true)">
+      <app-icon name="lucideEye" />
+      <span>{{ 'editor.header.preview' | transloco }}</span>
+    </button>
+  }
+  @if (missingMandatory().length > 0) {
+    <span id="template-missing-mandatory" class="max-w-md min-w-0 text-xs text-danger">{{
+      'editor.template.missingMandatory' | transloco: { names: missingMandatory().join(', ') }
+    }}</span>
+  }
+  <button
+    type="button"
+    class="btn-primary"
+    [disabled]="!canExecute()"
+    [attr.aria-describedby]="missingMandatory().length > 0 ? 'template-missing-mandatory' : null"
+    (click)="execute()"
+  >
+    <app-icon name="lucidePlay" />
+    <span>{{ 'editor.template.execute' | transloco }}</span>
+  </button>
+</header>
+
+<div class="flex min-h-0 flex-1">
+  <!-- Form pane -->
+  <div class="min-w-0 flex-1 p-4">
+    <app-card [header]="'editor.template.card.templates' | transloco" sectionClass="shadow-sm mb-4">
+      <div class="flex flex-wrap items-center gap-2">
+        @for (cat of templates(); track cat.id; let i = $index) {
+          <span
+            class="inline-flex items-center gap-1 rounded-full border border-surface-200 bg-surface-100 py-1 pr-1 pl-2.5 text-sm dark:border-surface-700 dark:bg-surface-800"
+          >
+            {{ nameOf(cat) }}
+            <button
+              type="button"
+              class="icon-button"
+              (click)="removeTemplate(i)"
+              [attr.aria-label]="'term.remove' | transloco"
+            >
+              <app-icon name="lucideX" class="text-xs" />
+            </button>
+          </span>
+        } @empty {
+          <span class="text-sm text-fg-subtle">{{
+            'editor.template.noneSelected' | transloco
+          }}</span>
+        }
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded border border-dashed border-surface-300 px-2.5 py-1 text-xs text-fg-muted hover:border-primary hover:text-primary dark:border-surface-600"
+          (click)="openDrawer()"
+        >
+          <app-icon name="lucidePlus" />
+          <span>{{ 'editor.template.change' | transloco }}</span>
+        </button>
+      </div>
+    </app-card>
+
+    @if (templates().length > 0) {
+      <app-template-execute-fields
+        [templates]="templates()"
+        [paramTypes]="paramTypes()"
+        [lang]="lang()"
+        [(message)]="messageCopy"
+        [(templateData)]="values"
+        (userEdited)="touched.set(true)"
+        (reorder)="moveTemplate($event.from, $event.to)"
+        (typeChanged)="onTypeChanged()"
+        (geometryChanged)="onGeometryChanged()"
+        (computeAreas)="onComputeAreas()"
+      />
+    }
+  </div>
+
+  <!-- Inline preview (wide only) -->
+  @if (!narrow()) {
+    <app-live-preview [message]="previewMessage()" mode="inline">
+      <ng-container [ngTemplateOutlet]="refreshBar" />
+    </app-live-preview>
+  }
+</div>
+
+<!-- Narrow preview drawer -->
+@if (narrow()) {
+  <app-drawer
+    [visible]="previewOpen()"
+    header="editor.preview.title"
+    size="wide"
+    (closed)="previewOpen.set(false)"
+  >
+    <app-live-preview [message]="previewMessage()" mode="drawer">
+      <ng-container [ngTemplateOutlet]="refreshBar" />
+    </app-live-preview>
+  </app-drawer>
+}
+
+<!-- Refresh-preview control, projected where the edit form's verify/publish stepper sits. Auto-
+     preview keeps this rarely needed — it stays as a manual fallback + a live status indicator. -->
+<ng-template #refreshBar>
+  <div
+    class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-surface-200 px-4 py-2.5 dark:border-surface-700"
+  >
+    <span class="text-xs text-fg-subtle">
+      @switch (previewState()) {
+        @case ('loading') {
+          {{ 'editor.template.preview.updating' | transloco }}
+        }
+        @case ('error') {
+          <span class="text-danger">{{ 'editor.template.preview.failed' | transloco }}</span>
+        }
+        @case ('ready') {
+          {{ 'editor.template.preview.updated' | transloco }}
+        }
+        @default {
+          {{ 'editor.template.preview.idle' | transloco }}
+        }
+      }
+    </span>
+    <button
+      type="button"
+      class="btn-tertiary ml-auto"
+      [disabled]="previewState() === 'loading' || templates().length === 0"
+      (click)="refreshPreview()"
+    >
+      <app-icon name="lucideRefreshCw" [spin]="previewState() === 'loading'" />
+      <span>{{ 'editor.template.refreshPreview' | transloco }}</span>
+    </button>
+  </div>
+</ng-template>
+
+<!-- Selection drawer (always mounted so its slide-out animation runs on close). -->
+<app-template-selection-drawer
+  [visible]="drawerOpen()"
+  [preselectedIds]="selectedIds()"
+  (confirmed)="onDrawerConfirm($event)"
+  (closed)="drawerOpen.set(false)"
+/>
+
+<app-confirm width="28rem" />

@@ -1,0 +1,132 @@
+<app-admin-section-page
+  titleKey="admin.sections.schedules.label"
+  descriptionKey="admin.schedules.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.schedules.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.schedules.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.schedules.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <button type="button" class="btn-primary" (click)="addSchedule()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.schedules.newSchedule' | transloco }}
+    </button>
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.schedules.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.schedules.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.schedules.loadError' | transloco"
+      [retryLabel]="'admin.schedules.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.schedules().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.schedules.empty.none' | transloco" />
+    } @else {
+      <app-empty-state
+        icon="lucideFilterX"
+        [title]="'admin.schedules.empty.noMatches' | transloco"
+      />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-20">{{ 'admin.schedules.column.active' | transloco }}</th>
+            <th>{{ 'admin.schedules.column.domain' | transloco }}</th>
+            <th>{{ 'admin.schedules.column.targetDomain' | transloco }}</th>
+            <th>{{ 'admin.schedules.column.targetSeries' | transloco }}</th>
+            <th class="w-24">
+              <span class="sr-only">{{ 'admin.schedules.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (schedule of pageRows(); track schedule.id) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="schedule.active"
+                  [class.is-inactive]="!schedule.active"
+                  [attr.aria-label]="
+                    (schedule.active ? 'admin.schedules.column.active' : 'common.inactive')
+                      | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td>{{ schedule.domain?.name }}</td>
+              <td>{{ schedule.targetDomain?.name }}</td>
+              <td>{{ schedule.targetSeriesId }}</td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.schedules.editSchedule' | transloco"
+                  (click)="editSchedule(schedule)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.schedules.deleteSchedule' | transloco"
+                  (click)="deleteSchedule(schedule)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-firing-schedule-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="editorModel.set(undefined)"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

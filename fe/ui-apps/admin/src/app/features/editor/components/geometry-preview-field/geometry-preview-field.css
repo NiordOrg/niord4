@@ -1,0 +1,40 @@
+/* Mono coordinate table for the read-only positions viewer: a bordered well with a numbered,
+   sunken left gutter and per-line dividers. Mirrors the message-part card's positions table. */
+.ed-coords {
+  overflow: hidden;
+  border: 1px solid var(--niord-border);
+  border-radius: var(--niord-radius-sm);
+  font-family: var(--niord-font-mono);
+  font-size: 12px;
+}
+
+.ed-coords-name {
+  padding: 5px 9px;
+  font-weight: 600;
+  color: var(--niord-fg);
+  background: var(--niord-surface-sunken);
+  border-bottom: 1px solid var(--niord-divider);
+}
+
+.ed-coords-row {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  border-bottom: 1px solid var(--niord-divider);
+}
+
+.ed-coords-row:last-child {
+  border-bottom: 0;
+}
+
+.ed-coords-n {
+  padding: 5px 9px;
+  text-align: right;
+  color: var(--niord-fg-muted);
+  background: var(--niord-surface-sunken);
+  border-right: 1px solid var(--niord-border);
+}
+
+.ed-coords-c {
+  padding: 5px 9px;
+  color: var(--niord-fg);
+}

@@ -1,0 +1,9 @@
+<app-ol-map class="flex-1" [view]="view()">
+  <app-ol-tile-layer source="OSM" [visible]="true" />
+  <app-ol-message-list-layer
+    [messages]="messages()"
+    [showOutline]="true"
+    [showInLayerSwitcher]="false"
+  />
+  <app-message-map-tooltip />
+</app-ol-map>

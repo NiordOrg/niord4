@@ -1,0 +1,458 @@
+# Buoy replaced  [templates/tmpl/buoy-replaced.ftl]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=aton, type=buoy_replacement, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 56° 00.0'N - 012° 00.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 56-00.0N
+  | 012-00.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East has been replaced with a black-yellow buoy.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 56° 00.0'N - 012° 00.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 56-00.0N
+  | 012-00.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East has been replaced with a black-yellow buoy.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 61° 06.0'N - 045° 15.0'W has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 61-06.0N
+  | 045-15.0W REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West has been replaced with a black-yellow buoy.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. / The north cardinal buoy Hals Barre in pos. 55° 36.0'N - 010° 45.0'E has been replaced with a black-yellow buoy. / The north cardinal buoy Hals Barre in pos. 55° 42.0'N - 011° 00.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+  | NORTH CARDINAL BUOY HALS BARRE 55-36.0N
+  | 010-45.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+  | NORTH CARDINAL BUOY HALS BARRE 55-42.0N
+  | 011-00.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy. The north cardinal buoy Hals Barre in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East has been replaced with a black-yellow buoy. The north cardinal buoy Hals Barre in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East has been replaced with a black-yellow buoy.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: 
+NAVTEX:
+  | 
+  |         
+AUDIO:   null
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.function.buoy.north_cardinal
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.south_cardinal
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The south cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | SOUTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The south cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.east_cardinal
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The east cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | EAST CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The east cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.west_cardinal
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The west cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | WEST CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The west cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.port_hand
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The port hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | PORT HAND BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The port hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.starboard_hand
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The starboard hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | STARBOARD HAND BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The starboard hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The preferred channel to starboard hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | PREFERRED CHANNEL TO STARBOARD HAND
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | REPLACED WITH BLACK-YELLOW BUOY.
+AUDIO:   The preferred channel to starboard hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The preferred channel to port hand buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | PREFERRED CHANNEL TO PORT HAND BUOY
+  | HALS BARRE 55-30.0N 010-30.0E REPLACED
+  | WITH BLACK-YELLOW BUOY.
+AUDIO:   The preferred channel to port hand buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.safe_water
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The safe water buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | SAFE WATER BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The safe water buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.special
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The special buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | SPECIAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The special buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy.isolated_danger
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The isolated danger buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | ISOLATED DANGER BUOY HALS BARRE
+  | 55-30.0N 010-30.0E REPLACED WITH
+  | BLACK-YELLOW BUOY.
+AUDIO:   The isolated danger buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.buoy
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | REPLACED WITH BLACK-YELLOW BUOY.
+AUDIO:   The buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = aton.function.aton
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | REPLACED WITH BLACK-YELLOW BUOY.
+AUDIO:   The buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | BUOY HALS BARRE 55-30.0N 010-30.0E
+  | REPLACED WITH BLACK-YELLOW BUOY.
+AUDIO:   The buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY 55-30.0N 010-30.0E
+  | REPLACED WITH BLACK-YELLOW BUOY.
+AUDIO:   The north cardinal buoy in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy St. John's Point in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY ST. JOHN'S POINT
+  | 55-30.0N 010-30.0E REPLACED WITH
+  | BLACK-YELLOW BUOY.
+AUDIO:   The north cardinal buoy St. John's Point in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_replacement = aton.type.buoy.black_yellow
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow buoy.
+
+### param aton_replacement = aton.type.buoy.yellow_black
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a yellow-black buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH YELLOW-BLACK
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a yellow-black buoy.
+
+### param aton_replacement = aton.type.buoy.black_yellow_black
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow-black buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH
+  | BLACK-YELLOW-BLACK BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow-black buoy.
+
+### param aton_replacement = aton.type.buoy.yellow_black_yellow
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a yellow-black-yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH
+  | YELLOW-BLACK-YELLOW BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a yellow-black-yellow buoy.
+
+### param aton_replacement = aton.type.buoy.green
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a green buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH GREEN BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a green buoy.
+
+### param aton_replacement = aton.type.buoy.red
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a red buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH RED BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a red buoy.
+
+### param aton_replacement = aton.type.buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a green-red-green buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH GREEN-RED-GREEN
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a green-red-green buoy.
+
+### param aton_replacement = aton.type.buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a red-green-red buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH RED-GREEN-RED
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a red-green-red buoy.
+
+### param aton_replacement = aton.type.buoy.red_white
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a red-white bouy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH RED-WHITE BOUY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a red-white bouy.
+
+### param aton_replacement = aton.type.buoy.yellow
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a yellow buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH YELLOW BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a yellow buoy.
+
+### param aton_replacement = aton.type.buoy.black_red
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-red buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-RED BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-red buoy.
+
+### param aton_replacement = aton.type.light_buoy.black_yellow
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-YELLOW
+  | LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow light buoy.
+
+### param aton_replacement = aton.type.light_buoy.yellow_black
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a yellow-black light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH YELLOW-BLACK
+  | LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a yellow-black light buoy.
+
+### param aton_replacement = aton.type.light_buoy.black_yellow_black
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-yellow-black light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH
+  | BLACK-YELLOW-BLACK LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-yellow-black light buoy.
+
+### param aton_replacement = aton.type.light_buoy.yellow_black_yellow
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a yellow-black-yellow light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH
+  | YELLOW-BLACK-YELLOW LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a yellow-black-yellow light buoy.
+
+### param aton_replacement = aton.type.light_buoy.green
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a green light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH GREEN LIGHT
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a green light buoy.
+
+### param aton_replacement = aton.type.light_buoy.red
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a red light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH RED LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a red light buoy.
+
+### param aton_replacement = aton.type.light_buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a green-red-green light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH GREEN-RED-GREEN
+  | LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a green-red-green light buoy.
+
+### param aton_replacement = aton.type.light_buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a red-green-red light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH RED-GREEN-RED
+  | LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a red-green-red light buoy.
+
+### param aton_replacement = aton.type.light_buoy.red_white
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a red-white bouy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH RED-WHITE BOUY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a red-white bouy.
+
+### param aton_replacement = aton.type.light_buoy.yellow
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a yellow light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH YELLOW LIGHT
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a yellow light buoy.
+
+### param aton_replacement = aton.type.light_buoy.black_red
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a black-red light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLACK-RED LIGHT
+  | BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a black-red light buoy.
+
+### param aton_replacement = aton.type.light_buoy.blue_yellow
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a blue-yellow light buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH BLUE-YELLOW
+  | LIGHT BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a blue-yellow light buoy.
+
+### param aton_replacement = empty
+TITLE:   Denmark. The Baltic Sea. Buoy replaced.
+SUBJECT: Buoy replaced
+DETAILS: The north cardinal buoy Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been replaced with a buoy. /
+NAVTEX:
+  | NORTH CARDINAL BUOY HALS BARRE 55-30.0N
+  | 010-30.0E REPLACED WITH A BUOY.
+AUDIO:   The north cardinal buoy Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been replaced with a buoy.
+

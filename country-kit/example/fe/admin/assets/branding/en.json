@@ -1,0 +1,18 @@
+{
+  "footer.copyright": "© Example Maritime Authority",
+  "footer.link": "https://example.org/",
+  "footer.disclaimer": "Disclaimer",
+  "main.footer.links.center.url": "https://example.org/",
+  "main.footer.links.center.ariaLabel": "Example Maritime Authority",
+  "main.footer.links.center.imageAlt": "Example Maritime Authority logo",
+  "main.footer.links.center.imageSrc": "assets/branding/company-logo-en.png",
+  "main.footer.dialogs.disclaimer.title": "Disclaimer",
+  "country.motto": "Safe passage, plainly charted",
+  "country.harbour.menu": "Harbour",
+  "country.harbour.title": "Harbour notes",
+  "country.harbour.text": "Berths, quay works and the harbour office's notices for this week.",
+  "country.harbour.size": "This week's notes: {{ size }}",
+  "country.welcome.note": "Harbour notes are under Harbour in the menu.",
+  "country.bulletin.title": "Harbour bulletin",
+  "country.bulletin.text": "Bulletin text"
+}

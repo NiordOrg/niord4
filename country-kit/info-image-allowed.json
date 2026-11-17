@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "note": "The files the public site's image may package: every file of dist/niord-info/browser must match one glob below, or image-info.mjs refuses to build the image (§4.11 rule 5). Paths are relative to dist/niord-info/browser and written with '/'; the globs are lib/include.mjs's. Derived from the real outputs of build:info, of the example country and of the country images built against it. Base-product-owned: a country that needs another kind of file asks for a base product change, as for a CSP source. Never a source map, a pre-compressed twin (image-info.mjs writes those in the build context), a text file, a pack's status list or attribution, or anything from node_modules.",
+  "allow": [
+    {
+      "glob": "index.html",
+      "reason": "The application's shell, which nginx serves for every route of the site."
+    },
+    {
+      "glob": "teaser-frame.{html,js}",
+      "reason": "The teaser frame document and its script, from ui-apps/info/public/. Unhashed by design: the pages that embed the teaser address them by name."
+    },
+    {
+      "glob": "{main,chunk,styles}-*.{js,css}",
+      "reason": "The builder's bundles: the entry script, the lazy and shared chunks and the global stylesheet, each named by its content hash."
+    },
+    {
+      "glob": "media/*.woff2",
+      "reason": "A font a configuration's style entries reference, hashed by the builder into media/ (a country's vendored face, §4.7). Only woff2: every browser in the support matrix takes it."
+    },
+    {
+      "glob": "assets/i18n/*.json",
+      "reason": "The UI bundles staged for the configuration's uiLanguages; the build checks name exactly which."
+    },
+    {
+      "glob": "assets/img/flags/*.png",
+      "reason": "The language switcher's flags, staged from each pack's pack.json (a PNG by the pack schema). A flag's SVG drawing never ships."
+    },
+    {
+      "glob": "assets/branding/*.{json,png,webp,ico,svg}",
+      "reason": "The country's branding: per-language texts and its images, of the kinds §4.11 rule 4 admits. nginx serves the folder sandboxed."
+    },
+    {
+      "glob": "assets/legal/*.html",
+      "reason": "The country's legal documents, held to the legal documents' element and attribute allow-list by set-up. nginx serves the folder sandboxed."
+    },
+    {
+      "glob": "assets/portrayal/*.svg",
+      "reason": "The message symbols of the map, from shared-map/portrayal/."
+    }
+  ]
+}

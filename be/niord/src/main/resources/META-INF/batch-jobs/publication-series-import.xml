@@ -1,0 +1,20 @@
+<job id="publication-series-import" xmlns="http://xmlns.jcp.org/xml/ns/javaee" version="1.0">
+    <listeners>
+        <listener ref="batchJobListener"/>
+    </listeners>
+    <step id="importPublicationSeriesStep">
+        <!--
+            One row per chunk: each row is written before the next is read, so a compilation finds a source
+            listed before it in the same file, as the export's order (sources before compilations) promises.
+            With a larger chunk the processor saw the compilation before the writer had stored its source and
+            skipped it. Each row is also committed on its own: a row that fails at the flush rolls back alone, but
+            it stops the job, so the rows before it stay imported and the rows after it are not read.
+            A series file holds tens of rows, so a commit per row costs nothing that matters.
+        -->
+        <chunk item-count="1">
+            <reader ref="batchPublicationSeriesImportReader" />
+            <processor ref="batchPublicationSeriesImportProcessor"/>
+            <writer ref="batchPublicationSeriesImportWriter" />
+        </chunk>
+    </step>
+</job>

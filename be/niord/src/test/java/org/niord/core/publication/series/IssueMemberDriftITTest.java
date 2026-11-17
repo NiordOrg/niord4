@@ -1,0 +1,625 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
+import org.junit.jupiter.api.Test;
+import org.niord.core.message.Message;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.TestIds;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.criteria.MessageSeriesCriterionVo;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.series.vo.IssueMemberVo;
+import org.niord.core.publication.vo.MessagePublication;
+import org.niord.core.user.User;
+import org.niord.model.message.MainType;
+import org.niord.model.message.Status;
+import org.niord.model.message.Type;
+import org.niord.test.ITTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * What has moved under a published issue since it was published.
+ *
+ * The member snapshot is frozen and stays frozen -- it is the record of what was
+ * printed and the archived PDF is the proof. But the messages go on living, and
+ * from the snapshot alone nobody can tell whether a three-week-old issue still
+ * describes the world. So the divergence is computed and SURFACED, and these
+ * assertions are about surfacing it without ever writing it back: a row healed
+ * to agree with today would disagree with the document that went out, and
+ * nothing would record that they had ever differed.
+ *
+ * Two things are compared, the status and the type, and a message that is gone
+ * says so under its own name. The end of the publication window is frozen as
+ * part of the record but not compared: it acquires a value as a side effect of
+ * every cancel and expiry, so it never says anything the status does not.
+ *
+ * And the live state travels on EVERY frozen row, not only where something
+ * moved: the status a reader wants beside a frozen row is the message's status
+ * now, and the frozen one is "published" for every member by construction.
+ */
+public class IssueMemberDriftITTest extends ITTest {
+
+    @Autowired
+    IssueMemberListService memberList;
+
+    @PersistenceContext
+    EntityManager em;
+
+    // ------------------------------------------------------------------ fixtures
+
+    private User user(String username) {
+        User u = new User();
+        u.setUsername(username);
+        em.persist(u);
+        return u;
+    }
+
+    private PublicationSeries series() {
+        PublicationCategory c = new PublicationCategory();
+        c.setCategoryId(TestIds.category());
+        c.setPriority(100);
+        em.persist(c);
+
+        PublicationSeries s = new PublicationSeries();
+        s.setSeriesId(TestIds.series());
+        s.setStatus(SeriesStatus.ACTIVE);
+        s.setContentMode(ContentMode.GENERATED_FROM_QUERY);
+        s.setCadence(SeriesCadence.WEEKLY);
+        s.setTimeRelation(TimeRelation.PUBLISHED_IN_INTERVAL);
+        s.setAliveAtCutoff(false);
+        s.setReleaseMode(ReleaseMode.MANUAL_GATE);
+        s.setNextIssueCreation(NextIssueCreation.MANUAL);
+        s.setMessagePublication(MessagePublication.NONE);
+        s.setNumberingScheme(NumberingScheme.ISO_WEEK_YEAR);
+        s.setCategory(c);
+        // Every publication names the desk that owns it: the column is NOT NULL and
+        // S-20a refuses a save without one, so a fixture that left it out no longer
+        // describes a state the system can be in.
+        s.setDomain(TestOwnerDomain.of(em));
+        s.getLanguages().add("da");
+
+        IssueCriteriaVo doc = new IssueCriteriaVo();
+        MessageSeriesCriterionVo node = new MessageSeriesCriterionVo();
+        node.setValues(new ArrayList<>(List.of("dma-nm")));
+        doc.getCriteria().add(node);
+        s.setCriteria(doc);
+
+        s.createDesc("da").setName("Drift fixture");
+        em.persist(s);
+        return s;
+    }
+
+    private PublicationIssue issue(PublicationSeries s, IssueStatus status) {
+        PublicationIssue i = new PublicationIssue();
+        i.setSeries(s);
+        i.setPublicId(UUID.randomUUID().toString());
+        i.setRepoPath("publications/" + i.getPublicId());
+        i.setStatus(status);
+        i.setSnapshotTimeRelation(TimeRelation.PUBLISHED_IN_INTERVAL);
+        i.setIntervalFrom(new Date(1_700_000_000_000L));
+        i.setIntervalTo(new Date(1_700_600_000_000L));
+        if (status != IssueStatus.OPEN) {
+            i.setCutoffStampedAt(new Date(1_700_600_000_000L));
+        }
+        i.createDesc("da").setName("Drift issue");
+        em.persist(i);
+        return i;
+    }
+
+    private Message message(Type type, Status status, Date publishDateTo) {
+        Message m = new Message();
+        m.setUid(UUID.randomUUID().toString());
+        m.setMainType(MainType.NM);
+        m.setType(type);
+        m.setStatus(status);
+        m.setPublishDateTo(publishDateTo);
+        em.persist(m);
+        return m;
+    }
+
+    /** A frozen row recording the message exactly as it stands right now. */
+    private IssueMember member(PublicationIssue issue, Message message, int sortIndex) {
+        IssueMember m = new IssueMember();
+        m.setIssue(issue);
+        m.setMessage(message);
+        m.setMessageUid(message.getUid());
+        m.setSortIndex(sortIndex);
+        m.setFrozenShortId("NM-" + sortIndex);
+        m.setFrozenMainType(message.getMainType().name());
+        m.setFrozenType(message.getType().name());
+        m.setFrozenStatus(message.getStatus().name());
+        m.setFrozenPublishDateTo(message.getPublishDateTo());
+        m.setSource(MemberSource.CRITERIA);
+        em.persist(m);
+        return m;
+    }
+
+    private IssueMemberVo rowFor(List<IssueMemberVo> rows, String uid) {
+        return rows.stream().filter(r -> uid.equals(r.getMessageUid())).findFirst()
+                .orElseThrow(() -> new AssertionError("no member row for " + uid));
+    }
+
+    // ------------------------------------------------------------------ drift
+
+    /**
+     * A member whose message has not moved carries NO drift, and still says what
+     * the message is today.
+     *
+     * The absence of drift is the signal that nothing moved. The live block is
+     * there regardless: the status column of a published issue shows the status
+     * the message has now, and a client shown it only where something moved would
+     * have to invent it for the rows where nothing did.
+     */
+    @Test
+    @Transactional
+    public void anUnchangedMemberReportsNoDriftAndItsLiveState() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        member(i, m, 0);
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i), m.getUid());
+        assertNull(row.getDrift(), "an unchanged member reported drift");
+        assertNotNull(row.getCurrent(), "a frozen row carried no live state");
+        assertTrue(row.getCurrent().isExists());
+        assertEquals("PUBLISHED", row.getCurrent().getStatus());
+        assertEquals("TEMPORARY_NOTICE", row.getCurrent().getType());
+    }
+
+    /**
+     * The status and the type each drift under their own name, the end of the
+     * window does not, and the frozen row is untouched.
+     */
+    @Test
+    @Transactional
+    public void typeAndStatusEachDriftUnderTheirOwnName() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        member(i, m, 0);
+        em.flush();
+
+        // The world moves on: the notice is re-typed, withdrawn, and closed.
+        m.setType(Type.PRELIMINARY_NOTICE);
+        m.setStatus(Status.CANCELLED);
+        m.setPublishDateTo(new Date(1_701_000_000_000L));
+        em.merge(m);
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i), m.getUid());
+        assertNotNull(row.getDrift());
+        assertTrue(row.getDrift().containsAll(List.of("type", "status")),
+                "expected type and status to drift; got " + row.getDrift());
+        assertFalse(row.getDrift().contains("publishDateTo"),
+                "the end of the window is a side effect of the cancel, not a finding of its own");
+
+        assertNotNull(row.getCurrent());
+        assertTrue(row.getCurrent().isExists());
+        assertEquals("PRELIMINARY_NOTICE", row.getCurrent().getType());
+        assertEquals("CANCELLED", row.getCurrent().getStatus());
+
+        // SURFACED, NEVER HEALED. The row still says what was printed.
+        assertEquals("TEMPORARY_NOTICE", row.getFrozenType());
+        assertEquals("PUBLISHED", row.getFrozenStatus());
+        assertNull(row.getFrozenPublishDateTo());
+    }
+
+    /**
+     * An open-ended validity that has since been closed is NOT drift on its own.
+     *
+     * It is the most common change on the estate, and it is a side effect: every
+     * cancel and every expiry writes an end date. The status already says what
+     * happened, and a second mark for the date behind it read as a second finding
+     * about the same row. The date stays frozen as part of the record.
+     */
+    @Test
+    @Transactional
+    public void aClosedValidityAloneIsNotAFinding() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        member(i, m, 0);
+        em.flush();
+
+        m.setPublishDateTo(new Date(1_701_000_000_000L));
+        em.merge(m);
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i), m.getUid());
+        assertNull(row.getDrift(), "closing the window was reported as a finding: " + row.getDrift());
+        assertNull(row.getFrozenPublishDateTo(), "the frozen record was rewritten");
+    }
+
+    /**
+     * A member whose message is no longer public says so, without that being a
+     * drift of its own invention.
+     *
+     * "Still in the database" and "still readable by the public" are different
+     * questions and a reader needs both: a cancelled member is present, findable
+     * and no longer something the public may be pointed at.
+     */
+    @Test
+    @Transactional
+    public void aWithdrawnMemberReportsThatItIsNoLongerPublic() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        member(i, m, 0);
+        em.flush();
+
+        m.setStatus(Status.DELETED);
+        em.merge(m);
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i), m.getUid());
+        assertTrue(row.getCurrent().isExists());
+        assertFalse(row.getCurrent().isPubliclyVisible(),
+                "a DELETED member still reported itself as publicly readable");
+        assertTrue(row.getDrift().contains("status"));
+    }
+
+    /**
+     * A member whose message is GONE drifts under its own name.
+     *
+     * Reporting three nulls for type, status and publishDateTo would be
+     * indistinguishable from a message whose fields happen to be empty.
+     */
+    @Test
+    @Transactional
+    public void aDeletedMessageDriftsAsAnAbsence() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        IssueMember member = member(i, m, 0);
+        em.flush();
+
+        // The member row keeps the uid; the message itself is removed.
+        member.setMessage(null);
+        em.merge(member);
+        em.flush();
+        em.remove(em.find(Message.class, m.getId()));
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i), m.getUid());
+        assertEquals(List.of("exists"), row.getDrift());
+        assertFalse(row.getCurrent().isExists());
+        assertFalse(row.getCurrent().isPubliclyVisible());
+        assertNull(row.getCurrent().getType());
+    }
+
+    /**
+     * An OPEN issue's list carries no drift at all, and is not read from rows.
+     *
+     * There is nothing frozen for the live message to disagree with: an open issue
+     * is RESOLVED, every time it is asked, so every value on it is the current one
+     * and a drift marker would claim something had changed when nothing had.
+     *
+     * The row planted below is exactly what an open issue must not be answered
+     * from. Member rows are written by the freeze, so a row on an OPEN issue is a
+     * leftover -- an issue that was amended, or a fixture like this one -- and
+     * serving it would report a membership decided at some earlier instant as
+     * though it were what the issue contains now.
+     */
+    @Test
+    @Transactional
+    public void anOpenIssueIsResolvedLiveAndCarriesNoDrift() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.OPEN);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        member(i, m, 0);
+        em.flush();
+
+        m.setStatus(Status.CANCELLED);
+        em.merge(m);
+        em.flush();
+
+        List<IssueMemberVo> rows = memberList.members(i);
+        assertTrue(rows.stream().noneMatch(r -> m.getUid().equals(r.getMessageUid())),
+                "the frozen row was served for an OPEN issue; its list is the live resolution, and "
+                        + "this message is not one the criteria select");
+        for (IssueMemberVo row : rows) {
+            assertNull(row.getDrift(), "a LIVE member list carried drift");
+            assertNull(row.getCurrent());
+        }
+    }
+
+    /** A RETIRED issue is frozen too, so its rows drift like a published one's. */
+    @Test
+    @Transactional
+    public void aRetiredIssueStillReportsDrift() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.RETIRED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        member(i, m, 0);
+        em.flush();
+
+        m.setStatus(Status.CANCELLED);
+        em.merge(m);
+        em.flush();
+
+        assertTrue(rowFor(memberList.members(i), m.getUid()).getDrift().contains("status"));
+    }
+
+    // ------------------------------------------------------------------ curation
+
+    /**
+     * A curated member carries who decided, when, and why.
+     *
+     * "Manually included" alone answers nothing anybody wants to know. The
+     * override row has the rest, and a panel that needs one request per member to
+     * get it renders the reasons late or not at all.
+     */
+    @Test
+    @Transactional
+    public void aCuratedMemberCarriesTheDecisionBehindIt() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+
+        IssueOverride override = new IssueOverride();
+        override.setIssue(i);
+        override.setMessage(m);
+        override.setMessageUid(m.getUid());
+        override.setKind(OverrideKind.INCLUDE);
+        override.setAuthor(user(TestIds.id("curator-")));
+        override.setReason("dækket i uge 26");
+        em.persist(override);
+
+        IssueMember member = member(i, m, 0);
+        member.setSource(MemberSource.OVERRIDE_INCLUDE);
+        member.setOverride(override);
+        em.merge(member);
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i), m.getUid());
+        assertNotNull(row.getCuration(), "a curated member carried no curation facts");
+        assertEquals("INCLUDE", row.getCuration().getKind());
+        assertEquals("dækket i uge 26", row.getCuration().getReason());
+        assertNotNull(row.getCuration().getAuthor());
+        assertNotNull(row.getCuration().getAt());
+        assertEquals("MANUAL_INCLUDE", row.getReasonCode());
+    }
+
+    /**
+     * And the decision is found by uid where the member has no link to it.
+     *
+     * An imported row carries the curation without the foreign key, because the
+     * snapshot was written before the override existed as a row. The uid is the
+     * key all of them share, which is why the lookup is by uid rather than by
+     * the link alone.
+     */
+    @Test
+    @Transactional
+    public void aCurationIsFoundByUidWhenTheMemberHasNoLinkToIt() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+
+        IssueOverride override = new IssueOverride();
+        override.setIssue(i);
+        override.setMessage(m);
+        override.setMessageUid(m.getUid());
+        override.setKind(OverrideKind.INCLUDE);
+        override.setAuthor(user(TestIds.id("curator-")));
+        override.setReason("manuelt medtaget");
+        em.persist(override);
+
+        // No setOverride: the member row does not point at the decision.
+        member(i, m, 0);
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i), m.getUid());
+        assertNotNull(row.getCuration());
+        assertEquals("manuelt medtaget", row.getCuration().getReason());
+    }
+
+    /**
+     * The standing decisions include the EXCLUSIONS, which no member row can carry.
+     *
+     * An excluded message is not a member -- that is what excluding it means -- so
+     * the member list has nowhere to hang a "withdraw this" affordance, and
+     * reconstructing the decision from the audit trail reads what HAPPENED as
+     * though it were what STANDS.
+     */
+    @Test
+    @Transactional
+    public void theStandingDecisionsCarryTheExclusionsTheMemberListCannot() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message included = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        Message excluded = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+
+        override(i, included, OverrideKind.INCLUDE, "manuelt medtaget");
+        override(i, excluded, OverrideKind.EXCLUDE, "dækket i uge 26");
+        member(i, included, 0);
+        em.flush();
+
+        List<String> memberUids = new ArrayList<>();
+        memberList.members(i).forEach(r -> memberUids.add(r.getMessageUid()));
+        assertFalse(memberUids.contains(excluded.getUid()),
+                "an excluded message appeared in the member list");
+
+        var decisions = memberList.standingDecisions(i, null);
+        assertEquals(2, decisions.size());
+        var exclusion = decisions.stream()
+                .filter(d -> excluded.getUid().equals(d.getMessageUid()))
+                .findFirst().orElseThrow(() ->
+                        new AssertionError("the exclusion is unreachable from every surface"));
+        assertEquals("EXCLUDE", exclusion.getKind());
+        assertEquals("dækket i uge 26", exclusion.getReason());
+        assertNotNull(exclusion.getAuthor());
+        assertNotNull(exclusion.getAt());
+    }
+
+    private IssueOverride override(PublicationIssue issue, Message message, OverrideKind kind,
+                                   String reason) {
+        IssueOverride o = new IssueOverride();
+        o.setIssue(issue);
+        o.setMessage(message);
+        o.setMessageUid(message.getUid());
+        o.setKind(kind);
+        o.setAuthor(user(TestIds.id("curator-")));
+        o.setReason(reason);
+        em.persist(o);
+        return o;
+    }
+
+    /** An uncurated member carries no curation block at all. */
+    @Test
+    @Transactional
+    public void anUncuratedMemberCarriesNoCuration() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        member(i, m, 0);
+        em.flush();
+
+        assertNull(rowFor(memberList.members(i), m.getUid()).getCuration(),
+                "an empty curation block would say a human touched this row and left no reason, "
+                        + "which the NOT NULL reason column exists to make impossible");
+    }
+
+    // ------------------------------------------------------------------ title
+
+    /**
+     * A frozen row names its message in the language the list was asked for.
+     *
+     * "NM-114-25" identifies a notice to a database and to nobody else. The person
+     * reading a member list is looking for the one about the light at Hals Barre,
+     * and without a title the only way to find it is to open every row.
+     */
+    @Test
+    @Transactional
+    public void theMemberRowNamesItsMessageInTheRequestedLanguage() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        m.createDesc("da").setTitle("Hals Barre. Fyr slukket.");
+        m.createDesc("en").setTitle("Hals Barre. Light extinguished.");
+        em.merge(m);
+        member(i, m, 0);
+        em.flush();
+
+        assertEquals("Hals Barre. Light extinguished.",
+                rowFor(memberList.members(i, "en"), m.getUid()).getTitle());
+        assertEquals("Hals Barre. Fyr slukket.",
+                rowFor(memberList.members(i, "da"), m.getUid()).getTitle());
+    }
+
+    /**
+     * A language the message is not written in falls back to one it is.
+     *
+     * A blank row is worse than the wrong language: it reads as a notice with no
+     * subject, and the reader cannot tell that from a message nobody titled.
+     */
+    @Test
+    @Transactional
+    public void aMessageNotWrittenInTheRequestedLanguageStillNamesItself() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        m.createDesc("da").setTitle("Kun på dansk.");
+        em.merge(m);
+        member(i, m, 0);
+        em.flush();
+
+        assertEquals("Kun på dansk.", rowFor(memberList.members(i, "en"), m.getUid()).getTitle(),
+                "a Danish-only message went unnamed on an English screen");
+        assertEquals("Kun på dansk.", rowFor(memberList.members(i), m.getUid()).getTitle(),
+                "a list asked for no language in particular still has to name its rows");
+    }
+
+    /**
+     * The title is the LIVE one, on a frozen row, and it moves when the message
+     * is re-titled.
+     *
+     * Every other value on this row is a snapshot, so this one is the exception
+     * that has to be asserted: a title frozen alongside them would be a second
+     * copy of something the message owns, disagreeing in silence with every other
+     * screen that names it. What was printed is the archived document, and it is
+     * unaffected by any of this.
+     */
+    @Test
+    @Transactional
+    public void theTitleIsLiveAndIsNotPartOfTheSnapshot() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        m.createDesc("da").setTitle("Første formulering.");
+        em.merge(m);
+        member(i, m, 0);
+        em.flush();
+
+        m.getDesc("da").setTitle("Rettet formulering.");
+        em.merge(m);
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i, "da"), m.getUid());
+        assertEquals("Rettet formulering.", row.getTitle(),
+                "the row is still showing a title the message no longer carries");
+        assertNull(row.getDrift(),
+                "a re-titled message is not drift: the title was never frozen, so there is "
+                        + "no frozen value for it to have moved away from");
+    }
+
+    /**
+     * A member whose message is gone has NO title.
+     *
+     * Null, not an empty string and not the short id: the row already says the
+     * message no longer exists, and inventing a name for it would make a deleted
+     * message look like a present one with a blank subject.
+     */
+    @Test
+    @Transactional
+    public void aMemberWhoseMessageIsGoneHasNoTitle() {
+        PublicationSeries s = series();
+        PublicationIssue i = issue(s, IssueStatus.PUBLISHED);
+        Message m = message(Type.TEMPORARY_NOTICE, Status.PUBLISHED, null);
+        m.createDesc("da").setTitle("Findes ikke længere.");
+        em.merge(m);
+        IssueMember member = member(i, m, 0);
+        em.flush();
+
+        member.setMessage(null);
+        em.merge(member);
+        em.flush();
+        em.remove(em.find(Message.class, m.getId()));
+        em.flush();
+
+        IssueMemberVo row = rowFor(memberList.members(i, "da"), m.getUid());
+        assertNull(row.getTitle(), "a member whose message is gone was given a title anyway");
+        assertEquals(List.of("exists"), row.getDrift(),
+                "the absence is stated by the drift, which is where a reader looks for it");
+    }
+}

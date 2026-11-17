@@ -1,0 +1,94 @@
+<!-- Inline mode pins the pane so it follows the form down the page. The STICKY element is this
+     inner wrapper, not the host: the host stays a full-height flex item so its sunken background
+     and left border still run the length of the form column, and sticking the host itself would
+     also collide with the `relative` it needs for the splitter. Bounded by the viewport so a long
+     preview scrolls inside its own body (which owns `overflow-auto`) instead of growing the pin. -->
+<div
+  class="flex min-h-0 flex-1 flex-col"
+  [class.sticky]="mode() === 'inline'"
+  [class.top-0]="mode() === 'inline'"
+  [class.max-h-dvh]="mode() === 'inline'"
+>
+  <!-- Host-provided header (the status state-flow) — projected so this pane stays facade-agnostic. -->
+  <ng-content />
+
+  <!-- Head: preview label + one language pill per configured model language. -->
+  <div
+    class="flex items-center gap-2 border-b border-surface-200 px-4 py-2.5 text-[11px] font-bold tracking-wide text-fg-subtle uppercase"
+  >
+    <span>{{ 'editor.preview.title' | transloco }}</span>
+    <div
+      class="ml-auto flex gap-0.5"
+      role="group"
+      [attr.aria-label]="'editor.preview.title' | transloco"
+    >
+      @for (lang of languages; track lang.value) {
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded-full border border-surface-300 px-2.5 py-0.5 text-[11px] font-semibold text-fg-subtle transition-colors dark:border-surface-600"
+          [style.background-color]="previewLang() === lang.value ? 'var(--niord-primary)' : null"
+          [style.border-color]="previewLang() === lang.value ? 'var(--niord-primary)' : null"
+          [style.color]="previewLang() === lang.value ? 'var(--niord-fg-on-primary)' : null"
+          [attr.aria-pressed]="previewLang() === lang.value"
+          (click)="selectLanguage(lang.value)"
+        >
+          <app-language-flag
+            class="h-3 w-[1.125rem] rounded-xs"
+            [lang]="lang.value"
+            [flagPath]="lang.flagPath"
+            [codeFallback]="false"
+          />
+          {{ lang.value.toUpperCase() }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Body: the working message rendered through the language-parametric renderer. A single
+     delegated click surface maps a region click to its edit-form field (resolveHitTarget).
+     Pointer-only shortcut by design: keyboard users reach every field through the form's
+     roving field navigation, so an equivalent keyboard path exists outside this surface. -->
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+  <div
+    #previewBody
+    class="pv min-h-0 flex-1 cursor-pointer overflow-auto px-5 py-5 text-[0.8125rem] leading-relaxed text-fg"
+    (click)="onPreviewClick($event)"
+  >
+    @if (message(); as msg) {
+      <app-message-details-renderer
+        [message]="msg"
+        [language]="previewLang()"
+        [showPromulgation]="true"
+      />
+    }
+  </div>
+</div>
+
+<!-- Drag splitter (inline pane only) — drives the local width signal; the host owns drawer mode. -->
+@if (mode() === 'inline') {
+  <div
+    class="group absolute inset-y-0 left-0 z-20 w-[7px] cursor-col-resize touch-none"
+    role="separator"
+    aria-orientation="vertical"
+    tabindex="0"
+    [attr.aria-label]="'editor.preview.resize' | transloco"
+    [attr.aria-valuenow]="width()"
+    [attr.aria-valuemin]="320"
+    [attr.aria-valuemax]="820"
+    (pointerdown)="onSplitterPointerDown($event)"
+    (pointermove)="onSplitterPointerMove($event)"
+    (pointerup)="onSplitterPointerUp($event)"
+    (pointercancel)="onSplitterPointerUp($event)"
+    (keydown)="onSplitterKeydown($event)"
+  >
+    <span
+      class="absolute inset-y-0 left-[3px] w-px transition-colors group-hover:bg-accent"
+      [class.bg-accent]="dragging()"
+      [class.bg-surface-300]="!dragging()"
+    ></span>
+    <span
+      class="absolute left-px top-1/2 h-8 w-[5px] -translate-y-1/2 rounded-full bg-surface-400 opacity-0 transition-opacity group-hover:opacity-100"
+      [class.opacity-100]="dragging()"
+    ></span>
+  </div>
+}

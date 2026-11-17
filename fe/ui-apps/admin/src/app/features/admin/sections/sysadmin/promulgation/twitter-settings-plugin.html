@@ -1,0 +1,129 @@
+<!-- The in-drawer plugin row (the "Settings" form row in the type form). -->
+<div class="flex flex-col gap-1">
+  <span class="text-sm font-medium text-fg-title">
+    {{ 'admin.promulgation.twitter.row' | transloco }}
+  </span>
+  <div>
+    <button type="button" class="btn-secondary" (click)="openDialog()">
+      {{ 'admin.promulgation.twitter.updateSettings' | transloco }}
+    </button>
+  </div>
+</div>
+
+<!-- The settings surface is a modal dialog ABOVE the drawer — never a second drawer.
+     A per-type SINGLETON: the dialog IS the one form (no list↔edit swap). -->
+<app-dialog
+  [visible]="dialogVisible()"
+  (visibleChange)="dialogVisible.set($event)"
+  [header]="'admin.promulgation.twitter.title' | transloco"
+  [style]="{ width: '36rem', maxWidth: '92vw' }"
+>
+  @if (mode()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <label for="twitter-settings-format" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.twitter.format' | transloco }}
+        </label>
+        <input
+          id="twitter-settings-format"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.format"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <label class="flex items-center gap-2 text-sm">
+        <input
+          id="twitter-settings-include-thumbnail"
+          type="checkbox"
+          class="checkbox"
+          [formField]="form.includeThumbnail"
+        />
+        <span class="font-medium text-fg">
+          {{ 'admin.promulgation.twitter.includeThumbnail' | transloco }}
+        </span>
+      </label>
+
+      <div class="flex flex-col gap-1">
+        <label for="twitter-settings-api-key" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.twitter.apiKey' | transloco }}
+        </label>
+        <input
+          id="twitter-settings-api-key"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.apiKey"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <!-- The two secrets render as password inputs — but the persisted values
+           still seed them in clear via the API round-trip. -->
+      <div class="flex flex-col gap-1">
+        <label for="twitter-settings-api-secret" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.twitter.apiSecret' | transloco }}
+        </label>
+        <input
+          id="twitter-settings-api-secret"
+          type="password"
+          class="w-full text-input"
+          [formField]="form.apiSecret"
+          autocomplete="new-password"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="twitter-settings-access-token" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.twitter.accessToken' | transloco }}
+        </label>
+        <input
+          id="twitter-settings-access-token"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.accessToken"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="twitter-settings-access-token-secret" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.twitter.accessTokenSecret' | transloco }}
+        </label>
+        <input
+          id="twitter-settings-access-token-secret"
+          type="password"
+          class="w-full text-input"
+          [formField]="form.accessTokenSecret"
+          autocomplete="new-password"
+          spellcheck="false"
+        />
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  } @else {
+    <app-progress-bar [visible]="true" />
+  }
+
+  <ng-template #footer>
+    <!-- Close dismisses without saving (the dialog has no cancel/list split). -->
+    <button type="button" class="btn-tertiary" (click)="dialogVisible.set(false)">
+      {{ 'admin.promulgation.twitter.close' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.promulgation.twitter.save' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

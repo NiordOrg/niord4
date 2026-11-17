@@ -1,0 +1,91 @@
+
+[#map]
+== The Map
+
+[#map-view]
+=== The Map view
+
+_Map_ in the menu bar shows the messages on a map: the same messages as the _Details_ and _List_
+views, the ones you chose in the filter bar. When it opens, the map is placed so that every message
+on it is in view.
+
+.The Map view
+image::PublicSiteMapPage.png[The Map view, 800]
+
+To move around the map:
+
+* Drag the map to move it.
+* Zoom in and out with the _+_ and _−_ buttons in the top left corner, with the wheel of the mouse,
+  or with two fingers on a touch screen.
+
+The map is drawn from OpenStreetMap, whose credit is in the bottom right corner. It is not a nautical
+chart: use it to find the messages, and your charts to navigate.
+
+[#map-symbols]
+=== What the symbols mean
+
+Every message is drawn in magenta, in the way an electronic chart draws navigational warnings, and
+carries the letters of its kind: _NW_ for a Navigational Warning, _NM_ for a Notice to Mariners.
+
+.Points, lines and areas on the map
+image::PublicSiteMapSymbols.png["Points, lines and areas on the map", 800]
+
+[cols="30,70",options="header"]
+|===
+|What you see |What it is
+|A circle with _NW_ or _NM_ in it
+|A message about one position, such as a light or a buoy, or about a few positions, one circle for
+each.
+|A dashed line with boxed _NW_ or _NM_ tags along it
+|A message about a line, such as a cable, a pipeline or a channel. The tags follow the line, so you
+see what it is wherever you look along it.
+|A dashed outline with one boxed _NW_ or _NM_ tag inside
+|A message about an area, such as a work area or a firing area. The area is not filled in, so you
+can see the map under it.
+|A paler dashed outline around a message
+|The area around a position or a line that the message says is affected, for example the distance
+to keep from a vessel at work.
+|===
+
+Where many messages lie close together, such as in a harbour, their symbols overlap. Zoom in to tell
+them apart, or point at them (see <<map-pointing>>).
+
+[#map-pointing]
+=== Pointing at and opening a message
+
+Rest the mouse pointer on a symbol, or inside an area, to see which messages are there: a small box
+names up to three of them, each with its number and title. When there are more, the box ends with
+the number of the others, for example _and 9 more messages_.
+
+.Pointing at a message on the map
+image::PublicSiteMapTooltip.png[Pointing at a message on the map, 255]
+
+Click a symbol, or inside an area, to open the message in its window (see <<message-window>>). Where
+several messages lie at the same place, the click opens the first one the box names; the arrow
+buttons of the window then step through the messages of the map in the order of the list.
+
+[#additional-messages]
+=== Messages without a position
+
+Some messages have no position to draw, for example a notice to all ships in a country's waters.
+The Map view lists them in a panel called _Additional Messages_, in the top right corner of the map,
+with their numbers and titles. Click one to open it in its window.
+
+_Minimize_ folds the panel up to its title, so that it leaves the map free; _Maximize_ opens it
+again.
+
+[#message-map]
+=== The map of one message
+
+The window of a message with positions has a map of its own, above the text, which shows that
+message alone (see the picture in <<message-window>>).
+
+* The map shows the message's symbols, and places a numbered circle on each position. The numbers
+  are the same as in the position tables of the text, so you can find position 3) of the text on
+  the map.
+* When a position has a name in the text, such as the name of a buoy or a light, the name is
+  written under its circle.
+* _Labels_, in the bottom left corner, hides the numbers and the names, and shows them again.
+
+Some sites can also show a sea chart on the map of a message. They then have a second box in the
+bottom left corner, _Sea Chart_, which shows and hides it.

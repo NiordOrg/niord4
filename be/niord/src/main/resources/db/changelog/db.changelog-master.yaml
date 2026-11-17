@@ -1,0 +1,40 @@
+# Liquibase master changelog — builds the PostgreSQL 18 + PostGIS schema for a Niord deployment.
+# Liquibase always runs on startup (no enabled flag); Hibernate then validates against this schema
+# (ddl-auto=validate). Every deployment uses this bare master and starts with an empty schema; its data
+# comes from the bootstrap, once (docs/code-data-config-plan.md §7). Only the integration tests use
+# changelog-with-seed.yaml (niord-base's test resources), which includes this master and then layers the
+# base-data seed on top. A changeset changes the schema only (D2).
+databaseChangeLog:
+  - include:
+      file: changes/V001__baseline_schema.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V002__message_search_text.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V003__secom.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V004__publication_series.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V005__retire_map_image_settings.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V006__defaults_ledger.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V007__bootstrap_state.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V008__script_resource_history_source.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V009__repo_files.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V010__message_list_index_default.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/V011__message_filter_parameters_text.sql
+      relativeToChangelogFile: true

@@ -1,0 +1,11 @@
+.DS_Store
+*.tmp
+*.bak
+*.orig
+.git
+.gitignore
+*.md
+# The chart has no dependencies (0.4.0 dropped its only subchart). Helm would load a
+# leftover charts/*.tgz from an earlier `helm dependency build` as an undeclared,
+# always-enabled subchart, so charts/ is ignored. Remove this line if a dependency returns.
+/charts/

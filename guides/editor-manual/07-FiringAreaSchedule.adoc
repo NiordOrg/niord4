@@ -1,0 +1,161 @@
+
+:imagesdir: images
+
+[#firing-exercise-schedule]
+== Firing Area Schedule
+
+Firing areas are the sea areas where the armed forces hold firing exercises. Mariners are warned
+of each exercise: where it takes place and when. In Niord, editors keep a _schedule_ of the times
+each firing area is in use, the _firing periods_, and Niord turns the schedule into the warnings by
+itself: the _firing exercise_ messages.
+
+[#firing-schedule-setup]
+=== How It Fits Together
+
+A system administrator and an administrator set the parts up once; the system administrator's
+side is described in the link:../sysadmin-manual/manual.html#firing-schedules[Firing Schedules]
+chapter of the system administrator manual.
+
+* The firing areas are areas of Niord's base data of the type _firing area_ (see the
+  link:../admin-manual/manual.html#areas[Areas] chapter of the administrator manual).
+* A domain of its own, such as _Firing Areas_, holds a published message for each firing area,
+  with the firing area among its areas, which describes the area: its limits, the signals, whom to
+  contact, what is prohibited. Editors keep these _firing area messages_ up to date in the editor,
+  like any other message.
+* That domain has a firing schedule, and with it the _Schedule_ page this chapter describes, where
+  editors enter the firing periods.
+* The firing schedule names the domain and the message series that receive the firing exercise
+  messages, such as a domain _Firing Exercises_, and how many days ahead they cover.
+
+[#firing-schedule-page]
+=== The Schedule Page
+
+To open the page, choose the domain of the firing areas in the domain menu of the header, and click
+*Schedule* in the main menu. *Schedule* is in the menu when you have the editor, administrator or
+system administrator role and the current domain has a firing schedule. In another domain the page
+says "Domain has no firing schedule".
+
+image::FiringAreaSchedule.png[The Firing Area Schedule page, 800]
+
+The page shows the firing areas of the domain on one day:
+
+* *Area name*: type a part of a name to list only the areas whose name holds it.
+* *Select areas*: the pin opens the areas, where you tick the parts of the waters to list, such as
+  _Kattegat_; each one chosen shows beside the pin, and a click on it takes it out again. The
+  cross at the right clears the choice.
+* *Schedule Date*: the day shown. The page opens on today; pick another day in the calendar, or
+  step a day back or forward with the arrows (*Previous day*, *Next day*).
+* The table lists the firing areas under the waters they belong to. *Time* shows each area's
+  firing periods on that day, such as "7:00 AM - 9:00 PM CET", and the pencil beside them edits
+  them. An area without firing periods that day has an empty *Time*; when no area matches, the page
+  says "No firing areas for this date".
+* The map shows the firing areas of the table. Point at a row of the table, and its area is marked
+  on the map. *Layers* switches the areas and the base map on and off.
+
+Times are in the time zone of the domain, and its abbreviation (such as CET) follows them.
+
+*Update Firing Exercises…*, at the top, updates the firing exercise messages at once
+(<<firing-exercises-generation>>).
+
+[#firing-periods]
+=== Adding and Editing Firing Periods
+
+To change an area's firing periods on the day shown, click the pencil (*Edit firing periods*) in
+its row. The row opens a line for each period, with its start and end time.
+
+image::FiringAreaScheduleEdit.png[An area's firing periods being edited, 460]
+
+* Each line has two time fields, marked with a clock: the start of the period on the left and its
+  end on the right. Click a field and pick the time: the hour, the minutes, and AM or PM.
+* *Add* adds a line for another period, and the trash icon at the end of a line takes that line
+  out.
+* *Clear* takes out all the lines, except a period that started on an earlier day (see below).
+* *Save* stores the lines as the area's firing periods, for that area and that day only, and closes
+  the row. Nothing is stored before you click *Save*: *Clear* followed by *Save* deletes all the
+  periods of the day. *Cancel* closes the row and leaves the periods as they were.
+
+A firing period is entered on the day it starts. A period without a start time starts at midnight,
+and one without an end time lasts until 23:59; a line with neither is left out. To fire until
+midnight, enter 00:00 (12:00 AM) as the end: the period then lasts until midnight at the end of the
+day shown, and the firing exercise message reads, for example, "hours 09:00 - 24:00". For an
+exercise that goes on past midnight, enter one period until 00:00 and another from 00:00 on the
+next day.
+
+A period must end after it starts. When the end of a line is before its start, or the same, the
+line says "The period must end after it starts. To fire until midnight, enter 00:00 as the end."
+and *Save* cannot be clicked until the line is corrected.
+
+An older period can be stored with its end before its start, because Niord did not check this
+earlier (for example 09:00 to 00:00 of the same day, or 08:00 to 23:00 of the day before). Such a
+period has a warning mark beside it in the day's list;
+pointing at the mark says what is wrong. Its time fields can look right ("8:00 AM - 11:00 PM"), so
+when you open the row, the line under it names the end it was saved with, for example "This period
+was saved with its end at 24 Nov 2026, 11:00 PM CET, before its start. Choose the end time again to
+correct it." Pick the end time again (the same time, 00:00, or the end it should have) and save:
+the end is then stored on the day shown. An end of 00:00 is stored as midnight at the end of that
+day.
+
+Such an older period that was meant to go on past midnight, for example one stored as 22:00 to
+02:00 of 24 Nov, is also shown on the day after it starts, for its early hours. Its dates are shown
+on both ends ("24 Nov 2026, 10:00 PM - 24 Nov 2026, 2:00 AM CET"), so it does not read as that
+night's hours. On the later day it cannot be changed, as any period of an earlier day (see below):
+correct it on the day it starts. A period stored as 09:00 to 00:00 of the same day, or 08:00 to
+23:00 of the day before, is shown on its start day only.
+
+A period that started on the day before and goes on past midnight (made, for example, by another
+system) is also shown on the later day. There it cannot be changed: it shows as text with "Starts
+on an earlier day. Edit it on that day.", *Clear* leaves it, and *Save* keeps it as it is. On the
+day it starts you can change its start time, and it keeps its end on the next day. A changed end
+time is read on the day shown, so an end before the start makes the line say "The period must end
+after it starts. It runs past midnight: to keep firing after midnight, end it at 00:00 and add a
+period from 00:00 on the next day." Times and dates are shown on both ends of such a period, and of
+a period until midnight. A period you do not change is saved as it was. When Niord cannot store the periods it says "Error updating firing
+periods".
+
+The times are read in the time zone of the domain you are working in. When the domain has no time
+zone, the pencil cannot be used ("No time zone — choose a domain first").
+
+[#firing-exercises-generation]
+=== Firing Exercise Messages
+
+Niord makes the firing exercise messages from the firing area messages and the schedule. For each
+firing area with periods from today up to the number of days the firing schedule covers (30 days
+unless the system administrator has set another number), it publishes a message in the domain and
+message series of the firing schedule:
+
+* a local warning (a temporary notice, when the series holds notices to mariners), already
+  _Published_;
+* with the firing area message's text, areas, categories, charts and positions;
+* with a first part that lists the firing periods, as text in the time zone of the receiving
+  domain and as the message's event dates;
+* with the subject "Firing exercises. Warning." in English (the wording comes from the system's
+  dictionary);
+* published from the moment it is made until the end of its last period.
+
+Each time it runs, Niord compares the messages it would make with those already published:
+
+* an area whose periods are unchanged keeps its message;
+* an area whose periods have changed gets a new message, and the old one is cancelled;
+* an area without periods any more has its message cancelled.
+
+A change to a firing area message alone, with the same periods, does not change a firing exercise
+message already published; it reaches the firing exercises with the next change of that area's
+periods.
+
+Niord does this by itself once an hour. *Update Firing Exercises…* on the _Schedule_ page does it
+at once, for every active firing schedule: Niord asks first ("Firing exercises are automatically
+updated from the schedule every hour. Do you wish to update them now?"), and *Yes* updates the
+messages ("Firing Exercises have been updated"), *No* does nothing.
+
+image::FiringAreaScheduleUpdate.png[The question before the firing exercises are updated, 280]
+
+The firing exercise messages are made by Niord, so you do not edit them: change the schedule, or
+the firing area message, instead. You find them on the *Messages* page of the receiving domain,
+such as _Firing Exercises_ (see <<messages>>), and, when that domain is published, on the public
+site and through the public interfaces.
+
+An administrator can create a draft firing area message for every firing area at once: *Generate
+firing area messages…* in the action menu (the cog) of the *Areas* page. The action is there only
+in a domain that has a firing schedule, such as the domain of the firing areas (see the
+link:../admin-manual/manual.html#areas[Areas] chapter of the administrator manual). Editors then
+complete the drafts and publish them.

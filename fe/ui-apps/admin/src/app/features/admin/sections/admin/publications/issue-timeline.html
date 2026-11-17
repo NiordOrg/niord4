@@ -1,0 +1,99 @@
+@if (rows().length > 0) {
+  <div
+    class="flex flex-wrap items-center gap-1.5"
+    role="group"
+    [attr.aria-label]="'admin.publications.timeline.label' | transloco"
+  >
+    <!--
+      Tracked on the position, not on the id: half the cells stand for periods
+      that have no issue and so have no id, and every one of them tracking the
+      same absent value would collapse the whole run into one cell.
+    -->
+    @for (row of rows(); track $index) {
+      <!--
+        One sentence, used as both the tooltip and the accessible name. The cell
+        itself shows a bare number and nothing else, so everything that makes it
+        readable — which period, what happened in it, how many messages went out
+        — lives here.
+      -->
+      @let cellTitle =
+        hasCount(row)
+          ? ('admin.publications.timeline.cell'
+            | transloco
+              : {
+                  label: cellLabel(row),
+                  status: statusKey(row) | transloco,
+                  count: row.memberCount,
+                })
+          : ('admin.publications.timeline.cellNoCount'
+            | transloco: { label: cellLabel(row), status: statusKey(row) | transloco });
+      <!--
+        The shape says what the tint says, so the strip survives being read by
+        somebody who sees none of the colours: filled for the period being
+        worked on, outlined for one that produced a document, dashed for one
+        that produced none, quiet for one still to come.
+      -->
+      @let cellClass = 'pub-cell max-w-32 truncate ' + statusClass(row);
+
+      @if (row.publicId; as publicId) {
+        <!--
+          A cell is a link, not a button: it opens an address — the series with
+          that issue open — so it shows where it goes and can be opened in a
+          second tab. The plain click still runs the card's own handler, which
+          hands the series along so the screen it opens can draw its header
+          before its own fetch answers.
+        -->
+        <a
+          appRowLinkAnchor
+          [class]="cellClass"
+          [title]="cellTitle"
+          [attr.aria-label]="cellTitle"
+          [appRowLink]="[seriesId()]"
+          [rowLinkQueryParams]="{ issue: publicId }"
+          (appRowLinkActivate)="openIssue.emit(publicId)"
+        >
+          {{ cellText(row) }}
+        </a>
+      } @else if (row.computedStatus === 'MISSING') {
+        <!--
+          A missing period has no issue to open, so the cell opens the SERIES —
+          the one screen where the period can be recovered. Left inert it would
+          be the most important cell on the strip and the only one nothing
+          happens on.
+        -->
+        <a
+          appRowLinkAnchor
+          [class]="cellClass"
+          [title]="cellTitle"
+          [attr.aria-label]="cellTitle"
+          [appRowLink]="[seriesId()]"
+          (appRowLinkActivate)="openSeries.emit()"
+        >
+          {{ cellText(row) }}
+        </a>
+      } @else {
+        <!--
+          An upcoming period is not a problem and has nothing behind it. A
+          control that does nothing reads as a broken one, so it is not a
+          control — but it is still named, or a screen reader is handed a bare
+          number with nothing to say what it counts.
+        -->
+        <span [class]="cellClass" role="img" [title]="cellTitle" [attr.aria-label]="cellTitle">
+          {{ cellText(row) }}
+        </span>
+      }
+    }
+  </div>
+
+  <!--
+    Said only where periods were examined AND some are missing. "Nothing is
+    missing" is not worth a line on every card, and "nobody looked" belongs on
+    the series' own screen, which can say why.
+  -->
+  @if (gapCount() > 0) {
+    <p class="mt-1 flex items-center gap-1 text-xs text-warning">
+      <app-icon name="lucideTriangleAlert" class="text-xs" />
+      {{ 'admin.publications.detail.gaps.found' | transloco: { count: gapCount() } }}
+    </p>
+  }
+}

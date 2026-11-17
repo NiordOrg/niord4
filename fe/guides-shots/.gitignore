@@ -1,0 +1,6 @@
+# The pilot's pictures: the output of a proof run, never committed
+.pilot/
+# The map tiles the pictures were taken with (support/tiles.ts): a local cache, fetched again when deleted
+.tile-cache/
+# make-guides-db.sh's logs of the copy (data/README.md): local output, never committed
+data/logs/

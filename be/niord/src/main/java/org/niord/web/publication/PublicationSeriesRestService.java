@@ -1,0 +1,1685 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.web.publication;
+
+import jakarta.annotation.security.RolesAllowed;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.niord.core.batch.AbstractBatchableRestService;
+import org.niord.core.user.Roles;
+import org.niord.core.publication.series.IssueAuditEntry;
+import org.niord.core.publication.series.IssueAuditService;
+import org.niord.core.publication.series.IssueDraftService;
+import org.niord.core.publication.series.IssueLifecycleService;
+import org.niord.core.publication.series.vo.IssueAuditEntryVo;
+import org.niord.core.publication.series.vo.IssueDraftVo;
+import org.niord.core.publication.series.vo.IssueOmissionsVo;
+import org.niord.core.user.UserService;
+import org.niord.core.publication.series.legacy.LegacyImportReportVo;
+import org.niord.core.publication.series.legacy.ImportCheckService;
+import org.niord.core.publication.series.legacy.LegacyImportService;
+import org.niord.core.domain.Domain;
+import org.niord.core.domain.DomainLookupService;
+import org.niord.core.domain.DomainService;
+import org.niord.core.publication.MessageNaming;
+import org.niord.core.publication.NamedMessageVo;
+import org.niord.core.publication.PathSegmentId;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.PublicationCategoryService;
+import org.niord.core.publication.series.PublicationDomainGuard;
+import org.niord.core.publication.series.PublicationSeries;
+import org.niord.core.publication.series.PublicationSeriesService;
+import org.niord.core.NiordApp;
+import org.niord.core.publication.series.ContentMode;
+import org.niord.core.publication.series.MemberResolutionService;
+import org.niord.core.publication.series.NextIssueCreation;
+import org.niord.core.publication.series.NumberingScheme;
+import org.niord.core.publication.series.ReleaseMode;
+import org.niord.core.publication.series.SeriesAvailability;
+import org.niord.core.publication.series.SeriesAvailabilityResolver;
+import org.niord.core.publication.series.SeriesCadence;
+import org.niord.core.publication.series.SeriesOwnerTransfer;
+import org.niord.core.publication.series.SeriesStatus;
+import org.niord.core.publication.series.criteria.CriteriaResolver;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.resolve.Interval;
+import org.niord.core.publication.series.resolve.ResolvedCriteria;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.series.vo.PublicationSeriesDescVo;
+import org.niord.model.DataFilter;
+import org.niord.core.publication.vo.MessagePublication;
+import org.niord.core.publication.series.SeriesValidator;
+import org.niord.core.publication.series.StaleVersionGuard;
+import org.niord.core.publication.series.resolve.IssueNaming;
+import org.niord.core.publication.series.vo.PublicationSeriesVo;
+import org.niord.core.publication.series.vo.SystemPublicationSeriesVo;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * The series resource.
+ *
+ * The tier split is enforced by which VO class each endpoint returns, not by a
+ * parameter. An endpoint that returned "the public or the system shape depending
+ * on a flag" is one wrong flag away from serving the criteria document and the
+ * report parameters to an anonymous caller -- and nothing about the response would
+ * look wrong.
+ *
+ * So: /search returns the lean shape at the editor tier; /search-details returns
+ * the system shape and requires admin. Two endpoints, two types, no runtime
+ * decision.
+ *
+ * NOTHING HERE IS ANONYMOUS. The lean shape is the shape an EDITOR gets, not the
+ * shape the world gets: listing a series discloses that it exists, what it is
+ * called and which category it belongs to, and doing that for DRAFT and RETIRED
+ * rows to an unauthenticated caller is an enumeration of the whole catalogue in
+ * every state. The public site reads publications through the public adapter,
+ * which serves released issues only.
+ *
+ * TRANSACTIONS. The class is @Transactional, which is right for every endpoint
+ * here but the estate-scale ones. Those either open their OWN transaction with a
+ * budget sized for the whole estate, or commit in bounded batches of their own,
+ * so they are marked NOT_SUPPORTED to keep the class annotation from wrapping
+ * them in a second, ambient transaction on the DEFAULT timeout. That combination
+ * was found failing in the worst possible way: the reaper aborted the ambient
+ * transaction long before the work finished, so a COMPLETED import returned 500
+ * while its rows sat committed in the database -- and an operator reading that
+ * would re-run an import that had worked. The rationale is stated here once; the
+ * endpoints carry the annotation and a one-line pointer back.
+ *
+ * This deployment has no ambient transaction timeout at all today -- Spring's
+ * JpaTransactionManager is left at TIMEOUT_DEFAULT and nothing configures one --
+ * so there is no reaper here to abort anything. The annotation stays all the
+ * same, and for the same reason it was written: it states that these endpoints
+ * are not to be wrapped in a request-scoped transaction, so a global default
+ * added later cannot silently cut an estate-scale import short.
+ *
+ * The annotation belongs on the SERVICE as well, and for the same reason: the
+ * services these endpoints call extend a base class that is itself @Transactional,
+ * and that binding is inherited -- so removing the ambient transaction here alone
+ * only moved it one frame down. The endpoint annotation is what keeps a request
+ * from imposing its budget; the service annotation is what keeps the service from
+ * opening one of its own.
+ */
+@RestController
+@RequestMapping("/rest/publication-series")
+@Transactional
+@SuppressWarnings("unused")
+public class PublicationSeriesRestService extends AbstractBatchableRestService {
+
+    /**
+     * The server-side trace of the estate-wide changes.
+     *
+     * The audit table records the same events, but it is reachable only through
+     * the application and only while the row it hangs off still exists. The
+     * estate-wide import and a series deletion are exactly the two things somebody has
+     * to reconstruct afterwards, from an incident rather than from the admin UI.
+     */
+    static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PublicationSeriesRestService.class);
+
+    private final PublicationSeriesService seriesService;
+
+    private final NiordApp app;
+
+    private final MemberResolutionService memberResolver;
+
+    private final MessageNaming naming;
+
+    private final LegacyImportService importService;
+
+    private final ImportCheckService importCheckService;
+
+    // The preview resolves exactly as a publish would, domain nodes included; a
+    // probe that could not expand a domain would answer "nothing" for a series
+    // whose issues then select plenty.
+    private final org.niord.core.publication.series.criteria.DomainSeriesExpander domains;
+
+    // C-4 with real lookups behind it, so a criteria document naming an area, a
+    // chart or a message series that does not exist is refused on the save that
+    // carries it -- rather than at the resolve, which for a query-backed series
+    // happens inside the publish transaction with the cut-off already stamped.
+    private final org.niord.core.publication.series.criteria.PublicationOperandResolver operands;
+
+    private final PublicationCategoryService categoryService;
+
+    private final DomainService domainService;
+
+    // The by-id lookup lives on its own service here, away from DomainService, so the
+    // bean graph stays acyclic; DomainService beside it is still what answers which
+    // domains the caller administers.
+    private final DomainLookupService domainLookupService;
+
+    private final PublicationDomainGuard domainGuard;
+
+    // The sharing list, resolved the one way. The one-off editor and the
+    // interchange import write the same field from the same value object, and a
+    // list this form accepted and one of those refused would be two definitions
+    // of a valid publication, differing only by which screen it was typed on.
+    private final SeriesAvailabilityResolver availabilityResolver;
+
+    private final IssueLifecycleService lifecycle;
+
+    private final IssueDraftService drafts;
+
+    private final IssueAuditService audit;
+
+    private final UserService userService;
+
+    PublicationSeriesRestService(PublicationSeriesService seriesService,
+                                 NiordApp app,
+                                 MemberResolutionService memberResolver,
+                                 MessageNaming naming,
+                                 LegacyImportService importService,
+                                 ImportCheckService importCheckService,
+                                 org.niord.core.publication.series.criteria.DomainSeriesExpander domains,
+                                 org.niord.core.publication.series.criteria.PublicationOperandResolver operands,
+                                 PublicationCategoryService categoryService,
+                                 DomainService domainService,
+                                 DomainLookupService domainLookupService,
+                                 PublicationDomainGuard domainGuard,
+                                 SeriesAvailabilityResolver availabilityResolver,
+                                 IssueLifecycleService lifecycle,
+                                 IssueDraftService drafts,
+                                 IssueAuditService audit,
+                                 UserService userService) {
+        this.seriesService = seriesService;
+        this.app = app;
+        this.memberResolver = memberResolver;
+        this.naming = naming;
+        this.importService = importService;
+        this.importCheckService = importCheckService;
+        this.domains = domains;
+        this.operands = operands;
+        this.categoryService = categoryService;
+        this.domainService = domainService;
+        this.domainLookupService = domainLookupService;
+        this.domainGuard = domainGuard;
+        this.availabilityResolver = availabilityResolver;
+        this.lifecycle = lifecycle;
+        this.drafts = drafts;
+        this.audit = audit;
+        this.userService = userService;
+    }
+
+    // ------------------------------------------------------------------ reads
+
+    /**
+     * S1. The editor list, lean shape.
+     *
+     * ACTIVE only, and that is the contract rather than a convenience. This is
+     * what a picker and a filter panel read, and offering a DRAFT series there
+     * lets an editor bind a message to a publication nobody has finished
+     * configuring; offering a RETIRED one invites a citation into something the
+     * public list no longer carries. An admin who needs every state has
+     * /search-details, which takes a status and says so.
+     *
+     * The language narrows the desc rows, with a fallback to whatever the series
+     * does have. A one-language series is legitimate, and answering a request for
+     * English with an empty descs array leaves every consumer rendering the raw
+     * seriesId.
+     */
+    @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.USER)
+    public List<PublicationSeriesVo> search(@RequestParam(name = "lang", required = false) String lang,
+                                            @RequestParam(name = "domain", required = false) String domain) {
+        // The narrowing itself, and the fallback when the series does not carry
+        // the language asked for, live on the entity: they are rules about the
+        // data, and this module has no container tests to assert them in.
+        DataFilter filter = DataFilter.get().lang(lang);
+        List<PublicationSeriesVo> out = new ArrayList<>();
+        for (PublicationSeries s : ownedBy(seriesService.findByStatus(SeriesStatus.ACTIVE), domain)) {
+            out.add(s.toVo(PublicationSeriesVo.class, filter));
+        }
+        return out;
+    }
+
+    /**
+     * The admin lists narrow by OWNER, and that is not the picker's rule.
+     *
+     * A shared publication is read-only where it is shared: the receiving desk may
+     * cite it and may not touch it, so putting it in that desk's administration
+     * list would be offering an editor a row every control on which answers 403.
+     * The citation surfaces ask a different question -- what may I cite from here
+     * -- and answer it with the visible-from predicate, which reaches shared rows
+     * on purpose.
+     *
+     * OMITTING THE PARAMETER RETURNS THE ESTATE, and that is load-bearing rather
+     * than a fallback -- but NOT because the admin area offers a way to see other
+     * domains' publications. It does not: a publication is listed in its owner
+     * domain and nowhere else, which is the whole point of having an owner.
+     *
+     * The unscoped read has other callers, and each of them genuinely spans the
+     * estate: the JSON export and the scripts that consume it, which describe the
+     * installation rather than one desk; and the migration panels -- the import
+     * report and the import check -- which are estate-wide by rule, because an
+     * import that covered one domain's publications and silently skipped
+     * another's would be worse than one that did not run.
+     */
+    private static List<PublicationSeries> ownedBy(List<PublicationSeries> series, String domainId) {
+        if (domainId == null || domainId.isBlank()) {
+            return series;
+        }
+        String wanted = domainId.trim();
+        List<PublicationSeries> out = new ArrayList<>();
+        for (PublicationSeries s : series) {
+            if (s.getDomain() != null && wanted.equals(s.getDomain().getDomainId())) {
+                out.add(s);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * S2. The editor list, with everything the public shape omits.
+     *
+     * The released-issue count travels with every row, from ONE grouped query
+     * rather than one per series. It is what S-18 turns on: the citation channel
+     * is fixed for the life of a series once an issue is out, so the editor has to
+     * DISABLE that control rather than let an admin type a change the save will
+     * refuse -- and a list screen cannot ask per row without a query per row.
+     */
+    @GetMapping(value = "/search-details", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public List<SystemPublicationSeriesVo> searchDetails(@RequestParam(name = "status", required = false) String status,
+                                                         @RequestParam(name = "domain", required = false) String domain) {
+        List<PublicationSeries> found = ownedBy(status == null
+                ? seriesService.findAll()
+                : seriesService.findByStatus(seriesStatusOf(status)), domain);
+
+        Map<String, Integer> released = seriesService.publishedIssueCounts();
+        List<SystemPublicationSeriesVo> out = new ArrayList<>();
+        for (PublicationSeries s : found) {
+            SystemPublicationSeriesVo vo = s.toVo(SystemPublicationSeriesVo.class);
+            vo.setPublishedIssueCount(
+                    PublicationSeriesService.publishedIssueCountOf(released, s.getSeriesId()));
+            out.add(vo);
+        }
+        return out;
+    }
+
+    /** S3. One series, lean shape. */
+    @GetMapping(value = "/series/{seriesId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.USER)
+    public PublicationSeriesVo get(@PathVariable("seriesId") String seriesId) {
+        return required(seriesId).toVo(PublicationSeriesVo.class);
+    }
+
+    /** S4. One series, editor shape. */
+    @GetMapping(value = "/editable-series/{seriesId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public SystemPublicationSeriesVo getEditable(@PathVariable("seriesId") String seriesId) {
+        PublicationSeries series = required(seriesId);
+        SystemPublicationSeriesVo vo = series.toVo(SystemPublicationSeriesVo.class);
+        // The settings form locks the citation channel off this (S-18), so the
+        // single read carries it as well as the list does. A form that had to
+        // consult the list to know whether to disable a control would show the
+        // control enabled on a deep link.
+        vo.setPublishedIssueCount(seriesService.publishedIssueCount(series));
+        return vo;
+    }
+
+    /** S5. Several at once, for a picker. */
+    @GetMapping(value = "/series-by-ids/{seriesIds}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.USER)
+    public List<PublicationSeriesVo> byIds(@PathVariable("seriesIds") String seriesIds) {
+        List<PublicationSeriesVo> out = new ArrayList<>();
+        for (String id : seriesIds.split(",")) {
+            PublicationSeries s = seriesService.findBySeriesId(id.trim());
+            if (s != null) {
+                out.add(s.toVo(PublicationSeriesVo.class));
+            }
+        }
+        return out;
+    }
+
+    // ------------------------------------------------------------------ writes
+
+    /**
+     * S8. Create.
+     *
+     * The domain check is on the BODY, because there is no stored series yet to
+     * compare against: an admin may author a series into the domain they are
+     * administering, or into none at all, and not into somebody else's.
+     */
+    // required = false on the body, here and on every other write in this resource:
+    // JAX-RS handed an absent body to the method as null and the method answers that
+    // with its own coded refusal. Spring's default (required = true) would refuse it
+    // first, as an unparseable-body 400 with no code in it.
+    @PostMapping(value = {"/series", "/series/"},
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    @DomainScoped
+    public SystemPublicationSeriesVo create(@RequestBody(required = false) SystemPublicationSeriesVo vo) {
+        domainGuard.assertMayAssign(vo == null ? null : vo.getDomainId(), "The new series");
+        if (vo == null || vo.getSeriesId() == null || vo.getSeriesId().isBlank()) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    "seriesId is required; it is the human-authored, stable identity of the series");
+        }
+        // Every later read, save, status change and delete carries the id as one
+        // path segment, and the request firewall refuses some segments before any
+        // handler runs; a series stored under such an id could never be opened,
+        // activated or deleted (PUBCAT2).
+        String unservable = PathSegmentId.refusal("seriesId", vo.getSeriesId());
+        if (unservable != null) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID", unservable);
+        }
+        if (seriesService.findBySeriesId(vo.getSeriesId()) != null) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_ID_TAKEN",
+                    "a series with id '" + vo.getSeriesId() + "' already exists");
+        }
+
+        PublicationSeries series = new PublicationSeries();
+        series.updateFromVo(vo);
+        resolveReferences(series, vo);
+        applyDefaultAvailability(series, vo);
+
+        // S-19, checked here rather than left to the flush.
+        //
+        // The category column is NOT NULL, so a series without one dies inside
+        // Hibernate with "not-null property references a null or transient value" --
+        // a 500 that names a Java field and tells an admin nothing about the empty
+        // dropdown that caused it. A DRAFT is allowed to be incomplete in every
+        // other respect; this one is a database constraint rather than a rule about
+        // completeness, so it cannot wait for activation.
+        if (series.getCategory() == null) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    "a category is required: every series belongs to one, and it decides where the "
+                            + "series appears on the public page");
+        }
+        refuseMissingRequiredFields(series);
+
+        // Created as DRAFT whatever the client asked for. ACTIVE is what puts a
+        // series in the picker, and S-17 requires a complete series for that --
+        // so activation is the status transition, which validates. Letting create
+        // set ACTIVE would route around that check.
+        series.setStatus(SeriesStatus.DRAFT);
+        refuseHardRules(series);
+        refuseDanglingOperands(series);
+
+        return seriesService.create(series).toVo(SystemPublicationSeriesVo.class);
+    }
+
+    /**
+     * What a NEW publication is shared as when the body says nothing.
+     *
+     * A generated series is the owner's; anything else -- a document, a link, a
+     * publication with no content model -- is a reference other desks cite, which
+     * is what the whole catalogue was before the field existed. The editor
+     * pre-fills the same values, so a series created through the form and one
+     * created by a script agree.
+     *
+     * CREATE ONLY. On an update, silence means "unchanged": a client written
+     * before this field existed omits it, and re-deciding the default there would
+     * quietly re-share a publication somebody had deliberately narrowed.
+     */
+    private static void applyDefaultAvailability(PublicationSeries series,
+                                                 SystemPublicationSeriesVo vo) {
+        if (vo.getAvailability() == null || vo.getAvailability().isBlank()) {
+            series.setAvailability(SeriesAvailability.defaultFor(series.getContentMode()));
+        }
+    }
+
+    /**
+     * An ordinary save may not give an ownerless publication an owner.
+     *
+     * Shared by the series editor and the one-off editor, because the escape is
+     * the same on both and a rule stated once cannot be enforced on one form and
+     * forgotten on the other. The refusal is S-20a's, so the message the admin
+     * reads is the same one the validator would have produced -- what changes is
+     * only WHEN, and the timing matters: refusing after the body has been read
+     * onto the entity would have applied the caller's domain first.
+     */
+    static void refuseOwnerlessSave(PublicationSeries series) {
+        if (series != null && series.getDomain() == null) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    "S-20a: '" + series.getSeriesId() + "' belongs to no domain, and an ordinary "
+                            + "save cannot give it one -- that would make taking responsibility for "
+                            + "a publication a side effect of editing it. Claim it through the "
+                            + "transfer action, which asks why and records who.",
+                    List.of(new SeriesValidator.FieldError("S-20a", "domainId",
+                            "the publication belongs to no domain; claim it through the transfer "
+                                    + "action rather than by saving")));
+        }
+    }
+
+    /**
+     * Refuses a series without one of the NOT NULL columns updateFromVo copies
+     * from the body as they come, an absent value included: the content mode,
+     * the cadence and the numbering scheme. The others keep their stored value
+     * when the body leaves them out, and the status is not taken from the body
+     * at all. Refused here, by the rule create states for the category, rather
+     * than at the flush as a 500 that names a Java field.
+     */
+    private static void refuseMissingRequiredFields(PublicationSeries series) {
+        List<String> missing = new ArrayList<>();
+        if (series.getContentMode() == null) {
+            missing.add("contentMode");
+        }
+        if (series.getCadence() == null) {
+            missing.add("cadence");
+        }
+        if (series.getNumberingScheme() == null) {
+            missing.add("numberingScheme");
+        }
+        if (!missing.isEmpty()) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    String.join(", ", missing) + (missing.size() == 1 ? " is" : " are") + " required");
+        }
+    }
+
+    /**
+     * A draft may be incomplete; it may not be wrong. Asking for a release mode
+     * the system cannot honour, or typing a report parameter the issue supplies,
+     * is refused on the save that carries it -- as field errors, so the form can
+     * put the message beside the control -- rather than stored and discovered at
+     * activation.
+     */
+    private static void refuseHardRules(PublicationSeries series) {
+        List<SeriesValidator.FieldError> hard = SeriesValidator.hardRules(series);
+        if (!hard.isEmpty()) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    hard.size() + " rule(s) fail: " + hard, hard);
+        }
+    }
+
+    /**
+     * An operand that names nothing is refused on the save, draft or not.
+     *
+     * The rest of the criteria rules are activation's business, because a draft is
+     * allowed to be half-authored. This one is not the same kind of thing: an area
+     * MRN or a message-series id that resolves to no row is wrong the moment it is
+     * typed and stays wrong, and the alternative to catching it here is catching it
+     * at the resolve -- which for a query-backed series is inside the publish
+     * transaction, after the cut-off is stamped, leaving an admin with a series
+     * that cannot be released and no form open to fix it in.
+     */
+    private void refuseDanglingOperands(PublicationSeries series) {
+        List<SeriesValidator.FieldError> dangling = SeriesValidator.danglingOperands(series, operands);
+        if (!dangling.isEmpty()) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    dangling.size() + " criteria operand(s) name nothing: " + dangling, dangling);
+        }
+    }
+
+    /**
+     * Resolves the two references the value object carries only by id.
+     *
+     * They are separate from updateFromVo because that method is on the entity
+     * and has no persistence context. A category that does not exist is refused
+     * rather than created: the categories are a small curated set with a publish
+     * flag and a priority that decides where the series appears on the public
+     * page, and inventing one silently would put a series in a category nobody
+     * configured.
+     */
+    private void resolveReferences(PublicationSeries series, SystemPublicationSeriesVo vo) {
+        if (vo.getCategoryId() != null && !vo.getCategoryId().isBlank()) {
+            PublicationCategory category = categoryService.findByCategoryId(vo.getCategoryId());
+            if (category == null) {
+                throw new IssueLifecycleService.TransitionRefusedException("CATEGORY_NOT_FOUND",
+                        "no publication category '" + vo.getCategoryId() + "'");
+            }
+            series.setCategory(category);
+        }
+        // THE OWNER IS NOT CLEARABLE, and that is the change the sharing model
+        // made. An absent domainId used to CLEAR the owner, because null was a
+        // value: "visible from every domain". It is not a value any more -- the
+        // column is NOT NULL and reachability is availability's job -- so an
+        // absent one leaves the stored owner alone, exactly as the category does.
+        //
+        // A NULL OWNER ON AN EXISTING ROW IS NOT ADOPTED EITHER. If a row somehow
+        // has none, the save does not quietly hand it to whichever desk opened the
+        // form; it is left null and S-20a refuses the save with a sentence saying
+        // so. Assigning an owner is the transfer endpoint's job, and it asks for a
+        // reason and writes an audit entry.
+        if (vo.getDomainId() != null && !vo.getDomainId().isBlank()) {
+            Domain domain = domainLookupService.findByDomainId(vo.getDomainId());
+            if (domain == null) {
+                throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                        "no domain '" + vo.getDomainId() + "'");
+            }
+            series.setDomain(domain);
+        }
+
+        // THE SOURCE SERIES IS CLEARABLE, unlike the category and the owner above,
+        // and the asymmetry is the point. Those two are NOT NULL columns where
+        // absence can only mean "unchanged"; this one is the operand of an
+        // optional regime, and switching a series off COMPILED_FROM_SOURCE is
+        // exactly the edit that has to be able to send nothing and mean it. S-24
+        // then refuses the pairing in either direction.
+        //
+        // A value naming no series is REFUSED rather than ignored, by the
+        // category's argument: inventing nothing silently would leave a
+        // compilation whose derivation reads no issues and whose issues publish
+        // empty, with every row of the form looking correct.
+        if (vo.getSourceSeriesId() == null || vo.getSourceSeriesId().isBlank()) {
+            series.setSourceSeries(null);
+        } else {
+            PublicationSeries source = seriesService.findBySeriesId(vo.getSourceSeriesId().trim());
+            if (source == null) {
+                throw new IssueLifecycleService.TransitionRefusedException("SOURCE_SERIES_NOT_FOUND",
+                        "no publication series '" + vo.getSourceSeriesId() + "' to compile");
+            }
+            series.setSourceSeries(source);
+        }
+
+        availabilityResolver.apply(series, vo);
+    }
+
+    /**
+     * S6. An unsaved series, filled in as far as the server can.
+     *
+     * Not a convenience. A create form built client-side has to guess the
+     * defaults, and a guess that drifts from the server's produces a series that
+     * validates in the browser and is refused on save -- or worse, one that saves
+     * with a shape nobody chose. The defaults live here because the rules that
+     * check them live here.
+     *
+     * DRAFT, always. ACTIVE is what puts a series in the picker and S-17 requires a
+     * complete one, so activation is a transition that validates rather than a
+     * field a create form can set.
+     */
+    @GetMapping(value = "/new-series-template", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public SystemPublicationSeriesVo newSeriesTemplate() {
+        return newSeriesTemplate(app.getLanguages());
+    }
+
+    /**
+     * The template, without the container.
+     *
+     * Package-private and static for the same reason validationReport is: what the
+     * template CONTAINS is worth asserting, and it had two fields disagreeing with
+     * each other that no CDI-free test could reach.
+     */
+    static SystemPublicationSeriesVo newSeriesTemplate(String[] languages) {
+        SystemPublicationSeriesVo vo = new SystemPublicationSeriesVo();
+        vo.setStatus(SeriesStatus.DRAFT.name());
+        vo.setContentMode(ContentMode.GENERATED_FROM_QUERY.name());
+        vo.setCadence(SeriesCadence.NONE.name());
+        vo.setNumberingScheme(NumberingScheme.NONE.name());
+        vo.setTimeRelation(TimeRelation.PUBLISHED_IN_INTERVAL.name());
+        vo.setAliveAtCutoff(Boolean.FALSE);
+        vo.setReleaseMode(ReleaseMode.MANUAL_GATE.name());
+        // MANUAL, to agree with cadence NONE. S-8 says a one-off has no next issue
+        // to create automatically, so the pair the template shipped broke a rule
+        // against itself -- the create form corrected it silently on save, which is
+        // the worst place for a template to be wrong.
+        vo.setNextIssueCreation(NextIssueCreation.MANUAL.name());
+        vo.setMessagePublication(MessagePublication.NONE.name());
+
+        // Shared as its content mode says, and the template's content mode is
+        // GENERATED_FROM_QUERY -- so the owner's desk and nobody else's. The form
+        // offers the control; this is what it starts on, and it agrees with what
+        // the server would default to if the control were never touched.
+        vo.setAvailability(
+                SeriesAvailability.defaultFor(ContentMode.GENERATED_FROM_QUERY).name());
+
+        // Zero, and stated. The form disables the citation channel once a series
+        // has released an issue (S-18), and a missing count on a series that has
+        // never had one would disable it on the create screen.
+        vo.setPublishedIssueCount(0);
+
+        // One desc row per configured language, so the form has a row to type into
+        // for each -- C5: a payload narrowed to one language is uneditable.
+        //
+        // DECLARED as well as written. S-12 refuses a desc row for a language the
+        // series does not list, so a template that emitted the rows and left
+        // languages empty failed its own validation twice over and told the admin
+        // that "da" was not a configured language on a screen that had just offered
+        // it to them.
+        for (String lang : languages == null ? new String[0] : languages) {
+            PublicationSeriesDescVo desc = new PublicationSeriesDescVo();
+            desc.setLang(lang);
+            vo.getDescs().add(desc);
+            vo.getLanguages().add(lang);
+        }
+        return vo;
+    }
+
+    /**
+     * S7. An existing series as the starting point for a new one, unsaved.
+     *
+     * The reason this is a server endpoint and not a client-side object copy is
+     * WHAT IT CLEARS. A copy carries the settings that took an admin an afternoon
+     * -- the criteria document, the per-language patterns, the report and its
+     * parameters -- and must not carry the three fields that are claims about the
+     * ORIGINAL row. Each of them causes a distinct, quiet failure if it travels:
+     *
+     *  - `seriesId` is unique and is the citation handle. Carried, the save is
+     *    refused as taken; worse, an admin who edits it to something plausible has
+     *    renamed nothing and created a second series under a name that reads like
+     *    the first.
+     *  - `legacyTemplateId` is unique too, and it is what says "this row IS that
+     *    legacy publication". A second row claiming it makes the import's own
+     *    already-imported check ambiguous.
+     *  - `importSource` says where the row came from. A hand-made series carrying
+     *    it would be undone by an import undo.
+     *
+     * `firstIssueStartsAt` is cleared for the same reason, and it is the one that
+     * is easy to argue about: it is not a setting but a fact about when the
+     * ORIGINAL series began, and a 2017 date on a series created today would put
+     * every gap since then on its first screen. S-4 makes the admin state it.
+     *
+     * DRAFT, always -- ACTIVE is what puts a series in the picker, and activation
+     * validates. Nothing is persisted; the copy exists only in the response.
+     */
+    @GetMapping(value = "/copy-series-template/{seriesId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public SystemPublicationSeriesVo copySeriesTemplate(@PathVariable("seriesId") String seriesId) {
+        return copyOf(required(seriesId).toVo(SystemPublicationSeriesVo.class));
+    }
+
+    /**
+     * The copy, without the container.
+     *
+     * Package-private and static for the same reason newSeriesTemplate is: what
+     * the template CONTAINS is the whole behaviour, and asserting it must not
+     * require a server.
+     */
+    static SystemPublicationSeriesVo copyOf(SystemPublicationSeriesVo source) {
+        source.setSeriesId(null);
+        source.setStatus(SeriesStatus.DRAFT.name());
+        source.setLegacyTemplateId(null);
+        source.setImportSource(null);
+        source.setFirstIssueStartsAt(null);
+
+        // THE SHARING SETTINGS TRAVEL; THE OWNER DOES NOT.
+        //
+        // Availability and its list are configuration, and they are exactly the
+        // kind an admin copies a publication to keep: "another quarterly annex,
+        // shared with the same three desks" is why the copy button exists.
+        //
+        // The owner is a claim about the ORIGINAL row, like the three fields above
+        // it, and it is also the one field the copy must not carry across a desk:
+        // copying somebody else's publication would otherwise author a new one
+        // straight into their domain, which the write guard then refuses on save
+        // with a message about a domain the admin never chose. Cleared here and
+        // seeded from the session domain by the form.
+        source.setDomainId(null);
+
+        // Timestamps of the row this was copied FROM. Left in place they would
+        // date a series that does not exist yet.
+        source.setCreated(null);
+        source.setUpdated(null);
+
+        // Zero rather than absent: the copy has released nothing, and the settings
+        // form reads this to decide whether the citation channel is still editable
+        // (S-18). Absent would leave that control disabled on a brand-new series.
+        source.setPublishedIssueCount(0);
+
+        // THE SOURCE SERIES TRAVELS, deliberately, and it is not cleared here with
+        // firstIssueStartsAt above it. That field is a fact about when the original
+        // began; this one is configuration -- "another compilation of the same
+        // weekly" is exactly why somebody copies a compilation -- and S-24 would
+        // refuse the copy outright if it arrived without one.
+        return source;
+    }
+
+    /**
+     * S13. What a criteria document WOULD select, without saving it.
+     *
+     * The editing surface for criteria is unusable without it. A criteria document
+     * decides what goes into a publication, and the only way to know whether the
+     * one being typed is right is to run it -- against real messages, over a real
+     * interval. The alternative is saving a guess onto a series and finding out
+     * when an issue publishes.
+     *
+     * PERSISTS NOTHING. It resolves and returns; no issue, no member rows, no
+     * override. That is what makes it safe to call on every keystroke-ish edit.
+     *
+     * Capped at 50 by the contract. The number is not a page -- it is a sample. A
+     * probe that returned nine hundred rows would be answering a question nobody
+     * asked, and `total` carries the real answer.
+     */
+    @PostMapping(value = "/resolve-preview",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public Map<String, Object> resolvePreview(@RequestBody(required = false) ResolvePreviewRequest request,
+                                              @RequestParam(name = "lang", required = false) String lang) {
+        if (request == null || request.criteria() == null) {
+            throw new IssueLifecycleService.TransitionRefusedException("CRITERIA_INVALID",
+                    "a criteria document is required to preview what it would select");
+        }
+        if (request.cutoff() == null) {
+            throw new IssueLifecycleService.TransitionRefusedException("CRITERIA_INVALID",
+                    "a cut-off is required: a criteria document selects over an interval, and "
+                            + "\"everything ever\" is not the question the editor is asking");
+        }
+
+        // Parsed with a coded refusal rather than valueOf: an unknown token is a
+        // client error, and an IllegalArgumentException out of a probe fired on
+        // every edit answers 500 to the editor with nothing to act on.
+        TimeRelation relation = request.timeRelation() == null
+                ? TimeRelation.PUBLISHED_IN_INTERVAL
+                : parseEnum(TimeRelation.class, request.timeRelation(), "timeRelation");
+
+        // A COMPILATION HAS NO PREDICATE TO PREVIEW. Its members are the frozen
+        // rows of another series' published issues, so there is no document being
+        // typed and nothing for a probe to run -- the issue screen's sources panel
+        // is the counterpart, and it answers about a real issue over a real
+        // period. Refused with the same coded refusal a malformed document gets,
+        // because the editor fires this on every edit and a 500 is nothing it can
+        // act on.
+        if (relation.compiled()) {
+            throw new IssueLifecycleService.TransitionRefusedException("CRITERIA_INVALID",
+                    "a compilation selects no messages by criteria, so there is no document to "
+                            + "preview; its members are what its source series' issues printed");
+        }
+
+        // An in-force probe has no lower bound, exactly as a real in-force issue has
+        // none -- passing one would preview a narrower set than the series produces.
+        Date from = relation == TimeRelation.IN_FORCE_AT_CUTOFF || request.intervalFrom() == null
+                ? null : new Date(request.intervalFrom());
+        Date cutoff = new Date(request.cutoff());
+
+        MemberResolutionService.Resolution resolution;
+        try {
+            ResolvedCriteria resolved = CriteriaResolver.resolve(request.criteria(), relation,
+                    Boolean.TRUE.equals(request.aliveAtCutoff()), domains);
+            resolution = memberResolver.resolve(resolved, new Interval(from, cutoff));
+        } catch (IllegalArgumentException e) {
+            // A malformed document or an impossible interval is the caller's, and
+            // saying which beats a 500 the editor cannot act on.
+            throw new IssueLifecycleService.TransitionRefusedException("CRITERIA_INVALID",
+                    e.getMessage());
+        }
+
+        // Named, not listed by key. The panel exists to let an admin recognise what
+        // the document being typed selects, and a column of uuids answers that with
+        // something nobody can read or cite. Filled for the whole sample in one
+        // query, by the same rule that names the omissions beside it.
+        List<NamedMessageVo> sample = naming.namedList(
+                resolution.members().stream().limit(PROBE_SAMPLE).toList(), lang);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("source", "PROBE");
+        out.put("total", resolution.members().size());
+        out.put("candidates", resolution.candidateCount());
+        out.put("sample", sample);
+        out.put("truncated", resolution.members().size() > sample.size());
+        out.put("warnings", resolution.warnings());
+        // The misses are a SAMPLE too, and the count travels beside them.
+        //
+        // Every candidate the predicate rejected produces one of these, so a wide
+        // criteria document over a live corpus yields thousands of nested objects
+        // -- serialised on a path the editor fires while somebody is still typing,
+        // to answer a question nobody asked. Fifty is enough to see the shape of
+        // what is being dropped; missCount is what says how much there is.
+        //
+        // Capped AND labelled by the resolver, which is where the issue workbench's
+        // omissions panel gets its rows too: the short id and the title each row
+        // carries are filled in one query over the capped uids, and building the
+        // two lists separately here is how the two screens would come to disagree.
+        IssueOmissionsVo omissions = memberResolver.omissions(resolution.misses(), lang);
+        out.put("missCount", omissions.getMissCount());
+        out.put("misses", omissions.getMisses());
+        return out;
+    }
+
+    /** What a probe needs: an unsaved document and the interval to run it over. */
+    public record ResolvePreviewRequest(IssueCriteriaVo criteria, Long intervalFrom, Long cutoff,
+                                        String timeRelation, Boolean aliveAtCutoff) {
+    }
+
+    /**
+     * The contract's probe cap: a sample, not a page.
+     *
+     * Read from core rather than declared here, because the issue workbench's
+     * omissions panel caps the same misses of the same document. Two constants
+     * would show a reader fifty rows on one screen and a different fifty on the
+     * other, with only the counts beside them to say they disagree.
+     */
+    private static final int PROBE_SAMPLE = IssueOmissionsVo.PROBE_SAMPLE;
+
+    /**
+     * An enum from a client token, or a catalogued 400.
+     *
+     * Enum.valueOf on request data is the pattern the error catalogue exists to
+     * stop: it raises an IllegalArgumentException, nothing maps it, and a
+     * mistyped filter comes back as "the server broke" with a stack trace in the
+     * log for something the caller did.
+     */
+    private static <E extends Enum<E>> E parseEnum(Class<E> type, String token, String field) {
+        try {
+            return Enum.valueOf(type, token.trim().toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new IssueLifecycleService.TransitionRefusedException("INVALID_FILTER_VALUE",
+                    "'" + token + "' is not a value of " + field);
+        }
+    }
+
+    /**
+     * S9. Update a series.
+     *
+     * The settings screen has nowhere to save to without this, so every
+     * configuration an imported series needs before it can be reviewed and
+     * activated -- criteria included -- was unreachable.
+     *
+     * THREE GUARDS, and they are not the same guard.
+     *
+     * S-16: seriesId is the import/export key and the citation handle. Changing it
+     * renames the thing every stored reference points at, so the path id wins and a
+     * body disagreeing with it is refused rather than silently ignored -- a caller
+     * that thinks it renamed a series and did not is worse off than one that got an
+     * error.
+     *
+     * S-18: messagePublication cannot move once an issue has published, because a
+     * citation lives in whichever field was configured at the time. Changing the
+     * channel makes every existing citation unfindable and re-applying appends a
+     * duplicate rather than replacing.
+     *
+     * S-17: an ACTIVE series may not be edited INTO incompleteness. Activation
+     * already validates; without the same check here an admin could activate a
+     * valid series and then remove the criteria it was activated for, which is the
+     * same end state by a longer route.
+     */
+    @PutMapping(value = "/series/{seriesId}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    @DomainScoped
+    @VersionChecked
+    public SystemPublicationSeriesVo update(@PathVariable("seriesId") String seriesId,
+                                           @RequestBody(required = false) SystemPublicationSeriesVo vo) {
+        if (vo == null) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    "a series body is required");
+        }
+        if (vo.getSeriesId() != null && !vo.getSeriesId().isBlank()
+                && !seriesId.equals(vo.getSeriesId())) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_ID_IMMUTABLE",
+                    "seriesId is the import/export key and the citation handle; it cannot be changed "
+                            + "after create. The path says '" + seriesId + "' and the body says '"
+                            + vo.getSeriesId() + "'");
+        }
+
+        PublicationSeries series = required(seriesId);
+
+        // AN OWNERLESS ROW IS NOT ADOPTED BY A SAVE, and this comes first because
+        // it is the more useful answer than the domain refusal that would follow.
+        // The importer assigns owners; a save that found one missing and quietly
+        // took it -- from whichever desk happened to open the form, on a body that
+        // may not even mention the domain -- would make claiming a publication a
+        // side effect of editing its title. Claiming one is the transfer
+        // endpoint's job, and it asks for a reason and writes an audit entry.
+        refuseOwnerlessSave(series);
+
+        // BOTH ends of the move are checked, and one without the other is an open
+        // door. The stored domain says whether this series is the caller's to
+        // touch at all; the body's domain says where they are putting it, and a
+        // caller who may write a series they own could otherwise hand it to a
+        // domain they are not in and never get it back.
+        domainGuard.assertWritable(series);
+        domainGuard.assertMayAssign(vo.getDomainId(), "The series '" + seriesId + "'");
+
+        // And only then whose revision this is. The domain refusal comes first
+        // because it is the more useful answer: a caller at the wrong desk fixes
+        // it by switching domain, and telling them to re-read a series they may
+        // never write would send them round a loop with no exit.
+        //
+        // BEFORE anything is read off the body onto the entity. A save sends every
+        // field, so one composed against an older revision carries that revision's
+        // values for the fields it did not mean to change -- and applying it would
+        // silently revert whatever somebody else corrected in between.
+        StaleVersionGuard.check(series, vo.getVersion());
+
+        // Captured BEFORE the update, because updateFromVo overwrites the entity in
+        // place and there is nothing left to compare against afterwards.
+        MessagePublication publicationBefore = series.getMessagePublication();
+        boolean anyPublished = seriesService.hasPublishedIssue(series);
+
+        // The status is not taken from the body. It has its own endpoint, which
+        // validates the transition and audits it, and a save carrying a status
+        // would route around both -- an admin renaming a series would be able to
+        // activate or retire it, and nothing in the trail would say who did.
+        SeriesStatus status = series.getStatus();
+        series.updateFromVo(vo);
+        series.setSeriesId(seriesId);
+        series.setStatus(status);
+        refuseMissingRequiredFields(series);
+        resolveReferences(series, vo);
+
+        if (anyPublished && publicationBefore != series.getMessagePublication()) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    "S-18: changing the citation channel after an issue has published makes every "
+                            + "existing citation unfindable -- it lives in the other field -- and "
+                            + "re-applying appends a duplicate rather than replacing");
+        }
+
+        refuseHardRules(series);
+        refuseDanglingOperands(series);
+        List<SeriesValidator.FieldError> errors =
+                SeriesValidator.validateForActivation(series, null, operands);
+        if (status == SeriesStatus.ACTIVE && !errors.isEmpty()) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    errors.size() + " rule(s) fail: " + errors, errors);
+        }
+
+        return seriesService.update(series).toVo(SystemPublicationSeriesVo.class);
+    }
+
+    /**
+     * S10. Status transition, validated and audited.
+     *
+     * DRAFT is where a series is assembled, and it is reachable only before the
+     * series has ever been active. Going back to it afterwards would put a
+     * publication that has issues, citations and readers into the state whose
+     * whole meaning is "not finished yet", and every rule that guards an ACTIVE
+     * series -- the domain its cut-offs are read in, the report it renders --
+     * would stop applying to something the public is still reading.
+     *
+     * Leaving ACTIVE asks for a reason: it changes what editors can cite and
+     * what the site lists, and "who turned this off, and why" is the question
+     * asked months later when somebody notices. Entering it -- the first
+     * activation, or a reinstatement -- is confirmed and audited, but restores a
+     * state the series was already in, and asks for none.
+     */
+    @PutMapping(value = "/series/{seriesId}/status",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    @DomainScoped
+    @VersionChecked
+    public SystemPublicationSeriesVo setStatus(@PathVariable("seriesId") String seriesId,
+                                               @RequestParam(name = "reason", required = false) String reason,
+                                               @RequestParam(name = "version", required = false) Integer version,
+                                               @RequestBody(required = false) String status) {
+        PublicationSeries series = required(seriesId);
+        domainGuard.assertWritable(series);
+        // The revision travels as a query parameter here because the body is the
+        // status token itself and has nowhere to put it -- the same place the
+        // reason already travels, for the same reason.
+        StaleVersionGuard.check(series, version);
+        // Null-safe: an empty body reaches here as null, and seriesStatusOf
+        // answers that with a coded 400 rather than a NullPointerException the
+        // caller reads as a server failure.
+        SeriesStatus target = seriesStatusOf(status == null ? null : status.replace("\"", "").trim());
+        SeriesStatus from = series.getStatus();
+        SystemPublicationSeriesVo vo = seriesService.transition(series, target, reason, userService.currentUser())
+                .toVo(SystemPublicationSeriesVo.class);
+        log.info("Series {} status {} -> {}, reason '{}'", seriesId, from, target, reason);
+        return vo;
+    }
+
+    static final int MIN_REASON = IssueLifecycleService.MIN_REASON;
+    static final int MAX_REASON = IssueLifecycleService.MAX_REASON;
+
+    /**
+     * A series status by either vocabulary.
+     *
+     * The two frontends still in service speak different words for the same
+     * three states, and an unknown one is a client error rather than a server
+     * failure -- SeriesStatus.valueOf raised IllegalArgumentException, which
+     * reaches the caller as a 500 that says nothing.
+     */
+    static SeriesStatus seriesStatusOf(String token) {
+        if (token == null || token.isBlank()) {
+            throw new IssueLifecycleService.TransitionRefusedException("INVALID_STATUS",
+                    "a status is required");
+        }
+        return switch (token.trim().toUpperCase()) {
+            case "DRAFT", "RECORDING" -> SeriesStatus.DRAFT;
+            case "ACTIVE" -> SeriesStatus.ACTIVE;
+            case "RETIRED", "INACTIVE" -> SeriesStatus.RETIRED;
+            default -> throw new IssueLifecycleService.TransitionRefusedException("INVALID_STATUS",
+                    "'" + token + "' is not a publication series status; the states are DRAFT, ACTIVE "
+                            + "and RETIRED");
+        };
+    }
+
+    /**
+     * S21. Move a publication to another domain.
+     *
+     * ITS OWN ENDPOINT, and not a field on the save, for the reason activation is
+     * its own endpoint: it changes who is responsible for a publication.
+     * The ordinary save refuses a body naming any domain but the caller's, and
+     * that refusal is what stops an admin handing their series to a desk that is
+     * not expecting it -- so the way to move one has to be a deliberate act with
+     * its own permission, its own reason and its own line in the trail.
+     *
+     * ADMIN IN BOTH DOMAINS. Either half alone is an escape. Admin only in the
+     * SOURCE would let a desk push its unwanted publications onto somebody else,
+     * who then owns something they never accepted; admin only in the TARGET would
+     * let a desk help itself to another authority's weekly edition. Requiring both
+     * means a transfer is always performed by somebody who is accountable at both
+     * ends -- which is also the only person who can explain it afterwards.
+     *
+     * The refusal names WHICH side is missing, because the two have opposite
+     * remedies: one is fixed by switching domain, the other by asking for a role
+     * in a domain the caller does not work in.
+     *
+     * WHAT MOVES AND WHAT DOES NOT. The owner moves, and with it the timezone
+     * FUTURE cut-offs are read in. Nothing already stamped changes: a published
+     * issue's cut-off is a moment recorded in the past and re-reading it in
+     * another zone would silently renumber the archive. The target is removed from
+     * the sharing list if it was on it -- it is the owner now, which is the
+     * strongest form of the same thing, and leaving the row would put a domain in
+     * a list the read filters back out.
+     */
+    @PutMapping(value = "/series/{seriesId}/owner",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    @DomainScoped
+    @VersionChecked
+    public SystemPublicationSeriesVo transferOwner(@PathVariable("seriesId") String seriesId,
+                                                   @RequestBody(required = false) Map<String, Object> body) {
+        PublicationSeries series = required(seriesId);
+
+        // THE SOURCE HALF, unless there is no source.
+        //
+        // A publication that already belongs to a desk is moved by somebody
+        // sitting at it -- the guard the whole admin surface uses. An OWNERLESS
+        // row has no desk to be sitting at, and refusing on that ground would
+        // leave it permanently unreachable: no ordinary save may adopt it either,
+        // so the only remaining route would be the database.
+        //
+        // So this endpoint doubles as a CLAIM. The target half still applies in
+        // full -- the caller must be an admin where the publication is going --
+        // and so do the reason and the audit entry, which records `from` as null.
+        // The difference between a move and a claim is visible in the trail, which
+        // is the point: taking responsibility for a publication nobody owned is a
+        // deliberate act with a name on it.
+        boolean claim = series.getDomain() == null;
+        if (!claim) {
+            domainGuard.assertWritable(series);
+        }
+        StaleVersionGuard.check(series, StaleVersionGuard.versionOf(body));
+
+        // An absent body, an absent key and an explicit null all read the same
+        // here: nothing was named. String.valueOf on a null yields "null", which
+        // would otherwise become a domain id nobody can explain.
+        String targetId = textOf(body, "domainId");
+        if (targetId.isEmpty()) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    "a transfer names the domain the publication is moving to");
+        }
+        Domain target = domainLookupService.findByDomainId(targetId);
+        if (target == null) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_INVALID",
+                    "no domain '" + targetId + "'");
+        }
+        // The target half, and every other refusal, decided away from the request.
+        // Only the token's per-domain roles can answer whether the caller is an
+        // admin THERE: the container's check ran against the domain in the header.
+        SeriesOwnerTransfer.assertTransferable(series, target, isAdminIn(targetId));
+
+        // A REASON, in words. Months later somebody in the receiving domain finds
+        // a publication on their list that they did not create, and this sentence
+        // is the only thing that will tell them why it is theirs.
+        String reason = IssueLifecycleService.requireReason(textOf(body, "reason"),
+                "moving a publication changes which desk lists it, administers it and answers for "
+                        + "it; the trail must say why");
+
+        SeriesOwnerTransfer.Moved moved = SeriesOwnerTransfer.moveTo(series, target);
+
+        PublicationSeries saved = seriesService.update(series);
+        audit.ownerTransferred(saved, userService.currentUser(), moved, reason);
+        log.info("Series {} owner {} -> {}{}, reason '{}'", seriesId, moved.fromDomainId(), targetId,
+                moved.availabilityChanged()
+                        ? " (availability " + moved.availabilityBefore() + " -> "
+                                + moved.availabilityAfter() + ")"
+                        : "",
+                reason);
+        return saved.toVo(SystemPublicationSeriesVo.class);
+    }
+
+    /**
+     * One string out of an untyped body, trimmed, with absent and null the same.
+     *
+     * String.valueOf yields the four characters "null" for a null value, which as
+     * a domain id or a reason is worse than nothing: it names something that does
+     * not exist, and the refusal then quotes a word nobody typed.
+     */
+    private static String textOf(Map<String, Object> body, String key) {
+        Object raw = body == null ? null : body.get(key);
+        return raw == null ? "" : String.valueOf(raw).trim();
+    }
+
+    /**
+     * Whether the caller is an admin in a named domain.
+     *
+     * TWO SOURCES, and both are needed. The token's resource_access claim carries
+     * a role set per domain client, which is the only thing that can answer for a
+     * domain the caller is not currently working in -- the security identity holds
+     * the roles for the domain named in the NiordDomain header and nothing else.
+     * For that header domain the identity IS the answer, and it is the same answer
+     * every other write on this surface trusts, including an admin role held on
+     * the base client, which the identity carries in every domain.
+     */
+    private boolean isAdminIn(String domainId) {
+        if (domainId == null || domainId.isBlank()) {
+            return false;
+        }
+        // The token's per-domain role set, reached through the domains it names:
+        // domainsWithUserRole intersects the claim with the STORED domains, and the
+        // only caller here has just resolved `domainId` to a stored row, so the
+        // intersection cannot narrow the answer.
+        if (domainService.domainsWithUserRole(Roles.ADMIN).stream()
+                .anyMatch(d -> domainId.equals(d.getDomainId()))) {
+            return true;
+        }
+        Domain current = domainGuard.currentDomain();
+        return current != null && domainId.equals(current.getDomainId())
+                && userService.isCallerInRole(Roles.ADMIN);
+    }
+
+    /**
+     * S12. The issue that does not exist yet.
+     *
+     * ONE endpoint for three screens -- "＋ Ny udgave", the retro-create prefill,
+     * and the live preview on a gap row -- because all three ask the same
+     * question. Built separately, the interval one screen prefills and the
+     * interval another one displays are two derivations of one bound, and the day
+     * they disagree an admin creates a week that overlaps the one before it and
+     * finds out at publish.
+     *
+     * Three ways to say which interval, and they are not alternatives so much as
+     * three amounts of knowledge the caller has:
+     *
+     *  - `afterPublicId` -- chain off that issue's close. This is "the next one
+     *    after this", and it is the only form that needs no dates at all.
+     *  - `intervalFrom` / `intervalTo` -- the caller already has the period: the
+     *    gap row hands its own bounds back to ask what would land in them.
+     *  - neither -- the newest issue plus one cadence period, and at the head of
+     *    the chain the series' own declared first start.
+     *
+     * WRITES NOTHING, which is what makes it safe to call while somebody drags a
+     * date around. A GET for the same reason: it is a question, it is idempotent,
+     * and it is bookmarkable from the row that asked it.
+     *
+     * `lang` names the language the issue this period chains off is TITLED in,
+     * and nothing else -- the interval, the count and the observations are the
+     * same answer whoever asks. A predecessor with no name in the requested
+     * language falls back to whichever it has, because the wrong language is
+     * still a name and an identifier is not one.
+     */
+    @GetMapping(value = "/series/{seriesId}/issue-draft", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public IssueDraftVo issueDraft(@PathVariable("seriesId") String seriesId,
+                                   @RequestParam(name = "afterPublicId", required = false) String afterPublicId,
+                                   @RequestParam(name = "intervalFrom", required = false) Long intervalFrom,
+                                   @RequestParam(name = "intervalTo", required = false) Long intervalTo,
+                                   @RequestParam(name = "lang", required = false) String lang) {
+        return drafts.draft(required(seriesId), afterPublicId,
+                intervalFrom == null ? null : new Date(intervalFrom),
+                intervalTo == null ? null : new Date(intervalTo),
+                new Date(), lang);
+    }
+
+    /** S11. Delete, guarded on having no issues. */
+    @DeleteMapping(value = "/series/{seriesId}")
+    @RolesAllowed(Roles.ADMIN)
+    @DomainScoped
+    @VersionChecked
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable("seriesId") String seriesId,
+                       @RequestParam(name = "version", required = false) Integer version) {
+        PublicationSeries series = required(seriesId);
+        domainGuard.assertWritable(series);
+        // A DELETE carries no body, so the revision arrives as a parameter. It is
+        // worth asking for: the delete is guarded on the series having no issues,
+        // and a series that gained one since the screen was drawn is exactly the
+        // change the caller has not seen.
+        StaleVersionGuard.check(series, version);
+        lifecycle.deleteSeries(series);
+        // The audit rows go with the series, so this line is the only thing left
+        // that says it was ever there.
+        log.info("Deleted series {}", seriesId);
+    }
+
+    /**
+     * The series' own history: the events that belong to the publication rather
+     * than to any one issue.
+     *
+     * There was no way to read these at all. Activation, retirement, the move to
+     * another desk and -- now -- the deletion of an issue are all recorded on the
+     * SERIES, and every one of them was written to a table whose only endpoint
+     * keyed off an issue. The deletion is what makes that
+     * unacceptable rather than merely untidy: the entry it writes is the ONLY
+     * remaining record of a publication that stopped existing, and an
+     * unreadable-only record is not a record.
+     *
+     * Not domain-scoped, because it is a read. Admin tier all the same: the
+     * entries name people and carry reasons written for colleagues.
+     */
+    @GetMapping(value = "/{seriesId}/history", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public List<IssueAuditEntryVo> history(@PathVariable("seriesId") String seriesId) {
+        // The same VO the issue trail returns, and the same per-line mapping: two
+        // history panels rendering two shapes of the same table is how one of them
+        // comes to show an actor the other does not.
+        return audit.forSeries(required(seriesId)).stream().map(IssueAuditEntry::toVo).toList();
+    }
+
+    // ------------------------------------------------------------------ tools
+
+    /**
+     * S14. The token vocabulary.
+     *
+     * Served from the constant the expander itself uses. A menu built from a
+     * second list is a second source of truth, and the drift shows up as a token
+     * the UI offers and the backend rejects.
+     *
+     * Editor tier: it is a fixed vocabulary of placeholder names and discloses
+     * nothing about any series, while the surfaces that render a pattern hint sit
+     * below the admin screens.
+     */
+    @GetMapping(value = "/name-tokens", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.USER)
+    public List<String> nameTokens() {
+        return new ArrayList<>(IssueNaming.TOKENS);
+    }
+
+    /**
+     * S15. Validate without saving, so the form can show its errors.
+     *
+     * THE BODY IS THE SUBJECT. This used to load the STORED series by id and
+     * validate that, which answers a question nobody asked: the form already has
+     * the saved state and is asking about the edit in front of it. Worse, a series
+     * that did not exist yet returned an EMPTY list -- "no problems" for a create
+     * form whose series could not be created at all.
+     *
+     * Validated on a transient entity, never persisted and never attached. The
+     * validator reads no entity references (category and domain are resolved from
+     * ids elsewhere and it looks at neither), so nothing here needs a database.
+     */
+    @PostMapping(value = "/validate",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public List<Map<String, String>> validate(@RequestBody(required = false) SystemPublicationSeriesVo vo) {
+        String[] languages = app.getLanguages();
+        return validationReport(vo,
+                languages == null ? Set.of() : new LinkedHashSet<>(List.of(languages)),
+                operands,
+                // THE SOURCE SERIES IS LOOKED UP FOR REAL, unlike the category and
+                // the domain, which stand in as nameless placeholders. S-25 reads
+                // the source's OWN fields -- its id, its content mode, its relation
+                // -- so a placeholder would pass every clause of it and the dry run
+                // would come back clean on a source that cannot be compiled.
+                seriesService::findBySeriesId);
+    }
+
+    /**
+     * The endpoint's body, without the container.
+     *
+     * Package-private and static so the wiring itself is testable -- the bug this
+     * replaced was not in the validator but in what got handed to it, and a test of
+     * SeriesValidator would have stayed green throughout.
+     */
+    static List<Map<String, String>> validationReport(SystemPublicationSeriesVo vo,
+                                                      Set<String> installationLanguages) {
+        return validationReport(vo, installationLanguages,
+                org.niord.core.publication.series.criteria.CriteriaValidator.ACCEPT_ALL);
+    }
+
+    /**
+     * The same report, with a resolver that can look an operand up.
+     *
+     * The endpoint passes the real one; the two-argument form above stays for
+     * callers with no persistence context, which is the same split SeriesValidator
+     * itself carries and for the same reason.
+     */
+    static List<Map<String, String>> validationReport(
+            SystemPublicationSeriesVo vo,
+            Set<String> installationLanguages,
+            org.niord.core.publication.series.criteria.CriteriaValidator.OperandResolver resolver) {
+        return validationReport(vo, installationLanguages, resolver, id -> null);
+    }
+
+    /**
+     * The same report, able to look a source series up.
+     *
+     * The fourth argument is a LOOKUP rather than a resolved series because the
+     * report is taken over a body that has not been saved: what the admin typed
+     * names a series or it does not, and only the endpoint holds a persistence
+     * context to find out. A caller with none passes one that finds nothing, and
+     * the report then says the source names nothing -- which is the honest answer
+     * for a caller that cannot check.
+     */
+    static List<Map<String, String>> validationReport(
+            SystemPublicationSeriesVo vo,
+            Set<String> installationLanguages,
+            org.niord.core.publication.series.criteria.CriteriaValidator.OperandResolver resolver,
+            java.util.function.Function<String, PublicationSeries> sourceLookup) {
+        List<Map<String, String>> out = new ArrayList<>();
+        if (vo == null) {
+            return out;
+        }
+        PublicationSeries candidate = new PublicationSeries();
+        candidate.updateFromVo(vo);
+
+        // Category and domain are ENTITIES on the series and IDS on the wire, and
+        // updateFromVo does not bridge them -- resolveReferences does, and it needs a
+        // persistence context this has no business holding.
+        //
+        // So a named reference stands in as a placeholder. S-19 and S-20 ask whether
+        // one was NAMED; whether it EXISTS is create and update's question, and they
+        // answer it by refusing an id that resolves to nothing. Without this the rules
+        // fire on every series that has a perfectly good category or domain, "Check
+        // rules" can never come back clean, and activation can never be offered.
+        //
+        // BOTH, deliberately. This was fixed for the category alone when S-19 landed,
+        // and S-20 then arrived and reproduced the identical bug on the domain --
+        // because the first fix patched the instance instead of the shape. Any future
+        // rule reading an id-backed reference belongs in this block.
+        if (vo.getCategoryId() != null && !vo.getCategoryId().isBlank()) {
+            candidate.setCategory(new PublicationCategory());
+        }
+        if (vo.getDomainId() != null && !vo.getDomainId().isBlank()) {
+            candidate.setDomain(new Domain());
+        }
+        // And one per shared domain, for the same reason and with the same limit:
+        // S-20b asks whether "selected domains" NAMES anybody, and the report has
+        // no persistence context to look the ids up in. Whether each one EXISTS is
+        // create and update's question, answered there by refusing an id that
+        // resolves to nothing. Nameless like the owner's placeholder, so no rule
+        // reading a domain's own fields can fire on a row nothing looked up.
+        for (String id : vo.getAvailableDomainIds() == null
+                ? List.<String>of() : vo.getAvailableDomainIds()) {
+            if (id != null && !id.isBlank()) {
+                candidate.getAvailableDomains().add(new Domain());
+            }
+        }
+        // The source series, looked up for real. S-25 reads the source's own
+        // fields, so a nameless placeholder would pass every clause of it.
+        //
+        // WHEN THE ID NAMES NOTHING the report says so as an S-25 failure and the
+        // candidate still gets a stand-in, so S-24 does not ALSO fire and tell the
+        // admin their compilation has no source when what it has is a source that
+        // does not exist. The save answers the same question as
+        // SOURCE_SERIES_NOT_FOUND, which is the coded refusal for the same fact.
+        String sourceSeriesId = vo.getSourceSeriesId();
+        if (sourceSeriesId != null && !sourceSeriesId.isBlank()) {
+            PublicationSeries source = sourceLookup.apply(sourceSeriesId.trim());
+            if (source == null) {
+                Map<String, String> row = new LinkedHashMap<>();
+                row.put("rule", "S-25");
+                row.put("field", "sourceSeriesId");
+                row.put("message", "no publication series '" + sourceSeriesId + "' to compile");
+                out.add(row);
+                source = new PublicationSeries();
+                source.setSeriesId(sourceSeriesId.trim());
+            }
+            candidate.setSourceSeries(source);
+        }
+
+        // The dry run resolves operands for real, so "Check rules" answers the same
+        // question the save will. A report that passed on a dangling operand and a
+        // save that refused it would be two definitions of a valid series, and the
+        // one the admin is looking at would be the wrong one.
+        for (SeriesValidator.FieldError e
+                : SeriesValidator.validateForActivation(candidate, installationLanguages, resolver)) {
+            Map<String, String> row = new LinkedHashMap<>();
+            row.put("rule", e.rule());
+            row.put("field", e.field());
+            row.put("message", e.message());
+            out.add(row);
+        }
+        return out;
+    }
+
+    /**
+     * S18. The dry run of the legacy import.
+     *
+     * Reads and translates the whole legacy estate, reports everything wrong with
+     * it, and writes NOTHING -- not written-and-rolled-back, but never opened for
+     * write at all. That is what lets it promise the database is byte-identical
+     * afterwards.
+     *
+     * Returns 200 with the report whether or not the import would succeed, because
+     * the report IS the answer: an admin running a dry run is asking what would
+     * happen, and a 422 with a body they have to dig out of an error handler is a
+     * worse way to tell them.
+     */
+    // Opens its own transaction; see the class comment on transactions.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @PostMapping(value = "/import-legacy/validate", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public LegacyImportReportVo importDryRun() {
+        return importService.dryRun();
+    }
+
+    /**
+     * S19. The run.
+     *
+     * Refuses with 422 and the FULL report if anything is wrong -- every offender,
+     * not the first. An admin fixing them one build at a time is exactly the
+     * failure mode a full report exists to prevent, and a half-imported archive is
+     * worse than none: the rows that landed look correct and nothing marks them as
+     * partial.
+     *
+     * SYSADMIN, not ADMIN. The run writes series, issues and members into every
+     * domain at once, so no single domain's administrator may decide it for the
+     * others. It is not scoped to the caller's domain instead: a partial import
+     * would report success (see the unscoped-writes list in PublicationTierMatrixTest).
+     */
+    // Opens its own transaction; see the class comment on transactions.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @PostMapping(value = "/import-legacy", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.SYSADMIN)
+    public ResponseEntity<LegacyImportReportVo> importLegacy() {
+        LegacyImportReportVo report = importService.run();
+        return report.isWouldSucceed()
+                ? ResponseEntity.ok(report)
+                : ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(report);
+    }
+
+    /**
+     * S20. Undo the import.
+     *
+     * The importer refuses rather than merging, so a second attempt is blocked
+     * until the first one is cleared. Exposing this is not a convenience: the
+     * alternative is hand-written DELETE statements against a live archive during
+     * an import window, which is the worst possible time to be composing SQL.
+     *
+     * DELETE rather than POST because that is what it is, and the method itself
+     * should warn the reader.
+     *
+     * Returns 409 with every reason when it refuses -- an imported series that is
+     * no longer DRAFT. Once an imported issue has been published its row IS the
+     * public list, and undoing would withdraw a published edition from under its
+     * readers.
+     *
+     * SYSADMIN, like the run it undoes: it deletes every imported series in every
+     * domain, so no single domain's administrator may decide it for the others.
+     */
+    // Opens its own transaction; see the class comment on transactions.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DeleteMapping(value = "/import-legacy", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.SYSADMIN)
+    public ResponseEntity<LegacyImportService.UndoReport> undoImport() {
+        LegacyImportService.UndoReport report = importService.undo();
+        return report.deleted()
+                ? ResponseEntity.ok(report)
+                : ResponseEntity.status(HttpStatus.CONFLICT).body(report);
+    }
+
+    /**
+     * The import check, and the mailing-list trigger audit.
+     *
+     * Read-only, and safe to run as often as you like. Exposed because the pass
+     * was previously reachable only from a test -- which meant the one person who
+     * has to act on the trigger audit had no way to see it.
+     *
+     * Returns 200 with the report either way: an admin running the check is
+     * asking what the state IS, and a non-2xx would bury the answer in an error
+     * handler. Read "clear": false means the estate is not ready to import.
+     *
+     * `series` is the per-series sheet -- how many periods the archive leaves
+     * uncovered, and what kind of publication it is. NEITHER moves `clear`: a gap
+     * is a fact about an archive that predates this system, and folding it in
+     * would stop the check ever passing on an estate that is in exactly the state
+     * everybody expects.
+     */
+    // Reads the whole estate; see the class comment on transactions.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @GetMapping(value = "/import-check", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RolesAllowed(Roles.ADMIN)
+    public Map<String, Object> importCheck() {
+        ImportCheckService.ImportCheck result = importCheckService.run();
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("clear", result.isClear());
+        out.put("counts", result.counts());
+        out.put("violations", result.violations());
+        out.put("triggerAudit", result.triggerAudit());
+        out.put("series", result.series());
+        return out;
+    }
+
+    /**
+     * Exports every series as the JSON the importer reads back.
+     *
+     * The same shape as /search-details, and that is the point: one format, so a
+     * round trip cannot lose a field only one side knows about.
+     *
+     * @RolesAllowed, NOT the @PermitAll-plus-programmatic-check the older admin
+     * exports use. That pattern exists because a ticketed download opens in a new
+     * tab carrying no bearer token, and a ticket does not produce a security
+     * identity -- UserService.isCallerInRole reads it from a thread-local -- so a
+     * declarative annotation refuses the request before the ticket is ever
+     * consulted.
+     *
+     * This export does not need it. It carries the criteria documents and the
+     * report parameters, so the client fetches it with its own credentials and saves
+     * the response, and no ticket is involved. Going the other way would put a
+     * @PermitAll endpoint returning a SYSTEM shape into the API -- exactly what
+     * PublicationApiContractTest exists to prevent, and the in-code guard is
+     * invisible to it, so deleting that one line later would leave nothing at all
+     * flagging an anonymous system-shape endpoint.
+     */
+    @GetMapping(value = "/export", produces = "application/json;charset=UTF-8")
+    @RolesAllowed(Roles.ADMIN)
+    public List<SystemPublicationSeriesVo> exportSeries() {
+        // The same grouped count the admin list carries, so a round trip through
+        // the file does not lose a field one side knows about. It is read-only on
+        // the way back in -- the importer writes series, not issues -- and is here
+        // because an export that omitted it would not be the same shape as
+        // /search-details, which is the one property this format has.
+        Map<String, Integer> released = seriesService.publishedIssueCounts();
+        List<SystemPublicationSeriesVo> out = new ArrayList<>();
+        for (PublicationSeries s : sourcesBeforeCompilations(seriesService.findAll())) {
+            SystemPublicationSeriesVo vo = s.toVo(SystemPublicationSeriesVo.class);
+            vo.setPublishedIssueCount(
+                    PublicationSeriesService.publishedIssueCountOf(released, s.getSeriesId()));
+            out.add(vo);
+        }
+        return out;
+    }
+
+    /**
+     * The export order: a source series before any series that compiles it.
+     *
+     * THE FILE IS READ IN THE ORDER IT IS WRITTEN. The importer resolves a
+     * compilation's source by seriesId against what the installation already
+     * holds and drops the row when it finds nothing, so a file listing the
+     * compilation first loses it -- and the estate's own ids sort that way
+     * ("accumulated-yearly-ntm" before "weekly-ntm"), which means the default
+     * alphabetical order is precisely the losing one.
+     *
+     * Two tiers rather than a topological sort, because S-25 refuses a chain: a
+     * compilation's source is never itself a compilation, so "the sources, then
+     * the compilations" is the whole dependency graph. Within each tier the
+     * alphabetical order the query established is preserved, so an export of an
+     * estate without compilations is byte-identical to what it always was.
+     */
+    static List<PublicationSeries> sourcesBeforeCompilations(List<PublicationSeries> series) {
+        List<PublicationSeries> out = new ArrayList<>(series.size());
+        for (PublicationSeries s : series) {
+            if (s.getSourceSeries() == null) {
+                out.add(s);
+            }
+        }
+        for (PublicationSeries s : series) {
+            if (s.getSourceSeries() != null) {
+                out.add(s);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Imports series from an uploaded JSON file, as a background batch job.
+     *
+     * The file format is whatever /search-details emits, unchanged. There is no
+     * export endpoint for the same reason: the admin list IS the export, so there
+     * are not two formats that can drift apart, and a round trip cannot lose a
+     * field only one side knows about.
+     *
+     * Upsert by seriesId, and never ACTIVE -- an imported series arrives DRAFT
+     * and an existing one keeps the status it had. Activation validates against
+     * S-1..S-20, and a file that could set it would route around every one of
+     * them, which is precisely what a file written against another installation's
+     * categories, domains and reports would do.
+     *
+     * The same batch-job shape as every other admin import in the system, so it
+     * appears in the Batch Jobs screen and its log says which rows were dropped.
+     *
+     * ADMIN, matching the export beside it and the category import, and the admin
+     * page that offers the control is reachable by admin -- so a sysadmin gate
+     * showed a button that answered 403.
+     *
+     * NOT a way around the domain guard. The file can name any series and any
+     * owner, so the processor applies the interactive writes' rule to every row:
+     * a row may only create or update a series in the domain the upload was made
+     * from, and a row aimed at another domain's series is skipped and logged
+     * (BatchPublicationSeriesImportProcessor.domainRefusal). That per-row check is
+     * why the endpoint is on the unscoped list rather than @DomainScoped.
+     *
+     * This endpoint is the only way in: no folder on the server starts the job.
+     */
+    @PostMapping(value = "/upload-series",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = "text/plain")
+    @RolesAllowed(Roles.ADMIN)
+    public String importSeries(MultipartHttpServletRequest request) throws Exception {
+        return executeBatchJobFromUploadedFile(request, "publication-series-import");
+    }
+
+    private PublicationSeries required(String seriesId) {
+        PublicationSeries series = seriesService.findBySeriesId(seriesId);
+        if (series == null) {
+            throw new IssueLifecycleService.TransitionRefusedException("SERIES_NOT_FOUND",
+                    "no series with id " + seriesId);
+        }
+        return series;
+    }
+}

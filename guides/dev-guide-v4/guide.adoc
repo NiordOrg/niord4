@@ -1,0 +1,66 @@
+
+:doctype: book
+:compat-mode:
+:page-layout!:
+:toc: left
+:toclevels: 2
+:sectanchors:
+:sectlinks:
+:sectnums:
+:linkattrs:
+:icons: font
+:source-highlighter: coderay
+:source-language: asciidoc
+:experimental:
+:idprefix:
+:idseparator: -
+:table-caption!:
+:example-caption!:
+:figure-caption:
+:imagesdir: images
+:underscore: _
+
+:releaseVersion: 4.0
+:version: 4.0
+
+// The country kit's guides, rendered onto this site by their own sub-site. One place to change
+// when that sub-site's landing page moves.
+:country-kit-guides: ../country-kit/index.html
+
+= Niord Development Guide (Niord v4)
+
+<<<
+
+include::01-Introduction.adoc[]
+
+<<<
+
+include::02-RunningLocally.adoc[]
+
+<<<
+
+include::03-BackendConventions.adoc[]
+
+<<<
+
+include::04-TestingTheBackend.adoc[]
+
+<<<
+
+include::05-FrontendArchitecture.adoc[]
+
+<<<
+
+include::06-CodeDataConfiguration.adoc[]
+
+<<<
+
+include::07-BuildingACountry.adoc[]
+
+<<<
+
+include::08-ReleasesImagesDeployment.adoc[]
+
+<<<
+
+include::09-Contributing.adoc[]

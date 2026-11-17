@@ -1,0 +1,88 @@
+<!--
+  Landing page: full-area map with all published messages as outline dots, and
+  a welcome panel overlaid near the top. The outer `flex-1` makes this fill
+  the remaining height of `main`, so the map runs flush to the footer. The
+  map renders behind everything; the absolute-positioned overlay sits on top.
+
+  Welcome-panel layout: Niord logo, welcome heading + NID-acronym subtitle, and
+  a login button when anonymous. Deliberately no body paragraph — the panel
+  stays compact. A country may add its own component at the end of the panel
+  through the `home.welcome` slot.
+
+  Full-bleed: the landing map should run edge-to-edge. `w-screen` + `left-1/2` +
+  `-translate-x-1/2` spans the full viewport width regardless of the surrounding
+  layout (kept explicit so the map stays edge-to-edge even if a content cap is
+  ever re-introduced around it).
+-->
+<div class="relative left-1/2 flex w-screen -translate-x-1/2 flex-1 flex-col">
+  <!--
+    The map is deferred so the welcome panel and the logo (the LCP element, already priority-
+    loaded) paint without waiting on ~104 kB of OpenLayers. `on idle` rather than `on viewport`
+    (the map fills the viewport, so that would fire immediately and gain nothing) or
+    `on interaction` (a passive visitor would be left looking at an empty page).
+
+    The placeholder occupies the identical `flex-1` box, so deferring costs no layout shift. Its
+    colour is the map's own water tone rather than a surface grey, so the swap is not a flash.
+
+    @error is not optional here. Angular records the failure on the TView and never retries a
+    defer block, so a single rejected chunk fetch is terminal for the page; with no @error branch
+    the placeholder would simply stay, and because it is deliberately water-coloured the failure
+    would read as a successfully-loaded map showing open sea. A full reload is the only real
+    recovery, hence the button.
+  -->
+  @defer (on idle) {
+    <app-home-map class="flex-1" [view]="initialView()" [messages]="messages()" />
+  } @placeholder {
+    <div class="flex-1 bg-[#aad3df]"></div>
+  } @error {
+    <div
+      class="flex flex-1 flex-col items-center justify-center gap-3 bg-[#aad3df] p-4 text-center"
+      role="alert"
+    >
+      <p class="text-sm text-fg-muted">{{ 'common.mapLoadError' | transloco }}</p>
+      <button type="button" class="btn-secondary" (click)="reload()">
+        {{ 'common.retry' | transloco }}
+      </button>
+    </div>
+  }
+
+  <!--
+    pointer-events-none on the wrapper keeps the map under the panel pannable
+    in the gaps; the panel itself re-enables clicks via pointer-events-auto.
+    `items-start` + `pt-8` parks the panel near the top instead of the
+    vertical center.
+  -->
+  <div class="pointer-events-none absolute inset-0 flex items-start justify-center p-4 pt-8">
+    <div
+      class="pointer-events-auto flex max-w-md flex-col items-center gap-4 rounded-lg bg-surface-0/30 p-6 text-center shadow-lg backdrop-blur-md"
+    >
+      <img
+        ngSrc="assets/img/niord.png"
+        [alt]="'menu.brand' | transloco"
+        width="124"
+        height="80"
+        priority
+      />
+      <div>
+        <h1 class="mb-1 text-2xl font-semibold text-fg">
+          {{ 'front_page.welcome' | transloco }}
+        </h1>
+        <!-- Brand-fixed product name: the bolded letters spell the NIORD acronym
+             (Nautical Information Directory). Intentionally untranslated and un-keyed —
+             the product name is identical across all country deployments. -->
+        <h2 class="text-lg text-fg-muted">
+          <span class="font-bold">N</span>autical <span class="font-bold">I</span>nf<span
+            class="font-bold"
+            >or</span
+          >mation <span class="font-bold">D</span>irectory
+        </h2>
+      </div>
+      @if (!isAuthenticated()) {
+        <button type="button" class="btn-primary" (click)="login()">
+          <span>{{ 'menu.login' | transloco }}</span>
+        </button>
+      }
+      <app-slot name="home.welcome" />
+    </div>
+  </div>
+</div>

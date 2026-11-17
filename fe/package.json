@@ -1,0 +1,132 @@
+{
+  "name": "niord-app",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "node ../country-kit/stage-languages.mjs --app admin && ng serve niord-app",
+    "start:local": "node ../country-kit/stage-languages.mjs --app admin && ng serve niord-app --configuration local",
+    "build": "node ../country-kit/stage-languages.mjs --app admin && ng build niord-app",
+    "watch": "node ../country-kit/stage-languages.mjs --app admin && ng build niord-app --watch --configuration development",
+    "test": "ng test niord-app",
+    "lint": "ng lint niord-app --max-warnings 0",
+    "lint:scripts": "eslint \"scripts/**/*.{mjs,cjs,js}\" eslint-shared.cjs --max-warnings 0 && npm run lint:kit",
+    "lint:kit": "cd ../country-kit && eslint \"**/*.{mjs,cjs}\" --max-warnings 0",
+    "verify": "npm run paths:check && npm run contents:check -- --project niord-app && npm run format:check && npm run lint && npm run lint:scripts && npm run test -- --watch=false && npm run build && npm run urls:check -- --dist dist/niord-app/browser",
+    "start:info": "node ../country-kit/stage-languages.mjs --app info && ng serve niord-info --port 4400",
+    "build:info": "node ../country-kit/stage-languages.mjs --app info && ng build niord-info --stats-json",
+    "test:info": "ng test niord-info",
+    "lint:info": "ng lint niord-info --max-warnings 0",
+    "bundle:info": "node scripts/info-bundle-report.mjs",
+    "separation:info": "node scripts/info-separation-check.mjs",
+    "layout:info": "node scripts/info-layout-check.mjs",
+    "test:container:info": "node scripts/info-container-test.mjs",
+    "image:info": "node ../country-kit/image-info.mjs --package-only",
+    "verify:info": "npm run paths:check && npm run contents:check -- --project niord-info && npm run format:check && npm run lint:info && npm run test:info -- --watch=false && npm run build:info && npm run urls:check -- --dist dist/niord-info/browser && npm run separation:info && npm run bundle:info",
+    "format": "prettier --write --cache . ../country-kit",
+    "format:check": "prettier --check --cache . ../country-kit",
+    "docs:check": "node scripts/docs-check.mjs",
+    "paths:check": "node scripts/workspace-paths-check.mjs",
+    "contents:check": "node scripts/build-contents-check.mjs",
+    "languages:stage": "node ../country-kit/stage-languages.mjs",
+    "languages:watch": "node ../country-kit/stage-languages.mjs --watch",
+    "languages:catalog": "node ../country-kit/catalog.mjs",
+    "languages:check": "node ../country-kit/pack.mjs check",
+    "languages:migrate": "node ../country-kit/pack.mjs migrate",
+    "languages:prune": "node ../country-kit/pack.mjs prune",
+    "languages:accept": "node ../country-kit/pack.mjs accept",
+    "urls:check": "node scripts/build-urls-check.mjs",
+    "portrayal:fixtures": "node scripts/portrayal-fixtures.mjs",
+    "test:guards": "node --test \"scripts/*.test.mjs\" \"../country-kit/**/*.test.mjs\"",
+    "kit:zip": "node ../country-kit/source-zip.mjs build",
+    "kit:package": "node ../country-kit/source-zip.mjs build --package kit",
+    "e2e": "playwright test",
+    "shots": "playwright test -c guides-shots/playwright.config.ts --grep-invert pilot/",
+    "shots:pilot": "playwright test -c guides-shots/playwright.config.ts pilot.shots.ts",
+    "shots:check": "node guides-shots/manifest-check.mjs",
+    "perf:publications": "node scripts/perf/publications-requests.mjs",
+    "prepare": "husky"
+  },
+  "private": true,
+  "packageManager": "npm@11.11.0",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || ^26.0.0"
+  },
+  "dependencies": {
+    "@angular/aria": "^22.2.3",
+    "@angular/cdk": "^22.2.3",
+    "@angular/common": "^22.2.2",
+    "@angular/compiler": "^22.2.2",
+    "@angular/core": "^22.2.2",
+    "@angular/forms": "^22.2.2",
+    "@angular/platform-browser": "^22.2.2",
+    "@angular/router": "^22.2.2",
+    "@angular/service-worker": "^22.2.2",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/merge": "^6.12.2",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.1",
+    "@jsverse/transloco": "^8.3.0",
+    "@ng-icons/core": "^33.3.0",
+    "@ng-icons/lucide": "^33.3.0",
+    "@tiptap/core": "^3.30.5",
+    "@tiptap/extension-highlight": "^3.27.1",
+    "@tiptap/extension-image": "^3.27.1",
+    "@tiptap/extension-link": "^3.27.1",
+    "@tiptap/extension-table": "^3.27.1",
+    "@tiptap/extension-text-align": "^3.27.1",
+    "@tiptap/extension-text-style": "^3.27.1",
+    "@tiptap/pm": "^3.27.1",
+    "@tiptap/starter-kit": "^3.27.1",
+    "@turf/buffer": "^7.3.5",
+    "keycloak-js": "^26.2.4",
+    "ol": "^10.9.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.2",
+    "@angular/cli": "^22.2.4",
+    "@angular/compiler-cli": "^22.2.2",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.2.4",
+    "@types/geojson": "^7946.0.16",
+    "@vitest/coverage-v8": "^4.1.12",
+    "angular-eslint": "22.5.0",
+    "eslint": "^10.0.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
+    "js-yaml": "^4.3.2",
+    "jsdom": "^28.0.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.2.4",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "8.56.1",
+    "vitest": "^4.1.12"
+  },
+  "lint-staged": {
+    "*.{ts,html,css,scss,md,json,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.{ts,html,mjs,cjs}": [
+      "eslint --fix"
+    ],
+    "scripts/**/*.js": [
+      "eslint --fix"
+    ],
+    "../country-kit/**/*.{ts,html,css,scss,md,json,yml,yaml}": [
+      "prettier --write"
+    ],
+    "../country-kit/**/*.{mjs,cjs}": [
+      "eslint --fix"
+    ]
+  },
+  "overrides": {
+    "vite": "8.3.4"
+  }
+}

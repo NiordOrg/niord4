@@ -1,0 +1,41 @@
+<app-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [header]="'admin.categories.template.result.title' | transloco"
+  [style]="{ width: 'min(52rem, 94vw)' }"
+>
+  @if (message(); as msg) {
+    <div class="flex flex-col gap-3">
+      @if (languages.length > 1) {
+        <div class="flex flex-wrap gap-1">
+          @for (lang of languages; track lang.value) {
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm"
+              [class.bg-primary]="previewLang() === lang.value"
+              [class.text-fg-on-primary]="previewLang() === lang.value"
+              [class.text-fg]="previewLang() !== lang.value"
+              (click)="setLang(lang.value)"
+            >
+              <app-language-flag
+                class="h-3.5 w-5 rounded-xs"
+                [lang]="lang.value"
+                [flagPath]="flagFor(lang.value)"
+                [codeFallback]="false"
+              />
+              {{ lang.label }}
+            </button>
+          }
+        </div>
+      }
+
+      <div class="max-h-[70vh] overflow-auto">
+        <app-message-details-renderer
+          [message]="msg"
+          [language]="previewLang()"
+          [showPromulgation]="true"
+        />
+      </div>
+    </div>
+  }
+</app-dialog>

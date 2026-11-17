@@ -1,0 +1,704 @@
+<app-admin-section-page
+  titleKey="admin.sections.publications.label"
+  [descriptionKey]="pageDescriptionKey()"
+  [descriptionParams]="{ domain: sessionDomainName() }"
+  [showHeader]="!selectedSeriesId()"
+>
+  @if (selectedSeriesId(); as seriesId) {
+    <!--
+      ONE header per level: the back link, the name, the settings button and the
+      `⋯` menu are the series screen's own header cluster, and a second row of
+      the same three above it described the parent while pointing at the child.
+
+      What stays here is what the SECTION owns: which series is selected, and the
+      one drawer both settings and copy open in. The clicked row travels down as
+      `initial` so the header is drawn before the screen's own request answers,
+      and a save in that drawer travels back down as a tick, because the screen
+      fetches the series itself.
+    -->
+    <app-series-detail
+      [seriesId]="seriesId"
+      [initial]="selectedSeries"
+      [refreshTick]="seriesRefreshTick()"
+      (back)="clearSelection()"
+      (settings)="openSettings($event)"
+      (copySeries)="copySeries(seriesId)"
+    />
+  } @else {
+    <!--
+      The toolbar stands OUTSIDE the fetch chain, and the cards below report the
+      fetch instead of replacing the screen with it. Every mutation on this page
+      refetches the list, so a chain that owned the whole screen tore down the
+      toolbar, the create menu and the cog on each save.
+    -->
+    <div class="admin-toolbar mb-4">
+      <!--
+        One box over every group below. A reader looking for a publication does
+        not know which section it is filed under -- and the archive alone is ~20
+        rows that otherwise have to be read one by one.
+      -->
+      <app-publication-list-filter
+        class="w-full max-w-xs shrink-0"
+        placeholderKey="admin.publications.filter.series"
+        [value]="seriesFilter()"
+        (valueChange)="setSeriesFilter($event)"
+      />
+
+      <span class="admin-toolbar-spacer"></span>
+
+      <app-menu-trigger
+        icon="lucidePlus"
+        variant="primary"
+        [label]="'admin.publications.new.label' | transloco"
+        [ariaLabel]="'admin.publications.new.aria' | transloco"
+        [menu]="newMenu"
+        align="end"
+      />
+      <app-menu
+        #newMenu
+        [model]="newItems()"
+        [ariaLabel]="'admin.publications.new.aria' | transloco"
+      />
+      <app-menu-trigger
+        icon="lucideSettings"
+        [ariaLabel]="'admin.publications.actionsAriaLabel' | transloco"
+        [menu]="cogMenu"
+        align="end"
+      />
+      <app-menu
+        #cogMenu
+        [model]="cogItems()"
+        [ariaLabel]="'admin.publications.actionsAriaLabel' | transloco"
+      />
+    </div>
+
+    <app-progress-bar [visible]="facade.loading()" />
+
+    @if (facade.error()) {
+      <app-error-banner
+        [title]="'admin.publications.loadError' | transloco"
+        [retryLabel]="'admin.publications.retry' | transloco"
+        (retry)="facade.refresh()"
+      />
+    } @else if (!facade.loading()) {
+      <!--
+        The series, one card each. No heading above them: they are what the
+        screen is, and a section title over the only unlabelled thing on the
+        page names it twice.
+      -->
+      <section class="mb-6">
+        <!--
+          The empty state lives HERE, not around the whole screen. Wrapping the
+          page in it removed the toolbar and the create menu whenever there
+          were no series -- so a fresh installation, or any moment before the
+          first import, showed an admin screen with no way to create anything.
+        -->
+        @if (cadenced().length === 0) {
+          @if (filtering()) {
+            <!--
+              Said in words rather than left as a blank section: an empty list
+              under a filter box that matched nothing is otherwise
+              indistinguishable from a list that failed to load.
+            -->
+            <p class="text-sm text-fg-subtle">
+              {{ 'admin.publications.filter.noMatches' | transloco }}
+            </p>
+          } @else if (facade.isEmpty()) {
+            <app-empty-state
+              icon="lucideInbox"
+              [title]="'admin.publications.empty.none' | transloco"
+            />
+          } @else {
+            <p class="text-sm text-fg-subtle">
+              {{ 'admin.publications.group.noneCadenced' | transloco }}
+            </p>
+          }
+        } @else {
+          <!--
+            The strips decorate the cards and are not what they are for, so a
+            failure to read them is said once, quietly, rather than as a banner
+            over a section that works perfectly well without them.
+          -->
+          @if (facade.timelineError()) {
+            <p class="mb-2 text-xs text-fg-muted">
+              {{ 'admin.publications.timeline.error' | transloco }}
+            </p>
+          }
+          <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            @for (series of cadenced(); track series.seriesId) {
+              @let openRow = openIssueRow(series);
+              @let latest = latestIssueRow(series);
+              <!--
+                The card is a container with controls inside it, not a control
+                itself: the strip carries its own, one per period, and a control
+                inside a control is neither valid nor reachable from a keyboard.
+              -->
+              <!--
+                Named for the end-to-end suite, which has no other stable handle
+                on it: the card has been a button, then a div, and its structure
+                is one layout change away from moving again.
+              -->
+              <div class="admin-card flex flex-col gap-3 p-3.5" data-testid="series-card">
+                <div class="flex items-start justify-between gap-2">
+                  <!--
+                    The title opens the series, so it is a link and not a button:
+                    the address shows on hover and the series can be opened in a
+                    second tab. A plain click still goes through `select`, which
+                    hands the clicked row to the screen it opens so the header
+                    can be drawn before that screen's own fetch answers.
+                  -->
+                  <a
+                    appRowLinkAnchor
+                    class="flex min-w-0 items-baseline gap-2 text-left focus-visible:outline-2 focus-visible:outline-primary-500"
+                    [appRowLink]="[series.seriesId]"
+                    (appRowLinkActivate)="select(series)"
+                  >
+                    <!--
+                      A card wide enough to hold a title gets one line of it and
+                      an ellipsis; the narrower one- and two-column layouts give
+                      it a second line instead, because a publication whose name
+                      differs from its neighbour's only near the end is
+                      otherwise unidentifiable. The badge sits on the first
+                      line's baseline in both states.
+                    -->
+                    <span
+                      class="font-semibold text-fg hover:underline max-xl:line-clamp-2 xl:truncate"
+                      >{{ name(series) }}</span
+                    >
+                    <!--
+                      Only the two states that change what the reader may do:
+                      a draft is not publishing yet, a retired series is
+                      finished. Badging the ordinary case spends attention on
+                      the one fact that never needs it.
+                    -->
+                    @if (badgeClass(series); as tint) {
+                      <span [class]="'status-badge shrink-0 ' + tint">{{
+                        badgeKey(series) | transloco
+                      }}</span>
+                    }
+                  </a>
+                  <span class="shrink-0 text-xs text-fg-muted">{{
+                    'admin.publications.cadence.' + series.cadence | transloco
+                  }}</span>
+                </div>
+
+                @if (unscheduled(series)) {
+                  <!--
+                    A series with no calendar has no periods to draw. What it
+                    has is an archive, so the card says how big it is and what
+                    came out of it last.
+                  -->
+                  @if (latest?.publicId; as latestId) {
+                    @let issues = issueCount(series);
+                    <!--
+                      `inline text-left` on the link: a button is an inline-BLOCK
+                      that centres its own text, so a long publication title
+                      broke out of the sentence and sat centred over two lines
+                      under a left-aligned prefix.
+                    -->
+                    <p class="text-sm text-fg-muted">
+                      {{ issueCountKey(issues) | transloco: { count: issues } }}
+                      · {{ 'admin.publications.card.latest' | transloco }}
+                      <button
+                        type="button"
+                        class="link-button inline is-prose text-left"
+                        (click)="openTimelineIssue(series, latestId)"
+                      >
+                        {{ latest?.label }}
+                      </button>
+                      @if (date(latest?.intervalTo); as released) {
+                        ({{ released }})
+                      }
+                    </p>
+                  } @else if (archiveAnswered(series)) {
+                    <p class="text-xs text-fg-subtle">
+                      {{ 'admin.publications.detail.noIssues' | transloco }}
+                    </p>
+                  }
+                } @else {
+                  <!--
+                    The recent periods, and the ones with nothing in them. This is
+                    the landing screen's whole reason for existing: a series that
+                    stopped producing is visible from here and from nowhere else
+                    short of opening it.
+                  -->
+                  <app-issue-timeline
+                    [timeline]="facade.timeline(series.seriesId)"
+                    [numbering]="series"
+                    [seriesId]="series.seriesId"
+                    (openIssue)="openTimelineIssue(series, $event)"
+                    (openSeries)="select(series)"
+                  />
+                }
+
+                <div class="flex flex-col gap-1">
+                  @if (openRow?.publicId) {
+                    <span class="text-sm font-semibold text-fg">{{
+                      'admin.publications.card.openIssue' | transloco: { name: openRow?.label }
+                    }}</span>
+                    <span class="text-xs text-fg-muted">
+                      {{ 'admin.publications.card.cutoff' | transloco }}
+                      <!--
+                        Not stamped yet: the cut-off is taken by the act of
+                        publishing, so what the card shows is what WOULD be
+                        written, and it is marked as the expectation it is.
+                      -->
+                      <app-expected-date
+                        [value]="openRow?.intervalTo"
+                        [format]="cutoffFormat(series)"
+                      />
+                      @if (hasMemberCount(openRow)) {
+                        ·
+                        {{
+                          membersKey(openRow?.memberCount)
+                            | transloco: { count: openRow?.memberCount }
+                        }}
+                      }
+                    </span>
+                  } @else {
+                    <span class="text-sm font-semibold text-fg">{{
+                      'admin.publications.card.noOpenIssue' | transloco
+                    }}</span>
+                    @if (unscheduled(series)) {
+                      <!--
+                        A series with no calendar is not waiting for a period, so
+                        "nothing open" says nothing on its own. What decides
+                        whether that is normal is what the next edition WOULD be:
+                        a file somebody uploads, an address somebody points at,
+                        or nothing at all.
+                      -->
+                      @if (contentModeKey(series); as modeKey) {
+                        <span class="text-xs text-fg-muted">{{ modeKey | transloco }}</span>
+                      }
+                    } @else if (latest?.publicId; as latestId) {
+                      <!--
+                        The last thing that DID come out, and the stretch since
+                        that produced nothing. A series that has stopped is
+                        described by both together — "nothing open" alone does
+                        not say whether that is a week's pause or seven years.
+                      -->
+                      <span class="text-xs text-fg-muted">
+                        {{ 'admin.publications.card.latestLabel' | transloco }}
+                        <button
+                          type="button"
+                          class="link-button inline is-prose text-left"
+                          (click)="openTimelineIssue(series, latestId)"
+                        >
+                          {{ latest?.label }}
+                        </button>
+                        @if (gapSpan(series); as span) {
+                          ·
+                          {{ 'admin.publications.card.gapSpan' | transloco: { span } }}
+                        }
+                      </span>
+                    }
+                    @if (series.dormant) {
+                      <span class="flex items-center gap-1 text-xs text-warning">
+                        <app-icon name="lucideTriangleAlert" class="text-xs" />
+                        {{ 'admin.publications.dormant' | transloco }}
+                      </span>
+                    }
+                  }
+                </div>
+
+                <div class="flex items-center gap-2">
+                  @if (openRow?.publicId; as openId) {
+                    <button
+                      type="button"
+                      class="btn-primary"
+                      (click)="openTimelineIssue(series, openId)"
+                    >
+                      {{ 'admin.publications.card.openAction' | transloco }}
+                    </button>
+                  } @else if (canCreateIssue(series)) {
+                    <button type="button" class="btn-secondary" (click)="newIssue(series)">
+                      {{ 'admin.publications.detail.newIssue' | transloco }}
+                    </button>
+                  }
+                  <button type="button" class="btn-tertiary" (click)="select(series)">
+                    {{ 'admin.publications.card.allIssues' | transloco }}
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <!--
+        One-offs get their own table, not a row in the series list. What such a
+        publication has is a name, a type, whether it is live, who may cite it
+        and the file or link behind it -- and none of the columns a series needs
+        (cadence, next issue, a timeline) mean anything for a document published
+        once.
+
+        Imported ones are NOT filtered out. Every one-off in the estate was
+        carried in by the importer, so excluding them by importSource emptied
+        this table of exactly the rows it exists to show.
+      -->
+      <section class="mb-6">
+        <div class="admin-card">
+          <!--
+            The band wraps rather than squeezing: the title keeps its own line
+            unbroken and the sentence beside it drops beneath when there is no
+            room for both.
+          -->
+          <div class="admin-panel-header flex-wrap">
+            <span class="shrink-0">{{ 'admin.publications.group.oneOffs' | transloco }}</span>
+            <span class="min-w-0 font-normal text-fg-muted">{{
+              'admin.publications.oneOff.subtitle' | transloco
+            }}</span>
+          </div>
+          @if (filteredOneOffs().length === 0) {
+            <div class="p-3">
+              <!--
+                Named for the desk being worked at, and followed by the reason an
+                empty table here is not the same as no such publications: the
+                reference publications every domain cites are owned by one desk
+                and administered only there.
+
+                Compact: this is one empty band inside a card on a page that has
+                cards above and below it, and the full-height placeholder made
+                the section with nothing in it the tallest thing on the screen.
+              -->
+              <app-empty-state
+                [compact]="true"
+                [title]="
+                  filtering()
+                    ? ('admin.publications.filter.noMatches' | transloco)
+                    : ('admin.publications.oneOff.noneInDomain'
+                      | transloco: { domain: sessionDomainName() })
+                "
+                [body]="
+                  filtering() ? undefined : ('admin.publications.oneOff.elsewhereNote' | transloco)
+                "
+              />
+            </div>
+          } @else {
+            <!--
+              Seven columns need a section column wider than a docked sidebar
+              leaves below 80rem. The two that describe the publication rather
+              than identify it -- its kind and who may cite it -- are dropped
+              there, so the name, where it stands and where the public can read
+              it keep their room; both are on the publication's own screen. The
+              name and the file column carry `max-w-0` so they share the leftover
+              width instead of each demanding its content's natural size.
+            -->
+            <table class="niord-table">
+              <thead>
+                <tr>
+                  <th class="md:min-w-40">{{ 'admin.publications.column.name' | transloco }}</th>
+                  <th class="w-32 max-xl:hidden">
+                    {{ 'admin.publications.column.type' | transloco }}
+                  </th>
+                  <th class="w-28">{{ 'admin.publications.column.status' | transloco }}</th>
+                  <!--
+                    Ordered by the START of the public period, which is the one
+                    date in the cell every row can be compared on. Three states,
+                    the third of them the order the endpoint answered in: that is
+                    the order the estate is administered in, and a column that
+                    could only be sorted by date would have no way back to it.
+                  -->
+                  <th class="w-56" [attr.aria-sort]="oneOffOrderAria()">
+                    <button
+                      type="button"
+                      class="link-button is-quiet inline-flex items-center gap-1 font-semibold"
+                      (click)="toggleOneOffOrder()"
+                      data-testid="one-off-public-sort"
+                    >
+                      {{ 'admin.publications.column.public' | transloco }}
+                      @if (oneOffOrder() !== 'none') {
+                        <app-icon
+                          [name]="oneOffOrder() === 'asc' ? 'lucideArrowUp' : 'lucideArrowDown'"
+                          class="text-xs"
+                        />
+                      }
+                    </button>
+                  </th>
+                  <th class="w-40 max-xl:hidden">
+                    {{ 'admin.publications.column.availability' | transloco }}
+                  </th>
+                  <!-- Dropped on a phone: the document is on the publication's own page. -->
+                  <th class="min-w-48 max-md:hidden">
+                    {{ 'admin.publications.column.fileOrLink' | transloco }}
+                  </th>
+                  <th class="w-16">
+                    <span class="sr-only">{{
+                      'admin.publications.column.actions' | transloco
+                    }}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (publication of sortedOneOffs(); track publication.series.seriesId) {
+                  @let target = oneOffTarget(publication);
+                  <tr>
+                    <td class="max-w-0">
+                      <!--
+                        The publication's own screen, a sibling of the series
+                        one: what it is, the document behind it, where it is
+                        public and what has happened to it.
+
+                        The name wraps rather than truncating: it is what
+                        identifies the row, and half a title is worth less than
+                        a second line. A name with no spaces (a web address)
+                        may break inside the word rather than push the column.
+                      -->
+                      <button
+                        type="button"
+                        class="text-left font-semibold text-primary [overflow-wrap:anywhere] hover:underline"
+                        (click)="openOneOff(publication)"
+                      >
+                        {{ oneOffName(publication) }}
+                      </button>
+                    </td>
+                    <td class="max-xl:hidden">{{ oneOffTypeKey(publication) | transloco }}</td>
+                    <!--
+                      WHERE THE PUBLICATION STANDS, and separately where the
+                      public can read it. One dot used to fold a series status,
+                      an issue status and a public period into the single word
+                      "active", and every one of them was invisible from the
+                      other two: a publication being prepared, one that had been
+                      withdrawn and one due to go public next January all read
+                      the same.
+                    -->
+                    <td>
+                      <span
+                        [class]="'status-badge ' + oneOffStatusClass(publication)"
+                        data-testid="one-off-status"
+                        >{{ oneOffStatusKey(publication) | transloco }}</span
+                      >
+                    </td>
+                    <td class="whitespace-nowrap" data-testid="one-off-public">
+                      @let line = oneOffLines().get(publication.series.seriesId);
+                      @if (line) {
+                        {{ line.compactKey | transloco: line.params }}
+                      }
+                    </td>
+                    <td class="max-xl:hidden">
+                      {{
+                        oneOffAvailabilityKey(publication)
+                          | transloco: oneOffAvailabilityParams(publication)
+                      }}
+                    </td>
+                    <td class="max-w-0 max-md:hidden">
+                      @let address = oneOffAddress(publication);
+                      @let label = oneOffTargetLabel(publication);
+                      @if (target === '') {
+                        <span class="text-fg-subtle">—</span>
+                      } @else {
+                        <!--
+                          A block-level flex row, not an inline one: an
+                          inline-flex box sizes itself to the whole file name
+                          and pushes the copy button out of the cell, so the
+                          name never gets the chance to ellipsise.
+                        -->
+                        <span class="flex min-w-0 items-center gap-2">
+                          <app-icon
+                            [name]="oneOffIsLink(publication) ? 'lucideExternalLink' : 'lucideFile'"
+                            class="shrink-0 text-xs text-fg-muted"
+                          />
+                          <!--
+                            An uploaded document is served over an address too,
+                            so it is offered the same way an external link is:
+                            the name a reader knows it by, pointing at where the
+                            bytes actually are.
+                          -->
+                          @if (address !== '') {
+                            <a
+                              class="truncate"
+                              [href]="address"
+                              [title]="label"
+                              target="_blank"
+                              rel="noopener"
+                              >{{ label }}</a
+                            >
+                            <app-copy-link-button [url]="address" />
+                          } @else {
+                            <!--
+                              A stored file whose row carries no address: shown
+                              by name, because a link that resolves to nothing is
+                              worse than a name — the publication's own screen
+                              has the resolved one.
+                            -->
+                            <span class="truncate text-fg-muted" [title]="label">{{ label }}</span>
+                          }
+                        </span>
+                      }
+                    </td>
+                    <td class="text-right">
+                      @let rowLabel =
+                        'admin.publications.oneOff.rowActions'
+                          | transloco: { name: oneOffName(publication) };
+                      <app-menu-trigger
+                        icon="lucideSettings"
+                        [ariaLabel]="rowLabel"
+                        [menu]="rowMenu"
+                        align="end"
+                      />
+                      <app-menu
+                        #rowMenu
+                        [model]="oneOffMenus().get(publication.series.seriesId) ?? []"
+                        [ariaLabel]="rowLabel"
+                      />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      </section>
+
+      <!--
+        Retired series, collapsed.
+
+        History: finished, and not what this screen is for. Collapsed rather than
+        dropped because a retired series is still a real thing somebody may need
+        to find -- but three retired development probes were once the ONLY rows
+        the live list showed, which reads as a broken screen.
+      -->
+      @if (retired().length > 0) {
+        <section class="mb-6">
+          <button
+            type="button"
+            class="mb-2 flex items-center gap-1 text-sm font-semibold text-fg-muted hover:text-fg"
+            [attr.aria-expanded]="showRetired()"
+            (click)="toggleRetired()"
+          >
+            <app-icon
+              [name]="showRetired() ? 'lucideChevronDown' : 'lucideChevronRight'"
+              class="text-xs"
+            />
+            {{ 'admin.publications.group.retired' | transloco }}
+            <span class="text-fg-subtle">({{ retired().length }})</span>
+          </button>
+
+          @if (showRetired()) {
+            <!-- The trailing column is Status, not row actions, so it is not pinned. -->
+            <div class="admin-card is-unpinned">
+              <table class="niord-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'admin.publications.column.name' | transloco }}</th>
+                    <th>{{ 'admin.publications.column.seriesId' | transloco }}</th>
+                    <th>{{ 'admin.publications.column.status' | transloco }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (series of retired(); track series.seriesId) {
+                    <!--
+                      The row carries the click, and the name is a real link
+                      inside it -- the same shape the issue rows use. A row that
+                      only listens for a click is unreachable without a mouse and
+                      cannot be opened in a second tab; the link's Enter lands on
+                      the row through the same handler rather than through a
+                      second one that can drift from it.
+                    -->
+                    <tr
+                      class="row-interactive"
+                      [appRowLink]="[series.seriesId]"
+                      (appRowLinkActivate)="select(series)"
+                    >
+                      <td>
+                        <a appRowLinkAnchor class="row-link block">
+                          {{ name(series) }}
+                        </a>
+                      </td>
+                      <td class="font-mono text-xs">{{ series.seriesId }}</td>
+                      <td>
+                        <span [class]="'status-badge ' + badgeClass(series)">{{
+                          statusKey(series) | transloco
+                        }}</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+    }
+  }
+
+  <!--
+    Both editors exist only while their drawer does. Each reads the lists its
+    pickers offer as it is built, so one standing here permanently would fetch
+    them on every visit to this page, opened or not.
+
+    Two events, two steps: `closed` clears the MODEL, which starts the slide-out
+    inside an editor that is still alive; `hidden` arrives when the pane is gone
+    and clears the mount, which destroys it. Reopening mid-slide finds the
+    component still there, so the drawer slides back in and `hidden` never comes.
+  -->
+  @if (oneOffMounted()) {
+    <app-one-off-editor
+      [model]="oneOffModel()"
+      (closed)="oneOffModel.set(undefined)"
+      (hidden)="oneOffMounted.set(false)"
+      (saved)="onOneOffSaved()"
+    />
+  }
+
+  @if (editorMounted()) {
+    <app-publication-series-editor
+      [model]="editorModel()"
+      (saved)="onSeriesSaved($event)"
+      (closed)="editorModel.set(undefined)"
+      (hidden)="editorMounted.set(false)"
+    />
+  }
+
+  <!--
+    The next issue is REVIEWED before it is created: the draft comes from the
+    server, so the period on screen is the one the create would actually use.
+  -->
+  @if (draftSeries(); as draftFor) {
+    <app-publication-issue-draft-dialog
+      [(visible)]="draftDialogOpen"
+      [seriesId]="draftFor.seriesId"
+      [seed]="draftSeed()"
+      [working]="facade.issueCreating()"
+      [errorKey]="facade.createIssueErrorKey()"
+      (submitted)="submitDraft($event)"
+    />
+  }
+
+  <!--
+    Moving a one-off changes which desk administers it, so it asks why and the
+    picker offers only the domains this admin could actually move it to.
+  -->
+  <app-publication-transfer-dialog
+    [(visible)]="transferDialogOpen"
+    [ownerId]="transferOwnerId()"
+    [working]="transferWorking()"
+    [errorKey]="transferErrorKey()"
+    [errorDetail]="transferErrorDetail()"
+    (submitted)="submitTransfer($event)"
+  />
+
+  <!--
+    Taking a one-off off the public site withdraws the issue behind it, which is
+    why the reason is asked for rather than assumed.
+  -->
+  <app-publication-reason-dialog
+    [(visible)]="withdrawDialogOpen"
+    headerKey="admin.publications.oneOff.withdrawTitle"
+    effectKey="admin.publications.oneOff.withdrawEffect"
+    confirmKey="admin.publications.oneOff.withdraw"
+    [working]="withdrawWorking()"
+    [errorKey]="withdrawErrorKey()"
+    (submitted)="submitWithdraw($event)"
+  />
+
+  <app-json-import-dialog
+    titleKey="admin.publications.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.publications.label"
+    jobLink="/sysadmin/batch/publication-series-import"
+    (closed)="facade.refresh()"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

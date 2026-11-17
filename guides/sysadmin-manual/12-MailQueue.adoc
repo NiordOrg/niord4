@@ -1,0 +1,91 @@
+
+:imagesdir: images
+
+[#mail-queue]
+== Mail Queue
+
+Niord does not send a mail at once: it puts it in its _mail queue_ and sends it from there. The _Mail Queue_ page
+lets a system administrator look through every mail in the queue, sent or not. You open it from *Sysadmin* ->
+*Mail Queue*. The page only shows mails: it cannot send, resend or delete one.
+
+image::MailQueuePage.png[Mail Queue, 800]
+
+The picture shows the list filtered on the subject of one mail (see <<mail-filtering,Mail Filtering>>).
+
+Mails in Niord come from a few places:
+
+. An editor mails a selection of messages from the _Messages_ page, as described in the
+  link:../editor-manual/manual.html#e-mail-selection-action[E-mail Selection Action] section of the editors'
+  manual.
+. An editor who writes a comment to a message can mail it to recipients, as described in the
+  link:../editor-manual/manual.html#comments-editor-page[Comments Editor Page] section.
+. Most mails are sent by mailing lists, as described in the <<mailing-lists,Mailing Lists>> chapter.
+
+Niord deletes a mail from the queue when it is older than the number of days in the setting `mailDeleteAfterDays`
+(30 unless it is changed). The page says so above the list ("NB: Mails get deleted after 30 days."). With a value of
+0 or less, Niord deletes no mail, and the page shows no such note.
+
+[#sending-mails]
+=== Sending Mails
+
+A new mail in the queue is _Pending_. Every minute, Niord sends the pending mails that are due, at most as many as
+the setting `mailMaxPerMinute` allows. A mail the mail server accepts becomes _Sent_. When sending fails, Niord
+keeps the error with the mail and tries again later: after 1, 5, 15 and then 60 minutes. When the fifth attempt
+fails too, the mail becomes _Error_, and Niord does not try again.
+
+So check the queue now and then for mails with the status _Error_, and put right what caused them, such as a
+mistyped address of a user or a contact.
+
+The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>):
+
+* `ALL` sends every mail.
+* A comma-separated list of addresses sends mail only to those addresses; the other recipients are left out, and a
+  mail with no recipient left fails.
+* `LOG`, the value a new deployment starts with, sends no mail at all: Niord only pretends to send it, and the
+  queue still shows it as _Sent_. Set the setting to `ALL` when the deployment is to send mail.
+
+Niord reads these settings when the server starts, so a change takes effect at the next restart of the server.
+
+[#mail-filtering]
+=== Mail Filtering
+
+The queue may hold thousands of mails, so the list shows 20 mails at a time, with a pager below it. The line above
+the list says how many mails match the filter. The _Refresh_ button at the right, two circling arrows, searches
+again with the same filter; the list does not refresh by itself.
+
+The fields above the list filter it:
+
+[cols="30,70",options="header"]
+|===
+| Filter
+| Description
+
+| Recipient
+| Matches the addresses of the recipients.
+
+| Sender
+| Matches the address of the sender.
+
+| Subject
+| Matches the subject of the mails.
+
+| All, Pending, Sent, Error
+| Shows the mails of one status, or of all of them.
+
+| From date, To date
+| The two date fields with a calendar mark, after the status buttons: the first is the _From date_, the second the
+  _To date_. They show the mails put in the queue within these dates. Either can be left empty.
+
+|===
+
+The list shows when each mail was put in the queue, its status, its sender, its first recipient (and how many
+others it has) and its subject.
+
+[#mail-details]
+=== Mail Details
+
+Click the *Open mail details* button (the envelope) at the end of a row to see the whole mail: its sender and
+recipients, when it was put in the queue and when it was sent, the last error and the number of attempts when
+sending failed, its subject and its content.
+
+image::MailQueueDetails.png[Mail Details Dialog, 400]

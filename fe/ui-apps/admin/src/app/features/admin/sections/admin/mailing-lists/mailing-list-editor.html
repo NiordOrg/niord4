@@ -1,0 +1,111 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  size="wide"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <label for="mailing-list-id" class="text-sm font-medium text-fg-title">
+          {{ 'admin.mailingLists.editor.id' | transloco }}
+        </label>
+        <input
+          id="mailing-list-id"
+          type="text"
+          class="text-input"
+          autocapitalize="off"
+          autocomplete="off"
+          [formField]="form.mailingListId"
+        />
+      </div>
+
+      <div class="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          id="mailing-list-active"
+          class="checkbox"
+          [formField]="form.active"
+        />
+        <label for="mailing-list-active">{{
+          'admin.mailingLists.editor.active' | transloco
+        }}</label>
+      </div>
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.mailingLists.editor.name' | transloco }}
+        </legend>
+        <div class="flex flex-col gap-2">
+          @for (desc of form.descs().value(); track desc.lang; let i = $index) {
+            <app-localized-text-input
+              [formField]="form.descs[i].name"
+              [lang]="desc.lang"
+              ariaLabelKey="admin.mailingLists.editor.name"
+            />
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="mb-1 text-sm font-medium text-fg-title">
+          {{ 'admin.mailingLists.editor.description' | transloco }}
+        </legend>
+        <div class="flex flex-col gap-2">
+          @for (desc of form.descs().value(); track desc.lang; let i = $index) {
+            <app-localized-text-input
+              [formField]="form.descs[i].description"
+              [lang]="desc.lang"
+              [multiline]="true"
+              ariaLabelKey="admin.mailingLists.editor.description"
+            />
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="flex flex-col gap-2">
+        <div class="mb-1 flex items-center justify-between">
+          <legend class="text-sm font-medium text-fg-title">
+            {{ 'admin.mailingLists.editor.triggers' | transloco }}
+          </legend>
+          <button
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded border border-dashed border-surface-300 px-2.5 py-1 text-xs text-fg-muted hover:border-primary hover:text-primary dark:border-surface-600"
+            (click)="addTrigger()"
+          >
+            <app-icon name="lucidePlus" />
+            <span>{{ 'admin.mailingLists.editor.addTrigger' | transloco }}</span>
+          </button>
+        </div>
+        <div class="flex flex-col gap-2">
+          @for (trigger of form.triggers().value(); track $index; let i = $index) {
+            <app-trigger-card
+              [triggerField]="form.triggers[i]"
+              [index]="i"
+              (duplicate)="copyTrigger(i)"
+              (remove)="removeTrigger(i)"
+              (test)="onTestTrigger(i)"
+            />
+          }
+        </div>
+      </fieldset>
+
+      <!-- Hidden submit makes Enter submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.mailingLists.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.mailingLists.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>
+
+<!-- Test dialog layers ABOVE the drawer (a dialog over a drawer is permitted; never two drawers). -->
+<app-trigger-test-dialog [model]="testModel()" (closed)="testTriggerIndex.set(undefined)" />

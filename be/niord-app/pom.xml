@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.niord</groupId>
+        <artifactId>niord-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- The generic, English-language Niord application: the reference deployable of the
+         base library, with no country content of its own.
+
+         niord-base ships the code this module needs to be a complete application - the
+         English backend texts (defaults/base/texts/en/) and the English-only
+         settings file (defaults/base/settings.json: modelLanguages/siteLanguages = ["en"]).
+         The English FreeMarker templates and scripts are not in it: they are bootstrap data
+         (niord/bootstrap/templates/, published as the niord-bootstrap zip), which a new
+         database gets once through the bootstrap command.
+         A country deployable (niord-dk) is the same thing plus its own overlay resources.
+
+         So this module carries no resources beyond configuration: it is the @SpringBootApplication
+         class and the deployment-tier dependencies (JDBC driver, Liquibase, JMS broker) that a
+         library deliberately does not ship. -->
+    <groupId>org.niord.app</groupId>
+    <artifactId>niord-app</artifactId>
+    <packaging>jar</packaging>
+    <name>Niord (generic English application)</name>
+
+    <properties>
+        <!-- Default the run profile so `mvn -pl niord-app spring-boot:run` needs no -D. The
+             spring-boot-maven-plugin reads the `spring-boot.run.profiles` user property; a
+             -Dspring-boot.run.profiles=... on the command line still wins over this. -->
+        <spring-boot.run.profiles>local</spring-boot.run.profiles>
+
+        <!-- Override the Spring Boot 4.0.7 BOM's Artemis 2.43.0: that version's
+             AuditLogger.getCaller() calls the JDK-24-removed Subject.getSubject() while the
+             embedded broker initialises, so the broker fails to start on Java 25 (ARTEMIS-5374).
+             2.44.0 was the first release with that fix; 2.54.0 additionally carries the
+             CVE-2026-27446 (critical) fix from 2.52.0 while staying above the Java-25 floor.
+             Mirrors the identical override in niord-dk. -->
+        <artemis.version>2.54.0</artemis.version>
+        <!-- A deployable ships as a container image, never as a jar in GitHub Packages
+             (be/docs/cicd/design.md §2.1): keep it out of `mvn deploy`. -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <!-- No country build group: this is the base product's own deployable, it lacks the
+             Testcontainers and RestAssured test dependencies the group's ITs need, and niord-base runs
+             the same tests on the same code. -->
+        <niord.countryGroup.skip>true</niord.countryGroup.skip>
+    </properties>
+
+    <dependencies>
+        <!-- The whole base library (brings spring-data-jpa, spring-web, security, oauth2,
+             mail, geotools, the English resource bundles, ... transitively; the templates
+             are bootstrap data, not in the library). -->
+        <dependency>
+            <groupId>org.niord.base</groupId>
+            <artifactId>niord-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- PostgreSQL driver. With only this driver on the classpath, Hibernate 7 auto-selects
+             the PostgreSQL dialect; hibernate-spatial (from niord-base) then contributes the
+             PostGIS spatial function support. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Liquibase manages the database schema on application bootstrap. The Spring Boot 4
+             STARTER is required, not bare liquibase-core: Spring Boot 4 splits autoconfiguration
+             into per-technology modules, so the starter brings both liquibase-core AND the
+             spring-boot-liquibase autoconfiguration that actually runs the changelog. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-liquibase</artifactId>
+        </dependency>
+
+        <!-- JMS: the app injects a jakarta.jms.ConnectionFactory (message-status topic). An
+             embedded ActiveMQ Artemis broker provides a real ConnectionFactory so the context starts. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-artemis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.artemis</groupId>
+            <artifactId>artemis-jakarta-server</artifactId>
+        </dependency>
+
+        <!-- Dev-time only: on `mvn spring-boot:run` this starts ../docker-compose.yml and blocks
+             until every published port accepts connections, so the app never races the database or
+             Keycloak. It deactivates itself when the app runs from a packaged jar, which is why it
+             is <optional> - it never reaches a deployment or a downstream consumer. Configured
+             (file location, start-only lifecycle) in application-local.yml. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-docker-compose</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Dev-time only, like docker-compose above: hot restart. While the app runs under
+             `spring-boot:run`, devtools watches every classpath DIRECTORY and restarts the
+             application (warm JVM, seconds) when one changes. This module's own target/classes is
+             watched out of the box; ../niord/target/classes is a watched directory too because the
+             spring-boot-maven-plugin configuration below puts it on the run classpath. So the loop
+             is: keep ./run.sh running, edit code, `./reload.sh` (mvnw compile) in a second
+             terminal — no reinstall, no JVM cold start. Deactivates itself in a packaged jar
+             (production), and <optional> keeps it out of downstream consumers. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ===== Test ===== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- The base library's test-jar carries org.niord.test.NiordTestApplication, the
+             application class the IT suite boots. ApplicationWiringTest compares it against the one
+             in this module on four named axes — a drift guard on the axes that matter, not a proof
+             of equivalence; see that test's javadoc for what it misses and for the composed-annotation
+             fix that should replace it. -->
+        <dependency>
+            <groupId>org.niord.base</groupId>
+            <artifactId>niord-base</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Make the module a runnable Spring Boot application. -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- Dev-loop for the base library, for CLI-invoked goals ONLY: the default-cli
+                         execution id scopes this to `mvnw spring-boot:run` and never to the
+                         lifecycle-bound repackage, so the deployment jar keeps its niord-base
+                         dependency untouched.
+
+                         `-pl niord-app` resolves niord-base as the ~/.m2 JAR, which has two
+                         consequences for a RUNNING app: edits under niord/ are invisible until an
+                         install, and devtools never restarts for them (it watches classpath
+                         DIRECTORIES, not jars). So swap the artifact for its build output: drop the
+                         jar from the run classpath (excludes) and put ../niord/target/classes there
+                         instead (additionalClasspathElements). A plain `mvnw -pl niord compile`
+                         (see ../reload.sh) then refreshes the directory and devtools restarts the
+                         app with the new code, warm JVM.
+
+                         A SWAP, not a shadowing overlay, deliberately: with both on the classpath
+                         every resource in niord-base exists twice, and Liquibase 5 hard-fails on
+                         duplicate changelog paths (duplicateFileMode=ERROR default) before the app
+                         even starts. Exclusion leaves exactly one copy of everything.
+
+                         The flip side: spring-boot:run now REQUIRES niord/target/classes to exist
+                         and be current — the jar no longer backs it up. run.sh guarantees that on
+                         every start (its install step, or its fast-path check that nothing changed
+                         since the last one); only a manual `mvnw -pl niord clean` between an
+                         install and a bare spring-boot:run can break it. -->
+                    <execution>
+                        <id>default-cli</id>
+                        <configuration>
+                            <additionalClasspathElements>
+                                <additionalClasspathElement>${project.basedir}/../niord/target/classes</additionalClasspathElement>
+                            </additionalClasspathElements>
+                            <excludes>
+                                <exclude>
+                                    <groupId>org.niord.base</groupId>
+                                    <artifactId>niord-base</artifactId>
+                                </exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- A local run labels itself: the `mode` setting is `production` in
+                         defaults/base/settings.json and in the backend's fallback, and both frontends
+                         show a ribbon for any other mode. Start-up adds a setting only to a database
+                         that lacks it and a read never writes one, so the override is applied where a
+                         read sees it first: SettingsService get()/peek() consult System.getenv(key)
+                         right after System.getProperty(key) and before the database. A deliberate
+                         -Dmode=... still wins over it.
+
+                         Why an ENVIRONMENT VARIABLE rather than a -D in <jvmArguments>: jvmArguments
+                         is a single string bound to the `spring-boot.run.jvmArguments` user property,
+                         so any -Dspring-boot.run.jvmArguments=... on the command line REPLACES it
+                         wholesale and would silently drop this override when a developer passes their
+                         own JVM argument (e.g. to disable the compose integration and use a database
+                         they started themselves). environmentVariables is a separate, map-valued plugin
+                         parameter with no user property, so the two compose instead of colliding.
+
+                         Scoped to the forked local JVM; nothing is written to a deployment. -->
+                    <environmentVariables>
+                        <mode>development</mode>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

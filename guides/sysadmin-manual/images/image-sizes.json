@@ -1,0 +1,312 @@
+{
+  "BatchJobExecuteJavaScript.png": {
+    "cssWidth": 736,
+    "cssHeight": 554,
+    "printWidth": 460
+  },
+  "BatchJobLogDialog.png": {
+    "cssWidth": 832,
+    "cssHeight": 473,
+    "printWidth": 520
+  },
+  "BatchJobRestart.png": {
+    "cssWidth": 1280,
+    "cssHeight": 542,
+    "printWidth": 800
+  },
+  "BatchJobRunning.png": {
+    "cssWidth": 1280,
+    "cssHeight": 542,
+    "printWidth": 800
+  },
+  "BatchJobsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 542,
+    "printWidth": 800
+  },
+  "BatchSetUploadDialog.png": {
+    "cssWidth": 448,
+    "cssHeight": 395,
+    "printWidth": 280
+  },
+  "CategoriesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 756,
+    "printWidth": 800
+  },
+  "CategoryEditorPanel.png": {
+    "cssWidth": 950,
+    "cssHeight": 1521,
+    "printWidth": 594
+  },
+  "CategoryStdTemplateFields.png": {
+    "cssWidth": 824,
+    "cssHeight": 338,
+    "printWidth": 515
+  },
+  "CategoryTemplateParams.png": {
+    "cssWidth": 824,
+    "cssHeight": 638,
+    "printWidth": 515
+  },
+  "CategoryTemplateResult.png": {
+    "cssWidth": 832,
+    "cssHeight": 222,
+    "printWidth": 520
+  },
+  "DictionariesExtendedPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 576,
+    "printWidth": 800
+  },
+  "DictionariesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 770,
+    "printWidth": 800
+  },
+  "DictionaryDeleteConfirm.png": {
+    "cssWidth": 384,
+    "cssHeight": 256,
+    "printWidth": 240
+  },
+  "DictionaryEntryEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 380,
+    "printWidth": 324
+  },
+  "DictionaryEntryExtendedEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 560,
+    "printWidth": 324
+  },
+  "DictionaryImportPreview.png": {
+    "cssWidth": 960,
+    "cssHeight": 508,
+    "printWidth": 600
+  },
+  "DomainsEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 1320,
+    "printWidth": 324
+  },
+  "DomainsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 704,
+    "printWidth": 800
+  },
+  "DragHandle.png": {
+    "cssWidth": 22,
+    "cssHeight": 21,
+    "printWidth": 14
+  },
+  "FiringArea.png": {
+    "cssWidth": 1280,
+    "cssHeight": 1096,
+    "printWidth": 800
+  },
+  "FiringAreaMessages.png": {
+    "cssWidth": 1280,
+    "cssHeight": 759,
+    "printWidth": 800
+  },
+  "FiringScheduleEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 560,
+    "printWidth": 324
+  },
+  "FiringSchedulesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 542,
+    "printWidth": 800
+  },
+  "KeycloakClientMapper.png": {
+    "cssWidth": 1280,
+    "cssHeight": 795,
+    "printWidth": 800
+  },
+  "KeycloakClientRoles.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "KeycloakClients.png": {
+    "cssWidth": 1280,
+    "cssHeight": 1023,
+    "printWidth": 800
+  },
+  "KeycloakGroupAttribute.png": {
+    "cssWidth": 1280,
+    "cssHeight": 699,
+    "printWidth": 800
+  },
+  "KeycloakGroupRoles.png": {
+    "cssWidth": 1280,
+    "cssHeight": 770,
+    "printWidth": 800
+  },
+  "KeycloakGroups.png": {
+    "cssWidth": 1280,
+    "cssHeight": 795,
+    "printWidth": 800
+  },
+  "KeycloakUsers.png": {
+    "cssWidth": 1280,
+    "cssHeight": 800,
+    "printWidth": 800
+  },
+  "MailQueueDetails.png": {
+    "cssWidth": 640,
+    "cssHeight": 591,
+    "printWidth": 400
+  },
+  "MailQueuePage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 542,
+    "printWidth": 800
+  },
+  "MessageSeriesEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 880,
+    "printWidth": 324
+  },
+  "MessageSeriesNextNumber.png": {
+    "cssWidth": 248,
+    "cssHeight": 232,
+    "printWidth": 155
+  },
+  "MessageSeriesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 728,
+    "printWidth": 800
+  },
+  "NavtexTransmitterDialog.png": {
+    "cssWidth": 672,
+    "cssHeight": 514,
+    "printWidth": 420
+  },
+  "NiordIntegrationEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 800,
+    "printWidth": 324
+  },
+  "NiordIntegrationsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 542,
+    "printWidth": 800
+  },
+  "ParameterTypeAddBtn.png": {
+    "cssWidth": 225,
+    "cssHeight": 142,
+    "printWidth": 141
+  },
+  "ParameterTypeExample.png": {
+    "cssWidth": 768,
+    "cssHeight": 231,
+    "printWidth": 480
+  },
+  "ParameterTypeExample2.png": {
+    "cssWidth": 768,
+    "cssHeight": 700,
+    "printWidth": 480
+  },
+  "ParameterTypesCompositeDialog.png": {
+    "cssWidth": 640,
+    "cssHeight": 431,
+    "printWidth": 400
+  },
+  "ParameterTypesCompositeEditPage.png": {
+    "cssWidth": 819,
+    "cssHeight": 500,
+    "printWidth": 512
+  },
+  "ParameterTypesListEditPage.png": {
+    "cssWidth": 1099,
+    "cssHeight": 720,
+    "printWidth": 687
+  },
+  "ParameterTypesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 542,
+    "printWidth": 800
+  },
+  "PrintDialog.png": {
+    "cssWidth": 576,
+    "cssHeight": 437,
+    "printWidth": 360
+  },
+  "PrintReportEditPage.png": {
+    "cssWidth": 819,
+    "cssHeight": 1240,
+    "printWidth": 512
+  },
+  "PrintReportExample.png": {
+    "cssWidth": 796,
+    "cssHeight": 416,
+    "printWidth": 498
+  },
+  "PrintReportsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 609,
+    "printWidth": 800
+  },
+  "PromulgationTypeEditPage.png": {
+    "cssWidth": 819,
+    "cssHeight": 1080,
+    "printWidth": 512
+  },
+  "PromulgationTypesAddBtn.png": {
+    "cssWidth": 219,
+    "cssHeight": 218,
+    "printWidth": 137
+  },
+  "PromulgationTypesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 594,
+    "printWidth": 800
+  },
+  "ScriptResourceEditor.png": {
+    "cssWidth": 1099,
+    "cssHeight": 800,
+    "printWidth": 687
+  },
+  "ScriptResourceHistory.png": {
+    "cssWidth": 1120,
+    "cssHeight": 720,
+    "printWidth": 700
+  },
+  "ScriptResourceImportPreview.png": {
+    "cssWidth": 960,
+    "cssHeight": 720,
+    "printWidth": 600
+  },
+  "ScriptResourcesAddBtn.png": {
+    "cssWidth": 222,
+    "cssHeight": 142,
+    "printWidth": 139
+  },
+  "ScriptResourcesPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 743,
+    "printWidth": 800
+  },
+  "SettingEditPage.png": {
+    "cssWidth": 519,
+    "cssHeight": 380,
+    "printWidth": 324
+  },
+  "SettingsPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 609,
+    "printWidth": 800
+  },
+  "SysadminPage.png": {
+    "cssWidth": 1280,
+    "cssHeight": 771,
+    "printWidth": 800
+  },
+  "TwitterSettingsDialog.png": {
+    "cssWidth": 576,
+    "cssHeight": 547,
+    "printWidth": 360
+  }
+}

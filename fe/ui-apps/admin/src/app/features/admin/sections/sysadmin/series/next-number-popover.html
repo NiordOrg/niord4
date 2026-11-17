@@ -1,0 +1,58 @@
+<app-picker-popover panelWidth="fit-content" [dismissOnScroll]="false">
+  @if (shown()) {
+    <form class="flex w-64 flex-col gap-3 p-3" (submit)="$event.preventDefault(); update()">
+      <span class="text-sm font-semibold text-fg">
+        {{ 'admin.series.nextNumber.title' | transloco }}
+      </span>
+
+      @if (sequenceType() === 'YEARLY') {
+        <div class="flex flex-col gap-1">
+          <label for="next-number-year" class="text-sm font-medium text-fg-title">
+            {{ 'admin.series.nextNumber.year' | transloco }}
+          </label>
+          <!-- min/max come from the schema validators (Signal Forms reflects them). -->
+          <input
+            id="next-number-year"
+            type="number"
+            class="w-full text-input"
+            [formField]="form.year"
+            [step]="1"
+          />
+        </div>
+      }
+
+      <div class="flex flex-col gap-1">
+        <label for="next-number-value" class="text-sm font-medium text-fg-title">
+          {{ 'admin.series.nextNumber.number' | transloco }}
+        </label>
+        <div class="flex items-center gap-2">
+          <input
+            #numberField
+            id="next-number-value"
+            type="number"
+            class="min-w-0 flex-1 text-input"
+            [formField]="form.nextNumber"
+            [step]="1"
+          />
+          <button
+            type="button"
+            class="btn-secondary shrink-0"
+            [attr.title]="'admin.series.nextNumber.computeTitle' | transloco"
+            (click)="compute()"
+          >
+            {{ 'admin.series.nextNumber.compute' | transloco }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" class="btn-tertiary" (click)="close()">
+          {{ 'admin.series.nextNumber.cancel' | transloco }}
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="updateDisabled()">
+          {{ 'admin.series.nextNumber.update' | transloco }}
+        </button>
+      </div>
+    </form>
+  }
+</app-picker-popover>

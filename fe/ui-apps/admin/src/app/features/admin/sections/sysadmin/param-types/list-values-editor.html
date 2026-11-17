@@ -1,0 +1,150 @@
+<app-model-language-picker class="mb-3" [selection]="modelLanguage" />
+
+<!-- Subgrid so both cards share one auto-sized header row (heights align to the
+     taller header, no fixed px) and one 1fr body row (fills the drawer). -->
+<div class="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-[auto_1fr]">
+  <!-- Selected (ordered) -->
+  <section
+    class="flex min-h-0 flex-col overflow-hidden rounded border border-surface-200 dark:border-surface-700 md:grid md:row-span-2 md:grid-rows-subgrid"
+  >
+    <header
+      class="flex items-center justify-between gap-2 border-b border-surface-200 bg-surface-100 px-3 py-2 dark:border-surface-700 dark:bg-surface-800"
+    >
+      <span class="text-sm font-medium text-fg">
+        {{ 'admin.paramTypes.list.selected' | transloco }}
+      </span>
+      <button type="button" class="btn-tertiary text-xs" (click)="clearAll()">
+        {{ 'admin.paramTypes.list.clearAll' | transloco }}
+      </button>
+    </header>
+    <!-- Key/value truncate to the column edge (full text on hover via title) so the
+         card never needs a horizontal scrollbar. -->
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      <table class="niord-table">
+        <tbody>
+          @for (entry of selectedRows(); track entry.key; let index = $index) {
+            <tr>
+              <td class="max-w-0 font-mono text-xs">
+                <div class="truncate" [title]="entry.key">{{ entry.key }}</div>
+              </td>
+              <td class="max-w-0">
+                @let text = modelLanguage.text(entry.descs, 'value');
+                <div class="truncate" [title]="text.value" [attr.lang]="text.lang">
+                  {{ text.value }}
+                </div>
+              </td>
+              <td class="w-28 text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button"
+                  [disabled]="index === 0"
+                  (click)="moveUp(index)"
+                  [attr.aria-label]="'admin.paramTypes.list.moveUp' | transloco"
+                >
+                  <app-icon name="lucideArrowUp" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  [disabled]="index === selectedRows().length - 1"
+                  (click)="moveDown(index)"
+                  [attr.aria-label]="'admin.paramTypes.list.moveDown' | transloco"
+                >
+                  <app-icon name="lucideArrowDown" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button hover:text-danger"
+                  (click)="removeValue(entry)"
+                  [attr.aria-label]="'admin.paramTypes.list.remove' | transloco"
+                >
+                  <app-icon name="lucideMinus" />
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="py-2 text-sm text-fg-muted">
+                {{ 'admin.paramTypes.list.noneSelected' | transloco }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Available -->
+  <section
+    class="flex min-h-0 flex-col overflow-hidden rounded border border-surface-200 dark:border-surface-700 md:grid md:row-span-2 md:grid-rows-subgrid"
+  >
+    <header
+      class="flex items-center gap-2 border-b border-surface-200 bg-surface-100 px-3 py-2 dark:border-surface-700 dark:bg-surface-800"
+    >
+      <span class="relative flex-1">
+        <input
+          type="text"
+          class="w-full text-input"
+          [value]="dictSearch()"
+          (input)="dictSearch.set($any($event.target).value)"
+          [placeholder]="'admin.paramTypes.list.filterPlaceholder' | transloco"
+        />
+        @if (dictSearch() !== '') {
+          <button
+            type="button"
+            class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+            [attr.aria-label]="'admin.paramTypes.list.clearFilter' | transloco"
+            (click)="dictSearch.set('')"
+          >
+            <app-icon name="lucideX" class="text-xs" />
+          </button>
+        }
+      </span>
+      <div class="flex-1">
+        <app-select
+          class="w-full"
+          [options]="dictionaryNames()"
+          [ngModel]="currentDictionaryName()"
+          (ngModelChange)="onDictionaryChange($event)"
+          [ariaLabel]="'admin.paramTypes.list.dictionary' | transloco"
+          [scrollHeight]="'min(20rem, 60vh)'"
+        />
+      </div>
+    </header>
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      <table class="niord-table">
+        <tbody>
+          @for (entry of available(); track entry.key) {
+            <tr>
+              <td class="max-w-0 font-mono text-xs">
+                <div class="truncate" [title]="entry.key">{{ entry.key }}</div>
+              </td>
+              <td class="max-w-0">
+                @let text = modelLanguage.text(entry.descs, 'value');
+                <div class="truncate" [title]="text.value" [attr.lang]="text.lang">
+                  {{ text.value }}
+                </div>
+              </td>
+              <td class="w-12 text-right">
+                <button
+                  type="button"
+                  class="icon-button"
+                  (click)="addValue(entry)"
+                  [attr.aria-label]="'admin.paramTypes.list.add' | transloco"
+                >
+                  <app-icon name="lucidePlus" />
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="py-2 text-sm text-fg-muted">
+                {{ 'admin.paramTypes.list.noneAvailable' | transloco }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

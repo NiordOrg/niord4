@@ -1,0 +1,54 @@
+/*
+ * Copyright 2017 Danish Maritime Authority.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.user;
+
+/**
+ * Defines the user roles used throughout the Niord system.
+ * <p>
+ * The roles are configured per domain in Keycloak and defined as composite roles, such that
+ * "sysadmin" implies "admin", which implies "editor", which implies "user", but not vice versa.
+ * <p>
+ * NB: They have been defined as string constants rather than enums, because it then
+ * allows us to use the roles in, say, @RolesAllowed annotations.
+ */
+public interface Roles {
+
+    String USER = "user";
+    String EDITOR = "editor";
+    String ADMIN = "admin";
+    String SYSADMIN = "sysadmin";
+
+    /**
+     * The right to add or remove a publication issue's members by hand.
+     * <p>
+     * Not part of the composite ladder above: it is a Keycloak client role granted
+     * per domain, and it is named here so the endpoints that gate on it spell it
+     * once rather than repeating the literal at every annotation.
+     * <p>
+     * The endpoints that require it accept ADMIN alongside it. That pairing is a
+     * transitional fallback added on 2026-08-22, because the realms the running
+     * deployments authenticate against do not carry this role yet: without the
+     * fallback the curation endpoints would be callable by nobody. The realm
+     * exports in this repository (keycloak/niord-realm-local.json,
+     * k8s/helm/niord/files/niord-realm.json and the test realm under
+     * niord/src/test/resources/keycloak) do carry it, so the fallback is to be
+     * removed one release after the deployed realms are re-imported, by dropping
+     * ADMIN from the annotations that name both. Which endpoints those are, and
+     * who each one admits, is asserted in full by the tier-matrix test.
+     */
+    String PUBLICATION_CURATE = "publication-curate";
+}

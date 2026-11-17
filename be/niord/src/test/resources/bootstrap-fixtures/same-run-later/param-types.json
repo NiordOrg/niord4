@@ -1,0 +1,120 @@
+[
+  {
+    "type": "COMPOSITE",
+    "name": "it_composite",
+    "templateParams": [
+      {
+        "paramId": "p1",
+        "type": "text",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [
+          {
+            "name": "FIRST",
+            "lang": "en"
+          },
+          {
+            "name": "Første",
+            "lang": "da"
+          }
+        ]
+      },
+      {
+        "paramId": "p3",
+        "type": "text",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [
+          {
+            "name": "Third",
+            "lang": "en"
+          },
+          {
+            "name": "Tredje",
+            "lang": "da"
+          }
+        ]
+      },
+      {
+        "paramId": "p1",
+        "type": "text",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [
+          {
+            "name": "First again",
+            "lang": "en"
+          },
+          {
+            "name": "Første igen",
+            "lang": "da"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "COMPOSITE",
+    "name": "it_same",
+    "templateParams": [
+      {
+        "paramId": "s1",
+        "type": "text",
+        "mandatory": false,
+        "positionList": false,
+        "descs": [
+          {
+            "name": "Same",
+            "lang": "en"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "COMPOSITE",
+    "name": "it_mandatory",
+    "templateParams": [
+      {
+        "paramId": "m1",
+        "descs": [
+          {
+            "name": "Mandatory",
+            "lang": "en"
+          },
+          {
+            "name": "Obligatorisk",
+            "lang": "da"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "LIST",
+    "name": "it_list",
+    "values": [
+      {
+        "key": "k1"
+      },
+      {
+        "key": "k2"
+      }
+    ]
+  },
+  {
+    "type": "COMPOSITE",
+    "name": "it_typed",
+    "templateParams": [
+      {
+        "paramId": "t1",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "type": "LIST",
+    "name": "it_list_emptied",
+    "values": []
+  }
+]

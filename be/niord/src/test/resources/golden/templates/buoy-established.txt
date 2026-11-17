@@ -1,0 +1,189 @@
+# Buoy established  [templates/tmpl/buoy-established.ftl]
+# std fields [type, promulgation, areas, positions], params [ParamDef[paramId=aton, type=buoy_by_type, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy Hals Barre has been established in pos. 56° 00.0'N - 012° 00.0'E. /
+NAVTEX:
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 56-00.0N 012-00.0E.
+AUDIO:   A black-yellow buoy Hals Barre has been established in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy Hals Barre has been established in pos. 56° 00.0'N - 012° 00.0'E. /
+NAVTEX:
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 56-00.0N 012-00.0E.
+AUDIO:   A black-yellow buoy Hals Barre has been established in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy Hals Barre has been established in pos. 61° 06.0'N - 045° 15.0'W. /
+NAVTEX:
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 61-06.0N 045-15.0W.
+AUDIO:   A black-yellow buoy Hals Barre has been established in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. / A black-yellow buoy Hals Barre has been established in pos. 55° 36.0'N - 010° 45.0'E. / A black-yellow buoy Hals Barre has been established in pos. 55° 42.0'N - 011° 00.0'E. /
+NAVTEX:
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 55-36.0N 010-45.0E.
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 55-42.0N 011-00.0E.
+AUDIO:   A black-yellow buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East. A black-yellow buoy Hals Barre has been established in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East. A black-yellow buoy Hals Barre has been established in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: 
+NAVTEX:
+  | 
+  |     
+AUDIO:   null
+LINT:    details: empty
+LINT:    navtex: empty
+
+### param aton_type = aton.type.buoy.black_yellow
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.yellow_black
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A yellow-black buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | YELLOW-BLACK BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A yellow-black buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.black_yellow_black
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow-black buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW-BLACK BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow-black buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.yellow_black_yellow
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A yellow-black-yellow buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | YELLOW-BLACK-YELLOW BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A yellow-black-yellow buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.green
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A green buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | GREEN BUOY HALS BARRE ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A green buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.red
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A red buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | RED BUOY HALS BARRE ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A red buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.starboard_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A green-red-green buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | GREEN-RED-GREEN BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A green-red-green buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.port_bifurcation
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A red-green-red buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | RED-GREEN-RED BUOY HALS BARRE
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A red-green-red buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.red_white
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A red-white bouy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | RED-WHITE BOUY HALS BARRE ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A red-white bouy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.yellow
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A yellow buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | YELLOW BUOY HALS BARRE ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A yellow buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = aton.type.buoy.black_red
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-red buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-RED BUOY HALS BARRE ESTABLISHED
+  | 55-30.0N 010-30.0E.
+AUDIO:   A black-red buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_type = empty
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A buoy Hals Barre has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | A BUOY HALS BARRE ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A buoy Hals Barre has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW BUOY ESTABLISHED 55-30.0N
+  | 010-30.0E.
+AUDIO:   A black-yellow buoy has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Buoy established.
+SUBJECT: Buoy established
+DETAILS: A black-yellow buoy St. John's Point has been established in pos. 55° 30.0'N - 010° 30.0'E. /
+NAVTEX:
+  | BLACK-YELLOW BUOY ST. JOHN'S POINT
+  | ESTABLISHED 55-30.0N 010-30.0E.
+AUDIO:   A black-yellow buoy St. John's Point has been established in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+

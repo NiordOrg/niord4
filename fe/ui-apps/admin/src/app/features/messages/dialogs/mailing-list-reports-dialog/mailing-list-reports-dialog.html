@@ -1,0 +1,81 @@
+<app-dialog
+  [visible]="visible()"
+  (visibleChange)="onVisibleChange($event)"
+  [header]="'reports.title' | transloco"
+  [style]="{ width: '52rem', maxWidth: '92vw' }"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2">
+      <span class="font-semibold">{{ 'reports.title' | transloco }}</span>
+      <app-help-anchor section="report-action" />
+    </div>
+  </ng-template>
+
+  <div class="flex flex-col gap-4">
+    @if (reports(); as reportList) {
+      @if (reportList.length === 0) {
+        <p class="py-4 text-center text-fg-muted">
+          {{ 'messages.mailingListReports.empty' | transloco }}
+        </p>
+      } @else {
+        <div class="rounded border border-surface-200 dark:border-surface-700">
+          <table class="niord-table">
+            <thead>
+              <tr>
+                <th>{{ 'reports.report' | transloco }}</th>
+                <th>{{ 'reports.schedule' | transloco }}</th>
+                <th class="w-28"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (report of reportList; track report.id) {
+                <tr>
+                  <td class="font-medium">{{ report.name }}</td>
+                  <td class="text-fg-muted">{{ scheduleText(report) }}</td>
+                  <td class="text-right">
+                    <button
+                      type="button"
+                      class="btn-primary text-xs"
+                      [disabled]="executing()"
+                      (click)="execute(report)"
+                    >
+                      <app-icon name="lucidePlay" class="mr-1 text-xs" />
+                      {{ 'report.execute' | transloco }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    } @else {
+      <p class="py-4 text-center text-fg-muted">
+        {{ 'messages.mailingListReports.loading' | transloco }}
+      </p>
+    }
+
+    @if (result(); as html) {
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'term.result' | transloco }}
+          </span>
+          @if (resultReport(); as report) {
+            <button
+              type="button"
+              class="link-button is-subtle inline-flex items-center gap-1 text-xs"
+              (click)="openInNewWindow(report)"
+            >
+              <app-icon name="lucideExternalLink" />
+              {{ 'term.new_window' | transloco }}
+            </button>
+          }
+        </div>
+        <div class="h-96 overflow-hidden rounded border border-surface-200 dark:border-surface-700">
+          <app-sandboxed-html [html]="html" [title]="'term.result' | transloco" />
+        </div>
+      </div>
+    }
+  </div>
+</app-dialog>

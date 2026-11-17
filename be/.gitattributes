@@ -1,0 +1,40 @@
+# The Maven wrapper ships both flavours; each must keep its own endings
+# regardless of the cloning platform. mvnw is a /bin/sh script and breaks
+# outright if it is checked out with CRLF.
+mvnw       text eol=lf
+mvnw.cmd   text eol=crlf
+
+# The publication fixtures are hashed byte-for-byte by hashes.txt, and the
+# capture script writes LF. A CRLF checkout changes every hash and fires the
+# drift guard on a clean clone -- a false alarm that would teach people to
+# regenerate on sight, which is exactly what the guard exists to prevent.
+*.mjs                                     text eol=lf
+niord/src/test/resources/fixtures/**      text eol=lf
+
+# The rule-id export carries a SHA-256 of its source section in the header and is
+# compared byte-for-byte (InvariantManifestTest). CRLF would break that comparison
+# on Windows. entity-fields.json is generated the same way.
+niord/src/test/resources/rule-ids.txt          text eol=lf
+niord/src/test/resources/entity-fields.json    text eol=lf
+
+# The payload golden files are compared byte-for-byte (PublicationPayloadContractTest).
+niord/src/test/resources/golden/**             text eol=lf
+
+# The bootstrap folder is zipped as checked out (start-local.sh), and the import
+# compares its templates byte for byte with the LF release files
+# (ScriptResourceImportService.sameContent): a CRLF checkout makes the first
+# release's file preview spurious overwrites on a fresh local database.
+niord/bootstrap/**                             text=auto eol=lf
+
+# The bootstrap fixtures are zipped as checked out and read back byte for byte
+# (BootstrapArchiveTest compares the minimal archive's domains.json with LF text):
+# a CRLF checkout fails the comparison on Windows.
+niord/src/test/resources/bootstrap-fixtures/** text=auto eol=lf
+
+# The sample's sources are zipped and captured as checked out (niord/scripts/regen-sample.sh), and the
+# regeneration must rebuild the committed sample byte for byte on any platform.
+niord/sample/**                                text=auto eol=lf
+
+# The integration suite's fixture is a dump that niord/scripts/regen-test-seed-postgres.sh rebuilds byte for byte,
+# with LF, on any platform: a CRLF checkout (the Windows default without this line) would make every rebuild differ.
+niord/src/test/resources/db/**                 text=auto eol=lf

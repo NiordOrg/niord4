@@ -1,0 +1,133 @@
+# Light destroyed  [templates/tmpl/light-destroyed.ftl]
+# std fields [type, promulgation, areas, positions, markings], params [ParamDef[paramId=aton_name, type=aton_name, positionList=true]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 55-30.0N 010-30.0E
+  | DESTROYED. FOUNDATION OF LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 56° 00.0'N - 012° 00.0'E has been destroyed and makes an obstruction. The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 56-00.0N 012-00.0E
+  | DESTROYED. FOUNDATION OF LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East has been destroyed and makes an obstruction. The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 56° 00.0'N - 012° 00.0'E has been destroyed and makes an obstruction. The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 56-00.0N 012-00.0E
+  | DESTROYED. FOUNDATION OF LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East has been destroyed and makes an obstruction. The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 61° 06.0'N - 045° 15.0'W has been destroyed and makes an obstruction. The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 61-06.0N 045-15.0W
+  | DESTROYED. FOUNDATION OF LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West has been destroyed and makes an obstruction. The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The light Hals Barre in pos. 55° 36.0'N - 010° 45.0'E has been destroyed and makes an obstruction. The light Hals Barre in pos. 55° 42.0'N - 011° 00.0'E has been destroyed and makes an obstruction. The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 55-30.0N 010-30.0E
+  | DESTROYED. LIGHT HALS BARRE 55-36.0N
+  | 010-45.0E DESTROYED. LIGHT HALS BARRE
+  | 55-42.0N 011-00.0E DESTROYED.
+  | FOUNDATION OF LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The light Hals Barre in position 55 degrees 36.0 min. North - 010 degrees 45.0 min. East has been destroyed and makes an obstruction. The light Hals Barre in position 55 degrees 42.0 min. North - 011 degrees 00.0 min. East has been destroyed and makes an obstruction. The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | FOUNDATION OF LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### param aton_name = empty
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT 55-30.0N 010-30.0E DESTROYED.
+  | FOUNDATION OF LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### param aton_name = with an apostrophe
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light St. John's Point in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The foundation of the light is unmarked. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT ST. JOHN'S POINT 55-30.0N
+  | 010-30.0E DESTROYED. FOUNDATION OF
+  | LIGHT UNMARKED.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light St. John's Point in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The foundation of the light is unmarked. Mariners are advised to keep well clear.
+
+### markings: one buoy with light, distance and bearing
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The foundation of the light is buoyed with a black-yellow light buoy showing 3 quick flashes every 10 seconds approx. 50m E of the position. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 55-30.0N 010-30.0E
+  | DESTROYED. FOUNDATION OF LIGHT BUOYED
+  | WITH BLACK-YELLOW LIGHT BUOY SHOWING
+  | Q(3)10S APPROX. 50M E OF POSITION.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The foundation of the light is buoyed with a black-yellow light buoy showing 3 quick flashes every 10 seconds approx. 50m E of the position. Mariners are advised to keep well clear.
+
+### markings: two buoys
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The foundation of the light is buoyed with a black-yellow light buoy showing 3 quick flashes every 10 seconds approx. 50m E of the position and a red buoy. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 55-30.0N 010-30.0E
+  | DESTROYED. FOUNDATION OF LIGHT BUOYED
+  | WITH BLACK-YELLOW LIGHT BUOY SHOWING
+  | Q(3)10S APPROX. 50M E OF POSITION AND
+  | RED BUOY.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The foundation of the light is buoyed with a black-yellow light buoy showing 3 quick flashes every 10 seconds approx. 50m E of the position and a red buoy. Mariners are advised to keep well clear.
+
+### markings: a buoy at distance 0
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The foundation of the light is buoyed with a green buoy. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 55-30.0N 010-30.0E
+  | DESTROYED. FOUNDATION OF LIGHT BUOYED
+  | WITH GREEN BUOY.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The foundation of the light is buoyed with a green buoy. Mariners are advised to keep well clear.
+
+### markings: other marking (red balloon)
+TITLE:   Denmark. The Baltic Sea. Light destroyed.
+SUBJECT: Light destroyed
+DETAILS: The light Hals Barre in pos. 55° 30.0'N - 010° 30.0'E has been destroyed and makes an obstruction. The foundation of the light is marked with a red balloon. / Mariners are advised to keep well clear.
+NAVTEX:
+  | LIGHT HALS BARRE 55-30.0N 010-30.0E
+  | DESTROYED. FOUNDATION OF LIGHT MARKED
+  | WITH RED BALLOON.
+  | MARINERS ADVISED TO KEEP CLEAR.
+AUDIO:   The light Hals Barre in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East has been destroyed and makes an obstruction. The foundation of the light is marked with a red balloon. Mariners are advised to keep well clear.
+

@@ -1,0 +1,13 @@
+/* TypeScript project config for the user guides' screenshot rig. Like the end-to-end suite's, it
+   covers its own folder only, so the IDE and ESLint's project service resolve its imports and
+   types. The rig imports the end-to-end suite's login helpers from ui-apps/admin/e2e/auth/, so its
+   root is the workspace, not this folder. */
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../out-tsc/guides-shots",
+    "rootDir": "..",
+    "types": []
+  },
+  "include": ["**/*.ts"]
+}

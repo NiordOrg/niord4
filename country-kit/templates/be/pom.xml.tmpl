@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!-- The parent is the base product's reactor parent at the base version this country is built
+         on, read from the base product's GitHub Packages registry (the `github` repository below; a
+         token for it comes from ~/.m2/settings.xml, server id `github`). Inheriting it gives this
+         deployable the dependency set niord-base was tested with, and the country build group:
+         niord-base's security tests and country checks, run from its test-jar. The parent version
+         is the pin of this repository: set-up, the launcher and the image job read it here,
+         niord-base below follows it as ${project.version}, and so does this artefact's own
+         version. The Base bump workflow moves it to a newer base version. -->
+    <parent>
+        <groupId>org.niord</groupId>
+        <artifactId>niord-parent</artifactId>
+        <version>{{version}}</version>
+        <relativePath/>
+    </parent>
+
+    <!-- The country's deployable: the base product's Spring Boot application with the country's
+         configuration and resources. The artifactId is the jar's name and image.yml's MODULE. -->
+    <groupId>org.niord.{{cc}}</groupId>
+    <artifactId>niord-{{cc}}</artifactId>
+    <packaging>jar</packaging>
+
+    <!-- Where the parent and niord-base come from: Maven resolves a parent with the repositories
+         the child declares, so this cannot live in the parent. Reading GitHub Packages needs a token
+         even for a public package. -->
+    <repositories>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages of the niord product</name>
+            <url>https://maven.pkg.github.com/NiordOrg/niord</url>
+            <snapshots><enabled>false</enabled></snapshots>
+            <releases><enabled>true</enabled></releases>
+        </repository>
+    </repositories>
+
+    <properties>
+        <!-- Nothing manages this library's version, and without it the pom fails validate. -->
+        <testcontainers-keycloak.version>3.4.0</testcontainers-keycloak.version>
+        <!-- The Spring Boot BOM's older Artemis calls a method Java 24 removed while the embedded
+             broker starts, so the broker fails on Java 25 (ARTEMIS-5374); 2.54.0 has the fix. -->
+        <artemis.version>2.54.0</artemis.version>
+        <!-- A country ships a container image, never a jar in GitHub Packages. -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
+    <dependencies>
+        <!-- The base product's backend: MVC, persistence, security, mail and reports. -->
+        <dependency>
+            <groupId>org.niord.base</groupId>
+            <artifactId>niord-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- niord-base's test-jar: the country build group and the shared IT harness. A test-jar
+             brings no dependencies of its own, so the test libraries below are declared here. -->
+        <dependency>
+            <groupId>org.niord.base</groupId>
+            <artifactId>niord-base</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Applies the shared database schema on start-up. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-liquibase</artifactId>
+        </dependency>
+        <!-- The embedded JMS broker for message status notifications. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-artemis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.artemis</groupId>
+            <artifactId>artemis-jakarta-server</artifactId>
+        </dependency>
+
+        <!-- Tests and integration tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <!-- Testcontainers brings a stand-in JUnit 4 (quarkus-junit4-mock); the suite is
+                     JUnit 5 only, so it is kept off the test class path. -->
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-junit4-mock</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- The Keycloak container for the security integration tests. -->
+        <dependency>
+            <groupId>com.github.dasniko</groupId>
+            <artifactId>testcontainers-keycloak</artifactId>
+            <version>${testcontainers-keycloak.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <!-- As for testcontainers-junit-jupiter. -->
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-junit4-mock</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>6.0.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Spring Boot's parent, which niord-parent inherits, configures its repackage. -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+{{packPlugins}}        </plugins>
+    </build>
+</project>

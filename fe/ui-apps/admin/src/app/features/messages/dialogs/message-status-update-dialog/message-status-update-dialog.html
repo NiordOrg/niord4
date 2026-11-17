@@ -1,0 +1,131 @@
+<app-dialog
+  [visible]="visible()"
+  (closed)="close()"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [header]="'messages.statusUpdate.title' | transloco"
+  [style]="{ width: '52rem', maxWidth: '95vw' }"
+>
+  <ng-template #header>
+    <div class="flex items-center gap-2">
+      <span class="font-semibold">{{ 'messages.statusUpdate.title' | transloco }}</span>
+      <app-help-anchor section="update-selection-status-action" />
+    </div>
+  </ng-template>
+
+  @if (rows().length === 0) {
+    <p class="py-4 text-sm text-fg-muted">{{ 'messages.statusUpdate.empty' | transloco }}</p>
+  } @else {
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'messages.statusUpdate.changeAll' | transloco }}
+        </span>
+        <app-select
+          [options]="bulkOptions()"
+          [optionLabel]="bulkLabel"
+          [clearOnPick]="true"
+          (picked)="applyBulk($any($event))"
+          [placeholder]="'messages.statusUpdate.changeAllPlaceholder' | transloco"
+          [ariaLabel]="'messages.statusUpdate.changeAll' | transloco"
+          [scrollHeight]="'min(24rem, 60vh)'"
+        >
+          <ng-template #option let-option>
+            {{ 'msg.status.' + option.from | transloco }} →
+            {{ 'msg.status.' + option.to | transloco }}
+          </ng-template>
+        </app-select>
+      </div>
+
+      <!-- Own scroll region so large selections stay usable (the dialog's own
+           max-height would otherwise clip the table to a handful of rows). -->
+      <div class="max-h-[min(60vh,32rem)] overflow-y-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr
+              class="sticky top-0 z-10 border-b border-surface-200 bg-surface-0 text-left dark:border-surface-700 dark:bg-surface-900"
+            >
+              <th class="py-1 pr-4">{{ 'messages.statusUpdate.column.id' | transloco }}</th>
+              <th class="py-1 pr-4">{{ 'messages.statusUpdate.column.title' | transloco }}</th>
+              <th class="py-1 pr-4">{{ 'messages.statusUpdate.column.current' | transloco }}</th>
+              <th class="w-48 py-1">{{ 'messages.statusUpdate.column.newStatus' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr class="border-b border-surface-100 dark:border-surface-800">
+                <td class="py-1 pr-4 whitespace-nowrap">
+                  <app-message-id-badge [message]="row" />
+                </td>
+                <td class="py-1 pr-4">
+                  {{ title(row) }}
+                  @if (rowReasons().get(row.id); as reasons) {
+                    <!-- Why the publish gate refuses (or will refuse) the chosen target. -->
+                    <ul class="mt-0.5 text-xs text-danger" data-testid="status-row-reasons">
+                      @for (reason of reasons; track reason.code) {
+                        <li>
+                          @switch (reason.code) {
+                            @case ('NO_TITLE') {
+                              {{ 'messages.statusUpdate.reason.noTitle' | transloco }}
+                            }
+                            @case ('MANDATORY_PROMULGATION_OFF') {
+                              {{
+                                'messages.statusUpdate.reason.mandatoryOff'
+                                  | transloco: { types: (reason.types ?? []).join(', ') }
+                              }}
+                            }
+                            @case ('SCHEDULED') {
+                              {{
+                                'messages.statusUpdate.reason.scheduled'
+                                  | transloco: { date: reason.date | localeDate: 'dateTime' }
+                              }}
+                            }
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
+                </td>
+                <td class="py-1 pr-4">
+                  <span class="status-badge" [class]="row.status | statusClass">
+                    {{ 'msg.status.' + row.status | transloco }}
+                  </span>
+                </td>
+                <td class="py-1">
+                  <app-select
+                    [options]="targetOptions(row)"
+                    [value]="targets().get(row.id) ?? null"
+                    (valueChange)="setTarget(row.id, $any($event))"
+                    [showClear]="true"
+                    [placeholder]="'messages.statusUpdate.noChange' | transloco"
+                    [ariaLabel]="'messages.statusUpdate.column.newStatus' | transloco"
+                  >
+                    <ng-template #option let-status>
+                      {{ 'msg.status.' + status | transloco }}
+                    </ng-template>
+                  </app-select>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" (click)="close()">
+      {{ 'messages.statusUpdate.cancel' | transloco }}
+    </button>
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="!hasTargets() || saving()"
+      (click)="save()"
+    >
+      {{ 'messages.statusUpdate.apply' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>
+
+<app-confirm />

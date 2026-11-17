@@ -1,0 +1,144 @@
+<app-admin-section-page
+  titleKey="admin.sections.niord-integration.label"
+  descriptionKey="admin.niord-integration.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.niord-integration.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.niord-integration.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.niord-integration.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <button type="button" class="btn-primary" (click)="addIntegration()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.niord-integration.newIntegration' | transloco }}
+    </button>
+  </div>
+
+  @if (facade.seriesError()) {
+    <app-error-banner [title]="'admin.niord-integration.seriesLoadError' | transloco" />
+  }
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.niord-integration.loadError' | transloco"
+      [retryLabel]="'admin.niord-integration.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.integrations().length === 0) {
+      <app-empty-state
+        icon="lucideInbox"
+        [title]="'admin.niord-integration.empty.none' | transloco"
+      />
+    } @else {
+      <app-empty-state
+        icon="lucideFilterX"
+        [title]="'admin.niord-integration.empty.noMatches' | transloco"
+      />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-20">{{ 'admin.niord-integration.column.active' | transloco }}</th>
+            <th>{{ 'admin.niord-integration.column.url' | transloco }}</th>
+            <th>{{ 'admin.niord-integration.column.messageSeries' | transloco }}</th>
+            <th class="w-32">
+              <span class="sr-only">{{
+                'admin.niord-integration.column.actions' | transloco
+              }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (integration of pageRows(); track integration.id) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="integration.active"
+                  [class.is-inactive]="!integration.active"
+                  [attr.aria-label]="
+                    (integration.active
+                      ? 'admin.niord-integration.column.active'
+                      : 'common.inactive'
+                    ) | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td>{{ integration.url }}</td>
+              <td>
+                @for (mapping of integration.messageSeriesMappings; track $index) {
+                  <div>{{ mapping.sourceSeriesId }} &rarr; {{ mapping.targetSeriesId }}</div>
+                }
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.niord-integration.editIntegration' | transloco"
+                  (click)="editIntegration(integration)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.niord-integration.deleteIntegration' | transloco"
+                  (click)="deleteIntegration(integration)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.niord-integration.executeIntegration' | transloco"
+                  (click)="executeIntegration(integration)"
+                >
+                  <app-icon name="lucideSettings" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-niord-integration-editor
+    [model]="editorModel()"
+    [seriesIds]="facade.seriesOptions()"
+    (saved)="onEditorSaved()"
+    (closed)="editorModel.set(undefined)"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

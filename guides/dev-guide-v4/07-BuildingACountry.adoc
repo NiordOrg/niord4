@@ -1,0 +1,65 @@
+
+[#building-a-country]
+== Building a country
+
+A deployment of Niord is always a country: a repository of its own, built on one pinned version of
+the base product (<<the-base-product-and-its-countries>>). The base product itself has no
+country's code, texts or data; its generic English application in `be/niord-app/` is a reference,
+not a deployment.
+
+How to build and run a country is written up in the _country guides_, which ship with the country
+kit and match the version a country builds on. The full set is read in the kit a country builds
+with, or in `country-kit/` of the base product's repository (<<country-sources>>). Only part of it is
+published on this site, among it the overview of the guides, the operators' guide and the
+designers' brief: link:{country-kit-guides}[The country kit's guides]. The country guide itself and
+the kit's reference are not on the site. This chapter only says where the guides are and how the
+pieces fit; it does not repeat them.
+
+[#what-a-country-is]
+=== What a country repository holds
+
+* *The pins.* The base product version is the parent version in the country's `be/pom.xml`. The
+  file `fe/niord-pins.lock.json` pins the same version's frontend source zip and country kit by
+  their checksums, and any language packs the country takes from other countries.
+* *The backend.* The country's application is the base library, `org.niord.base:niord-base`, plus
+  its own settings file, logos, texts and, where needed, beans at the extension points the
+  backend contract allows.
+* *The frontend.* The country's set-up, `node setup.mjs`, fetches the base product's frontend
+  source zip and the kit, checks them, and lays the country's files over the base product at the
+  _seams_ it offers: the manifest, branding and colours, languages, text overrides, and at most a
+  few pages, hooks and slots of its own. Everything else is generated from the base product on
+  every set-up. Where no seam serves, a country may replace one base product file of an
+  application's `src/app/` with its own copy, a _guarded override_: it is made with
+  `node setup.mjs --add-override <file> --reason <text>` and listed in the manifest's `overrides`,
+  and the build fails whenever the base product changes the original, until the country has
+  compared its copy again. An override that is still needed after a version or two is a request for
+  a new seam.
+* *Its data.* The country's own bootstrap (`be/bootstrap/`) and release folders, applied after the
+  base product's (<<code-data-and-configuration>>).
+
+A new version of the base product reaches a country as one pull request in the country's
+repository, which moves the pins; the country runs its set-up and its tests on it, and a person
+reviews and merges it.
+
+[#country-sources]
+=== Where the rules are
+
+In the base product's repository:
+
+* `country-kit/` is the kit itself. Its `README.md` is the reference for set-up, the seams, the
+  language packs and the checks on every country build.
+* `country-kit/docs/` holds the country guides: who does what and how an upgrade works, the country
+  guide with its in-depth companion, the designers' brief, the operators' guide, and a prompt for a
+  coding assistant that sets up a country.
+* `country-kit/API-CHANGES.md` records what each base product version changed for a country and
+  what a country must do about it.
+* `be/docs/country-api.md` is the backend contract: the extension points, the beans and properties
+  a country may not replace, and how both are enforced. It ships in the kit as well.
+* `fe/docs/country-deployments.md` describes the frontend's seams and their neutral defaults.
+* `country-kit/example/` is an example country, `xx`, a complete country repository in miniature.
+  `node ../country-kit/example/run.mjs --work ../.local-run/example`, run from `fe/`, sets it up and
+  builds it against the working tree; the continuous integration does the same on every change
+  the example depends on.
+
+When a change to the base product changes what a country may use or must do, it is recorded in
+`country-kit/API-CHANGES.md` in the same change.

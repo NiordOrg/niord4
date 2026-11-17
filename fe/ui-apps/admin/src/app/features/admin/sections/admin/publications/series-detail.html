@@ -1,0 +1,842 @@
+<!--
+  A series another desk owns is refused, and the refusal is the whole screen.
+
+  Above everything, because it answers the question every panel below would
+  otherwise answer wrongly: the archive, the issue, the settings and the actions
+  all describe a publication this desk is not accountable for. The way back to
+  the list stays, so the refusal is never a dead end.
+-->
+@if (foreignOwnerDomainId(); as owner) {
+  <button type="button" class="btn-tertiary mb-4 self-start pl-0" (click)="back.emit()">
+    <app-icon name="lucideArrowLeft" class="mr-1 text-xs" />
+    {{ 'admin.publications.detail.backToList' | transloco }}
+  </button>
+  <app-publication-foreign-domain [ownerDomainId]="owner" />
+} @else if (selectedIssueId(); as issuePublicId) {
+  <!--
+    One issue takes over the whole panel rather than opening beside the list.
+    The workbench asks a different question -- should THIS go out -- and the
+    archive behind it is not context for that decision, it is noise.
+  -->
+  <!--
+    The series travels down rather than being fetched again: the workbench needs
+    it for two decisions (where the cut-off falls by default, whether there is a
+    report to preview) and a second request would be a second source that can
+    disagree with the one this panel is drawn from. It is the only half of this
+    screen's load an open issue pays for -- the archive below is not read at all
+    while this branch is on screen.
+  -->
+  <!--
+    (openIssue) is how a new edition hands the panel over to its successor: a
+    different issue at a different address, so the URL moves with it.
+  -->
+  <!--
+    Not before the series is in hand. The owner lives on the series and the issue
+    inherits it, so mounting the workbench first would spend the one call this
+    screen has left on an issue the reader may not be entitled to see. From the
+    archive the series is already loaded and the panel mounts with no wait at
+    all; only a cold link straight into an issue waits for the answer that
+    decides whether it may be opened.
+  -->
+  @if (ownerState() === 'owned') {
+    <app-issue-detail
+      [publicId]="issuePublicId"
+      [series]="facade.series()"
+      (openIssue)="openIssue($event)"
+      (closed)="closeIssue()"
+    />
+  } @else if (facade.error()) {
+    <!--
+      The series could not be read, so the panel below it is never going to
+      mount: the owner lives on that answer, and nothing else can supply it. Said
+      with the way back and the retry, because the back button this branch would
+      otherwise have belongs to the workbench that is not there -- a deep link
+      into an issue of a series that 404s would otherwise be a spinner with no
+      message and no way out. A series that is not there says so, without the
+      retry, which could only meet the same 404 (loadErrorKey).
+    -->
+    <button type="button" class="btn-tertiary mb-4 self-start pl-0" (click)="back.emit()">
+      <app-icon name="lucideArrowLeft" class="mr-1 text-xs" />
+      {{ 'admin.publications.detail.backToList' | transloco }}
+    </button>
+    <app-error-banner
+      [title]="loadErrorKey() | transloco"
+      [retryLabel]="facade.notFound() ? undefined : ('admin.publications.retry' | transloco)"
+      (retry)="facade.refresh()"
+    />
+  } @else {
+    <app-progress-bar [visible]="true" [overlay]="true" />
+  }
+} @else {
+  <!--
+    The strip reports the fetch rather than replacing the panel with it: every
+    issue created here refetches the series, and a loading branch that owned the
+    panel blanked it after each one. As an OVERLAY on the host's top edge, not
+    in flow: a fetch that finishes in a blink used to push the page down and
+    back, which read as a flicker on every refetch.
+  -->
+  <app-progress-bar [visible]="facade.loading()" [overlay]="true" />
+
+  @if (facade.error()) {
+    <!--
+      With the way back: the page header is hidden while a series is selected,
+      and the header below that carries the back button is not drawn here, so
+      without it only the rail would lead out. A series that is not there says
+      so, without the retry (loadErrorKey).
+    -->
+    <button type="button" class="btn-tertiary mb-4 self-start pl-0" (click)="back.emit()">
+      <app-icon name="lucideArrowLeft" class="mr-1 text-xs" />
+      {{ 'admin.publications.detail.backToList' | transloco }}
+    </button>
+    <app-error-banner
+      [title]="loadErrorKey() | transloco"
+      [retryLabel]="facade.notFound() ? undefined : ('admin.publications.retry' | transloco)"
+      (retry)="facade.refresh()"
+    />
+  } @else {
+    <!--
+      The header is drawn from whatever the screen knows: the row the reader
+      clicked until the fetch answers, the series itself afterwards. A header
+      that waits for two requests reads as a page that failed to load.
+    -->
+    @if (shownSeries(); as series) {
+      <header class="mb-4 flex flex-col gap-2">
+        <button type="button" class="btn-tertiary self-start pl-0" (click)="back.emit()">
+          <app-icon name="lucideArrowLeft" class="mr-1 text-xs" />
+          {{ 'admin.publications.detail.backToList' | transloco }}
+        </button>
+
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex flex-wrap items-center gap-3">
+              <h2 class="text-xl font-semibold text-fg">{{ seriesName() }}</h2>
+              <!--
+                No badge on a live series. "Active" is the ordinary case, and
+                marking it spends the reader's attention on the one state that
+                needs none.
+              -->
+              @if (seriesBadge(); as badge) {
+                <span [class]="'status-badge ' + badge">{{ seriesBadgeKey() | transloco }}</span>
+              }
+            </div>
+
+            <!--
+              One line, and it answers the two questions the screen is opened
+              with: how often does this come out, and what is on the public site
+              right now. The owner is not among them: every series this screen
+              draws is owned by the desk reading it, and one that is not never
+              gets this far.
+            -->
+            <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">
+              <span>{{ cadenceKey() | transloco }}</span>
+              <span aria-hidden="true">·</span>
+              @if (facade.publicNowIssue(); as live) {
+                <span class="inline-flex flex-wrap items-center gap-x-1">
+                  <span>{{ 'admin.publications.detail.publicNowLabel' | transloco }}</span>
+                  <button
+                    type="button"
+                    class="link-button"
+                    (click)="openIssue(live.publicId)"
+                    [disabled]="!live.publicId"
+                  >
+                    {{ issueName(live) }}
+                  </button>
+                  <!--
+                    A window nothing has closed is one phrase, not half a range:
+                    "9 Sep –" reads as a date somebody stopped typing. Said
+                    through the same rule the one-off screens use, so one issue
+                    cannot have its window described two ways.
+                  -->
+                  @if (publicNowSince(); as since) {
+                    <span>({{ since.compactKey | transloco: since.params }})</span>
+                  } @else {
+                    <span>({{ date(live.publicFrom) }} –</span>
+                    <!--
+                      The window closes when the successor goes out, and nobody
+                      has done that yet -- so the end is a projection and says so.
+                    -->
+                    @if (expectedPublicEnd(live)) {
+                      <!--
+                        The bracket travels WITH the date rather than beside it:
+                        the line is a gapped flex row, and a closing bracket of
+                        its own is an item with a space in front of it.
+                      -->
+                      <span class="inline-flex items-center">
+                        <app-expected-date [value]="publicEnd(live)" format="date" />
+                        <span>)</span>
+                      </span>
+                    } @else {
+                      <span>{{ date(publicEnd(live)) }})</span>
+                    }
+                  }
+                </span>
+              } @else {
+                <span>{{ publicNowNoneKey() | transloco }}</span>
+              }
+            </p>
+          </div>
+
+          <div class="flex flex-none items-center gap-2">
+            <button type="button" class="btn-secondary" (click)="settings.emit(series)">
+              <app-icon name="lucidePencil" class="mr-1 text-xs" />
+              {{ 'admin.publications.series.editor.settings' | transloco }}
+            </button>
+            <app-menu-trigger
+              icon="lucideSettings"
+              [ariaLabel]="'admin.publications.actionsAriaLabel' | transloco"
+              [menu]="seriesMenu"
+              align="end"
+            />
+            <app-menu
+              #seriesMenu
+              [model]="menuItems()"
+              [ariaLabel]="'admin.publications.actionsAriaLabel' | transloco"
+            />
+          </div>
+        </div>
+      </header>
+    }
+
+    @if (facade.series(); as series) {
+      <!--
+        A draft accepts no issues, and the one step that changes that is offered
+        inside the sentence that says so -- rather than as a missing button
+        somewhere else on the screen.
+      -->
+      @if (isDraft()) {
+        <div class="message message-info mb-4">
+          <app-icon name="lucideInfo" class="message-icon" />
+          <span>
+            {{ 'admin.publications.detail.draftNote' | transloco }}
+            @if (canActivate()) {
+              <button type="button" class="link-button ml-1" (click)="activate()">
+                {{ 'admin.publications.detail.activateInline' | transloco }}
+              </button>
+            }
+          </span>
+        </div>
+      }
+
+      <!--
+        Nothing below this line until BOTH reads have answered once.
+
+        The panels are drawn from the archive, and an archive nobody has fetched
+        yet is indistinguishable from an empty one — so the first paint of a
+        series announced "no issue matches the filter" and an empty current-issue
+        card, about a list still in flight. The progress bar above already says
+        what is happening, and it says it without asserting anything false.
+
+        Only the FIRST read. A re-read keeps the rows on screen deliberately:
+        this screen refetches itself after every action taken on it, and a table
+        that blanked each time would read as a page that keeps breaking.
+      -->
+      @if (!facade.awaitingFirstRead()) {
+        <!--
+          What this series is working on, above everything it has already done.
+          The archive answers "what went out"; this answers "what am I in the
+          middle of", which is the question somebody opening the screen mid-week
+          actually has.
+        -->
+        <!--
+          The accent border is marked important because it is overriding another
+          utility of the same property: the card's own `border-surface-200` sits in
+          the same Tailwind layer, so which one wins is decided by their order in
+          the generated stylesheet rather than by the order they are written here.
+        -->
+        @if (facade.currentIssue(); as open) {
+          <app-card sectionClass="mb-4 border-primary-100!">
+            <div class="flex flex-wrap items-center justify-between gap-5">
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <span class="text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                  {{ 'admin.publications.detail.currentIssue' | transloco }}
+                </span>
+                <div class="flex flex-wrap items-center gap-3">
+                  <span class="text-lg font-semibold text-fg">{{ issueName(open) }}</span>
+                  <span [class]="'status-badge ' + issueBadge(open)">
+                    {{ issueStatusKey(open) | transloco }}
+                  </span>
+                </div>
+                <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">
+                  <span class="inline-flex flex-wrap items-center gap-x-1">
+                    <!--
+                      Named as the plan it is: this card only ever shows an OPEN
+                      issue, whose period end moves with an edit and is not
+                      stamped until somebody releases.
+                    -->
+                    <span>{{ 'admin.publications.issue.plannedCutoff' | transloco }}</span>
+                    <app-expected-date [value]="cutoff(open)" format="weekday" />
+                    <span class="text-fg-subtle">
+                      {{ 'admin.publications.detail.cutoffOnPublish' | transloco }}
+                    </span>
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span>{{
+                    memberCountKey(open.memberCount ?? 0)
+                      | transloco: { count: open.memberCount ?? 0 }
+                  }}</span>
+                  <!--
+                    How far this issue is from going out, said where somebody is
+                    deciding whether to open it. The read behind it is its own, so
+                    a card that could not get an answer closes at the count rather
+                    than claiming the issue is ready.
+                  -->
+                  @if (checklistSummary(); as summary) {
+                    <span aria-hidden="true">·</span>
+                    @switch (summary.state) {
+                      @case ('warnings') {
+                        @let warningDetail =
+                          summary.detailKey
+                            ? (summary.detailKey | transloco: summary.detailParams)
+                            : summary.detailText;
+                        <span class="font-semibold text-warning" data-testid="series-checklist">{{
+                          checklistWarningsKey(summary.count)
+                            | transloco: { count: summary.count, detail: warningDetail }
+                        }}</span>
+                      }
+                      @case ('blocked') {
+                        <span class="font-semibold text-danger" data-testid="series-checklist">{{
+                          'admin.publications.checklist.verdict.blocked'
+                            | transloco: { n: summary.count }
+                        }}</span>
+                      }
+                      @default {
+                        <span data-testid="series-checklist">{{
+                          'admin.publications.checklist.verdict.ready' | transloco
+                        }}</span>
+                      }
+                    }
+                  }
+                </p>
+              </div>
+              <button type="button" class="btn-primary" (click)="openIssue(open.publicId)">
+                {{ 'admin.publications.detail.openIssue' | transloco }}
+              </button>
+            </div>
+          </app-card>
+        } @else if (!facade.isEmpty() || facade.canCreateIssue()) {
+          <app-card sectionClass="mb-4">
+            <div class="flex flex-wrap items-center justify-between gap-5">
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <span class="text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                  {{ 'admin.publications.detail.currentIssue' | transloco }}
+                </span>
+                <span class="text-sm text-fg-muted">
+                  {{ 'admin.publications.detail.noOpenIssue' | transloco }}
+                </span>
+              </div>
+              @if (facade.canCreateIssue()) {
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  [disabled]="facade.working()"
+                  (click)="newIssue()"
+                >
+                  <app-icon name="lucidePlus" class="mr-1 text-xs" />
+                  {{ 'admin.publications.detail.newIssue' | transloco }}
+                </button>
+              }
+            </div>
+          </app-card>
+        }
+
+        <!--
+          The archive is why this box exists: the weekly series carry ~500 issues
+          each, and finding one by the fragment of a name somebody quoted in a mail
+          is otherwise a walk through twenty-five pages. The count beside it is the
+          count AFTER the filter, so the box and the number never disagree.
+        -->
+        @if (!facade.isEmpty()) {
+          <div class="admin-toolbar">
+            <app-publication-list-filter
+              class="w-full max-w-xs"
+              placeholderKey="admin.publications.filter.issues"
+              [value]="issueFilter()"
+              (valueChange)="setIssueFilter($event)"
+            />
+            <span class="text-xs text-fg-muted">
+              {{ issueCountKey() | transloco: { count: filteredIssues().length } }}
+            </span>
+          </div>
+        }
+
+        <!--
+          Whether the periods with no issue were looked for.
+
+          Two lines, not three. Missing periods are a finding and read as a
+          warning; "nobody looked" is the absence of one, said quietly, with the
+          reason -- which is also the fix. A complete archive says nothing at all:
+          a tick on every screen is a line readers stop seeing.
+        -->
+        @if (gapSummary(); as gaps) {
+          @if (!facade.isEmpty()) {
+            <p class="mb-3 flex items-center gap-2 text-xs">
+              @if (gaps.state === 'found') {
+                <app-icon name="lucideTriangleAlert" class="text-warning" />
+                <span class="text-warning">{{
+                  'admin.publications.detail.gaps.found' | transloco: { count: gaps.count }
+                }}</span>
+              } @else {
+                <app-icon name="lucideInfo" class="text-fg-subtle" />
+                <span class="text-fg-muted">
+                  {{ 'admin.publications.detail.gaps.notChecked' | transloco }}
+                  {{ 'admin.publications.gapReason.' + gaps.reasonCode | transloco }}
+                </span>
+              }
+            </p>
+          }
+        }
+
+        @if (facade.isEmpty()) {
+          <app-empty-state
+            icon="lucideInbox"
+            [title]="'admin.publications.detail.noIssues' | transloco"
+          />
+        } @else if (filteredIssues().length === 0) {
+          <!--
+            A series with issues, and a filter none of them match. Said as its own
+            state rather than reusing "no issues yet", which would be untrue and
+            would send the reader looking for an import that never failed.
+          -->
+          <app-empty-state
+            icon="lucideFilterX"
+            [title]="'admin.publications.filter.noMatchingIssues' | transloco"
+          />
+        } @else {
+          <div class="admin-card">
+            <table class="niord-table">
+              <!--
+                The sortable columns are each a real <button> inside their <th>.
+
+                The button is what carries the click, so the header is reachable by
+                keyboard without a tabindex on a cell; `aria-sort` on the <th> is
+                what announces the state, and it must stay on the cell rather than
+                the button because that is the element the row model exposes as a
+                column header. The arrow is decorative — it repeats what aria-sort
+                says.
+              -->
+              <thead>
+                <tr>
+                  <th [attr.aria-sort]="ariaSort('name')">
+                    <button type="button" class="th-sort" (click)="toggleSort('name')">
+                      {{ 'admin.publications.column.issue' | transloco }}
+                      @if (sortIcon('name'); as icon) {
+                        <app-icon [name]="icon" class="text-xs" />
+                      }
+                    </button>
+                  </th>
+                  <!-- Dropped on a phone: the open issue is already the emphasised row and
+                     the current-issue card above; the name column needs the room. -->
+                  <th class="max-sm:hidden">
+                    {{ 'admin.publications.column.status' | transloco }}
+                  </th>
+                  <!--
+                    Only where the series numbers its issues in a way the NAME does
+                    not already carry. A week-and-year name repeats itself in an
+                    edition column, and a series that numbers nothing fills it with
+                    em dashes.
+                  -->
+                  @if (showEdition()) {
+                    <!-- Dropped on a phone; the edition is in the issue's own header. -->
+                    <th class="max-sm:hidden" [attr.aria-sort]="ariaSort('edition')">
+                      <button type="button" class="th-sort" (click)="toggleSort('edition')">
+                        {{ 'admin.publications.column.edition' | transloco }}
+                        @if (sortIcon('edition'); as icon) {
+                          <app-icon [name]="icon" class="text-xs" />
+                        }
+                      </button>
+                    </th>
+                  }
+                  <th [attr.aria-sort]="ariaSort('period')">
+                    <button type="button" class="th-sort" (click)="toggleSort('period')">
+                      {{ 'admin.publications.field.cutoff' | transloco }}
+                      @if (sortIcon('period'); as icon) {
+                        <app-icon [name]="icon" class="text-xs" />
+                      }
+                    </button>
+                  </th>
+                  <!--
+                    Column priority. The table has to stay whole inside a detail
+                    pane that the navigation rail narrows to roughly 740px on a
+                    1024-wide tablet, so the two columns an admin consults least
+                    drop out first: the public window below 1280, the member count
+                    below 768. What is left -- issue, status, edition, cut-off and
+                    the row's actions -- is what the screen is for.
+                  -->
+                  <th class="max-xl:hidden">
+                    {{ 'admin.publications.column.publicWindow' | transloco }}
+                  </th>
+                  <th class="text-right max-md:hidden">
+                    {{ 'admin.publications.column.members' | transloco }}
+                  </th>
+                  <th class="text-right">
+                    <span class="sr-only">{{
+                      'admin.publications.column.actions' | transloco
+                    }}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <!--
+                  Tracked on the id where there is one and the sort key otherwise. A
+                  synthesized row has no id, and every one of them tracking the same
+                  undefined would collapse them into a single row.
+                -->
+                @for (issue of pager.paged(); track issue.publicId ?? issue.sortKey) {
+                  <!--
+                    The state classes are concatenated INTO the one string binding.
+                    Angular's `[class]` replaces whatever a second class source
+                    sets, so a static `class` beside this binding would be dropped
+                    the moment the binding evaluates. The open issue is washed and
+                    set in bold: it is the row the screen is about.
+                  -->
+                  <tr
+                    [class]="
+                      'row-interactive ' +
+                      (issue.pseudo ? 'issue-row-pseudo ' : '') +
+                      (issue.status === 'OPEN' ? 'status-row is-issue-open font-semibold' : '')
+                    "
+                    [appRowLink]="issue.publicId ? [] : null"
+                    [rowLinkQueryParams]="{ issue: issue.publicId }"
+                    (appRowLinkActivate)="openIssue(issue.publicId)"
+                  >
+                    <td>
+                      <!--
+                        The floor sits on the block inside the cell, not on the
+                        cell: 9rem is what a week-and-year name needs to stay on
+                        one line while the table is squeezed between sm and xl,
+                        where the low-priority columns are gone. From xl up every
+                        column is present and the floor would push the widest rows
+                        past the card; on a phone the cut-off column needs the room
+                        more than the name does. In both the name takes its natural
+                        width and wraps. A longer name always wraps rather than
+                        forcing the column wider.
+                      -->
+                      @if (issue.publicId) {
+                        <!--
+                          The row's one tab stop, and a real link: the issue has
+                          an address of its own, so it shows on hover and opens
+                          in a second tab. A synthesized row stands for a period
+                          rather than an entity and has no address, so its name
+                          stays plain text.
+                        -->
+                        <a appRowLinkAnchor class="row-link block sm:max-xl:min-w-36">
+                          {{ issueName(issue) }}
+                        </a>
+                      } @else {
+                        <span class="block sm:max-xl:min-w-36">{{ issueName(issue) }}</span>
+                      }
+                      @if (issue.pseudo) {
+                        <span class="text-xs text-fg-subtle">
+                          {{ 'admin.publications.detail.gaps.' + issue.pseudo + 'Row' | transloco }}
+                        </span>
+                      }
+                    </td>
+                    <td class="max-sm:hidden">
+                      @if (issue.pseudo) {
+                        <span [class]="'status-badge ' + issueBadge(issue)">
+                          {{ 'admin.publications.row.' + issue.pseudo | transloco }}
+                        </span>
+                      } @else {
+                        <span [class]="'status-badge ' + issueBadge(issue)">
+                          {{ issueStatusKey(issue) | transloco }}
+                        </span>
+                      }
+                    </td>
+                    @if (showEdition()) {
+                      <td class="max-sm:hidden">{{ issue.edition ?? '—' }}</td>
+                    }
+                    <!--
+                      The cut-off, and the release moment folded into it. Publishing
+                      stamps the cut-off and then does the work, so the two are
+                      normally one instant printed twice — the release earns a
+                      muted suffix only where it says something the cut-off does
+                      not.
+                    -->
+                    <td class="whitespace-nowrap">
+                      @if (expectedCutoff(issue)) {
+                        <app-expected-date [value]="cutoff(issue)" format="dateTime" />
+                      } @else {
+                        {{ dateTime(cutoff(issue)) }}
+                      }
+                      <!--
+                        A bound that was not stamped at a release is a derived
+                        value, not a recorded one. The word beside it keeps a
+                        reconstructed date from being read as evidence of when the
+                        issue actually closed.
+                      -->
+                      <!--
+                        Below 1344 (84rem) each annotation drops onto its own line
+                        under the date instead of widening the column; the date
+                        itself never wraps, so it always reads as one instant. The
+                        bound sits above xl because at 1280 the annual series'
+                        "reconstructed" + "published …" pair inline squeezes the
+                        name column to two lines. The two are separate blocks so
+                        that the rare row carrying both still measures only as
+                        wide as the longer of them.
+                      -->
+                      <span class="max-[84rem]:block">
+                        <app-bound-source-marker [source]="cutoffSource(issue)" />
+                      </span>
+                      @if (publishedApart(issue)) {
+                        <span
+                          class="ml-1 text-xs text-fg-subtle max-[84rem]:ml-0 max-[84rem]:block"
+                        >
+                          {{
+                            'admin.publications.issue.publishedApart'
+                              | transloco: { time: dateTime(issue.publishedAt) }
+                          }}
+                        </span>
+                      }
+                    </td>
+                    <!--
+                      An open issue's window is expected at BOTH ends -- it opens
+                      when somebody releases the issue and closes when its
+                      successor goes out -- so it carries one marker over the
+                      range rather than one per bound. Every other row opened at an
+                      instant that was recorded, and only the end of the window
+                      still running is a projection.
+
+                      Both ends come through `publicStart` / `publicEnd`, which
+                      prefer the server's projection to the stored instant: an
+                      unreleased issue stores no window at all, and the issue that
+                      is out right now keeps an open end until its successor's
+                      release stamps one on.
+                    -->
+                    <td class="whitespace-nowrap max-xl:hidden">
+                      @if (expectedPublicWindow(issue)) {
+                        <app-expected-date
+                          [value]="publicStart(issue)"
+                          [to]="publicEnd(issue)"
+                          format="date"
+                        />
+                      } @else if (publicSince(issue); as since) {
+                        <!--
+                          Nothing has closed this window, and that is the whole
+                          answer: a start followed by a dash reads as a period
+                          somebody forgot to finish rather than as one that is
+                          still running. The wording comes from the same rule
+                          every other public-standing line on the screen uses.
+                        -->
+                        <span>{{ since.compactKey | transloco: since.params }}</span>
+                      } @else if (issue.publicFrom || publicEnd(issue)) {
+                        <span class="inline-flex items-center gap-1">
+                          <span>{{ date(issue.publicFrom) }}</span>
+                          @if (publicEnd(issue); as end) {
+                            <span>–</span>
+                            @if (expectedPublicEnd(issue)) {
+                              <app-expected-date [value]="end" format="date" />
+                            } @else {
+                              <span>{{ date(end) }}</span>
+                            }
+                          }
+                        </span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td class="text-right tabular-nums max-md:hidden">
+                      {{ issue.memberCount ?? '—' }}
+                    </td>
+                    <td class="text-right">
+                      <!--
+                        A MISSING period is always offered on an ACTIVE series --
+                        nothing was released for it and nothing will be unless
+                        somebody says so. The UPCOMING period is offered too, but
+                        only while nothing is open: the series normally opens that
+                        one itself when the current issue publishes, so a button
+                        beside an open issue would invite a duplicate -- while a
+                        series with nothing open is one that has fallen behind,
+                        and this row is the step that catches it up.
+
+                        A DRAFT or RETIRED series cannot receive an issue anybody
+                        will publish, and neither can another desk's: creating an
+                        issue is a write on the series.
+                      -->
+                      @if (offersCreate(issue)) {
+                        <button
+                          type="button"
+                          class="link-button is-subtle text-xs"
+                          [disabled]="facade.working()"
+                          (click)="createFromGap(issue)"
+                        >
+                          {{ 'admin.publications.detail.gaps.create' | transloco }}
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <!--
+              The pager belongs to the table, so it sits in the card's own foot
+              rather than floating under it: the rule above it is what separates
+              the controls from the last row, and a pager outside the card reads
+              as chrome for the page instead of for this list.
+            -->
+            @if (pager.total() > pager.rows) {
+              <div class="border-t border-surface-200 py-2 dark:border-surface-700">
+                <app-pager
+                  [first]="pager.first()"
+                  [rows]="pager.rows"
+                  [total]="pager.total()"
+                  [inCard]="true"
+                  (pageChange)="pager.setFirst($event)"
+                />
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <!--
+        What has happened to the series itself, folded away below the archive.
+
+        The trail of one ISSUE lives on that issue's own screen. This is the
+        other half: the lines recorded against the series -- an activation, a
+        retirement, a move to another desk -- and the one line left behind when
+        an issue was removed, which is by then the only record that it ever
+        existed. Closed always, and read when it is opened: it is a record rather
+        than a decision, so nothing about a series makes it the reason somebody
+        came here.
+      -->
+      <section class="mt-4">
+        <!-- Important for the same reason the card above is: it overrides the
+             card's own `bg-surface-0`, which lives in the same layer. -->
+        <app-card sectionClass="bg-surface-sunken!" [padded]="false">
+          <div class="px-4 py-2.5">
+            <!-- `text-left` because a full-width button would otherwise centre
+                 its wrapped lines on the UA default. -->
+            <button
+              type="button"
+              class="flex items-center gap-2 text-left text-sm font-medium text-fg max-sm:flex-wrap"
+              [attr.aria-expanded]="historyOpen()"
+              (click)="toggleHistory()"
+              data-testid="series-history-toggle"
+            >
+              <app-icon
+                [name]="historyOpen() ? 'lucideChevronDown' : 'lucideChevronRight'"
+                class="text-xs"
+              />
+              <span>{{ 'admin.publications.detail.history.title' | transloco }}</span>
+            </button>
+          </div>
+
+          @if (historyOpen()) {
+            <div
+              class="border-t border-surface-200 px-4 py-3 dark:border-surface-700"
+              data-testid="series-history"
+            >
+              @if (facade.historyLoading()) {
+                <p class="text-xs text-fg-subtle">
+                  {{ 'admin.publications.detail.history.loading' | transloco }}
+                </p>
+              } @else if (facade.historyError()) {
+                <p class="text-xs text-fg-muted">
+                  {{ 'admin.publications.detail.history.error' | transloco }}
+                </p>
+              } @else if (facade.history().length === 0) {
+                <p class="text-sm text-fg-muted">
+                  {{ 'admin.publications.detail.history.empty' | transloco }}
+                </p>
+              } @else {
+                <ol class="flex flex-col gap-2.5">
+                  @for (entry of facade.history(); track entry.id ?? entry.created) {
+                    <li class="text-sm">
+                      <!--
+                        The same row shape the issue trail uses: what happened,
+                        who it was recorded for, when, and why. An action this
+                        build has no words for renders as its own code, which is
+                        imperfect English but still the name of what happened --
+                        where a key built blind renders as the key path.
+                      -->
+                      <span class="flex flex-wrap items-baseline gap-x-2">
+                        @if (historyActionKey(entry); as key) {
+                          <span class="font-medium text-fg">{{ key | transloco }}</span>
+                        } @else {
+                          <span class="font-mono text-xs font-medium text-fg">
+                            {{ entry.action }}
+                          </span>
+                        }
+                        @if (historyActorKey(entry); as key) {
+                          <span class="text-xs text-fg-muted">{{ key | transloco }}</span>
+                        } @else {
+                          <span class="text-xs text-fg-muted">{{ entry.actorLabel }}</span>
+                        }
+                      </span>
+                      <span class="block text-xs text-fg-muted">{{ dateTime(entry.created) }}</span>
+                      <!--
+                        What the line is about. On the line a removed issue left
+                        behind this is the only place its name and its period are
+                        still written down, and the state it was in is what says
+                        whether anything had ever gone out under it.
+                      -->
+                      @if (historySubject(entry); as subject) {
+                        <span class="block text-xs text-fg-muted">
+                          {{ subject }}
+                          @if (historyStatusKey(entry); as statusKey) {
+                            <span class="text-fg-subtle">· {{ statusKey | transloco }}</span>
+                          }
+                        </span>
+                      }
+                      @if (entry.reason) {
+                        <span class="block text-xs text-fg-subtle">{{ entry.reason }}</span>
+                      }
+                    </li>
+                  }
+                </ol>
+              }
+            </div>
+          }
+        </app-card>
+      </section>
+
+      <!--
+        The issue that does not exist yet, reviewed before it does. Both routes in
+        -- a missing period and the next one -- go through it, so a reconstructed
+        bound is never committed as though somebody had chosen it.
+      -->
+      <app-publication-issue-draft-dialog
+        [(visible)]="draftDialogOpen"
+        [seriesId]="series.seriesId"
+        [seed]="draftSeed()"
+        [working]="facade.working()"
+        [errorKey]="facade.createErrorKey()"
+        (submitted)="submitDraft($event)"
+      />
+
+      <!--
+        Retiring a series retires nothing it has already released, which is
+        exactly the surprise the dialog's copy exists to remove.
+      -->
+      <app-publication-reason-dialog
+        [(visible)]="retireDialogOpen"
+        headerKey="admin.publications.series.editor.retireTitle"
+        effectKey="admin.publications.series.editor.retireEffect"
+        confirmKey="admin.publications.series.editor.retire"
+        [working]="statusWorking()"
+        [errorKey]="retireErrorKey()"
+        (submitted)="submitRetire($event)"
+      />
+
+      <!--
+        Moving the series to another desk: a change of who is accountable for it,
+        so it asks which desk and why.
+      -->
+      <app-publication-transfer-dialog
+        [(visible)]="transferDialogOpen"
+        [ownerId]="ownerDomainId()"
+        [working]="facade.transferWorking()"
+        [errorKey]="facade.transferErrorKey()"
+        [errorDetail]="facade.transferErrorDetail()"
+        (submitted)="submitTransfer($event)"
+      />
+    }
+
+    <!--
+      Activation and reinstatement are asked as "whether", not "why", so they
+      route through the shared confirm rather than the reason dialog.
+    -->
+    <app-confirm />
+  }
+}

@@ -1,0 +1,4 @@
+@let p = promulgation();
+@if (p.text) {
+  <div class="font-mono text-sm" [innerHTML]="p.text | plainTextToHtml"></div>
+}

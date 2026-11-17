@@ -1,0 +1,31 @@
+<app-filter-panel label="messages.filter.date.label" (clear)="clear()">
+  <div class="flex items-center gap-2 flex-wrap">
+    <app-select
+      [options]="dateTypeOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [ariaLabel]="'messages.filter.date.label' | transloco"
+      [value]="dateType()"
+      (valueChange)="onDateTypeChange($any($event))"
+      scrollHeight="auto"
+    />
+    <app-date-picker
+      class="w-40"
+      [ariaLabel]="'messages.filter.date.fromPlaceholder' | transloco"
+      [placeholder]="'messages.filter.date.fromPlaceholder' | transloco"
+      [showClear]="true"
+      [clearLabel]="'common.clear' | transloco"
+      [value]="fromDate()"
+      (valueChange)="onFromDateChange($event)"
+    />
+    <app-date-picker
+      class="w-40"
+      [ariaLabel]="'messages.filter.date.toPlaceholder' | transloco"
+      [placeholder]="'messages.filter.date.toPlaceholder' | transloco"
+      [showClear]="true"
+      [clearLabel]="'common.clear' | transloco"
+      [value]="toDate()"
+      (valueChange)="onToDateChange($event)"
+    />
+  </div>
+</app-filter-panel>

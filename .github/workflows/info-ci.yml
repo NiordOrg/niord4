@@ -1,0 +1,328 @@
+name: Info CI
+
+# CI for the public site (fe/ui-apps/info, Angular project niord-info).
+#
+#   Checks + builds    one `npm ci`, then one step after another: prettier over ui-apps/info/ and
+#                      the info scripts, the documentation guard, npm run lint:info, npm run
+#                      test:guards (the boundaries proven against crafted imports each must
+#                      reject), npm run test:info, the paths guard, the contents guard (what
+#                      each build configuration ships, against its language configuration), npm
+#                      run build:info with the external-URL check, the separation check and the
+#                      first-visit bundle report
+#   Info gate          the one job for branch protection to require
+#
+# Why one work job: GitHub bills every job rounded UP to a whole minute, and every job pays its own
+# checkout + `npm ci` (~20 s). Measured on the runs of September 2026, the eight work jobs this
+# workflow used to have took 6½–8½ runner-minutes and were billed 10–13; one job pays the checkout
+# and the install once. Every step runs even when an earlier one failed (as long as what it reads
+# was built), so one red check never hides another.
+#
+# Since P7 the job builds and packages no country artefact. A country builds, packages and tests
+# its own image, with npm run image:info in its repository. For the base build the image, the
+# container test and the layout check are manual tools (fe/AGENTS.md). Frontend CI's Example
+# country job packages and tests the example's image on pull requests. On main a merge confined to
+# the public site is re-checked by this job's build checks alone, because fe-ci.yml's push paths
+# exclude fe/ui-apps/info/**.
+#
+# What keeps the administration app out of the public site is the separation check (run on every
+# build's statistics: no input from ui-apps/admin/, no banned package) and lint (no import across
+# the applications), not the image: it holds the built files alone.
+#
+# Branch protection is not enabled on main yet: it is switched on before production go-live, and
+# until then this gate reports but blocks no merge.
+#
+# ---------------------------------------------------------------------------------------------
+# Why this file lives at the repository root
+# ---------------------------------------------------------------------------------------------
+# GitHub only reads workflows from `.github/workflows/` at the root of the repository. A copy under
+# fe/ is never registered. Every job that runs npm therefore sets `working-directory: fe` and points
+# the npm cache at fe/package-lock.json.
+#
+# ---------------------------------------------------------------------------------------------
+# Which pull requests, why `pull_request` is not path-filtered, and why there is a gate job
+# ---------------------------------------------------------------------------------------------
+# Identical reasoning to be-ci.yml and fe-ci.yml: only pull requests into main, and a draft runs
+# nothing until it is marked ready for review. A workflow a `paths:` filter skips never reports its
+# checks, so a required check would sit at "Expected — waiting for status to be reported" forever.
+# The filter lives in the `changes` job, the work jobs carry a job-level `if:`, and the gate is the
+# only name branch protection needs. The gate skips itself — "skipped" counts as passing — on a
+# draft and when detection found the public site untouched, so a PR that does not reach the site
+# costs this workflow its detection job alone; fe-ci.yml explains what that skip means.
+# `push` is path-filtered the cheap way, at the trigger.
+#
+# ---------------------------------------------------------------------------------------------
+# Why this workflow runs the documentation guard as well
+# ---------------------------------------------------------------------------------------------
+# fe-ci.yml skips its whole suite — including `npm run docs:check` — for a change confined to
+# fe/ui-apps/info/. That folder holds ui-apps/info/AGENTS.md, which the guard checks, so the guard runs
+# here too; otherwise a broken link in it would reach main unseen.
+#
+# ---------------------------------------------------------------------------------------------
+# What counts as a change to the public site
+# ---------------------------------------------------------------------------------------------
+# Everything a job below reads: the site's folder, the three shared folders, the language packs
+# its bundles and flags are staged from, the workspace configuration (with the lint lists
+# eslint.config.js takes from eslint-shared.cjs), the Node version the jobs install, the Prettier
+# configurations the format step applies (fe/.prettierrc, and country-kit/.prettierrc for the kit's
+# files), and the scripts the jobs run or their tests read — the
+# info-* scripts, the staging step, the catalog and the pack check, the paths guard, the build-*
+# checks (what a build ships, no external URL in it) with the glob matcher scripts/glob.mjs, and
+# the guard tests, and the image tool the guard tests read: country-kit/image-info.mjs with what
+# it imports and reads (lib/info-image.mjs and its glob matcher lib/include.mjs, the layout
+# resolver lib/where.mjs that finds the base product, guard-build.mjs and lib/build-report.mjs,
+# the manifest reader lib/manifest.mjs with lib/schema.mjs and
+# niord-country.schema.json, the output allow-list info-image-allowed.json; the Dockerfile, the
+# nginx files and precompress.mjs are in the site's folder). No step builds an image since P7, but
+# the entries stay, so that the three copies of the list stay the same.
+# fe/docs/ and scripts/docs-check.mjs are left out on purpose: fe-ci.yml runs the same
+# documentation guard over the same files for any change to them. The list is kept three times:
+# here for `push`, in `Detect` for pull requests, and in ./verify-local for a local branch.
+on:
+  pull_request:
+    branches: [ main ]
+    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  push:
+    branches: [ main ]
+    paths:
+      - 'fe/ui-apps/info/**'
+      - 'fe/styles/**'
+      - 'fe/shared-map/**'
+      - 'fe/shared-html/**'
+      - 'fe/package.json'
+      - 'fe/package-lock.json'
+      - 'fe/.npmrc'
+      - 'fe/.nvmrc'
+      - 'fe/.postcssrc.json'
+      - 'fe/.prettierrc'
+      - 'fe/.prettierignore'
+      - 'fe/.editorconfig'
+      - 'fe/angular.json'
+      - 'fe/tsconfig*.json'
+      - 'fe/eslint.config.js'
+      - 'fe/eslint-shared.cjs'
+      - 'fe/vitest.config.ts'
+      - 'fe/languages/**'
+      - 'fe/scripts/info-*.mjs'
+      - 'country-kit/stage-languages.mjs'
+      - 'country-kit/catalog.mjs'
+      - 'country-kit/pack.mjs'
+      - 'fe/scripts/workspace-paths-check.mjs'
+      - 'fe/scripts/build-*.mjs'
+      - 'fe/scripts/build-*.json'
+      - 'fe/scripts/glob.mjs'
+      - 'fe/scripts/*.test.mjs'
+      - 'country-kit/*.test.mjs'
+      - 'country-kit/image-info.mjs'
+      - 'country-kit/guard-build.mjs'
+      - 'country-kit/info-image-allowed.json'
+      - 'country-kit/lib/info-image.mjs'
+      - 'country-kit/lib/where.mjs'
+      - 'country-kit/lib/build-report.mjs'
+      - 'country-kit/lib/include.mjs'
+      - 'country-kit/lib/manifest.mjs'
+      - 'country-kit/lib/schema.mjs'
+      - 'country-kit/lib/asset-outputs.mjs'
+      - 'country-kit/niord-country.schema.json'
+      - 'country-kit/.prettierrc'
+      - '.github/workflows/info-ci.yml'
+  workflow_dispatch:
+
+# A newer push to the same pull request cancels its in-flight run, so superseded builds are not
+# paid for. Push and dispatch runs get a group of their own (their run id) and are never cancelled
+# or replaced (see be-ci.yml).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # The `prepare` script installs git hooks through husky; a CI checkout has no use for them.
+  HUSKY: 0
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Does this change touch the public site at all? See the trigger comment above
+  # for why this is a job rather than a `paths:` filter on `pull_request`.
+  # Skipped on a draft's first attempt, and with it every job below (a re-run
+  # reuses the draft flag of the run it repeats, and must not skip again: see
+  # fe-ci.yml).
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect public-site changes
+    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      info: ${{ steps.detect.outputs.info }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so `git merge-base` with the target branch resolves on pull_request runs,
+          # as a partial clone with .github alone on disk: the step reads commits and trees, no
+          # file (be-ci.yml's header, What a job checks out).
+          fetch-depth: 0
+          sparse-checkout: .github
+
+      - name: Detect
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+            # --no-renames: a moved file is listed under BOTH its paths. Rename detection would
+            # list only the new one, so a file moved out of ui-apps/info/ into ui-apps/admin/
+            # would read as an administration change alone and skip the suite whose build it broke.
+            changed=$(git diff --name-only --no-renames "$base" "$HEAD_SHA")
+            echo "Files changed by this PR:"
+            echo "$changed" | sed 's/^/  /'
+            # A here-string, not `echo | grep -q`: under pipefail that pipe reads FALSE for a
+            # large PR (grep exits on its first match, echo takes SIGPIPE past the pipe buffer).
+            pattern='^(fe/ui-apps/info/|fe/styles/|fe/shared-map/|fe/shared-html/|fe/scripts/info-|fe/scripts/build-|fe/languages/|country-kit/stage-languages\.mjs$|country-kit/catalog\.mjs$|country-kit/pack\.mjs$|fe/scripts/workspace-paths-check\.mjs$|fe/scripts/glob\.mjs$|fe/scripts/[^/]*\.test\.mjs$|country-kit/[^/]*\.test\.mjs$|country-kit/(image-info|guard-build)\.mjs$|country-kit/(info-image-allowed|niord-country\.schema)\.json$|country-kit/lib/(info-image|build-report|include|manifest|schema|asset-outputs|where)\.mjs$|country-kit/\.prettierrc$|fe/package\.json$|fe/package-lock\.json$|fe/\.npmrc$|fe/\.nvmrc$|fe/\.postcssrc\.json$|fe/\.prettierrc$|fe/\.prettierignore$|fe/\.editorconfig$|fe/angular\.json$|fe/tsconfig[^/]*\.json$|fe/eslint\.config\.js$|fe/eslint-shared\.cjs$|fe/vitest\.config\.ts$|\.github/workflows/info-ci\.yml$)'
+            if grep -qE "$pattern" <<< "$changed"; then
+              info=true
+            else
+              info=false
+            fi
+          else
+            # push is already path-filtered at the trigger; workflow_dispatch is explicit.
+            info=true
+          fi
+
+          echo "info=$info" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Info CI"
+            echo ""
+            echo "Public site changed: **$info**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Everything, one step after another after one `npm ci`. Each step runs
+  # whenever the install succeeded (`!cancelled()`) — and, for a step that reads
+  # the build, whenever the build succeeded — so the job lists every failing
+  # check, not just the first.
+  # ---------------------------------------------------------------------------
+  checks:
+    name: Checks + builds
+    needs: changes
+    if: needs.changes.outputs.info == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      # Everything but the guides' pictures (be-ci.yml's header, What a job checks out).
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /*
+            !/guides/**/images/
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: fe/.nvmrc
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+      # fe/.npmrc sets legacy-peer-deps=true, so `npm ci` resolves the typescript-eslint <->
+      # TypeScript peer mismatch without extra flags.
+      - name: Install dependencies
+        id: install
+        run: npm ci
+      # Scoped, so an administration-only formatting slip does not fail the Info gate.
+      # --ignore-unknown: the folder also holds PNGs, an SVG, a Dockerfile, an nginx template and a
+      # shell script, and Prettier treats "no parser could be inferred" as an error without it.
+      - name: Check formatting
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npx prettier --check --ignore-unknown "ui-apps/info/**" "scripts/info-*.mjs" "languages/*/i18n/info/**" "../country-kit/stage-languages.mjs" "../country-kit/catalog.mjs" "../country-kit/pack.mjs" "../country-kit/image-info.mjs" "../country-kit/lib/info-image.mjs"
+      - name: Check documentation
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run docs:check
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint:info
+      # A stale glob or an unforeseen spelling stops a boundary from applying without an error,
+      # so every boundary is linted against crafted imports it must reject — into the other
+      # application in every spelling, static and dynamic; across a layer; into a country
+      # folder from anywhere but app.config.ts — from a folder that must exist.
+      - name: Guard tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run test:guards
+      - name: Unit tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run test:info -- --watch=false
+      # Every path in angular.json must exist and lie in its project's folder or a shared one.
+      - name: Check the workspace paths
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run paths:check
+      # Read from angular.json through the builder's own asset code, so it needs no build and
+      # covers every configuration, not only the one built below: one source per output file,
+      # the bundles and flags the language configuration names (en among them), branding only
+      # for its languages, no other country's overlay, no translation review list.
+      - name: Check what each build ships
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run contents:check -- --project niord-info
+      # --stats-json; the separation check and the bundle report read
+      # dist/niord-info/browser-stats.json.
+      - name: Build
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build:info
+      # The site ships its fonts and styles itself: no reader's browser asks a third party for
+      # them, and the site's Content-Security-Policy names no font or style origin.
+      - name: No external font or style URL
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run urls:check -- --dist dist/niord-info/browser
+      - name: Separation from the administration app
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run separation:info
+      - name: First-visit bundle report
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run bundle:info
+
+  # ---------------------------------------------------------------------------
+  # The status check for branch protection to require. Runs also when a work job
+  # failed or change detection did not succeed, and is green only if detection
+  # succeeded and every work job succeeded. Skipped — which counts as passing,
+  # see fe-ci.yml — on a draft's first attempt and when detection found the
+  # public site untouched.
+  # ---------------------------------------------------------------------------
+  gate:
+    name: Info gate
+    needs: [ changes, checks ]
+    if: >-
+      ${{ always() && (!github.event.pull_request.draft || github.run_attempt > 1)
+      && !(needs.changes.result == 'success' && needs.changes.outputs.info != 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          INFO: ${{ needs.changes.outputs.info }}
+          RESULTS: >-
+            checks=${{ needs.checks.result }}
+        run: |
+          set -euo pipefail
+          echo "changes=$CHANGES info=$INFO"
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::Change detection did not succeed ($CHANGES)."
+            exit 1
+          fi
+          # The gate runs past this point only when the public site changed (see its `if:`), so
+          # every work job must have run and passed. Anything else (failure, cancelled, a skip) is red.
+          failed=0
+          for entry in $RESULTS; do
+            echo "  $entry"
+            if [ "${entry#*=}" != "success" ]; then
+              echo "::error::${entry%%=*} is '${entry#*=}', expected 'success'."
+              failed=1
+            fi
+          done
+          exit $failed

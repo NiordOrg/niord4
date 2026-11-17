@@ -1,0 +1,20 @@
+# Security updates only: Dependabot opens a pull request for an advisory and never for a new
+# version (open-pull-requests-limit 0 stops version updates, not security updates). The base
+# product version and the pinned packs' digests come with the base bump: the Niord base bump app's
+# pull request, on which the Base bump workflow pins and refreshes them. No maven entry: the base
+# product's dependencies are the base product's, and a country takes a fix with the version.
+version: 2
+updates:
+  # fe/country/ is absent until the country adds its first package (absent counts as empty), so
+  # this entry has nothing to read until then; whether Dependabot reports the missing manifest
+  # each week is GitHub's behaviour. Nothing to do until the folder exists.
+  - package-ecosystem: npm
+    directory: /fe/country
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0

@@ -1,0 +1,21 @@
+@if (built()) {
+  <app-message-details-menu [messageId]="messageId()" [message]="message()" [size]="size()" />
+} @else {
+  <!--
+    The stand-in: the icon-only button `MenuTrigger` draws for `MessageDetailsMenu` — its classes,
+    the cog at 1.25rem and the chevron — with the attributes CDK's trigger gives the button of a
+    closed menu.
+  -->
+  <button
+    type="button"
+    [class]="buttonClass()"
+    aria-haspopup="menu"
+    aria-expanded="false"
+    [attr.aria-label]="'messages.detailsMenu.buttonLabel' | transloco"
+    (click)="onClick($event)"
+    (keydown)="onKeydown($event)"
+  >
+    <app-icon name="lucideSettings" class="text-xl!" />
+    <app-icon name="lucideChevronDown" class="text-xs opacity-70" />
+  </button>
+}

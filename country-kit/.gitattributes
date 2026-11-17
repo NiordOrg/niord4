@@ -1,0 +1,18 @@
+# The kit's files are stored and checked out with LF line endings: the kit's zip builder reads the
+# working tree, and the countries check the published templates by sha256, so a CRLF checkout on a
+# Windows workstation would change the bytes they verify.
+* text=auto eol=lf
+
+# Binary file types, never line-ending-converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary

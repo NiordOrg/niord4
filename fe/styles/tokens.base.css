@@ -1,0 +1,108 @@
+/* ============================================================
+   tokens.base.css — country-LOCKED tokens
+   ============================================================
+
+   These tokens encode Niord-wide identity that is identical in
+   every deployment. The pin/label visuals are the world-wide
+   international standard for marine warning markers — users
+   moving between deployments must see the same marker.
+
+   Country overlays do NOT override these. They live here so a
+   future revision to the international standard is a single-
+   file change rather than a code sweep.
+   ============================================================ */
+
+:root {
+  /* Mono font stack — no external dependency */
+  --niord-font-mono:
+    ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, 'Roboto Mono', monospace;
+
+  /* Niord pin marker — world-wide international standard for marine
+     warning markers. The OL canvas layers read these at runtime via
+     readCssVar() (shared-map/css-tokens.ts) — canvas cannot consume CSS
+     vars directly — so this file is the single source of truth and a
+     future standard revision is a one-line change here. Both applications
+     draw the pin with the map kit's map-styles.ts. */
+  --niord-pin-fill: #8b008b; /* darkmagenta */
+  --niord-pin-stroke: #ffffff; /* white outline */
+  --niord-pin-label: #ffffff; /* white text inside the pin circle */
+  --niord-pin-label-fill: rgba(80, 0, 60, 1); /* text-label fill alongside pins */
+  --niord-pin-label-stroke: rgba(255, 255, 255, 0.9); /* white halo behind label text */
+
+  /* Message map feature visuals that are NOT the S-124 portrayal — the selection
+     and hover halos and the co-location count badge, which map-styles.ts in the
+     map kit reads via readCssVar for both applications, and the geometry
+     editor's own buffer overlay. Country-LOCKED like the pin: users moving
+     between deployments must read the same marker. The portrayal itself — its
+     magenta, and the colours of the affected-area overlay on a message map — is
+     not a token: it is data in shared-map/portrayal/portrayal.json, the one
+     definition the web maps and the backend's map images both read. */
+  --niord-msg-buffer-fill: rgba(
+    192,
+    69,
+    209,
+    0.15
+  ); /* geometry editor's buffer fill (the S-124 magenta #C045D1) */
+  --niord-msg-buffer-stroke: rgba(192, 69, 209, 0.6); /* geometry editor's buffer stroke */
+  --niord-msg-selected-halo: rgba(
+    255,
+    165,
+    0,
+    0.95
+  ); /* selection halo (orange) — niord interaction enhancement */
+  --niord-msg-hover-halo: rgba(
+    0,
+    120,
+    215,
+    0.95
+  ); /* hover halo (blue) — niord interaction enhancement */
+  --niord-msg-count-fill: #ffffff; /* co-location count numeral (on a disc in the portrayal's pen colour) */
+  --niord-msg-count-stroke: #ffffff; /* co-location count badge outline (separates it from the map) */
+
+  /* Geometry editor — the editable feature is drawn in the pin magenta
+     (vertices/outline reuse --niord-pin-*); this is the translucent fill. */
+  --niord-editor-fill: rgba(139, 0, 139, 0.1);
+
+  /* Measure tool — transient distance-measuring overlay (a tool affordance, not
+     brand). Read by the measure OL layer via readCssVar. */
+  --niord-measure-stroke: #ffcc33; /* measured-path line (amber) */
+  --niord-measure-fill: rgba(255, 255, 255, 0.2);
+
+  /* Chart-extent overview outlines (admin Charts) — country-LOCKED; the
+     dashed-red chart-coverage visual. Read by the charts-extent OL layer via
+     readCssVar (canvas styles need literal strings). */
+  --niord-chart-extent-stroke: rgba(255, 50, 0, 0.8);
+  --niord-chart-extent-label-fill: rgba(255, 50, 0, 0.8);
+  --niord-chart-extent-label-stroke: rgba(255, 255, 255, 0.9);
+
+  /* Severity notice palette — universal alert semantics (success/info/warn/
+     error) shared by the inline `.message` notice and the `<app-toast>` stack.
+     Country-LOCKED: these are standard status hues, not brand colours. `-bg` is
+     the tint, `-fg` the icon + left-accent colour (body text stays --niord-fg). */
+  --niord-notice-success-bg: #e7f3ec;
+  --niord-notice-success-fg: #1b7a44;
+  --niord-notice-info-bg: #e8f0f8;
+  --niord-notice-info-fg: #1a5a97;
+  --niord-notice-warn-bg: #fdf6e3;
+  --niord-notice-warn-fg: #92610a;
+  --niord-notice-error-bg: #fdecea;
+  --niord-notice-error-fg: #b52d20;
+
+  /* ATTENTION rail — the left rail on a list row that needs looking at (e.g. a message
+     whose follow-up date has passed); same role the accent rail plays for selection. The
+     row itself keeps its ordinary background. Country-LOCKED: a universal status hue, not
+     brand colour. Named separately from the notice palette (whose hue it currently shares,
+     since both mean "something here is off") so the row rail can move without disturbing
+     toasts. Measures 6.3:1 on white, clearing the 3:1 floor for a non-text graphic with
+     room to spare, and sits far from BOTH selection rails in colour — ΔE ≈ 97 from the
+     default brand's teal accent, ≈ 39 from a warm orange accent. */
+  --niord-attention-rail: var(--niord-notice-error-fg);
+
+  /* Revision-diff palette — added / changed / removed semantics for the editor
+     history JSON-diff pane and its colour-key legend. Country-LOCKED: these are
+     universal diff hues (green add / amber change / red remove), not brand
+     colours — same rationale as the severity notice palette above. */
+  --niord-diff-added: #15803d; /* add — green */
+  --niord-diff-changed: #b45309; /* change — amber */
+  --niord-diff-removed: #b91c1c; /* remove — red */
+}

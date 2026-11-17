@@ -1,0 +1,26 @@
+/* ============================================================
+   tokens.active.css — active-brand stub (Default)
+   ============================================================
+
+   This is the indirection point for build-time theme selection.
+   It is listed in the `styles[]` array of the build target in
+   `angular.json`, and what it imports determines which brand is
+   active in the build.
+
+   - The base product's builds → this file, importing
+                       `tokens.default.css`.
+   - A country workspace → its generated angular.json lists the
+                       country's own `tokens.<cc>.css` in this
+                       file's place, or this file when the country
+                       has none (country-kit/lib/workspace.mjs).
+
+   The swap has to happen in `styles[]` because Angular's
+   `fileReplacements` accepts only JS/TS/JSON files — a CSS file
+   is rejected by schema validation.
+
+   Do NOT add brand values here. They live in
+   `tokens.default.css` or a country's `tokens.<cc>.css`. This
+   file is purely a swap indirection.
+   ============================================================ */
+
+@import './tokens.default.css';

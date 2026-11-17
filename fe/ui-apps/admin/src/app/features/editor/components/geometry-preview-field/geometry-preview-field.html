@@ -1,0 +1,98 @@
+<div class="flex flex-col gap-2">
+  <div
+    class="relative {{
+      heightClass()
+    }} overflow-hidden rounded border border-surface-200 dark:border-surface-700"
+  >
+    <app-ol-map class="block h-full w-full" [readOnly]="true" [view]="initialView()">
+      <!-- Base layers must precede the feature layer: sea chart and WMS paint under the geometry. -->
+      <app-base-map-layers />
+      <app-ol-geometry-preview-layer [featureCollection]="featureCollection()" />
+    </app-ol-map>
+    <!-- Bottom-left: the top edge is taken by the empty-geometry hint and the edit buttons. -->
+    <app-ol-layer-switcher
+      class="absolute bottom-2 left-2 z-10"
+      [title]="'messages.map.layerSwitcher.title' | transloco"
+    />
+    @if (coordinateLineCount() === 0) {
+      <span class="pointer-events-none absolute inset-x-0 top-2 text-center text-xs text-fg-muted">
+        {{ 'editor.field.positions.empty' | transloco }}
+      </span>
+    }
+    @if (editable()) {
+      <div class="absolute top-2 right-2 z-10 flex gap-2">
+        <button type="button" class="btn-secondary shadow" (click)="openEditor()">
+          <app-icon name="lucidePencil" class="mr-1 text-xs" />
+          {{ 'editor.field.positions.edit' | transloco }}
+        </button>
+        <button type="button" class="btn-secondary shadow" (click)="openAsText()">
+          <app-icon name="lucideAlignLeft" class="mr-1 text-xs" />
+          {{ 'editor.field.positions.editAsText' | transloco }}
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (coordinateGroups().length > 0) {
+    <div class="ed-coords">
+      @for (group of coordinateGroups(); track $index) {
+        @if (group.name) {
+          <div class="ed-coords-name">{{ group.name }}</div>
+        }
+        @for (row of group.rows; track row.index) {
+          <div class="ed-coords-row">
+            <div class="ed-coords-n">{{ row.index }})</div>
+            <div class="ed-coords-c">
+              {{ row.text }}
+              @if (row.name) {
+                <span class="text-fg-subtle">— {{ row.name }}</span>
+              }
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
+</div>
+
+<!-- Near-full-window geometry editor modal (chart-editor presentation): owns its own Cancel/OK
+     toolbar + Escape, so the dialog shell's close X + Escape are off. Lazily loaded so @turf / the
+     editor chunk stay out of the initial bundle. -->
+@defer (when modalOpen()) {
+  <app-dialog
+    [visible]="modalOpen()"
+    [modal]="true"
+    [closable]="false"
+    [closeOnEscape]="false"
+    [dismissableMask]="false"
+    top="1rem"
+    [style]="{
+      width: 'calc(100vw - 2rem)',
+      maxWidth: 'calc(100vw - 2rem)',
+      height: 'calc(100vh - 2rem)',
+      maxHeight: 'calc(100vh - 2rem)',
+      overflow: 'hidden',
+    }"
+  >
+    @if (modalOpen()) {
+      <app-geometry-editor
+        class="block h-full"
+        [geometry]="featureCollection()"
+        editType="message"
+        (geometryChange)="onCommit($event)"
+        (cancelled)="onCancel()"
+      />
+    }
+  </app-dialog>
+} @error {
+  @if (modalOpen()) {
+    <p class="p-4 text-sm text-fg-muted" role="alert">{{ 'common.fetchError' | transloco }}</p>
+  }
+}
+
+<app-edit-as-text-dialog
+  [visible]="asTextOpen()"
+  (visibleChange)="asTextOpen.set($event)"
+  [featureCollection]="featureCollection()"
+  (saved)="onCommit($event)"
+/>

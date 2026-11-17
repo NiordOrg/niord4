@@ -1,0 +1,78 @@
+<div class="text-input flex w-full items-center gap-2" [class.opacity-60]="disabled()">
+  <button
+    #trigger
+    type="button"
+    class="flex min-w-0 flex-1 items-center gap-2 bg-transparent text-left"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel() || null"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="popover()?.shown() ?? false"
+    (click)="toggle()"
+  >
+    <app-icon name="lucideClock" class="shrink-0 text-fg-muted" />
+    <span class="min-w-0 flex-1 truncate" [class.text-fg-subtle]="!hasValue()">
+      {{ hasValue() ? displayValue() : placeholder() }}
+    </span>
+  </button>
+</div>
+
+<app-picker-popover panelWidth="fit-content" [dismissOnScroll]="false">
+  @if (popover()?.shown()) {
+    <div class="flex gap-1 p-1">
+      <div class="time-col" role="group" [attr.aria-label]="hoursLabel()">
+        @for (h of hours(); track h.value) {
+          <button
+            #hourBtn
+            type="button"
+            class="time-option"
+            [class.is-selected]="isHourSelected(h.value)"
+            [attr.aria-pressed]="isHourSelected(h.value)"
+            [attr.aria-label]="hourOptionLabel(h)"
+            (click)="selectHour(h.value)"
+          >
+            {{ h.label }}
+          </button>
+        }
+      </div>
+
+      <div class="time-col" role="group" [attr.aria-label]="minutesLabel()">
+        @for (m of minutes; track m.value) {
+          <button
+            #minuteBtn
+            type="button"
+            class="time-option"
+            [class.is-selected]="isMinuteSelected(m.value)"
+            [attr.aria-pressed]="isMinuteSelected(m.value)"
+            [attr.aria-label]="minuteOptionLabel(m)"
+            (click)="selectMinute(m.value)"
+          >
+            {{ m.label }}
+          </button>
+        }
+      </div>
+
+      @if (use12h()) {
+        <div class="flex flex-col gap-1">
+          <button
+            type="button"
+            class="time-option"
+            [class.is-selected]="meridiem() === 'am'"
+            [attr.aria-pressed]="meridiem() === 'am'"
+            (click)="setMeridiem('am')"
+          >
+            AM
+          </button>
+          <button
+            type="button"
+            class="time-option"
+            [class.is-selected]="meridiem() === 'pm'"
+            [attr.aria-pressed]="meridiem() === 'pm'"
+            (click)="setMeridiem('pm')"
+          >
+            PM
+          </button>
+        </div>
+      }
+    </div>
+  }
+</app-picker-popover>

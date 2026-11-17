@@ -1,0 +1,42 @@
+{
+  "name": "niord-zz-country",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "niord-zz-country",
+      "dependencies": {
+        "ngx-harbour": "3.1.0",
+        "pretty-bytes": "7.1.0",
+        "rxjs": "7.8.2"
+      }
+    },
+    "node_modules/berth-geometry": {
+      "version": "1.2.3",
+      "resolved": "https://registry.npmjs.org/berth-geometry/-/berth-geometry-1.2.3.tgz",
+      "integrity": "sha512-berthgeometry123000000000000000000000000000000000000000000000000000000000000000000000000==",
+      "license": "MIT"
+    },
+    "node_modules/ngx-harbour": {
+      "version": "3.1.0",
+      "resolved": "https://registry.npmjs.org/ngx-harbour/-/ngx-harbour-3.1.0.tgz",
+      "integrity": "sha512-ngxharbour31000000000000000000000000000000000000000000000000000000000000000000000000000==",
+      "license": "MIT",
+      "dependencies": { "berth-geometry": "^1.2.0", "ms": "^3.0.0", "tslib": "^2.3.0" },
+      "peerDependencies": { "@angular/core": "^22.0.0", "rxjs": "^7.4.0" }
+    },
+    "node_modules/ngx-harbour/node_modules/ms": {
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-3.0.0.tgz",
+      "integrity": "sha512-ms30000000000000000000000000000000000000000000000000000000000000000000000000000000000000==",
+      "license": "MIT"
+    },
+    "node_modules/pretty-bytes": {
+      "version": "7.1.0",
+      "resolved": "https://registry.npmjs.org/pretty-bytes/-/pretty-bytes-7.1.0.tgz",
+      "integrity": "sha512-prettybytes7100000000000000000000000000000000000000000000000000000000000000000000000000==",
+      "license": "MIT",
+      "engines": { "node": ">=20" }
+    }
+  }
+}

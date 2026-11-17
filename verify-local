@@ -1,0 +1,627 @@
+#!/usr/bin/env bash
+#
+# Verify a branch locally the way CI would, for the pull requests CI does not run on — the sub-PRs
+# into a `feature/**` branch (root AGENTS.md) — and print a summary to paste into the PR.
+#
+#   ./verify-local                   the parts the branch changed, against origin/main
+#   ./verify-local --base <ref>      ... against another base: origin/feature/<name> for a sub-PR
+#   ./verify-local --be-only         the backend only, whether or not the branch changed it
+#   ./verify-local --fe-only         the frontend only: the applications the branch changed, or
+#                                    both when it changed neither
+#   ./verify-local --upgrade-from <zip> --upgrade-kit-from <kit zip>   also the example
+#                                    country, with its upgrade test from that previous
+#                                    published release: its niord-fe-src and its
+#                                    niord-country-kit, both required together (a release's
+#                                    two zips, see the example country below); without them
+#                                    that test is CI's
+#
+# What runs:
+#   backend              ./mvnw clean verify over the whole be/ reactor — unit AND integration
+#                        tests, so Docker must be running (about 10 minutes) — then the Failsafe
+#                        reports are checked as ./test-it checks them (scripts/it-report-check.py):
+#                        an integration suite that silently skipped for want of Docker is a FAIL.
+#                        Then, after a build that succeeded, Backend CI's no-sample check
+#                        (k8s/scripts/check-no-sample.sh) over the jars and the bootstrap zip the
+#                        run built: none may carry the sample (be/niord/sample, loaded only into
+#                        the loopback niord_sample). A failed build has no jars to check, so the
+#                        check is then not run, and the summary says so.
+#   administration app   Frontend CI's steps: format:check, docs:check, paths:check,
+#                        contents:check (niord-app), lint, lint:scripts (ESLint over the kit's
+#                        and the workspace's scripts), test:guards, the unit tests, build,
+#                        followed by urls:check on its output
+#   public site          Info CI's steps: prettier over ui-apps/info/, the info scripts and the
+#                        public site's half of the language packs, docs:check, lint:info,
+#                        test:guards, test:info, paths:check, contents:check (niord-info),
+#                        build:info with urls:check, separation:info and bundle:info.
+#                        The base build's image, container test and layout check are manual tools
+#                        (fe/AGENTS.md); the example country below checks an image when Docker runs.
+#   example country      Frontend CI's Example country job, whenever the branch changed what its
+#                        zip or harness reads (EXAMPLE_RULE below, as fe-ci.yml's Detect): the
+#                        example country (country-kit/example/) set up as a country does, with
+#                        its secret scan, from a folder outside the tree
+#                        (.local-run/verify-local/example/) against a source zip built from the
+#                        working tree and installed into a scratch Maven repository, then npm ci,
+#                        both builds with the checks on every country build, its specs and its
+#                        lint, and — when Docker is running — its public-site image with the
+#                        container test, the layout check and the separation check against it
+#                        (country-kit/example/run.mjs --image; needs the JDK, as the backend
+#                        does). Without Docker the image is left to Frontend CI, and the row says so.
+#                        Then the new-country acceptance tests against the same zip: the untouched
+#                        init (a country `yy` made by init: set-up, the build with its warning that
+#                        there is no bundle baseline yet, the baseline started, specs, lint, the e2e
+#                        listing and, with Docker, its image); with Docker, publishing and pinning
+#                        (zz published to a local registry:2.8.3 from Docker Hub with the two
+#                        commands pack.yml's token jobs run, anonymously, pinned in yy, built
+#                        from the pin, withdrawn);
+#                        and the fixture upgrade (the example
+#                        bumped to a derived zip: set-up red on its override with the upgrade
+#                        report, green after the routine actions, built). The upgrade test from
+#                        a previous published zip runs with --upgrade-from <zip>, a release's:
+#                          gh release download v4.0.<n> --repo NiordOrg/niord4 --pattern 'niord-fe-src-*.zip'
+#                        (its sha256 is the line of that release's notes), and with
+#                        --upgrade-kit-from <kit zip> the same release's kit package, which every
+#                        release since 4.0.109 publishes:
+#                          gh release download v4.0.<n> --repo NiordOrg/niord4 --pattern 'niord-country-kit-*.zip'
+#                        Without them the test is
+#                        Frontend CI's, which takes the latest release's. The row repeats the
+#                        harness's lines on publishing and pinning (zz published, or skipped
+#                        without Docker) and on the upgrade test either way.
+#                        When the branch changed what the generated country's backend build reads
+#                        (SCAFFOLD_RULE below, as be-ci.yml's and fe-ci.yml's Detect), the part
+#                        runs whatever else changed, with --backend: straight after yy's init and
+#                        set-up, niord-base and its test-jar installed from the working tree, yy's
+#                        be/mvnw verify (the country build group on Testcontainers), the group
+#                        check and the override check. That needs Docker, and without it the row
+#                        is a FAIL: there is no Backend CI job for a sub-PR. When nothing else asks
+#                        for the part (EXAMPLE_RULE does not match, and neither --upgrade-from
+#                        nor --fe-only asks for it), it runs --backend --skip-frontend, as
+#                        Backend CI's Generated country job does: init, set-up and the backend,
+#                        no frontend step. The row repeats the harness's line on the backend.
+#
+# Which parts run is decided as CI's Detect jobs decide it (the same path rules), from
+# `git diff --no-renames <merge base>` plus untracked files: the committed branch AND the working
+# tree, so an uncommitted change counts too — the summary says when there is one. Run
+# `git fetch origin` first, so the base is current.
+#
+# The frontend runs `npm ci` in fe/ when node_modules is missing or older than package-lock.json.
+# Stop a backend started from this checkout first: `clean` deletes the target/ it runs from.
+#
+# The JDK: JAVA_HOME when it is 25 or newer, else ~/.jdks/temurin-25, else macOS's java_home or
+# the `java` on PATH. Windows (Git Bash): Maven gets -Dmaven.repo.local spelled out, NIORD_HOME is
+# exported with forward slashes (PORT-1 in be/docs/potential-errors.md), and python3 falls back to
+# `py -3` (python3 can be the Microsoft Store stub). The known Windows-only test failures listed
+# below are reported, not counted.
+#
+# Logs and the summary go to .local-run/verify-local/. Exit status: 0 PASS, 1 FAIL, 2 usage or setup.
+
+# Not -e: every part runs and reports whatever failed before it.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OUT="$ROOT/.local-run/verify-local"
+
+usage() { sed -n '3,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+# A previous published zip for the upgrade test, given with the option $1 as $2, set into the
+# variable $3: an existing file, made absolute (the harness runs from fe/), and without a space,
+# which the harness refuses (it reaches Maven in MAVEN_ARGS).
+previous_zip() {
+    case "$2" in
+        *[[:space:]]*) echo "verify-local: $1 '$2' has a space; the harness refuses it, so pass a path without one" >&2; exit 2 ;;
+    esac
+    [ -f "$2" ] || { echo "verify-local: $1 '$2' is not a file" >&2; exit 2; }
+    printf -v "$3" '%s' "$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
+}
+
+BASE=origin/main
+MODE=auto
+UPGRADE_FROM=""
+UPGRADE_KIT_FROM=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --base) [ $# -ge 2 ] || { echo "verify-local: --base needs a ref" >&2; exit 2; }
+                BASE="$2"; shift 2 ;;
+        --base=*) BASE="${1#--base=}"; shift ;;
+        --upgrade-from) [ $# -ge 2 ] || { echo "verify-local: --upgrade-from needs a niord-fe-src zip" >&2; exit 2; }
+                previous_zip --upgrade-from "$2" UPGRADE_FROM; shift 2 ;;
+        --upgrade-from=*) previous_zip --upgrade-from "${1#--upgrade-from=}" UPGRADE_FROM; shift ;;
+        --upgrade-kit-from) [ $# -ge 2 ] || { echo "verify-local: --upgrade-kit-from needs a niord-country-kit zip" >&2; exit 2; }
+                previous_zip --upgrade-kit-from "$2" UPGRADE_KIT_FROM; shift 2 ;;
+        --upgrade-kit-from=*) previous_zip --upgrade-kit-from "${1#--upgrade-kit-from=}" UPGRADE_KIT_FROM; shift ;;
+        --be-only|--fe-only)
+            [ "$MODE" = auto ] || { echo "verify-local: --be-only and --fe-only exclude each other" >&2; exit 2; }
+            MODE="${1#--}"; MODE="${MODE%-only}"; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "verify-local: unknown option '$1'" >&2; usage >&2; exit 2 ;;
+    esac
+done
+if [ -n "$UPGRADE_KIT_FROM" ] && [ -z "$UPGRADE_FROM" ]; then
+    echo "verify-local: --upgrade-kit-from comes with --upgrade-from: it is the kit package of the same release" >&2
+    exit 2
+fi
+if [ -n "$UPGRADE_FROM" ] && [ -z "$UPGRADE_KIT_FROM" ]; then
+    echo "verify-local: --upgrade-from needs --upgrade-kit-from: the niord-country-kit zip of the same release, which every release since 4.0.109 publishes" >&2
+    exit 2
+fi
+
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) WINDOWS=true ;;
+    *) WINDOWS=false ;;
+esac
+# A path the JVM understands (C:/Users/... on Windows, unchanged elsewhere).
+native_path() { if $WINDOWS; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
+# Git Bash's own find and sort, never C:\Windows\System32's.
+if $WINDOWS; then PATH="/usr/bin:$PATH"; fi
+
+# ---- what the branch changed -----------------------------------------------------------------
+
+cd "$ROOT" || exit 2
+if ! git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
+    echo "verify-local: '$BASE' is not a commit in this repository — git fetch origin, or pass --base <ref>." >&2
+    exit 2
+fi
+MERGE_BASE=$(git merge-base "$BASE" HEAD) || { echo "verify-local: no merge base between $BASE and HEAD." >&2; exit 2; }
+# 2>/dev/null: git's line-ending warnings about the working copy are not what this is asking.
+CHANGED=$( { git diff --name-only --no-renames "$MERGE_BASE" 2>/dev/null; git ls-files --others --exclude-standard; } | sort -u)
+DIRTY=false
+[ -n "$(git status --porcelain 2>/dev/null)" ] && DIRTY=true
+
+# The path rules of the Detect steps in .github/workflows/be-ci.yml, fe-ci.yml and info-ci.yml;
+# keep them in step. Here-strings, not `echo | grep -q` (see fe-ci.yml).
+touches() { grep -qE "$1" <<< "$2"; }
+BE_RULE='^(be/|\.github/workflows/be-ci\.yml$|fe/shared-html/message-html-classes\.ts$|fe/shared-map/portrayal/)'
+ADMIN_RULE='^(fe/|country-kit/|be/niord/src/test/resources/endpoints/|\.github/workflows/(fe-ci|publish|retract-version)\.yml$)'
+INFO_RULE='^(fe/ui-apps/info/|fe/styles/|fe/shared-map/|fe/shared-html/|fe/scripts/info-|fe/scripts/build-|fe/languages/|country-kit/stage-languages\.mjs$|country-kit/catalog\.mjs$|country-kit/pack\.mjs$|fe/scripts/workspace-paths-check\.mjs$|fe/scripts/glob\.mjs$|fe/scripts/[^/]*\.test\.mjs$|country-kit/[^/]*\.test\.mjs$|country-kit/(image-info|guard-build)\.mjs$|country-kit/(info-image-allowed|niord-country\.schema)\.json$|country-kit/lib/(info-image|build-report|include|manifest|schema|asset-outputs|where)\.mjs$|country-kit/\.prettierrc$|fe/package\.json$|fe/package-lock\.json$|fe/\.npmrc$|fe/\.nvmrc$|fe/\.postcssrc\.json$|fe/\.prettierrc$|fe/\.prettierignore$|fe/\.editorconfig$|fe/angular\.json$|fe/tsconfig[^/]*\.json$|fe/eslint\.config\.js$|fe/eslint-shared\.cjs$|fe/vitest\.config\.ts$|\.github/workflows/info-ci\.yml$)'
+# What the example country's zip and harness read: the zip's include list
+# (country-kit/zip-include.json, widened to whole folders; of fe/scripts/ only the public site's
+# checks, the URL check with its glob matcher and the URL allow-list it carries; of the root files
+# also eslint-shared.cjs, the lint lists eslint.config.js takes), the kit, the backend contract
+# be/docs/country-api.md, the parent pom and Maven wrapper it installs and runs, the base settings
+# file, its catalog and the PDF logo the kit package carries under backend/, and the English
+# backend bundles the zip's catalog.json is built from.
+EXAMPLE_RULE='^(fe/ui-apps/|fe/shared-map/|fe/shared-html/|fe/styles/|fe/languages/en/|country-kit/|fe/scripts/(info-(separation-check|layout-check|bundle-report|container-test)|build-urls-check|glob)\.mjs$|fe/scripts/build-urls-allowed\.json$|fe/(package\.json|package-lock\.json|\.npmrc|\.nvmrc|\.postcssrc\.json|tsconfig\.json|angular\.json|eslint\.config\.js|eslint-shared\.cjs|vitest\.config\.ts|proxy\.conf\.mjs|LICENSE|playwright\.config\.ts)$|be/pom\.xml$|be/mvnw(\.cmd)?$|be/\.mvn/|be/docs/country-api\.md$|be/niord/src/main/resources/([a-z]+_en\.properties$|defaults/base/texts/en/|defaults/base/settings(-catalog)?\.json$|META-INF/resources/img/company-logo\.png$)|\.github/workflows/fe-ci\.yml$)'
+# What the generated country's backend build reads (the example part's --backend): be-ci.yml's and
+# fe-ci.yml's scaffold_rule, the same expression — the parent pom, niord-base's, niord-app's and
+# the bootstrap's poms, the bootstrap, the base settings, the country build group, the backend
+# contract, the Maven wrapper, the override check, the kit's init, answers schema, scaffold and
+# templates, and the harness and the two workflows that run it.
+SCAFFOLD_RULE='^(be/pom\.xml$|be/niord/pom\.xml$|be/niord-app/|be/niord-bootstrap/|be/niord/bootstrap/|be/niord/src/main/resources/defaults/base/|be/niord/src/test/java/org/niord/test/CountryBuildGroup(Test)?\.java$|be/docs/country-api\.md$|be/mvnw(\.cmd)?$|be/\.mvn/|be/k8s/scripts/(check-overrides\.sh|CheckOverrides\.java)$|country-kit/init\.mjs$|country-kit/init-answers\.schema\.json$|country-kit/lib/(scaffold|answers|where)\.mjs$|country-kit/templates/be/|country-kit/templates/ci\.yml$|country-kit/example/(run|acceptance)\.mjs$|\.github/workflows/(be-ci|fe-ci)\.yml$)'
+NOT_INFO=$(grep -vE '^fe/ui-apps/info/' <<< "$CHANGED" || true)
+
+DO_BE=false; DO_ADMIN=false; DO_INFO=false; DO_EXAMPLE=false; DO_SCAFFOLD=false
+if [ "$MODE" != fe ]; then touches "$BE_RULE" "$CHANGED" && DO_BE=true; fi
+if [ "$MODE" != be ]; then
+    touches "$ADMIN_RULE" "$NOT_INFO" && DO_ADMIN=true
+    touches "$INFO_RULE" "$CHANGED" && DO_INFO=true
+    touches "$EXAMPLE_RULE" "$CHANGED" && DO_EXAMPLE=true
+    touches "$SCAFFOLD_RULE" "$CHANGED" && DO_SCAFFOLD=true
+fi
+if [ "$MODE" = be ]; then DO_BE=true; fi
+if [ "$MODE" = fe ] && ! $DO_ADMIN && ! $DO_INFO; then DO_ADMIN=true; DO_INFO=true; DO_EXAMPLE=true; fi
+# An upgrade test asked for runs, whatever the branch changed (not with --be-only).
+if [ -n "$UPGRADE_FROM" ] && [ "$MODE" != be ]; then DO_EXAMPLE=true; fi
+# A scaffold change runs the example part with the generated country's backend: locally there is
+# no Backend CI job to build it. When nothing else asked for the example, it runs the backend
+# steps alone (--backend --skip-frontend), what Backend CI's Generated country job runs.
+EXAMPLE_FRONTEND=$DO_EXAMPLE
+if $DO_SCAFFOLD; then DO_EXAMPLE=true; fi
+
+mkdir -p "$OUT"
+rm -f "$OUT"/*.log "$OUT"/summary.md
+
+# ---- helpers ---------------------------------------------------------------------------------
+
+duration() { local s=$1; if [ "$s" -ge 60 ]; then printf '%dm%02ds' $((s / 60)) $((s % 60)); else printf '%ds' "$s"; fi; }
+
+# run_step <label> <log name> <command...> — runs the command in the current directory, logs its
+# output to $OUT/<log name>.log and prints one line; the status is the command's.
+run_step() {
+    local label="$1" log="$OUT/$2.log" start=$SECONDS status
+    shift 2
+    printf '  %-30s ' "$label"
+    "$@" > "$log" 2>&1
+    status=$?
+    if [ $status -eq 0 ]; then
+        printf 'ok    %s\n' "$(duration $((SECONDS - start)))"
+    else
+        printf 'FAIL  %s  (.local-run/verify-local/%s.log)\n' "$(duration $((SECONDS - start)))" "$2"
+    fi
+    return $status
+}
+
+# ---- backend ---------------------------------------------------------------------------------
+
+# Known to fail on Windows only, on main as well (12 tests): paths compared with `/` in them —
+# every test of RepositoryRestServiceITTest (9), and one each in SettingsServiceITTest,
+# SecomImportBoundaryTest and KubernetesSecretKeystoreWriterTest. On Windows they are listed and
+# ignored; anywhere else they fail the run like any other test.
+KNOWN_WINDOWS_FAILURES='(^|\.)RepositoryRestServiceITTest\.|(^|\.)(SettingsServiceITTest\.getPathBuildsPathFromStringValue|SecomImportBoundaryTest\.onlyTheSecomPackageImportsSecomLibOrResteasy|KubernetesSecretKeystoreWriterTest\.parsesAndNormalizesTheSecretMountPairs)($|\()'
+
+java_major() {
+    local v
+    v=$("$1/bin/java" -version 2>&1 | sed -n '1s/.*version "\([0-9]*\).*/\1/p')
+    echo "${v:-0}"
+}
+jdk_ok() { [ -n "$1" ] && [ -x "$1/bin/java" ] && [ "$(java_major "$1")" -ge 25 ]; }
+
+# A JDK 25 or newer, in this order: JAVA_HOME, ~/.jdks/temurin-25 (where the Windows workstations
+# keep it), macOS's java_home, the `java` on PATH (Homebrew or a Linux package, often with no
+# JAVA_HOME set). Each is tried only when the one before did not do.
+find_jdk() {
+    local c
+    for c in "${JAVA_HOME:-}" "$HOME/.jdks/temurin-25"; do
+        jdk_ok "$c" && { printf '%s' "$c"; return 0; }
+    done
+    if [ -x /usr/libexec/java_home ]; then
+        c=$(/usr/libexec/java_home -v 25 2>/dev/null) && jdk_ok "$c" && { printf '%s' "$c"; return 0; }
+    fi
+    if command -v java >/dev/null 2>&1; then
+        c=$(java -XshowSettings:properties -version 2>&1 | sed -n 's/^ *java\.home = //p' | tr -d '\r')
+        if $WINDOWS && [ -n "$c" ]; then c=$(cygpath -u "$c"); fi
+        jdk_ok "$c" && { printf '%s' "$c"; return 0; }
+    fi
+    return 1
+}
+
+# A Python 3 that runs: python3 can be the Microsoft Store stub on Windows, which only prints a hint.
+PY=()
+for candidate in python3 "py -3" python; do
+    # shellcheck disable=SC2086 # "py -3" is a command and an argument
+    if $candidate -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' >/dev/null 2>&1; then
+        read -r -a PY <<< "$candidate"
+        break
+    fi
+done
+
+BE_RESULT="not changed"; BE_DETAIL=""; BE_TIME=""; BE_NOTES=""
+verify_backend() {
+    local start=$SECONDS jdk
+    echo ">> backend (be/): ./mvnw clean verify, unit and integration tests"
+    if ! jdk=$(find_jdk); then
+        BE_RESULT=FAIL; BE_DETAIL="no JDK 25: set JAVA_HOME, put one on PATH, or unpack Temurin 25 into ~/.jdks/temurin-25"; return
+    fi
+    JAVA_HOME="$(native_path "$jdk")"
+    export JAVA_HOME
+    if ! docker info >/dev/null 2>&1; then
+        BE_RESULT=FAIL; BE_DETAIL="Docker is not running: the integration tests need it"; return
+    fi
+    if [ ${#PY[@]} -eq 0 ]; then
+        BE_RESULT=FAIL; BE_DETAIL="no Python 3 (python3, py -3 or python) for the integration-test report check"; return
+    fi
+
+    # The integration tests write under NIORD_HOME (and keep one that is set, so a NIORD_HOME left
+    # pointing at real data would be written into). A folder of this run's own, with forward slashes.
+    rm -rf "$OUT/niord-home"; mkdir -p "$OUT/niord-home"
+    NIORD_HOME="$(native_path "$OUT/niord-home")"
+    export NIORD_HOME
+    local repo_arg=()
+    if $WINDOWS; then
+        local m2
+        m2="$(native_path "${USERPROFILE:-$HOME}")/.m2"
+        export MAVEN_USER_HOME="${MAVEN_USER_HOME:-$m2}"
+        case " ${MAVEN_ARGS:-} " in
+            *maven.repo.local=*) ;;
+            *) repo_arg=("-Dmaven.repo.local=$m2/repository") ;;
+        esac
+    fi
+
+    # -Dmaven.test.failure.ignore: a known Windows failure in niord/ must not skip the modules after
+    # it (niord-bootstrap, niord-app); the failures are read from the reports below instead. The
+    # last two are safety nets for a hang, not settings CI needs: a forked test JVM is killed after
+    # 55 minutes, and a database lock wait gives up after 60 s instead of blocking the run for hours.
+    printf '  %-30s ' "mvnw clean verify"
+    (cd be && ./mvnw -B -ntp -fae ${repo_arg[@]+"${repo_arg[@]}"} clean verify \
+        -Dmaven.test.failure.ignore=true -Dfailsafe.timeout=3300 \
+        "-Dspring.datasource.hikari.connection-init-sql=SET lock_timeout = '60s'") > "$OUT/backend.log" 2>&1
+    local mvn_status=$?
+    if [ $mvn_status -eq 0 ]; then echo "done  $(duration $((SECONDS - start)))"; else echo "FAIL  $(duration $((SECONDS - start)))  (.local-run/verify-local/backend.log)"; fi
+
+    (cd be && "${PY[@]}" scripts/it-report-check.py --min 50) > "$OUT/backend-it-check.log" 2>&1
+    local it_status=$?
+    [ $it_status -eq 0 ] || sed 's/^/    /' "$OUT/backend-it-check.log"
+
+    # Backend CI's step after its build, over the same artefacts: no jar the run built — niord-base
+    # and its test-jar, niord-app's executable jar with the jars nested in it — and not the
+    # bootstrap zip carries the sample (docs/fe-country-split-plan.md P9's safety rule). Like
+    # be-ci.yml's step, it runs after a build that succeeded only: a failed build leaves no jars, and
+    # the check's exit 2 for a missing artefact would read as a second failure.
+    local sample_status=0 sample_run=false
+    if [ $mvn_status -eq 0 ]; then
+        sample_run=true
+        (cd be && k8s/scripts/check-no-sample.sh niord/sample niord/target/*.jar niord-app/target/*.jar \
+            niord-bootstrap/target/*.zip) > "$OUT/backend-no-sample.log" 2>&1
+        sample_status=$?
+        [ $sample_status -eq 0 ] || sed 's/^/    /' "$OUT/backend-no-sample.log"
+    fi
+
+    # Totals and failed tests from the Surefire and Failsafe XML reports (not the console, whose
+    # layout changes between plugin versions): line 1 the totals, then one failed test per line.
+    (cd be && "${PY[@]}" - <<'PYEOF'
+import glob, os, xml.etree.ElementTree as ET
+totals, failed = {}, []
+for kind in ("surefire", "failsafe"):
+    tests = bad = skipped = 0
+    for path in sorted(glob.glob(os.path.join("**", "target", kind + "-reports", "TEST-*.xml"), recursive=True)):
+        try:
+            suite = ET.parse(path).getroot()
+        except ET.ParseError:
+            failed.append("unreadable report " + path)
+            continue
+        for case in suite.iter("testcase"):
+            tests += 1
+            if case.find("skipped") is not None:
+                skipped += 1
+            if case.find("failure") is not None or case.find("error") is not None:
+                bad += 1
+                failed.append(case.get("classname", "?") + "." + case.get("name", "?"))
+    totals[kind] = (tests, bad, skipped)
+u, i = totals["surefire"], totals["failsafe"]
+print("unit %d tests (%d failed, %d skipped), integration %d tests (%d failed, %d skipped)" % (u + i))
+print("\n".join(failed))
+PYEOF
+    ) > "$OUT/backend-tests.txt" 2>&1
+    local totals failures unexpected known
+    totals=$(head -n 1 "$OUT/backend-tests.txt")
+    failures=$(tail -n +2 "$OUT/backend-tests.txt" | sed '/^$/d')
+    if $WINDOWS; then
+        known=$(grep -E "$KNOWN_WINDOWS_FAILURES" <<< "$failures" || true)
+        unexpected=$(grep -vE "$KNOWN_WINDOWS_FAILURES" <<< "$failures" || true)
+    else
+        known=""; unexpected="$failures"
+    fi
+    local n_known=0 n_unexpected=0
+    [ -n "$known" ] && n_known=$(wc -l <<< "$known" | tr -d ' ')
+    [ -n "$unexpected" ] && n_unexpected=$(wc -l <<< "$unexpected" | tr -d ' ')
+
+    BE_TIME=$(duration $((SECONDS - start)))
+    BE_DETAIL="mvnw clean verify: $totals"
+    [ $it_status -eq 0 ] && BE_DETAIL="$BE_DETAIL; IT report check ok"
+    if $sample_run; then
+        [ $sample_status -eq 0 ] && BE_DETAIL="$BE_DETAIL; no-sample check ok"
+    else
+        BE_DETAIL="$BE_DETAIL; no-sample check not run (build failed)"
+    fi
+    [ "$n_known" -gt 0 ] && BE_DETAIL="$BE_DETAIL; $n_known known Windows-only failures ignored"
+    if [ $mvn_status -eq 0 ] && [ $it_status -eq 0 ] && [ $sample_status -eq 0 ] && [ "$n_unexpected" -eq 0 ]; then
+        BE_RESULT=PASS
+    else
+        BE_RESULT=FAIL
+        [ $mvn_status -eq 0 ] || BE_DETAIL="$BE_DETAIL; Maven exited $mvn_status (build error, see backend.log)"
+        [ $it_status -eq 0 ] || BE_DETAIL="$BE_DETAIL; the integration-test report check failed (backend-it-check.log)"
+        [ $sample_status -eq 0 ] || BE_DETAIL="$BE_DETAIL; the no-sample check failed (backend-no-sample.log)"
+    fi
+    [ -n "$unexpected" ] && BE_NOTES="$BE_NOTES
+Failed tests: $(head -n 20 <<< "$unexpected" | tr '\n' ' ')$([ "$n_unexpected" -gt 20 ] && echo "... ($n_unexpected in all)")"
+    [ -n "$known" ] && BE_NOTES="$BE_NOTES
+Known Windows-only failures ignored: $(sed -E 's/^([a-z0-9_]+\.)+//; s/\..*//' <<< "$known" | sort | uniq -c | sed -E 's/^ *([0-9]+) (.*)/\2 ×\1/' | paste -sd ',' - | sed 's/,/, /g')."
+}
+
+# ---- frontend --------------------------------------------------------------------------------
+
+FE_READY=unknown
+FE_SETUP_ERROR=""
+fe_prepare() {
+    [ "$FE_READY" = unknown ] || { [ "$FE_READY" = yes ]; return; }
+    FE_READY=no
+    if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+        FE_SETUP_ERROR="node or npm not found on PATH"
+        echo "  $FE_SETUP_ERROR"
+        return 1
+    fi
+    cd "$ROOT/fe" || return 1
+    if [ ! -d node_modules ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
+        FE_SETUP_ERROR="npm ci failed (fe-npm-ci.log)"
+        run_step "npm ci" fe-npm-ci npm ci || return 1
+    fi
+    FE_READY=yes
+}
+
+# Checks both applications run are run once: the whole-tree format check covers the public
+# site's folder, and docs:check, paths:check and test:guards are the same for both. A repeated
+# call reports the first run's result again, so each part's row names the checks that failed.
+DONE_SHARED=""; FAILED_SHARED=""
+shared_done() { case " $DONE_SHARED " in *" $1 "*) return 0 ;; esac; return 1; }
+shared_failed() { case " $FAILED_SHARED " in *" $1 "*) return 0 ;; esac; return 1; }
+shared_step() {
+    if shared_done "$2"; then
+        if shared_failed "$2"; then printf '  %-30s FAIL  (ran above)\n' "$1"; return 1; fi
+        printf '  %-30s ok    (ran above)\n' "$1"; return 0
+    fi
+    DONE_SHARED="$DONE_SHARED $2"
+    run_step "$@" && return 0
+    FAILED_SHARED="$FAILED_SHARED $2"
+    return 1
+}
+
+ADMIN_RESULT="not changed"; ADMIN_DETAIL=""; ADMIN_TIME=""
+verify_admin() {
+    local start=$SECONDS failed=""
+    echo ">> administration app (fe/, Frontend CI's steps)"
+    if ! fe_prepare; then ADMIN_RESULT=FAIL; ADMIN_DETAIL="$FE_SETUP_ERROR"; return; fi
+    cd "$ROOT/fe" || return
+    shared_step "format:check (whole tree)" fe-format npm run format:check || failed="$failed format"
+    shared_step "docs:check" fe-docs npm run docs:check || failed="$failed docs"
+    shared_step "paths:check" fe-paths npm run paths:check || failed="$failed paths"
+    run_step "contents:check" admin-contents npm run contents:check -- --project niord-app || failed="$failed contents"
+    run_step "lint" admin-lint npm run lint || failed="$failed lint"
+    run_step "lint:scripts" admin-lint-scripts npm run lint:scripts || failed="$failed lint-scripts"
+    shared_step "test:guards" fe-guards npm run test:guards || failed="$failed guards"
+    run_step "unit tests" admin-test npm run test -- --watch=false || failed="$failed unit-tests"
+    # The build's URL check comes right after it.
+    if run_step "build" admin-build npm run build; then
+        run_step "urls:check" admin-urls npm run urls:check -- --dist dist/niord-app/browser || failed="$failed urls"
+    else
+        failed="$failed build"
+    fi
+    ADMIN_TIME=$(duration $((SECONDS - start)))
+    if [ -z "$failed" ]; then
+        ADMIN_RESULT=PASS
+        ADMIN_DETAIL="format, docs, paths, contents, lint, lint:scripts, guards, unit tests, build + urls"
+    else
+        ADMIN_RESULT=FAIL
+        ADMIN_DETAIL="failed:$failed"
+    fi
+}
+
+INFO_RESULT="not changed"; INFO_DETAIL=""; INFO_TIME=""
+verify_info() {
+    local start=$SECONDS failed=""
+    echo ">> public site (fe/ui-apps/info, Info CI's steps)"
+    if ! fe_prepare; then INFO_RESULT=FAIL; INFO_DETAIL="$FE_SETUP_ERROR"; return; fi
+    cd "$ROOT/fe" || return
+    # Info CI's own, narrower Prettier check — unless the whole-tree check already passed, which
+    # covers it. When that one failed, this one says whether the public site's files are among it.
+    if ! shared_done fe-format || shared_failed fe-format; then
+        run_step "prettier ui-apps/info/" info-format \
+            npx prettier --check --ignore-unknown "ui-apps/info/**" "scripts/info-*.mjs" \
+            "languages/*/i18n/info/**" "../country-kit/stage-languages.mjs" "../country-kit/catalog.mjs" \
+            "../country-kit/pack.mjs" "../country-kit/image-info.mjs" "../country-kit/lib/info-image.mjs" \
+            || failed="$failed format"
+    fi
+    shared_step "docs:check" fe-docs npm run docs:check || failed="$failed docs"
+    run_step "lint:info" info-lint npm run lint:info || failed="$failed lint"
+    shared_step "test:guards" fe-guards npm run test:guards || failed="$failed guards"
+    run_step "test:info" info-test npm run test:info -- --watch=false || failed="$failed unit-tests"
+    shared_step "paths:check" fe-paths npm run paths:check || failed="$failed paths"
+    run_step "contents:check" info-contents npm run contents:check -- --project niord-info || failed="$failed contents"
+    # The build's checks come right after it.
+    if run_step "build:info" info-build npm run build:info; then
+        run_step "urls:check" info-urls npm run urls:check -- --dist dist/niord-info/browser || failed="$failed urls"
+        run_step "separation:info" info-separation npm run separation:info || failed="$failed separation"
+        run_step "bundle:info" info-bundle npm run bundle:info || failed="$failed bundle"
+    else
+        failed="$failed build"
+    fi
+    INFO_TIME=$(duration $((SECONDS - start)))
+    if [ -z "$failed" ]; then
+        INFO_RESULT=PASS
+        INFO_DETAIL="format, docs, lint, guards, unit tests, paths, contents, build + urls + separation + bundle"
+    else
+        INFO_RESULT=FAIL
+        INFO_DETAIL="failed:$failed"
+    fi
+}
+
+EXAMPLE_RESULT="not changed"; EXAMPLE_DETAIL=""; EXAMPLE_TIME=""
+verify_example() {
+    local start=$SECONDS jdk
+    echo ">> example country (country-kit/example, Frontend CI's Example country job)"
+    if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+        EXAMPLE_RESULT=FAIL; EXAMPLE_DETAIL="node or npm not found on PATH"; return
+    fi
+    # The harness runs Maven through the base product's wrapper: the zip's install into a scratch
+    # repository, and the example's own set-up fetching it from there.
+    if ! jdk=$(find_jdk); then
+        EXAMPLE_RESULT=FAIL; EXAMPLE_DETAIL="no JDK 25: set JAVA_HOME, put one on PATH, or unpack Temurin 25 into ~/.jdks/temurin-25"; return
+    fi
+    JAVA_HOME="$(native_path "$jdk")"
+    export JAVA_HOME
+    local repo_arg=()
+    if $WINDOWS; then
+        local m2
+        m2="$(native_path "${USERPROFILE:-$HOME}")/.m2"
+        export MAVEN_USER_HOME="${MAVEN_USER_HOME:-$m2}"
+        repo_arg=(--maven-repo "$m2/repository")
+    fi
+    local docker=false
+    docker info >/dev/null 2>&1 && docker=true
+    # The generated country's backend (a scaffold change) runs its integration tests on
+    # Testcontainers. Without Docker it is a FAIL, not a skip: this run is a sub-PR's only proof.
+    if $DO_SCAFFOLD && ! $docker; then
+        EXAMPLE_RESULT=FAIL; EXAMPLE_DETAIL="the scaffold inputs changed and the generated country's backend needs Docker: start Docker Desktop"; return
+    fi
+    local backend_arg=()
+    if $DO_SCAFFOLD; then
+        backend_arg=(--backend)
+        $EXAMPLE_FRONTEND || backend_arg+=(--skip-frontend)
+    fi
+    # The public-site image needs Docker; without it the harness runs every other step and the row
+    # says the image is Frontend CI's. No --with-deps: installing Chromium's system libraries asks
+    # for root (apt), which a local run must not do. --skip-frontend builds no image.
+    local image_arg=() label="set-up, build, test, lint" image_note yy_image upgrade registry backend
+    if ! $EXAMPLE_FRONTEND; then
+        label="init, set-up, generated backend"
+        image_note=""
+        yy_image=""
+    elif $docker; then
+        image_arg=(--image)
+        label="set-up, build, test, lint, image"
+        image_note=", the info image with its container test, layout and separation checks"
+        yy_image=", its image with the warnings of no legal document and no branding text"
+    else
+        image_note="; image: not built here (Docker not running); Frontend CI's Example country job builds it"
+        yy_image=""
+    fi
+    $DO_SCAFFOLD && $EXAMPLE_FRONTEND && label="$label, generated backend"
+    # The upgrade test runs here only from a zip given with --upgrade-from and its kit package
+    # from --upgrade-kit-from; without them the harness skips it and says it is Frontend CI's,
+    # which takes the latest release's.
+    local upgrade_arg=()
+    if [ -n "$UPGRADE_FROM" ]; then
+        upgrade_arg=(--upgrade-from "$(native_path "$UPGRADE_FROM")" --upgrade-kit-from "$(native_path "$UPGRADE_KIT_FROM")")
+        label="$label, upgrade test"
+    fi
+    # From fe/, as Frontend CI's job runs it: the kit sits beside fe/.
+    cd "$ROOT/fe" || return
+    if run_step "$label, acceptance" example node ../country-kit/example/run.mjs \
+        --work "$(native_path "$OUT/example")" ${repo_arg[@]+"${repo_arg[@]}"} \
+        ${image_arg[@]+"${image_arg[@]}"} ${backend_arg[@]+"${backend_arg[@]}"} \
+        ${upgrade_arg[@]+"${upgrade_arg[@]}"}; then
+        EXAMPLE_RESULT=PASS
+        # The harness's own lines on publishing and pinning zz, on the upgrade test and on the
+        # generated country's backend: what ran, or that it was skipped.
+        registry=$(grep -E '^example: (zz published|publishing and pinning zz: skipped)' "$OUT/example.log" | tail -n 1 | sed 's/^example: //')
+        upgrade=$(grep -E '^example: upgrade test: ' "$OUT/example.log" | tail -n 1 | sed 's/^example: //')
+        backend=$(grep -E '^example: (yy.s backend|the generated country.s backend)' "$OUT/example.log" | tail -n 1 | sed 's/^example: //')
+        if $EXAMPLE_FRONTEND; then
+            EXAMPLE_DETAIL="zip from the working tree in a scratch Maven repository, set-up pinned by its hash with the secret scan, npm ci, build of both applications with the build checks (bundles, flags, URLs, the utility, secrets, separation, bundle baseline), npm test, npm run lint$image_note, the e2e spec listed; untouched init yy: set-up, build with the no-baseline warning, test, lint, e2e listing, the baseline recipe$yy_image; ${backend:-the generated country's backend: no line in example.log}; ${registry:-publishing and pinning: no line in example.log}; fixture upgrade 4.0.0-example to 4.0.1-example: set-up red on the override alone with .niord/niord-upgrade-report.md checked, --accept-override's diff since the recorded fingerprint, set-up and build green; ${upgrade:-upgrade test: no line in example.log}"
+        else
+            EXAMPLE_DETAIL="only the scaffold inputs asked for the part (--backend --skip-frontend, as Backend CI's Generated country job): zip and kit package from the working tree in a scratch Maven repository; untouched init yy from --answers and --sha256-file, its set-up; ${backend:-the generated country's backend: no line in example.log}"
+        fi
+    else
+        EXAMPLE_RESULT=FAIL
+        EXAMPLE_DETAIL="failed: see .local-run/verify-local/example.log$( [ ${#image_arg[@]} -eq 0 ] && printf '%s' "$image_note")"
+    fi
+    EXAMPLE_TIME=$(duration $((SECONDS - start)))
+}
+
+# ---- run -------------------------------------------------------------------------------------
+
+BRANCH=$(git branch --show-current); [ -n "$BRANCH" ] || BRANCH="(detached)"
+HEAD_SHORT=$(git rev-parse --short HEAD)
+BASE_SHORT=$(git rev-parse --short "$MERGE_BASE")
+echo "verify-local: $BRANCH @ $HEAD_SHORT against $BASE (merge base $BASE_SHORT)$($DIRTY && echo ', with uncommitted changes')"
+echo "  backend: $DO_BE · administration app: $DO_ADMIN · public site: $DO_INFO · example country: $DO_EXAMPLE · generated backend: $DO_SCAFFOLD"
+
+$DO_BE && { verify_backend; cd "$ROOT" || exit 2; }
+$DO_ADMIN && { verify_admin; cd "$ROOT" || exit 2; }
+$DO_INFO && { verify_info; cd "$ROOT" || exit 2; }
+$DO_EXAMPLE && { verify_example; cd "$ROOT" || exit 2; }
+$DO_BE || [ "$MODE" != fe ] || BE_RESULT="not run (--fe-only)"
+if [ "$MODE" = be ]; then
+    ADMIN_RESULT="not run (--be-only)"; INFO_RESULT="not run (--be-only)"; EXAMPLE_RESULT="not run (--be-only)"
+fi
+
+RESULT=PASS
+for r in "$BE_RESULT" "$ADMIN_RESULT" "$INFO_RESULT" "$EXAMPLE_RESULT"; do [ "$r" = FAIL ] && RESULT=FAIL; done
+if ! $DO_BE && ! $DO_ADMIN && ! $DO_INFO && ! $DO_EXAMPLE; then RESULT="PASS (nothing to verify: the branch changes neither be/ nor fe/)"; fi
+
+row() { printf '| %s | %s | %s | %s |\n' "$1" "$2" "${3:-—}" "${4:-—}"; }
+{
+    echo "**\`./verify-local\`** — \`$BRANCH\` @ \`$HEAD_SHORT\` against \`$BASE\` (merge base \`$BASE_SHORT\`), $(uname -s | sed -E 's/^(MINGW|MSYS|CYGWIN).*/Windows/'), $(date '+%Y-%m-%d %H:%M')"
+    $DIRTY && echo "" && echo "The working tree had uncommitted changes; they were verified too."
+    echo ""
+    echo "| Part | Result | What ran | Time |"
+    echo "|---|---|---|---|"
+    row "backend" "$BE_RESULT" "$BE_DETAIL" "$BE_TIME"
+    row "administration app" "$ADMIN_RESULT" "$ADMIN_DETAIL" "$ADMIN_TIME"
+    row "public site" "$INFO_RESULT" "$INFO_DETAIL" "$INFO_TIME"
+    row "example country" "$EXAMPLE_RESULT" "$EXAMPLE_DETAIL" "$EXAMPLE_TIME"
+    [ -n "$BE_NOTES" ] && printf '%s\n' "$BE_NOTES"
+    echo ""
+    echo "**RESULT: $RESULT**"
+} > "$OUT/summary.md"
+
+echo
+cat "$OUT/summary.md"
+case "$RESULT" in PASS*) exit 0 ;; *) exit 1 ;; esac

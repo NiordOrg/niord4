@@ -1,0 +1,205 @@
+
+:imagesdir: images
+
+[#dictionaries]
+== Dictionaries
+
+A _dictionary_ is a named list of translatable texts. Each _entry_ has a _key_, such as
+`msg.field.areas`, and a value in each language of the messages. Niord uses the dictionaries for the
+words of its messages, mails and PDF reports, for the lists editors choose from when they execute a
+message template, and to change wordings of the administration application.
+
+The _Dictionaries_ page shows the entries of one dictionary at a time. To open it, click *Sysadmin*
+in the main menu, then *Dictionaries*.
+
+image::DictionariesPage.png[The Dictionaries page, 800]
+
+Choose the dictionary in the list at the left of the toolbar. The table shows each entry's *Key* and
+its *Value*, one line per language with the language's flag. The *Filter* field matches the key and
+the values, and the long values too while they are shown.
+
+[#standard-dictionaries]
+=== Standard Dictionaries
+
+Niord comes with five standard dictionaries:
+
+[cols="30,70", options="header"]
+|===
+| Dictionary
+| Description
+
+| web
+| Texts of the application's pages.
+
+| message
+| Words used in messages, such as the names of the message types and fields, and in the pages,
+  mails and reports that show messages. Firing exercise messages take their subject and time formats
+  from it (see <<firing-schedules,Firing Schedules>>).
+
+| mail
+| Texts of the mails Niord sends.
+
+| pdf
+| Texts of the PDF reports.
+
+| template
+| Texts used when message templates are executed, such as the words of dates and positions.
+|===
+
+When Niord starts, it adds each standard key and translation that the database lacks. It never
+changes one the database has, so a value you have edited stays as you left it.
+
+The administration application has texts of its own for its pages, and lays the entries of the "web"
+and "message" dictionaries over them by key, so an entry with the key of one of the application's
+texts changes that wording. Two rules keep this safe:
+
+* An entry whose value is still the one Niord added at start changes nothing: the application shows
+  its own, newer text. Once you edit the entry, your value is shown.
+* The value must use exactly the placeholders of the application's text, such as `{{count}}`;
+  otherwise the application keeps its own text.
+
+The application shows the value of the language the user has chosen, or else that of the default
+language. When you save, delete or import entries, your own application takes the change at once.
+
+[#extended-dictionaries]
+=== Extended Dictionaries
+
+Some dictionaries hold entries with a second, _long_ value, such as the "aton" dictionary, whose
+entries are the values of template parameter lists ("north cardinal buoy", "the north cardinal
+buoy"); see <<parameter-types,Parameter Types>>. Such dictionaries arrive with an import (see
+<<importing-and-exporting-dictionaries,Importing and Exporting Dictionaries>>).
+
+Tick *Show Extended* to see the *Long Value* column. It is ticked by itself for a dictionary that
+has long values.
+
+image::DictionariesExtendedPage.png[The aton dictionary with its long values, 800]
+
+[#adding-or-editing-a-dictionary-entry]
+=== Adding or Editing a Dictionary Entry
+
+Click *New Entry* to add an entry to the dictionary shown, the pencil of a row (*Edit Entry*) to
+edit one, or the double square (*Copy Entry*) to start a new entry with the values of one; give the
+copy a key of its own before you save it. Each opens the editor drawer:
+
+image::DictionaryEntryEditPage.png[The Edit Entry drawer, 324]
+
+[cols="30,70", options="header"]
+|===
+| Field
+| Description
+
+| Key
+| The entry's key, unique within the dictionary. It cannot be changed once the entry is saved.
+
+| Values
+| The text in each language.
+|===
+
+While *Show Extended* is ticked, the drawer has two more fields:
+
+image::DictionaryEntryExtendedEditPage.png[The Edit Entry drawer of an extended entry, 324]
+
+[cols="30,70", options="header"]
+|===
+| Field
+| Description
+
+| Long Version
+| The long value in each language. Message templates use it where a phrase reads better in full,
+  such as "the north cardinal buoy".
+
+| AtoN filter
+| A rule that ties the entry to aids to navigation, written over their OpenStreetMap seamark tags:
+  `aton.kv('seamark:buoy_cardinal:category', 'north') && !aton.k('seamark:light.*')` matches a north
+  cardinal buoy without a light. It serves an aids-to-navigation module that is not part of the
+  administration application, and is kept and exported with the entry.
+|===
+
+The drawer warns when a language has a *Long Version* but no *Value*, since that long version is
+not kept: "A long version without a value will be discarded on save." A new entry needs a value in
+at least one language before it can be saved. When you blank every value of an existing entry, the
+drawer warns "All values are blank — the entry will be hard to find and edit afterwards." Click
+*Save Entry* to save.
+
+[#deleting-a-dictionary-entry]
+=== Deleting a Dictionary Entry
+
+Click the bin of a row (*Delete Entry*). Before it asks, Niord looks up what uses the key, and the
+confirmation lists it:
+
+image::DictionaryDeleteConfirm.png[The confirmation of a delete, 240]
+
+* the script resources that name the key. For a key that templates build while they run, such as the
+  message statuses (`msg.status.DRAFT`), the language names (`lang.`), the message types (`msg.type.`)
+  and the message fields (`msg.field.`), these are the script resources that build keys with that
+  prefix;
+* the parts of Niord that read the key, and what each does without it: for instance, the audio text
+  of a message cannot be generated without the `position.*` entries of the "template" dictionary, and
+  templates that format date intervals fail to render without the `navwarn.date.*` entries;
+* the <<parameter-types,Parameter Types>> whose list values hold the key. Such a key cannot be
+  deleted: Niord refuses the delete and names the parameter types, until the key is removed from
+  their lists.
+
+When the check cannot be made, the confirmation says so, and the entry can still be deleted, unless
+a parameter type lists it. *Yes* deletes the entry, in every language.
+
+A deleted entry is not added again, in any language, also not after a restart or an upgrade of
+Niord. A template or mail that reads the key fails until a system administrator restores the entry
+with the dictionary import, ticking the deleted key in its preview (below). A restored key keeps its
+deleted mark: it gets no default text in a language added to Niord later, and such a language is
+completed by an import.
+
+[#importing-and-exporting-dictionaries]
+=== Importing and Exporting Dictionaries
+
+The action menu (the cog) has *Export...*, which downloads the dictionary shown as a JSON file, and
+*Import...*, which opens the _Upload Dictionary JSON File_ dialog.
+
+The file is a list of dictionaries, each with its entries, for example:
+
+[source,json]
+----
+[
+  {
+    "name": "mail",
+    "entries": [
+      {
+        "key": "mail.dear.user",
+        "descs": [
+          { "lang": "en", "value": "Dear {0}" }
+        ]
+      }
+    ]
+  }
+]
+----
+
+An entry of an extended dictionary has a `longValue` beside each `value`, and may have an
+`atonFilter`.
+
+When you choose a file (*Choose file…*, or drop it on the dialog), the dialog first shows what the
+import would do, and nothing is written until you import:
+
+image::DictionaryImportPreview.png[The preview of a dictionary import, 600]
+
+* *Would add*: the keys Niord lacks, with their values. Each is ticked, except a key an operator
+  deleted, which is marked "Deleted by an operator" and offered unticked: importing a file to restore
+  one key does not restore every key that was deleted.
+* *Would overwrite*: the keys Niord has with other values, with the *Current* and the *New* value of
+  each language the file carries (and the long value and the AtoN filter where they differ). None is
+  ticked; a key is overwritten only when you tick it. A ticked key gets each language the file
+  carries whole, value and long value, so a long value the file lacks is cleared, and the preview
+  shows "(cleared)"; the other languages are kept, and the AtoN filter is replaced. A key someone
+  changed between the preview and the import is kept, and the job's log names it as changed since the
+  preview.
+* *Unchanged*: how many keys already have the file's values.
+* *Refused*: the entries Niord cannot hold, each with its reason: a blank key, an entry with no
+  translation, a translation without a language or a value, a key longer than 255 characters, a
+  value or long value longer than 1,000, an AtoN filter longer than 255, a control character other
+  than tab and newline, or a key that appears twice in one dictionary of the file. An empty value is
+  accepted: Niord's own texts have one (`navwarn.date.time_interval_prefix` in English).
+
+*Import ticked* imports the ticked keys with the _dictionary-import_ batch job, whose log names each
+refused entry and counts what was added, overwritten, kept and left unchanged; the dialog then links
+to the job (*View batch job*). *Close* closes the dialog without importing. A batch set uploaded on
+the _Batch Jobs_ page cannot run the dictionary import (see <<batch-sets,Batch Sets>>).

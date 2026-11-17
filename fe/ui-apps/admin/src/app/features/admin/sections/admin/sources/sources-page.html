@@ -1,0 +1,134 @@
+<app-admin-section-page
+  titleKey="admin.sections.sources.label"
+  descriptionKey="admin.sources.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.sources.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.sources.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.sources.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <app-model-language-picker [selection]="modelLanguage" />
+    <button type="button" class="btn-primary" (click)="addSource()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.sources.newSource' | transloco }}
+    </button>
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.sources.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.sources.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.sources.loadError' | transloco"
+      [retryLabel]="'admin.sources.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.sources().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.sources.empty.none' | transloco" />
+    } @else {
+      <app-empty-state icon="lucideFilterX" [title]="'admin.sources.empty.noMatches' | transloco" />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-20">{{ 'admin.sources.column.active' | transloco }}</th>
+            <th>{{ 'admin.sources.column.name' | transloco }}</th>
+            <th>{{ 'admin.sources.column.abbreviation' | transloco }}</th>
+            <th class="w-24">
+              <span class="sr-only">{{ 'admin.sources.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (source of pager.paged(); track source.id) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="source.active"
+                  [class.is-inactive]="!source.active"
+                  [attr.aria-label]="
+                    (source.active ? 'admin.sources.column.active' : 'common.inactive') | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td [attr.lang]="source.descs[0]?.lang">{{ source.descs[0]?.name }}</td>
+              <td [attr.lang]="source.descs[0]?.lang">{{ source.descs[0]?.abbreviation }}</td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.sources.editSource' | transloco"
+                  (click)="editSource(source)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.sources.deleteSource' | transloco"
+                  (click)="deleteSource(source)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-source-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="editorModel.set(undefined)"
+  />
+
+  <app-json-import-dialog
+    titleKey="admin.sources.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.sources.label"
+    (closed)="onImportClosed()"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

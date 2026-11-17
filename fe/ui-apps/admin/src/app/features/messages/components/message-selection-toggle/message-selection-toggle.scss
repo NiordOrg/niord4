@@ -1,0 +1,11 @@
+.selection-star {
+  border-radius: 4px;
+
+  // The native checkbox is visually hidden (sr-only) but stays keyboard-focusable;
+  // surface a focus ring only for KEYBOARD focus (`:focus-visible`), so a mouse
+  // click on the star doesn't leave a lingering outline.
+  &:has(:focus-visible) {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+}

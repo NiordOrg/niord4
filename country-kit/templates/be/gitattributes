@@ -1,0 +1,9 @@
+# The bootstrap folder is zipped as checked out, and the import compares its templates byte for
+# byte with the LF release files: a CRLF checkout would make a fresh local database preview
+# spurious overwrites.
+bootstrap/**    text=auto eol=lf
+
+# The Maven wrapper's two scripts each keep their own line ends on every platform: mvnw is a
+# /bin/sh script and breaks when it is checked out with CRLF.
+mvnw       text eol=lf
+mvnw.cmd   text eol=crlf

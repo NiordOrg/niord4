@@ -1,0 +1,828 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import org.springframework.stereotype.Service;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import org.springframework.transaction.annotation.Transactional;
+
+import org.niord.core.publication.MessageNaming;
+import org.niord.core.publication.series.resolve.IssueOrdering;
+import org.niord.core.publication.series.resolve.MembershipReason;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.series.vo.IssueMemberVo;
+import org.niord.core.publication.series.vo.LiveMessageStateVo;
+import org.niord.core.publication.series.vo.IssueOverrideVo;
+import org.niord.core.publication.series.vo.MemberCurationVo;
+import org.niord.core.publication.series.vo.SourceIssueRefVo;
+import org.niord.core.publication.series.vo.SourceIssueVo;
+import org.niord.model.message.Status;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+/**
+ * The member list of one issue, with what has moved under it since.
+ *
+ * A published issue's member rows are frozen and stay frozen: they record what
+ * was printed, and the archived document is the proof. But the messages
+ * themselves go on living -- a notice is cancelled, a type is corrected, an
+ * open-ended validity gets an end date -- and none of that is visible from the
+ * snapshot, which is exactly why an admin looking at a three-week-old issue
+ * cannot tell whether it still describes the world.
+ *
+ * So the divergence is COMPUTED and SURFACED, and the snapshot is not touched.
+ * Healing it would be the one unrecoverable move here: the row would then agree
+ * with today and disagree with the PDF that went out, and nothing would record
+ * that they ever differed.
+ *
+ * It is a service in core rather than logic on the endpoint because the rules --
+ * which fields count as drift, whether the list is live or frozen, what a
+ * curated row reveals -- are the interesting part and the web layer has no
+ * container tests to pin them with.
+ */
+@Service
+public class IssueMemberListService {
+
+    /**
+     * How many uids go into one live-facts lookup.
+     *
+     * The whole point of reading the live side in one query is that a member list
+     * runs to hundreds of rows and a per-row lookup would be hundreds of
+     * round-trips. The chunk exists only because an IN-list has a practical
+     * ceiling, and it is the same bound the resolver already uses.
+     */
+    private static final int LOOKUP_CHUNK = 1000;
+
+    @Inject
+    EntityManager em;
+
+    @Inject
+    MemberResolutionService resolver;
+
+    @Inject
+    IssueResolutionService resolutions;
+
+    @Inject
+    MessageNaming naming;
+
+    /**
+     * Every curation decision that STANDS on this issue, include and exclude alike.
+     *
+     * The exclusions are the reason this exists. An excluded message is not a
+     * member -- that is what excluding it means -- so it has no row in the member
+     * list for a "withdraw this decision" affordance to hang off, and the only
+     * other record of it is the audit trail. The trail records what HAPPENED,
+     * not what stands: an exclude followed by a clear leaves two entries and no
+     * decision, and reading the trail as a state is how a withdrawn exclusion
+     * comes back to life on a screen.
+     *
+     * CURATOR TIER, like the writes it describes. It carries the author and the
+     * reason, which is the admin-only half of a why-line.
+     *
+     * IT TAKES NO RESOLVE. The decisions are rows; answering them needs the
+     * override query and nothing else. Reading them off a full
+     * {@link IssueResolutionService.IssueResolution} would be tidy and would make
+     * this endpoint pay a candidate narrowing -- about a second on an in-force
+     * series -- to list a handful of rows nobody resolved anything for.
+     *
+     * @param lang the language the rows are named in. An EXCLUDED message never
+     *             appears in the member list, so this list is the only place it is
+     *             named at all, and a row identified by a uid is not a decision
+     *             anybody can check or withdraw
+     */
+    @Transactional
+    public List<IssueOverrideVo> standingDecisions(PublicationIssue issue, String lang) {
+        return decisionsOf(resolutions.overridesOf(issue).values(), lang);
+    }
+
+    /**
+     * The same list, off a resolution the caller already took.
+     *
+     * The decisions are read by the member list too, so a screen showing both
+     * used to read them twice. Sharing one read is also what keeps the two
+     * agreeing: a decision taken between the two queries would otherwise show in
+     * one panel and not in the other.
+     */
+    public List<IssueOverrideVo> standingDecisions(IssueResolutionService.IssueResolution pre,
+                                                   String lang) {
+        return decisionsOf(pre.overrides().values(), lang);
+    }
+
+    /**
+     * One rendering of the decisions, whichever read produced them.
+     *
+     * The names come out of ONE query over the whole list, the same way the member
+     * list fills its titles. A decision list is short, so a lookup per row would
+     * be affordable and would still be wrong: it would be a second definition of
+     * which language a message is named in, and the exclusions panel would name a
+     * message differently from the member row three lines above it.
+     */
+    private List<IssueOverrideVo> decisionsOf(Collection<IssueOverride> overrides, String lang) {
+        List<IssueOverrideVo> out = new ArrayList<>();
+        Set<String> uids = new LinkedHashSet<>();
+        for (IssueOverride override : overrides) {
+            if (override.getMessageUid() != null) {
+                uids.add(override.getMessageUid());
+            }
+        }
+        Map<String, MessageNaming.Name> names = naming.namesOf(uids, lang);
+
+        for (IssueOverride override : overrides) {
+            IssueOverrideVo vo = new IssueOverrideVo();
+            fillCuration(vo, override);
+            vo.setMessageUid(override.getMessageUid());
+            // NONE where the message is gone: the decision still stands and still
+            // has to be listed, and a row that vanished with its message would be
+            // an exclusion nobody could withdraw.
+            MessageNaming.Name name =
+                    names.getOrDefault(override.getMessageUid(), MessageNaming.Name.NONE);
+            vo.setMessageId(name.messageId());
+            vo.setTitle(name.title());
+            out.add(vo);
+        }
+        return out;
+    }
+
+    /**
+     * The rows, in print order.
+     *
+     * Live-versus-frozen is keyed off the issue's STATUS and nothing else. A
+     * request parameter would let a caller ask a published issue what it would
+     * contain today, and that answer looks authoritative while describing a
+     * document nobody published.
+     *
+     * AN OPEN ISSUE HAS NO ROWS, and that is the point of the split. Member rows
+     * are written by the freeze, so before an issue is published there are none --
+     * and answering an empty list is the worst of the available answers, because
+     * "nothing is in this issue" and "this issue has not been frozen yet" look
+     * identical on the wire and only one of them is true. So an open issue is
+     * resolved live, exactly as the publish would resolve it: same document, same
+     * interval, same overrides, same order.
+     */
+    @Transactional
+    public List<IssueMemberVo> members(PublicationIssue issue) {
+        return members(issue, null);
+    }
+
+    /**
+     * The same rows, titled in the language the caller asked for.
+     *
+     * The title is the LIVE one on both halves of the split -- a frozen row names
+     * the message it printed by the name that message has today. It is not a
+     * frozen column and must not become one: the row exists to be recognised by a
+     * human, and a snapshotted title would go stale against every other screen in
+     * the system with nothing saying it had.
+     *
+     * A blank or unknown language falls back to the first description that
+     * carries a title, so a message written only in Danish still names itself on
+     * an English screen. An empty name would be worse than the wrong language:
+     * the row would read as a message with no subject.
+     */
+    @Transactional
+    public List<IssueMemberVo> members(PublicationIssue issue, String lang) {
+        return members(issue, lang, resolutions.forIssue(issue, new Date()));
+    }
+
+    /**
+     * The same rows, off a resolution the caller already took.
+     *
+     * The overload exists because the issue screen asks three questions of one
+     * issue -- what is in it, what was left out, may it be published -- and each
+     * of them used to take its own resolve of the same document over the same
+     * interval. On an in-force series that is a second of work each, and worse
+     * than the cost: three resolves taken milliseconds apart can disagree, and
+     * then the rail's count and this list's length differ with nothing to say
+     * which one the publish would honour.
+     *
+     * @param pre the resolution the whole screen is being answered from. Its
+     *            instant is the one the rows are decided at
+     */
+    public List<IssueMemberVo> members(PublicationIssue issue, String lang,
+                                       IssueResolutionService.IssueResolution pre) {
+        // Every curation decision on this issue, indexed by uid. The member's own
+        // foreign key answers for rows frozen after the override was taken; an
+        // imported row carries the decision without the link, and a live list has
+        // no member rows to hang a key on at all -- so the uid is the fallback,
+        // and it is the key every one of them shares.
+        Map<String, IssueOverride> overrides = pre.overrides();
+
+        if (!pre.frozen()) {
+            return liveMembers(issue, pre, lang);
+        }
+
+        List<IssueMember> frozen = em.createQuery(
+                        "SELECT m FROM IssueMember m WHERE m.issue = :i ORDER BY m.sortIndex",
+                        IssueMember.class)
+                .setParameter("i", issue)
+                .getResultList();
+
+        Map<String, LiveFacts> live = liveFacts(frozen);
+        Map<String, String> titles = titlesOf(live.keySet(), lang);
+        // The source issues this list was compiled from, in ONE query over the
+        // distinct ids: a compiled annual holds a thousand rows across fifty
+        // weeks, and a lookup per row would be a thousand round-trips to draw
+        // fifty headings.
+        Set<String> sourceIds = new LinkedHashSet<>();
+        for (IssueMember m : frozen) {
+            if (m.getSourceIssuePublicId() != null) {
+                sourceIds.add(m.getSourceIssuePublicId());
+            }
+        }
+        Map<String, SourceIssueRefVo> sources = sourceRefsOf(sourceIds, lang);
+
+        List<IssueMemberVo> out = new ArrayList<>();
+        for (IssueMember m : frozen) {
+            IssueMemberVo vo = new IssueMemberVo();
+            vo.setMessageUid(m.getMessageUid());
+            vo.setSortIndex(m.getSortIndex());
+            vo.setFrozenShortId(m.getFrozenShortId());
+            // The live name, never a frozen one: a member row is read by somebody
+            // looking for a notice they can recognise, and a message that has
+            // since been re-titled is still that message.
+            vo.setTitle(titles.get(m.getMessageUid()));
+            vo.setFrozenType(m.getFrozenType());
+            vo.setFrozenStatus(m.getFrozenStatus());
+            vo.setFrozenPublishDateFrom(m.getFrozenPublishDateFrom());
+            vo.setFrozenPublishDateTo(m.getFrozenPublishDateTo());
+            vo.setSource(m.getSource() == null ? null : m.getSource().name());
+            // DERIVED from source and the snapshot relation, never a stored column:
+            // a stored derivable value is a second source of truth that can
+            // disagree with the first.
+            vo.setReasonCode(deriveReason(m, issue));
+            vo.setReasonNote(m.getReasonNote());
+
+            // Null on every row of every other regime, and on a compilation's
+            // manual includes. Asked before the lookup because an immutable empty
+            // map refuses a null key rather than answering absent.
+            vo.setSourceIssue(m.getSourceIssuePublicId() == null
+                    ? null : sources.get(m.getSourceIssuePublicId()));
+
+            IssueOverride override = m.getOverride() != null
+                    ? m.getOverride() : overrides.get(m.getMessageUid());
+            vo.setCuration(curationOf(override));
+
+            applyDrift(vo, m, live.get(m.getMessageUid()));
+            out.add(vo);
+        }
+        return out;
+    }
+
+    /**
+     * How many members an OPEN issue would have if it were published now.
+     *
+     * The list's count for an open issue. The column holds what the freeze wrote
+     * or what the import copied off a legacy tag, and neither is what the issue
+     * contains today: a native open issue reports 0 while the week fills up, an
+     * imported one reports the tag as it stood at the backup. Null where the
+     * issue has no membership semantics or its criteria cannot resolve.
+     */
+    public Integer liveMemberCount(PublicationIssue issue) {
+        // Resolved on every call, and never remembered. Each caller -- the series
+        // list, the strip, the timeline -- answers for the instant it was asked,
+        // and a count served from a moment ago is a count that can disagree with
+        // the member list rendered beside it. The resolve is cheap enough to
+        // afford that: the candidate query hands the rule scalar rows, and on an
+        // in-force series the liveness clause has already removed everything that
+        // could not qualify.
+        Set<String> includes = new LinkedHashSet<>();
+        Set<String> excludes = new LinkedHashSet<>();
+        for (IssueOverride o : em.createQuery(
+                        "SELECT o FROM IssueOverride o WHERE o.issue = :i", IssueOverride.class)
+                .setParameter("i", issue)
+                .getResultList()) {
+            (o.getKind() == OverrideKind.INCLUDE ? includes : excludes).add(o.getMessageUid());
+        }
+        // The shared rule, without the author join-fetch the list needs: a count
+        // renders no why-line, and this runs once per open issue on the dashboard.
+        MemberResolutionService.Resolution resolution =
+                resolutions.resolutionOf(issue, countInstant(issue, new Date()), includes, excludes);
+        return resolution == null ? null : resolution.members().size();
+    }
+
+    /**
+     * The instant an open issue is counted at: the one the issue screen reads it
+     * at unless the reader picks another.
+     *
+     * A series that closes at the end of its content period is read at that
+     * planned cut-off once it has passed, because that is the release its admin is
+     * about to make; everything else is read as of now. Counted as of now, an open
+     * yearly compilation whose year is long over held every week published since
+     * the year began, so the list showed each older year carrying the years after
+     * it, and a number the issue screen beside it never showed.
+     */
+    static Date countInstant(PublicationIssue issue, Date now) {
+        PublicationSeries series = issue.getSeries();
+        Date planned = issue.getIntervalTo();
+        return series != null && series.getCutoffDefault() == CutoffDefault.PERIOD_END
+                && planned != null && !planned.after(now) ? planned : now;
+    }
+
+    /**
+     * What an OPEN issue would contain if it were published now.
+     *
+     * A PROBE, not a record. Nothing is written: no member row, no snapshot, no
+     * override. The interval closes at NOW rather than at any stamped instant,
+     * because an open issue has no cut-off yet -- that is what publishing it
+     * decides -- and the set therefore moves as messages are published into it,
+     * which is exactly what an admin watching the week fill up needs to see.
+     *
+     * There is no drift half. Drift is the distance between a frozen fact and the
+     * live one, and here there is only the live one.
+     */
+    private List<IssueMemberVo> liveMembers(PublicationIssue issue,
+                                            IssueResolutionService.IssueResolution pre, String lang) {
+        Map<String, IssueOverride> overrides = pre.overrides();
+        MemberResolutionService.Resolution resolution = pre.resolution();
+        if (resolution == null) {
+            return List.of();
+        }
+
+        PublicationSeries series = issue.getSeries();
+        IssueOrdering.SortSpec sort = IssueOrdering.resolveSort(
+                series == null ? null : series.getMessageSortBy(),
+                series == null || series.getMessageSortOrder() == null ? null
+                        : IssueOrdering.Direction.valueOf(series.getMessageSortOrder().name()),
+                series == null || series.getDomain() == null
+                        ? null : series.getDomain().getMessageSortOrder());
+        // The SAME order publish and the preview use, from the one definition of
+        // it: what an admin reads on screen and what the renderer prints are
+        // supposed to be the same list, and a compilation's order comes from its
+        // sources rather than from the series' sort.
+        List<IssueOrdering.Orderable> ordered = MemberResolutionService.orderFor(
+                resolution, resolver.orderablesFor(resolution.members()), sort);
+        Map<String, Integer> sortIndex = IssueOrdering.assignSortIndex(ordered);
+
+        // The live facts for the rows, in one query, the same way the frozen half
+        // reads them. The columns are named "frozen" because that is what they
+        // carry on a published issue; on a live list they carry today's values,
+        // which is what the row is FOR.
+        Map<String, LiveFacts> facts = liveFactsOf(sortIndex.keySet());
+        Map<String, String> titles = titlesOf(facts.keySet(), lang);
+        // The same one-query lookup the frozen half uses, off the resolution's
+        // owner map instead of off frozen columns that do not exist yet. One
+        // builder for both halves, because the screen renders the same headings
+        // before and after a release and two builders would let them differ.
+        Set<String> sourceIds = new LinkedHashSet<>();
+        if (resolution.compiled()) {
+            for (CompilationResolver.SourceRef ref : resolution.sourceOf().values()) {
+                if (ref.publicId() != null) {
+                    sourceIds.add(ref.publicId());
+                }
+            }
+        }
+        Map<String, SourceIssueRefVo> sources = sourceRefsOf(sourceIds, lang);
+
+        List<IssueMemberVo> out = new ArrayList<>();
+        for (IssueOrdering.Orderable o : ordered) {
+            String uid = o.uid();
+            IssueOverride override = overrides.get(uid);
+            LiveFacts fact = facts.get(uid);
+
+            IssueMemberVo vo = new IssueMemberVo();
+            vo.setMessageUid(uid);
+            vo.setSortIndex(sortIndex.get(uid));
+            vo.setTitle(titles.get(uid));
+            vo.setFrozenShortId(fact == null ? null : fact.shortId());
+            vo.setFrozenType(fact == null ? null : fact.type());
+            vo.setFrozenStatus(fact == null ? null : fact.status());
+            vo.setFrozenPublishDateFrom(fact == null ? null : fact.publishDateFrom());
+            vo.setFrozenPublishDateTo(fact == null ? null : fact.publishDateTo());
+
+            // A row is here because a derivation selected it, or because somebody
+            // put it here. The include overrides are the only ones that can
+            // produce a member; an exclude removes one, so it never has a row to
+            // be the reason for.
+            //
+            // WHICH DERIVATION comes off the resolution rather than off the series,
+            // because the resolution is what actually produced this row: a
+            // compiled row carries a source issue and a criteria row does not, and
+            // asking the series would be re-deriving the regime a second time
+            // beside the answer that already knows.
+            boolean manual = override != null && override.getKind() == OverrideKind.INCLUDE;
+            boolean fromSource = !manual && resolution.compiled()
+                    && resolution.sourceOf().containsKey(uid);
+            vo.setSource(manual ? MemberSource.OVERRIDE_INCLUDE.name()
+                    : fromSource ? MemberSource.COMPILED.name() : MemberSource.CRITERIA.name());
+            vo.setReasonCode(manual ? "MANUAL_INCLUDE"
+                    : fromSource ? MembershipReason.FROM_SOURCE_ISSUE.name()
+                    : series != null && series.getTimeRelation() == TimeRelation.IN_FORCE_AT_CUTOFF
+                            ? "IN_FORCE_AT_CUTOFF" : "IN_INTERVAL");
+            vo.setSourceIssue(fromSource
+                    ? sources.get(resolution.sourceOf().get(uid).publicId()) : null);
+            vo.setCuration(curationOf(override));
+            out.add(vo);
+        }
+        return out;
+    }
+
+    /**
+     * The reason code for one member.
+     *
+     * Public and static so it can be checked without a database. It is the one
+     * value on the row that is derived rather than read, and a derivation nobody
+     * can test directly is a derivation that drifts.
+     */
+    public static String deriveReason(IssueMember m, PublicationIssue issue) {
+        if (m.getSource() == MemberSource.OVERRIDE_INCLUDE) {
+            return "MANUAL_INCLUDE";
+        }
+        if (m.getSource() == MemberSource.IMPORTED) {
+            return "IMPORTED";
+        }
+        // Off the ROW's own source, not off the snapshot relation, and the
+        // difference matters on a compilation: its manual includes carry
+        // OVERRIDE_INCLUDE and are answered above, while everything else came from
+        // a source issue and says so.
+        if (m.getSource() == MemberSource.COMPILED) {
+            return MembershipReason.FROM_SOURCE_ISSUE.name();
+        }
+        return TimeRelation.IN_FORCE_AT_CUTOFF == issue.getSnapshotTimeRelation()
+                ? "IN_FORCE_AT_CUTOFF" : "IN_INTERVAL";
+    }
+
+    /**
+     * The sources panel: every source-series issue inside the period, named.
+     *
+     * Off the survey the resolution already took, so the panel, the
+     * SOURCE_ISSUES_COMPLETE row and the warning the publish gate enforces are
+     * one answer. A panel that surveyed the source series for itself would be a
+     * second answer to the same question, and the one an admin is reading would
+     * not be the one the release enforced.
+     *
+     * The names come from the same one-query lookup the member rows use.
+     */
+    public List<SourceIssueVo> sources(CompilationResolver.Survey survey,
+                                       PublicationSeries source, String lang) {
+        if (survey == null) {
+            return null;
+        }
+        Set<String> ids = new LinkedHashSet<>();
+        for (CompilationResolver.SourceIssue s : survey.sources()) {
+            if (s.publicId() != null) {
+                ids.add(s.publicId());
+            }
+        }
+        Map<String, SourceIssueRefVo> named = sourceRefsOf(ids, lang);
+
+        List<SourceIssueVo> out = new ArrayList<>();
+        for (CompilationResolver.SourceIssue s : survey.sources()) {
+            SourceIssueVo vo = new SourceIssueVo();
+            vo.setPublicId(s.publicId());
+            vo.setSeriesId(source == null ? null : source.getSeriesId());
+            vo.setWeek(s.week());
+            vo.setWeekTo(s.weekTo());
+            vo.setYear(s.year());
+            vo.setCutoff(s.cutoff());
+            vo.setStatus(s.status());
+            vo.setMemberCount(s.memberCount());
+            vo.setIntervalFrom(s.intervalFrom());
+            SourceIssueRefVo ref = s.publicId() == null ? null : named.get(s.publicId());
+            vo.setName(ref == null ? null : ref.getName());
+            out.add(vo);
+        }
+        return out;
+    }
+
+    /**
+     * The same panel for a RELEASED compilation, rebuilt from what it froze.
+     *
+     * The survey above is a live answer and a released issue has no live answer
+     * to give -- so the record of what this release compiled is the snapshot
+     * header, which names the source issues in cut-off order and names them ALL,
+     * including one that contributed no rows. That is the whole reason this
+     * exists rather than letting a client group the member rows by their
+     * provenance: a week nothing was published in has no member row to be grouped
+     * under, so grouping would quietly drop it, and a section of the year that
+     * printed nothing is still a section of the year the reader has to see.
+     *
+     * PUBLISHED on every row, without asking the issue how it stands today. What
+     * is being described is what was compiled, and a source that was retired or
+     * deleted afterwards is still what this release printed; reading the live
+     * status would let the panel of a two-year-old annual change underneath it.
+     *
+     * Everything else -- the name, the week numbers, the cut-off -- is read live
+     * off the source issues, in the one chunked query the member rows already
+     * use, and a source issue that is GONE keeps its row with the id and the
+     * series alone. Both are the same rules {@link #sourceRefsOf} answers by, for
+     * the same reason: a weekly's name is editable, and deleting a retired week
+     * must not take the record of what an annual printed with it.
+     *
+     * @param members the rows the same screen is showing, the only place the
+     *                per-source count can come from: the header froze which weeks
+     *                were compiled, not how many rows each of them contributed
+     */
+    public List<SourceIssueVo> frozenSources(PublicationIssue issue, List<IssueMemberVo> members,
+                                             String lang) {
+        if (issue.getMembershipProvenance() != MembershipProvenance.COMPILED) {
+            return null;
+        }
+        List<String> ids = PublicationIssue.splitIds(issue.getSnapshotSourceIssueIds());
+        if (ids == null) {
+            return null;
+        }
+
+        // Zero for every named week before a single row is looked at, because zero
+        // is the answer this list exists to be able to give.
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String id : ids) {
+            counts.put(id, 0);
+        }
+        for (IssueMemberVo m : members) {
+            SourceIssueRefVo ref = m.getSourceIssue();
+            String id = ref == null ? null : ref.getPublicId();
+            if (id != null && counts.containsKey(id)) {
+                counts.put(id, counts.get(id) + 1);
+            }
+        }
+
+        Map<String, PublicationIssue> sources = issuesByPublicId(new LinkedHashSet<>(ids));
+
+        List<SourceIssueVo> out = new ArrayList<>();
+        for (String id : ids) {
+            SourceIssueVo vo = new SourceIssueVo();
+            vo.setPublicId(id);
+            vo.setStatus(IssueStatus.PUBLISHED.name());
+            vo.setMemberCount(counts.get(id));
+
+            PublicationIssue source = sources.get(id);
+            if (source == null) {
+                // The week is gone. The series it belonged to is still on this
+                // issue's own header, so the row can still say what it was one of.
+                vo.setSeriesId(issue.getSnapshotSourceSeriesId());
+            } else {
+                vo.setSeriesId(source.getSeries() == null
+                        ? null : source.getSeries().getSeriesId());
+                vo.setWeek(source.getWeek());
+                vo.setWeekTo(source.getWeekTo());
+                vo.setYear(source.getYear());
+                vo.setCutoff(source.effectiveCutoff());
+                vo.setName(IssueListService.nameOf(source, lang));
+                vo.setIntervalFrom(source.getIntervalFrom());
+            }
+            out.add(vo);
+        }
+        return out;
+    }
+
+    /**
+     * The source issues a compiled list points at, named and numbered, in ONE
+     * query.
+     *
+     * THE MEMBER ROW FREEZES A PUBLIC ID AND NOTHING ELSE, so everything the
+     * heading shows is read here and read live. That is deliberate: a weekly's
+     * name and its week numbers are corrected during an import and its name is
+     * editable afterwards, and a compilation that had frozen copies of them would
+     * head its sections with values that no longer match the issues they link to.
+     *
+     * A source issue that is GONE is not an error. A retired issue is deletable,
+     * and deleting one must not take the record of what a published annual
+     * printed with it -- so the id has no entry here, the row's reference carries
+     * the publicId alone, and the heading degrades to "an issue that is no longer
+     * here" rather than disappearing.
+     *
+     * Public because the RENDERER needs the same headings: the sections of a
+     * compiled document are the source issues, named and numbered exactly as the
+     * screen names them, and a second lookup would be a second answer to the one
+     * question of what a week is called.
+     */
+    public Map<String, SourceIssueRefVo> sourceRefsOf(Collection<String> publicIds, String lang) {
+        if (publicIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, SourceIssueRefVo> out = new LinkedHashMap<>();
+        for (PublicationIssue i : issuesByPublicId(publicIds).values()) {
+            SourceIssueRefVo vo = new SourceIssueRefVo();
+            vo.setPublicId(i.getPublicId());
+            vo.setSeriesId(i.getSeries() == null ? null : i.getSeries().getSeriesId());
+            vo.setWeek(i.getWeek());
+            vo.setWeekTo(i.getWeekTo());
+            vo.setYear(i.getYear());
+            vo.setCutoff(i.effectiveCutoff());
+            vo.setIntervalFrom(i.getIntervalFrom());
+            vo.setName(IssueListService.nameOf(i, lang));
+            out.put(i.getPublicId(), vo);
+        }
+        for (String id : publicIds) {
+            if (!out.containsKey(id)) {
+                SourceIssueRefVo vo = new SourceIssueRefVo();
+                vo.setPublicId(id);
+                out.put(id, vo);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * The issues behind a set of public ids, in ONE chunked query, descs fetched.
+     *
+     * Shared by the member rows' section headings and by the sources panel of a
+     * released compilation, because both are answering the same question -- what
+     * is the week behind this id called, and which week of which year is it --
+     * and two lookups would be two answers to it. An id no issue carries any more
+     * is simply absent from the map; what a caller does with that is the caller's
+     * rule, and both callers keep the id.
+     *
+     * The descs come with the row rather than being fetched per name: the lists
+     * that read this run to fifty sections on a compiled annual, and a lazy
+     * collection there is a select per heading.
+     */
+    private Map<String, PublicationIssue> issuesByPublicId(Collection<String> publicIds) {
+        List<String> all = new ArrayList<>(publicIds);
+        Map<String, PublicationIssue> out = new LinkedHashMap<>();
+        for (int from = 0; from < all.size(); from += LOOKUP_CHUNK) {
+            List<String> chunk = all.subList(from, Math.min(from + LOOKUP_CHUNK, all.size()));
+            for (PublicationIssue i : em.createQuery(
+                            "SELECT DISTINCT i FROM PublicationIssue i LEFT JOIN FETCH i.descs "
+                                    + "WHERE i.publicId IN (:ids)", PublicationIssue.class)
+                    .setParameter("ids", chunk)
+                    .getResultList()) {
+                out.put(i.getPublicId(), i);
+            }
+        }
+        return out;
+    }
+
+    // ------------------------------------------------------------------ drift
+
+    /** The live values membership and the printed row depend on. */
+    private record LiveFacts(String shortId, String type, String status,
+                             Date publishDateFrom, Date publishDateTo) {
+    }
+
+    /**
+     * Every member's live row, in ONE query.
+     *
+     * Reading the message entity per member would be a query per row on a list
+     * that regularly runs past two hundred, on a screen that is opened to answer
+     * a single question. The projection is deliberate too: three scalars is all
+     * the comparison needs, and selecting whole Message entities would drag their
+     * parts, areas and geometry along for nothing.
+     */
+    private Map<String, LiveFacts> liveFacts(List<IssueMember> members) {
+        List<String> uids = new ArrayList<>();
+        for (IssueMember m : members) {
+            if (m.getMessageUid() != null) {
+                uids.add(m.getMessageUid());
+            }
+        }
+        return liveFactsOf(uids);
+    }
+
+    /** The same projection, for a set of uids that has no member rows yet. */
+    private Map<String, LiveFacts> liveFactsOf(Collection<String> uids) {
+        List<String> all = new ArrayList<>(uids);
+        Map<String, LiveFacts> out = new LinkedHashMap<>();
+        for (int from = 0; from < all.size(); from += LOOKUP_CHUNK) {
+            List<String> chunk = all.subList(from, Math.min(from + LOOKUP_CHUNK, all.size()));
+            for (Object[] row : em.createQuery(
+                            "SELECT m.uid, m.shortId, m.type, m.status, m.publishDateFrom, m.publishDateTo "
+                                    + "FROM Message m WHERE m.uid IN (:uids)", Object[].class)
+                    .setParameter("uids", chunk)
+                    .getResultList()) {
+                out.put((String) row[0],
+                        new LiveFacts((String) row[1],
+                                row[2] == null ? null : row[2].toString(),
+                                row[3] == null ? null : row[3].toString(),
+                                (Date) row[4],
+                                (Date) row[5]));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Every member's title, in ONE query, resolved to one language per message.
+     *
+     * Delegated rather than implemented here, and that is the point of the
+     * delegation: the member list, the exclusions panel, the omissions panel and
+     * the delete refusal all name the same messages, and four copies of the
+     * language rule is four screens that can disagree about what a message is
+     * called. {@link MessageNaming} is the one rule.
+     */
+    private Map<String, String> titlesOf(Collection<String> uids, String lang) {
+        return naming.titlesOf(uids, lang);
+    }
+
+    /**
+     * What the message is today, and what has moved since the document went out.
+     *
+     * `current` is on EVERY frozen row. The status a reader of a published issue
+     * wants is the message's status now -- the frozen one is "published" for
+     * every row by construction, since nothing withdrawn before the cut-off is a
+     * member -- and a client left to show the live status only where the server
+     * said something moved would have to invent it for the rows where nothing
+     * did.
+     *
+     * `drift` names what moved: the status, the type, or the message itself
+     * being gone. A row that drifted is still a member. It was published when
+     * the issue was decided at its cut-off, and what changed happened afterwards;
+     * the row is the record of the document and is never rewritten from the
+     * live message.
+     *
+     * The end of the publication window is frozen as part of that record but is
+     * not compared: it acquires a value as a side effect of every cancel and
+     * expiry, so it never says anything the status does not already say.
+     */
+    private static void applyDrift(IssueMemberVo vo, IssueMember member, LiveFacts live) {
+        List<String> drift = new ArrayList<>();
+        LiveMessageStateVo current = new LiveMessageStateVo();
+
+        if (live == null) {
+            drift.add("exists");
+            current.setExists(false);
+            current.setPubliclyVisible(false);
+        } else {
+            current.setExists(true);
+            current.setType(live.type());
+            current.setStatus(live.status());
+            current.setPubliclyVisible(isPublic(live.status()));
+
+            if (!Objects.equals(member.getFrozenType(), live.type())) {
+                drift.add("type");
+            }
+            if (!Objects.equals(member.getFrozenStatus(), live.status())) {
+                drift.add("status");
+            }
+        }
+
+        vo.setCurrent(current);
+        if (!drift.isEmpty()) {
+            vo.setDrift(drift);
+        }
+    }
+
+    /**
+     * Whether the live status is one the public may read.
+     *
+     * Derived from the enum rather than listed. A literal list drifts the first
+     * time a status is added, and the answer here decides whether a member of a
+     * published issue is still readable at all.
+     */
+    private static boolean isPublic(String status) {
+        if (status == null) {
+            return false;
+        }
+        try {
+            return Status.valueOf(status).isPublic();
+        } catch (IllegalArgumentException e) {
+            // A status this build does not know is not one it can call public.
+            return false;
+        }
+    }
+
+    // ------------------------------------------------------------------ curation
+
+    /**
+     * The curation facts a why-line renders, or null where nobody curated.
+     *
+     * Null rather than an empty object: "no human touched this row" and "a human
+     * touched it and left no reason" are different facts, and the reason column
+     * is NOT NULL precisely so the second cannot happen.
+     */
+    static MemberCurationVo curationOf(IssueOverride override) {
+        if (override == null) {
+            return null;
+        }
+        MemberCurationVo vo = new MemberCurationVo();
+        fillCuration(vo, override);
+        return vo;
+    }
+
+    /**
+     * The curation facts onto whichever shape is carrying them.
+     *
+     * One filler for the member row's block and the standing-decisions list, so
+     * an EXCLUDE's reason and an INCLUDE's why-line cannot come to disagree about
+     * what a decision says.
+     */
+    static void fillCuration(MemberCurationVo vo, IssueOverride override) {
+        vo.setKind(override.getKind() == null ? null : override.getKind().name());
+        vo.setAuthor(ActorName.of(override.getAuthor()));
+        vo.setAt(override.getCreated());
+        vo.setReason(override.getReason());
+    }
+
+}

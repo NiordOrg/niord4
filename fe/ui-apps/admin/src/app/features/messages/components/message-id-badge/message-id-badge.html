@@ -1,0 +1,11 @@
+<span class="inline-flex items-center gap-1 whitespace-nowrap">
+  <span
+    class="status-badge mono-id"
+    [class]="message().status | statusClass"
+    appSelectAllOnDblclick
+    >{{ displayValue() }}</span
+  >
+  @if (suffix()) {
+    <span class="leading-none">{{ suffix() }}</span>
+  }
+</span>

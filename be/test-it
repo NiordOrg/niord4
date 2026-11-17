@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+#
+# Run the integration-test suite and prove it actually ran.
+#
+#   ./test-it                                    whole suite (Surefire + Failsafe)
+#   ./test-it --its-only                         the integration suite alone (Failsafe; no unit test)
+#   ./test-it -pl niord                          one module
+#   ./test-it --its-only -pl niord -Dit.test=KeycloakITTest
+#                                                one class, without the unit suite
+#
+# Any further arguments are passed through to Maven. `--its-only` is this script's own flag: it is
+# taken off the arguments and answered by appending `-Dtest=_none_ -Dsurefire.failIfNoSpecifiedTests=false`
+# to the Maven call, which makes Surefire select no test and accept that (Failsafe selects by
+# `it.test` and reads neither). Surefire has no skip of its own -- `-DskipTests` skips Failsafe too,
+# and this script refuses it below -- and the pair given by hand is not the way for a whole suite:
+# `-Dtest=` on the command line lowers the floor below to one executed test, as a narrowed run should,
+# while the flag keeps it at 50 (the pair is appended after the floor is read). The backend CI's
+# integration job runs with it: its Unit tests job runs the unit suite in parallel.
+#
+# Why this wrapper exists rather than a bare `./mvnw verify`:
+#
+#   1. The suite SKIPS instead of failing when Docker is missing. ITTest guards every integration
+#      test with a JUnit assumption (`Assumptions.assumeTrue(dockerAvailable())`), so with no
+#      reachable Docker daemon all ~200 *ITTest classes report "Tests run: 0" and the build still
+#      ends in BUILD SUCCESS. "Green" then means either "the integration tests passed" or "the
+#      integration tests never ran", and the Maven output does not say which. That trap is real
+#      enough to be written up in be/README.md and be/AGENTS.md; it is not something a developer
+#      should have to remember. This script reads the Failsafe XML reports afterwards, which do
+#      record the difference, and fails loudly on a suite that skipped -- the same check the
+#      backend CI workflow runs, from the same file (scripts/it-report-check.py), so the local
+#      loop and CI cannot drift apart. Skips that are *not* about Docker are listed but tolerated
+#      (an @EnabledIfSystemProperty gate that sits out an ordinary run, for instance).
+#
+#   2. Failsafe does not clear target/failsafe-reports before a run, so without a `clean` the
+#      reports from the previous run are still on disk. A check that just globs them would count
+#      yesterday's 200 passing tests and call today's zero-test run green -- exactly the failure
+#      it exists to catch. The wipe below removes only those report directories, which keeps the
+#      run incremental (a full `./mvnw clean verify` recompiles everything and costs minutes).
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+# A Python 3 that runs, for the report check: on Windows `python3` can be the Microsoft Store stub, which
+# exists on PATH but only prints an install hint, so try `py -3` and `python` too (as ../verify-local does).
+PY=()
+for candidate in python3 "py -3" python; do
+    # shellcheck disable=SC2086 # "py -3" is a command and an argument
+    if $candidate -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' >/dev/null 2>&1; then
+        read -r -a PY <<< "$candidate"
+        break
+    fi
+done
+if [ ${#PY[@]} -eq 0 ]; then
+    echo "test-it: a Python 3 (python3, py -3 or python) is required for the integration-test report check (see ./dev doctor)" >&2
+    exit 1
+fi
+
+# `--its-only` is ours, not Maven's: take it off the arguments before anything below reads them.
+# The pair it stands for is appended to the Maven call further down, after the floor is read, so
+# the `-Dtest=` detection there never sees it. (`${args[@]+...}`: an empty array is unbound under
+# `set -u` in bash 3.2, the macOS one.)
+ITS_ONLY=false
+args=()
+for arg in "$@"; do
+    case "$arg" in
+        --its-only) ITS_ONLY=true ;;
+        *) args+=("$arg") ;;
+    esac
+done
+set -- ${args[@]+"${args[@]}"}
+if $ITS_ONLY; then
+    for arg in "$@"; do
+        case "$arg" in
+            -Dtest=*)
+                echo "test-it: --its-only sets -Dtest=_none_ itself; it cannot be combined with $arg." >&2
+                exit 2
+                ;;
+        esac
+    done
+fi
+
+# `-DskipITs` would leave the report directories empty and the check would then correctly, but
+# uselessly, fail. Say so up front instead: that flag belongs on `./mvnw verify`, not here.
+for arg in "$@"; do
+    case "$arg" in
+        -DskipITs|-DskipITs=true|-DskipTests|-DskipTests=true|-Dmaven.test.skip*)
+            echo "test-it: $arg skips the very tests this script exists to run." >&2
+            echo "         Use ./mvnw verify $arg if that is what you want." >&2
+            exit 2
+            ;;
+    esac
+done
+
+# How many executed integration tests count as a real run. The floor only makes sense for a whole
+# suite; a deliberately narrowed run (a single module, a single class) legitimately executes a
+# handful, so it drops to "at least one" -- which still catches the Docker trap, because that trap
+# produces zero whatever the selection.
+IT_MIN="${NIORD_IT_MIN:-50}"
+for arg in "$@"; do
+    case "$arg" in
+        -pl|--projects|--projects=*|-pl=*|-Dit.test=*|-Dtest=*)
+            IT_MIN=1
+            break
+            ;;
+    esac
+done
+
+echo ">> Clearing stale Failsafe reports ..."
+find . -type d -name failsafe-reports -path '*/target/*' -prune -exec rm -rf {} +
+
+# The pair goes LAST, after the user's arguments and after the floor above was read from them.
+if $ITS_ONLY; then
+    set -- "$@" -Dtest=_none_ -Dsurefire.failIfNoSpecifiedTests=false
+    echo ">> Running the integration tests alone (./mvnw verify, Surefire selects no test) ..."
+else
+    echo ">> Running the integration tests (./mvnw verify) ..."
+fi
+status=0
+./mvnw verify "$@" || status=$?
+
+# Always check, even when Maven failed: a build that fails for an unrelated reason should not hide
+# the fact that the integration tests also never ran.
+echo
+echo ">> Checking that the integration tests really ran (minimum: $IT_MIN executed) ..."
+check_status=0
+"${PY[@]}" scripts/it-report-check.py --min "$IT_MIN" --stats-file target/it-stats.txt || check_status=$?
+
+if [[ $status -ne 0 ]]; then
+    exit $status
+fi
+exit $check_status

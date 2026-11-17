@@ -1,0 +1,104 @@
+/* print.css — what a browser puts on paper.
+
+   The reset is scoped to `app-layout` because the dedicated print view renders outside it and
+   keeps its own colours; that scoping is the contract between the two and stays as it was.
+
+   Deliberately unlayered: these rules have to beat the utilities the routed components carry,
+   and a layered rule never beats an unlayered one. */
+@media print {
+  app-layout *,
+  app-layout *::before,
+  app-layout *::after {
+    color: #000 !important;
+    text-shadow: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+
+  /* A printed link names where it leads when that is an address a reader can type. A
+     root-relative path names no host, and a router link leads to a screen paper does not have. */
+  a[href^='http://']::after,
+  a[href^='https://']::after {
+    content: ' (' attr(href) ')';
+  }
+
+  /* Below the `lg` width — which a printed page is — the shared link classes give the same
+     pseudo-element an absolutely placed touch target. On paper that box would carry the address
+     over the link beside it and off the edge of the sheet, so the address runs in the line. */
+  a::after {
+    position: static;
+    width: auto;
+    height: auto;
+    transform: none;
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img {
+    page-break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+  }
+
+  h2,
+  h3,
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  body {
+    font-size: 12px;
+  }
+
+  .no-print {
+    display: none;
+  }
+
+  /* The chrome elements carry no class, so the hide list names them. */
+  app-main-menu,
+  app-footer,
+  app-default-footer,
+  app-message-filter {
+    display: none !important;
+  }
+
+  /* On paper there are no bars, and both page wrappers start the same short way down. */
+  .message-details-list,
+  .publication-list {
+    margin-top: 10px;
+  }
+
+  .message-details-item {
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+
+  /* On a phone the rich text of a message scrolls sideways inside its own cell. A printer
+     cannot scroll, and it would print only what the box shows, so the box goes away: the
+     paper is 820 px wide and the widest table a message carries fits on it. */
+  .message-details-html {
+    overflow: visible !important;
+  }
+}

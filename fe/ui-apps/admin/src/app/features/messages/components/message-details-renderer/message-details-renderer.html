@@ -1,0 +1,101 @@
+<article class="flex flex-col gap-2">
+  @for (att of attachmentsAbove(); track att.path) {
+    <app-message-attachment [attachment]="att" mode="source" [language]="language()" />
+  }
+
+  <div>
+    <app-message-id-badge [message]="message()" />
+  </div>
+
+  @if (title()) {
+    <div>
+      <strong>{{ title() }}</strong>
+    </div>
+  }
+
+  <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 items-start text-sm m-0">
+    @if (hasReferences()) {
+      <dt class="font-medium text-surface-600 whitespace-nowrap">
+        {{ 'messages.field.references' | transloco }}
+      </dt>
+      <dd class="m-0">
+        @for (ref of references(); track ref.messageId) {
+          <div>
+            <app-message-reference-type
+              [reference]="ref"
+              [language]="language()"
+              (referenceClicked)="referenceClicked.emit($event)"
+            />
+          </div>
+        }
+      </dd>
+    }
+
+    @if (hasParts()) {
+      @for (part of parts(); track $index; let i = $index) {
+        <dt class="font-medium text-surface-600 whitespace-nowrap">
+          @if (isFirstOfType(parts(), i)) {
+            {{ partTypeLabel(part) }}
+          }
+        </dt>
+        <dd class="m-0">
+          <app-message-part [part]="part" [language]="language()" />
+        </dd>
+      }
+    }
+
+    @if (hasAttachments()) {
+      <dt class="font-medium text-surface-600 whitespace-nowrap">
+        {{ 'messages.field.attachments' | transloco }}
+      </dt>
+      <dd class="m-0">
+        <button type="button" (click)="toggleAttachments()" class="attach-link">
+          <app-icon name="lucidePaperclip" />
+          <span>{{ attachmentsToggleLabel() }}</span>
+        </button>
+        @if (showAttachments()) {
+          <div class="mt-2">
+            <app-message-attachment-list [attachments]="allAttachments()" [language]="language()" />
+          </div>
+        }
+      </dd>
+    }
+
+    @if (hasCharts()) {
+      <dt class="font-medium text-surface-600 whitespace-nowrap">
+        {{ 'messages.field.charts' | transloco }}
+      </dt>
+      <dd class="m-0">
+        <app-message-charts [charts]="charts()" />
+      </dd>
+    }
+
+    @if (hasPublication()) {
+      <dt class="font-medium text-surface-600 whitespace-nowrap">
+        {{ 'messages.field.publication' | transloco }}
+      </dt>
+      <dd class="m-0">
+        <app-message-publication
+          [message]="message()"
+          [showInternal]="true"
+          [language]="language()"
+        />
+      </dd>
+    }
+
+    @if (showPromulgation() && hasPromulgations()) {
+      <dt class="font-medium text-surface-600 whitespace-nowrap">
+        {{ 'messages.promulgation.heading' | transloco }}
+      </dt>
+      <dd class="m-0">
+        <app-promulgation-list [msg]="message()" />
+      </dd>
+    }
+  </dl>
+
+  @for (att of attachmentsBelow(); track att.path) {
+    <app-message-attachment [attachment]="att" mode="source" [language]="language()" />
+  }
+
+  <app-message-source [message]="message()" [language]="language()" />
+</article>

@@ -1,0 +1,140 @@
+
+:imagesdir: images
+
+[#batch-jobs]
+== Batch Jobs
+
+A _batch job_ is a task Niord runs in the background, such as an import. Almost every kind of Niord data, areas,
+charts, categories, dictionaries, messages and more, is imported by a batch job, and the page that imports it
+starts the job and links to it. The _Batch Jobs_ page lets a system administrator follow the batch jobs and stop,
+restart or abandon them. You open it from *Sysadmin* -> *Batch Jobs*; the number beside the menu item is the
+number of batch jobs running now.
+
+image::BatchJobsPage.png[Batch Jobs Page, 800]
+
+The left side of the page lists the kinds of batch jobs that have run in the deployment, each with the number of
+its executions and, while some run, the number running. Click one to list its executions on the right. The address
+`/sysadmin/batch/<job name>` opens the page with that kind selected; the import dialogs link to it. The picture
+shows the runs of the _script-executor_ job, which runs the scripts of *Execute JavaScript…* (see
+<<execute-javascript,Execute JavaScript>>).
+
+The executions are listed from the batch engine, which keeps them only while the server runs: after a restart
+of the server, a kind of job lists the executions since that restart.
+
+For each run, the list shows its job number, the user who started it, the data file it was started with and a
+*logs…* link, and for each execution when it started and ended and its status: _starting_, _started_, _stopping_,
+_stopped_, _failed_, _completed_ or _abandoned_. Click the name of the data file to download it.
+
+[#batch-job-execution]
+=== Batch Job Execution
+
+A batch job is started from the administration application: by an import on the page that owns the data (for
+example a domains file on the <<domains,Domains>> page), by a batch set uploaded on this page (see
+<<batch-sets,Batch Sets>>), or by *Execute JavaScript…* (see <<execute-javascript,Execute JavaScript>>). The
+bootstrap of a new deployment runs batch jobs too (see <<data-and-releases,Bootstrap, Releases and Imports>>). No
+folder on the server starts a batch job.
+
+When a batch job starts, Niord copies its data file into the job's own folder,
+`<batch job folder>/<job name>/execution/<year>/<month>/<job number>`, where the job also writes its log files. The
+batch job folder is the setting `batchJobRootPath`, by default the folder "batch-jobs" in Niord's home folder.
+
+Niord runs batch jobs with Jakarta Batch (https://jakarta.ee/specifications/batch/). A batch job usually reads,
+processes and writes its data in steps, each with its own log file, and commits a number of records at a time. So
+a running job can be stopped, and restarted or abandoned afterwards.
+
+While a job runs, its execution has a *stop* link, and a job that reports its progress, such as a large message
+import, shows a progress bar. The job's card counts it as running, and so does the number beside *Batch Jobs* in
+the menu. In the picture, a script that waits is running (a script job reports its progress as complete once it
+has read its script):
+
+image::BatchJobRunning.png[Batch Jobs Running, 800]
+
+A job that fails stops and becomes _failed_; a job you stop becomes _stopping_ and then _stopped_. A job you stop
+first finishes the records it is working on, so _stopping_ can last a while; the waiting script of the picture
+became _stopped_ when its wait was over:
+
+image::BatchJobRestart.png[Batch Jobs Stopped, 800]
+
+What the job wrote up to its last commit stays; what it wrote after it is rolled back. The links an execution
+offers come from the server: *restart* runs the job again from where it stopped, and only the newest execution of
+a run can be restarted; *abandon* gives the run up for good. A job of the bootstrap of a new deployment is never
+restarted: Niord refuses, and says why.
+
+Click *logs…* to open the _Batch Job Log Files_ dialog. It lists the log files of the run at the top; click one to
+read it. The picture shows the log of a short script's run, with the script and how long it ran. A log file
+gives its times as the server writes them, in the server's time zone and date format, so they can differ from the
+times the list shows:
+
+image::BatchJobLogDialog.png[Batch Jobs Log Files, 520]
+
+[#batch-sets]
+=== Batch Sets
+
+*Upload batch set…* at the top of the page opens the _Upload Batch-Set Archive_ dialog, where you upload a zip
+archive that holds several data files, to start several batch jobs in one go:
+
+image::BatchSetUploadDialog.png[Upload Batch-Set Archive, 280]
+
+Besides the data files, the archive must hold a file named "batch-set.json", which lists the batch jobs to start,
+each with its data file and a delay. For example:
+
+[source,json]
+----
+[
+  {
+    "jobName": "domain-import",
+    "fileName": "domains.json",
+    "delay": 2000
+  },
+  {
+    "jobName": "chart-import",
+    "fileName": "charts.json",
+    "delay": 5000
+  },
+  {
+    "jobName": "area-import",
+    "fileName": "areas.json",
+    "delay": 5100
+  },
+  ...
+]
+----
+
+The delay, in milliseconds, orders jobs that depend on each other: if the areas of "areas.json" name the domains of
+"domains.json", the area import must start after the domain import, as above.
+
+A batch set may name only these batch jobs: _domain-import_, _category-import_, _param-type-import_,
+_mailing-list-import_, _report-import_, _promulgation-type-import_, _chart-import_, _area-import_,
+_source-import_, _publication-category-import_, _publication-import_, _publication-series-import_,
+_message-import_ and _msg-archive-import_. A batch set that names any other job is refused as a whole, and none
+of its jobs is started; the answer in the dialog says why. The script resource and dictionary imports run only
+from their own pages, where you first see what they would change (see <<script-resources,Script Resources>> and
+<<dictionaries,Dictionaries>>), the settings import only from the <<settings,Settings>> page, and scripts only
+through *Execute JavaScript…*. A new deployment gets its first data from its bootstrap, not from a batch set.
+
+[#execute-javascript]
+=== Execute JavaScript
+
+*Execute JavaScript…* at the top of the page opens a dialog where you write a server-side JavaScript (see
+<<server-side-javascript,Server-Side JavaScript>>) and run it as a batch job:
+
+image::BatchJobExecuteJavaScript.png[Execute JavaScript, 460]
+
+WARNING: The script runs on the server with full access to the system, and nothing checks it: it can change or
+delete any data. Run only scripts you understand and trust.
+
+*Schedule* asks you to confirm, and then starts the _script-executor_ batch job with the script as its data file.
+Niord writes the script and the name of the user who scheduled it in the server's log. Besides Niord's services, the
+script can use the database directly, as `em` (the entity manager). The job's own log, which you open with *logs…*
+on this page, shows the script and how long it ran, or the error it failed with; what the script prints goes to the
+server's log.
+
+Like every *Sysadmin* page, the Batch Jobs page with *Upload batch set…* and *Execute JavaScript…* opens only for a
+system administrator.
+
+[#batch-job-clean-up]
+=== Batch Job Clean-Up
+
+So that the server's disk does not fill up, Niord deletes the files and folders of a batch job's executions when
+they are older than the number of days in the setting `batchFileExpiryDays` (10 unless it is changed). It looks
+for them every hour.

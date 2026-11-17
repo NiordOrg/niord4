@@ -1,0 +1,47 @@
+
+:doctype: book
+:compat-mode:
+:page-layout!:
+:toc: left
+:toclevels: 2
+:sectanchors:
+:sectlinks:
+:sectnums:
+:linkattrs:
+:icons: font
+:source-highlighter: coderay
+:source-language: asciidoc
+:experimental:
+:idprefix:
+:idseparator: -
+:table-caption!:
+:example-caption!:
+:figure-caption:
+:imagesdir: images
+:underscore: _
+
+= What Changed Since the Old Niord
+
+<<<
+
+include::01-Introduction.adoc[]
+
+<<<
+
+include::02-Everyone.adoc[]
+
+<<<
+
+include::03-Editors.adoc[]
+
+<<<
+
+include::04-Administrators.adoc[]
+
+<<<
+
+include::05-SystemAdministrators.adoc[]
+
+<<<
+
+include::06-PublicSite.adoc[]

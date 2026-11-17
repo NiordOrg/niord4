@@ -1,0 +1,1587 @@
+/* ============================================================
+   components-admin.css — Layer 3 semantic classes, this application only
+   ============================================================
+
+   The classes the administration application renders and the public site does
+   not. Its shared sibling is fe/styles/components-core.css, which both load and
+   which this file is free to build on; the rules for naming, for country
+   overlays and for the cascade are stated there and hold here unchanged.
+   ============================================================ */
+
+@layer components {
+  .status-chip {
+    /* Outlined by default — the chip starts as just a border + text color
+       in the status's hue. Add `.is-active` to fill it with the status's
+       background tint. Toggles (filter chips) use `.is-active` to indicate
+       "on"; display sites that always want the filled treatment just apply
+       `.is-active` alongside the `.is-{status}` state class. The base shape
+       (outlined) reads as "available option / not yet selected"; the active
+       shape reads as "selected / matching." */
+    @apply inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border;
+    background: transparent;
+    color: var(--status-fg, var(--niord-fg-muted));
+    border-color: var(--status-bd, var(--niord-border));
+    border-radius: 999px;
+    transition: background 0.12s ease;
+  }
+  /* `.is-deleted` is the one inverted status: its --status-fg is white so the
+     filled/active chip reads white-on-black. At rest the chip background is
+     transparent, so the white text would be invisible — fall back to the
+     surface-fg color for the outlined state only. */
+  .status-chip.is-deleted:not(.is-active) {
+    color: var(--niord-fg);
+  }
+  .status-chip.is-active {
+    background: var(--status-bg, var(--niord-surface-sunken));
+  }
+  /* Button-flavored chips (filter toggles) get a hover tint and pointer
+     cursor so the interactive affordance is clear. Display chips (<span>)
+     don't. Tailwind v4's preflight doesn't set `cursor: pointer` on
+     buttons globally, so we add it here. */
+  button.status-chip {
+    cursor: pointer;
+  }
+  button.status-chip:hover,
+  button.status-chip:focus-visible {
+    background: color-mix(in srgb, var(--status-bg, var(--niord-surface-sunken)), white 50%);
+  }
+  button.status-chip.is-active:hover,
+  button.status-chip.is-active:focus-visible {
+    background: color-mix(in srgb, var(--status-bg, var(--niord-surface-sunken)), black 5%);
+  }
+
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+    background: var(--status-bd, var(--niord-fg-subtle));
+  }
+  /* Generic active/inactive flag dot — boolean-driven, no status-pipe machinery.
+     Active uses the selection/accent color, inactive the muted gray. */
+  .status-dot.is-active {
+    background: var(--niord-accent);
+  }
+  .status-dot.is-inactive {
+    background: var(--niord-fg-subtle);
+  }
+
+  .status-row {
+    /* Subtle row tint — soften the badge bg further for whole-row use */
+    background: color-mix(in srgb, var(--status-bg, var(--niord-surface-sunken)), white 50%);
+  }
+
+  /* --------------------------------------------------------
+     EXPECTED DATE
+     A date that has not happened yet, worn by <app-expected-date>.
+     Publication dates are stamped by the act of publishing, so a
+     future one is a projection and must not read as a record.
+     Three carriers, none of them colour: the clock glyph, the
+     italics and the dotted rule — the component adds a hover title
+     saying the same thing in words. `nowrap` because it sits inline
+     in a sentence, where a date broken across two lines reads as
+     two facts.
+     -------------------------------------------------------- */
+  .expected-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-style: italic;
+    color: var(--niord-fg-muted);
+    border-bottom: 1px dotted var(--niord-fg-subtle);
+    padding-bottom: 1px;
+    white-space: nowrap;
+  }
+  /* The glyph never shrinks and sits a step back from the text it marks. */
+  .expected-date app-icon {
+    flex: none;
+    opacity: 0.8;
+  }
+
+  /* --------------------------------------------------------
+     MESSAGE TABLE — elevated card frame
+     Surface chrome shared by the table, details and selected
+     message views: 1px border + rounded corners + small shadow
+     on the white surface, with a sticky, sunken, strong-bordered
+     header band. `overflow: clip` rounds the header / last-row
+     corners without establishing a scroll container, so the
+     sticky header keeps working. The large radius auto-tightens
+     per country via the token (10px in Default; a country sets its own).
+
+     Global (not component-scoped) so all three views render the
+     identical card.
+     -------------------------------------------------------- */
+  .message-table {
+    /* Plain semantic <table>. `border-collapse: separate` + zero spacing keeps
+       the rounded card corners (with `overflow: clip`) and lets the row wash /
+       rail render as the selection cue. The card owns its white surface
+       explicitly — without it the gray page shows through the rows. */
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--niord-surface-0);
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius-lg);
+    box-shadow: var(--niord-shadow-sm);
+    overflow: clip;
+  }
+  .message-table thead > tr > th {
+    position: sticky;
+    top: 0;
+    background: var(--niord-header-band);
+    border-bottom: 2px solid var(--niord-border-strong);
+    z-index: 1;
+  }
+  /* Cell padding. Detail/selected rows opt out with `p-0` and pad via their own
+     `.details-row`; utilities win over this components-layer rule. */
+  .message-table thead > tr > th,
+  .message-table tbody > tr > td,
+  .message-table tbody > tr > th {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+  }
+  /* Hairline inter-row divider. */
+  .message-table tbody > tr > td,
+  .message-table tbody > tr > th {
+    border-bottom: 1px solid var(--niord-divider);
+  }
+  .message-table tbody > tr:last-child > td,
+  .message-table tbody > tr:last-child > th {
+    border-bottom: 0;
+  }
+  .message-table .clickable {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* --------------------------------------------------------
+     DETAILS ROW — internal grid layout
+     Per-message body layout inside the details / selected views.
+     3-column grid: 220px thumb | 1fr body | 40px actions, with
+     24px gap + 24px padding. The row sits inside a `<td class="p-0">`
+     so the cell padding doesn't double up. The surface card, the
+     inter-row divider, and the row-interactive hover come from
+     `.message-table` / `.row-interactive`; this class owns only the
+     row's internal layout.
+     -------------------------------------------------------- */
+  .details-row {
+    display: grid;
+    grid-template-columns: 220px 1fr 40px;
+    gap: 24px;
+    padding: 24px;
+    align-items: start;
+  }
+
+  /* --------------------------------------------------------
+     DETAILS THUMB
+     220×170 map preview inside the details-row's first column.
+     Named class (not inline arbitrary values) so the
+     dimensions live in CSS, not template strings. Surface-
+     sunken bg fills the box before the image loads; the
+     image inside is `object-cover` to crop without distortion.
+     -------------------------------------------------------- */
+  .details-thumb {
+    width: 220px;
+    height: 170px;
+    border-radius: var(--niord-radius);
+    border: 1px solid var(--niord-border);
+    overflow: hidden;
+    background: var(--niord-surface-sunken);
+  }
+
+  /* Narrow screens: the 3-column grid (220px thumb + 40px actions + gaps) leaves
+     the body almost no room, crushing titles to one word per line. Stack into a
+     single column and let the thumb span the width. The desktop 3-column layout
+     is untouched from `md` up. */
+  @media (max-width: 767px) {
+    .details-row {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+    .details-thumb {
+      width: 100%;
+    }
+  }
+
+  /* --------------------------------------------------------
+     AREA DOT
+     6px round accent dot rendered before "Country — Area" group
+     headings across the area-grouped views (table, details, grid)
+     for a consistent wayfinding mark. Country overlays flip the
+     dot color via --niord-accent.
+     -------------------------------------------------------- */
+  .area-dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full align-middle mr-2;
+    background: var(--niord-accent);
+  }
+
+  /* --------------------------------------------------------
+     CARD OVERLAY (top / bottom)
+     Translucent strips that float over a card's image/thumb to
+     hold metadata. The top strip carries id + title, the bottom
+     strip carries the description excerpt. Light frosted-glass treatment:
+     white-at-78% with backdrop blur + saturation, dark text.
+     Map underneath stays mostly visible; the card reads as a
+     stack of frosted panels over the chart, not as a dark
+     poster blocking the imagery.
+     -------------------------------------------------------- */
+  .card-overlay-top,
+  .card-overlay-bottom {
+    @apply absolute inset-x-0 overflow-hidden px-3 py-2;
+    background: rgb(255 255 255 / 0.78);
+    color: var(--niord-fg);
+    backdrop-filter: blur(8px) saturate(1.2);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  }
+  .card-overlay-top {
+    @apply top-0 max-h-2/5;
+    border-bottom: 1px solid rgb(255 255 255 / 0.5);
+  }
+  .card-overlay-bottom {
+    @apply bottom-0 max-h-16;
+    border-top: 1px solid rgb(255 255 255 / 0.5);
+  }
+
+  /* --------------------------------------------------------
+     TOOLBAR TAB — active state (inset accent underline)
+     Applied via `routerLinkActive="toolbar-tab-active …"` on
+     desktop tab links. The 2px underline is a `::after` pseudo,
+     absolute-positioned with 12px L/R inset so it stops short
+     of the tab's edges — reads as an indicator tied to the
+     label, not a full-width border. Requires `position: relative`
+     on the host anchor.
+     -------------------------------------------------------- */
+  .toolbar-tab-active {
+    position: relative;
+  }
+  .toolbar-tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 12px;
+    right: 12px;
+    height: 2px;
+    background: var(--niord-accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* --------------------------------------------------------
+     REFERENCE LINK
+     Inline links to related messages inside the message-details
+     renderer. Shape: dashed bottom-border that solidifies on
+     hover + a soft accent fill.
+
+     Link color convention (applies to all link-style affordances):
+       base  → --niord-primary  (universal, NOT country-flipped)
+       hover → --niord-accent   (universal, NOT country-flipped)
+     Links don't use the --niord-action-primary-* alias; they
+     stay in the brand-identity primary family by default and
+     flip to brand-accent on hover. Cross-country uniformity
+     keeps "link" reading the same way in every deployment —
+     primary for "this is content," accent for "you're about to
+     click it."
+
+     Designed for use on a <button> element styled as a link
+     (per project standard — references trigger in-app navigation,
+     not href). The `border: 0` override neutralizes browser
+     button defaults; the rule then re-applies just the dashed
+     bottom border that defines the link visual.
+     -------------------------------------------------------- */
+  .reference-link {
+    color: var(--niord-primary);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px dashed var(--niord-primary);
+    padding: 0 0 1px 0;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      border-bottom-color 0.12s ease,
+      border-bottom-style 0.12s ease,
+      color 0.12s ease;
+  }
+  .reference-link:hover {
+    color: var(--niord-accent);
+    border-bottom-color: var(--niord-accent);
+    border-bottom-style: solid;
+  }
+
+  /* --------------------------------------------------------
+     AUTOCOMPLETE (app-autocomplete) — CDK multi-select chip
+     combobox. `.ac-control` is the bordered input + chip row (in the
+     component's view); `.ac-panel` is the portalled results
+     listbox (in the cdk-overlay-container, so it must be a
+     global Layer-3 class — encapsulated styles won't reach it,
+     same as `.picker-panel` / `.dialog-panel`). Chips reuse the
+     `.chip.is-active` skin (primary + rounded). The border is the
+     `.text-input` border, and focus turns it to the primary the way
+     it turns a text field's.
+     -------------------------------------------------------- */
+  .ac-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 3px 6px;
+    border: 1px solid var(--niord-surface-500);
+    border-radius: var(--niord-radius);
+    background: var(--niord-surface-0);
+    cursor: text;
+  }
+  .ac-control:focus-within {
+    border-color: var(--niord-primary);
+  }
+  .ac-control.ac-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--niord-surface-sunken);
+  }
+  .ac-input {
+    flex: 1 1 6rem;
+    min-width: 4rem;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--niord-fg);
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    padding: 2px 4px;
+  }
+  .ac-input:disabled {
+    cursor: not-allowed;
+  }
+  .ac-chip {
+    cursor: default;
+  }
+  .ac-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--niord-fg-on-primary);
+    line-height: 1;
+    cursor: pointer;
+  }
+  .ac-chip-remove app-icon {
+    font-size: 11px;
+    line-height: 1;
+  }
+  .ac-chip-remove:disabled {
+    cursor: not-allowed;
+  }
+  .ac-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+    color: var(--niord-fg-subtle);
+    cursor: pointer;
+  }
+  .ac-clear:hover,
+  .ac-clear:focus-visible {
+    color: var(--niord-fg);
+  }
+
+  .ac-panel {
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    max-height: min(18rem, 45vh);
+    overflow-y: auto;
+    background: var(--niord-surface);
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius);
+    box-shadow: var(--niord-shadow);
+  }
+  .ac-option {
+    padding: 6px 10px;
+    border-radius: var(--niord-radius-sm);
+    color: var(--niord-fg);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .ac-option:hover,
+  .ac-option.ac-option-active {
+    background: var(--niord-surface-sunken);
+  }
+  .ac-empty,
+  .ac-status {
+    padding: 8px 10px;
+    color: var(--niord-fg-muted);
+    font-size: 0.8125rem;
+  }
+
+  /* The content-sized panel (`[panelWidth]="'content'"`). The pane carries the
+     control's width as a floor and grows to its widest row; the list fills the
+     pane, so a short row's hover still spans the full width — the same pairing
+     `.sel-panel` uses. The pane's own width CAP has to live unlayered (see the
+     unlayered-overrides block above `ADMIN AREA`), because the CDK injects its
+     `.cdk-overlay-pane` rules outside every layer. */
+  .ac-overlay-content .ac-panel {
+    min-width: 100%;
+    max-width: 100%;
+    width: max-content;
+  }
+
+  /* --------------------------------------------------------
+     SELECT (app-select) — CDK/aria single-select dropdown.
+     `.sel-control` is the bordered trigger row (in the component's
+     view); `.sel-panel` is
+     the portalled `role="listbox"` (in the cdk-overlay-container, so
+     it must be a global Layer-3 class — encapsulated styles won't
+     reach it, same as `.ac-panel` / `.picker-panel`). Chrome mirrors
+     the autocomplete so both read as one form-field family.
+     -------------------------------------------------------- */
+  .sel-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-height: 2.625rem;
+    border: 1px solid var(--niord-surface-500);
+    border-radius: var(--niord-radius);
+    background: var(--niord-surface-0);
+  }
+  .sel-control:focus-within {
+    border-color: var(--niord-primary);
+  }
+  .sel-control.sel-disabled {
+    opacity: 0.6;
+    background: var(--niord-surface-sunken);
+  }
+  .sel-trigger {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 0;
+    background: transparent;
+    color: var(--niord-fg);
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .sel-trigger:disabled {
+    cursor: not-allowed;
+  }
+  .sel-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sel-placeholder {
+    color: var(--niord-fg-muted);
+  }
+  .sel-chevron {
+    flex: 0 0 auto;
+    color: var(--niord-fg-subtle);
+    font-size: 0.75rem;
+  }
+  .sel-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+    color: var(--niord-fg-subtle);
+    cursor: pointer;
+  }
+  .sel-clear:hover,
+  .sel-clear:focus-visible {
+    color: var(--niord-fg);
+  }
+
+  .sel-panel {
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    /* The overlay pane is min-width:triggerWidth with auto width, so the panel
+       grows to fit its widest option (no horizontal scrollbar); fill the pane so
+       option rows span the full width even when the widest option is short. */
+    min-width: 100%;
+    width: max-content;
+    /* Grow to fit typical option lists; cap (and scroll) only for very long lists. */
+    max-height: min(28rem, calc(100vh - 4rem));
+    overflow-y: auto;
+    background: var(--niord-surface);
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius);
+    box-shadow: var(--niord-shadow);
+  }
+  .sel-option {
+    padding: 6px 10px;
+    border-radius: var(--niord-radius-sm);
+    color: var(--niord-fg);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .sel-option:hover,
+  .sel-option.sel-option-active {
+    background: var(--niord-surface-sunken);
+  }
+  .sel-option.sel-option-selected {
+    font-weight: 600;
+    color: var(--niord-action-primary-bg);
+  }
+  .sel-option[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* --------------------------------------------------------
+     ACCENT BADGE (.badge-accent)
+     A small count pill that reads as "this item is marked, in
+     brand color" (e.g. the Selection-tab count badge): a rounded
+     accent pill sized to its value, with white text. White on
+     accent passes WCAG AA in both themes.
+     -------------------------------------------------------- */
+  .badge-accent {
+    @apply inline-flex items-center justify-center text-xs font-bold leading-none;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.375rem;
+    border-radius: 999px;
+    background: var(--niord-accent);
+    color: var(--niord-fg-on-primary);
+  }
+
+  /* --------------------------------------------------------
+     PICKER POPOVER (tag / area / category)
+     Shared chrome for the anchored pickers. The popover MECHANISM
+     + instant/no-reposition behaviour live in the PickerPopover
+     component; these are the box + footer recipe. Token-driven so
+     they re-skin with the theme. The fixed, viewport-bounded scroll
+     region inside stays per-picker (it differs: flat list vs tree).
+     -------------------------------------------------------- */
+  .picker-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    /* Comfortable, viewport-clamped width — never wider than the screen. */
+    width: min(26rem, calc(100vw - 1rem));
+    /* Surface chrome — the CDK overlay pane is transparent, so the panel owns
+       its own card. */
+    background: var(--niord-surface);
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius);
+    box-shadow: var(--niord-shadow);
+    padding: 0.75rem;
+  }
+  .picker-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-top: 1px solid var(--niord-border);
+    padding-top: 0.5rem;
+  }
+
+  /* --------------------------------------------------------
+     CONFIRM (app-confirm) — centered alertdialog card + scrim.
+     -------------------------------------------------------- */
+  .confirm-backdrop {
+    background: color-mix(in srgb, var(--niord-fg), transparent 45%);
+  }
+  .confirm-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: var(--niord-surface);
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius-lg);
+    box-shadow: var(--niord-shadow-lg);
+    padding: 1.25rem;
+  }
+  .confirm-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .confirm-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--niord-fg);
+  }
+  .confirm-body {
+    overflow-y: auto;
+    color: var(--niord-fg-muted);
+  }
+  /* Optional lines under the message (ConfirmOptions.details); a long list scrolls inside the
+     90vh panel while header and buttons stay in view. */
+  .confirm-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding-left: 1.25rem;
+    list-style: disc;
+    font-size: 0.875rem;
+    color: var(--niord-fg-muted);
+    overflow-wrap: anywhere;
+  }
+  .confirm-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.25rem;
+  }
+
+  /* --------------------------------------------------------
+     PAGER (app-pager) — prev/next presentational pager.
+     -------------------------------------------------------- */
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .pager-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--niord-radius-sm);
+    color: var(--niord-fg-muted);
+    cursor: pointer;
+  }
+  .pager-btn:hover:not(:disabled) {
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg);
+  }
+  .pager-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .pager-status {
+    font-size: 0.8125rem;
+    color: var(--niord-fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --------------------------------------------------------
+     POPUP MENU PANEL + ITEM
+     The surface + row recipe for every `<app-menu>` popup (row gear,
+     toolbar Action, editor/geometry Action, header dropdowns), built
+     on `@angular/cdk/menu`. The CDK overlay pane is transparent, so the
+     `[cdkMenu]` panel owns its own card chrome. Viewport-bounded so a
+     tall menu scrolls in place instead of overflowing. Token-driven.
+     -------------------------------------------------------- */
+  .menu-panel {
+    min-width: 12rem;
+    max-width: min(20rem, calc(100vw - 1rem));
+    /* Grow to fit content; only scroll when the menu would exceed the viewport. */
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    padding: 0.25rem 0;
+    background: var(--niord-surface);
+    border: 1px solid var(--niord-border);
+    border-radius: var(--niord-radius);
+    box-shadow: var(--niord-shadow);
+    outline: none;
+  }
+  .menu-sep {
+    margin: 0.25rem 0;
+    border: 0;
+    border-top: 1px solid var(--niord-border);
+  }
+
+  /* --------------------------------------------------------
+     POPUP MENU ITEM
+     The row recipe for every `<app-menu>` popup item (row gear,
+     toolbar Action, editor Action). `CdkMenuItem` supplies the popup
+     mechanism; this is just the item layout + hover/disabled states,
+     token-driven.
+     -------------------------------------------------------- */
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    /* CDK renders rows as native <button>/<a>; reset their chrome so this
+       token-driven layout fully owns the appearance. */
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    outline: none;
+    background: transparent;
+  }
+  .menu-item:hover,
+  .menu-item:focus-visible {
+    background: var(--niord-surface-sunken);
+  }
+  .menu-item.is-disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+  /* A heading over a separated group of rows, not an action. Set on a disabled
+     item so the row is skipped by the roving tabindex; the small caps and the
+     muted colour are what stop it reading as one more thing to click. */
+  .menu-item.menu-group-label {
+    padding: 0.375rem 0.75rem 0.125rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--niord-fg-subtle);
+    opacity: 1;
+  }
+  /* A row that takes something away. Reached only through a separated group, so
+     the colour is the second signal rather than the only one. */
+  .menu-item.is-destructive {
+    color: var(--color-danger);
+  }
+
+  /* --------------------------------------------------------
+     DRAWER (app-drawer) — right-anchored slide-over + backdrop.
+     The CDK overlay pane is transparent, so `.niord-drawer-panel`
+     (the pane, via `panelClass`) owns the surface chrome AND the
+     slide: it starts off-screen right, and `.is-open` — added a
+     frame after attach, removed at close — drives the transform
+     both ways. The close path detaches on the slide-out's
+     `transitionend`. `.niord-drawer-backdrop` tints the CDK scrim;
+     its fade comes free from the prebuilt overlay CSS, started in
+     parallel with the slide by dropping `cdk-overlay-backdrop-showing`
+     at close. Token-driven.
+     -------------------------------------------------------- */
+  .niord-drawer-backdrop {
+    background: color-mix(in srgb, var(--niord-fg), transparent 55%);
+  }
+  .niord-drawer-panel {
+    background: var(--niord-surface);
+    border-left: 1px solid var(--niord-border);
+    box-shadow: var(--niord-shadow-lg);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+  .niord-drawer-panel.is-open {
+    transform: translateX(0);
+  }
+  /* The pane's width cap is NOT here. From `md` up it leaves a strip of dimmed
+     page beside it so a tap on the backdrop can dismiss, below `md` it is the
+     viewport — but the CDK writes the pane's size as inline styles, which no
+     layered rule can beat, so the drawer component sets `maxWidth` through
+     `OverlayRef.updateSize` from a media query (drawer.ts). */
+
+  /* --------------------------------------------------------
+     ENTITY TREE / TREE PICKER — CDK tree row chrome
+     Shared Layer-3 markup for <app-entity-tree> (single-select
+     browse) and <app-tree-picker> (checkbox multi-select), both
+     built on @angular/cdk/tree. Row layout, filter row, twisty
+     and label no-wrap live here so the two wrappers can't drift.
+     Hover + focus reuse `.row-interactive`; the "already-picked"
+     tint reuses `.row-selected` (accent-soft wash + rail).
+     Token-driven so they re-skin with the theme.
+     -------------------------------------------------------- */
+  .tree-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0 0.25rem 0.25rem;
+    color: var(--niord-fg-muted);
+  }
+  .tree-filter-icon {
+    flex: none;
+    font-size: 0.875rem;
+  }
+  .tree-filter-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 1px solid var(--niord-surface-500);
+    border-radius: var(--niord-radius-sm);
+    background: var(--niord-surface);
+    color: var(--niord-fg);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+  .tree-filter-input:focus-visible {
+    outline: 2px solid var(--niord-accent);
+    outline-offset: -1px;
+  }
+
+  /* Fixed, viewport-bounded scroll region (tree-picker popover box stays stable). */
+  .tree-scroll {
+    max-height: min(18rem, 45vh);
+    overflow: auto;
+  }
+
+  .tree-root {
+    display: block;
+  }
+  .tree-root .cdk-nested-tree-node {
+    display: block;
+    outline: none;
+  }
+
+  .tree-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--niord-radius-sm);
+  }
+  .tree-root .cdk-nested-tree-node:focus-visible > .tree-row {
+    outline: 2px solid var(--niord-accent);
+    outline-offset: -2px;
+  }
+  .tree-row-toggle {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--niord-fg-muted);
+    border-radius: var(--niord-radius-sm);
+    cursor: pointer;
+  }
+  .tree-row-toggle:hover {
+    color: var(--niord-fg);
+  }
+  .tree-row-check {
+    flex: none;
+    cursor: pointer;
+  }
+  /* The clickable label region — a native <button> (keyboard-accessible mouse
+     target) that fills the row; keyboard activation is owned by the CDK
+     treeitem, so this is a -1 tab stop with no button chrome. */
+  .tree-row-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .tree-row-main:focus {
+    outline: none;
+  }
+  .tree-row-folder {
+    flex: none;
+    color: var(--niord-fg-muted);
+  }
+  /* Deep hierarchies indent each level; keep long labels on one line and let the
+     scroll area scroll horizontally rather than wrap to two lines. */
+  .tree-row-label {
+    white-space: nowrap;
+  }
+
+  .tree-children {
+    padding-left: 1rem;
+  }
+  .tree-children-collapsed {
+    display: none;
+  }
+}
+
+/* ============================================================
+   UNLAYERED OVERRIDES
+   ============================================================
+   Rules here win over ALL @layer blocks (CSS cascade-layer rule:
+   unlayered styles beat every layer). Use sparingly — only for
+   context-based overrides where a specific layer (typically
+   @layer utilities) would otherwise win by cascade order.
+
+   Currently: pin the selection star's <app-icon> to a fixed base size
+   and enlarge it for the selected message. The star's `1em` glyph would
+   otherwise inherit the `text-3xl` on its overlay wrapper unconditionally,
+   so the base size has to be pinned unlayered to beat that utility.
+   ============================================================ */
+
+/* The thumbnail selection star is an <app-icon> (a `1em` SVG glyph that scales
+   with font-size). Its overlay wrapper carries `text-3xl`, so pin the base to
+   1rem here (the default / hover-reveal size) and enlarge ONLY the selected
+   message's star — its accent colour (set by the toggle's `text-accent`) is the
+   selection cue in the details / selected / grid views. Unlayered so it beats
+   the `text-3xl` utility on the wrapper. The `.selection-star` label wraps the
+   star in message-selection-toggle; `.selection-star-overlay` is the centred
+   wrapper in message-details-row and message-grid-card. */
+.selection-star app-icon {
+  font-size: 1rem;
+}
+.selection-star-overlay.is-selected .selection-star app-icon {
+  font-size: 1.875rem;
+}
+
+/* The width cap on a content-sized autocomplete panel (`[panelWidth]="'content'"`).
+   Unlayered because the CDK injects its OWN copy of `.cdk-overlay-pane` — including
+   `max-width: 100%` — as a runtime <style> outside every layer, and unlayered CSS
+   beats every layer whatever its specificity. Importing `overlay-prebuilt.css` into
+   `base` does not cover that copy. Without this the panel is capped only by the
+   flexible bounding box, so one long title stretches it to whatever room is left
+   beside the control. */
+.cdk-overlay-pane.ac-overlay-content {
+  max-width: min(40rem, 90vw);
+}
+
+/* ============================================================
+   ADMIN AREA — section recipe chrome (Layer 3)
+   Shared toolbar/card shells every admin/sysadmin section
+   reuses. The table/pager mechanism itself is the CDK-table
+   `.niord-table` + `<app-pager>`; these classes own only the
+   section chrome around them.
+   ============================================================ */
+@layer components {
+  /* Toolbar row above a section list: filter inputs left, primary
+     action + cog overflow right (separated by .admin-toolbar-spacer). */
+  .admin-toolbar {
+    @apply mb-4 flex flex-wrap items-center gap-2.5;
+  }
+  /* Vertically stacks several .admin-toolbar-row groups onto separate lines
+     (e.g. mails: text fields on row 1, status + date range on row 2). */
+  .admin-toolbar-stack {
+    @apply mb-4 flex flex-col gap-2.5;
+  }
+  /* One horizontal group inside an .admin-toolbar-stack; still wraps at
+     narrow widths. */
+  .admin-toolbar-row {
+    @apply flex flex-wrap items-center gap-2.5;
+  }
+  .admin-toolbar-spacer {
+    @apply flex-1;
+  }
+  /* A titled content panel: a sunken header band over a bordered body.
+
+     Distinct from `.admin-card`, which is the shell around a section's TABLE and
+     carries the shadow and the sticky-last-column rule that go with one. This is
+     the frame for the read-and-act panels a detail screen is made of — a
+     checklist, a document, an audit trail — and the band is what makes the
+     heading read as a heading rather than as bold text inside a box. */
+  .admin-panel {
+    @apply rounded border border-surface-200 dark:border-surface-700;
+  }
+  .admin-panel-header {
+    @apply flex min-h-9 items-center justify-between gap-2 border-b border-surface-200 bg-surface-sunken px-3 py-2 text-sm font-medium text-fg dark:border-surface-700;
+  }
+  .admin-panel-body {
+    @apply p-3;
+  }
+
+  /* Card shell around a section's table/list.
+
+     The x-axis SCROLLS and the y-axis clips: the sticky-last-column rule below
+     only has an effect inside a scroll container, so with the box clipped on
+     both axes a wide table's trailing actions column was simply unreachable on
+     a narrow screen. Owned here rather than as an `overflow-x-auto` utility per
+     table, so every section answers the same way.
+
+     `relative` is load-bearing, not decoration: Tailwind's `.sr-only` is
+     `position: absolute`, and the visually-hidden column labels inside the
+     table's `<th>`s must resolve their containing block to the scroll box that
+     clips them. Without a positioned ancestor here they resolve against the
+     initial containing block, escape the clip and extend
+     `documentElement.scrollWidth` — a page-level horizontal scrollbar on every
+     screen that carries such a table. */
+  .admin-card {
+    @apply relative overflow-x-auto overflow-y-hidden rounded-niord-md border border-surface-200 bg-surface-0 shadow-niord-md;
+  }
+  /* Below `xl` (Tailwind `max-xl`, so `max-xl:` utilities flip with it): a section
+     table that overflows its card scrolls sideways, which pushes the trailing actions
+     column (edit / delete / …) off the right edge. Pin that last column so row actions
+     stay reachable. A no-op whenever the table FITS — a non-overflowing scroll container
+     never shifts a sticky cell — so ≥ 1280 is pixel-identical and the tablet band
+     (iPad portrait 768/820, landscape 1024 where the `lg` rail narrows the pane) gains
+     the pin phones already had. The cell inherits the ROW's paint, so a hover /
+     selection / status wash (`.row-interactive:hover`, `.row-selected`,
+     `.status-row`, `.issue-row-pseudo`, …) runs under it unbroken; plain rows are
+     given the card surface at zero specificity (`:where`) so every wash still wins.
+     Spanning cells (`[colspan]` — empty-state rows, the batch instance band) are
+     never an actions cell and are left alone.
+     `.is-unpinned` — add to an .admin-card whose last column is content, not row
+     actions (a members list ending in a reason column, an overview ending in Status),
+     or to ONE table in a card holding several where only some carry actions. */
+  @media (width < 80rem) {
+    :where(.admin-card:not(.is-unpinned) table tbody tr) {
+      background: var(--niord-surface-0);
+    }
+    .admin-card:not(.is-unpinned) table:not(.is-unpinned) thead th:last-child,
+    .admin-card:not(.is-unpinned) table:not(.is-unpinned) tbody td:last-child:not([colspan]) {
+      position: sticky;
+      right: 0;
+      box-shadow: -6px 0 6px -6px rgb(0 0 0 / 0.18);
+    }
+    .admin-card:not(.is-unpinned) table:not(.is-unpinned) thead th:last-child {
+      background: var(--niord-header-band);
+    }
+    .admin-card:not(.is-unpinned) table:not(.is-unpinned) tbody td:last-child:not([colspan]) {
+      background: inherit;
+    }
+  }
+  /* File picker / drag-drop target shared by the import dialogs and the shared
+     file uploader. Dotted border idle, brand-tinted highlight while a file is
+     dragged over. */
+  .file-drop-zone {
+    @apply flex flex-wrap items-center gap-2 rounded-niord-md border-2 border-dotted border-surface-300 p-3 text-sm;
+  }
+  .file-drop-zone.is-dragover {
+    @apply border-primary-500 bg-primary-50;
+  }
+  /* The picker input is visually hidden (sr-only) — surface its keyboard focus
+     on the zone so tabbing to the file picker is visible. */
+  .file-drop-zone:focus-within {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+}
+
+/* Mail-queue statuses extend the status-badge system, reusing the message
+   status palette: pending=draft amber, sent=published green, error=cancelled
+   red. Same orthogonal state-class pattern as .is-published etc. */
+@layer components {
+  .is-mail-pending {
+    --status-bg: var(--niord-status-draft-bg);
+    --status-fg: var(--niord-status-draft-fg);
+    --status-bd: var(--niord-status-draft-bd);
+  }
+  .is-mail-sent {
+    --status-bg: var(--niord-status-published-bg);
+    --status-fg: var(--niord-status-published-fg);
+    --status-bd: var(--niord-status-published-bd);
+  }
+  .is-mail-error {
+    --status-bg: var(--niord-status-cancelled-bg);
+    --status-fg: var(--niord-status-cancelled-fg);
+    --status-bd: var(--niord-status-cancelled-bd);
+  }
+}
+
+/* Publication-issue membership extends the status-badge system, reusing the
+   message status palette: an issue the message was published IN reads published
+   green (it is out, and that is settled), an issue it is merely due to appear in
+   reads draft — the same colour the message itself carries while it has not gone
+   out. The two must not share a tint: a pending membership can still change, and
+   an editor reading it as settled is one who decides a correction is too late.
+   Same orthogonal state-class pattern as .is-published etc. */
+@layer components {
+  .is-issue-published {
+    --status-bg: var(--niord-status-published-bg);
+    --status-fg: var(--niord-status-published-fg);
+    --status-bd: var(--niord-status-published-bd);
+  }
+  .is-issue-open {
+    --status-bg: var(--niord-status-draft-bg);
+    --status-fg: var(--niord-status-draft-fg);
+    --status-bd: var(--niord-status-draft-bd);
+  }
+  /* A field one edition says differently from its series. Amber, mixed off the
+     theme's warn colour rather than off a message status: nothing has gone
+     wrong, but the value has stopped following what the series decides and a
+     reader has to know which ones those are. Always worn with `.is-plain` — it
+     labels a fact about a field, not a lifecycle the field moves through. */
+  .is-tailored {
+    --status-bg: color-mix(in srgb, var(--color-warning), white 82%);
+    --status-fg: var(--color-warning);
+    --status-bd: color-mix(in srgb, var(--color-warning), white 50%);
+  }
+}
+
+/* Batch-execution statuses extend the status-badge system. The status-colour
+   mapping: running/starting=primary (blue), stopping/stopped=warn (amber),
+   failed=danger (red), completed=success (green), abandoned/unknown=neutral
+   default. Running/completed/default reuse the existing status palette;
+   the warn + danger tints are mixed off the shared --color-warning/--color-danger
+   theme colors (no message-status token reads amber/red). Those two are app-wide
+   theme constants (styles.css @theme), not per-country tokens. */
+@layer components {
+  .is-batch-running {
+    --status-bg: var(--niord-status-draft-bg);
+    --status-fg: var(--niord-status-draft-fg);
+    --status-bd: var(--niord-status-draft-bd);
+  }
+  .is-batch-completed {
+    --status-bg: var(--niord-status-published-bg);
+    --status-fg: var(--niord-status-published-fg);
+    --status-bd: var(--niord-status-published-bd);
+  }
+  .is-batch-stopped {
+    --status-bg: color-mix(in srgb, var(--color-warning), white 82%);
+    --status-fg: var(--color-warning);
+    --status-bd: color-mix(in srgb, var(--color-warning), white 50%);
+  }
+  .is-batch-failed {
+    --status-bg: color-mix(in srgb, var(--color-danger), white 86%);
+    --status-fg: var(--color-danger);
+    --status-bd: color-mix(in srgb, var(--color-danger), white 55%);
+  }
+  .is-batch-default {
+    --status-bg: var(--niord-status-cancelled-bg);
+    --status-fg: var(--niord-status-cancelled-fg);
+    --status-bd: var(--niord-status-cancelled-bd);
+  }
+}
+
+/* The lazy CodeMirror editor (behind code-text-input / code-merge-view) has no
+   intrinsic height — give it a sensible floor so an empty/short document doesn't
+   collapse to near-zero, with an internal scroll cap for large files. Global
+   because the .cm-editor element is created by CodeMirror at runtime, outside
+   the component's emulated-encapsulation scope. */
+@layer components {
+  .cm-host .cm-editor {
+    /* Grow to fit the document; the editor lives in a scroll container (drawer
+       body / dialog content) that provides the overflow, so no internal cap. */
+    min-height: 12rem;
+  }
+}
+
+/* Script-resource FM/JS type badges extend the status-badge system with two
+   distinct, themeable hues — Freemarker reads the brand accent, JavaScript an
+   amber tint mixed off the app-wide --color-warning theme constant. No hardcoded
+   color literals (per the token discipline); both are derived from theme tokens. */
+@layer components {
+  .is-script-fm {
+    --status-bg: color-mix(in srgb, var(--niord-accent), white 84%);
+    --status-fg: var(--niord-accent);
+    --status-bd: color-mix(in srgb, var(--niord-accent), white 50%);
+  }
+  .is-script-js {
+    --status-bg: color-mix(in srgb, var(--color-warning), white 82%);
+    --status-fg: var(--color-warning);
+    --status-bd: color-mix(in srgb, var(--color-warning), white 50%);
+  }
+}
+
+/* Batch Jobs master/detail chrome. The type cards are a single-column list of
+   selectable tiles; the selected tile gets the accent-tinted highlight. The
+   instance/execution table reuses the shared admin-card frame; the instance
+   header row gets a subtle sunken band so each instance group reads as one. */
+@layer components {
+  .batch-type-card {
+    @apply flex w-full items-center justify-between gap-3 rounded-niord-md border px-3 py-2 text-left text-sm;
+    border-color: var(--niord-border);
+    background: var(--niord-surface-0);
+    cursor: pointer;
+    transition:
+      background 0.12s ease,
+      border-color 0.12s ease;
+  }
+  .batch-type-card:hover {
+    background: var(--niord-surface-sunken);
+  }
+  .batch-type-card.is-selected {
+    border-color: var(--niord-accent);
+    background: var(--niord-accent-soft);
+  }
+  /* Visible keyboard focus ring (outline is independent of the selected/ hover background,
+     so a focused-AND-selected card still shows it). */
+  .batch-type-card:focus-visible {
+    outline: 2px solid var(--niord-accent);
+    outline-offset: 2px;
+  }
+  .batch-type-card .batch-type-count {
+    @apply text-xs;
+    color: var(--niord-fg-muted);
+  }
+  .batch-type-card .batch-type-running {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium;
+    border-radius: 999px;
+    background: var(--niord-status-draft-bg);
+    color: var(--niord-status-draft-fg);
+  }
+  /* Instance-header row band inside the executions table. */
+  .batch-instance-row > td {
+    background: var(--niord-surface-sunken);
+    font-weight: 500;
+  }
+  /* Read-only monospace viewer for a fetched text payload — the batch log files
+     and the stored S-124 GML of a dataset. */
+  .text-viewer {
+    @apply w-full resize-none rounded-niord-md border p-2 font-mono text-xs;
+    border-color: var(--niord-border);
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg);
+    min-height: 18rem;
+  }
+}
+
+/* SECOM delivery + dataset statuses extend the status-badge system. The outbox
+   maps its lifecycle onto the message-status palette — queued=draft,
+   in-flight=verified, acknowledged/opened=published, cancelled=cancelled — with
+   failed mixed off the shared --color-danger theme constant (no message-status
+   token reads red). A dataset is simply live or withdrawn. */
+@layer components {
+  .is-secom-pending {
+    --status-bg: var(--niord-status-draft-bg);
+    --status-fg: var(--niord-status-draft-fg);
+    --status-bd: var(--niord-status-draft-bd);
+  }
+  .is-secom-sent {
+    --status-bg: var(--niord-status-verified-bg);
+    --status-fg: var(--niord-status-verified-fg);
+    --status-bd: var(--niord-status-verified-bd);
+  }
+  .is-secom-acked,
+  .is-secom-opened {
+    --status-bg: var(--niord-status-published-bg);
+    --status-fg: var(--niord-status-published-fg);
+    --status-bd: var(--niord-status-published-bd);
+  }
+  .is-secom-failed {
+    --status-bg: color-mix(in srgb, var(--color-danger), white 86%);
+    --status-fg: var(--color-danger);
+    --status-bd: color-mix(in srgb, var(--color-danger), white 55%);
+  }
+  .is-secom-cancelled,
+  .is-secom-dataset-cancelled {
+    --status-bg: var(--niord-status-cancelled-bg);
+    --status-fg: var(--niord-status-cancelled-fg);
+    --status-bd: var(--niord-status-cancelled-bd);
+  }
+  .is-secom-dataset-active {
+    --status-bg: var(--niord-status-published-bg);
+    --status-fg: var(--niord-status-published-fg);
+    --status-bd: var(--niord-status-published-bd);
+  }
+}
+
+@layer components {
+  /* --------------------------------------------------------
+     CHECKLIST VERDICT (.checklist-verdict) — the one-line answer
+     a release rail exists to give, said as a LINE rather than as
+     a notice box. Same severity palette as `.message`, but with
+     no tint, no border and no accent rail: a boxed banner at the
+     top of a card reads as something that happened, and the
+     verdict is a standing state of the thing the card is about.
+     Weight and colour carry it; the caller puts the severity
+     icon inside, and it inherits `currentColor`.
+     -------------------------------------------------------- */
+  .checklist-verdict {
+    @apply flex items-center gap-2 text-[15px] leading-snug font-bold;
+    color: var(--verdict-fg, var(--niord-fg));
+  }
+  .checklist-verdict.is-ok {
+    --verdict-fg: var(--niord-notice-success-fg);
+  }
+  .checklist-verdict.is-warn {
+    --verdict-fg: var(--niord-notice-warn-fg);
+  }
+  .checklist-verdict.is-blocked {
+    --verdict-fg: var(--niord-notice-error-fg);
+  }
+
+  /* --------------------------------------------------------
+     TOAST (<app-toast>) — CDK-overlay top-right stack. Shares
+     the severity notice palette. The wrapper is click-through;
+     each toast card is interactive and left-accented by severity.
+     -------------------------------------------------------- */
+  .toast-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(24rem, calc(100vw - 2rem));
+    pointer-events: none;
+  }
+  .toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: var(--niord-radius);
+    border: 1px solid var(--niord-border);
+    border-left: 3px solid var(--toast-accent, var(--niord-border));
+    background: var(--niord-surface);
+    box-shadow: var(--niord-shadow);
+    color: var(--niord-fg);
+  }
+  .toast-icon {
+    flex: none;
+    color: var(--toast-accent);
+  }
+  .toast-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .toast-summary {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .toast-detail {
+    font-size: 0.8125rem;
+    color: var(--niord-fg-muted);
+  }
+  .toast-close {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem;
+    border: 0;
+    border-radius: var(--niord-radius-sm);
+    background: transparent;
+    color: var(--niord-fg-muted);
+    cursor: pointer;
+  }
+  .toast-close:hover {
+    background: var(--niord-surface-sunken);
+    color: var(--niord-fg);
+  }
+  .toast-success {
+    --toast-accent: var(--niord-notice-success-fg);
+  }
+  .toast-info {
+    --toast-accent: var(--niord-notice-info-fg);
+  }
+  .toast-warn {
+    --toast-accent: var(--niord-notice-warn-fg);
+  }
+  .toast-error {
+    --toast-accent: var(--niord-notice-error-fg);
+  }
+}
+
+/* --------------------------------------------------------
+   PROGRESS BAR
+   Thin track with an accent fill. Determinate: fill width =
+   value%. Indeterminate: a sweeping segment animates across.
+   Track height comes from the host (`h-0.5` etc.), so the bar
+   fills whatever slot the consumer sizes.
+   -------------------------------------------------------- */
+@layer components {
+  .progress {
+    position: relative;
+    width: 100%;
+    /* Fixed thin bar. `height: 100%` blew up to the full height of any
+       definite-height flex-column parent (e.g. admin section pages), rendering
+       a full-panel blue block instead of a top-of-list loading strip. */
+    height: 3px;
+    overflow: hidden;
+    background: var(--niord-surface-sunken);
+    border-radius: 999px;
+  }
+  .progress-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    /* Selection accent (matches the row-selected cue), not the navy primary. */
+    background: var(--niord-accent);
+    border-radius: inherit;
+    transition: width 0.2s ease;
+  }
+  .progress.is-indeterminate .progress-fill {
+    width: 40%;
+    animation: niord-progress-indeterminate 1.1s ease-in-out infinite;
+  }
+}
+
+@keyframes niord-progress-indeterminate {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Editor edit-form field rows draw their own bottom divider (Layer 4, in the row
+   component). The last row of a field group must close flush with no trailing line.
+   Rows sit inside display:contents wrappers, so :last-child on the row itself always
+   matches — the group's real last DOM child removes the divider on the row it wraps.
+   `.ed-field-group` is set on the SectionPanel body for the flat (Preamble / Misc)
+   field lists. Global because it reaches projected content across encapsulation. */
+@layer components {
+  /* Custom property, not a direct border override: the row's border lives in the (unlayered,
+     scoped) editor-field-row component stylesheet, which beats any layered rule — the variable
+     inherits through the display:contents field-component hosts instead. */
+  .ed-field-group > *:last-child {
+    --ed-row-border: none;
+  }
+}
+
+/* Message-comparison "Changes" tab word-diff. The diffed HTML is injected via [innerHTML], so it
+   escapes component encapsulation — these rules must be global. Additions/deletions reuse the same
+   diff tokens as the JSON "Data" tab (`--niord-diff-added` / `--niord-diff-removed`), softened to a
+   background tint so the surrounding text stays readable in both light and dark themes. */
+@layer components {
+  .message-diff ins {
+    background: color-mix(in srgb, var(--niord-diff-added) 22%, transparent);
+    text-decoration: none;
+  }
+  .message-diff del {
+    background: color-mix(in srgb, var(--niord-diff-removed) 22%, transparent);
+    text-decoration: line-through;
+  }
+  .diff-swatch-add {
+    background: color-mix(in srgb, var(--niord-diff-added) 45%, transparent);
+  }
+  .diff-swatch-del {
+    background: color-mix(in srgb, var(--niord-diff-removed) 45%, transparent);
+  }
+}
+
+/* Issue-list pseudo-rows: a period with no issue, rendered in the same table as
+   the issues. MISSING reuses the amber warn tint (something is wrong and can be
+   acted on); UPCOMING reuses the neutral cancelled palette, because a period
+   still open is not a problem and must not read as one. The row itself is
+   sunken and italic so a reader scanning the table can see at a glance which
+   lines describe documents that exist. Both tints are mixed off theme tokens,
+   never colour literals. */
+@layer components {
+  .is-gap-MISSING {
+    --status-bg: color-mix(in srgb, var(--color-warning), white 82%);
+    --status-fg: var(--color-warning);
+    --status-bd: color-mix(in srgb, var(--color-warning), white 50%);
+  }
+  .is-gap-UPCOMING {
+    --status-bg: var(--niord-status-cancelled-bg);
+    --status-fg: var(--niord-status-cancelled-fg);
+    --status-bd: var(--niord-status-cancelled-bd);
+  }
+  .issue-row-pseudo {
+    background: var(--niord-surface-100);
+    font-style: italic;
+    color: var(--niord-fg-muted);
+  }
+}
+
+/* --------------------------------------------------------
+   PERIOD CELL
+   One period of a publication's recent-periods strip, and the
+   samples that explain the strip in the dashboard legend.
+
+   A pill wide enough for a week number, and FOUR shapes rather
+   than four colours, so the strip is still readable to somebody
+   who sees none of the hues: the period being worked on is
+   filled, a period that produced a document is outlined, a
+   period that produced none is dashed, and a period still to
+   come is a quiet outline in the neutral palette.
+
+   The tints come from the state class the caller already puts on
+   the cell (`.is-issue-open`, `.is-issue-published`,
+   `.is-gap-MISSING`, `.is-gap-UPCOMING`), which is what keeps a
+   cell and the badge on the issue behind it from ever disagreeing
+   about the same status.
+   -------------------------------------------------------- */
+@layer components {
+  .pub-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.125rem;
+    height: 1.625rem;
+    padding: 0 0.4375rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1.5px solid var(--status-fg, var(--niord-border-strong));
+    color: var(--status-fg, var(--niord-fg-muted));
+    background: var(--niord-surface-0);
+  }
+  /* The period being worked on: filled, because it is the one cell on the strip
+     that is about what happens next rather than about what already happened. */
+  .pub-cell.is-issue-open {
+    background: var(--status-fg, var(--niord-primary));
+    border-color: var(--status-fg, var(--niord-primary));
+    color: var(--niord-fg-on-primary);
+  }
+  /* Nothing came out. Dashed as well as amber: the shape is what carries it on a
+     strip read at a glance, and the one cell that must not be missed. */
+  .pub-cell.is-gap-MISSING {
+    border-style: dashed;
+  }
+  /* Still to come, and so not a finding. Quiet outline, subtle text. */
+  .pub-cell.is-gap-UPCOMING {
+    border-color: var(--niord-border-strong);
+    color: var(--niord-fg-subtle);
+  }
+  /* The interactive cells: a real cell and a missing period are links (they
+     open a URL and so can be opened in a second tab); an upcoming period is an
+     inert span. */
+  a.pub-cell,
+  button.pub-cell {
+    cursor: pointer;
+    text-decoration: none;
+  }
+  a.pub-cell:hover,
+  a.pub-cell:focus-visible,
+  button.pub-cell:hover,
+  button.pub-cell:focus-visible {
+    background: color-mix(in srgb, var(--status-bg, var(--niord-surface-sunken)), white 30%);
+  }
+  a.pub-cell.is-issue-open:hover,
+  a.pub-cell.is-issue-open:focus-visible,
+  button.pub-cell.is-issue-open:hover,
+  button.pub-cell.is-issue-open:focus-visible {
+    background: color-mix(in srgb, var(--status-fg, var(--niord-primary)), black 12%);
+  }
+}
+
+/* --------------------------------------------------------
+   TABLET / PHONE TOUCH FLOORS (below lg)
+   The floors of the shared controls are in components-core.css;
+   these are the controls only this application renders. Same
+   boundary as Tailwind's `max-lg:`, so they flip in sync with the
+   header. Utilities on a template still win; 64rem and up is untouched.
+   -------------------------------------------------------- */
+@layer components {
+  @media (width < 64rem) {
+    .pager-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+    /* Row flex, not column: a custom option template may render sibling root
+       spans (label + a qualifier) that must stay side by side. */
+    .ac-option {
+      display: flex;
+      align-items: center;
+      min-height: 2.5rem;
+    }
+    .pub-cell {
+      height: 2.25rem;
+      min-width: 2.5rem;
+    }
+    /* Glyph-sized controls keep their footprint (the autocomplete control's
+       36px content row) and grow only their hit box. */
+    .ac-chip-remove,
+    .ac-clear {
+      position: relative;
+    }
+    .ac-clear {
+      flex: none;
+    }
+    .ac-chip-remove::after,
+    .ac-clear::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 2.5rem);
+      height: 2.5rem;
+      transform: translate(-50%, -50%);
+    }
+  }
+}

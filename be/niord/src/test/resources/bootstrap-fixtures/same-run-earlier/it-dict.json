@@ -1,0 +1,79 @@
+[
+  {
+    "name": "it-same-run",
+    "entries": [
+      {
+        "key": "k1",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "one",
+            "longValue": "the one"
+          }
+        ]
+      },
+      {
+        "key": "k2",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "two"
+          },
+          {
+            "lang": "da",
+            "value": "to"
+          }
+        ]
+      },
+      {
+        "key": "k5",
+        "atonFilter": "it-filter",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "five"
+          }
+        ]
+      },
+      {
+        "key": "k6",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "six"
+          }
+        ]
+      },
+      {
+        "key": "k7",
+        "atonFilter": "it-filter-7",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "seven",
+            "longValue": "the seven"
+          }
+        ]
+      },
+      {
+        "key": "k8",
+        "atonFilter": "f1",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "eight"
+          }
+        ]
+      },
+      {
+        "key": "k9",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "nine"
+          }
+        ]
+      }
+    ]
+  }
+]

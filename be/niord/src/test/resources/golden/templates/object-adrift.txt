@@ -1,0 +1,220 @@
+# Object adrift  [templates/tmpl/object-adrift.js, templates/tmpl/object-adrift.ftl]
+# std fields [type, promulgation, positions, areas], params [ParamDef[paramId=date, type=date, positionList=false], ParamDef[paramId=object, type=object_adrift_list, positionList=false]]
+
+### ordinary
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 55-30.0N 010-30.0E 120830
+  | UTC MAY 26.
+AUDIO:   An object has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: a position on a whole degree (56 00N 012 00E)
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 56° 00.0'N - 012° 00.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 56-00.0N 012-00.0E 120830
+  | UTC MAY 26.
+AUDIO:   An object has been observed adrift in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: a position just below a whole degree (55.999999N 11.999999E)
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 56° 00.0'N - 012° 00.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 56-00.0N 012-00.0E 120830
+  | UTC MAY 26.
+AUDIO:   An object has been observed adrift in position 56 degrees 00.0 min. North - 012 degrees 00.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: a negative longitude (61 06N 045 15W)
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 61° 06.0'N - 045° 15.0'W the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 61-06.0N 045-15.0W 120830
+  | UTC MAY 26.
+AUDIO:   An object has been observed adrift in position 61 degrees 06.0 min. North - 045 degrees 15.0 min. West the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: three positions
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift between pos. 55° 30.0'N - 010° 30.0'E and 55° 36.0'N - 010° 45.0'E and 55° 42.0'N - 011° 00.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 55-30.0N 010-30.0E AND
+  | 55-36.0N 010-45.0E AND 55-42.0N
+  | 011-00.0E 120830 UTC MAY 26.
+AUDIO:   An object has been observed adrift between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 36.0 min. North - 010 degrees 45.0 min. East and 55 degrees 42.0 min. North - 011 degrees 00.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: an area (polygon)
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in the area between pos. 55° 30.0'N - 010° 30.0'E and 55° 30.0'N - 011° 00.0'E and 56° 00.0'N - 011° 00.0'E and 56° 00.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT IN AREA 55-30.0N
+  | 010-30.0E AND 55-30.0N 011-00.0E AND
+  | 56-00.0N 011-00.0E AND 56-00.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   An object has been observed adrift in the area between position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East and 55 degrees 30.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 011 degrees 00.0 min. East and 56 degrees 00.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### geometry: no position
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 120830 UTC MAY 26.
+AUDIO:   An object has been observed adrift the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param date = 31 Dec 23:30 local
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 31 st December 2026 at 2230 UTC. Cancel this warning the 1 st January 2027 at 1030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 55-30.0N 010-30.0E 312230
+  | UTC DEC 26.
+AUDIO:   An object has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 31st December 2026 at 2230 UTC. Cancel this warning the 1st January 2027 at 1030 UTC.
+
+### param date = 1 Jan 00:30 local
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 31 st December 2026 at 2330 UTC. Cancel this warning the 1 st January 2027 at 1130 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 55-30.0N 010-30.0E 312330
+  | UTC DEC 26.
+AUDIO:   An object has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 31st December 2026 at 2330 UTC. Cancel this warning the 1st January 2027 at 1130 UTC.
+
+### param date = empty
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E.
+NAVTEX:
+  | OBJECT ADRIFT 55-30.0N 010-30.0E.
+AUDIO:   An object has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East.
+
+### param object = object.adrift.object
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | OBJECT ADRIFT 55-30.0N 010-30.0E 120830
+  | UTC MAY 26.
+AUDIO:   An object has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.boat
+TITLE:   Denmark. The Baltic Sea. Boat adrift.
+SUBJECT: Boat adrift
+DETAILS: A boat has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | BOAT ADRIFT 55-30.0N 010-30.0E 120830
+  | UTC MAY 26.
+AUDIO:   A boat has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.lifeboat
+TITLE:   Denmark. The Baltic Sea. Lifeboat adrift.
+SUBJECT: Lifeboat adrift
+DETAILS: A lifeboat has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | LIFEBOAT ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A lifeboat has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.life_raft
+TITLE:   Denmark. The Baltic Sea. Life raft adrift.
+SUBJECT: Life raft adrift
+DETAILS: A life raft has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | LIFE RAFT ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A life raft has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.sailboat
+TITLE:   Denmark. The Baltic Sea. Sailboat adrift.
+SUBJECT: Sailboat adrift
+DETAILS: A sailboat has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | SAILBOAT ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A sailboat has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.dinghy
+TITLE:   Denmark. The Baltic Sea. Dinghy adrift.
+SUBJECT: Dinghy adrift
+DETAILS: A dinghy has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | DINGHY ADRIFT 55-30.0N 010-30.0E 120830
+  | UTC MAY 26.
+AUDIO:   A dinghy has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.fishing_vessel
+TITLE:   Denmark. The Baltic Sea. Fishing vessel adrift.
+SUBJECT: Fishing vessel adrift
+DETAILS: A fishing vessel has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | FISHING VESSEL ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A fishing vessel has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.shooting_target
+TITLE:   Denmark. The Baltic Sea. Shooting target adrift.
+SUBJECT: Shooting target adrift
+DETAILS: A shooting target has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | SHOOTING TARGET ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   A shooting target has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.fish_farm
+TITLE:   Denmark. The Baltic Sea. Fish farm adrift.
+SUBJECT: Fish farm adrift
+DETAILS: A fish farm has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | FISH FARM ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A fish farm has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.fishing_net
+TITLE:   Denmark. The Baltic Sea. Fishing net adrift.
+SUBJECT: Fishing net adrift
+DETAILS: A fishing net has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | FISHING NET ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A fishing net has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.fishing_stakes
+TITLE:   Denmark. The Baltic Sea. Fishing stakes adrift.
+SUBJECT: Fishing stakes adrift
+DETAILS: Fishing stakes have been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | FISHING STAKES ADRIFT 55-30.0N
+  | 010-30.0E 120830 UTC MAY 26.
+AUDIO:   Fishing stakes have been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12 th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.logs
+TITLE:   Denmark. The Baltic Sea. Logs adrift.
+SUBJECT: Logs adrift
+DETAILS: Logs have been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | LOGS ADRIFT 55-30.0N 010-30.0E 120830
+  | UTC MAY 26.
+AUDIO:   Logs have been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = object.adrift.container
+TITLE:   Denmark. The Baltic Sea. Container adrift.
+SUBJECT: Container adrift
+DETAILS: A container has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | CONTAINER ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   A container has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+
+### param object = empty
+TITLE:   Denmark. The Baltic Sea. Object adrift.
+SUBJECT: Object adrift
+DETAILS: An object has been observed adrift in pos. 55° 30.0'N - 010° 30.0'E the 12 th May 2026 at 0830 UTC. Cancel this warning the 12 th May 2026 at 2030 UTC.
+NAVTEX:
+  | AN OBJECT ADRIFT 55-30.0N 010-30.0E
+  | 120830 UTC MAY 26.
+AUDIO:   An object has been observed adrift in position 55 degrees 30.0 min. North - 010 degrees 30.0 min. East the 12th May 2026 at 0830 UTC. Cancel this warning the 12th May 2026 at 2030 UTC.
+

@@ -1,0 +1,156 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model()) {
+    <form (submit)="$event.preventDefault(); save()" class="flex min-h-0 flex-col gap-5">
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.niord-integration.field.id' | transloco }}
+        </span>
+        <span class="text-sm text-fg-subtle">{{ displayId() }}</span>
+      </div>
+
+      <div class="flex items-center gap-2 text-sm">
+        <input type="checkbox" [formField]="form.active" id="integration-active" class="checkbox" />
+        <label for="integration-active">
+          {{ 'admin.niord-integration.field.active' | transloco }}
+        </label>
+      </div>
+
+      <div class="flex flex-col gap-1 text-sm">
+        <div class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            [formField]="form.assignNewUids"
+            id="integration-assign-uids"
+            class="checkbox"
+          />
+          <label for="integration-assign-uids">
+            {{ 'admin.niord-integration.field.assignNewUids' | transloco }}
+          </label>
+        </div>
+        <span class="pl-6 text-xs text-fg-subtle">
+          {{ 'admin.niord-integration.field.assignNewUidsHelp' | transloco }}
+        </span>
+      </div>
+
+      <div class="flex flex-col gap-1 text-sm">
+        <div class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            [formField]="form.createBaseData"
+            id="integration-create-base-data"
+            class="checkbox"
+          />
+          <label for="integration-create-base-data">
+            {{ 'admin.niord-integration.field.createBaseData' | transloco }}
+          </label>
+        </div>
+        <span class="pl-6 text-xs text-fg-subtle">
+          {{ 'admin.niord-integration.field.createBaseDataHelp' | transloco }}
+        </span>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="integration-url" class="text-sm font-medium text-fg-title">
+          {{ 'admin.niord-integration.field.url' | transloco }}
+        </label>
+        <input
+          id="integration-url"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.url"
+          [placeholder]="'admin.niord-integration.field.urlPlaceholder' | transloco"
+        />
+      </div>
+
+      <div class="flex min-h-0 flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-fg-title">
+            {{ 'admin.niord-integration.field.messageSeries' | transloco }}
+          </span>
+          <button type="button" class="btn-tertiary" (click)="addMapping()">
+            <app-icon name="lucidePlus" class="mr-1 text-xs" />
+            {{ 'admin.niord-integration.field.addMapping' | transloco }}
+          </button>
+        </div>
+
+        <!-- Scrollable so a growing mapping table never blows out the drawer. -->
+        <div class="max-h-72 min-h-0 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs font-medium text-fg-subtle">
+                <th class="pb-1 pr-2 font-medium">
+                  {{ 'admin.niord-integration.field.sourceSeries' | transloco }}
+                </th>
+                <th class="pb-1 pr-2 font-medium">
+                  {{ 'admin.niord-integration.field.targetSeries' | transloco }}
+                </th>
+                <th class="pb-1">
+                  <span class="sr-only">{{
+                    'admin.niord-integration.field.mappingActions' | transloco
+                  }}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of form.messageSeriesMappings().value(); track $index; let i = $index) {
+                <tr>
+                  <td class="py-1 pr-2 align-top">
+                    <input
+                      type="text"
+                      class="w-full text-input"
+                      [formField]="form.messageSeriesMappings[i].sourceSeriesId"
+                      [attr.aria-label]="'admin.niord-integration.field.sourceSeries' | transloco"
+                    />
+                  </td>
+                  <td class="py-1 pr-2 align-top">
+                    <app-select
+                      class="w-full"
+                      [formField]="form.messageSeriesMappings[i].targetSeriesId"
+                      [options]="seriesOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [placeholder]="
+                        'admin.niord-integration.field.targetSeriesPlaceholder' | transloco
+                      "
+                      [ariaLabel]="'admin.niord-integration.field.targetSeries' | transloco"
+                    />
+                  </td>
+                  <td class="py-1 align-top text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      class="icon-button text-xs hover:text-danger"
+                      [attr.aria-label]="'admin.niord-integration.field.removeMapping' | transloco"
+                      (click)="removeMapping($index)"
+                    >
+                      <app-icon name="lucideTrash2" />
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.niord-integration.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.niord-integration.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

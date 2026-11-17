@@ -1,0 +1,90 @@
+[#other-public-outputs]
+== Other Public Outputs
+Besides the REST API, a Niord system serves a few other things without a login. They are made for
+Niord's own applications rather than as an interface for other systems, so their form may change
+more easily than that of the API; they are described here so that a client knows what the links it
+receives lead to.
+
+[#repository-files]
+=== Files of messages and publications
+The attachments of a message, the pictures and files its text links to, and the documents of
+publications are files in the system's repository, served under `/rest/repo/file/`. These are the
+addresses the `path` of an attachment and the `link` of a publication lead to (see the `externalize`
+parameter in <<common-parameters,Common parameters>>). A client fetches them with a plain `GET`.
+
+[#message-pdf]
+=== A message as PDF
+`/rest/message-reports/message/{messageId}.pdf` returns one message as a PDF document, laid out
+with the system's standard report. The message is named by its id or its short id, and the
+parameter `lang` (for example `lang=en`) chooses the language. Only a public message can be
+fetched; for any other id the answer is an error.
+
+The public site's print button in a message's window opens this address.
+
+[#list-pdf]
+=== A list of messages as PDF
+`/rest/message-reports/report.pdf` returns a list of messages as a PDF document, with at most 1,000
+messages. Without a login it is always laid out with the system's _public_ report, which a request
+may name with `report=public`; naming any other report is refused with `403`. The following
+parameters
+choose the messages, as on the public site's print button:
+
+[cols="20,80",options="header"]
+|===
+|Parameter |Description
+
+|lang
+|The language of the document, for example `en`.
+
+|mainType
+|`NW` or `NM`, repeatable. Without it, both.
+
+|area
+|The id of an area, repeatable. Note that this parameter is called `area` here, not `areaId` as in
+the REST API.
+
+|messageSeries
+|The id of a message series, repeatable. Name the series of the messages wanted: without it, the
+list holds the published messages of every series, including series the public site does not
+show.
+
+|publication
+|The id of a publication, to print the messages of that publication.
+|===
+
+Example:
+
+[source,bash]
+----
+curl -o messages.pdf \
+  'https://niord.brs2.dk/rest/message-reports/report.pdf?report=public&lang=en&mainType=NM&messageSeries=dma-nm'
+----
+
+Making a PDF takes time, so a system makes only a few at once for callers without a login. When
+it is busy, it answers `503` at once, and the client should try again shortly.
+
+On the public site's own host (for example nautiskinformation.brs2.dk), both PDF addresses are
+held to the requests the site itself makes, and any other request is refused with `403`:
+
+* A list accepts only the parameters named above, with letters, digits, `.`, `_` and `-` in their
+  values, and exactly one `report=public`.
+* One message needs exactly one parameter, `lang`, whose value is made of the same characters: a
+  request without it is refused there, although the system's own host accepts one. The message id
+  in the path may not hold `..` or an encoded dot, slash, backslash, percent sign, semicolon or
+  null character.
+
+[#map-image]
+=== A map of a message
+`/rest/message-map-image/{id}.png` returns a small map of the geometry of a message as a PNG
+picture, as the administration application shows it beside a message in its lists. The message is
+named by its `id` (the UUID, not the short id). An unknown id is answered with `404`.
+
+When an editor has given the message a picture of its own instead of the drawn map, the answer is
+a redirect (`307 Temporary Redirect`) to that file under `/rest/repo/file/`, so a client must
+follow redirects. Otherwise the map is drawn the first time it is asked for after the message was
+last changed, which can take a moment, and kept afterwards. For a message without a geometry, and
+whenever the map cannot be drawn, the picture is a placeholder, and the answer then carries the
+header `X-Niord-Map-Image: placeholder`.
+
+The map is served from the system's own host only (for example niord.brs2.dk), not through the
+public site.

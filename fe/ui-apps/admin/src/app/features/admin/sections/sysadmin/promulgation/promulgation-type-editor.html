@@ -1,0 +1,204 @@
+<app-drawer
+  #drawerRef
+  [visible]="model() !== undefined"
+  [header]="headerKey()"
+  size="wide"
+  [dirty]="changed()"
+  (closed)="closed.emit()"
+>
+  @if (model(); as m) {
+    <form (submit)="$event.preventDefault(); save()" class="flex flex-col gap-5">
+      <!-- Fixed at add time via the per-service Add menu — display-only, never editable. -->
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.serviceId' | transloco }}
+        </span>
+        <span class="text-sm">{{ m.type.serviceId }}</span>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" class="checkbox" [formField]="form.active" />
+          <span class="font-medium text-fg">
+            {{ 'admin.promulgation.editor.active' | transloco }}
+          </span>
+        </label>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="promulgation-requirement" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.requirement' | transloco }}
+        </label>
+        <app-select
+          inputId="promulgation-requirement"
+          class="w-full"
+          [formField]="form.requirement"
+          [options]="requirementOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ariaLabel]="'admin.promulgation.editor.requirement' | transloco"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="promulgation-type-id" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.typeId' | transloco }}
+        </label>
+        <input
+          #typeIdField
+          id="promulgation-type-id"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.typeId"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="promulgation-name" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.name' | transloco }}
+        </label>
+        <input
+          id="promulgation-name"
+          type="text"
+          class="w-full text-input"
+          [formField]="form.name"
+          autocapitalize="off"
+          autocorrect="off"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="promulgation-priority" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.priority' | transloco }}
+        </label>
+        <input
+          id="promulgation-priority"
+          type="number"
+          step="1"
+          class="w-32 text-input"
+          [formField]="form.priority"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="promulgation-language" class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.language' | transloco }}
+        </label>
+        <app-select
+          inputId="promulgation-language"
+          class="w-full"
+          [formField]="form.language"
+          [options]="languageOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ariaLabel]="'admin.promulgation.editor.language' | transloco"
+        >
+          <ng-template #option let-opt>
+            <span class="inline-flex items-center gap-1.5">
+              <app-language-flag
+                class="h-3.5 w-5 rounded-xs"
+                [lang]="opt.value"
+                [flagPath]="opt.flagPath"
+                [codeFallback]="false"
+              />
+              {{ opt.label }}
+            </span>
+          </ng-template>
+          <ng-template #selectedOption let-opt>
+            <span class="inline-flex items-center gap-1.5">
+              <app-language-flag
+                class="h-3.5 w-5 rounded-xs"
+                [lang]="opt.value"
+                [flagPath]="opt.flagPath"
+                [codeFallback]="false"
+              />
+              {{ opt.label }}
+            </span>
+          </ng-template>
+        </app-select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.domains' | transloco }}
+        </span>
+        <app-domain-multiselect-field
+          [formField]="form.domains"
+          [placeholder]="'admin.promulgation.editor.domainsPlaceholder' | transloco"
+          [ariaLabel]="'admin.promulgation.editor.domains' | transloco"
+        />
+      </div>
+
+      <fieldset class="flex flex-col gap-2">
+        <legend class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.restrictTypes' | transloco }}
+        </legend>
+        <!-- A group renders only while its main type is supported by the selected
+             domains (none selected = all supported); checks of a hidden group are
+             silently pruned at save. -->
+        @for (mainType of mainTypes; track mainType) {
+          @if (supportedGroups()[mainType]) {
+            <div class="flex flex-col gap-1 pt-1">
+              <span class="text-xs text-fg-muted">{{ groupLabelKey(mainType) | transloco }}</span>
+              <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                @for (type of restrictGroups[mainType]; track type) {
+                  <label class="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      class="checkbox"
+                      [checked]="checks()[type]"
+                      (change)="toggleType(type)"
+                    />
+                    <span>{{ 'msg.type.' + type | transloco }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          }
+        }
+      </fieldset>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-fg-title">
+          {{ 'admin.promulgation.editor.scriptResourcePaths' | transloco }}
+        </span>
+        <app-script-resources-field
+          [formField]="$any(form.scriptResourcePaths)"
+          [multiple]="true"
+        />
+      </div>
+
+      <!-- The per-service plugin section (transmitters / areas / settings) mounts
+           here for persisted types only — every nested plugin endpoint requires an
+           existing typeId. A serviceId with no registered plugin renders nothing. -->
+      @if (m.mode === 'edit') {
+        @if (pluginComponent(); as plugin) {
+          <ng-container *ngComponentOutlet="plugin; inputs: pluginInputs()" />
+        }
+      } @else {
+        <p class="text-sm text-fg-muted">
+          {{ 'admin.promulgation.plugin.saveTypeFirst' | transloco }}
+        </p>
+      }
+
+      <!-- Hidden submit makes Enter in any field submit the form (validity-gated in save()). -->
+      <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  }
+
+  <!-- Top-level: nodes inside an @if project to the DEFAULT slot, never to a
+       select()ed one — nested here, the buttons would render in the body. -->
+  <div drawerFooter class="flex w-full justify-end gap-2">
+    <button type="button" class="btn-tertiary" (click)="drawerRef.requestClose()">
+      {{ 'admin.promulgation.editor.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saveDisabled()" (click)="save()">
+      {{ 'admin.promulgation.editor.save' | transloco }}
+    </button>
+  </div>
+</app-drawer>

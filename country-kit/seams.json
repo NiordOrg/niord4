@@ -1,0 +1,194 @@
+{
+  "format": 1,
+  "note": "The seam catalogue (fe-country-split-plan §4.3, §4.9), the base product's extension points and the protected list (§4.11 rule 3). A seam is a base product file with a neutral default that a country may replace by a file at the seam's conventional path: `country` is relative to the country's fe/, `base` (the default) and `replaces` (the file a build compiles in its place) to the base product's fe/. Set-up adds a fileReplacements entry, or for `option` that angular.json option, for every seam whose country file exists, in the configurations named (`every` for all of the application's). `generated` are seams the kit fills itself, with no country file. `hooks` are injection tokens a country provides its own implementations of in country.providers.ts, beside the base product's defaults. `slots` are named places in base product templates (`<app-slot name=\"…\" />`) where a country registers a component with provideSlot and a lazy loader; a slot's default renders nothing. Every hook and slot is a promise the base product keeps across versions, added only where a country needs one. `protected` are globs, relative to the base product's fe/, of files no country override may replace; an override (niord-country.json `overrides`) may replace any other TypeScript, JavaScript or JSON file of an application's src/app/ but a spec or a seam's file.",
+  "seams": [
+    {
+      "id": "admin.environment.development",
+      "app": "admin",
+      "country": "admin/environments/environment.development.ts",
+      "base": "ui-apps/admin/src/environments/environment.development.ts",
+      "replaces": "ui-apps/admin/src/environments/environment.ts",
+      "configurations": ["development"],
+      "description": "The development build's backends: the local stack, /rest through the dev proxy, Keycloak at http://localhost:8080/auth."
+    },
+    {
+      "id": "admin.environment.local",
+      "app": "admin",
+      "country": "admin/environments/environment.local.ts",
+      "base": "ui-apps/admin/src/environments/environment.local.ts",
+      "replaces": "ui-apps/admin/src/environments/environment.ts",
+      "configurations": ["local"],
+      "description": "The local build's backends, as the development build's."
+    },
+    {
+      "id": "admin.environment.test",
+      "app": "admin",
+      "country": "admin/environments/environment.test.ts",
+      "base": "ui-apps/admin/src/environments/environment.test.ts",
+      "replaces": "ui-apps/admin/src/environments/environment.ts",
+      "configurations": ["test"],
+      "description": "The test deployment's: /rest and /auth on its own origin."
+    },
+    {
+      "id": "admin.environment.production",
+      "app": "admin",
+      "country": "admin/environments/environment.production.ts",
+      "base": "ui-apps/admin/src/environments/environment.production.ts",
+      "replaces": "ui-apps/admin/src/environments/environment.ts",
+      "configurations": ["production"],
+      "description": "Production: production true, without which a production bundle lets the e2e test's Keycloak token stub take Keycloak's place and compiles in the dev routes; apiBaseUrl /rest, keycloak.url /auth and map.wmsUrl, if set, /wms/ — origin-relative. Set-up checks both."
+    },
+    {
+      "id": "info.config",
+      "app": "info",
+      "country": "info/app/info.config.ts",
+      "base": "ui-apps/info/src/app/country-specific/default/info.config.ts",
+      "replaces": "ui-apps/info/src/app/country-specific/default/info.config.ts",
+      "configurations": "every",
+      "description": "The public site's country configuration and the footer component it names."
+    },
+    {
+      "id": "info.index",
+      "app": "info",
+      "country": "info/app/index.html",
+      "base": "ui-apps/info/src/index.html",
+      "option": "index",
+      "configurations": "every",
+      "description": "The public site's index.html: its title and the branding icons it links."
+    },
+    {
+      "id": "admin.country.providers",
+      "app": "admin",
+      "country": "admin/app/country.providers.ts",
+      "base": "ui-apps/admin/src/app/country-specific/default/country.providers.ts",
+      "replaces": "ui-apps/admin/src/app/country-specific/default/country.providers.ts",
+      "configurations": "every",
+      "description": "The administration app's behaviour hooks and component slots: provideCountry(), returning the providers of the hooks below and the country's provideSlot registrations, added at the root injector beside the base product's own. The default adds nothing."
+    },
+    {
+      "id": "admin.country.routes",
+      "app": "admin",
+      "country": "admin/app/country.routes.ts",
+      "base": "ui-apps/admin/src/app/country-specific/default/country.routes.ts",
+      "replaces": "ui-apps/admin/src/app/country-specific/default/country.routes.ts",
+      "configurations": "every",
+      "description": "The administration app's own pages: the default export, Routes, loaded lazily after every base route. Each top-level entry has canMatch: [roleGuard] with a non-empty data.rolesRequired, data: { public: true }, or is a redirect; any other is left out and logged. The default has none."
+    },
+    {
+      "id": "admin.country.menu",
+      "app": "admin",
+      "country": "admin/app/country.menu.ts",
+      "base": "ui-apps/admin/src/app/country-specific/default/country.menu.ts",
+      "replaces": "ui-apps/admin/src/app/country-specific/default/country.menu.ts",
+      "configurations": "every",
+      "description": "The administration app's own menu entries: COUNTRY_MENU_ENTRIES, each { after (the base item it follows: messages, editor, schedule, admin or sysadmin), labelKey (a country.* key), icon (a registered ng-icons name), routerLink, roles (any one of them; [] for everyone) }. The default has none."
+    },
+    {
+      "id": "info.country.routes",
+      "app": "info",
+      "country": "info/app/country.routes.ts",
+      "base": "ui-apps/info/src/app/country-specific/default/country.routes.ts",
+      "replaces": "ui-apps/info/src/app/country-specific/default/country.routes.ts",
+      "configurations": "every",
+      "description": "The public site's own pages: the default export, Routes, loaded lazily as the layout's last child, after every base route; every one public, as the site is. The default has none."
+    },
+    {
+      "id": "info.country.providers",
+      "app": "info",
+      "country": "info/app/country.providers.ts",
+      "base": "ui-apps/info/src/app/country-specific/default/country.providers.ts",
+      "replaces": "ui-apps/info/src/app/country-specific/default/country.providers.ts",
+      "configurations": "every",
+      "description": "The public site's component slots and hooks: provideCountry(), returning the country's provideSlot registrations. The default adds nothing."
+    }
+  ],
+  "generated": [
+    {
+      "id": "admin.languages",
+      "app": "admin",
+      "replaces": "ui-apps/admin/src/app/country-specific/default/language.config.ts",
+      "configurations": "every",
+      "description": "The language configuration, made from the manifest and each pack's pack.json."
+    },
+    {
+      "id": "info.languages",
+      "app": "info",
+      "replaces": "ui-apps/info/src/app/country-specific/default/language.config.ts",
+      "configurations": "every",
+      "description": "The language configuration, made from the manifest and each pack's pack.json."
+    },
+    {
+      "id": "admin.brand-tokens",
+      "app": "admin",
+      "replaces": "styles/tokens.active.css",
+      "option": "styles",
+      "configurations": "every",
+      "description": "The brand tokens: the styles array names styles/tokens.<country>.css, and styles/fonts.<country>.css when the country has one, where the base product's names tokens.active.css."
+    },
+    {
+      "id": "info.brand-tokens",
+      "app": "info",
+      "replaces": "styles/tokens.active.css",
+      "option": "styles",
+      "configurations": "every",
+      "description": "The brand tokens, as the administration app's."
+    }
+  ],
+  "hooks": [
+    {
+      "id": "admin.promulgation.renderers",
+      "app": "admin",
+      "token": "PROMULGATION_RENDERERS",
+      "file": "ui-apps/admin/src/app/features/messages/promulgation/promulgation-renderer.token.ts",
+      "description": "How a message's promulgation of one service is shown: { serviceId, component }, multi. The base product registers navtex, twitter, safetynet and audio; a country adds one per service of its own with { provide: PROMULGATION_RENDERERS, useValue, multi: true }."
+    },
+    {
+      "id": "admin.promulgation.editors",
+      "app": "admin",
+      "token": "PROMULGATION_EDITORS",
+      "file": "ui-apps/admin/src/app/features/editor/promulgation/promulgation-editor.token.ts",
+      "description": "How the editor edits a promulgation of one service: { serviceId, component }, multi, as the renderers. The base product registers navtex, twitter, safetynet and audio; a country adds the editor of each service of its own."
+    }
+  ],
+  "slots": [
+    {
+      "id": "home.welcome",
+      "app": "admin",
+      "template": "ui-apps/admin/src/app/features/home/components/home-page/home-page.html",
+      "registry": "ui-apps/admin/src/app/shared/slots/component-slots.ts",
+      "description": "The end of the front page's welcome panel, below the sign-in prompt."
+    },
+    {
+      "id": "layout.beforeFooter",
+      "app": "info",
+      "template": "ui-apps/info/src/app/shared/components/layout/layout.component.ts",
+      "registry": "ui-apps/info/src/app/shared/slots/component-slots.ts",
+      "description": "Every page of the public site, between the main content and the footer."
+    }
+  ],
+  "protected": [
+    "shared-html/**",
+    "ui-apps/admin/src/app/features/messages/pipes/safe-message-html.pipe.ts",
+    "ui-apps/info/src/app/shared/pipes/safe-message-html.pipe.ts",
+    "ui-apps/admin/src/app/shared/pipes/plain-text-to-html.pipe.ts",
+    "ui-apps/admin/src/app/shared/components/sandboxed-html/**",
+    "ui-apps/admin/src/app/shared/forms/rich-text-editor/**",
+    "ui-apps/admin/src/app/core/interceptors/**",
+    "ui-apps/admin/src/app/core/auth/**",
+    "ui-apps/{admin,info}/src/app/app.config.ts",
+    "ui-apps/admin/src/app/app.routes.ts",
+    "ui-apps/admin/src/app/core/country/**",
+    "ui-apps/admin/src/environments/environment.ts",
+    "ui-apps/admin/src/app/transloco-loader.ts",
+    "ui-apps/info/src/app/i18n/niord-transloco-loader.ts",
+    "ui-apps/admin/src/app/core/i18n/**",
+    "ui-apps/admin/src/app/core/config/web-settings.ts",
+    "ui-apps/admin/src/app/core/config/app-config.token.ts",
+    "ui-apps/info/src/app/core/services/repo-url.ts",
+    "ui-apps/admin/ngsw-config.json",
+    "eslint.config.js",
+    "eslint-shared.cjs",
+    "scripts/**",
+    "ui-apps/info/nginx/**"
+  ]
+}

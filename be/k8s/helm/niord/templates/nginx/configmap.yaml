@@ -1,0 +1,96 @@
+{{- if .Values.proxy.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "niord.componentName" (list . "proxy") }}
+  labels:
+    {{- include "niord.componentLabels" (list . "proxy") | nindent 4 }}
+data:
+  nginx.conf: |-
+    # nginx runs as its non-root `nginx` user (the deployment's securityContext), which
+    # cannot write the image's /var/run or /var/cache/nginx: pid file and temp files go
+    # to /tmp.
+    worker_processes auto;
+    pid /tmp/nginx.pid;
+    events { worker_connections 1024; }
+    http {
+      client_body_temp_path /tmp/client_temp;
+      proxy_temp_path       /tmp/proxy_temp;
+      fastcgi_temp_path     /tmp/fastcgi_temp;
+      uwsgi_temp_path       /tmp/uwsgi_temp;
+      scgi_temp_path        /tmp/scgi_temp;
+
+      # Keycloak tokens / headers can be large.
+      proxy_buffer_size      16k;
+      proxy_buffers          8 16k;
+      proxy_busy_buffers_size 32k;
+      large_client_header_buffers 4 16k;
+      client_max_body_size   50m;
+
+      # Upstreams are resolved once at startup via the pod's cluster DNS; a Service's
+      # ClusterIP is stable for its lifetime, so a literal hostname is sufficient. In one
+      # release Helm creates the Services with this pod. An app-only release whose Keycloak
+      # lives in the infra release can start first: nginx then exits on the unknown host and
+      # restarts until the infra release's Service exists.
+      upstream niord_app      { server {{ include "niord.app.host" . }}:{{ .Values.app.service.port }}; }
+      {{- if not (include "niord.keycloak.external" .) }}
+      upstream niord_keycloak { server {{ include "niord.keycloak.host" . }}:{{ .Values.keycloak.service.port }}; }
+      {{- end }}
+
+      # The scheme and port the browser used. Without an Ingress, nginx is the entry point:
+      # its own scheme, and the published port. Behind an Ingress, the ingress controller
+      # ended TLS, so nginx's own scheme is http; the controller's X-Forwarded-Proto and
+      # X-Forwarded-Port say what the browser used, and nginx passes them on.
+      {{- if .Values.proxy.ingress.enabled }}
+      map $http_x_forwarded_proto $niord_forwarded_proto { default $http_x_forwarded_proto; "" $scheme; }
+      map $http_x_forwarded_port  $niord_forwarded_port  { default $http_x_forwarded_port;  "" {{ .Values.proxy.service.port }}; }
+      {{- else }}
+      map $scheme $niord_forwarded_proto { default $scheme; }
+      map $scheme $niord_forwarded_port  { default {{ .Values.proxy.service.port }}; }
+      {{- end }}
+
+      server {
+        listen 8888;
+        server_name _;
+
+        {{- if not (include "niord.keycloak.external" .) }}
+        # Keycloak — same origin as the app, under /auth (matches Keycloak's
+        # --http-relative-path=/auth). The app's own admin calls use the Service directly.
+        # Not rendered when the browser's Keycloak is a shared one on another origin
+        # (niord.keycloak.external): the browser goes there itself.
+        location /auth {
+          proxy_pass http://niord_keycloak;
+          proxy_set_header Host              $host;
+          proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $niord_forwarded_proto;
+          proxy_set_header X-Forwarded-Host  $host;
+          proxy_set_header X-Forwarded-Port  $niord_forwarded_port;
+        }
+        {{- end }}
+
+        # Everything else -> the niord app: /rest, /wms, the /img and /css/templates files,
+        # /api/secom when SECOM is enabled (a peer's identity travels in its signed
+        # envelope, so the proxy adds nothing), and / itself, where the image's
+        # administration web app is served (WebAppConfig), or which redirects to the
+        # adminAppUrl setting when that names another origin.
+        location / {
+          proxy_pass http://niord_app;
+          proxy_http_version 1.1;
+          proxy_set_header Host              $host;
+          proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $niord_forwarded_proto;
+          proxy_set_header Upgrade           $http_upgrade;
+          proxy_set_header Connection        "upgrade";
+          {{- if .Values.secom.enabled }}
+          # No listener sets this header any more; drop whatever a client sends. The guard
+          # itself is in the app: MrnCertificateFilter ignores the header unless
+          # niord.secom.trust-cert-header is true, which the chart never sets, so every SECOM
+          # request except ping is refused until identity comes from the envelope
+          # (docs/s124-secom-spec-gap-analysis.md §7). The strip is belt and braces.
+          proxy_set_header X-Secom-Cert      "";
+          {{- end }}
+          proxy_read_timeout 300s;
+        }
+      }
+    }
+{{- end }}

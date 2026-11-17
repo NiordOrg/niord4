@@ -1,0 +1,356 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm",
+    "schematicCollections": ["angular-eslint"],
+    "analytics": false
+  },
+  "newProjectRoot": ".",
+  "projects": {
+    "niord-app": {
+      "projectType": "application",
+      "root": "ui-apps/admin",
+      "sourceRoot": "ui-apps/admin/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "ui-apps/admin/src/main.ts",
+            "tsConfig": "ui-apps/admin/tsconfig.app.json",
+            // The base input ships the base product's own public files. The language bundles and
+            // flags come only from the staged copies of the language packs (languages/, which
+            // holds English alone), which `npm run languages:stage` writes into
+            // .niord/build/admin/ and every npm build and serve script runs first. The map kit
+            // carries the S-124 symbol files, because the portrayal that names them belongs to
+            // neither application. Every configuration that spells `assets` out again has to
+            // repeat all three entries: Angular replaces the array, it does not add to it.
+            // `npm run contents:check` holds every configuration's file list to its language
+            // configuration.
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "ui-apps/admin/public"
+              },
+              {
+                "glob": "**/*",
+                "input": ".niord/build/admin",
+                "output": "assets"
+              },
+              {
+                "glob": "*.svg",
+                "input": "shared-map/portrayal",
+                "output": "assets/portrayal"
+              }
+            ],
+            "styles": ["ui-apps/admin/src/styles.css", "styles/tokens.active.css"],
+            "allowedCommonJsDependencies": ["@turf/jsts"],
+            "budgets": [
+              // The initial threshold moves in step with main's below. Initial total is
+              // main + styles, so leaving it at 900kB would have re-imposed the same squeeze
+              // one line down and made main's extra headroom unreachable.
+              {
+                "type": "initial",
+                "maximumWarning": "950kB",
+                "maximumError": "1.05MB"
+              },
+              {
+                "type": "bundle",
+                "name": "main",
+                "maximumWarning": "850kB",
+                "maximumError": "950kB"
+              },
+              {
+                "type": "bundle",
+                "name": "styles",
+                "maximumWarning": "115kB",
+                "maximumError": "135kB"
+              },
+              {
+                "type": "anyComponentStyle",
+                "maximumWarning": "4kB",
+                "maximumError": "8kB"
+              }
+            ]
+          },
+          "configurations": {
+            "production": {
+              "serviceWorker": "ui-apps/admin/ngsw-config.json",
+              "optimization": {
+                "scripts": true,
+                "fonts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                }
+              },
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "ui-apps/admin/src/environments/environment.ts",
+                  "with": "ui-apps/admin/src/environments/environment.production.ts"
+                }
+              ]
+            },
+            "local": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "budgets": [],
+              "fileReplacements": [
+                {
+                  "replace": "ui-apps/admin/src/environments/environment.ts",
+                  "with": "ui-apps/admin/src/environments/environment.local.ts"
+                }
+              ]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              // Unoptimized output is far larger than any production threshold, so the inherited
+              // budgets would fail every `ng serve`. Gating is a production concern.
+              "budgets": [],
+              "fileReplacements": [
+                {
+                  "replace": "ui-apps/admin/src/environments/environment.ts",
+                  "with": "ui-apps/admin/src/environments/environment.development.ts"
+                }
+              ]
+            },
+            "test": {
+              "optimization": {
+                "scripts": true,
+                "fonts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                }
+              },
+              "outputHashing": "all",
+              "namedChunks": false,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "fileReplacements": [
+                {
+                  "replace": "ui-apps/admin/src/environments/environment.ts",
+                  "with": "ui-apps/admin/src/environments/environment.test.ts"
+                }
+              ]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          // Every configuration gets the proxy: the base product's environments call `/rest` on
+          // the page's own origin, which the dev server passes to the local backend.
+          "options": {
+            "proxyConfig": "proxy.conf.mjs"
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "niord-app:build:production"
+            },
+            "development": {
+              "buildTarget": "niord-app:build:development"
+            },
+            "local": {
+              "buildTarget": "niord-app:build:local"
+            },
+            "test": {
+              "buildTarget": "niord-app:build:test"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runnerConfig": "vitest.config.ts",
+            "setupFiles": ["ui-apps/admin/src/test-setup.ts"],
+            // The two shared folders live outside both application folders and have no project of
+            // their own. Their patterns are resolved against this project's source root, so the
+            // three levels up reach the workspace; both applications run these specs, which is what
+            // puts a change to either in front of both gates.
+            "include": [
+              "**/*.spec.ts",
+              "../../../shared-map/**/*.spec.ts",
+              "../../../shared-html/**/*.spec.ts"
+            ],
+            "exclude": ["ui-apps/admin/src/environments/environment.test.ts"]
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            // The two shared folders are linted by both projects, for the same reason both run
+            // their specs: they belong to neither, and each application's gate has to see a
+            // change to either.
+            "lintFilePatterns": [
+              "ui-apps/admin/src/**/*.ts",
+              "ui-apps/admin/src/**/*.html",
+              "shared-map/**/*.ts",
+              "shared-html/**/*.ts"
+            ]
+          }
+        }
+      }
+    },
+    "niord-info": {
+      "projectType": "application",
+      "root": "ui-apps/info",
+      "sourceRoot": "ui-apps/info/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "ui-apps/info/src/main.ts",
+            "index": "ui-apps/info/src/index.html",
+            "tsConfig": "ui-apps/info/tsconfig.app.json",
+            // The default overlay, public/assets/default/, is laid over `assets` by the second
+            // input and so ignored by the first. The language bundles and flags come only from
+            // the staged copies of the language packs (languages/, English alone here), which
+            // `npm run languages:stage` writes into .niord/build/info/ and every npm build and
+            // serve script runs first. The fourth input is the map kit's, which carries the S-124
+            // symbol files both applications draw; every configuration that spells `assets` out
+            // again has to repeat all four, because Angular replaces the array rather than adding
+            // to it. `npm run contents:check` holds every configuration's file list to its
+            // language configuration.
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "ui-apps/info/public",
+                "ignore": ["assets/default/**"]
+              },
+              {
+                "glob": "**/*",
+                "input": "ui-apps/info/public/assets/default",
+                "output": "assets"
+              },
+              {
+                "glob": "**/*",
+                "input": ".niord/build/info",
+                "output": "assets"
+              },
+              {
+                "glob": "*.svg",
+                "input": "shared-map/portrayal",
+                "output": "assets/portrayal"
+              }
+            ],
+            // The entry stylesheet first, the active brand tokens after it — the same pair
+            // the administration application loads, which is the point of sharing them. A CSS
+            // file cannot be swapped with fileReplacements, so a country workspace swaps this
+            // array (its tokens.<cc>.css).
+            "styles": ["ui-apps/info/src/styles.css", "styles/tokens.active.css"],
+            // Set from the largest of the builds measured when they were set, the country
+            // artefacts included: a warning about 3 % above it and an error about 8 %, so an
+            // accident fails the build and a deliberate gain is re-measured and the pair re-set
+            // from it. A country workspace's generated angular.json inherits them. `kB` is 1000
+            // bytes to the budget calculator. What a first visit transfers is measured and
+            // checked in apart from these, in ui-apps/info/bundle-baseline.json.
+            "budgets": [
+              {
+                "type": "initial",
+                "maximumWarning": "410kB",
+                "maximumError": "430kB"
+              },
+              {
+                // About 3 % and 7 % over the largest global stylesheet of the builds measured.
+                "type": "bundle",
+                "name": "styles",
+                "maximumWarning": "53kB",
+                "maximumError": "55kB"
+              },
+              {
+                "type": "anyScript",
+                "maximumWarning": "350kB",
+                "maximumError": "367kB"
+              },
+              {
+                // A component stylesheet is inlined into the chunk that carries the component,
+                // so this one guards a shape, not a download: a per-component sheet that reaches
+                // two kilobytes is a stylesheet that belongs in src/styles/ or in a shared class.
+                "type": "anyComponentStyle",
+                "maximumWarning": "2kB",
+                "maximumError": "4kB"
+              }
+            ]
+          },
+          "configurations": {
+            "production": {
+              "optimization": {
+                "scripts": true,
+                "fonts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                }
+              },
+              "outputHashing": "all",
+              "styles": ["ui-apps/info/src/styles.css", "styles/tokens.active.css"]
+            },
+            // Unoptimized output is far above any production threshold, so the inherited
+            // budgets would fail every `ng serve`. Gating is a production concern.
+            "local": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "budgets": [],
+              "styles": ["ui-apps/info/src/styles.css", "styles/tokens.active.css"]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.mjs"
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "niord-info:build:production"
+            },
+            "local": {
+              "buildTarget": "niord-info:build:local"
+            }
+          },
+          "defaultConfiguration": "local"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            // The builder's default build target is `:build:development`, a configuration this
+            // project does not have: unoptimized development output is spelled `local` here.
+            "buildTarget": "niord-info:build:local",
+            "runnerConfig": "vitest.config.ts",
+            "setupFiles": ["ui-apps/info/src/test-setup.ts"],
+            // The two shared folders belong to neither application, so both suites run their
+            // specs: a change to the map or to the message-HTML contract is then gated by both
+            // workflows, and a tuning that helps one application and hurts the other cannot pass
+            // unnoticed.
+            "include": [
+              "**/*.spec.ts",
+              "../../../shared-map/**/*.spec.ts",
+              "../../../shared-html/**/*.spec.ts"
+            ]
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "ui-apps/info/src/**/*.ts",
+              "ui-apps/info/src/**/*.html",
+              "shared-map/**/*.ts",
+              "shared-html/**/*.ts"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

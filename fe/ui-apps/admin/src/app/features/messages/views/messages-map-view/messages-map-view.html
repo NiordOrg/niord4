@@ -1,0 +1,60 @@
+<!--
+  Full-bleed map: `left-1/2 w-screen -translate-x-1/2` breaks out of the messages
+  section's centered `max-w-screen-2xl` column so the map runs edge-to-edge like the
+  homepage map. The absolute overlay below stays anchored to this div, so it tracks the
+  viewport's left edge with the same 8 px inset.
+-->
+<div class="relative left-1/2 w-screen -translate-x-1/2" [style.height.px]="mapHeightPx()">
+  <app-ol-map [view]="initialView()" (viewChange)="onViewChange($event)">
+    <app-base-map-layers />
+    <app-ol-charts-layer
+      [charts]="chartsFilter()"
+      [visible]="chartsLayerVisible()"
+      [name]="chartsName()"
+      [showInLayerSwitcher]="chartsLayerVisible()"
+    />
+    <app-ol-areas-layer
+      [areas]="areasFilter()"
+      [visible]="areasLayerVisible()"
+      [name]="areasName()"
+      [showInLayerSwitcher]="areasLayerVisible()"
+    />
+    <app-ol-message-list-layer
+      [messages]="messages()"
+      [selection]="selectionSet()"
+      [hovered]="hoveredMessageId()"
+      [name]="messagesName()"
+      (featureClicked)="onFeatureClicked($event)"
+    />
+    <app-message-map-tooltip />
+  </app-ol-map>
+
+  <!--
+    Shared left-column overlay: pointer-events-none on the container so the
+    map underneath stays draggable in the gaps between panels; each child
+    re-enables pointer events. Top-to-bottom: the map-extent chip (w-max so it
+    sizes to its single-line content and may extend past the column width
+    rather than wrapping; the rest of its row stays draggable), then the
+    search-result list, then the layer switcher pushed to the bottom by
+    mt-auto. The gap-2 + container's 8 px insets give consistent spacing on
+    every edge regardless of how tall any panel grows.
+  -->
+  <div
+    class="pointer-events-none absolute top-2 bottom-2 left-2 z-10 flex w-80 max-w-[calc(100%-1rem)] flex-col gap-2"
+  >
+    <app-map-filter-panel class="pointer-events-auto w-max shrink-0 max-md:max-w-full" />
+    <app-map-result-list
+      class="pointer-events-auto min-h-0"
+      [messages]="messages()"
+      [total]="total()"
+      [loading]="loading()"
+      (messageClicked)="onListMessageClicked($event)"
+      (messageHovered)="onListMessageHovered($event)"
+      (zoomRequested)="onListMessageZoom($event)"
+    />
+    <app-ol-layer-switcher
+      class="pointer-events-auto mt-auto shrink-0"
+      [title]="'messages.map.layerSwitcher.title' | transloco"
+    />
+  </div>
+</div>

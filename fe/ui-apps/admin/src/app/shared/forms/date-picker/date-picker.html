@@ -1,0 +1,44 @@
+<div
+  class="text-input flex w-full items-center gap-2"
+  [class.opacity-60]="isDisabled()"
+  [attr.title]="zoneMissing() ? noTimeZoneLabel() : null"
+>
+  <button
+    #trigger
+    type="button"
+    class="flex min-w-0 flex-1 items-center gap-2 bg-transparent text-left"
+    [attr.id]="inputId() || null"
+    [disabled]="isDisabled()"
+    [attr.aria-disabled]="zoneMissing() ? 'true' : null"
+    [attr.aria-label]="ariaLabel() || null"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="popover()?.shown() ?? false"
+    (click)="toggle()"
+  >
+    <app-icon name="lucideCalendar" class="shrink-0 text-fg-muted" />
+    <span class="min-w-0 flex-1 truncate" [class.text-fg-subtle]="!hasValue()">
+      {{ hasValue() ? displayValue() : placeholder() }}
+    </span>
+  </button>
+
+  @if (showClear() && hasValue() && !isDisabled()) {
+    <button
+      type="button"
+      class="shrink-0 text-fg-subtle hover:text-fg"
+      [attr.aria-label]="clearLabel() || null"
+      (click)="clear($event)"
+    >
+      <app-icon name="lucideX" class="text-xs" />
+    </button>
+  }
+</div>
+
+<app-picker-popover panelWidth="fit-content" [dismissOnScroll]="false">
+  @if (popover()?.shown()) {
+    <app-calendar
+      [selected]="calendarValue()"
+      [today]="calendarToday()"
+      (dateSelected)="onDateSelected($event)"
+    />
+  }
+</app-picker-popover>

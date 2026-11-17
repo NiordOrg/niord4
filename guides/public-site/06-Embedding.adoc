@@ -1,0 +1,47 @@
+
+[#embedding]
+== Showing the Messages on Your Own Web Site
+
+A harbour, a marina or a sailing club can show the messages on its own web site with the _teaser_:
+a small map of the current warnings and notices, with a banner that invites the reader to click it.
+A click opens the public site's Map view in a new tab.
+
+.The teaser on another web site
+image::PublicSiteTeaser.png[The teaser on another web site, 400]
+
+[#teaser]
+=== Adding the teaser to a page
+
+The teaser is the page `/teaser` of the public site, which your page shows in a frame. Add this to
+the HTML of your page, where the map should be:
+
+[source,html]
+----
+<iframe src="https://nautiskinformation.brs2.dk/teaser?lang=en"
+        title="Navigational Warnings and Notices to Mariners"
+        width="480" height="320" style="border: 0"></iframe>
+----
+
+Choose the width and the height to fit your page: the map fills the frame, and places itself so that
+the messages are in view.
+
+The address of the teaser takes two settings:
+
+`lang`::
+The language of the banner and of the messages, for example `lang=en`, one of the languages the
+public site is offered in. Without it, or with a language the site does not offer, the teaser is
+normally in the site's own language, so name the language you want.
+
+`area`::
+The sea area whose messages the teaser shows, by the area's id in Niord or by its MRN, a name of the
+form `urn:mrn:...`. Ask the authority that runs the site which areas it has. Without it, the teaser
+shows the messages of the first area the site has, or every message when the site has no areas of
+its own.
+
+Settings are joined with `&`, for example `/teaser?lang=en&area=urn:mrn:iho:country:dk`.
+
+The site's operator decides which web sites may show the teaser in a frame. If the frame on your
+page stays empty, ask the authority to allow your site.
+
+An address of the teaser written for the earlier public site, such as `/#/teaser?lang=en` or
+`/teaser#?lang=en`, still works.

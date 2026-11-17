@@ -1,0 +1,186 @@
+<app-admin-section-page
+  titleKey="admin.sections.domains.label"
+  descriptionKey="admin.domains.intro"
+>
+  <div class="admin-toolbar">
+    <span class="relative">
+      <input
+        type="text"
+        class="w-64 text-input"
+        [value]="search()"
+        (input)="onSearch($any($event.target).value)"
+        [placeholder]="'admin.domains.filterPlaceholder' | transloco"
+        [attr.aria-label]="'admin.domains.filterPlaceholder' | transloco"
+      />
+      @if (search() !== '') {
+        <button
+          type="button"
+          class="absolute top-1/2 right-2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+          [attr.aria-label]="'admin.domains.clearFilter' | transloco"
+          (click)="onSearch('')"
+        >
+          <app-icon name="lucideX" class="text-xs" />
+        </button>
+      }
+    </span>
+    <span class="admin-toolbar-spacer"></span>
+    <button type="button" class="btn-primary" (click)="addDomain()">
+      <app-icon name="lucidePlus" class="mr-1 text-xs" />
+      {{ 'admin.domains.new' | transloco }}
+    </button>
+    <!-- External console link-out — Keycloak enforces its own login in the new tab. -->
+    <a
+      [href]="keycloakConsoleUrl"
+      target="_blank"
+      rel="noopener"
+      class="btn-secondary inline-flex items-center"
+    >
+      <app-icon name="lucideExternalLink" class="mr-1 text-xs" />
+      {{ 'admin.domains.kcConsole' | transloco }}
+    </a>
+    <app-menu-trigger
+      icon="lucideSettings"
+      [ariaLabel]="'admin.domains.actionsAriaLabel' | transloco"
+      [menu]="cogMenu"
+    />
+    <app-menu
+      #cogMenu
+      [model]="cogItems()"
+      [ariaLabel]="'admin.domains.actionsAriaLabel' | transloco"
+    />
+  </div>
+
+  <app-progress-bar [visible]="facade.loading()" />
+
+  @if (facade.error()) {
+    <app-error-banner
+      [title]="'admin.domains.loadError' | transloco"
+      [retryLabel]="'admin.domains.retry' | transloco"
+      (retry)="facade.refresh()"
+    />
+  } @else if (!facade.loading() && filtered().length === 0) {
+    @if (facade.domains().length === 0) {
+      <app-empty-state icon="lucideInbox" [title]="'admin.domains.empty.none' | transloco" />
+    } @else {
+      <app-empty-state icon="lucideFilterX" [title]="'admin.domains.empty.noMatches' | transloco" />
+    }
+  } @else if (!facade.loading()) {
+    <div class="admin-card">
+      <table class="niord-table">
+        <thead>
+          <tr>
+            <th class="w-16">{{ 'admin.domains.column.active' | transloco }}</th>
+            <th class="w-16">{{ 'admin.domains.column.order' | transloco }}</th>
+            <th class="w-44">{{ 'admin.domains.column.keycloakId' | transloco }}</th>
+            <th>{{ 'admin.domains.column.name' | transloco }}</th>
+            <th class="w-44">{{ 'admin.domains.column.timeZone' | transloco }}</th>
+            <th>{{ 'admin.domains.column.areas' | transloco }}</th>
+            <th>{{ 'admin.domains.column.categories' | transloco }}</th>
+            <th>{{ 'admin.domains.column.messageSeries' | transloco }}</th>
+            <th class="w-32">
+              <span class="sr-only">{{ 'admin.domains.column.actions' | transloco }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (domain of pager.paged(); track domain.domainId) {
+            <tr>
+              <td>
+                <span
+                  class="status-dot"
+                  [class.is-active]="domain.active"
+                  [class.is-inactive]="!domain.active"
+                  [attr.aria-label]="
+                    (domain.active ? 'admin.domains.column.active' : 'common.inactive') | transloco
+                  "
+                  role="img"
+                ></span>
+              </td>
+              <td>{{ domain.sortOrder }}</td>
+              <td>
+                <!-- Tri-state: the indicator shows only for a confirmed client; false and
+                     null (Keycloak unreachable) alike render nothing. -->
+                @if (domain.inKeycloak) {
+                  <app-icon
+                    name="lucideCheck"
+                    class="mr-1 text-xs text-primary"
+                    role="img"
+                    [attr.aria-label]="'admin.domains.inKeycloak' | transloco"
+                  />
+                }
+                {{ domain.domainId }}
+              </td>
+              <td>{{ domain.name }}</td>
+              <td>{{ domain.timeZone }}</td>
+              <td class="text-sm">
+                @for (name of descNames(domain.areas); track $index) {
+                  <div>{{ name }}</div>
+                }
+              </td>
+              <td class="text-sm">
+                @for (name of descNames(domain.categories); track $index) {
+                  <div>{{ name }}</div>
+                }
+              </td>
+              <td class="text-sm">
+                @for (seriesId of seriesIds(domain); track $index) {
+                  <div>{{ seriesId }}</div>
+                }
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.domains.editDomain' | transloco"
+                  (click)="editDomain(domain)"
+                >
+                  <app-icon name="lucidePencil" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs"
+                  [attr.aria-label]="'admin.domains.copyDomain' | transloco"
+                  (click)="copyDomain(domain)"
+                >
+                  <app-icon name="lucideCopy" />
+                </button>
+                <button
+                  type="button"
+                  class="icon-button text-xs hover:text-danger"
+                  [attr.aria-label]="'admin.domains.deleteDomain' | transloco"
+                  (click)="deleteDomain(domain)"
+                >
+                  <app-icon name="lucideTrash2" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pager.total() > pager.rows) {
+      <app-pager
+        [first]="pager.first()"
+        [rows]="pager.rows"
+        [total]="pager.total()"
+        (pageChange)="pager.setFirst($event)"
+      />
+    }
+  }
+
+  <app-json-import-dialog
+    titleKey="admin.domains.import.title"
+    [uploadUrl]="api.uploadUrl()"
+    entityKey="admin.sections.domains.label"
+    jobLink="/sysadmin/batch/domain-import"
+    (closed)="onImportClosed()"
+  />
+
+  <app-domain-editor
+    [model]="editorModel()"
+    (saved)="onEditorSaved()"
+    (closed)="onEditorClosed()"
+  />
+
+  <app-confirm />
+</app-admin-section-page>

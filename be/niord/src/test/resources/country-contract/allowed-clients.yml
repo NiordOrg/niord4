@@ -1,0 +1,4 @@
+# A country jar that widens the clients whose tokens are accepted without saying why: refused (CountryContractGuard).
+niord:
+  oidc:
+    allowed-clients: niord-web,niord-client-master,country-script

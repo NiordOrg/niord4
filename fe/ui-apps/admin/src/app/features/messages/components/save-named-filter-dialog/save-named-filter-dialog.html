@@ -1,0 +1,34 @@
+<app-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [header]="'messages.namedFilter.save.title' | transloco"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '24rem' }"
+  (closed)="onHide()"
+>
+  <div class="flex flex-col gap-3">
+    <input
+      class="text-input"
+      type="text"
+      [placeholder]="'messages.namedFilter.save.namePlaceholder' | transloco"
+      [attr.aria-label]="'messages.namedFilter.save.namePlaceholder' | transloco"
+      [ngModel]="name()"
+      (ngModelChange)="name.set($event)"
+      [disabled]="saving()"
+    />
+    @if (saveError()) {
+      <p class="text-sm text-danger" role="alert">
+        {{ 'messages.namedFilter.error.save' | transloco }}
+      </p>
+    }
+  </div>
+  <ng-template #footer>
+    <button type="button" class="btn-tertiary" [disabled]="saving()" (click)="onCancel()">
+      {{ 'messages.namedFilter.save.cancel' | transloco }}
+    </button>
+    <button type="button" class="btn-primary" [disabled]="!canSave()" (click)="onSave()">
+      {{ 'messages.namedFilter.save.confirm' | transloco }}
+    </button>
+  </ng-template>
+</app-dialog>

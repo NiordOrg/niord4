@@ -1,0 +1,92 @@
+@if (showFilter()) {
+  <div class="tree-filter">
+    <app-icon name="lucideSearch" class="tree-filter-icon" />
+    <input
+      type="text"
+      class="tree-filter-input"
+      [placeholder]="filterPlaceholder()"
+      [attr.aria-label]="filterPlaceholder()"
+      [value]="filterText()"
+      (input)="filterText.set($any($event.target).value)"
+    />
+  </div>
+}
+
+<cdk-tree
+  #tree="cdkTree"
+  class="tree-root"
+  [dataSource]="visibleRoots()"
+  [childrenAccessor]="childrenOf"
+  [trackBy]="trackByKey"
+  [expansionKey]="keyOf"
+>
+  <cdk-nested-tree-node
+    *cdkTreeNodeDef="let node"
+    [isExpandable]="node.children.length > 0"
+    [cdkTreeNodeTypeaheadLabel]="node.label"
+    (activation)="onActivate(node)"
+  >
+    <div
+      class="tree-row row-interactive"
+      [class.is-inactive]="node.styleClass.includes('inactive')"
+      [class.is-template]="node.styleClass.includes('template')"
+      [class.row-selected]="isSelected(node)"
+      [attr.data-node-key]="node.key"
+      cdkDrag
+      [cdkDragDisabled]="!dnd()"
+      (cdkDragEnded)="onDragEnded(node, $event)"
+    >
+      @if (node.children.length > 0) {
+        <button
+          cdkTreeNodeToggle
+          type="button"
+          class="tree-row-toggle"
+          [attr.aria-label]="
+            (tree.isExpanded(node) ? 'shared.entityTree.collapse' : 'shared.entityTree.expand')
+              | transloco
+          "
+          (click)="$event.stopPropagation()"
+        >
+          <app-icon [name]="tree.isExpanded(node) ? 'lucideChevronDown' : 'lucideChevronRight'" />
+        </button>
+      } @else {
+        <span class="tree-row-toggle" aria-hidden="true"></span>
+      }
+      <!-- Mouse target: keyboard activation is owned by the CDK treeitem's
+           TreeKeyManager (Enter/Space → (activation)); a native button keeps the
+           mouse path accessible without a second tab stop (tabindex=-1). -->
+      <button type="button" tabindex="-1" class="tree-row-main" (click)="onActivate(node)">
+        <app-icon name="lucideFolder" class="tree-row-folder" />
+        <span class="tree-row-label" [attr.lang]="node.labelLanguage">{{ node.label }}</span>
+        @if (node.styleClass.includes('template')) {
+          <app-icon
+            name="lucideLayoutTemplate"
+            class="tree-row-template-badge"
+            [attr.aria-label]="'shared.entityTree.templateBadge' | transloco"
+          />
+        }
+      </button>
+      @if (dnd()) {
+        <!-- cdkDrag is on the ROW so the whole row drags, but `cdkDragHandle` on this grip means
+             the drag only STARTS here — the row's toggle/select clicks are never swallowed. Keyboard
+             users reorder via the host toolbar, so the grip is hidden from AT. -->
+        <span
+          class="tree-row-drag-handle"
+          cdkDragHandle
+          aria-hidden="true"
+          [title]="'shared.entityTree.dragHandle' | transloco"
+        >
+          <app-icon name="lucideGripVertical" />
+        </span>
+      }
+    </div>
+
+    <div
+      class="tree-children"
+      role="group"
+      [class.tree-children-collapsed]="!tree.isExpanded(node)"
+    >
+      <ng-container cdkTreeNodeOutlet />
+    </div>
+  </cdk-nested-tree-node>
+</cdk-tree>

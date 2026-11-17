@@ -1,0 +1,10 @@
+@if (formatted(); as text) {
+  <span class="expected-date" [title]="'admin.publications.expected.title' | transloco">
+    <app-icon name="lucideClock" size="13px" />
+    <span>{{ text }}</span>
+    @if (formattedTo(); as toText) {
+      <span>–</span>
+      <span>{{ toText }}</span>
+    }
+  </span>
+}

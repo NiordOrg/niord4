@@ -1,0 +1,17 @@
+<app-filter-panel label="messages.filter.user.label" (clear)="clear()">
+  <div class="flex items-center gap-3 flex-wrap">
+    <app-user-field [value]="username()" (valueChange)="onUsernameChange($any($event))" />
+    <div class="flex items-center gap-1.5 flex-wrap">
+      @for (option of userTypeOptions(); track option.value) {
+        <button
+          type="button"
+          [class]="'chip ' + (userType() === option.value ? 'is-active' : '')"
+          [attr.aria-pressed]="userType() === option.value"
+          (click)="onUserTypeChange(userType() === option.value ? null : option.value)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+  </div>
+</app-filter-panel>

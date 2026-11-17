@@ -1,0 +1,415 @@
+@let p = preset();
+<div class="rte-shell">
+  <div
+    class="rte-toolbar"
+    role="toolbar"
+    [attr.aria-label]="'shared.richText.toolbar' | transloco"
+    (mousedown)="onToolbarMousedown($event)"
+  >
+    @if (p === 'full' || p === 'basic') {
+      <select
+        class="rte-select"
+        [disabled]="disabled()"
+        [attr.aria-label]="'shared.richText.paragraphStyle' | transloco"
+        (change)="onParagraphStyle($event)"
+      >
+        @for (opt of paragraphStyles; track opt.value) {
+          <option [value]="opt.value" [selected]="opt.value === currentParagraphStyle()">
+            {{ opt.labelKey | transloco }}
+          </option>
+        }
+      </select>
+
+      <span class="rte-group">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive('bold')"
+          [attr.aria-pressed]="isActive('bold')"
+          [attr.aria-label]="'shared.richText.bold' | transloco"
+          [title]="'shared.richText.bold' | transloco"
+          [disabled]="disabled()"
+          (click)="toggleBold()"
+        >
+          <app-icon name="lucideBold" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive('italic')"
+          [attr.aria-pressed]="isActive('italic')"
+          [attr.aria-label]="'shared.richText.italic' | transloco"
+          [title]="'shared.richText.italic' | transloco"
+          [disabled]="disabled()"
+          (click)="toggleItalic()"
+        >
+          <app-icon name="lucideItalic" />
+        </button>
+        <label
+          class="icon-button rte-btn rte-color"
+          [attr.aria-label]="'shared.richText.textColor' | transloco"
+          [title]="'shared.richText.textColor' | transloco"
+        >
+          <app-icon name="lucideBaseline" />
+          <input
+            type="color"
+            class="rte-color-input"
+            [value]="currentColor()"
+            [disabled]="disabled()"
+            [attr.aria-label]="'shared.richText.textColor' | transloco"
+            (input)="setColor($event)"
+          />
+        </label>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive('highlight')"
+          [attr.aria-pressed]="isActive('highlight')"
+          [attr.aria-label]="'shared.richText.highlight' | transloco"
+          [title]="'shared.richText.highlight' | transloco"
+          [disabled]="disabled()"
+          (click)="toggleHighlight()"
+        >
+          <app-icon name="lucideHighlighter" />
+        </button>
+      </span>
+
+      <span class="rte-group">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive({ textAlign: 'left' })"
+          [attr.aria-label]="'shared.richText.alignLeft' | transloco"
+          [title]="'shared.richText.alignLeft' | transloco"
+          [disabled]="disabled()"
+          (click)="setAlign('left')"
+        >
+          <app-icon name="lucideAlignLeft" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive({ textAlign: 'center' })"
+          [attr.aria-label]="'shared.richText.alignCenter' | transloco"
+          [title]="'shared.richText.alignCenter' | transloco"
+          [disabled]="disabled()"
+          (click)="setAlign('center')"
+        >
+          <app-icon name="lucideAlignCenter" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive({ textAlign: 'right' })"
+          [attr.aria-label]="'shared.richText.alignRight' | transloco"
+          [title]="'shared.richText.alignRight' | transloco"
+          [disabled]="disabled()"
+          (click)="setAlign('right')"
+        >
+          <app-icon name="lucideAlignRight" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive({ textAlign: 'justify' })"
+          [attr.aria-label]="'shared.richText.alignJustify' | transloco"
+          [title]="'shared.richText.alignJustify' | transloco"
+          [disabled]="disabled()"
+          (click)="setAlign('justify')"
+        >
+          <app-icon name="lucideAlignJustify" />
+        </button>
+      </span>
+
+      <span class="rte-group">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive('bulletList')"
+          [attr.aria-pressed]="isActive('bulletList')"
+          [attr.aria-label]="'shared.richText.bulletList' | transloco"
+          [title]="'shared.richText.bulletList' | transloco"
+          [disabled]="disabled()"
+          (click)="toggleBulletList()"
+        >
+          <app-icon name="lucideList" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive('orderedList')"
+          [attr.aria-pressed]="isActive('orderedList')"
+          [attr.aria-label]="'shared.richText.orderedList' | transloco"
+          [title]="'shared.richText.orderedList' | transloco"
+          [disabled]="disabled()"
+          (click)="toggleOrderedList()"
+        >
+          <app-icon name="lucideListOrdered" />
+        </button>
+      </span>
+    }
+
+    @if (p === 'full') {
+      <span class="rte-group">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.outdent' | transloco"
+          [title]="'shared.richText.outdent' | transloco"
+          [disabled]="disabled()"
+          (click)="outdent()"
+        >
+          <app-icon name="lucideIndentDecrease" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.indent' | transloco"
+          [title]="'shared.richText.indent' | transloco"
+          [disabled]="disabled()"
+          (click)="indent()"
+        >
+          <app-icon name="lucideIndentIncrease" />
+        </button>
+      </span>
+    }
+
+    <span class="rte-group">
+      <button
+        type="button"
+        class="icon-button rte-btn"
+        [class.rte-active]="isActive('link')"
+        [attr.aria-label]="'shared.richText.link' | transloco"
+        [title]="'shared.richText.link' | transloco"
+        [disabled]="disabled()"
+        (click)="setLink()"
+      >
+        <app-icon name="lucideLink" />
+      </button>
+
+      @if (p === 'full') {
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.image' | transloco"
+          [title]="'shared.richText.image' | transloco"
+          [disabled]="disabled()"
+          (click)="requestImage()"
+        >
+          <app-icon name="lucideImage" />
+        </button>
+      }
+
+      @if (p === 'full' || p === 'basic') {
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.insertTable' | transloco"
+          [title]="'shared.richText.insertTable' | transloco"
+          [disabled]="disabled()"
+          (click)="insertTable()"
+        >
+          <app-icon name="lucideTable" />
+        </button>
+      }
+
+      @if (p === 'full') {
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="isActive('noWrap')"
+          [attr.aria-pressed]="isActive('noWrap')"
+          [attr.aria-label]="'shared.richText.noWrap' | transloco"
+          [title]="'shared.richText.noWrap' | transloco"
+          [disabled]="disabled()"
+          (click)="toggleNoWrap()"
+        >
+          <app-icon name="lucideWrapText" />
+        </button>
+      }
+    </span>
+
+    @if (p === 'full' && inTable()) {
+      <span class="rte-group">
+        <select
+          class="rte-select"
+          [disabled]="disabled()"
+          [attr.aria-label]="'shared.richText.tableClass.aria' | transloco"
+          (change)="onTableClass($event)"
+        >
+          @for (opt of tableClasses; track opt.value) {
+            <option [value]="opt.value" [selected]="opt.value === currentTableClass()">
+              {{ opt.labelKey | transloco }}
+            </option>
+          }
+        </select>
+        <select
+          class="rte-select"
+          [disabled]="disabled()"
+          [attr.aria-label]="'shared.richText.cellClass.aria' | transloco"
+          (change)="onCellClass($event)"
+        >
+          @for (opt of cellClasses; track opt.value) {
+            <option [value]="opt.value" [selected]="opt.value === currentCellClass()">
+              {{ opt.labelKey | transloco }}
+            </option>
+          }
+        </select>
+        <select
+          class="rte-select"
+          [disabled]="disabled()"
+          [attr.aria-label]="'shared.richText.rowClass.aria' | transloco"
+          (change)="onRowClass($event)"
+        >
+          @for (opt of rowClasses; track opt.value) {
+            <option [value]="opt.value" [selected]="opt.value === currentRowClass()">
+              {{ opt.labelKey | transloco }}
+            </option>
+          }
+        </select>
+      </span>
+
+      <span class="rte-group">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.insertColumnBefore' | transloco"
+          [title]="'shared.richText.insertColumnBefore' | transloco"
+          [disabled]="disabled()"
+          (click)="addColumnBefore()"
+        >
+          <app-icon name="lucideBetweenVerticalStart" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.insertColumnAfter' | transloco"
+          [title]="'shared.richText.insertColumnAfter' | transloco"
+          [disabled]="disabled()"
+          (click)="addColumnAfter()"
+        >
+          <app-icon name="lucideBetweenVerticalEnd" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.deleteColumn' | transloco"
+          [title]="'shared.richText.deleteColumn' | transloco"
+          [disabled]="disabled()"
+          (click)="deleteColumn()"
+        >
+          <app-icon name="lucideTrash2" />
+        </button>
+      </span>
+
+      <span class="rte-group">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.insertRowAbove' | transloco"
+          [title]="'shared.richText.insertRowAbove' | transloco"
+          [disabled]="disabled()"
+          (click)="addRowBefore()"
+        >
+          <app-icon name="lucideBetweenHorizontalStart" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.insertRowBelow' | transloco"
+          [title]="'shared.richText.insertRowBelow' | transloco"
+          [disabled]="disabled()"
+          (click)="addRowAfter()"
+        >
+          <app-icon name="lucideBetweenHorizontalEnd" />
+        </button>
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.deleteRow' | transloco"
+          [title]="'shared.richText.deleteRow' | transloco"
+          [disabled]="disabled()"
+          (click)="deleteRow()"
+        >
+          <app-icon name="lucideTrash2" />
+        </button>
+      </span>
+
+      <span class="rte-group">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="'shared.richText.deleteTable' | transloco"
+          [title]="'shared.richText.deleteTable' | transloco"
+          [disabled]="disabled()"
+          (click)="deleteTable()"
+        >
+          <app-icon name="lucideGrid2x2X" />
+        </button>
+      </span>
+    }
+
+    @if (p === 'full' || p === 'inline') {
+      <span class="rte-group rte-group-end">
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [class.rte-active]="codeView()"
+          [attr.aria-pressed]="codeView()"
+          [attr.aria-label]="'shared.richText.codeView' | transloco"
+          [title]="'shared.richText.codeView' | transloco"
+          (click)="toggleCodeView()"
+        >
+          <app-icon name="lucideCode" />
+        </button>
+        @if (codeView()) {
+          <button
+            type="button"
+            class="icon-button rte-btn"
+            [attr.aria-label]="'shared.richText.format' | transloco"
+            [title]="'shared.richText.format' | transloco"
+            (click)="formatCode()"
+          >
+            <app-icon name="lucideBraces" />
+          </button>
+        }
+        <button
+          type="button"
+          class="icon-button rte-btn"
+          [attr.aria-label]="
+            (fullscreen() ? 'shared.richText.exitFullscreen' : 'shared.richText.fullscreen')
+              | transloco
+          "
+          [title]="
+            (fullscreen() ? 'shared.richText.exitFullscreen' : 'shared.richText.fullscreen')
+              | transloco
+          "
+          (click)="toggleFullscreen()"
+        >
+          <app-icon [name]="fullscreen() ? 'lucideMinimize' : 'lucideMaximize'" />
+        </button>
+
+        <!-- Feature insert buttons (niord Insert-Publications / Insert-Geometry / …) are
+             projected in by the host field; the shared control stays feature-agnostic. -->
+        <ng-content select="[richTextTools]" />
+      </span>
+    }
+  </div>
+
+  @if (codeView()) {
+    <textarea
+      class="rte-code"
+      spellcheck="false"
+      autocapitalize="off"
+      autocomplete="off"
+      [value]="codeDisplay()"
+      [disabled]="disabled()"
+      [attr.aria-label]="'shared.richText.codeView' | transloco"
+      (input)="onCodeInput($event)"
+      (blur)="touch.emit()"
+    ></textarea>
+  }
+  <!-- TipTap's contenteditable mounts inside here; kept in the DOM (hidden in code view)
+       so the lazy mount always has a stable host element. -->
+  <div #surface class="rte-surface-host" [class.hidden]="codeView()"></div>
+</div>

@@ -1,0 +1,281 @@
+
+:imagesdir: images
+
+[#areas]
+== Areas
+
+The _Areas_ page keeps the tree of areas, such as "Denmark" > "The Baltic Sea". Editors give each
+notice to mariners and navigational warning its areas; messages are listed, sorted and filtered by
+them, and the title line of a message starts with them. Open the page with *Admin* > *Areas*. Areas
+are shared by all domains, although a system administrator can limit the areas a domain uses
+(link:../sysadmin-manual/manual.html#domains[Domains]).
+
+image::AreasPage.png[The Areas page with an area open in the editor, 800]
+
+The page has two parts: the area tree on the left and, beside it, the editor of the area you select.
+
+The tree works like the folders of a file system: click the arrow before an area to show or hide
+its sub-areas, and click an area's name to open it in the editor. An inactive area is shown in grey
+italics. To find an area, type in *Filter areas* at the top of the tree; the tree then shows the
+areas whose names hold the text, unfolded with all their sub-areas, and the areas above them.
+
+When the deployment writes its messages in more than one language, a *Model language* list at the
+right of the toolbar chooses the language the tree shows the names in. It changes only what the
+page shows, not the language of the application. With one language, the list is not shown.
+
+[#adding-or-editing-an-area]
+=== Adding or Editing an Area
+
+To change an area, select it in the tree. Its fields open beside the tree, under _Edit area_.
+
+To add an area, click *New area* when no area is selected: the new area becomes a root area, at the
+top of the tree. With an area selected, the button is called *New sub-area*, and the new area
+becomes a sub-area of the selected one; the editor shows that area as its *Parent area*. The button
+waits until the selected area has loaded. To add a root area while an area is selected, click
+*Cancel* first, which clears the selection.
+
+The fields of an area:
+
+[cols="30,70",options="header"]
+|===
+| Field
+| Description
+
+| Active
+| Only an active area can be given to a message. A new area is active.
+
+| Name
+| The name of the area, with a field for each language the deployment writes its messages in (the
+  flag before each field shows which). The name in the deployment's default language, a setting
+  of the system administrator (English unless it is changed), is required.
+
+| MRN
+| Optionally, a _Maritime Resource Name_: a unique name of the form `urn:mrn:...` that identifies
+  the area across systems, for example `urn:mrn:iho:country:dk`. The import uses it to find an
+  existing area (<<importing-and-exporting-areas>>).
+
+| Type
+| Optionally, the kind of area: _Country_ or _Firing area_ (<<areas-firing-areas>>). _None_ is an
+  ordinary area.
+
+| Additional editor fields
+| Fields of the message editor that are shown when a message has this area, although the message's
+  series does not show them: _Org. Information_, _Charts_, _Event dates_, _Attachments_, _Source_,
+  _Part Types_, _Prohibition_, _Signals_ and _Layout_. For example, a firing area can show the
+  _Signals_ field, which navigational warnings do not normally have.
+
+| Message sorting
+| How the messages of this area and its sub-areas are sorted; see
+  <<message-sorting-editor-field>>.
+
+| Origin latitude, Origin longitude, Origin angle
+| The centre and the starting bearing of a _Clockwise_ or _Counter-clockwise_ sorting. The fields
+  are shown only for those two.
+
+| Extent
+| The geographical extent of the area; see <<extent-editor-field>>.
+|===
+
+*Save area* saves the area; it can be clicked once you have changed something and the area has a
+name. *Cancel* closes the editor without saving and clears the selection.
+
+While you have unsaved changes in the editor, Niord asks before it lets you select another area,
+add one or leave the page (_Unsaved changes_), and the browser warns you before it reloads or
+closes the page.
+
+[#message-sorting-editor-field]
+==== Message Sorting
+
+When the message list is sorted by area, the _Message sorting_ of an area decides the order of the
+messages within it:
+
+[cols="30,70",options="header"]
+|===
+| Message sorting
+| Description
+
+| Area order
+| The default (the field left at _Area order_). The messages follow the order of their areas in the
+  tree: in the tree above, "The Baltic Sea" comes before "The Sound", so the messages of "The Baltic
+  Sea" come before those of "The Sound".
+
+| North-South
+| The messages of the area, and of its sub-areas, are sorted from north to south by the latitude
+  of their centre.
+
+| South-North
+| The reverse of _North-South_.
+
+| East-West
+| The messages are sorted from east to west by the longitude of their centre.
+
+| West-East
+| The reverse of _East-West_.
+
+| Clockwise
+| The messages are sorted clockwise around the position given by *Origin latitude* and *Origin
+  longitude*, starting at the bearing given by *Origin angle*, in degrees.
+
+| Counter-clockwise
+| The reverse of _Clockwise_.
+|===
+
+A sorting applies to the area and every area below it, so only one area on a branch of the tree
+can have one: when an area above the selected one already has a sorting, the editor does not show
+the *Message sorting* field.
+
+Editors can change the order of the messages in an area by hand afterwards, as described in the
+link:../editor-manual/manual.html#sort-area-action[Sort Area Action] section of the User Manual for
+Editors. The sorting of an area is applied to a message each time the message is saved before it
+is published; to apply a changed sorting to the messages already published, use *Re-index
+published messages* (<<areas-actions>>).
+
+[#extent-editor-field]
+==== Extent
+
+The _Extent_ map at the bottom of the editor shows the area's geographical extent; an area without
+one says _No extent defined yet._ Niord uses the extent, for example, to suggest areas for a
+message from its positions. Two buttons on the map change it:
+
+* *Edit* opens the extent in the position editor, which fills almost the whole window. An area can
+  be drawn with *Point*, *Line*, *Area* (a polygon) and *Box*; *Select* moves and changes what is
+  drawn, and *Delete* removes it. *OK* puts the extent into the editor, and *Cancel* leaves it as it
+  was.
++
+image::AreasEditExtentPage.png[The position editor on an area's extent, 759]
+* *Edit as text* opens the extent as text, with a small map that shows what you type; it works as
+  for a chart (<<chart-extent>>).
+
+The position editor, its text format and its _Import geometry_ action are described in the
+link:../editor-manual/manual.html#position-editor[Position Editor] chapter of the User Manual for
+Editors. The extent is saved with *Save area*, like the other fields.
+
+[#reorganizing-areas]
+=== Reorganizing Areas
+
+* To move an area up or down among the areas of the same parent, select it and click the arrows
+  *Move area up* and *Move area down* in the toolbar. They work while the area's editor has no
+  unsaved changes.
+* To move an area to another parent area, drag it by the grip at the right end of its row and drop
+  it on the new parent, or on the empty space below the tree to make it a root area. Niord asks
+  first (_Move area?_) and names the area and its new parent.
+
+[#deleting-an-area]
+=== Deleting an Area
+
+Select the area and click *Delete* in the toolbar, then confirm with _Delete area?_. The area is
+deleted with all its sub-areas.
+
+An area that is in use cannot be deleted: when the area, or one of its sub-areas, is given to a
+message in any status, has firing periods or is used by a domain, Niord says _Error deleting area_
+and keeps it. Make such an area inactive instead.
+
+[#areas-actions]
+=== The Area Actions Menu
+
+The cog, _Area actions_, at the right of the toolbar holds the export, the import and two actions
+that put the sort order right:
+
+image::AreasActionMenu.png[The Area actions menu, 167]
+
+* *Export…* and *Import…* are described in <<importing-and-exporting-areas>>.
+* *Re-index areas* computes the order of the whole area tree again, the order messages are sorted
+  in by area. Niord does this by itself every hour, so you need it only to see a change at once.
+* *Re-index published messages* computes again where each published message of the current domain
+  belongs in its area, from the message sorting of its area. Use it after you have changed the
+  _Message sorting_ of an area. It overwrites the order that editors have set by hand with the Sort
+  Area action, in every area of the domain.
+* *Generate firing area messages…* is shown only in a domain that has a firing schedule; see
+  <<areas-firing-areas>>.
+
+Both re-index actions say _Sort order updated_ when they are done.
+
+[#areas-firing-areas]
+=== Firing Areas
+
+An area with the *Type* _Firing area_ is a firing area: a place where the armed forces practise
+firing, which editors give firing periods on the _Schedule_ page and which Niord warns of with
+firing exercise messages. How the parts fit together is described in the
+link:../sysadmin-manual/manual.html#firing-schedules[Firing Schedules] chapter of the System
+Administrator Manual, and the editors' side in the
+link:../editor-manual/manual.html#firing-exercise-schedule[Firing Area Schedule] chapter of the
+User Manual for Editors.
+
+The administrator's part is the firing areas themselves: add each one in the area tree, usually
+under the waters it lies in, give it the type _Firing area_, a name, an extent and, when it is to
+be scheduled, keep it active. The *Signals* additional editor field is useful for a firing area.
+
+[#areas-generate-firing-messages]
+==== Generating Firing Area Messages
+
+The domain of the firing areas holds one message for each firing area, describing it: its limits,
+its signals and whom to contact. Niord can draft these messages for you. In the domain of the
+firing areas (switch to it in the header), open the cog menu and click *Generate firing area
+messages…*:
+
+image::AreasFiringGenerateDialog.png[The Generate Firing Area Messages dialog, 280]
+
+* *Message series*: the series of the current domain the messages are written in. Required.
+* *Message tag*: optionally, a tag the messages are put in, so you can find them together.
+
+*Generate messages* drafts one message for every active firing area of the domain: a miscellaneous
+notice for a series of notices to mariners, or a local warning for a series of navigational
+warnings, with the firing area as its area, the area's extent as its positions, the charts the area
+crosses, and the category "Firing Exercises". Its title is made from the area. The drafts are then
+completed and published by the editors like any other message. Each click makes a new set of
+drafts, so generate them once.
+
+[#importing-and-exporting-areas]
+=== Importing and Exporting Areas
+
+*Export…* in the _Area actions_ menu opens the whole area tree, as JSON, in a new browser tab, where
+you can save it as a file. *Import…* opens _Upload Areas File_: choose a JSON file, or drop it on
+the dialog. The file is imported by the batch job _area-import_ in the background; _Upload Result_
+shows the answer to the upload, and a system administrator can follow the job on the
+link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] page.
+
+The file holds the root areas at its top level, and each area's sub-areas in its `children`. The
+imported areas are merged into the tree: an area with an MRN is matched with the existing area of
+the same MRN; otherwise a sub-area is matched with the existing area under the same parent that has
+the same name in one of the languages. An area at the top level of the file without a matching MRN
+is matched by name with any area of the tree, not only a root area, so give a root area an MRN, or
+a name no other area has. A matched area is updated, and any other area is added.
+
+For example:
+
+[source,json]
+----
+[
+  {
+    "mrn": "urn:mrn:iho:country:dk",
+    "active": true,
+    "descs": [ { "lang": "en", "name": "Denmark" } ],
+    "type": "COUNTRY",
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": [ ... ]
+    },
+    "children": [
+      {
+        "active": true,
+        "descs": [ { "lang": "en", "name": "The Baltic Sea" } ],
+        "geometry": {
+          "type": "MultiPolygon",
+          "coordinates": [ ... ]
+        },
+        "children": [ ... ],
+        "messageSorting": "CW",
+        "originLatitude": 54.5,
+        "originLongitude": 12.0,
+        "originAngle": 180
+      },
+      ...
+    ]
+  },
+  ...
+]
+----
+
+The `type` is `COUNTRY` or `FIRING_AREA`, and the `messageSorting` one of `NS`, `SN`, `EW`, `WE`,
+`CW` and `CCW`. A deployment that writes its messages in several languages gives a `descs` entry,
+with its `lang`, for each.

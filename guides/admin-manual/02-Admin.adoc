@@ -1,0 +1,49 @@
+
+:imagesdir: images
+
+[#admin-page]
+== Admin Page
+
+The _Admin_ area is where administrators look after the base data that editors work with: the
+nautical charts, the areas, the publications and their categories, the sources, the users and
+contacts, and the mailing lists. Open it with *Admin* in the menu at the top of the page; it
+opens on its _Overview_ page.
+
+image::AdminPage.png[The Overview page of the Admin area, 800]
+
+[#admin-page-layout]
+=== Finding Your Way
+
+The list down the left side of the _Admin_ area holds its sections: *Overview*, *Charts*,
+*Areas*, *Publications*, *Publication categories*, *Sources*, *Users & Contacts* and *Mailing
+Lists*. It stays on screen, so you move from one section to another in one click. The _Overview_
+page has a card for each section with a line on what it is for; click a card to open the section.
+
+Each section has a page of its own, with its address in the browser, so you can bookmark a section
+or send a colleague a link to it. *Help*, the question mark in the header, opens the chapter of this
+manual that describes the page you are on, in a new browser tab.
+
+Most sections edit a record in a panel that slides in from the right over the list, a _drawer_:
+open it with the pencil next to a row, or with the button that adds a new record. *Cancel*, or the
+cross at the top of the drawer, closes it; when you have changed something, Niord asks before it
+throws your changes away. The _Areas_ section edits beside its tree instead.
+
+[#admin-page-access]
+=== Who Can Use the Admin Area
+
+You see *Admin* in the menu when you hold the _Admin_ or the _Sysadmin_ role in the domain you are
+working in, the one named in the header. Roles are held per domain (see <<administrators-manual,Administrators Manual>>): only the
+role of the current domain counts. So a user can be an administrator in one domain, for example
+"NW", and only an editor in another, for example "NM"; when that user switches to "NM", the *Admin*
+item leaves the menu.
+
+Some base data, such as the charts, the areas and the sources, is shared by all domains. An
+administrator of the "NW" domain can therefore change the charts while working in "NW", but not
+while working in "NM", although they are the same charts. In practice an administrator of one
+domain is usually an administrator of all of them, but it is worth knowing.
+
+A system administrator sees a second item, *Sysadmin*, with the settings of the system itself; it is
+described in the link:../sysadmin-manual/manual.html#sysadmin-page[System Administrator Manual].
+Some actions in the _Admin_ area are for system administrators only, such as creating mailing
+lists; the chapters say where.
+

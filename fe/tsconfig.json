@@ -1,0 +1,68 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "resolveJsonModule": true,
+    /*
+      The workspace's path aliases, one per shared source folder. Both are folders that both
+      applications compile: a relative import across two project roots
+      (../../../../../shared-map/ol-map) would be unreadable and would break the moment a file
+      moves a level. There is no baseUrl, so TypeScript resolves these against the directory of
+      the file that declares them — this one, which is why an application tsconfig inherits the
+      aliases without repeating them.
+
+      The map and HTML aliases have no barrel: a call site names the file (@niord/map/ol-map), so
+      importing the map shell does not drag the WMS layer and the switcher into the same chunk.
+
+      The two country APIs, @niord/admin/api and @niord/info/api, are the one deliberate barrel
+      each application has: the contract country code imports base product code through, each
+      with a /testing entry for specs (fe-country-split-plan §4.3, country-kit/API-CHANGES.md).
+      Base product code never imports them; lint holds both sides to that.
+    */
+    "paths": {
+      "@niord/map/*": ["./shared-map/*"],
+      "@niord/html/*": ["./shared-html/*"],
+      "@niord/admin/api": ["./ui-apps/admin/src/public-api.ts"],
+      "@niord/admin/api/testing": ["./ui-apps/admin/src/testing-api.ts"],
+      "@niord/info/api": ["./ui-apps/info/src/public-api.ts"],
+      "@niord/info/api/testing": ["./ui-apps/info/src/testing-api.ts"]
+    }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./ui-apps/admin/tsconfig.app.json"
+    },
+    {
+      "path": "./ui-apps/admin/tsconfig.spec.json"
+    },
+    {
+      "path": "./ui-apps/admin/e2e/tsconfig.json"
+    },
+    {
+      "path": "./ui-apps/info/tsconfig.app.json"
+    },
+    {
+      "path": "./ui-apps/info/tsconfig.spec.json"
+    }
+  ]
+}

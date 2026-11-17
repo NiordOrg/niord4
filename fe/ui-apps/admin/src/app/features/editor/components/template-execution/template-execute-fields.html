@@ -1,0 +1,328 @@
+<div class="flex flex-col">
+  <!-- ── Base fields: the general message std fields, rendered once, OR-across the templates.
+       These come from each template's `stdTemplateFields` (configured in Sysadmin). ── -->
+  @if (
+    showStdField('type') ||
+    showStdField('promulgation') ||
+    showStdField('id') ||
+    showStdField('publish_date') ||
+    showStdField('areas')
+  ) {
+    <app-card
+      [header]="'editor.template.card.baseFields' | transloco"
+      sectionClass="shadow-sm mb-4"
+    >
+      <span
+        cardActions
+        class="flex items-center gap-1 text-[11px] font-normal text-fg-subtle normal-case"
+      >
+        <app-icon name="lucideSettings" />
+        {{ 'editor.template.baseFieldsHint' | transloco }}
+      </span>
+
+      <div class="flex flex-col gap-3">
+        @if (showStdField('type')) {
+          <div class="flex flex-col gap-1 text-sm">
+            <span class="font-medium text-fg-title">{{ 'msg.field.type' | transloco }}</span>
+            <div class="flex flex-wrap gap-1">
+              @for (type of typeOptions(); track type) {
+                <button
+                  type="button"
+                  class="rounded border px-2.5 py-1 text-xs"
+                  [class.border-primary]="message().type === type"
+                  [class.bg-primary]="message().type === type"
+                  [class.text-white]="message().type === type"
+                  [class.border-surface-300]="message().type !== type"
+                  (click)="setType(type)"
+                >
+                  {{ 'msg.type.' + type | transloco }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (showStdField('promulgation')) {
+          <div class="flex flex-col gap-1 text-sm">
+            <span class="font-medium text-fg-title">{{
+              'msg.field.promulgation' | transloco
+            }}</span>
+            <div class="flex flex-wrap gap-4">
+              @for (promulgation of message().promulgations ?? []; track $index) {
+                <label class="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    class="checkbox"
+                    [checked]="promulgation.promulgate"
+                    [disabled]="isPromulgationLocked(promulgation)"
+                    (change)="togglePromulgation($index)"
+                  />
+                  <span>{{ promulgation.type.name }}</span>
+                </label>
+              }
+            </div>
+          </div>
+        }
+
+        @if (showStdField('id')) {
+          <div class="flex flex-col gap-1 text-sm">
+            <span class="font-medium text-fg-title">{{ 'msg.field.id' | transloco }}</span>
+            <app-select
+              class="w-64"
+              [options]="messageSeries()"
+              [optionLabel]="'seriesId'"
+              [value]="message().messageSeries"
+              (valueChange)="setSeries($any($event))"
+              [ariaLabel]="'msg.field.id' | transloco"
+            />
+          </div>
+        }
+
+        @if (showStdField('publish_date')) {
+          <div class="flex flex-col gap-1 text-sm">
+            <span class="font-medium text-fg-title">{{
+              'msg.field.publish_date' | transloco
+            }}</span>
+            <div class="flex flex-wrap gap-3">
+              <app-date-time-field
+                [value]="asDate(message().publishDateFrom)"
+                (valueChange)="setPublishFrom($event)"
+              />
+              <app-date-time-field
+                [value]="asDate(message().publishDateTo)"
+                (valueChange)="setPublishTo($event)"
+              />
+            </div>
+          </div>
+        }
+
+        @if (showStdField('areas')) {
+          <div class="flex flex-col gap-2 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="font-medium text-fg-title">{{ 'msg.field.areas' | transloco }}</span>
+              <!-- Manual override: the automatic compute deliberately refuses to touch a
+                   non-empty selection, so this is the way to say "recompute anyway". -->
+              <button
+                type="button"
+                class="btn-tertiary ml-auto text-xs"
+                [disabled]="!hasGeometry()"
+                (click)="computeAreas.emit()"
+              >
+                <app-icon name="lucideMapPin" />
+                <span>{{ 'editor.areas.computeFromLocations' | transloco }}</span>
+              </button>
+            </div>
+            <app-areas-field
+              [value]="areaRefs()"
+              [domainId]="domainId()"
+              (valueChange)="onAreasChange($event)"
+              placeholder="editor.field.areas.pickerPlaceholder"
+            />
+            <!-- Per-language vicinity, with blank-input copy-on-focus, placed right under the
+                 area picker. -->
+            <app-localized-inputs
+              [value]="vicinities()"
+              placeholderKey="editor.field.areas.vicinityPlaceholder"
+              (valueInput)="onVicinityInput($event)"
+              (inputFocus)="onVicinityFocus($event)"
+            />
+          </div>
+        }
+      </div>
+    </app-card>
+  }
+
+  <!-- ── Template parameters: one Message-Parts-styled card per chosen template (drag/move-reorderable). ── -->
+  <app-section-panel heading="editor.template.card.params" [sunken]="true">
+    <div cdkDropList class="flex flex-col gap-3" (cdkDropListDropped)="onDrop($event)">
+      @for (
+        cat of templates();
+        track cat.id;
+        let i = $index;
+        let first = $first;
+        let last = $last
+      ) {
+        <div cdkDrag>
+          <div
+            class="overflow-hidden rounded-lg border border-surface-200 bg-surface-0 shadow-sm dark:border-surface-700 dark:bg-surface-900"
+          >
+            <div
+              class="flex flex-wrap items-center gap-2 border-b border-surface-200 bg-surface-100 px-3 py-2 dark:border-surface-700 dark:bg-surface-800"
+            >
+              <span
+                cdkDragHandle
+                aria-hidden="true"
+                class="inline-flex cursor-grab text-fg-subtle active:cursor-grabbing"
+              >
+                <app-icon name="lucideGripVertical" />
+              </span>
+              <app-icon name="lucideLayoutTemplate" class="text-fg-subtle" />
+              <span class="text-sm font-semibold text-fg">{{ nameOf(cat) }}</span>
+              <span class="flex-1"></span>
+              <button
+                type="button"
+                class="icon-button"
+                [disabled]="first"
+                (click)="move(i, -1)"
+                [attr.aria-label]="'editor.part.moveUp' | transloco"
+                [title]="'editor.part.moveUp' | transloco"
+              >
+                <app-icon name="lucideArrowUp" />
+              </button>
+              <button
+                type="button"
+                class="icon-button"
+                [disabled]="last"
+                (click)="move(i, 1)"
+                [attr.aria-label]="'editor.part.moveDown' | transloco"
+                [title]="'editor.part.moveDown' | transloco"
+              >
+                <app-icon name="lucideArrowDown" />
+              </button>
+            </div>
+
+            <div class="flex flex-col gap-3 px-3.5 py-3 text-sm">
+              @if (showStdField('event_dates', cat)) {
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-medium text-fg-title">{{
+                      'msg.field.event_dates' | transloco
+                    }}</span>
+                    <button
+                      type="button"
+                      class="link-button is-subtle text-xs"
+                      (click)="addEventDate(i)"
+                    >
+                      <app-icon name="lucidePlus" /> {{ 'editor.template.addDate' | transloco }}
+                    </button>
+                  </div>
+                  @for (di of eventDates(i); track $index; let d = $index) {
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label class="flex items-center gap-1">
+                        <input
+                          type="checkbox"
+                          class="checkbox"
+                          [checked]="di.allDay"
+                          (change)="setEventDate(i, d, { allDay: $any($event.target).checked })"
+                        />
+                        <span class="text-xs text-fg-subtle">{{
+                          'editor.template.allDay' | transloco
+                        }}</span>
+                      </label>
+                      <app-date-time-field
+                        [value]="asDate(di.fromDate)"
+                        (valueChange)="
+                          setEventDate(i, d, {
+                            fromDate: $event ? $event.toISOString() : undefined,
+                          })
+                        "
+                      />
+                      <app-date-time-field
+                        [value]="asDate(di.toDate)"
+                        (valueChange)="
+                          setEventDate(i, d, { toDate: $event ? $event.toISOString() : undefined })
+                        "
+                      />
+                      <button
+                        type="button"
+                        class="icon-button text-danger"
+                        (click)="removeEventDate(i, d)"
+                        [attr.aria-label]="'editor.template.removeDate' | transloco"
+                      >
+                        <app-icon name="lucideTrash2" />
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (showStdField('positions', cat)) {
+                <div class="flex flex-col gap-1">
+                  <span class="font-medium text-fg-title">{{
+                    'msg.field.positions' | transloco
+                  }}</span>
+                  <app-geometry-preview-field
+                    [featureCollection]="geometryOf(i)"
+                    heightClass="h-64"
+                    (geometryChange)="onGeometryChange(i, $event)"
+                  />
+                </div>
+              }
+
+              @for (param of cat.templateParams ?? []; track param.paramId) {
+                @if (!param.positionList) {
+                  <app-template-param-field
+                    [param]="param"
+                    [paramType]="paramTypes().get(param.type)"
+                    [paramTypes]="paramTypes()"
+                    [values]="templateData()[i]"
+                    [lang]="lang()"
+                    (paramChange)="onParamChange(i, $event)"
+                  />
+                } @else {
+                  <!-- A positionList param renders once per derived position — hidden until one exists. -->
+                  @for (pos of positions(i); track $index; let p = $index) {
+                    <div class="flex items-start gap-2" [class.mt-1]="p > 0">
+                      <span
+                        class="mt-6 flex items-center gap-0.5 text-xs whitespace-nowrap text-fg-subtle"
+                      >
+                        <app-icon name="lucideMapPin" />{{ p + 1 }}
+                      </span>
+                      <app-template-param-field
+                        class="min-w-0 flex-1"
+                        [param]="param"
+                        [paramType]="paramTypes().get(param.type)"
+                        [paramTypes]="paramTypes()"
+                        [values]="$any(pos)"
+                        [lang]="lang()"
+                        (paramChange)="onPositionParamChange(i, p, $event)"
+                      />
+                    </div>
+                  }
+                }
+              }
+
+              @if (showStdField('work_vessel', cat)) {
+                <div class="flex flex-col gap-1">
+                  <span class="font-medium text-fg-title">{{
+                    'editor.template.vessel.title' | transloco
+                  }}</span>
+                  <app-template-vessel-field
+                    [value]="vessel(i)"
+                    (valueChange)="setVessel(i, $event)"
+                  />
+                </div>
+              }
+
+              @if (showStdField('markings', cat)) {
+                <div class="flex flex-col gap-1">
+                  <span class="font-medium text-fg-title">{{
+                    'editor.template.markings.title' | transloco
+                  }}</span>
+                  <app-template-markings-field
+                    [markings]="markings(i)"
+                    [markingType]="markingType(i)"
+                    [paramTypes]="paramTypes()"
+                    [lang]="lang()"
+                    (markingsChange)="setMarkings(i, $event)"
+                    (markingTypeChange)="setMarkingType(i, $event)"
+                  />
+                </div>
+              }
+
+              @if (
+                !showStdField('event_dates', cat) &&
+                !showStdField('positions', cat) &&
+                !showStdField('work_vessel', cat) &&
+                !showStdField('markings', cat) &&
+                (cat.templateParams ?? []).length === 0
+              ) {
+                <p class="text-sm text-fg-subtle">{{ 'editor.template.noParams' | transloco }}</p>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </app-section-panel>
+</div>

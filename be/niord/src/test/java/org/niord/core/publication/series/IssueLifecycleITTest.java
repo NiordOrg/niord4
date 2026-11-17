@@ -1,0 +1,1262 @@
+/*
+ * Copyright 2026 Danish Emergency Management Agency.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.niord.core.publication.series;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.niord.core.domain.Domain;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.TestIds;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.criteria.MessageSeriesCriterionVo;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.vo.MessagePublication;
+import org.niord.core.user.User;
+import org.niord.test.ITTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** The transitions other than publish, plus curation and the release rail. */
+public class IssueLifecycleITTest extends ITTest {
+
+    @Autowired
+    IssueLifecycleService lifecycle;
+
+    @Autowired
+    IssueCurationService curation;
+
+    @Autowired
+    PublishChecklistService checklist;
+
+    @Autowired
+    IssuePublishService publishService;
+
+    @Autowired
+    PublicationSeriesService seriesService;
+
+    @Autowired
+    IssueAuditService audit;
+
+    @Autowired
+    IssueDeleteService deleteService;
+
+    @PersistenceContext
+    EntityManager em;
+
+    // ------------------------------------------------------------------ fixtures
+
+    private PublicationSeries series(TimeRelation relation) {
+        PublicationCategory c = new PublicationCategory();
+        c.setCategoryId(TestIds.category());
+        c.setPriority(100);
+        em.persist(c);
+
+        PublicationSeries s = new PublicationSeries();
+        s.setSeriesId(TestIds.series());
+        s.setStatus(SeriesStatus.ACTIVE);
+        s.setContentMode(ContentMode.GENERATED_FROM_QUERY);
+        s.setReportId("some-report");
+        s.setCadence(SeriesCadence.WEEKLY);
+        s.setTimeRelation(relation);
+        s.setAliveAtCutoff(relation == TimeRelation.IN_FORCE_AT_CUTOFF);
+        s.setReleaseMode(ReleaseMode.MANUAL_GATE);
+        s.setNextIssueCreation(NextIssueCreation.MANUAL);
+        s.setMessagePublication(MessagePublication.NONE);
+        s.setNumberingScheme(NumberingScheme.ISO_WEEK_YEAR);
+        // No report: these tests are about the lifecycle, and a series with a report now renders a document at publish.
+        s.setCategory(c);
+        // Every publication names the desk that owns it: the column is NOT NULL and
+        // S-20a refuses a save without one, so a fixture that left it out no longer
+        // describes a state the system can be in.
+        s.setDomain(TestOwnerDomain.of(em));
+        s.getLanguages().add("da");
+
+        IssueCriteriaVo doc = new IssueCriteriaVo();
+        MessageSeriesCriterionVo node = new MessageSeriesCriterionVo();
+        node.setValues(new ArrayList<>(List.of("dma-nm")));
+        doc.getCriteria().add(node);
+        s.setCriteria(doc);
+
+        s.createDesc("da").setName("Test series");
+        em.persist(s);
+        return s;
+    }
+
+    /**
+     * An existing message, since O-6 refuses an override naming nothing.
+     *
+     * SKIPPED, NOT FAILED, when the corpus is not there. The integration database
+     * is Liquibase plus db/niord-base-data.sql, which since C4b carries the
+     * sample's 34 messages, published ones among them, so these cases run on it;
+     * on a database with none, a case that curates a real message has nothing to
+     * name, and failing it would turn "nobody has seeded this machine" into a red
+     * suite that says nothing about the curation these cases are here for. The
+     * assumption names how to seed one.
+     *
+     * A PUBLIC-status message, because a manual include accepts nothing else, and
+     * a seeded corpus starts with drafts as often as not.
+     */
+    private String someMessageUid() {
+        List<String> uids = em.createQuery("SELECT m.uid FROM Message m WHERE m.status IN :public "
+                        + "ORDER BY m.id", String.class)
+                .setParameter("public", org.niord.core.publication.series.resolve.MembershipPredicate.PUBLIC_STATUSES)
+                .setMaxResults(1).getResultList();
+        Assumptions.assumeTrue(!uids.isEmpty(),
+                "the test database holds no messages. Seed it first: "
+                        + "node be/scripts/seed-dev-database.mjs");
+        return uids.get(0);
+    }
+
+    private User user() {
+        User u = new User();
+        u.setUsername(TestIds.user());
+        em.persist(u);
+        return u;
+    }
+
+    // ================================================================= create
+
+    @Test
+    @Transactional
+    public void publicIdIsMintedAtCreateAndSurvivesEveryTransition() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        String minted = i.getPublicId();
+        assertNotNull(minted, "publicId must exist from the moment of create -- message HTML cites it");
+
+        publishService.publish(i.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(1_700_000_000_000L)));
+        em.flush();
+        em.clear();
+
+        assertEquals(minted, em.find(PublicationIssue.class, i.getId()).getPublicId(),
+                "publicId changed across publish; every citation to it would break");
+    }
+
+    /**
+     * Retro-create is a category error for a series whose issues overlap.
+     *
+     * Deliberately NOT bound to I-8. It asserts one code and nothing about the
+     * overlap rule itself, so binding it here certified a rule off a test that
+     * could not fail for it. Both halves of I-8 -- the refusal on a tiling series
+     * and the exemption on an in-force one -- are asserted in AmendAndOverlapTest,
+     * which is where the binding now lives.
+     */
+    @Test
+    @Transactional
+    public void retroCreateIsRefusedForAnOverlappingSeries() {
+        PublicationSeries inForce = series(TimeRelation.IN_FORCE_AT_CUTOFF);
+        em.flush();
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> lifecycle.retroCreate(inForce, new Date(), new Date(), user()));
+        assertEquals("RETRO_CREATE_NOT_APPLICABLE", e.code());
+
+        // And it is allowed for one that tiles.
+        PublicationSeries tiling = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        em.flush();
+        PublicationIssue recovered = lifecycle.retroCreate(tiling,
+                new Date(1_690_000_000_000L), new Date(1_691_000_000_000L), user());
+        assertEquals(IntervalBoundSource.RECOVERED, recovered.getIntervalFromSource());
+        assertTrue(recovered.isCutoffReconstructed(),
+                "a recovered issue must record that its cut-off was reconstructed rather than stamped");
+    }
+
+    /**
+     * The new edition sets supersedes AND caps the predecessor in one
+     * transaction -- the multi-step alternative is where the cap gets forgotten.
+     */
+    @BindsRule({"I-13"})
+    @Test
+    @Transactional
+    public void aNewEditionLinksAndCapsInOneTransaction() {
+        PublicationSeries s = series(TimeRelation.IN_FORCE_AT_CUTOFF);
+        PublicationIssue first = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.MANUAL, user());
+        em.flush();
+        publishService.publish(first.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(1_700_000_000_000L)));
+        em.flush();
+
+        PublicationIssue predecessor = em.find(PublicationIssue.class, first.getId());
+        assertNull(predecessor.getPublicTo(), "the first edition should start open-ended");
+
+        PublicationIssue edition = lifecycle.newEdition(predecessor, new Date(1_710_000_000_000L), user());
+        em.flush();
+
+        assertNotNull(edition.getSupersedes(), "supersedes was not set");
+        assertEquals(first.getId(), edition.getSupersedes().getId());
+
+        // The number that tells the two apart. Without it the successor of a
+        // period's first edition shows nothing in the very column the action
+        // exists to fill, and a file-name pattern naming the edition renders the
+        // same name for both.
+        assertEquals("1", predecessor.getEdition(),
+                "a fresh period's issue is its first edition");
+        assertEquals("2", edition.getEdition(),
+                "a new edition counts from the one it supersedes");
+        // The predecessor stays current until the replacement is actually
+        // published: the new edition is OPEN and nobody can read it, so closing
+        // the old window now would leave the download site with no current
+        // edition at all. The cap belongs to the publish that takes over, which
+        // AmendAndOverlapTest drives end to end.
+        assertNull(em.find(PublicationIssue.class, first.getId()).getPublicTo(),
+                "an unpublished replacement must not close the edition people are still reading");
+
+        // The audit action that was previously unreachable by any API call.
+        List<IssueAuditEntry> superseded = em.createQuery(
+                        "SELECT a FROM IssueAuditEntry a WHERE a.issue.id = :id AND a.action = org.niord.core.publication.series.AuditAction.SUPERSEDED_BY",
+                        IssueAuditEntry.class)
+                .setParameter("id", first.getId()).getResultList();
+        assertEquals(1, superseded.size(), "SUPERSEDED_BY was not written");
+    }
+
+    /**
+     * One open successor per predecessor (ISSUE9).
+     *
+     * A second new edition of the same published issue, while the first is still
+     * OPEN, answers with that edition: no second "edition 2" superseding the same
+     * issue, and no second pair of trail entries.
+     */
+    @Test
+    @Transactional
+    public void aSecondNewEditionOfTheSamePublishedIssueAnswersTheOpenOne() {
+        PublicationIssue predecessor = publishedInForceIssue();
+
+        PublicationIssue edition = lifecycle.newEdition(predecessor, null, user());
+        em.flush();
+        PublicationIssue again = lifecycle.newEdition(predecessor, null, user());
+        em.flush();
+
+        assertEquals(edition.getId(), again.getId(), "a second open edition was opened beside the first");
+        assertEquals("2", again.getEdition());
+        assertEquals(1L, openSuccessors(predecessor), "more than one OPEN issue supersedes the predecessor");
+        assertEquals(1L, trailCount(predecessor, AuditAction.SUPERSEDED_BY),
+                "the repeated call wrote a second SUPERSEDED_BY");
+        assertEquals(1L, trailCount(edition, AuditAction.CREATED_NEW_EDITION),
+                "the repeated call wrote a second CREATED_NEW_EDITION");
+    }
+
+    /** Once the open edition is published, a new edition of IT can be opened: the third. */
+    @Test
+    @Transactional
+    public void aPublishedNewEditionCanItselfBeGivenANewEdition() {
+        PublicationIssue predecessor = publishedInForceIssue();
+        PublicationIssue second = lifecycle.newEdition(predecessor, null, user());
+        em.flush();
+        publish(second, new Date(1_700_000_000_000L + 86_400_000L));
+        second = em.find(PublicationIssue.class, second.getId());
+
+        PublicationIssue third = lifecycle.newEdition(second, null, user());
+        em.flush();
+
+        assertNotEquals(second.getId(), third.getId());
+        assertEquals(IssueStatus.OPEN, third.getStatus());
+        assertEquals("3", third.getEdition(), "a new edition counts from the one it supersedes");
+        assertEquals(second.getId(), third.getSupersedes().getId());
+    }
+
+    /** A predecessor whose open edition was deleted gets a fresh one: the deleted one no longer answers. */
+    @Test
+    @Transactional
+    public void aNewEditionAfterTheOpenOneWasDeletedOpensAFreshOne() {
+        PublicationIssue predecessor = publishedInForceIssue();
+        PublicationIssue edition = lifecycle.newEdition(predecessor, null, user());
+        em.flush();
+        Integer deletedId = edition.getId();
+        deleteService.delete(edition, user(), "opened by mistake");
+        em.flush();
+
+        PublicationIssue fresh = lifecycle.newEdition(predecessor, null, user());
+        em.flush();
+
+        assertNotEquals(deletedId, fresh.getId(), "the deleted edition was answered");
+        assertEquals(IssueStatus.OPEN, fresh.getStatus());
+        assertEquals("2", fresh.getEdition());
+        assertEquals(predecessor.getId(), fresh.getSupersedes().getId());
+        assertEquals(1L, openSuccessors(predecessor));
+    }
+
+    /** A published first edition of an in-force series, managed in this transaction. */
+    private PublicationIssue publishedInForceIssue() {
+        PublicationSeries s = series(TimeRelation.IN_FORCE_AT_CUTOFF);
+        PublicationIssue first = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.MANUAL, user());
+        em.flush();
+        publish(first, new Date(1_700_000_000_000L));
+        return em.find(PublicationIssue.class, first.getId());
+    }
+
+    private long openSuccessors(PublicationIssue predecessor) {
+        return em.createQuery("SELECT COUNT(i) FROM PublicationIssue i WHERE i.supersedes.id = :id "
+                        + "AND i.status = :open", Long.class)
+                .setParameter("id", predecessor.getId())
+                .setParameter("open", IssueStatus.OPEN)
+                .getSingleResult();
+    }
+
+    private long trailCount(PublicationIssue issue, AuditAction action) {
+        return em.createQuery("SELECT COUNT(a) FROM IssueAuditEntry a WHERE a.issue.id = :id "
+                        + "AND a.action = :action", Long.class)
+                .setParameter("id", issue.getId())
+                .setParameter("action", action)
+                .getSingleResult();
+    }
+
+    // ============================================================ retire / reactivate
+
+    /** Retiring leaves the file and the window in place: history, not erasure. */
+    @Test
+    @Transactional
+    public void retiringLeavesTheWindowAndFileAlone() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+        publishService.publish(i.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(1_700_000_000_000L)));
+        em.flush();
+
+        PublicationIssue published = em.find(PublicationIssue.class, i.getId());
+        Date windowFrom = published.getPublicFrom();
+        String repoPath = published.getRepoPath();
+
+        lifecycle.retire(published, user(), "superseded by an errata");
+        em.flush();
+        em.clear();
+
+        PublicationIssue retired = em.find(PublicationIssue.class, i.getId());
+        assertEquals(IssueStatus.RETIRED, retired.getStatus());
+        assertNotNull(retired.getRetiredAt());
+        assertEquals(windowFrom, retired.getPublicFrom(),
+                "retiring moved the public window; people have cited this document");
+        assertEquals(repoPath, retired.getRepoPath(), "retiring moved the file");
+
+        lifecycle.reactivate(retired, user(), "the errata was withdrawn");
+        em.flush();
+        em.clear();
+        assertEquals(IssueStatus.PUBLISHED, em.find(PublicationIssue.class, i.getId()).getStatus());
+        assertNull(em.find(PublicationIssue.class, i.getId()).getRetiredAt());
+    }
+
+    // ================================================================= delete
+
+    // Removing an issue is IssueDeleteService's, and IssueDeleteTest asserts it:
+    // what may go, what may not, what goes with it and what is left behind.
+
+    /** X-5. A series with issues is retired, never deleted. */
+    @BindsRule({"X-5"})
+    @Test
+    @Transactional
+    public void aSeriesWithIssuesCannotBeDeleted() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        lifecycle.create(s, new Date(1_699_000_000_000L), IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> lifecycle.deleteSeries(s));
+        assertEquals("SERIES_HAS_ISSUES", e.code());
+        assertTrue(e.getMessage().contains("1 issue"), "the refusal should name the count: " + e.getMessage());
+    }
+
+    /**
+     * And a series ANOTHER ONE COMPILES is refused in words, not by the database.
+     *
+     * The foreign key is RESTRICT, so the delete could not have gone through in
+     * any case -- but it would have failed inside the flush as a constraint
+     * violation naming a column, on a screen whose only other option is "retire".
+     * Reachable on a source series that has no issues yet: a weekly created this
+     * morning and already named by an annual somebody is configuring.
+     */
+    @Test
+    @Transactional
+    public void aSeriesAnotherOneCompilesCannotBeDeleted() {
+        PublicationSeries source = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationSeries annual = series(TimeRelation.COMPILED_FROM_SOURCE);
+        annual.setCriteria(null);
+        annual.setAliveAtCutoff(null);
+        annual.setSourceSeries(source);
+        em.merge(annual);
+        em.flush();
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> lifecycle.deleteSeries(source));
+        assertEquals("SERIES_IS_COMPILED", e.code());
+        assertTrue(e.getMessage().contains(annual.getSeriesId()),
+                "the refusal should name the publication that depends on this one: "
+                        + e.getMessage());
+    }
+
+    /**
+     * A series that accumulated a TRAIL can still be deleted.
+     *
+     * An audit entry owns a foreign key to the row it describes and nothing
+     * cascades it, so a series that had ever been activated, retired or moved to
+     * another domain could not be deleted at all: the delete failed inside the
+     * flush on a constraint naming a table nobody was thinking about, and the only
+     * other thing the screen offers is "retire".
+     *
+     * It went unseen because the delete is guarded on having no ISSUES, and every
+     * fixture that reached it was a series nothing had ever happened to. Both
+     * series-level events are driven here through the paths that really write
+     * them -- the status transition, and the move the transfer endpoint performs
+     * -- rather than by planting rows, so the test fails if either stops writing
+     * one.
+     */
+    @Test
+    @Transactional
+    public void aSeriesWithATrailCanStillBeDeleted() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        User actor = user();
+        em.flush();
+
+        Domain elsewhere = new Domain();
+        elsewhere.setDomainId(TestIds.id("lifecycle-transfer-"));
+        elsewhere.setName("Another desk");
+        elsewhere.setTimeZone("Europe/Copenhagen");
+        em.persist(elsewhere);
+
+        // The move, exactly as the transfer endpoint performs one: the owner
+        // changes and the trail records what moved.
+        audit.ownerTransferred(s, actor, SeriesOwnerTransfer.moveTo(s, elsewhere),
+                "moved so the delete has a trail to trip over");
+
+        // And a real retirement, which writes SERIES_RETIRED.
+        seriesService.transition(s, SeriesStatus.RETIRED,
+                "retired so the delete has a second entry to trip over", actor);
+        em.flush();
+
+        Integer seriesId = s.getId();
+        assertFalse(audit.forSeries(s).isEmpty(),
+                "the fixture wrote no series-level trail at all, so the delete below would pass "
+                        + "over nothing and this test would prove the opposite of what it claims");
+
+        lifecycle.deleteSeries(s);
+        em.flush();
+
+        assertNull(em.find(PublicationSeries.class, seriesId),
+                "the series survived its own delete");
+        assertEquals(0L, em.createQuery(
+                                "SELECT COUNT(a) FROM IssueAuditEntry a WHERE a.series.id = :id", Long.class)
+                        .setParameter("id", seriesId).getSingleResult(),
+                "the trail outlived the series it describes, pointing at a row that no longer exists");
+    }
+
+    // ================================================================= curation
+
+    @Test
+    @Transactional
+    public void curationIsRecordedNotAppliedDestructively() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        User curator = user();
+        // A real message: O-6 refuses an override naming one that does not exist,
+        // because an override that can never apply would sit in the audit trail
+        // looking like a decision nobody can act on.
+        String uid = someMessageUid();
+
+        curation.include(i, uid, curator, "belongs in this week");
+        em.flush();
+        assertEquals(1, curation.forIssue(i).size());
+
+        // A second decision on the same message replaces the first: two would be
+        // either redundant or contradictory.
+        curation.exclude(i, uid, curator, "changed my mind");
+        em.flush();
+        List<IssueOverride> after = curation.forIssue(i);
+        assertEquals(1, after.size(), "two overrides for one message were kept");
+        assertEquals(OverrideKind.EXCLUDE, after.get(0).getKind());
+    }
+
+    @BindsRule({"O-1"})
+    @Test
+    @Transactional
+    public void anOverrideMustSayWhy() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> curation.include(i, "some-uid", user(), "  "));
+        assertEquals("OVERRIDE_REASON_REQUIRED", e.code());
+    }
+
+    /** Once frozen, the member set is history. Changing it would rewrite what was published. */
+    @BindsRule({"O-3"})
+    @Test
+    @Transactional
+    public void curationIsRefusedOnceTheIssueIsFrozen() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+        publishService.publish(i.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(1_700_000_000_000L)));
+        em.flush();
+
+        PublicationIssue published = em.find(PublicationIssue.class, i.getId());
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> curation.include(published, "some-uid", user(), "too late"));
+        assertEquals("ISSUE_NOT_OPEN", e.code());
+    }
+
+    // ================================================================= checklist
+
+    /** All fifteen rail codes are emitted, every time. */
+    @Test
+    @Transactional
+    public void theRailEmitsEveryCodeItDeclares() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        PublishChecklistService.Checklist result =
+                checklist.compute(i, new Date(1_700_000_000_000L), false);
+
+        assertEquals(15, PublishChecklistService.CODES.size(), "the rail is not fifteen codes");
+        assertEquals(PublishChecklistService.CODES.size(), result.rows().size(),
+                "the rail emitted " + result.rows().size() + " rows; the UI renders and translates all "
+                        + PublishChecklistService.CODES.size());
+
+        List<String> emitted = result.rows().stream().map(PublishChecklistService.CheckRow::code).toList();
+        assertEquals(PublishChecklistService.CODES, emitted, "the rail rows are out of order or incomplete");
+    }
+
+    /**
+     * FILE_PRESENT_PER_LANGUAGE does not apply to generated content.
+     *
+     * Gating publish on a file that publish itself writes would mean no
+     * query-backed issue could ever be published at all.
+     */
+    @Test
+    @Transactional
+    public void theFileCheckDoesNotGateTheFileItselfProduces() {
+        PublicationSeries generated = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(generated, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        PublishChecklistService.CheckRow row =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows().stream()
+                        .filter(r -> r.code().equals("FILE_PRESENT_PER_LANGUAGE"))
+                        .findFirst().orElseThrow();
+
+        assertTrue(row.passed(),
+                "a query-backed issue was blocked for lacking the file that publishing generates; no such "
+                        + "issue could ever be published");
+        assertFalse(row.applicable(),
+                "the file check does not apply to generated content, and a row reported as an ordinary "
+                        + "pass is counted as one -- every tally drawn from the rail then claims an answer "
+                        + "about a condition this issue cannot be in");
+    }
+
+    /**
+     * And it DOES apply where the bytes are a precondition.
+     *
+     * The pair is the whole point: "does not apply" is a property of the series,
+     * not a way of describing a check that is merely satisfied. An uploaded issue
+     * with no bytes fails this row, so the row has to be counted for it.
+     */
+    @Test
+    @Transactional
+    public void theFileCheckAppliesToUploadedContent() {
+        PublicationSeries uploaded = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        uploaded.setContentMode(ContentMode.UPLOADED_FILE);
+        em.merge(uploaded);
+        PublicationIssue i = lifecycle.create(uploaded, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        PublishChecklistService.CheckRow row =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows().stream()
+                        .filter(r -> r.code().equals("FILE_PRESENT_PER_LANGUAGE"))
+                        .findFirst().orElseThrow();
+
+        assertTrue(row.applicable(), "an uploaded issue's bytes are a precondition; the row applies");
+        assertFalse(row.passed(), "an uploaded issue with no bytes must still be blocked");
+    }
+
+    /**
+     * The reference-format row does not apply to a series nobody can cite.
+     *
+     * The flagship weekly IS citable and the row blocks it until every language
+     * carries a format, so the two halves are asserted together -- an
+     * "inapplicable" that also swallowed the citable case would read identically
+     * on the fixture and hide the block.
+     */
+    @Test
+    @Transactional
+    public void thereferenceFormatRowAppliesOnlyToACitableSeries() {
+        PublicationSeries notCitable = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue plain = lifecycle.create(notCitable, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        PublishChecklistService.CheckRow row = rowOf(plain, "REFERENCE_FORMAT_COMPLETE");
+        assertFalse(row.applicable(), "the series carries MessagePublication.NONE; nothing can cite it");
+        assertTrue(row.passed(), "an inapplicable row must stay a passing one -- the publish gate reads passed");
+
+        PublicationSeries citable = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        citable.setMessagePublication(MessagePublication.EXTERNAL);
+        em.merge(citable);
+        PublicationIssue cited = lifecycle.create(citable, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        PublishChecklistService.CheckRow citableRow = rowOf(cited, "REFERENCE_FORMAT_COMPLETE");
+        assertTrue(citableRow.applicable(), "a citable series must be asked for its reference formats");
+        assertFalse(citableRow.passed(), "no language carries a format, so the row must block");
+    }
+
+    /**
+     * An issue with no member list is not asked about its members.
+     *
+     * The five membership rows are computed from a resolution, and a series whose
+     * content is a file somebody uploaded has none to compute: no query, no
+     * curation, nothing to resolve. Answering them anyway put "0 members" in
+     * front of an admin as an outstanding warning on every uploaded and
+     * link-backed issue -- one nobody can clear, because there is no query to run
+     * and no curation to fix.
+     */
+    @Test
+    @Transactional
+    public void anIssueWithNoMemberListIsNotAskedAboutItsMembers() {
+        PublicationSeries uploaded = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        uploaded.setContentMode(ContentMode.UPLOADED_FILE);
+        em.merge(uploaded);
+        PublicationIssue i = lifecycle.create(uploaded, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        List<PublishChecklistService.CheckRow> rows =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows();
+
+        for (String code : List.of("MEMBERS_RESOLVED", "MEMBER_LIMIT", "NO_INEFFECTIVE_OVERRIDES",
+                "CANCELLED_MEMBERS_ALIVE_AT_CUTOFF", "OVERLAPPING_ISSUE")) {
+            PublishChecklistService.CheckRow row = rows.stream()
+                    .filter(r -> r.code().equals(code)).findFirst().orElseThrow();
+            assertFalse(row.applicable(),
+                    code + " was answered for an issue that resolves no member list");
+        }
+
+        // The acknowledgement travels whether or not the row applies: the gate
+        // compares that code, and a row that dropped it would be a refusal the
+        // publish dialog has no control for.
+        PublishChecklistService.CheckRow acknowledgeable = rows.stream()
+                .filter(r -> r.code().equals("CANCELLED_MEMBERS_ALIVE_AT_CUTOFF"))
+                .findFirst().orElseThrow();
+        assertTrue(acknowledgeable.acknowledgeable());
+        assertEquals("CANCELLED_BUT_DATE_ALIVE", acknowledgeable.acknowledgeCode());
+
+        // What is left is what this issue is actually being asked: is it open, are
+        // the bytes there, is the instant sane.
+        assertEquals(List.of("ISSUE_OPEN", "FILE_PRESENT_PER_LANGUAGE", "CUTOFF_NOT_FUTURE"),
+                rows.stream().filter(PublishChecklistService.CheckRow::applicable)
+                        .map(PublishChecklistService.CheckRow::code).toList(),
+                "the rows an uploaded issue answers are not the ones expected");
+    }
+
+    /**
+     * And one curated message is a member list.
+     *
+     * Overrides constitute membership on their own -- the annexes hold two live
+     * messages a year with each issue naming one of them -- so the same series
+     * that answers nothing about members before the curation must answer for all
+     * of it afterwards. The pair is what stops "does not apply" from being read
+     * as "this kind of series never has members".
+     */
+    @Test
+    @Transactional
+    public void oneCuratedMessageIsAMemberList() {
+        PublicationSeries uploaded = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        uploaded.setContentMode(ContentMode.UPLOADED_FILE);
+        em.merge(uploaded);
+        PublicationIssue i = lifecycle.create(uploaded, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        curation.include(i, someMessageUid(), user(), "the issue names this message");
+        em.flush();
+
+        List<PublishChecklistService.CheckRow> rows =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows();
+
+        for (String code : List.of("MEMBERS_RESOLVED", "MEMBER_LIMIT", "NO_INEFFECTIVE_OVERRIDES",
+                "CANCELLED_MEMBERS_ALIVE_AT_CUTOFF", "OVERLAPPING_ISSUE")) {
+            PublishChecklistService.CheckRow row = rows.stream()
+                    .filter(r -> r.code().equals(code)).findFirst().orElseThrow();
+            assertTrue(row.applicable(),
+                    code + " went unanswered on an issue whose membership is its curation");
+        }
+
+        assertEquals("1 members", rows.stream()
+                        .filter(r -> r.code().equals("MEMBERS_RESOLVED"))
+                        .findFirst().orElseThrow().detail(),
+                "the curated member was not counted");
+    }
+
+    /**
+     * Which rows the fixture issue is actually answering.
+     *
+     * Named as a set rather than counted, because a count agrees with itself
+     * whichever five rows dropped out: a first issue of a generated, non-citable
+     * series has no neighbour to bracket, no chain to join, no file to
+     * pre-exist and nobody to cite it -- and it compiles nothing, so the source
+     * coverage row has no sources to be short of either. The rest are the
+     * answers, and every one of the fifteen is still emitted.
+     *
+     * It is also the guard that the query-backed case is UNCHANGED: this series
+     * resolves a member list, so all five membership rows are among them.
+     */
+    @Test
+    @Transactional
+    public void theRailSaysWhichRowsThisIssueCanEvenFail() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        List<PublishChecklistService.CheckRow> rows =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows();
+
+        assertEquals(PublishChecklistService.CODES.size(), rows.size(),
+                "every code ships every time, applicable or not -- a client that renders only what it "
+                        + "received cannot tell a passed check from an absent one");
+
+        List<String> inapplicable = rows.stream()
+                .filter(r -> !r.applicable())
+                .map(PublishChecklistService.CheckRow::code).toList();
+        assertEquals(List.of("INTERVAL_CHAINED", "FILE_PRESENT_PER_LANGUAGE",
+                        "REFERENCE_FORMAT_COMPLETE", "CUTOFF_AFTER_PREVIOUS", "CUTOFF_BEFORE_SUCCESSOR",
+                        "SOURCE_ISSUES_COMPLETE"),
+                inapplicable,
+                "the rows this issue cannot be in are not the ones expected");
+
+        assertEquals(PublishChecklistService.CODES.size() - inapplicable.size(),
+                rows.stream().filter(PublishChecklistService.CheckRow::applicable).count(),
+                "applicable and inapplicable must partition the rail");
+    }
+
+    /**
+     * A COMPILATION answers three of the rows differently, and only three.
+     *
+     * Each of the three is a question decided somewhere other than this release,
+     * and answering it here would be answering it twice: the member ceiling
+     * guards against a query nobody bounded, and seven of the nine accumulated
+     * years in the estate hold more than a thousand rows that were each published
+     * one week at a time; the liveness re-judgement was made at every source
+     * issue's own cut-off, and re-making it in December would drop what February
+     * rightly printed; and the source coverage is the only question a compilation
+     * has that nothing else does.
+     *
+     * Everything else applies to it exactly as it does to any other tiling,
+     * rendering series -- which is the point of making the regime a time relation
+     * rather than a content mode.
+     */
+    @Test
+    @Transactional
+    public void therailAnswersACompilationOnItsOwnThreeRows() {
+        PublicationSeries source = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationSeries s = compilation(source);
+
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        List<PublishChecklistService.CheckRow> rows =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows();
+        assertEquals(PublishChecklistService.CODES.size(), rows.size());
+
+        PublishChecklistService.CheckRow limit = rowOf(rows, "MEMBER_LIMIT");
+        assertFalse(limit.applicable(),
+                "the member ceiling was applied to a compilation; seven of the nine accumulated "
+                        + "years hold more than a thousand members, so it would refuse exactly the "
+                        + "releases the regime exists for");
+        assertTrue(limit.passed(), "no inapplicable BLOCK row may fail");
+        assertEquals("NOT_APPLICABLE.BOUNDED_BY_SOURCES", limit.detailCode());
+
+        PublishChecklistService.CheckRow alive = rowOf(rows, "CANCELLED_MEMBERS_ALIVE_AT_CUTOFF");
+        assertFalse(alive.applicable(),
+                "liveness was re-judged at the compilation's cut-off; a notice cancelled in March "
+                        + "would be reported as a problem with the year that published it in February");
+        assertEquals("NOT_APPLICABLE.JUDGED_AT_SOURCE", alive.detailCode());
+        assertEquals("CANCELLED_BUT_DATE_ALIVE", alive.acknowledgeCode(),
+                "the row dropped its acknowledgement code when it stopped applying; the dialog "
+                        + "renders a control for the code the row names");
+
+        PublishChecklistService.CheckRow sources = rowOf(rows, "SOURCE_ISSUES_COMPLETE");
+        assertTrue(sources.applicable(), "a compilation was not asked whether its period is covered");
+        assertEquals(PublishChecklistService.Severity.WARN, sources.severity());
+        assertEquals("SOURCE_ISSUES_INCOMPLETE", sources.acknowledgeCode());
+        assertTrue(sources.passed(),
+                "a period the source series has no open or uncovered week in reported as "
+                        + "incomplete: " + sources.detail());
+
+        for (String applies : List.of("MEMBERS_RESOLVED", "NO_INEFFECTIVE_OVERRIDES",
+                "OVERLAPPING_ISSUE", "REPORT_CONFIGURED", "INTERVAL_PRESENT")) {
+            assertTrue(rowOf(rows, applies).applicable(),
+                    applies + " stopped applying to a compilation; it tiles and it renders, exactly "
+                            + "as any other interval series does");
+        }
+    }
+
+    /** An OPEN source issue inside the period is what the fifteenth row warns about. */
+    @Test
+    @Transactional
+    public void thesourceCoverageRowReportsAWeekThatIsStillOpen() {
+        PublicationSeries source = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationSeries s = compilation(source);
+
+        PublicationIssue week = lifecycle.create(source, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        week.setIntervalTo(new Date(1_699_500_000_000L));
+        week.setWeek(51);
+        week.setYear(2023);
+        em.merge(week);
+
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        PublishChecklistService.CheckRow row = rowOf(
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows(),
+                "SOURCE_ISSUES_COMPLETE");
+
+        assertFalse(row.passed(),
+                "the year was reported complete while a week of it is still open; an annual "
+                        + "released in early January would go out short of December without a word");
+        assertEquals("SOURCE_ISSUES_COMPLETE.incomplete", row.detailCode());
+        assertEquals(Integer.valueOf(1), row.detailParams().get("openCount"));
+        assertEquals(List.of("51/2023"), row.detailParams().get("openWeeks"),
+                "the open week is not named by the numbering the admin knows it by");
+    }
+
+    /** The row this issue can be in, or a failure that names the whole rail. */
+    private static PublishChecklistService.CheckRow rowOf(
+            List<PublishChecklistService.CheckRow> rows, String code) {
+        return rows.stream().filter(r -> r.code().equals(code)).findFirst()
+                .orElseThrow(() -> new AssertionError("the rail emitted no " + code + " row: "
+                        + rows.stream().map(PublishChecklistService.CheckRow::code).toList()));
+    }
+
+    /**
+     * A compilation over one source series.
+     *
+     * Its own category and its own owner, like every other fixture here, so two
+     * cases in this file cannot collide on a seriesId.
+     */
+    private PublicationSeries compilation(PublicationSeries source) {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        s.setCadence(SeriesCadence.YEARLY);
+        s.setTimeRelation(TimeRelation.COMPILED_FROM_SOURCE);
+        // Neither of these belongs on a compilation: it runs no query and judges
+        // no liveness, and S-24 refuses both.
+        s.setCriteria(null);
+        s.setAliveAtCutoff(null);
+        s.setSourceSeries(source);
+        em.merge(s);
+        return s;
+    }
+
+    /**
+     * No inapplicable row can refuse a publish.
+     *
+     * The invariant that makes this field safe to add: the gate refuses on BLOCK
+     * rows that did not pass, so as long as no BLOCK row is inapplicable AND
+     * failing, everything reading `passed` is untouched. A row that both blocks
+     * and does not apply would be a refusal nobody counted and nobody could act
+     * on. The WARN rows are free to say the resolver never ran, because a warning
+     * describes the release rather than refusing it.
+     */
+    @Test
+    @Transactional
+    public void noInapplicableRowCanRefuseAPublish() {
+        List<PublicationIssue> shapes = new ArrayList<>();
+
+        PublicationSeries generated = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        shapes.add(lifecycle.create(generated, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user()));
+
+        PublicationSeries uploaded = series(TimeRelation.IN_FORCE_AT_CUTOFF);
+        uploaded.setContentMode(ContentMode.UPLOADED_FILE);
+        em.merge(uploaded);
+        shapes.add(lifecycle.create(uploaded, new Date(1_699_000_000_000L),
+                IntervalBoundSource.MANUAL, user()));
+
+        PublicationSeries linked = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        linked.setContentMode(ContentMode.EXTERNAL_LINK);
+        linked.setMessagePublication(MessagePublication.EXTERNAL);
+        em.merge(linked);
+        shapes.add(lifecycle.create(linked, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user()));
+        em.flush();
+
+        for (PublicationIssue issue : shapes) {
+            for (boolean allowFuture : List.of(false, true)) {
+                List<String> contradictory =
+                        checklist.compute(issue, new Date(1_700_000_000_000L), allowFuture).rows()
+                                .stream()
+                                .filter(r -> !r.applicable() && !r.passed()
+                                        && r.severity() == PublishChecklistService.Severity.BLOCK)
+                                .map(PublishChecklistService.CheckRow::code).toList();
+                assertTrue(contradictory.isEmpty(),
+                        "these rows do not apply and yet refuse the publish: " + contradictory);
+            }
+        }
+    }
+
+    /**
+     * The two rows that presume tiling do not apply to an in-force series.
+     *
+     * INTERVAL_CHAINED asks whether this issue's period opens exactly where the
+     * previous one closed, and OVERLAPPING_ISSUE asks whether two issues print the
+     * same message. Both are questions about issues that TILE. An in-force series
+     * answers "what is in force at this instant", so consecutive editions share
+     * every message that stayed in force across both of them, and an in-force
+     * issue has no lower bound to chain off at all.
+     *
+     * So both rows were failing permanently on every in-force issue in the estate
+     * -- the open P&T edition showed two standing warnings, and no action an admin
+     * could take would ever clear either of them. A warning that cannot be cleared
+     * teaches the reader to ignore the ones that can.
+     */
+    @Test
+    @Transactional
+    public void theTilingRowsDoNotApplyToAnInForceSeries() {
+        PublicationSeries inForce = series(TimeRelation.IN_FORCE_AT_CUTOFF);
+        PublicationIssue first = lifecycle.create(inForce, new Date(1_699_000_000_000L),
+                IntervalBoundSource.MANUAL, user());
+        em.flush();
+        // A published predecessor, so the rows have a neighbour to be wrong about:
+        // without one they would drop out as NO_PREDECESSOR and the case would
+        // pass for the wrong reason.
+        publish(first, new Date(1_699_500_000_000L));
+        PublicationIssue second = lifecycle.create(inForce, new Date(1_699_600_000_000L),
+                IntervalBoundSource.MANUAL, user());
+        em.flush();
+
+        for (String code : List.of("INTERVAL_CHAINED", "OVERLAPPING_ISSUE")) {
+            PublishChecklistService.CheckRow row = rowOf(second, code);
+            assertFalse(row.applicable(),
+                    code + " still answers for an in-force series, whose issues do not tile -- so it "
+                            + "reports a permanent warning nothing can clear");
+            assertTrue(row.passed(),
+                    code + " does not apply and yet reports a failure; an inapplicable row must stay "
+                            + "a passing one, because that is what everything reading the rail counts");
+            assertEquals("NOT_APPLICABLE.IN_FORCE_SERIES", row.detailCode(),
+                    code + " does not say WHY it does not apply, so the reader deciding whether to "
+                            + "release is shown a row with no answer and no reason");
+        }
+    }
+
+    /**
+     * And they still answer for a series whose issues DO tile.
+     *
+     * The pair is what stops "does not apply" from being read as "this check was
+     * removed": a tiling series with a published predecessor must be asked both
+     * questions, and INTERVAL_CHAINED must be able to fail.
+     */
+    @Test
+    @Transactional
+    public void theTilingRowsStillAnswerForAnIntervalSeries() {
+        PublicationSeries tiling = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue first = lifecycle.create(tiling, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+        publish(first, new Date(1_699_500_000_000L));
+        PublicationIssue second = lifecycle.create(tiling, new Date(1_699_600_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        for (String code : List.of("INTERVAL_CHAINED", "OVERLAPPING_ISSUE")) {
+            PublishChecklistService.CheckRow row = rowOf(second, code);
+            assertTrue(row.applicable(),
+                    code + " stopped answering for a series whose issues tile, which is the only "
+                            + "kind of series it was ever about");
+            assertNotEquals("NOT_APPLICABLE.IN_FORCE_SERIES", row.detailCode(),
+                    code + " reported a tiling series as in-force");
+        }
+    }
+
+    /**
+     * And a series with NO time relation is not an in-force one.
+     *
+     * Every uploaded, link-backed and one-off series carries a null time relation:
+     * only a series that selects its content by query has one, and S-1 refuses to
+     * save a value on any other kind. So deciding the two tiling rows by "this is
+     * not an interval series" would sweep the whole document estate in and tell an
+     * admin their PDF series carries what is in force -- a reason that is not
+     * merely imprecise but untrue, and the kind a reader cannot argue with because
+     * it names a property of the series.
+     *
+     * The overlap row keeps the answer it already had -- no member list to overlap
+     * with at all. The chain row has none to give such a series either, before or
+     * after a predecessor exists, because its issues carry no lower bound; it steps
+     * aside with the reason that fits the kind.
+     */
+    @Test
+    @Transactional
+    public void aSeriesWithNoTimeRelationIsNotReportedAsInForce() {
+        PublicationSeries uploaded = uploadedSeries();
+        PublicationIssue first = lifecycle.create(uploaded, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        assertEquals("NOT_APPLICABLE.NOT_QUERY_BACKED", rowOf(first, "INTERVAL_CHAINED").detailCode(),
+                "the first issue of an uploaded series was told its chain does not apply because the "
+                        + "series is in force, which is not what the series is");
+        assertEquals("NOT_APPLICABLE.NO_MEMBERSHIP", rowOf(first, "OVERLAPPING_ISSUE").detailCode(),
+                "an uploaded issue resolves no member list, and THAT -- not a time relation it does "
+                        + "not carry -- is why the overlap row cannot answer");
+
+        // And once there is a predecessor the chain row still cannot answer: only
+        // a series whose issues tile is given a lower bound at all -- the shaping
+        // strips one from every other kind, and the requested open below is dropped
+        // on the way in -- so a row that compared it would warn on every issue
+        // after the first, for ever. It steps aside with the reason that fits an
+        // uploaded series, not the in-force one.
+        for (PublicationIssueDesc d : first.getDescs()) {
+            d.setFilePath("publications/test/" + d.getLang() + ".pdf");
+        }
+        publish(first, new Date(1_699_500_000_000L));
+        PublicationIssue second = lifecycle.create(uploaded,
+                new Date(first.getCutoffStampedAt().getTime()), IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        assertNull(second.getIntervalFrom(),
+                "an issue of a series that does not tile was given a lower bound; the resolver would "
+                        + "then ask for messages published inside a window this publication has none of");
+        PublishChecklistService.CheckRow chained = rowOf(second, "INTERVAL_CHAINED");
+        assertFalse(chained.applicable(),
+                "the chain row asked an uploaded issue to open where its predecessor closed, which no "
+                        + "issue of a series that does not tile can ever do");
+        assertTrue(chained.passed(), "a row that does not apply must not stand as a warning");
+        assertEquals("NOT_APPLICABLE.NOT_QUERY_BACKED", chained.detailCode(),
+                "the chain row gave an uploaded series the in-force reason, which is not what it is");
+        assertEquals("NOT_APPLICABLE.NO_MEMBERSHIP", rowOf(second, "OVERLAPPING_ISSUE").detailCode(),
+                "the overlap row changed its reason once the series had two issues");
+    }
+
+    /**
+     * A series whose document is a file somebody uploads.
+     *
+     * It carries none of the query-backed fields -- no time relation, no criteria,
+     * no liveness filter, no report -- because S-1 and S-2 refuse a save that sets
+     * any of them on a series that selects nothing by query. A fixture that left
+     * them set would describe a state the system cannot be in, and would hide
+     * exactly the case this covers.
+     */
+    private PublicationSeries uploadedSeries() {
+        PublicationSeries s = series(null);
+        s.setContentMode(ContentMode.UPLOADED_FILE);
+        s.setTimeRelation(null);
+        s.setCriteria(null);
+        s.setAliveAtCutoff(null);
+        s.setReportId(null);
+        em.merge(s);
+        return s;
+    }
+
+    /** A published predecessor, so a bracket row has a neighbour to answer about. */
+    private void publish(PublicationIssue issue, Date cutoff) {
+        publishService.publish(issue.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, cutoff));
+        em.flush();
+    }
+
+    /** One row of the rail, for the tests that ask about a single check. */
+    private PublishChecklistService.CheckRow rowOf(PublicationIssue issue, String code) {
+        return checklist.compute(issue, new Date(1_700_000_000_000L), false).rows().stream()
+                .filter(r -> r.code().equals(code))
+                .findFirst().orElseThrow();
+    }
+
+    /**
+     * A link-backed issue is blocked until it HAS a link.
+     *
+     * The check was written for "content that must already exist" and its own
+     * comment says it covers uploaded and link-backed alike -- but it tested
+     * UPLOADED_FILE only, so an EXTERNAL_LINK issue could be published with
+     * nothing behind it. The visible result is a live publication on the public
+     * site whose link goes nowhere, which nothing downstream can detect.
+     */
+    @Test
+    @Transactional
+    public void alinkBackedIssueIsBlockedUntilItHasALink() {
+        PublicationSeries linked = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        linked.setContentMode(ContentMode.EXTERNAL_LINK);
+        em.merge(linked);
+        PublicationIssue i = lifecycle.create(linked, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        PublishChecklistService.CheckRow row =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows().stream()
+                        .filter(r -> r.code().equals("FILE_PRESENT_PER_LANGUAGE"))
+                        .findFirst().orElseThrow();
+
+        assertFalse(row.passed(),
+                "an external-link issue with no link passed the content check, so it can be "
+                        + "published pointing at nothing");
+    }
+
+    /** And passes once the link is there. */
+    @Test
+    @Transactional
+    public void alinkBackedIssuePassesOnceTheLinkIsSet() {
+        PublicationSeries linked = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        linked.setContentMode(ContentMode.EXTERNAL_LINK);
+        em.merge(linked);
+        PublicationIssue i = lifecycle.create(linked, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        // The lifecycle already made the per-language desc; setting the link on a
+        // fresh one would leave the real desc linkless and the name NOT NULL.
+        i.getDescs().forEach(d -> d.setLink("https://example.invalid/publication.pdf"));
+        em.flush();
+
+        PublishChecklistService.CheckRow row =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows().stream()
+                        .filter(r -> r.code().equals("FILE_PRESENT_PER_LANGUAGE"))
+                        .findFirst().orElseThrow();
+
+        assertTrue(row.passed(),
+                "a link-backed issue with a link in every language was still blocked");
+        assertTrue(row.applicable(),
+                "the link check applies to a link-backed issue whether or not it currently holds; a pass "
+                        + "is an answer, and only a check that could not have run is not one");
+    }
+
+    /**
+     * No checklist row puts a raw Java date on the screen.
+     *
+     * These details are read by an admin deciding whether to publish. Concatenating
+     * a Date rendered java.util.Date.toString() -- "Wed Aug 26 15:44:25 UTC 2026",
+     * in the SERVER JVM zone -- and java.sql.Timestamp.toString() for the stamped
+     * ones, "2026-07-29 10:16:08.0". The second is merely unreadable; the first
+     * states a timezone that is not the one the cut-off means, and a Copenhagen
+     * cut-off shown as UTC is two hours wrong to the person acting on it.
+     *
+     * Asserted as a pattern rather than against one row, because the leak was in
+     * four rows and the next one added would have leaked too.
+     */
+    @Test
+    @Transactional
+    public void nochecklistRowRendersARawJavaDate() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        List<String> leaked = checklist.compute(i, new Date(1_700_000_000_000L), false)
+                .rows().stream()
+                .map(PublishChecklistService.CheckRow::detail)
+                .filter(d -> d != null)
+                // java.util.Date.toString(), and java.sql.Timestamp.toString().
+                .filter(d -> d.matches(".*[A-Z][a-z]{2} [A-Z][a-z]{2} \\d{2} .*")
+                        || d.matches(".*\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d.*"))
+                .toList();
+
+        assertTrue(leaked.isEmpty(),
+                "these rows put an unformatted Java date in front of an admin: " + leaked);
+    }
+
+    /** And the cut-off row names the zone it is stating, so nobody has to guess. */
+    @Test
+    @Transactional
+    public void thecutoffRowNamesItsTimezone() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        String detail = checklist.compute(i, new Date(1_700_000_000_000L), false)
+                .rows().stream()
+                .filter(r -> r.code().equals("CUTOFF_NOT_FUTURE"))
+                .findFirst().orElseThrow().detail();
+
+        assertTrue(detail.contains("("),
+                "the cut-off is stated without saying which zone it is in: " + detail);
+    }
+
+    /** The one acknowledgeable row is the one an exclusions panel cannot show. */
+    @Test
+    @Transactional
+    public void exactlyOneRailRowIsAcknowledgeable() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(1_699_000_000_000L),
+                IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        List<PublishChecklistService.CheckRow> acknowledgeable =
+                checklist.compute(i, new Date(1_700_000_000_000L), false).rows().stream()
+                        .filter(PublishChecklistService.CheckRow::acknowledgeable).toList();
+
+        assertEquals(1, acknowledgeable.size(), "expected exactly one acknowledgeable row");
+        assertEquals("CANCELLED_MEMBERS_ALIVE_AT_CUTOFF", acknowledgeable.get(0).code());
+    }
+
+    /** A future cut-off blocks unless it was explicitly allowed. */
+    @Test
+    @Transactional
+    public void aFutureCutoffBlocksUnlessAllowed() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL);
+        PublicationIssue i = lifecycle.create(s, new Date(), IntervalBoundSource.STAMPED, user());
+        em.flush();
+
+        Date future = new Date(System.currentTimeMillis() + 86_400_000L);
+        assertTrue(checklist.compute(i, future, false).blockingCodes().contains("CUTOFF_NOT_FUTURE"));
+        assertFalse(checklist.compute(i, future, true).blockingCodes().contains("CUTOFF_NOT_FUTURE"));
+
+        // And an allowed future cut-off is a check that was waived rather than
+        // one that held: reported as a pass, counted by nobody.
+        PublishChecklistService.CheckRow waived =
+                checklist.compute(i, future, true).rows().stream()
+                        .filter(r -> r.code().equals("CUTOFF_NOT_FUTURE"))
+                        .findFirst().orElseThrow();
+        assertFalse(waived.applicable(), "a waived check must not be counted as one the issue passed");
+        assertTrue(waived.passed());
+    }
+
+}

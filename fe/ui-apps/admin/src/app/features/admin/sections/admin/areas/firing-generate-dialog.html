@@ -1,0 +1,56 @@
+<app-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [header]="'admin.areas.firing.title' | transloco"
+  [style]="{ width: '28rem' }"
+>
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <label for="firing-series" class="text-sm font-medium text-fg-title">
+        {{ 'admin.areas.firing.series' | transloco }}
+        <span class="text-danger" aria-hidden="true">*</span>
+      </label>
+      <select
+        id="firing-series"
+        class="text-input"
+        [value]="seriesId()"
+        (change)="seriesId.set($any($event.target).value)"
+      >
+        @for (id of seriesIds(); track id) {
+          <option [value]="id">{{ id }}</option>
+        }
+      </select>
+      @if (seriesIds().length === 0) {
+        <span class="text-xs text-fg-muted">
+          {{ 'admin.areas.firing.noSeries' | transloco }}
+        </span>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <span class="text-sm font-medium text-fg-title">
+        {{ 'admin.areas.firing.tag' | transloco }}
+      </span>
+      <app-single-tag-field
+        [value]="tagId()"
+        (valueChange)="tagId.set($event)"
+        [placeholder]="'admin.areas.firing.tag' | transloco"
+        [ariaLabel]="'admin.areas.firing.tag' | transloco"
+      />
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button" class="btn-tertiary" (click)="visible.set(false)">
+        {{ 'admin.areas.firing.cancel' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        [disabled]="generateDisabled()"
+        (click)="generate()"
+      >
+        {{ 'admin.areas.firing.generate' | transloco }}
+      </button>
+    </div>
+  </div>
+</app-dialog>
