@@ -5,7 +5,7 @@
  * stages what the builds ship and generates the Angular workspace in this folder.
  *
  *   node setup.mjs                          # run from the country repository's fe/
- *   NIORD_BASE=../../niord-ng/fe node setup.mjs   # a base product checkout instead (never in CI)
+ *   NIORD_BASE=../../niord/fe node setup.mjs      # a base product checkout instead (never in CI)
  *
  * This file is written by the kit's `init` and is never edited: the kit compares it with its own
  * copy and refuses a changed one. A change to it in the base product is a breaking change,
