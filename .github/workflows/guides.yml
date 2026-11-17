@@ -13,21 +13,15 @@ name: Guides
 # ---------------------------------------------------------------------------------------------
 # Which pull requests
 # ---------------------------------------------------------------------------------------------
-# Only pull requests into main that touch guides/, the help map, the country kit's guides (the
-# paths below, be/docs/country-api.md among them) or this file, and only once they
-# are ready for review — the reasons are in be-ci.yml: Actions minutes are billed, sub-PRs into a
-# `feature/**` branch run no CI, and a push to a draft starts a run whose job skips itself, which
-# costs nothing; `ready_for_review` starts the real run. A re-run is never skipped as a draft
-# (`github.run_attempt > 1`, see fe-ci.yml). Plus workflow_dispatch, to build any branch by hand.
+# Every pull request, into any branch, drafts too (the reasons are in be-ci.yml), that touches
+# guides/, the help map, the country kit's guides (the paths below, be/docs/country-api.md among
+# them) or this file. Plus workflow_dispatch, to build any branch by hand.
 #
 # Unlike the other workflows, `pull_request` is path-filtered at the trigger: this check is not
 # one branch protection requires, so a pull request that never reports it waits for nothing.
 # guides/ is outside be/ and fe/, so a guides-only change runs no Backend CI and no Frontend CI.
 on:
   pull_request:
-    branches: [ main ]
-    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
-    types: [ opened, synchronize, reopened, ready_for_review ]
     paths:
       - 'guides/**'
       - '.github/workflows/guides.yml'
@@ -53,7 +47,6 @@ permissions:
 jobs:
   build:
     name: Build the guides
-    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

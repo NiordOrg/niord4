@@ -332,7 +332,7 @@ two meet.
   scripts, the paths guard and the guard tests. Each gate job is the only name branch protection
   needs, so jobs can be added, merged or re-sharded without touching it — but never name one
   `Unit tests`, the backend's required check, which matches a job of that name in any workflow. A
-  gate is skipped (which counts as passing) on a draft and when its application is untouched.
+  gate is skipped (which counts as passing) when its application is untouched.
 - Review with the `niord-review` skill; the checklist is [docs/definition-of-done.md](docs/definition-of-done.md),
   which names the gates of each application. The rest of it is written for the administration app:
   for a change to the public site, [ui-apps/info/AGENTS.md](ui-apps/info/AGENTS.md) wins wherever the

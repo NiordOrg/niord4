@@ -91,18 +91,14 @@ their own `.github/` directory along, and those copies are inert wherever they s
 | [`.github/workflows/publish.yml`](.github/workflows/publish.yml) | after Backend CI, Frontend CI or Info CI completes for a push to `main` (the zip carries the public site, so a merge confined to it publishes too); a labelled break-glass run by hand, from `main` only, by a maintainer ([`.github/maintainers`](.github/maintainers)) | publishes with a publish-only token of the `main`-only `publish` environment, never in a job that runs npm, `4.0.<run>`: `niord-parent`, `niord-base`, `niord-bootstrap` (the base product's bootstrap archive), the administration app's bundle (`niord-web-admin`, the generic build under the classifier `en`), the image tools (`niord-image-tools`), `niord-local-run` (the files a country's launcher takes for a local run: the launcher library, `bootstrap.sh`, `load-sample.sh` with the sample, the compose file and the local realm; built by `be/scripts/local-run-zip.sh`, never an image input), `niord-fe-src` (the base product's frontend sources, a zip a country builds from, checked against its include list and the country-word guard first) and `niord-country-kit` (the country kit: set-up, the guides, the templates and the backend contract `country-api.md`, built by `source-zip.mjs --package kit` and checked by its include list, the import-closure check and the country-word guard) to the GitHub Packages registry of `NiordOrg/niord` (the product's public home; this repository's own registry up to 4.0.54), the app image `niord/niord-app-en` (its third-party jars in a layer that is the same bytes on every publish, so Harbor stores it once — `docs/image-split-plan.md`; `niord-app-dk` and `-gl` are built by the country repositories from the same packages) and the Helm chart to Harbor, the `v4.0.<run>` tag, and after it a GitHub release on that tag with two sha256 lines in its notes, one for each zip, beside a sentence naming the version's Maven packages, and both zips attached (Frontend CI's upgrade test reads the source zip); before anything is deployed or pushed it checks that no jar or image input carries the sample (`be/niord/sample/`; `niord-local-run` is its one carrier, for a local run) |
 | [`.github/workflows/retract-version.yml`](.github/workflows/retract-version.yml) | by hand, from `main`, by a maintainer | removes one published `4.0.<run>` from GitHub Packages (`niord-local-run` and `niord-country-kit` among them), the release with its two zips and the tag, and lists the Harbor artifacts to delete by hand; deletes with a delete-only token of the `main`-only `retract` environment. A country pinned to the version keeps building from Maven's cache and its unpacked base (the hash still matches), so it is told to bump |
 
-Actions minutes are billed (the SIFA-DK organisation's plan has 2,000 a month, shared by all its
-repositories), so CI runs only where it decides something:
+The repository is public, so its Actions minutes cost nothing:
 
-- **Pull requests into `main`**, and pushes to `main`, run the full CI. Sub-PRs into a long-lived
-  `feature/**` branch run none: the session that opens one runs [`./verify-local`](verify-local) and
-  puts its summary in the PR (see [AGENTS.md](AGENTS.md)). A PR retargeted from a `feature/**`
-  branch to `main` starts its first run on its next push (or close and reopen it).
-- **A draft runs nothing.** Its jobs skip themselves; marking the PR ready for review starts the run.
-  A re-run is never skipped as a draft: it does the real work.
+- **Every pull request**, into `main` or a `feature/**` branch, drafts included, and every push to
+  `main` run the full CI. A PR retargeted to another base runs against it at its next push (or
+  close and reopen it). [`./verify-local`](verify-local) runs the same parts locally.
 - **A newer push to a pull request cancels the run in flight.** Runs on `main` are never cancelled:
   `publish.yml` needs every main commit's CI to conclude.
-- **Few, full jobs.** GitHub bills every job rounded up to a whole minute, so each workflow has one
+- **Few, full jobs.** Every job pays its own set-up (the checkout, `npm ci`, Maven's cache), so each workflow has one
   detection job, as few work jobs as its parallel parts need (Backend CI two, the unit and the
   integration tests; Frontend CI three, the Example country among them; Info CI one) and, in the two
   frontend workflows, a gate.
@@ -128,8 +124,7 @@ The checks branch protection will require are **`Frontend gate`**, **`Info gate`
 **`Unit tests`**. Each gate is green only when every other job of its workflow succeeded, so jobs can
 be added, merged or re-sharded without touching branch protection. A job skipped by its condition
 reports "skipped", which branch protection counts as passing: that is how a gate, and `Unit tests`,
-answer for a PR that does not touch their part, and for a draft — which GitHub does not merge; the
-ready-for-review run replaces those results on the same commit, so merge on its gate. `Unit tests`
+answer for a PR that does not touch their part. `Unit tests`
 runs anyway when change detection fails. A required check matches a check run by its name in any
 workflow, so no other job may be named `Unit tests` (the administration app's is `Admin unit
 tests`). The Playwright suite is not part of CI — it needs a live backend and Keycloak, which every

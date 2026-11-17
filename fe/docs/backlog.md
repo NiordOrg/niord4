@@ -57,15 +57,10 @@ no new data after the backup, and stands.
 ### The repository and the backend settings
 
 - **Branch protection on `main`.** No rule protects `main` yet: the `Frontend gate` job (`fe-ci.yml`), the
-  `Info gate` job (`info-ci.yml`) and the backend unit-test job (`be-ci.yml`) report on every pull request into
-  `main`, but a red one blocks nothing, so all three are advisory. The repository becomes public before production,
-  which makes rulesets available to it; from then on a ruleset on `main` requires those three checks. Each of them
-  is skipped on a draft and when the PR does not touch its part, and a skipped check counts as passing. When the
-  ruleset is switched on, test two cases. Mark a draft ready and check whether the merge box waits for the new
-  run's gates or already accepts the draft run's skipped ones; if it accepts them, the gates must fail on a draft
-  instead of skipping (one runner minute per workflow and push). Then, on a commit whose ready run's gate is red,
-  re-run the draft run of that commit. A re-run reuses its draft flag, so the workflows do the real work on any
-  re-run (`github.run_attempt > 1`) rather than skip: its gates must report that work, never a skip.
+  `Info gate` job (`info-ci.yml`) and the backend unit-test job (`be-ci.yml`) report on every pull request,
+  but a red one blocks nothing, so all three are advisory. The repository is public since 2026-11-17, which makes
+  rulesets available to it; a ruleset on `main` is to require those three checks. Each of them is skipped when the
+  PR does not touch its part, and a skipped check counts as passing.
   The same ruleset requires review for changes under `.github/` (with a `CODEOWNERS` entry naming the
   maintainers): until then whoever may write `main` may also edit `.github/maintainers` or the two release
   workflows in the same push, so who may retract or break-glass is in effect who may write `main`, and write

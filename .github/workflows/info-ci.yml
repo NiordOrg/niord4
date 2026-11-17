@@ -41,12 +41,12 @@ name: Info CI
 # ---------------------------------------------------------------------------------------------
 # Which pull requests, why `pull_request` is not path-filtered, and why there is a gate job
 # ---------------------------------------------------------------------------------------------
-# Identical reasoning to be-ci.yml and fe-ci.yml: only pull requests into main, and a draft runs
-# nothing until it is marked ready for review. A workflow a `paths:` filter skips never reports its
+# Identical reasoning to be-ci.yml and fe-ci.yml: every pull request, into any branch, drafts too.
+# A workflow a `paths:` filter skips never reports its
 # checks, so a required check would sit at "Expected — waiting for status to be reported" forever.
 # The filter lives in the `changes` job, the work jobs carry a job-level `if:`, and the gate is the
-# only name branch protection needs. The gate skips itself — "skipped" counts as passing — on a
-# draft and when detection found the public site untouched, so a PR that does not reach the site
+# only name branch protection needs. The gate skips itself — "skipped" counts as passing — when
+# detection found the public site untouched, so a PR that does not reach the site
 # costs this workflow its detection job alone; fe-ci.yml explains what that skip means.
 # `push` is path-filtered the cheap way, at the trigger.
 #
@@ -79,9 +79,6 @@ name: Info CI
 # here for `push`, in `Detect` for pull requests, and in ./verify-local for a local branch.
 on:
   pull_request:
-    branches: [ main ]
-    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
-    types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches: [ main ]
     paths:
@@ -128,8 +125,8 @@ on:
       - '.github/workflows/info-ci.yml'
   workflow_dispatch:
 
-# A newer push to the same pull request cancels its in-flight run, so superseded builds are not
-# paid for. Push and dispatch runs get a group of their own (their run id) and are never cancelled
+# A newer push to the same pull request cancels its in-flight run, so a superseded build holds no
+# runner. Push and dispatch runs get a group of their own (their run id) and are never cancelled
 # or replaced (see be-ci.yml).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -146,13 +143,9 @@ jobs:
   # ---------------------------------------------------------------------------
   # Does this change touch the public site at all? See the trigger comment above
   # for why this is a job rather than a `paths:` filter on `pull_request`.
-  # Skipped on a draft's first attempt, and with it every job below (a re-run
-  # reuses the draft flag of the run it repeats, and must not skip again: see
-  # fe-ci.yml).
   # ---------------------------------------------------------------------------
   changes:
     name: Detect public-site changes
-    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -290,14 +283,13 @@ jobs:
   # The status check for branch protection to require. Runs also when a work job
   # failed or change detection did not succeed, and is green only if detection
   # succeeded and every work job succeeded. Skipped — which counts as passing,
-  # see fe-ci.yml — on a draft's first attempt and when detection found the
-  # public site untouched.
+  # see fe-ci.yml — when detection found the public site untouched.
   # ---------------------------------------------------------------------------
   gate:
     name: Info gate
     needs: [ changes, checks ]
     if: >-
-      ${{ always() && (!github.event.pull_request.draft || github.run_attempt > 1)
+      ${{ always()
       && !(needs.changes.result == 'success' && needs.changes.outputs.info != 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
