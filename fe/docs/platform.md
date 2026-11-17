@@ -589,15 +589,14 @@ fixtures' `test` during which the browser refuses something (a spec that imports
 ### Workflows
 
 Two GitHub Actions workflows, one per application, both at the **repository root** — GitHub reads
-workflows nowhere else, so every job that runs npm sets `working-directory: fe`. Each runs on pull
-requests into `main` once they are ready for review, and on pushes to `main` that touch its inputs.
-A draft runs nothing (its jobs skip themselves), and a pull request into a `feature/**` branch runs
-no CI: `./verify-local` at the repository root runs the same steps locally (the example country's
-image when Docker runs; the root `AGENTS.md` has the rule). A newer
+workflows nowhere else, so every job that runs npm sets `working-directory: fe`. Each runs on every
+pull request, drafts and pull requests into a `feature/**` branch included, and on pushes to `main`
+that touch its inputs. `./verify-local` at the repository root runs the same steps locally (the
+example country's image when Docker runs; the root `AGENTS.md` has the rule). A newer
 push to a pull request cancels the run in flight; runs on `main` are never cancelled.
 
-GitHub bills every job rounded up to a whole minute, and every job pays its own checkout and
-`npm ci`, so each workflow keeps its work in two jobs. Within a job every step runs even when an
+Every job pays its own checkout and `npm ci`, so each workflow keeps its work in as few jobs as its
+parallel parts need. Within a job every step runs even when an
 earlier one failed, so one red check never hides another.
 
 **`.github/workflows/fe-ci.yml`**, the administration app:
@@ -616,8 +615,8 @@ earlier one failed, so one red check never hides another.
   then its public-site image packaged from that build with the container test, the layout check and
   the separation check against the image; the `npm ci` is the harness's, in its work copy).
 - **Frontend gate** is green only when every work job detection asked for succeeded. It runs whenever there is something
-  to judge — also when a work job or the detection failed — and is skipped on a draft and when
-  the administration app is untouched; a skipped check counts as passing.
+  to judge — also when a work job or the detection failed — and is skipped when detection found
+  neither the administration app nor the example country to run; a skipped check counts as passing.
 
 **`.github/workflows/info-ci.yml`**, the public site:
 

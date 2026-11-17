@@ -8,8 +8,8 @@ suite) and `niord-app/` (the generic English deployable). The Danish and Greenla
 and shares nothing with the others except through `niord` ([docs/cicd/design.md](docs/cicd/design.md)
 §2.1). Repository-wide rules are in the [root AGENTS.md](../AGENTS.md).
 
-Spring is permanent. The application was ported from Quarkus and the Quarkus reactor stayed behind in the
-archived `kaspernielsen/niord-port` repository; Spring-specific code and Spring-specific tests are correct,
+Spring is permanent. The application was ported from Quarkus, and the Quarkus reactor is not in this
+repository; Spring-specific code and Spring-specific tests are correct,
 not a compromise. `MIGRATION.md` records the port's intent and is stale where it says Jersey, JTA or MySQL.
 
 ## Stack, in one line each

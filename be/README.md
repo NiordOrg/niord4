@@ -293,8 +293,8 @@ executed at all.
 ### CI
 
 [`.github/workflows/be-ci.yml`](../.github/workflows/be-ci.yml) (at the **repository root** —
-GitHub does not read workflows from subdirectories) runs automatically on every pull request into
-`main` that is ready for review, and on every push to `main` that touches `be/**`:
+GitHub does not read workflows from subdirectories) runs automatically on every pull request, drafts
+and pull requests into a `feature/**` branch included, and on every push to `main` that touches `be/**`:
 
 | Job | Runs | Typical |
 |---|---|---|
@@ -302,10 +302,12 @@ GitHub does not read workflows from subdirectories) runs automatically on every 
 | Unit tests | `./mvnw verify -DskipITs` | ~2 min |
 | Integration tests | `./test-it` | ~7 min |
 
-The test jobs skip themselves when the PR does not touch `be/**` (and on a draft); a skipped
-`Unit tests` reports "skipped", which branch protection counts as passing, so a frontend-only PR
-costs the detection job alone. When detection fails, `Unit tests` runs anyway. Pull requests into a
-`feature/**` branch run no CI: verify them with `./verify-local` at the repository root, which runs
+The test jobs skip themselves when the PR does not touch `be/**`; a skipped
+`Unit tests` reports "skipped", which the ruleset on `main` counts as passing, so a frontend-only PR
+costs the detection job alone. When detection fails, `Unit tests` runs anyway. The ruleset on `main`
+requires `Unit tests` (beside the frontend's `Frontend gate` and `Info gate`) before a pull request
+merges; `Integration tests` is not required for the merge, but a red run of it on `main` stops the
+publish of that commit. `./verify-local` at the repository root runs the same parts locally:
 `./mvnw clean verify` over this reactor and the same integration-test report check (see the root
 `AGENTS.md`). CI runs `./mvnw`, not the runner's preinstalled Maven, so it uses the same pinned
 Maven version you do, and it runs the *same* `./test-it` you run locally, so the "did the ITs
@@ -313,5 +315,5 @@ really run" check cannot drift between the two.
 
 See **[MIGRATION.md](MIGRATION.md)** for the staged port roadmap and current state, and
 [`docs/cicd/design.md`](docs/cicd/design.md) for the repository/CI layout — one shared version
-per merge, and the per-country repositories, split out since 2026-10-06 (backends) and the country
-split's P5 and P6 (frontends).
+per merge, and the per-country repositories, which hold a country's backend since 2026-10-06 and its
+frontend since the country split.
