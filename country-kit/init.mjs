@@ -18,9 +18,9 @@
  * JSON --answers takes, so a refused run can be repeated from a file.
  *
  * The version is the kit package's, from its marker (kit.json): init writes the version of the
- * kit it runs from, and a --version that disagrees is refused. Only in niord-ng's tree, whose kit
- * names no version, is --version given, and needed. No be/pom.xml is needed first; one that
- * exists is kept and must name that version as its parent's.
+ * kit it runs from, and a --version that disagrees is refused. Only in the base product's tree,
+ * whose kit names no version, is --version given, and needed. No be/pom.xml is needed first; one
+ * that exists is kept and must name that version as its parent's.
  *
  * Before init the repository holds the release's two packages in .niord/ (the source zip may lie
  * in fe/.niord/ instead, as the older guide fetches it) and the kit package unzipped into
@@ -149,7 +149,7 @@ export function zipSource(entries) {
   return (relative) => files.get(relative);
 }
 
-/** The same over a folder holding the base product's fe/ (niord-ng's own, in the tests). */
+/** The same over a folder holding the base product's fe/ (this repository's own, in the tests). */
 export function folderSource(dir) {
   return (relative) => {
     const file = path.join(dir, ...relative.split('/'));
@@ -243,8 +243,8 @@ export function skeleton({ cc, version, sha256, kitSha256, source, kit = KIT }) 
 
 /**
  * The version init writes, of the kit folder `kit` and the --version given: the kit package's,
- * from its marker, where a --version that differs is refused; in niord-ng's tree, whose kit names
- * none, the --version, which is then needed.
+ * from its marker, where a --version that differs is refused; in the base product's tree, whose
+ * kit names none, the --version, which is then needed.
  */
 export function kitVersion({ kit = KIT, version } = {}) {
   const layout = where(kit);
@@ -257,7 +257,7 @@ export function kitVersion({ kit = KIT, version } = {}) {
     chosen = layout.version;
   } else if (version === undefined)
     throw new Error(
-      `the kit at ${layout.kit} is niord-ng's tree, which names no version: give --version <v>`,
+      `the kit at ${layout.kit} is the base product's tree, which names no version: give --version <v>`,
     );
   if (!VERSION.test(chosen))
     throw new Error(
@@ -719,7 +719,7 @@ export function init({
 }
 
 const USAGE =
-  "(init [<cc>] [--answers <file>] --sha256-file <file> | --zip-sha256 <fe-sha256> --kit-sha256 <kit-sha256> [--version <v>, niord-ng's tree only])";
+  "(init [<cc>] [--answers <file>] --sha256-file <file> | --zip-sha256 <fe-sha256> --kit-sha256 <kit-sha256> [--version <v>, the base product's tree only])";
 const VALUE_FLAGS = {
   '--answers': 'answersFile',
   '--sha256-file': 'sha256File',

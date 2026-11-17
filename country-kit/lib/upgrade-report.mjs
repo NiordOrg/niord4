@@ -46,8 +46,8 @@ const KIT_PREFIX = 'country-kit/';
 const CHANGES = 'country-kit/API-CHANGES.md';
 /**
  * The kit's stub template, relative to the country's fe/: what a country copies when the stub
- * changed. A set-up from niord-ng's checkout copies the kit into ../.niord/kit/ as the kit package
- * unpacks, so it is there in every layout.
+ * changed. A set-up from a base product checkout copies the kit into ../.niord/kit/ as the kit
+ * package unpacks, so it is there in every layout.
  */
 export const STUB_TEMPLATE = '../.niord/kit/templates/setup.mjs';
 /** The pins of the foreign packs, relative to the country's fe/. */

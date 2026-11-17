@@ -71,10 +71,10 @@ describe('the build report', () => {
   });
 
   it('keeps a local source first', () => {
-    const made = report({ provenance: 'local: /x/niord-ng/fe @ abc', kitSha256: KIT });
+    const made = report({ provenance: 'local: /x/niord/fe @ abc', kitSha256: KIT });
     assert.equal(
       made.provenance,
-      `local: /x/niord-ng/fe @ abc; org.niord:niord-country-kit:4.0.1:zip sha256:${KIT}`,
+      `local: /x/niord/fe @ abc; org.niord:niord-country-kit:4.0.1:zip sha256:${KIT}`,
     );
     assert.equal(isLocal(made), true);
   });

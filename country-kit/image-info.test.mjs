@@ -104,7 +104,7 @@ function countryWorkspace({ report = 'pinned', legal = true, branding = true, ex
         base: { version: '4.0.7', sha256: 'ab'.repeat(32) },
         provenance:
           report === 'local'
-            ? 'local: ../niord-ng/fe @ 0123abc'
+            ? 'local: ../niord/fe @ 0123abc'
             : 'pinned: org.niord.web:niord-fe-src:4.0.7:zip',
         country: { code: 'xx', name: 'Example country' },
         ...extra,
@@ -925,7 +925,7 @@ describe('image:info in a country workspace', () => {
         fe,
         kit,
         run,
-        env: { CI: 'true', [name]: '../niord-ng/fe' },
+        env: { CI: 'true', [name]: '../niord/fe' },
       });
       assert.equal(code, 1, output);
       assert.match(output, new RegExp(`${name} is set while CI is`));

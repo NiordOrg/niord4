@@ -271,7 +271,7 @@ describe('source-zip', () => {
 });
 
 describe('the kit beside fe/', () => {
-  /** The fixture tree with a kit at its root, as niord-ng's tree holds it. */
+  /** The fixture tree with a kit at its root, as the base product's tree holds it. */
   const withKit = (edit) =>
     tree((files) => {
       files['country-kit/pack.mjs'] = 'export {};\n';
@@ -662,7 +662,7 @@ describe('the kit package, org.niord:niord-country-kit', () => {
   it('reports a shipped script whose import leaves the package or names a file it leaves out', () => {
     assert.deepEqual(
       kitClosureProblems([
-        // From country-kit/lib/ in niord-ng's tree, fe/scripts/glob.mjs of the base product.
+        // From country-kit/lib/ in the base product's tree, its fe/scripts/glob.mjs.
         entry('lib/x.mjs', "import { globToRegExp } from '../../fe/scripts/glob.mjs';\n"),
         entry('lib/y.mjs', "import { a } from './missing.mjs';\nimport { b } from './x.mjs';\n"),
         entry('lib/local-sources.mjs', "import { gitFiles } from '../source-zip.mjs';\n"),

@@ -4,8 +4,8 @@
  *
  *   npm run test:guards      # from fe/
  *
- * The real kit is niord-ng's tree; the other layouts are temporary folders, since where() only
- * works out paths and never reads more than the marker.
+ * The real kit is the base product's tree; the other layouts are temporary folders, since where()
+ * only works out paths and never reads more than the marker.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -52,7 +52,7 @@ function marked(relative, text) {
 }
 
 describe('where', () => {
-  it("resolves the real kit to niord-ng's tree, which has no marker", () => {
+  it("resolves the real kit to the base product's tree, which has no marker", () => {
     assert.ok(!fs.existsSync(path.join(KIT, MARKER)), `country-kit/${MARKER} exists`);
     assert.deepEqual(where(), {
       kind: 'source',
@@ -66,7 +66,7 @@ describe('where', () => {
     assert.deepEqual(where(KIT), where());
   });
 
-  it("resolves a country-kit folder beside fe/ as niord-ng's tree", () => {
+  it("resolves a country-kit folder beside fe/ as the base product's tree", () => {
     const { tmp, made } = folder('repo/country-kit');
     assert.deepEqual(where(made), {
       kind: 'source',
@@ -141,7 +141,7 @@ describe('where', () => {
         () => where(made),
         (error) =>
           error.message.startsWith(`the kit at ${made} is in no layout it knows: `) &&
-          error.message.includes("niord-ng's tree, <repo>/country-kit beside <repo>/fe") &&
+          error.message.includes("the base product's tree, <repo>/country-kit beside <repo>/fe") &&
           error.message.includes('the kit package, <root>/.niord/kit with kit.json') &&
           !error.message.includes("a country's unpacked base product"),
         relative,
@@ -151,7 +151,7 @@ describe('where', () => {
 });
 
 describe('baseLayout', () => {
-  it("knows niord-ng's fe/ and a country's .niord/base/", () => {
+  it("knows the base product's fe/ and a country's .niord/base/", () => {
     const source = folder('repo/fe');
     assert.deepEqual(baseLayout(source.made), {
       kind: 'source',
@@ -177,7 +177,7 @@ describe('baseLayout', () => {
         () => baseLayout(made),
         (error) =>
           error.message.startsWith(`${made} is not where the kit finds the base product: `) &&
-          error.message.includes("niord-ng's tree, <repo>/country-kit beside <repo>/fe") &&
+          error.message.includes("the base product's tree, <repo>/country-kit beside <repo>/fe") &&
           error.message.includes('the kit package, <root>/.niord/kit with kit.json'),
         relative,
       );
@@ -190,7 +190,7 @@ describe('the backend files the kit package carries', () => {
   const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   /** A file's text with its CRLFs read as LF. */
   const lf = (bytes) => bytes.toString('latin1').replaceAll('\r\n', '\n');
-  /** The file of a row in niord-ng's be/. */
+  /** The file of a row in the base product's be/. */
   const fromBe = (be, { from }) => path.join(be, ...from.split('/'));
   /** Writes each row's file into `dir` at `relative(row)` with the bytes `bytes(row)`. */
   const write = (dir, relative, bytes) => {
@@ -201,7 +201,7 @@ describe('the backend files the kit package carries', () => {
     }
   };
 
-  it("names the six files, each in niord-ng's be/, and only the shell wrapper executable", () => {
+  it("names the six files, each in the base product's be/, and only the shell wrapper executable", () => {
     assert.deepEqual(
       Object.values(KIT_BACKEND).map(({ entry }) => entry),
       [
@@ -261,7 +261,7 @@ describe('the backend files the kit package carries', () => {
     assert.throws(() => withLineEnds(mixed, 'cr'), /"cr" is not a line end/);
   });
 
-  it("resolves the files in niord-ng's be/, with the package's line ends", () => {
+  it("resolves the files in the base product's be/, with the package's line ends", () => {
     for (const [key, row] of Object.entries(KIT_BACKEND))
       assert.equal(kitBackendFile(key), fromBe(BE, row), key);
     const cmd = kitBackendBytes('mvnwCmd');

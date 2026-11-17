@@ -3,7 +3,7 @@
  * backend's be/. The kit never takes its parent folder to be the base product; it asks this
  * module, which knows two layouts and refuses any other:
  *
- *   source    niord-ng's tree: the kit is <repo>/country-kit, beside the base product and
+ *   source    the base product's tree: the kit is <repo>/country-kit, beside the base product and
  *             workspace <repo>/fe and the backend <repo>/be
  *   package   the kit package: the kit is <root>/.niord/kit with its marker, kit.json; the base
  *             product is <root>/fe/.niord/base, the workspace <root>/fe, the backend <root>/be
@@ -15,8 +15,8 @@
  *
  * It also names the backend files the kit package carries for init (KIT_BACKEND: the Maven
  * wrapper, the base settings file and its catalog, the PDF logo) and resolves them in both
- * layouts, the package's `<kit>/backend/…` and niord-ng's be/, with the package's line ends, so
- * init writes the same bytes from either.
+ * layouts, the package's `<kit>/backend/…` and the base product's be/, with the package's line
+ * ends, so init writes the same bytes from either.
  *
  * Node built-ins only, and nothing else of the kit, so every kit file can import it.
  */
@@ -32,7 +32,7 @@ export const KIT_PACKAGE = 'niord-country-kit';
 const VERSION = /^[0-9A-Za-z][0-9A-Za-z.+_-]*$/;
 const DEFAULT_KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LAYOUTS =
-  "niord-ng's tree, <repo>/country-kit beside <repo>/fe; the kit package, <root>/.niord/kit with kit.json";
+  "the base product's tree, <repo>/country-kit beside <repo>/fe; the kit package, <root>/.niord/kit with kit.json";
 
 /** The marker's bytes for a kit package of `version`: one JSON line. */
 export function markerText(version) {
@@ -41,9 +41,10 @@ export function markerText(version) {
 
 /**
  * The backend files the kit package carries for init, by key: `entry` is the name in the package,
- * `from` the path in niord-ng's be/ (with `/`) the build copies it from, `eol` the line ends the
- * package holds it with ('lf', 'crlf', or null for the bytes as they are), and `executable` true
- * when init writes it with mode 0755 (the package holds every entry as 0644, lib/zip.mjs).
+ * `from` the path in the base product's be/ (with `/`) the build copies it from, `eol` the line
+ * ends the package holds it with ('lf', 'crlf', or null for the bytes as they are), and
+ * `executable` true when init writes it with mode 0755 (the package holds every entry as 0644,
+ * lib/zip.mjs).
  */
 export const KIT_BACKEND = Object.freeze({
   mvnw: Object.freeze({ entry: 'backend/mvnw', from: 'mvnw', eol: 'lf', executable: true }),
@@ -118,8 +119,9 @@ function readBackend(file, entry) {
 }
 
 /**
- * The kit package's backend entries of niord-ng's backend folder `be`, `{ name, data }` in the
- * order of KIT_BACKEND, each with its line ends. A missing file throws, naming it and its entry.
+ * The kit package's backend entries of the base product's backend folder `be`, `{ name, data }`
+ * in the order of KIT_BACKEND, each with its line ends. A missing file throws, naming it and its
+ * entry.
  */
 export function backendEntries(be) {
   return Object.values(KIT_BACKEND).map(({ entry, from, eol }) => ({
@@ -130,7 +132,8 @@ export function backendEntries(be) {
 
 /**
  * The file of the backend file `key` (a key of KIT_BACKEND) for the kit folder `kit` (this kit
- * when none is given): `<kit>/<entry>` in the kit package, `<be>/<from>` in niord-ng's tree.
+ * when none is given): `<kit>/<entry>` in the kit package, `<be>/<from>` in the base product's
+ * tree.
  */
 export function kitBackendFile(key, kit) {
   const { entry, from } = backendRow(key);
@@ -149,7 +152,7 @@ export function kitBackendBytes(key, kit) {
   return withLineEnds(readBackend(kitBackendFile(key, kit), entry), eol);
 }
 
-/** True when `base` is niord-ng's own fe/: a folder named fe, not inside a .niord folder. */
+/** True when `base` is the base product's own fe/: a folder named fe, not in a .niord folder. */
 function isSourceBase(base) {
   return path.basename(base) === 'fe' && path.basename(path.dirname(base)) !== '.niord';
 }
@@ -160,9 +163,9 @@ function isCountryBase(base) {
 }
 
 /**
- * True when `kit` is niord-ng's own kit: a folder named country-kit, not inside a .niord folder,
- * whose parent is not named fe. That is the kit's place before it moved beside fe/, refused so a
- * stale copy there is never taken for the tree.
+ * True when `kit` is the base product's own kit: a folder named country-kit, not inside a .niord
+ * folder, whose parent is not named fe. That is the kit's place before it moved beside fe/, refused
+ * so a stale copy there is never taken for the tree.
  */
 function isSourceKit(kit) {
   return (
@@ -174,8 +177,9 @@ function isSourceKit(kit) {
 
 /**
  * The layout around the base product's fe/ folder `base`: `{ kind, base, workspace, root, be }`,
- * kind `source` (niord-ng's tree, where base is also the workspace) or `country` (a country's
- * `<workspace>/.niord/base`). Throws on any other folder, naming it and the layouts known.
+ * kind `source` (the base product's tree, where base is also the workspace) or `country` (a
+ * country's `<workspace>/.niord/base`). Throws on any other folder, naming it and the layouts
+ * known.
  */
 export function baseLayout(base) {
   const resolved = path.resolve(base);
