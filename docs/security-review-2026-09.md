@@ -330,16 +330,16 @@ go:
 
 1. Keycloak on 26.8.2: the shared Keycloak's pin (`devops-shared`) and the chart's, with its mirror in
    Harbor (F-X114). Done on 2026-11-12: the chart and the local compose file on 26.8.2
-   (published as 4.0.161), the image mirrored in Harbor, the shared Keycloak on 26.8.2 (devops-shared
-   !113), and the parked production values on 26.8.2 (devops-niord !56, on the owner's request). From
+   (published as 4.0.161), the image mirrored in Harbor, the shared Keycloak on 26.8.2 (devops-shared),
+   and the parked production values on 26.8.2 (devops-niord, on the owner's request). From
    26.8.2 the Admin REST API refuses a token without the client scope `kc-admin-api`, and the
    backend's admin calls carry the signed-in user's `niord-web` token: the realms the chart, the
    local run and the tests import now give `niord-web` that scope, and the owner gave it to
    `niord-web` in `niord-dk` and `niord-gl` by hand after the upgrade (devops-shared,
-   `runbooks/keycloak.md`, Upgrades). Both stagings run base 4.0.162 since devops-niord !57, and
+   `runbooks/keycloak.md`, Upgrades). Both stagings run base 4.0.162 (devops-niord), and
    the owner checked them the same day. Watching Keycloak's security releases stays open.
 2. The proxy on a maintained nginx line (F-X116). Done the same day: nginx 1.30.6, the stable line,
-   on Alpine 3.24, mirrored in Harbor, and the proxy of both stagings since devops-niord !57.
+   on Alpine 3.24, mirrored in Harbor, and the proxy of both stagings since their move to base 4.0.162.
    1.30 ends when 1.32 comes out, expected in April 2027. The public site's Alpine 3.22 base is
    maintained until 2027-05-01 and stays for now.
 3. A chart value that renders the production realm without the test users (F-X92).
@@ -351,7 +351,7 @@ go:
    The plan is [database-user-plan.md](database-user-plan.md), decided and built on the same day: the
    chart makes the user, and the first changeset builds as one (published as 4.0.162). Done on
    both stagings the same day: they connect as `niord_app`, a user that owns its database and is not
-   a superuser, since devops-niord !59 (the sealed Secrets) and !58 (the values). The owner checked
+   a superuser, since two merges in devops-niord (the sealed Secrets and the values). The owner checked
    them: every session on each database is that user's, the app reads and saves, and the Postgres
    pods were not restarted. Production's values name both Secrets when they are written.
 6. The read of the running realms and of the stagings' settings, from the jump server (F-X70, F-X72,
@@ -382,8 +382,8 @@ entry point and https, its realm and its admins, its Secrets, and its values.
 asked for the recheck again from the latest commits. The chart went to Keycloak 26.8.2 and nginx 1.30.6
 (base 4.0.161). The application got a database user of its own (base 4.0.162;
 [database-user-plan.md](database-user-plan.md)). Both stagings took base 4.0.162 and then a second
-sealed Secret for that user (devops-niord !57, !59, !58), and the shared Keycloak's pin went to 26.8.2
-(devops-shared !113).
+sealed Secret for that user (devops-niord), and the shared Keycloak's pin went to 26.8.2
+(devops-shared).
 
 **What it was held against.** `main` at its latest commit; the published chart 4.0.162, pulled from Harbor,
 whose templates, values and realm file are `main`'s; `devops-niord` and `devops-shared` at theirs.

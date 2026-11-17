@@ -784,13 +784,13 @@ both stacks: the volume's `repo/` held `temp/` only, no `messages/` and no `publ
 links in message texts: none). The text below this paragraph expected the volumes to keep the trees of the
 databases before the new ones of 2026-11-05 (`devops-niord/runbooks/fresh-database.md`); they did not. So:
 
-- **DK** followed the runbook to its step 4: `devops-niord` !46 (the release with `app.replicaCount: 0`), the
-  copy `niord_before_r2`, !48 (the start). The import was then left out, since it had nothing to read; its
+- **DK** followed the runbook to its step 4: in `devops-niord` the release with `app.replicaCount: 0`, the
+  copy `niord_before_r2`, then the start. The import was then left out, since it had nothing to read; its
   only output would have been the check from the rows' side, which the counts above had made. The copy was
   checked against the stopped database with `pg_dump | grep -vE '^\\(un)?restrict ' | md5sum`: PostgreSQL 18's
   `pg_dump` writes a random `\restrict` key into every plain dump, so two raw dumps of the same database never
   hash alike. The owner dropped the copy the same day, once the cutover was done.
-- **GL** moved by a plain release, !47: no `replicaCount: 0`, no copy, no import.
+- **GL** moved by a plain release: no `replicaCount: 0`, no copy, no import.
 
 The owner left out the runbook's smoke list (an upload, its thumbnail and its download); the store's write and
 read paths are covered by the R1 integration tests, and nothing was moved. What the volumes keep of the old
@@ -1212,7 +1212,7 @@ same standard area). Upload thumbnails: 0.1 MB of copies. This is what decided D
   /rest/repo/list/{folder}` was said to have dropped sub-folders, but main's listing filtered to regular files
   too, so `directory` was always false before as well; nothing changed.
 - 2026-11-10, R1 merged into `main` and released as 4.0.146. R2's runbook written in `devops-niord`
-  (`runbooks/repo-files-cutover.md`, merge request !45), with the README's note that the first move to 4.0.146
+  (`runbooks/repo-files-cutover.md`), with the README's note that the first move to 4.0.146
   is not a pin change alone and the comment of `envs/_template/values.yaml`. The owner: R2 does not wait for R0's
   measurements ("no need to take measurements"); the runbook reads what R2 needs on the day. The runbook
   simplifies §4.8 in three places: the stop and the release are one merge request; the rollback point is a copy
@@ -1224,9 +1224,9 @@ same standard area). Upload thumbnails: 0.1 MB of copies. This is what decided D
   staging to `niord-app-dk`/`-gl:4.0.147.9`. The check before the window showed that neither volume held a
   `messages/` or `publications/` tree and neither database referred to a file, contrary to R2's expectation
   that the volumes kept the trees from before the new databases of 2026-11-05. DK ran the runbook's stop, copy
-  and start (`devops-niord` !46, !48) and left out the import; GL moved by a plain release (!47). The owner
+  and start (in `devops-niord`) and left out the import; GL moved by a plain release. The owner
   left out the smoke list. No import rate was measured, so §11 has none and R4 says production's import is
-  sized on its own tree. DK's copy `niord_before_r2` was kept as `devops-niord` open issue 11 and dropped by
+  sized on its own tree. DK's copy `niord_before_r2` was kept as an open issue in `devops-niord` and dropped by
   the owner the same day; the issue is deleted. The status line, R2, R4 and §11 follow.
 - 2026-11-10, R4 done, at the owner's go ("update the docs"): `be/docs/cicd/design.md` §6 (the hotel is a
   separate project and more than values; the superuser premise is gone), §6's monitoring list, §9 (the dump
