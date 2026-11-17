@@ -45,6 +45,13 @@ The nested files own everything specific to a half. This file holds only what is
   pull request, where a full local run beforehand (`./verify-local`) only repeats what CI does
   (backend ~7 min locally, ~10 min on CI). Commit as often as useful but push when the work is done:
   every push to a PR restarts its CI and cancels the run in flight.
+- **This repository is public.** No file, commit message or pull request (its title, body and comments)
+  names the earlier private repository this product was developed in, its address, or a pull request,
+  commit or branch of it: where the fact is needed, write "the earlier private repository" and no name.
+  None holds an internal host name, a person's e-mail address, a password or token, or figures taken
+  from real data, and none carries a link to an agent's session: an agent's commit ends with its
+  `Co-Authored-By:` line and nothing after it. Text from before 2026-11-17 still breaks this in places;
+  it leaves in later changes and is no precedent.
 - **Production is touched only on request.** Do not start work on the production environments, prepare
   it, or suggest starting it — the prod values, secrets, cluster, promote and the host questions that
   gate them (`be/docs/cicd/`, step C of the order of work) — unless the owner asks for exactly that.
@@ -57,6 +64,14 @@ The nested files own everything specific to a half. This file holds only what is
   builds on (its extension points, the protected list, the override check) is
   [`be/docs/country-api.md`](be/docs/country-api.md); the frontend's (the seams, the country API, the set-up from
   the kit package and the source zip) is [`country-kit/README.md`](country-kit/README.md), the kit at the repository root beside `fe/`.
+- **The change record is asleep until production** (the owner's ruling of 2026-11-17). Until the first
+  production deployment, or the first country not maintained by the base product's own developers,
+  whichever comes first: a country's bump is merged when its CI is green, the boxes of the bump comment
+  are information, and `country-kit/API-CHANGES.md` gets an entry only when the base product's upgrade
+  test (part of the required `Frontend gate`) demands one. Two things do not sleep: that upgrade test;
+  and a country's pack holds a value for every new English text, as a draft listed unaccepted, while an
+  accepted translation is never rewritten in a bump. One deliberate pull request, decided by the owner,
+  wakes the record. The kit's README gets the full description in a later change.
 - **`fe/shared-map/portrayal/`** (the portrayal definition and its symbols) is also read by the backend's map-image
   renderer: Maven copies it into niord-base. A change there runs Backend CI and is measured in both applications and
   in the server-made map images.
