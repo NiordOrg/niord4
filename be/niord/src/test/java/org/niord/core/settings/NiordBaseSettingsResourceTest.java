@@ -53,7 +53,7 @@ class NiordBaseSettingsResourceTest {
 
     @Test
     void theGenericSettingsDeclareTheTestMode() {
-        // The owner's ruling of 2026-11-04 (decision 146): a fresh database starts in test mode and shows the
+        // The owner's ruling of 2026-11-04: a fresh database starts in test mode and shows the
         // ribbon; a production deployment sets mode=production by environment (NiordApp says why).
         assertEquals("test", baseValues().get("mode"), "the base file sets the mode");
         SettingsCatalog.Entry mode = catalog().get("mode");

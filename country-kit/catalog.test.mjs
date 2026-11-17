@@ -175,7 +175,7 @@ describe('catalog', () => {
     });
   });
 
-  it('reads the backend from defaults/base/texts/en/, where the backend keeps its English since #179', () => {
+  it('reads the backend from defaults/base/texts/en/, where the backend keeps its English', () => {
     const moved = buildCatalog(
       tree((files) => {
         for (const bundle of BUNDLES) {

@@ -253,7 +253,7 @@ class SettingsServiceITTest extends ITTest {
         assertEquals(10, em.find(Setting.class, "mailMaxPerMinute").getValue(), "the row is unchanged");
     }
 
-    /** A row wins over the settings file, so a required key's row may not be emptied (second review of PR #179) */
+    /** A row wins over the settings file, so a required key's row may not be emptied */
     @Test
     @Transactional
     void setRefusesANullOrBlankValueForARequiredKey() {

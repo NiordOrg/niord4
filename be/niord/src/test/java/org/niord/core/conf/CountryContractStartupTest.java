@@ -53,7 +53,7 @@ class CountryContractStartupTest {
 
     /**
      * A property file brought in by {@code @PropertySource} reaches the environment after the property check has run,
-     * so the annotation itself is refused (the second review of PR #179)
+     * so the annotation itself is refused
      */
     @Test
     void aCountrysPropertySourceStopsTheStart() {

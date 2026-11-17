@@ -154,7 +154,7 @@ class SettingsRestServiceITTest extends ITTest {
                 .then().statusCode(401);
     }
 
-    /** A required key is refused a null value with 400, and its row is unchanged (second review of PR #179) */
+    /** A required key is refused a null value with 400, and its row is unchanged */
     @Test
     void updateARequiredSettingToNullIsRefusedWith400() {
         Object stored = given().auth().oauth2(accessToken())
@@ -665,8 +665,8 @@ class SettingsRestServiceITTest extends ITTest {
 
     /**
      * A number setting the Settings page empties (its drawer sends null) is saved empty, and a live read gives its
-     * default at once, as an injected field does after the next start (L-180; the owner's answer 14 of the phase 2
-     * error hunt). Before, the live read gave null until a restart.
+     * default at once, as an injected field does after the next start (L-180; the owner's ruling). Before, the live
+     * read gave null until a restart.
      */
     @Test
     void anEmptiedNumberSettingIsSavedEmptyAndReadsAsItsDefault() {

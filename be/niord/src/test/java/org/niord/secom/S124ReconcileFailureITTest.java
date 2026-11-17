@@ -182,7 +182,7 @@ class S124ReconcileFailureITTest extends SecomITTest {
      * Two writers of one dataset: one that read the dataset and the published warning just before the warning was
      * cancelled, and the cancel itself. The first is the sweep's unit for a warning edited since its last version (an
      * edit sends no status event, so the sweep is what publishes it), or the listener on a status event read late;
-     * PR #322's second CI run met the listener's case in SecomProtocolITTest. Before the dataset row was locked, the
+     * a CI run met the listener's case in SecomProtocolITTest. Before the dataset row was locked, the
      * stale writer wrote its ACTIVE row over the committed CANCELLED one, and the cancelled warning was served and
      * pushed as in force. Now the cancel waits for the stale writer and then cancels what it wrote. The spy holds the
      * stale writer in the generator, after its reads, until the cancel has committed or waits on a lock.

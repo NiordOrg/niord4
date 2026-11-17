@@ -243,7 +243,7 @@ class ScriptResourceImportITTest extends ITTest {
 
     /**
      * The loader and the job find a row by its path case-insensitively, so the preview compares so too: a file's path
-     * that differs from a row's only in case is that row's overwrite, never an add (the second review of PR #179)
+     * that differs from a row's only in case is that row's overwrite, never an add
      */
     @Test
     void aPathThatDiffersOnlyInCaseIsTheRowsOverwrite() {
@@ -270,8 +270,7 @@ class ScriptResourceImportITTest extends ITTest {
 
     /**
      * A tick carries the fingerprint of the row the preview showed: a row changed between the preview and the job is
-     * kept, so the job never overwrites content nobody previewed (the second review of PR #179). A bare path tick
-     * overwrites as before.
+     * kept, so the job never overwrites content nobody previewed. A bare path tick overwrites as before.
      */
     @Test
     void aTickedRowChangedSinceThePreviewIsKept() {

@@ -116,7 +116,7 @@ public class IssueInvariantsITTest extends ITTest {
      * I-3, I-4, I-5. The stamp, its source, and publishedAt appear together.
      *
      * They are three separate columns because they answer three questions, and
-     * HANDOVER decision 5 lets an admin choose a stamp that is not the moment of
+     * an admin may choose a stamp that is not the moment of
      * publishing -- so publishedAt cannot simply be read off cutoffStampedAt.
      */
     @BindsRule({"I-3", "I-4", "I-5"})

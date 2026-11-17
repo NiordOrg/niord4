@@ -33,9 +33,9 @@
  *
  * The backend bundles are read wherever they are:
  * `be/niord/src/main/resources/defaults/base/texts/en/<bundle>.properties`, where the backend
- * keeps its English text since #179, or the legacy root-level
- * `be/niord/src/main/resources/<bundle>_en.properties`, still read for a tree from before it; a
- * bundle found in both places, or in neither, is an error. They are
+ * keeps its English text, or the legacy root-level
+ * `be/niord/src/main/resources/<bundle>_en.properties`, still read for a tree from before the
+ * move; a bundle found in both places, or in neither, is an error. They are
  * read as niord-base reads a bundle, `Properties.load` over a UTF-8 reader: java.util.Properties'
  * syntax, the bytes as UTF-8 and a byte-order mark as part of the first key. A file that is not
  * valid UTF-8, or that starts with a byte-order mark, is refused rather than read otherwise than

@@ -612,7 +612,7 @@ class MessageCommentRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // External review of #77 (N-07): the cap counts mailboxes, not strings.
+    // External review (N-07): the cap counts mailboxes, not strings.
     //
     // An RFC 822 group address ("name: a@x, b@y;") is one string that passes InternetAddress.validate(),
     // and the mail server sends to every mailbox in it. A group is refused whatever its size, before the
