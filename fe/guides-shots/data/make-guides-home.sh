@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# make-guides-home.sh: makes ~/.niord-ng-guides, the NIORD_HOME of the user-guide screenshots, from the local Danish
-# test data's home ~/.niord-ng-dk, which is only read.
+# make-guides-home.sh: makes ~/.niord-local/niord_guides, the NIORD_HOME of the user-guide screenshots, from the local
+# Danish test data's home ~/.niord-local/niord_test, which is only read.
 #
 #   bash make-guides-home.sh            (Git Bash)
 #   "%LOCALAPPDATA%\Programs\Git\bin\bash.exe" make-guides-home.sh    (PowerShell or cmd, Git not on the PATH)
@@ -24,8 +24,8 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 
-SRC="${HOME}/.niord-ng-dk"
-DST="${HOME}/.niord-ng-guides"
+SRC="${HOME}/.niord-local/niord_test"
+DST="${HOME}/.niord-local/niord_guides"
 CONTAINER=niord-db
 SOURCE_DB=niord_test
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,7 +33,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 die() { echo "!! $*" >&2; exit 1; }
 winpath() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
 
-[[ "$(basename "$DST")" == ".niord-ng-guides" ]] || die "Refusing the target $DST."
+[[ "$(basename "$DST")" == "niord_guides" && "$(basename "$(dirname "$DST")")" == ".niord-local" ]] || die "Refusing the target $DST."
 [[ -d "$SRC/repo" && -f "$SRC/niord.json" ]] || die "No test data home at $SRC (repo/ and niord.json expected)."
 command -v robocopy >/dev/null 2>&1 || die "robocopy is not on the PATH (this script runs on Windows)."
 NODE="$(command -v node 2>/dev/null || true)"

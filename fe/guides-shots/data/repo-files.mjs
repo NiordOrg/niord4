@@ -661,9 +661,15 @@ if (process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(proce
   const repo = dir && resolve(dir);
   if (mode === 'leave-out' || mode === 'check') {
     // the guides home's repository only, never the test data's
-    if (!repo || basename(repo) !== 'repo' || basename(dirname(repo)) !== '.niord-ng-guides')
+    const home = repo && dirname(repo);
+    if (
+      !repo ||
+      basename(repo) !== 'repo' ||
+      basename(home) !== 'niord_guides' ||
+      basename(dirname(home)) !== '.niord-local'
+    )
       throw new Error(
-        `repo-files: ${mode} takes the guides home's repo folder (.niord-ng-guides/repo), not ${dir}.`,
+        `repo-files: ${mode} takes the guides home's repo folder (.niord-local/niord_guides/repo), not ${dir}.`,
       );
   }
   if (mode === 'leave-out') {
@@ -689,7 +695,9 @@ if (process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(proce
   } else if (mode === 'check-db') {
     process.exitCode = await checkDb();
   } else {
-    console.error('usage: node repo-files.mjs leave-out|check <.niord-ng-guides/repo> | check-db');
+    console.error(
+      'usage: node repo-files.mjs leave-out|check <.niord-local/niord_guides/repo> | check-db',
+    );
     process.exitCode = 2;
   }
 }
