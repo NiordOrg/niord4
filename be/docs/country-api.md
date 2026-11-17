@@ -50,6 +50,10 @@ What a country may provide a bean or a file for. Each is checked against the cod
 | Its texts and settings values | `defaults/country/` (§ The defaults/country/ contract) | start-up, layered over the base product's |
 | A static image at a base product path | a png, jpg, jpeg, gif, webp or ico under `META-INF/resources/img/`, the only guarded override, listed in `be/overrides.json` (§ Overrides); any other shadow is refused | Spring Boot serves the country's copy first |
 
+A promulgation service of its own with a `MANDATORY` type adds the type's row in `onLoadSystemMessage`, as the base
+product's services do (the base class adds none): the status endpoints refuse (409, `MessagePublishGate`) a step to
+VERIFIED or PUBLISHED of a message that holds no ticked row of a `MANDATORY` type of the current domain.
+
 A base product Java class is never replaced by a class of the same name: the guard refuses it for the protected
 classes, the override check for every class (every shadow but a static image), and a country that needs different
 behaviour gets a bean or an extension point.
@@ -368,6 +372,13 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   the country's templates over the test-jar's rows, creating or replacing each path (an equal row is left). The
   unpacked base product's bootstrap stays for the countries' bootstrap ITs, which run it before the country's
   archive and compare with it; no test writes it to the IT database.
+- What a country's ITs may rely on in the test-jar's fixture (`db/niord-base-data.sql`, a dump of the base
+  product's bootstrap and the sample): beside the 84 template and script rows, the base product's three reports,
+  the master domain `niord-client-master` and the sample's five domains (`niord-nw`, `niord-nm`, `niord-fa`,
+  `niord-almanac`, `niord-annex`), each with its client in the IT realm, and the sample's 34 messages under the
+  fixture's own uid prefix. It holds no `Setting`, `User` or `BatchData` row: each IT start writes its settings
+  from its class path. So an IT reads no `Setting` row from the fixture, names the domains by the sample's ids and
+  finds a sample message by its short id (`NW-001-26`), never by a uid.
 - `be/bootstrap/releases/<yyyy-mm-dd>-<topic>/` holds a release's import files: a new or changed template as
   `script-resources.json` (the Script resources import's format), with a `README.md`. A folder is named by the date
   and topic of its change and never changes once merged; a sysadmin imports it after the preview.
@@ -472,8 +483,7 @@ working) for at least one base product version that both DK and GL have taken.
 ## Changes
 
 No change is recorded. The record starts again, empty, after 4.0.196: what changed up to that version is in the
-`docs/country-api.md` of its kit package. Until production it is paused as the frontend's record is, and gets no
-row (the country kit's README, `country-kit/README.md`, "Paused until production").
+`docs/country-api.md` of its kit package.
 
 | Base product version | Change | What a country does |
 |---|---|---|

@@ -48,8 +48,8 @@ form of an entry below hold in full from the day the record wakes.
   the old stub as a failed check with that copy in the upgrade report's To do, rather than refusing
   before the report; the example harness's upgrade test copies the new stub as a routine action.
 - The example country (`country-kit/example/`) compiles against the API in the base product's CI, so a
-  break cannot pass unnoticed; the upgrade test builds it against the previous published version's
-  API as well.
+  break cannot pass unnoticed; from P3c the upgrade test builds it against the previous published
+  version's API as well.
 - Base product code never imports the API: it is a one-way facade for country code.
 
 ## How an entry is written

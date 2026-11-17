@@ -68,9 +68,7 @@ The nested files own everything specific to a half. This file holds only what is
   production deployment, or the first country not maintained by the base product's own developers,
   whichever comes first: a country's bump is merged when its CI is green, the boxes of the bump comment
   are information, and `country-kit/API-CHANGES.md` gets an entry only when the base product's upgrade
-  test (part of the required `Frontend gate`) demands one, while the Changes table of
-  `be/docs/country-api.md` gets no row; both start again, empty, after 4.0.196. Two things do not
-  sleep: that upgrade test;
+  test (part of the required `Frontend gate`) demands one. Two things do not sleep: that upgrade test;
   and a country's pack holds a value for every new English text, as a draft listed unaccepted, while an
   accepted translation is never rewritten in a bump. One deliberate pull request, decided by the owner,
   wakes the record. The full description is in
