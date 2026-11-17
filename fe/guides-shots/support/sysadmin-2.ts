@@ -178,12 +178,19 @@ export async function loggedExecutions(request: APIRequestContext, run: BatchRun
 /**
  * The guides home's execution folders of the script job: <home>/batch-jobs/<job>/execution/
  * <year>/<month>/<job number>, named as BatchData.computeBatchJobFolderPath names them. The guides
- * home is start-rig.sh's ($HOME/.niord-ng-guides); null when it cannot be found.
+ * home is start-rig.sh's ($HOME/.niord-local/niord_guides); null when it cannot be found.
  */
 function scriptExecutionRoot(): string | null {
   const userHome = process.env['USERPROFILE'] ?? process.env['HOME'];
   if (!userHome) return null;
-  const root = joinPath(userHome, '.niord-ng-guides', 'batch-jobs', SCRIPT_JOB, 'execution');
+  const root = joinPath(
+    userHome,
+    '.niord-local',
+    'niord_guides',
+    'batch-jobs',
+    SCRIPT_JOB,
+    'execution',
+  );
   return existsSync(root) ? root : null;
 }
 

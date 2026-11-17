@@ -2,7 +2,7 @@
 #
 # Starts the stack the user guides' screenshots are taken on: the base product (niord-app, the
 # administration app and the public site) on the database niord_guides, the scrubbed copy of the
-# test data that make-guides-db.sh makes, with the Niord home ~/.niord-ng-guides that
+# test data that make-guides-db.sh makes, with the Niord home ~/.niord-local/niord_guides that
 # make-guides-home.sh makes, on slot 6, so it runs beside a checkout's own stack:
 #
 #   administration app  http://localhost:4106
@@ -14,7 +14,7 @@
 #   bash start-rig.sh          from Git Bash on Windows, or any bash; takes no arguments
 #
 # It starts the backend as ./start-local.sh --slot 6 would, on niord_guides with the Niord home
-# ~/.niord-ng-guides, builds both frontends once in the `local` configuration (the one ng serve
+# ~/.niord-local/niord_guides, builds both frontends once in the `local` configuration (the one ng serve
 # uses) into .local-run/guides-dist/, and serves those files with serve-built.mjs on 4106 and
 # 4406, passing /rest to 8894. No dev server runs: on 2026-11-11 one died four times while pages
 # were loaded from it, and the launcher then stopped the whole stack. Here a part that fails never
@@ -24,6 +24,8 @@
 #     to something else);
 #   - a missing niord_guides: start-local.sh would create it empty and bootstrap it, and the
 #     guides would show the bare base product;
+#   - a missing Niord home: the backend would start on an empty one, without the home's
+#     niord.json;
 #   - a niord_guides that still holds an e-mail address outside example.org in the users, the
 #     contacts, the mail recipients or the comments' notification addresses: the scrub has not run
 #     (the four local logins may also hold <login>@niord.local, see below).
@@ -32,12 +34,12 @@
 # log is .local-run/backend.log. A change under fe/ reaches the pictures only after the rig is
 # started again.
 #
-# Set NIORD_NG_ROOT to the niord-ng checkout when this file lies outside it; inside it, the
+# Set NIORD_CHECKOUT to the base product's checkout when this file lies outside it; inside it, the
 # checkout is the first folder above that holds start-local.sh.
 set -euo pipefail
 
 GUIDES_DB=niord_guides
-GUIDES_HOME="$HOME/.niord-ng-guides"
+GUIDES_HOME="$HOME/.niord-local/$GUIDES_DB"
 SLOT=6
 
 die() {
@@ -59,15 +61,15 @@ for port in FE_PORT INFO_PORT BE_PORT; do
     [[ -z "${!port:-}" ]] || die "$port is set (${!port}): the rig's ports follow slot $SLOT; unset it."
 done
 
-# The checkout: NIORD_NG_ROOT, or the first folder above this file that holds start-local.sh.
-ROOT="${NIORD_NG_ROOT:-}"
+# The checkout: NIORD_CHECKOUT, or the first folder above this file that holds start-local.sh.
+ROOT="${NIORD_CHECKOUT:-}"
 if [[ -z "$ROOT" ]]; then
     dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     while [[ "$dir" != "/" && ! -f "$dir/start-local.sh" ]]; do dir="$(dirname "$dir")"; done
     [[ -f "$dir/start-local.sh" ]] && ROOT="$dir"
 fi
 [[ -n "$ROOT" && -f "$ROOT/start-local.sh" ]] \
-    || die "cannot find start-local.sh: set NIORD_NG_ROOT to the niord-ng checkout."
+    || die "cannot find start-local.sh: set NIORD_CHECKOUT to the base product's checkout."
 
 command -v docker >/dev/null 2>&1 || die "docker not found on PATH."
 docker info >/dev/null 2>&1 || die "Docker is not running: start Docker Desktop and retry."
@@ -79,6 +81,9 @@ exists="$(docker exec niord-db psql -U niord -d postgres -Atc \
     || die "could not list the databases in niord-db."
 [[ "$exists" == "1" ]] \
     || die "the database $GUIDES_DB does not exist: make it first with make-guides-db.sh (start-local.sh would create it empty and bootstrap it)."
+# The home is made after the database, by make-guides-home.sh, and the rig never makes an empty one in its place.
+[[ -d "$GUIDES_HOME" ]] \
+    || die "the Niord home $GUIDES_HOME does not exist: make it first with make-guides-home.sh (the backend would start on an empty one, without the home's niord.json)."
 
 # Personal data the scrub replaces: every e-mail address is an example.org one afterwards. A column
 # that is gone (a newer schema) fails the query, and the rig refuses rather than guesses. The four
@@ -143,7 +148,7 @@ BE_URL="http://127.0.0.1:$BE_PORT/rest/settings/web"
 BE_LOG="$LOG_DIR/backend.log"
 WEB_LOG="$LOG_DIR/guides-web.log"
 BUILD_LOG="$LOG_DIR/guides-build.log"
-mkdir -p "$LOG_DIR" "$GUIDES_HOME"
+mkdir -p "$LOG_DIR"
 HOME_NATIVE="$(native_path "$GUIDES_HOME")"
 
 use_jdk25

@@ -6,13 +6,13 @@
 #   - the Angular dev server(s): the administration app (fe/ui-apps/admin)   http://localhost:${FE_PORT:-4100}
 #     and/or the public site (fe/ui-apps/info)                                http://localhost:${INFO_PORT:-4400}
 #
-#   ./start-local.sh                 niord-app, database `niord`, files in ~/.niord-ng
+#   ./start-local.sh                 niord-app, database `niord`, files in ~/.niord-local/niord
 #   ./start-local.sh --info          the PUBLIC site (fe/ui-apps/info) instead of the administration app,
 #                                    on port 4400 + slot
 #   ./start-local.sh --admin --info  BOTH frontends against the one backend: the administration app on
 #                                    4100 + slot, the public site on 4400 + slot
 #   ./start-local.sh --sample        the sample deployment in one command (below): database `niord_sample`,
-#                                    files in ~/.niord-ng-sample, both frontends
+#                                    files in ~/.niord-local/niord_sample, both frontends
 #   ./start-local.sh --sample --reset
 #                                    ... after dropping the database niord_sample (and nothing else, through
 #                                    the library's sample_reset): after a git pull that changed
@@ -23,7 +23,10 @@
 # be done (GET /rest/bootstrap, as the local realm's sysadmin) and, on a new database, runs the bootstrap
 # command (be/scripts/bootstrap.sh) with the base product's bootstrap: be/niord/bootstrap/, zipped into
 # .local-run/bootstrap-1.zip. A database that already holds data, bootstrapped before or loaded by you,
-# is never bootstrapped. The database is created in the niord-db container when it does not exist yet.
+# is never bootstrapped. The database is created in the niord-db container when it does not exist yet, and its
+# Niord home is made with it. A database a backend has run on is never given a new, empty home: when its home
+# does not exist, the start stops and names the folder (NIORD_HOME_DIR names a home that lies elsewhere; a folder
+# made by hand is the way to an empty home on purpose). --fe-only makes no home.
 #
 # --sample is the sample deployment (docs/fe-country-split-plan.md P9): the containers, an empty database
 # niord_sample (created when missing), the backend, the base product's bootstrap, then the sample
@@ -37,7 +40,7 @@
 # too.
 # --sample implies --admin --info unless one of them is given (`--sample --info` is the public site alone,
 # without an adminAppUrl, for the CSP run of fe/docs/testing.md). It refuses --fe-only, --own-db,
-# any NIORD_DB but niord_sample and any NIORD_HOME_DIR but ~/.niord-ng-sample. The sample users are the
+# any NIORD_DB but niord_sample and any NIORD_HOME_DIR but ~/.niord-local/niord_sample. The sample users are the
 # local realm's sysadmin, admin, editor and user, each with its name as password. A local trial on this
 # machine only: Keycloak runs in development mode with known passwords; never expose it. A country deploys
 # with the chart.
@@ -70,11 +73,13 @@
 #   INFO_PORT       public site's port when both frontends run (default 4400 + slot)
 #   BE_PORT         backend port (default 8888 + slot; with --fe-only 8888, the backend to proxy to)
 #   NIORD_DB        database name in the niord-db container (default niord; --sample takes niord_sample only)
-#   NIORD_HOME_DIR  the backend's file-system root, `niord.home` (default ~/.niord-ng; --sample takes
-#                   ~/.niord-ng-sample only). The checkout and the Niord home need a path without
-#                   whitespace: the JVM and Maven arguments split at a space.
+#   NIORD_HOME_DIR  the backend's file-system root, `niord.home` (default ~/.niord-local/<NIORD_DB>, one home
+#                   per database; --sample takes ~/.niord-local/niord_sample only). The checkout and the Niord
+#                   home need a path without whitespace: the JVM and Maven arguments split at a space.
 #                   Deliberately NOT the ~/.niord of the legacy Quarkus backend: its Lucene 9.5 message index
 #                   there makes this backend (Lucene 9.12) fail at startup with "Could not load codec 'Lucene95'".
+#                   Refused as a home, in any spelling of the path: ~/.niord, ~/.niord-local itself (the folder
+#                   of the homes) and ~/.niord-local/keycloak (the local realm's place).
 #
 # The backend JVM runs in UTC (-Duser.timezone=UTC). The database stores timestamps as wall-clock values
 # without a zone, converted with the JVM's default time zone, and the test/production data was written by a
@@ -138,12 +143,12 @@ if $SAMPLE; then
     fi
     # The same for the Niord home: a NIORD_HOME_DIR exported for the plain run would have its message index and
     # its caches rebuilt from niord_sample and lend its niord.json to the sample run.
-    if [[ -n "${NIORD_HOME_DIR:-}" && "$NIORD_HOME_DIR" != "$HOME/.niord-ng-sample" ]]; then
-        echo "--sample uses the Niord home ~/.niord-ng-sample only, not NIORD_HOME_DIR=$NIORD_HOME_DIR: unset it." >&2
+    if [[ -n "${NIORD_HOME_DIR:-}" && "$NIORD_HOME_DIR" != "$HOME/.niord-local/niord_sample" ]]; then
+        echo "--sample uses the Niord home ~/.niord-local/niord_sample only, not NIORD_HOME_DIR=$NIORD_HOME_DIR: unset it." >&2
         exit 2
     fi
     NIORD_DB=niord_sample
-    NIORD_HOME_DIR="$HOME/.niord-ng-sample"
+    NIORD_HOME_DIR="$HOME/.niord-local/niord_sample"
     if ! $ADMIN && ! $INFO; then
         ADMIN=true
         INFO=true
@@ -189,7 +194,8 @@ export NIORD_BE_PORT="$BE_PORT"
 # always succeeds, so the substitution never carries a failing status out.
 APP=niord-app
 NIORD_DB="${NIORD_DB:-niord}"
-NIORD_HOME_DIR="${NIORD_HOME_DIR:-$HOME/.niord-ng}"
+# One Niord home per database, as in a country's launcher; --own-db keeps the home of the database it copies.
+NIORD_HOME_DIR="${NIORD_HOME_DIR:-$HOME/.niord-local/$NIORD_DB}"
 FE_SCRIPT=$($INFO && ! $BOTH && echo start:info || echo start:local)
 INFO_SCRIPT=start:info
 
@@ -197,6 +203,46 @@ BASE_DB="$NIORD_DB"
 if $OWN_DB; then NIORD_DB="${NIORD_DB}_slot$SLOT"; fi
 
 [[ "$NIORD_DB" =~ ^[a-z_][a-z0-9_]*$ ]] || die "NIORD_DB must be a plain lower-case identifier, got '$NIORD_DB'."
+
+# A path as the file system reads it, for the refusals below: backslashes as slashes, a folder that exists by its
+# physical path (a link to it reads as the folder), a relative path from the current folder, `.`, `..` and repeated
+# or closing slashes resolved, and on Windows the one spelling cygpath gives every other (/c/..., C:/..., a mount
+# such as /tmp).
+home_path() {
+    local backslash='\' path part other
+    local parts=() kept=()
+    path=${1//"$backslash"//}
+    if other="$(cd -P "$path" 2>/dev/null && pwd -P)"; then path="$other"; fi
+    if [[ "$path" != /* ]] && ! { $WINDOWS && [[ "$path" == [A-Za-z]:/* ]]; }; then path="$PWD/$path"; fi
+    IFS=/ read -r -a parts <<< "$path"
+    for part in ${parts[@]+"${parts[@]}"}; do
+        case "$part" in
+            ''|.) ;;
+            ..) if (( ${#kept[@]} )); then unset "kept[$(( ${#kept[@]} - 1 ))]"; fi ;;
+            *) kept+=("$part") ;;
+        esac
+    done
+    path=""
+    for part in ${kept[@]+"${kept[@]}"}; do path+="/$part"; done
+    if $WINDOWS; then
+        if [[ "$path" == /[A-Za-z]:* ]]; then path="${path#/}/"; fi
+        if other="$(cygpath -m -- "${path:-/}" 2>/dev/null)"; then path="${other%/}"; fi
+    fi
+    printf '%s' "${path:-/}"
+}
+# Never a Niord home, in any spelling of the path: ~/.niord-local/keycloak holds the realm the compose file mounts
+# (local_realm_path), ~/.niord-local holds that folder and every database's home, and ~/.niord is the legacy
+# backend's (the header). Compared without regard to case, as NTFS and APFS read a path.
+HOME_PATH="$(home_path "$NIORD_HOME_DIR")"
+shopt -s nocasematch
+if [[ "$HOME_PATH" == */.niord-local/keycloak ]]; then
+    die "The Niord home $NIORD_HOME_DIR is the local realm's folder, never a Niord home: name another NIORD_DB or NIORD_HOME_DIR."
+elif [[ "$HOME_PATH" == */.niord-local ]]; then
+    die "The Niord home $NIORD_HOME_DIR is the folder of the homes and of the local realm, never a Niord home itself: name a folder in it, as the default ~/.niord-local/<NIORD_DB> is."
+elif [[ "$HOME_PATH" == */.niord && "$HOME_PATH" == "$(home_path "$HOME/.niord")" ]]; then
+    die "The Niord home $NIORD_HOME_DIR is the legacy backend's, whose message index this backend cannot load (see --help): unset NIORD_HOME_DIR or name another folder."
+fi
+shopt -u nocasematch
 
 # The backend's JVM arguments and Maven's MAVEN_ARGS are split at every space, so a path with whitespace in
 # them would break the run later with a misleading error.
@@ -227,7 +273,7 @@ fi
 port_in_use "$FE_PORT" && die "Port $FE_PORT is already in use — pick another with --slot <n> or FE_PORT=<port> $0"
 $BOTH && port_in_use "$INFO_PORT" && die "Port $INFO_PORT is already in use — pick another with --slot <n> or INFO_PORT=<port> $0"
 
-mkdir -p "$NIORD_HOME_DIR" "$LOG_DIR"
+mkdir -p "$LOG_DIR"
 NIORD_HOME_NATIVE="$(native_path "$NIORD_HOME_DIR")"
 
 # The backend installs org.niord.base:niord-base:${revision} before it runs — so two checkouts sharing ~/.m2
@@ -335,6 +381,26 @@ start_services "$ROOT/be/docker-compose.yml" "$ROOT/be/keycloak/niord-realm-loca
 if $RESET; then
     sample_reset niord_sample
 fi
+
+# Whether a backend has run on the database $1: it is there and holds the Setting table (the image's own `niord` is
+# there from the container's first start, without a table).
+database_in_use() {
+    local found
+    found="$(docker exec niord-db psql -U niord -d postgres -tAc "select 1 from pg_database where datname = '$1'")" \
+        || die "Could not list the databases in niord-db."
+    [[ "$found" == 1 ]] || return 1
+    found="$(docker exec niord-db psql -U niord -d "$1" -tAc "select to_regclass('public.\"Setting\"') is not null")" \
+        || die "Could not read the tables of database $1 in niord-db."
+    [[ "$found" == t ]]
+}
+# The Niord home is made with its database. A database a backend has run on is never given a new, empty home
+# without a word: the backend would start on it without the home's niord.json, and store the class-path default
+# of every operator setting the database lacks, which a niord.json no longer overrides afterwards. The home is
+# that of $BASE_DB, which --own-db copies; the test comes before the copy's database is made.
+if [[ ! -d "$NIORD_HOME_DIR" ]] && database_in_use "$BASE_DB"; then
+    die "The database $BASE_DB holds a backend's tables, but its Niord home $NIORD_HOME_DIR does not exist, and this start would make a new, empty one: the backend would run without the home's niord.json. Name the home the database has with NIORD_HOME_DIR, or put it at that path. To start on an empty home on purpose: mkdir -p $NIORD_HOME_DIR"
+fi
+mkdir -p "$NIORD_HOME_DIR"
 
 ensure_database "$NIORD_DB"
 if $DATABASE_CREATED && $OWN_DB; then

@@ -179,7 +179,7 @@ pinned zip by its hash and runs it; the kit refuses a modified stub:
    serve the frontend as they serve the backend) and each foreign pack (from GHCR by digest); check each
    against its pinned hash **before** unpacking or executing anything; unpack into `fe/.niord/base/` and
    `fe/.niord/packs/<lang>/`, refusing symlinks, links and any path outside the target. Locally either may
-   come from a checkout instead — `NIORD_BASE=../niord-ng/fe`, `NIORD_PACK_DA=../niord-dk/fe/packs/da` —
+   come from a checkout instead — `NIORD_BASE=../niord/fe`, `NIORD_PACK_DA=../niord-dk/fe/packs/da` —
    copied in (the builder accepts asset inputs only inside the workspace root, `resolve-assets.js:25-27`;
    with `NIORD_BASE` the catalog is built from the checkout, with exactly the zip's include list).
    These overrides are **refused when `CI` is set**, and a production build or `image:info` refuses a
@@ -301,7 +301,7 @@ is missing (any other `NIORD_DB` is refused), starts the backend, posts the boot
 archive only, stops the backend, loads the sample with `psql`, starts the backend again (its caches and message
 index then see the sample), starts both frontends, and ends with the URLs, the sample logins and the local-only
 warning. Run again on a loaded database it starts it again; `--reset` starts from scratch and drops only that
-database. It refuses any `NIORD_HOME_DIR` but `~/.niord-ng-sample`, and it refuses `--fe-only` and `--own-db`.
+database. It refuses any `NIORD_HOME_DIR` but `~/.niord-local/niord_sample`, and it refuses `--fe-only` and `--own-db`.
 A country's launcher (the kit's `templates/start-local.sh`, §5 step 9) does the same on `niord_sample_<cc>`
 with the country's backend, settings and texts: the base product's archive alone, then the sample, with no
 country bootstrap. The sample loads on any country's backend after the base archive: its own ids start at

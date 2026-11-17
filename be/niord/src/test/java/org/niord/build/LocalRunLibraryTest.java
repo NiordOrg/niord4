@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the compose file mounts first, and the compose file names that path and the project {@code be}. The library runs against a {@code docker} first on the PATH that writes down each
  * call and answers {@code inspect} from DOCKER_STOPPED and DOCKER_MISSING, so no real Docker is ever reached. Also:
  * {@code start-local.sh} sources the library and redefines none of its functions, and its {@code --dk} and
- * {@code --gl} name the country's own launcher before any docker call; {@code sample_reset} drops only
+ * {@code --gl} name the country's own launcher before any docker call; its Niord home is one folder per database
+ * under {@code ~/.niord-local}, {@code --sample} takes no home but its own and the realm's folder there, the folder
+ * of the homes and the legacy backend's home are never one, in any spelling of the path, each refused before any
+ * docker call; a copy of the launcher, with nothing real behind it, is started on the home of its database and
+ * never makes a new, empty home for a database a backend has run on ({@link #launch}); {@code sample_reset} drops only
  * {@code niord_sample} or {@code niord_sample_<cc>}, refusing any other name before any docker call. And the library
  * makes the local Keycloak client of each active domain a country's bootstrap folder brings, its kcadm calls answered
  * by the same stand-in, never updating or deleting anything. Skipped where no bash is found, as
@@ -243,6 +248,174 @@ class LocalRunLibraryTest {
                     && result.output().contains("SIFA-DK/niord-" + country), result.toString());
             assertTrue(result.calls().isEmpty(), "refused before any docker call: " + result);
         }
+    }
+
+    /** The rule of a country's launcher: one Niord home per database, under the folder that also holds the realm */
+    @Test
+    void theLaunchersHomeIsOneFolderPerDatabase() throws IOException {
+        String launcher = Files.readString(LAUNCHER, StandardCharsets.UTF_8);
+
+        assertTrue(launcher.contains("NIORD_HOME_DIR=\"${NIORD_HOME_DIR:-$HOME/.niord-local/$NIORD_DB}\""),
+                "the default home follows the database");
+        assertTrue(launcher.contains("NIORD_HOME_DIR=\"$HOME/.niord-local/niord_sample\""), "the sample's home");
+    }
+
+    @Test
+    void theSampleTakesNoHomeButItsOwn() throws Exception {
+        failingDocker();
+        for (String other : List.of(".niord-local/niord", ".niord-local/niord_sample_dk", "elsewhere")) {
+            String dir = slashes(home) + "/" + other;
+            Result result = run(List.of(slashes(LAUNCHER), "--sample"), Map.of("NIORD_DB", "", "NIORD_HOME_DIR", dir));
+            assertEquals(2, result.status(), other + ": " + result);
+            assertTrue(result.output().contains("--sample uses the Niord home ~/.niord-local/niord_sample only, not "
+                    + "NIORD_HOME_DIR=" + dir + ": unset it."), other + ": " + result);
+            assertTrue(result.calls().isEmpty(), "refused before any docker call: " + other + ": " + result);
+            assertFalse(Files.exists(home.resolve(other)), "no folder is made: " + other);
+        }
+    }
+
+    /**
+     * ~/.niord-local/keycloak holds the realm the compose file mounts: by the database's name or by the override,
+     * in any spelling of the path
+     */
+    @Test
+    void theRealmsFolderIsNeverANiordHome() throws Exception {
+        failingDocker();
+        String local = slashes(home) + "/.niord-local";
+        List<Map<String, String>> envs = new ArrayList<>(List.of(Map.of("NIORD_DB", "keycloak", "NIORD_HOME_DIR", "")));
+        for (String realm : List.of(local + "/keycloak", local + "/keycloak/", local + "/keycloak//",
+                local + "/keycloak/.", local + "/x/../keycloak", local + "/Keycloak",
+                local.replace('/', '\\') + "\\keycloak")) {
+            envs.add(Map.of("NIORD_DB", "", "NIORD_HOME_DIR", realm));
+        }
+        for (Map<String, String> env : envs) {
+            Result result = run(List.of(slashes(LAUNCHER)), env);
+            assertEquals(1, result.status(), env + ": " + result);
+            assertTrue(result.output().contains("is the local realm's folder, never a Niord home"), env + ": " + result);
+            assertTrue(result.calls().isEmpty(), "refused before any docker call: " + env + ": " + result);
+            assertFalse(Files.exists(home.resolve(".niord-local")), "no folder is made: " + env);
+        }
+    }
+
+    /** Nor is the folder of the homes itself, or the legacy backend's ~/.niord; a folder beside them is */
+    @Test
+    void theFolderOfTheHomesAndTheLegacyHomeAreNeverANiordHome() throws Exception {
+        failingDocker();
+        String user = slashes(home);
+        for (String[] refused : new String[][] {
+                {user + "/.niord-local", "is the folder of the homes and of the local realm"},
+                {user + "/.niord-local/", "is the folder of the homes and of the local realm"},
+                {user + "/.Niord-Local/x/..", "is the folder of the homes and of the local realm"},
+                {user + "/.niord", "is the legacy backend's"},
+                {user + "/.NIORD/", "is the legacy backend's"},
+                {user.replace('/', '\\') + "\\.niord", "is the legacy backend's"}}) {
+            Result result = run(List.of(slashes(LAUNCHER)), Map.of("NIORD_DB", "", "NIORD_HOME_DIR", refused[0]));
+            assertEquals(1, result.status(), refused[0] + ": " + result);
+            assertTrue(result.output().contains("The Niord home " + refused[0] + " " + refused[1]),
+                    refused[0] + ": " + result);
+            assertTrue(result.calls().isEmpty(), "refused before any docker call: " + refused[0] + ": " + result);
+        }
+        try (var made = Files.list(home)) {
+            assertEquals(List.of(), made.toList(), "no folder is made");
+        }
+        // The override stays: a folder beside them, on the launcher's copy, which starts nothing real
+        for (String allowed : List.of("elsewhere/.niord", ".niord-local/niord_other", ".niordx")) {
+            Started started = launch(List.of(), Map.of("NIORD_DB", "", "NIORD_HOME_DIR", user + "/" + allowed));
+            assertEquals(0, started.result().status(), allowed + ": " + started);
+            assertTrue(Files.isDirectory(home.resolve(allowed)), "the home is made: " + allowed + ": " + started);
+            assertTrue(started.backend().matches("(?s).* -Dniord\\.home=\\S*/" + Pattern.quote(allowed) + " .*"),
+                    "started on it: " + allowed + ": " + started);
+        }
+    }
+
+    /** The backend is started on the database's own home, which the launcher makes: the default and a named one */
+    @Test
+    void theBackendStartsOnTheHomeOfItsDatabase() throws Exception {
+        for (String db : List.of("niord", "niord_other")) {
+            Started started = launch(List.of(), Map.of("NIORD_DB", db.equals("niord") ? "" : db));
+
+            assertEquals(0, started.result().status(), db + ": " + started);
+            assertTrue(Files.isDirectory(home.resolve(".niord-local/" + db)), "the home is made: " + db + ": " + started);
+            assertTrue(started.backend().matches("(?s).* -Dniord\\.home=\\S*/\\.niord-local/" + db + " .*"),
+                    "started on that home: " + db + ": " + started);
+            assertTrue(started.backend().contains("jdbc:postgresql://localhost:5432/" + db + " "),
+                    "and on that database: " + db + ": " + started);
+        }
+        try (var homes = Files.list(home.resolve(".niord-local"))) {
+            assertEquals(List.of("niord", "niord_other"), homes.map(path -> path.getFileName().toString()).sorted().toList(),
+                    "one home per database, and no other");
+        }
+    }
+
+    /** --own-db: a database of the slot's own, copied on first use, on the home of the database it copies */
+    @Test
+    void ownDbRunsOnTheHomeOfTheDatabaseItCopies() throws Exception {
+        Started started = launch(List.of("--slot", "2", "--own-db"), Map.of());
+
+        assertEquals(0, started.result().status(), started.toString());
+        assertTrue(started.result().calls().stream().anyMatch(call -> call.startsWith("exec niord-db sh -c pg_dump "
+                + "-U niord -d niord | psql -q -U niord -d niord_slot2 ")), "niord is copied: " + started);
+        assertTrue(started.backend().matches("(?s).* -Dniord\\.home=\\S*/\\.niord-local/niord .*"),
+                "the home of the database it copies: " + started);
+        assertTrue(started.backend().contains("jdbc:postgresql://localhost:5432/niord_slot2 "),
+                "its own database: " + started);
+        assertTrue(started.backend().matches("(?s).* -DmessageIndexPath=\\S*/\\.niord-local/niord/message-index-slot2 .*"),
+                "its own message index there: " + started);
+        assertFalse(Files.exists(home.resolve(".niord-local/niord_slot2")), "no home of the copy's name: " + started);
+    }
+
+    /**
+     * A database a backend has run on is never given a new, empty home, which would start the backend without the
+     * home's niord.json: refused before a database is made or copied; its own home, when there, is started on
+     */
+    @Test
+    void aDatabaseInUseIsNeverGivenANewEmptyHome() throws Exception {
+        Map<String, String> inUse = Map.of("DB_EXISTS", "niord", "DB_IN_USE", "niord");
+        for (List<String> args : List.of(List.<String>of(), List.of("--slot", "2", "--own-db"))) {
+            Started refused = launch(args, inUse);
+
+            assertEquals(1, refused.result().status(), args + ": " + refused);
+            assertTrue(refused.result().output().contains("The database niord holds a backend's tables, but its Niord home ")
+                    && refused.result().output().contains("/.niord-local/niord does not exist"), args + ": " + refused);
+            assertEquals("", refused.backend(), "no backend is started: " + args);
+            assertFalse(Files.exists(home.resolve(".niord-local")), "no folder is made: " + args);
+            assertTrue(refused.result().calls().stream().noneMatch(call -> call.contains("createdb") || call.contains("pg_dump")),
+                    "no database is made or copied: " + args + ": " + refused);
+        }
+
+        Files.createDirectories(home.resolve(".niord-local/niord"));
+        Started started = launch(List.of(), inUse);
+        assertEquals(0, started.result().status(), started.toString());
+        assertTrue(started.backend().matches("(?s).* -Dniord\\.home=\\S*/\\.niord-local/niord .*"), started.toString());
+        assertTrue(started.result().calls().stream().noneMatch(call -> call.contains("createdb")), started.toString());
+    }
+
+    /** The image's own niord is there before any backend ran on it: it gets its home, as a new database does */
+    @Test
+    void aDatabaseNoBackendRanOnGetsItsHome() throws Exception {
+        Started started = launch(List.of(), Map.of("DB_EXISTS", "niord"));
+
+        assertEquals(0, started.result().status(), started.toString());
+        assertTrue(Files.isDirectory(home.resolve(".niord-local/niord")), "the home is made: " + started);
+        assertTrue(started.backend().matches("(?s).* -Dniord\\.home=\\S*/\\.niord-local/niord .*"), started.toString());
+        assertTrue(started.result().calls().stream().noneMatch(call -> call.contains("createdb")), started.toString());
+    }
+
+    /** --fe-only starts no backend, asks docker nothing and makes no home */
+    @Test
+    void feOnlyMakesNoHome() throws Exception {
+        Started started = launch(List.of("--fe-only"), Map.of("BACKEND_POLLS", "0"));
+
+        assertEquals(0, started.result().status(), started.toString());
+        assertEquals("", started.backend(), "no backend is started: " + started);
+        assertTrue(started.result().calls().isEmpty(), "docker is not asked: " + started);
+        assertFalse(Files.exists(home.resolve(".niord-local")), "no home is made: " + started);
+    }
+
+    /** A docker that fails and writes down that it was called */
+    void failingDocker() throws IOException {
+        Files.writeString(shims.resolve("docker"), "#!/bin/sh\necho \"$*\" >> '" + slashes(dockerCalls) + "'\nexit 1\n",
+                StandardCharsets.UTF_8);
     }
 
     @Test
@@ -490,6 +663,75 @@ class LocalRunLibraryTest {
         Files.writeString(driver, "set -euo pipefail\nsource \"$1\"\nstart_services \"$2\" \"$3\"\n",
                 StandardCharsets.UTF_8);
         return run(List.of(slashes(driver), slashes(LIBRARY), slashes(COMPOSE), slashes(REALM)), env);
+    }
+
+    /** A run of the launcher's copy: its outcome, and the arguments its backend was started with, empty when none was */
+    record Started(Result result, String backend) {
+        @Override
+        public String toString() {
+            return result + "\nbackend: " + backend;
+        }
+    }
+
+    /**
+     * Runs a copy of the launcher in a checkout of its own, up to the start of its backend, with nothing real behind
+     * it: the library is the real one with the calls that reach outside the launcher answered at once (the JDK, the
+     * ports, the containers) and a wait that ends the run once the backend is started, be/run.sh writes down its
+     * arguments in the backend's place, and docker and npm are stand-ins that do nothing. The docker stand-in
+     * answers which databases are there from DB_EXISTS and which of them hold the backend's tables from DB_IN_USE,
+     * each a list of names.
+     */
+    Started launch(List<String> args, Map<String, String> env) throws Exception {
+        assumeTrue(!slashes(dir).matches(".*\\s.*"), "the launcher refuses a path with whitespace");
+        Path checkout = dir.resolve("checkout");
+        Path backend = dir.resolve("backend-arguments");
+        Files.deleteIfExists(backend);
+        Files.deleteIfExists(dockerCalls);
+        Files.createDirectories(checkout.resolve("be/scripts"));
+        Files.createDirectories(checkout.resolve("fe/node_modules"));
+        Files.copy(LAUNCHER, checkout.resolve("start-local.sh"), StandardCopyOption.REPLACE_EXISTING);
+        // The stand-ins first on the PATH inside bash, and the run stops unless they are what it finds (standIns)
+        String stubs = slashes(shims);
+        Files.writeString(checkout.resolve("be/scripts/local-run-lib.sh"), "source '" + slashes(LIBRARY) + "'\n"
+                + "if command -v cygpath > /dev/null 2>&1; then stubs=\"$(cygpath -u '" + stubs + "')\"; else stubs='"
+                + stubs + "'; fi\n"
+                + "PATH=\"$stubs:$PATH\"\n"
+                + "for stub in docker npm; do\n"
+                + "    [ \"$(command -v \"$stub\")\" = \"$stubs/$stub\" ] \\\n"
+                + "        || { echo \"$stub is $(command -v \"$stub\"), not the stand-in\"; exit 99; }\n"
+                + "done\n"
+                + "use_jdk25() { :; }\n"
+                + "port_in_use() { return 1; }\n"
+                + "start_services() { :; }\n"
+                + "wait_for() {\n"
+                + "    local polls=0\n"
+                + "    while [[ ! -f '" + slashes(backend) + "' ]] && (( polls < ${BACKEND_POLLS:-40} )); do\n"
+                + "        sleep 0.25\n"
+                + "        polls=$((polls + 1))\n"
+                + "    done\n"
+                + "    exit 0\n"
+                + "}\n", StandardCharsets.UTF_8);
+        Path runScript = checkout.resolve("be/run.sh");
+        Files.writeString(runScript, "#!/bin/sh\necho \"$*\" > '" + slashes(backend) + "'\n", StandardCharsets.UTF_8);
+        runScript.toFile().setExecutable(true);
+        Files.writeString(shims.resolve("docker"), "#!/bin/sh\necho \"$*\" >> '" + slashes(dockerCalls) + "'\n"
+                + "case \"$*\" in\n"
+                + "    *pg_database*)\n"
+                + "        for db in ${DB_EXISTS:-}; do case \"$*\" in *\"datname = '$db'\"*) echo 1 ;; esac; done ;;\n"
+                + "    *to_regclass*)\n"
+                + "        answer=f\n"
+                + "        for db in ${DB_IN_USE:-}; do case \"$*\" in *\" -d $db \"*) answer=t ;; esac; done\n"
+                + "        echo \"$answer\" ;;\n"
+                + "esac\n"
+                + "exit 0\n", StandardCharsets.UTF_8);
+        Path npm = shims.resolve("npm");
+        Files.writeString(npm, "#!/bin/sh\nexit 0\n", StandardCharsets.UTF_8);
+        npm.toFile().setExecutable(true);
+
+        List<String> command = new ArrayList<>(List.of(slashes(checkout.resolve("start-local.sh"))));
+        command.addAll(args);
+        Result result = run(command, env);
+        return new Started(result, Files.exists(backend) ? Files.readString(backend, StandardCharsets.UTF_8) : "");
     }
 
     Result run(List<String> args, Map<String, String> extra) throws Exception {

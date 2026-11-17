@@ -58,7 +58,7 @@ not answered for about ten seconds. So the backend runs apart from it:
 
    ```bash
    ./run.sh "-Dspring-boot.run.jvmArguments=-Duser.timezone=UTC -Dserver.port=8888 \
-     -Dniord.home=$HOME/.niord-ng-sample \
+     -Dniord.home=$HOME/.niord-local/niord_sample \
      -Dspring.datasource.url=jdbc:postgresql://localhost:5432/niord_sample -Dmode=development \
      -DadminAppUrl=http://localhost:4100 -Dniord.secom.enabled=false -DmailValidRecipients=ALL" \
      >> ../.local-run/backend-scenarios.log 2>&1

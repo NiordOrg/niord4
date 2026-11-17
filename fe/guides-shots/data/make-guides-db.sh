@@ -98,8 +98,9 @@ psql_db "$TARGET_DB" --single-transaction -q -At -f - <"$HERE/prepare.sql"
 # prepare.sql deleted the batch job records, so the execution folders an earlier copy's runs left in the guides home
 # go too: the job numbers start again on a new copy, and a new run would append its log to an old run's file (seen
 # 2026-11-12: one script's log held two executions). Only the guides home, and only its batch-jobs folder.
-GUIDES_HOME="${GUIDES_HOME:-$HOME/.niord-ng-guides}"
-if [[ "$(basename "$GUIDES_HOME")" == ".niord-ng-guides" && -d "$GUIDES_HOME/batch-jobs" ]]; then
+GUIDES_HOME="${GUIDES_HOME:-$HOME/.niord-local/niord_guides}"
+if [[ "$(basename "$GUIDES_HOME")" == "niord_guides" && "$(basename "$(dirname "$GUIDES_HOME")")" == ".niord-local" \
+      && -d "$GUIDES_HOME/batch-jobs" ]]; then
     echo ">> Removing the batch job folders of an earlier copy ($GUIDES_HOME/batch-jobs)"
     rm -rf -- "$GUIDES_HOME/batch-jobs"
 fi

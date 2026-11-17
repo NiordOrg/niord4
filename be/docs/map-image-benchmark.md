@@ -92,7 +92,7 @@ later, plus the set of messages used, the checks and the findings.
    `docker exec niord-db createdb -U niord -T template_postgis niord_bench_old`, then
    `docker exec niord-db sh -c "pg_dump -U niord -d niord_test | psql -q -U niord -d niord_bench_old"`; the same
    for `niord_bench_new`.
-3. **Two homes**, copies of `~/.niord-ng-dk` (`niord.json` and the cache tree `cache/`), with every `map_*.png` in
+3. **Two homes**, copies of `~/.niord-local/niord_test` (`niord.json` and the cache tree `cache/`), with every `map_*.png` in
    them deleted (a build from before the cache tree kept its images in `repo/`; for such a build that folder is
    what `--cache` and `--legacy-from` name, as the folders below it are the same): the images the test data came with are the previous renderer's, which the new one would serve as
    superseded images and redraw in the background during the first cases. Never one home for both: an image
