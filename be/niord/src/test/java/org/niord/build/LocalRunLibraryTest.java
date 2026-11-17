@@ -46,7 +46,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the compose file mounts first, and the compose file names that path and the project {@code be}. The library runs against a {@code docker} first on the PATH that writes down each
  * call and answers {@code inspect} from DOCKER_STOPPED and DOCKER_MISSING, so no real Docker is ever reached. Also:
  * {@code start-local.sh} sources the library and redefines none of its functions, and its {@code --dk} and
- * {@code --gl} name the country's own launcher before any docker call; {@code sample_reset} drops only
+ * {@code --gl} name the country's own launcher before any docker call; its Niord home is one folder per database
+ * under {@code ~/.niord-local}, {@code --sample} takes no home but its own and the realm's folder there is never a
+ * home, each refused before any docker call; {@code sample_reset} drops only
  * {@code niord_sample} or {@code niord_sample_<cc>}, refusing any other name before any docker call. And the library
  * makes the local Keycloak client of each active domain a country's bootstrap folder brings, its kcadm calls answered
  * by the same stand-in, never updating or deleting anything. Skipped where no bash is found, as
@@ -243,6 +245,53 @@ class LocalRunLibraryTest {
                     && result.output().contains("SIFA-DK/niord-" + country), result.toString());
             assertTrue(result.calls().isEmpty(), "refused before any docker call: " + result);
         }
+    }
+
+    /** The rule of a country's launcher: one Niord home per database, under the folder that also holds the realm */
+    @Test
+    void theLaunchersHomeIsOneFolderPerDatabase() throws IOException {
+        String launcher = Files.readString(LAUNCHER, StandardCharsets.UTF_8);
+
+        assertTrue(launcher.contains("NIORD_HOME_DIR=\"${NIORD_HOME_DIR:-$HOME/.niord-local/$NIORD_DB}\""),
+                "the default home follows the database");
+        assertTrue(launcher.contains("NIORD_HOME_DIR=\"$HOME/.niord-local/niord_sample\""), "the sample's home");
+    }
+
+    @Test
+    void theSampleTakesNoHomeButItsOwn() throws Exception {
+        failingDocker();
+        for (String other : List.of(".niord-local/niord", ".niord-local/niord_sample_dk", "elsewhere")) {
+            String dir = slashes(home) + "/" + other;
+            Result result = run(List.of(slashes(LAUNCHER), "--sample"), Map.of("NIORD_DB", "", "NIORD_HOME_DIR", dir));
+            assertEquals(2, result.status(), other + ": " + result);
+            assertTrue(result.output().contains("--sample uses the Niord home ~/.niord-local/niord_sample only, not "
+                    + "NIORD_HOME_DIR=" + dir + ": unset it."), other + ": " + result);
+            assertTrue(result.calls().isEmpty(), "refused before any docker call: " + other + ": " + result);
+            assertFalse(Files.exists(home.resolve(other)), "no folder is made: " + other);
+        }
+    }
+
+    /** ~/.niord-local/keycloak holds the realm the compose file mounts: by the database's name or by the override */
+    @Test
+    void theRealmsFolderIsNeverANiordHome() throws Exception {
+        failingDocker();
+        String realm = slashes(home) + "/.niord-local/keycloak";
+        for (Map<String, String> env : List.of(Map.of("NIORD_DB", "keycloak", "NIORD_HOME_DIR", ""),
+                Map.of("NIORD_DB", "", "NIORD_HOME_DIR", realm), Map.of("NIORD_DB", "", "NIORD_HOME_DIR", realm + "/"))) {
+            Result result = run(List.of(slashes(LAUNCHER)), env);
+            assertEquals(1, result.status(), env + ": " + result);
+            // Git Bash hands the launcher its HOME in another spelling, so the folder is matched by its end
+            assertTrue(result.output().contains("/.niord-local/keycloak")
+                    && result.output().contains("is the local realm's folder"), env + ": " + result);
+            assertTrue(result.calls().isEmpty(), "refused before any docker call: " + env + ": " + result);
+            assertFalse(Files.exists(home.resolve(".niord-local")), "no folder is made: " + env);
+        }
+    }
+
+    /** A docker that fails and writes down that it was called */
+    void failingDocker() throws IOException {
+        Files.writeString(shims.resolve("docker"), "#!/bin/sh\necho \"$*\" >> '" + slashes(dockerCalls) + "'\nexit 1\n",
+                StandardCharsets.UTF_8);
     }
 
     @Test

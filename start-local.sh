@@ -6,13 +6,13 @@
 #   - the Angular dev server(s): the administration app (fe/ui-apps/admin)   http://localhost:${FE_PORT:-4100}
 #     and/or the public site (fe/ui-apps/info)                                http://localhost:${INFO_PORT:-4400}
 #
-#   ./start-local.sh                 niord-app, database `niord`, files in ~/.niord-ng
+#   ./start-local.sh                 niord-app, database `niord`, files in ~/.niord-local/niord
 #   ./start-local.sh --info          the PUBLIC site (fe/ui-apps/info) instead of the administration app,
 #                                    on port 4400 + slot
 #   ./start-local.sh --admin --info  BOTH frontends against the one backend: the administration app on
 #                                    4100 + slot, the public site on 4400 + slot
 #   ./start-local.sh --sample        the sample deployment in one command (below): database `niord_sample`,
-#                                    files in ~/.niord-ng-sample, both frontends
+#                                    files in ~/.niord-local/niord_sample, both frontends
 #   ./start-local.sh --sample --reset
 #                                    ... after dropping the database niord_sample (and nothing else, through
 #                                    the library's sample_reset): after a git pull that changed
@@ -37,7 +37,7 @@
 # too.
 # --sample implies --admin --info unless one of them is given (`--sample --info` is the public site alone,
 # without an adminAppUrl, for the CSP run of fe/docs/testing.md). It refuses --fe-only, --own-db,
-# any NIORD_DB but niord_sample and any NIORD_HOME_DIR but ~/.niord-ng-sample. The sample users are the
+# any NIORD_DB but niord_sample and any NIORD_HOME_DIR but ~/.niord-local/niord_sample. The sample users are the
 # local realm's sysadmin, admin, editor and user, each with its name as password. A local trial on this
 # machine only: Keycloak runs in development mode with known passwords; never expose it. A country deploys
 # with the chart.
@@ -70,11 +70,12 @@
 #   INFO_PORT       public site's port when both frontends run (default 4400 + slot)
 #   BE_PORT         backend port (default 8888 + slot; with --fe-only 8888, the backend to proxy to)
 #   NIORD_DB        database name in the niord-db container (default niord; --sample takes niord_sample only)
-#   NIORD_HOME_DIR  the backend's file-system root, `niord.home` (default ~/.niord-ng; --sample takes
-#                   ~/.niord-ng-sample only). The checkout and the Niord home need a path without
-#                   whitespace: the JVM and Maven arguments split at a space.
+#   NIORD_HOME_DIR  the backend's file-system root, `niord.home` (default ~/.niord-local/<NIORD_DB>, one home
+#                   per database; --sample takes ~/.niord-local/niord_sample only). The checkout and the Niord
+#                   home need a path without whitespace: the JVM and Maven arguments split at a space.
 #                   Deliberately NOT the ~/.niord of the legacy Quarkus backend: its Lucene 9.5 message index
 #                   there makes this backend (Lucene 9.12) fail at startup with "Could not load codec 'Lucene95'".
+#                   Never ~/.niord-local/keycloak either: that folder is the local realm's place.
 #
 # The backend JVM runs in UTC (-Duser.timezone=UTC). The database stores timestamps as wall-clock values
 # without a zone, converted with the JVM's default time zone, and the test/production data was written by a
@@ -138,12 +139,12 @@ if $SAMPLE; then
     fi
     # The same for the Niord home: a NIORD_HOME_DIR exported for the plain run would have its message index and
     # its caches rebuilt from niord_sample and lend its niord.json to the sample run.
-    if [[ -n "${NIORD_HOME_DIR:-}" && "$NIORD_HOME_DIR" != "$HOME/.niord-ng-sample" ]]; then
-        echo "--sample uses the Niord home ~/.niord-ng-sample only, not NIORD_HOME_DIR=$NIORD_HOME_DIR: unset it." >&2
+    if [[ -n "${NIORD_HOME_DIR:-}" && "$NIORD_HOME_DIR" != "$HOME/.niord-local/niord_sample" ]]; then
+        echo "--sample uses the Niord home ~/.niord-local/niord_sample only, not NIORD_HOME_DIR=$NIORD_HOME_DIR: unset it." >&2
         exit 2
     fi
     NIORD_DB=niord_sample
-    NIORD_HOME_DIR="$HOME/.niord-ng-sample"
+    NIORD_HOME_DIR="$HOME/.niord-local/niord_sample"
     if ! $ADMIN && ! $INFO; then
         ADMIN=true
         INFO=true
@@ -189,7 +190,8 @@ export NIORD_BE_PORT="$BE_PORT"
 # always succeeds, so the substitution never carries a failing status out.
 APP=niord-app
 NIORD_DB="${NIORD_DB:-niord}"
-NIORD_HOME_DIR="${NIORD_HOME_DIR:-$HOME/.niord-ng}"
+# One Niord home per database, as in a country's launcher; --own-db keeps the home of the database it copies.
+NIORD_HOME_DIR="${NIORD_HOME_DIR:-$HOME/.niord-local/$NIORD_DB}"
 FE_SCRIPT=$($INFO && ! $BOTH && echo start:info || echo start:local)
 INFO_SCRIPT=start:info
 
@@ -197,6 +199,8 @@ BASE_DB="$NIORD_DB"
 if $OWN_DB; then NIORD_DB="${NIORD_DB}_slot$SLOT"; fi
 
 [[ "$NIORD_DB" =~ ^[a-z_][a-z0-9_]*$ ]] || die "NIORD_DB must be a plain lower-case identifier, got '$NIORD_DB'."
+# ~/.niord-local/keycloak holds the realm the compose file mounts (local_realm_path): never a Niord home.
+[[ "${NIORD_HOME_DIR%/}" == */.niord-local/keycloak ]] && die "The Niord home $NIORD_HOME_DIR is the local realm's folder, never a Niord home: name another NIORD_DB or NIORD_HOME_DIR."
 
 # The backend's JVM arguments and Maven's MAVEN_ARGS are split at every space, so a path with whitespace in
 # them would break the run later with a misleading error.
