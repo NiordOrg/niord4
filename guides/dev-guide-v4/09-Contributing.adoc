@@ -90,6 +90,8 @@ the end-to-end tests and the manual checks of the public site's image.
 [#licence]
 === Licence
 
-Niord is open source under the Apache License 2.0, stated in `be/LICENSE` and `fe/LICENSE`. Most of
-the backend's Java files carry the licence header; the frontend's files carry none, and their licence
-is stated in `fe/LICENSE` and `fe/README.md` only.
+Niord is open source under the Apache License 2.0, stated in `LICENSE` at the root of the repository
+and in `be/LICENSE` and `fe/LICENSE`. `NOTICE`, beside the root `LICENSE`, quotes the copyright lines
+of the files and names the parts that are under a licence of their own and the third-party material
+the repository holds. Most of the backend's Java files carry the licence header; the frontend's
+files carry none, and their licence is stated in `fe/LICENSE` and `fe/README.md` only.
