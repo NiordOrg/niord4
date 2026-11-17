@@ -24,6 +24,8 @@
 #     to something else);
 #   - a missing niord_guides: start-local.sh would create it empty and bootstrap it, and the
 #     guides would show the bare base product;
+#   - a missing Niord home: the backend would start on an empty one, without the home's
+#     niord.json;
 #   - a niord_guides that still holds an e-mail address outside example.org in the users, the
 #     contacts, the mail recipients or the comments' notification addresses: the scrub has not run
 #     (the four local logins may also hold <login>@niord.local, see below).
@@ -79,6 +81,9 @@ exists="$(docker exec niord-db psql -U niord -d postgres -Atc \
     || die "could not list the databases in niord-db."
 [[ "$exists" == "1" ]] \
     || die "the database $GUIDES_DB does not exist: make it first with make-guides-db.sh (start-local.sh would create it empty and bootstrap it)."
+# The home is made after the database, by make-guides-home.sh, and the rig never makes an empty one in its place.
+[[ -d "$GUIDES_HOME" ]] \
+    || die "the Niord home $GUIDES_HOME does not exist: make it first with make-guides-home.sh (the backend would start on an empty one, without the home's niord.json)."
 
 # Personal data the scrub replaces: every e-mail address is an example.org one afterwards. A column
 # that is gone (a newer schema) fails the query, and the rig refuses rather than guesses. The four
@@ -143,7 +148,7 @@ BE_URL="http://127.0.0.1:$BE_PORT/rest/settings/web"
 BE_LOG="$LOG_DIR/backend.log"
 WEB_LOG="$LOG_DIR/guides-web.log"
 BUILD_LOG="$LOG_DIR/guides-build.log"
-mkdir -p "$LOG_DIR" "$GUIDES_HOME"
+mkdir -p "$LOG_DIR"
 HOME_NATIVE="$(native_path "$GUIDES_HOME")"
 
 use_jdk25

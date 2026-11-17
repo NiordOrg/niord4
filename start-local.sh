@@ -23,7 +23,10 @@
 # be done (GET /rest/bootstrap, as the local realm's sysadmin) and, on a new database, runs the bootstrap
 # command (be/scripts/bootstrap.sh) with the base product's bootstrap: be/niord/bootstrap/, zipped into
 # .local-run/bootstrap-1.zip. A database that already holds data, bootstrapped before or loaded by you,
-# is never bootstrapped. The database is created in the niord-db container when it does not exist yet.
+# is never bootstrapped. The database is created in the niord-db container when it does not exist yet, and its
+# Niord home is made with it. A database a backend has run on is never given a new, empty home: when its home
+# does not exist, the start stops and names the folder (NIORD_HOME_DIR names a home that lies elsewhere; a folder
+# made by hand is the way to an empty home on purpose). --fe-only makes no home.
 #
 # --sample is the sample deployment (docs/fe-country-split-plan.md P9): the containers, an empty database
 # niord_sample (created when missing), the backend, the base product's bootstrap, then the sample
@@ -270,7 +273,7 @@ fi
 port_in_use "$FE_PORT" && die "Port $FE_PORT is already in use — pick another with --slot <n> or FE_PORT=<port> $0"
 $BOTH && port_in_use "$INFO_PORT" && die "Port $INFO_PORT is already in use — pick another with --slot <n> or INFO_PORT=<port> $0"
 
-mkdir -p "$NIORD_HOME_DIR" "$LOG_DIR"
+mkdir -p "$LOG_DIR"
 NIORD_HOME_NATIVE="$(native_path "$NIORD_HOME_DIR")"
 
 # The backend installs org.niord.base:niord-base:${revision} before it runs — so two checkouts sharing ~/.m2
@@ -378,6 +381,26 @@ start_services "$ROOT/be/docker-compose.yml" "$ROOT/be/keycloak/niord-realm-loca
 if $RESET; then
     sample_reset niord_sample
 fi
+
+# Whether a backend has run on the database $1: it is there and holds the Setting table (the image's own `niord` is
+# there from the container's first start, without a table).
+database_in_use() {
+    local found
+    found="$(docker exec niord-db psql -U niord -d postgres -tAc "select 1 from pg_database where datname = '$1'")" \
+        || die "Could not list the databases in niord-db."
+    [[ "$found" == 1 ]] || return 1
+    found="$(docker exec niord-db psql -U niord -d "$1" -tAc "select to_regclass('public.\"Setting\"') is not null")" \
+        || die "Could not read the tables of database $1 in niord-db."
+    [[ "$found" == t ]]
+}
+# The Niord home is made with its database. A database a backend has run on is never given a new, empty home
+# without a word: the backend would start on it without the home's niord.json, and store the class-path default
+# of every operator setting the database lacks, which a niord.json no longer overrides afterwards. The home is
+# that of $BASE_DB, which --own-db copies; the test comes before the copy's database is made.
+if [[ ! -d "$NIORD_HOME_DIR" ]] && database_in_use "$BASE_DB"; then
+    die "The database $BASE_DB holds a backend's tables, but its Niord home $NIORD_HOME_DIR does not exist, and this start would make a new, empty one: the backend would run without the home's niord.json. Name the home the database has with NIORD_HOME_DIR, or put it at that path. To start on an empty home on purpose: mkdir -p $NIORD_HOME_DIR"
+fi
+mkdir -p "$NIORD_HOME_DIR"
 
 ensure_database "$NIORD_DB"
 if $DATABASE_CREATED && $OWN_DB; then

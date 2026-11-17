@@ -50,8 +50,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@code --gl} name the country's own launcher before any docker call; its Niord home is one folder per database
  * under {@code ~/.niord-local}, {@code --sample} takes no home but its own and the realm's folder there, the folder
  * of the homes and the legacy backend's home are never one, in any spelling of the path, each refused before any
- * docker call; a copy of the launcher, with nothing real behind it, is started on the home of its database
- * ({@link #launch}); {@code sample_reset} drops only
+ * docker call; a copy of the launcher, with nothing real behind it, is started on the home of its database and
+ * never makes a new, empty home for a database a backend has run on ({@link #launch}); {@code sample_reset} drops only
  * {@code niord_sample} or {@code niord_sample_<cc>}, refusing any other name before any docker call. And the library
  * makes the local Keycloak client of each active domain a country's bootstrap folder brings, its kcadm calls answered
  * by the same stand-in, never updating or deleting anything. Skipped where no bash is found, as
@@ -364,6 +364,54 @@ class LocalRunLibraryTest {
         assertFalse(Files.exists(home.resolve(".niord-local/niord_slot2")), "no home of the copy's name: " + started);
     }
 
+    /**
+     * A database a backend has run on is never given a new, empty home, which would start the backend without the
+     * home's niord.json: refused before a database is made or copied; its own home, when there, is started on
+     */
+    @Test
+    void aDatabaseInUseIsNeverGivenANewEmptyHome() throws Exception {
+        Map<String, String> inUse = Map.of("DB_EXISTS", "niord", "DB_IN_USE", "niord");
+        for (List<String> args : List.of(List.<String>of(), List.of("--slot", "2", "--own-db"))) {
+            Started refused = launch(args, inUse);
+
+            assertEquals(1, refused.result().status(), args + ": " + refused);
+            assertTrue(refused.result().output().contains("The database niord holds a backend's tables, but its Niord home ")
+                    && refused.result().output().contains("/.niord-local/niord does not exist"), args + ": " + refused);
+            assertEquals("", refused.backend(), "no backend is started: " + args);
+            assertFalse(Files.exists(home.resolve(".niord-local")), "no folder is made: " + args);
+            assertTrue(refused.result().calls().stream().noneMatch(call -> call.contains("createdb") || call.contains("pg_dump")),
+                    "no database is made or copied: " + args + ": " + refused);
+        }
+
+        Files.createDirectories(home.resolve(".niord-local/niord"));
+        Started started = launch(List.of(), inUse);
+        assertEquals(0, started.result().status(), started.toString());
+        assertTrue(started.backend().matches("(?s).* -Dniord\\.home=\\S*/\\.niord-local/niord .*"), started.toString());
+        assertTrue(started.result().calls().stream().noneMatch(call -> call.contains("createdb")), started.toString());
+    }
+
+    /** The image's own niord is there before any backend ran on it: it gets its home, as a new database does */
+    @Test
+    void aDatabaseNoBackendRanOnGetsItsHome() throws Exception {
+        Started started = launch(List.of(), Map.of("DB_EXISTS", "niord"));
+
+        assertEquals(0, started.result().status(), started.toString());
+        assertTrue(Files.isDirectory(home.resolve(".niord-local/niord")), "the home is made: " + started);
+        assertTrue(started.backend().matches("(?s).* -Dniord\\.home=\\S*/\\.niord-local/niord .*"), started.toString());
+        assertTrue(started.result().calls().stream().noneMatch(call -> call.contains("createdb")), started.toString());
+    }
+
+    /** --fe-only starts no backend, asks docker nothing and makes no home */
+    @Test
+    void feOnlyMakesNoHome() throws Exception {
+        Started started = launch(List.of("--fe-only"), Map.of("BACKEND_POLLS", "0"));
+
+        assertEquals(0, started.result().status(), started.toString());
+        assertEquals("", started.backend(), "no backend is started: " + started);
+        assertTrue(started.result().calls().isEmpty(), "docker is not asked: " + started);
+        assertFalse(Files.exists(home.resolve(".niord-local")), "no home is made: " + started);
+    }
+
     /** A docker that fails and writes down that it was called */
     void failingDocker() throws IOException {
         Files.writeString(shims.resolve("docker"), "#!/bin/sh\necho \"$*\" >> '" + slashes(dockerCalls) + "'\nexit 1\n",
@@ -630,7 +678,8 @@ class LocalRunLibraryTest {
      * it: the library is the real one with the calls that reach outside the launcher answered at once (the JDK, the
      * ports, the containers) and a wait that ends the run once the backend is started, be/run.sh writes down its
      * arguments in the backend's place, and docker and npm are stand-ins that do nothing. The docker stand-in
-     * answers the database's existence from DB_EXISTS.
+     * answers which databases are there from DB_EXISTS and which of them hold the backend's tables from DB_IN_USE,
+     * each a list of names.
      */
     Started launch(List<String> args, Map<String, String> env) throws Exception {
         assumeTrue(!slashes(dir).matches(".*\\s.*"), "the launcher refuses a path with whitespace");
@@ -667,7 +716,12 @@ class LocalRunLibraryTest {
         runScript.toFile().setExecutable(true);
         Files.writeString(shims.resolve("docker"), "#!/bin/sh\necho \"$*\" >> '" + slashes(dockerCalls) + "'\n"
                 + "case \"$*\" in\n"
-                + "    *pg_database*) if [ -n \"${DB_EXISTS:-}\" ]; then echo 1; fi ;;\n"
+                + "    *pg_database*)\n"
+                + "        for db in ${DB_EXISTS:-}; do case \"$*\" in *\"datname = '$db'\"*) echo 1 ;; esac; done ;;\n"
+                + "    *to_regclass*)\n"
+                + "        answer=f\n"
+                + "        for db in ${DB_IN_USE:-}; do case \"$*\" in *\" -d $db \"*) answer=t ;; esac; done\n"
+                + "        echo \"$answer\" ;;\n"
                 + "esac\n"
                 + "exit 0\n", StandardCharsets.UTF_8);
         Path npm = shims.resolve("npm");
