@@ -49,7 +49,7 @@ that is to stand for the scenarios has none of them.
 `./start-local.sh --sample` cannot host the restart: it stops the whole run once the backend has
 not answered for about ten seconds. So the backend runs apart from it:
 
-1. Once, create and load the sample database: `./start-local.sh --sample`, wait for "niord-ng is
+1. Once, create and load the sample database: `./start-local.sh --sample`, wait for "Niord is
    running", then stop it with Ctrl+C.
 2. Start the backend alone with the same JVM arguments `start-local.sh --sample` gives it, plus
    `-DmailValidRecipients=ALL`, so that its mails reach MailHog (the default, `LOG`, only logs

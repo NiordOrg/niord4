@@ -948,6 +948,14 @@ Background: [`testing.md`](testing.md).
   boots the real `appConfig` and steps the router with `nextTask()`, one macrotask per navigation, so a scroll
   event that arrives a task late is missed. Waiting for the navigation's own end (the router's `NavigationEnd` and
   the `Scroll` event) instead of a fixed number of tasks closes it.
+- **One guard test cannot pass in Git Bash on Windows.** In `country-kit/base-bump-workflow.test.mjs`, "refuses a
+  changed byte, another SHA256SUMS, a short SHA-256, unverified notes and a missing lock" takes the lock's line
+  out of its `SHA256SUMS` fixture with `line.endsWith(' niord-pins.lock.json')`. Git Bash's `sha256sum` writes
+  `<hash> *niord-pins.lock.json` (the binary marker), so the line stays and the step answers "FAILED open or
+  read" where the test expects "SHA256SUMS does not list niord-pins.lock.json." It passes on CI's Linux runners;
+  on a Windows workstation `npm run test:guards`, and with it `./verify-local`, ends red on this one test (seen
+  2026-11-17, 1 of 1,819, on `main` as well). A filter that also accepts the ` *name` form closes it. The
+  fixture only: the workflow template runs on Linux.
 - Lint enforces the layer and feature boundaries, the time-zone restrictions and the selector rules. Nothing
   enforces the naming conventions, `import type`, the no-`Component`-suffix rule or the "do not add a component
   library" rule. Country-specific code staying out of `core` / `shared` / `features` is lint-guarded on the
