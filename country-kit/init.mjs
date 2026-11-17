@@ -149,7 +149,7 @@ export function zipSource(entries) {
   return (relative) => files.get(relative);
 }
 
-/** The same over a folder holding the base product's fe/ (this repository's own, in the tests). */
+/** The same over a folder holding the base product's fe/ (its own tree, in the tests). */
 export function folderSource(dir) {
   return (relative) => {
     const file = path.join(dir, ...relative.split('/'));
