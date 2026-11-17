@@ -305,7 +305,9 @@ database. It refuses any `NIORD_HOME_DIR` but `~/.niord-ng-sample`, and it refus
 A country's launcher (the kit's `templates/start-local.sh`, §5 step 9) does the same on `niord_sample_<cc>`
 with the country's backend, settings and texts: the base product's archive alone, then the sample, with no
 country bootstrap. The sample loads on any country's backend after the base archive: its own ids start at
-1,000,001, and every base row it names is found by a natural key (`SampleOnACountryBaseITTest`).
+1,000,001, and every base row it names is found by a natural key (`SampleOnACountryBaseITTest`). The base
+product's `--sample` stays English only, while DK's launcher starts with Danish on (the owner's requirement of
+2026-10-23).
 
 **The safety rules (security review, 2026-10-19).** They hold for every change to the sample, the launchers,
 the loader, the builds and the publish:
@@ -334,7 +336,7 @@ the loader, the builds and the publish:
    a phone pattern, a table outside an allow-list; `SampleSafetyCheck`). A seed made from a copy of a real
    environment's data or from a production export is never committed as a country seed.
 5. **A local trial on this machine only.** The sample users exist only in the local realm that `docker-compose`
-   imports; the chart's realm has none. Every port stays on `127.0.0.1`, and the launcher's closing lines and
+   imports; the chart's realm gains none. Every port stays on `127.0.0.1`, and the launcher's closing lines and
    the README say: a local trial on this machine only — Keycloak in development mode, known passwords; never
    expose it; a country deploys with the chart. Mail goes to the loopback MailHog; SECOM's outbox dispatch is
    off.
@@ -1534,9 +1536,9 @@ country — hence split tokens, hash pins and, later, attestations.
      A spec or comment that names a word is allow-listed with its reason rather than kept out of the zip: a base
      product spec beside a file a country overrides runs against the
      country's copy (rule 3), so leaving specs out would silently drop that check. **The list is loosened when
-     the repositories go public (owner, 2026-10-19)**: the base product's repository has been public since
-     2026-11-17, the country repositories `niord-dk` and `niord-gl` are private, and the list is unchanged; the
-     condition waits for the country repositories.
+     the repositories go public (owner, 2026-10-19).** The base product's repository has been public since
+     2026-11-17, and the country repositories `niord-dk` and `niord-gl` are not. The list stays unchanged until
+     the owner says whether the condition is met.
    - **Pack and base product bumps are never automerged (owner, 2026-10-19):** the bump PR prints every changed value
      per application and flags values with markup or URLs. **Their cadence (the owner, 2026-10-25, 2026-11-01
      and 2026-11-03):** the Niord base bump app opens the bump PR at every publish, minutes after the release, and
@@ -1964,7 +1966,7 @@ of those steps is not in this document. This table says what each name stands fo
 | P1 (P1a, P1b) | 2026-10-21 | the contracts in the base product, while it still held the countries: branding and legal texts in both applications, the language configuration, the administration app's Content-Security-Policy, the maintainer list and the release environments | §4.4, §4.11 |
 | P2 (P2a, P2b) | 2026-10-21 | language packs: the pack layout and the status files, the staging step, the pack check | §4.5, §4.6 |
 | P3 (P3a, P3b1, P3b2, P3c1, P3c2) | 2026-10-21 and 22 | the country kit and the example country: set-up and the generated workspace (P3a), the extension points and the country API (P3b1, P3b2), the checks on every country build and the info image (P3c1), the acceptance and upgrade tests, a country's end-to-end specs and the upgrade report (P3c2) | §3.2, §4.3, §4.8, §4.9, §4.12 |
-| P4, "PR A" | 2026-10-22 | the source zip `niord-fe-src`, published with every version, and the release that records its hash; PR A is the pull request that brought P1 to P4 | §3.1, §4.11 rules 2 and 6 |
+| P4 | 2026-10-22 | the source zip `niord-fe-src`, published with every version, and the release that records its hash | §3.1, §4.11 rules 2 and 6 |
 | P5 (P5b, P5d, P5e, P5k) | 2026-10-22 to 24 | DK moved into `niord-dk`: its frontend (P5b), its bootstrap's domain ids (P5d), its bump onto 4.0.87 (P5e). P5k is the kit's half, in 4.0.87: published packs, their pins and the withdrawn marker, a country's own URL allow-list | §4.1, §4.2, §4.5, §4.11 |
 | P6 (P6b, P6e) | 2026-10-22 to 24 | GL moved into `niord-gl`, with its theme and its font: its frontend (P6b), its bump onto 4.0.87 (P6e) | §4.7 |
 | P7 (P7a to P7h, P7-be, P7-bs) | 2026-10-24 and 25, 4.0.97 | the base product let go of the countries: no country folder, pack or configuration in it, the word guards over the whole tree, audio promulgation in the base product (P7c, P7-be), the first bootstrap's rule (P7-bs, `docs/code-data-config-plan.md` §7.2), the run of §5 from an empty folder (P7h). D7 to D34 are decisions taken in it | §4.8, §4.11 rule 6, §5 |
