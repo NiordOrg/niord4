@@ -9,7 +9,7 @@ owner, and may be offline for a day. Wherever being offline makes a step simpler
 takes the offline path; no step is split or ordered to keep the stagings up.
 **Scope:** the test cluster only (staging DK, staging GL, the Argo CD UI, future test
 environments). Prod has no Traefik and is not touched.
-**Repos:** devops-shared (platform), niord-ng (the chart), devops-niord (environments).
+**Repos:** devops-shared (platform), niord (the chart), devops-niord (environments).
 
 ---
 
@@ -27,9 +27,9 @@ ruled the same day: stop, go back to Ingress, remove everything that was added.
 
 | Step | Done on 2026-10-01 | How it is undone |
 |---|---|---|
-| 1 | cert-manager on the test cluster, the wildcard certificate in a Secret (devops-shared merge requests 37, 38) | devops-shared removes the component, then its project entries; the CRDs, the namespace and the two Secrets are deleted by hand |
-| 2 | the TLSRoute CRD as a file under root (devops-shared merge requests 39, 40, 41) | devops-shared removes the file; the CRD is deleted by hand |
-| 3 | the chart rendered an HTTPRoute, published as 4.0.46 (pull requests 118, 119) | pull request 118 reverted: the chart renders an Ingress again, with `proxy.ingress`. 4.0.46 is the one version that renders an HTTPRoute; no environment ever pinned it |
+| 1 | cert-manager on the test cluster, the wildcard certificate in a Secret (two devops-shared merge requests) | devops-shared removes the component, then its project entries; the CRDs, the namespace and the two Secrets are deleted by hand |
+| 2 | the TLSRoute CRD as a file under root (three devops-shared merge requests) | devops-shared removes the file; the CRD is deleted by hand |
+| 3 | the chart rendered an HTTPRoute, published as 4.0.46 (two pull requests) | the first of the two reverted: the chart renders an Ingress again, with `proxy.ingress`. 4.0.46 is the one version that renders an HTTPRoute; no environment ever pinned it |
 | 4 | the switch: a draft, never pushed | discarded |
 | 5, 6 | not started | — |
 
@@ -81,10 +81,10 @@ its record is `docs/mTLS-support-removed.md` there).
 |---|---|---|---|
 | 1 | devops-shared | cert-manager fetches the wildcard certificate into a Secret — done 2026-10-01, **rolled back** | none |
 | 2 | devops-shared | the host's Gateway API CRDs stay; we add the one that is missing, TLSRoute (redrawn, section 2.6) — done 2026-10-01, **rolled back** | none |
-| 3 | niord-ng | chart renders an HTTPRoute instead of an Ingress; published — done 2026-10-01 as chart 4.0.46, **reverted** | none (never deployed) |
+| 3 | niord | chart renders an HTTPRoute instead of an Ingress; published — done 2026-10-01 as chart 4.0.46, **reverted** | none (never deployed) |
 | 4 | devops-shared | the switch: Gateways on, Ingress off, fence rewritten, Argo CD UI moved — **not done** | stagings down until step 5 |
 | 5 | devops-niord | stagings pin the chart from step 3 — **not done** | stagings back |
-| 6 | devops-shared, niord-ng, devops-niord | SECOM mTLS through a TLSRoute (open issue 5) — **not done; the reason it was needed is gone** | SECOM reachable through Traefik |
+| 6 | devops-shared, niord, devops-niord | SECOM mTLS through a TLSRoute (open issue 5) — **not done; the reason it was needed is gone** | SECOM reachable through Traefik |
 
 ---
 
@@ -234,7 +234,7 @@ chart owns its routes, devops-niord chooses internal or public.
 
 **What was planned.** Step 2 would install the Gateway API CRDs ourselves: the Standard
 channel of v1.5.1, eight CRDs, through the chart `traefik-crds`, as a platform component.
-It was built that way, proved on OrbStack and merged (devops-shared merge request 39).
+It was built that way, proved on OrbStack and merged (a devops-shared merge request).
 
 **What the cluster already had.** Six of the eight were there before we came:
 
@@ -290,7 +290,7 @@ two versions several times an hour.
 
 **What changes in this plan.**
 
-- Step 2 no longer installs a set of CRDs. It removes the component of merge request 39
+- Step 2 no longer installs a set of CRDs. It removes the component of the first attempt
   and adds the TLSRoute CRD alone (step 2 below).
 - The Gateway API version is the host's, and it moves when the host upgrades the cluster.
   v1.4.0 has everything the plan uses: Gateway and HTTPRoute `v1`, `allowedRoutes`,
@@ -457,7 +457,7 @@ the proof on OrbStack starts from what they show, not from a clean cluster.
 
 ### Step 1 — devops-shared: cert-manager and the certificate (done 2026-10-01, rolled back 2026-10-02)
 
-Merged as devops-shared merge request 37; the result is recorded in its
+Merged as a devops-shared merge request; the result is recorded in its
 `runbooks/bootstrap.md`. What was built, with the five places where it differs from the
 plan of 2026-09-30 marked **(changed)**:
 
@@ -520,11 +520,11 @@ Application's own destination namespace only.
 
 ### Step 2 — devops-shared: the one missing CRD (redrawn and done 2026-10-01, rolled back 2026-10-02)
 
-The first attempt is in section 2.6. This step replaced it. Merged as devops-shared merge
-request 40; the result is recorded in its `runbooks/bootstrap.md`, and what is left open
+The first attempt is in section 2.6. This step replaced it. Merged as a devops-shared merge
+request; the result is recorded in its `runbooks/bootstrap.md`, and what is left open
 in its open issue 9.
 
-- **The component of merge request 39 is removed:** `platform/test/gateway-api/`, its
+- **The component of the first attempt is removed:** `platform/test/gateway-api/`, its
   validator rule and tests, the `*.gateway.networking.k8s.io` entry in
   `argocd/test/platform-project.yaml`, and its places in the docs. With the directory gone,
   the ApplicationSet deleted the `gateway-api` Application, and Argo CD stopped touching
@@ -568,7 +568,7 @@ in its open issue 9.
   created was deleted by hand. Nothing changed for traffic.
 - **Rollback:** delete the file. The CRD stays; remove it by hand if it must go, once no
   TLSRoute exists (`kubectl delete crd tlsroutes.gateway.networking.k8s.io`). Do not
-  revert merge request 40 as a whole: that brings the failing component back.
+  revert this step's merge request as a whole: that brings the failing component back.
 - **When the host's package brings TLSRoute itself** (a Tanzu upgrade to Gateway API v1.5
   or later): delete our file before that upgrade, so the host's controller finds a CRD
   nobody else manages. How that controller treats a CRD it did not create is not tried;
@@ -580,9 +580,9 @@ copy of devops-shared with only the git URL and the chart registry changed, and 
 root Application and ApplicationSet. It starts from the cluster's state, the host's CRDs
 included, not from a clean cluster.
 
-### Step 3 — niord-ng: the chart renders an HTTPRoute (done 2026-10-01 as chart 4.0.46, reverted 2026-10-02)
+### Step 3 — niord: the chart renders an HTTPRoute (done 2026-10-01 as chart 4.0.46, reverted 2026-10-02)
 
-Merged as pull request 118 and published as **4.0.46**: the chart
+Merged and published as **4.0.46**: the chart
 `reg.sitcloud.dk/cu3504-mssb-brs/charts/niord:4.0.46` and the three app images of that
 version. That is the version step 5 pins. 4.0.42 and earlier render an Ingress.
 
@@ -786,7 +786,7 @@ Unchanged, except its step 2: in devops-niord, add `{ name: public, namespace: t
   `platform/test/reloader/` (the pull-secret pattern),
   `argocd/test/{platform-project,argocd-server-ingress}.yaml`, `runbooks/traefik-smoke.yaml`,
   `scripts/validate_configs.py`, `docs/open-issues.md` (issues 5 and 8)
-- niord-ng (this repo): [`ingress.yaml`](../be/k8s/helm/niord/templates/nginx/ingress.yaml),
+- niord (this repo): [`ingress.yaml`](../be/k8s/helm/niord/templates/nginx/ingress.yaml),
   [`configmap.yaml`](../be/k8s/helm/niord/templates/nginx/configmap.yaml),
   [`values.yaml`](../be/k8s/helm/niord/values.yaml) (`proxy`),
   [`be/k8s/README.md`](../be/k8s/README.md), [`be/docs/cicd/`](../be/docs/cicd/)
@@ -824,7 +824,7 @@ Unchanged, except its step 2: in devops-niord, add `{ name: public, namespace: t
   CD v3.5.3 on OrbStack (`retry.limit: 5` on an automated sync; no new attempt for the
   same revision after it fails; `helm.sh/resource-policy: keep` kept the CRDs on delete;
   orphan detection in the destination namespace).
-- Checked 2026-10-01 on the test cluster (jump server), after merge request 39: creation
+- Checked 2026-10-01 on the test cluster (jump server), after the first attempt's merge: creation
   times, annotations, labels and field managers of the eight CRDs; the PackageInstall and
   the kapp-controller App `test-cluster-brs-01-gateway-api` in `vmware-system-tkg`; the
   `gateway-api` Application's sync message. And on OrbStack: the upstream Standard bundle
@@ -834,5 +834,5 @@ Unchanged, except its step 2: in devops-niord, add `{ name: public, namespace: t
 - Checked 2026-10-01, the new step 2: the rehearsal above (real `root.yaml`, platform
   ApplicationSet and project from a git server in the proof cluster); Argo CD v3.5.3 puts
   a tracking annotation on the ConfigMap and the Ingress root applies, and none on a CRD;
-  on the test cluster after merge request 40: the Application gone, root Synced and
+  on the test cluster after its merge: the Application gone, root Synced and
   Healthy, seven CRDs, the host's package "Reconcile succeeded".

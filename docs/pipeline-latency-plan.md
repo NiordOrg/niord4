@@ -4,7 +4,7 @@
 minutes (11.5 before), and a staging deploy is one command and one merge (three hand-offs
 and about 18 minutes before). One step was decided against (the GitLab webhooks, §4) and
 one follow-up is open (§4). The full proposal, its two reviews of 2026-10-07 and the
-simplifying third look are in this file's history up to niord-ng #152; this page is the
+simplifying third look are in this file's history; this page is the
 record that remains.
 **Scope:** the path a change takes from a pull request into `main` to a running staging:
 `be-ci.yml` and `publish.yml` here, `ci.yml` and `image.yml` in `SIFA-DK/niord-dk` and
@@ -42,12 +42,12 @@ backend path.
 
 | Step | Where | Live since |
 |---|---|---|
-| 1. Documentation-only backend changes run no Backend CI and publish nothing | niord-ng #143, `be-ci.yml` | 4.0.63 |
-| 2. The run on `main` skips the tests a pull request run already ran on the same backend content | niord-ng #145 (the report), #150 (the skip), `be-ci.yml` | 4.0.65, 4.0.66 |
+| 1. Documentation-only backend changes run no Backend CI and publish nothing | niord, `be-ci.yml` | 4.0.63 |
+| 2. The run on `main` skips the tests a pull request run already ran on the same backend content | niord, two pull requests (the report, the skip), `be-ci.yml` | 4.0.65, 4.0.66 |
 | 3. A country image follows a green pin bump on its `main` | niord-dk #1, niord-gl #1, `ci.yml` + `image.yml` | 2026-10-08 |
-| 4a. Both Argo CD controllers poll GitLab every minute | devops-shared !50, `argocd/test/` | 2026-10-08, on the test cluster |
-| 5. The integration job runs Failsafe only and pulls its container images while Maven compiles | niord-ng #144, `be-ci.yml`, `be/test-it`, `be/scripts/it-images.sh` | 4.0.64 |
-| 17. A staging deploy in one command | devops-niord !31, `scripts/staging-bump.py` | 2026-10-08; first run !30 |
+| 4a. Both Argo CD controllers poll GitLab every minute | devops-shared, `argocd/test/` | 2026-10-08, on the test cluster |
+| 5. The integration job runs Failsafe only and pulls its container images while Maven compiles | niord, `be-ci.yml`, `be/test-it`, `be/scripts/it-images.sh` | 4.0.64 |
+| 17. A staging deploy in one command | devops-niord, `scripts/staging-bump.py` | 2026-10-08 |
 
 **Step 1.** `be-ci.yml`'s `push` filter excludes `be/docs/**` and Markdown under `be/`
 (re-including `src/test/resources`, where one fixture lives) and includes `publish.yml`;
@@ -90,13 +90,13 @@ subshell of the same step before `./test-it`; the first IT class then starts its
 containers from local images. One-class run: `./test-it --its-only -pl niord -Dit.test=<Class>`.
 
 **Item 17.** `scripts/staging-bump.py` in devops-niord, run from a workstation with the
-person's own `gh` and `glab` logins: takes a base (default niord-ng's newest `v4.0.N`
+person's own `gh` and `glab` logins: takes a base (default the base product's newest `v4.0.N`
 tag), commits the pin in each country repository under the person's identity, waits for
 CI and the Image run, reads the tags, writes the four pins into a branch with
 `promote.py`'s own substitution, validates, opens the merge request. The merge stays by
 hand. `--dry-run`, `--country`, `--no-wait`, `--timeout`; an already-pinned country reuses
 its newest green image or dispatches `image.yml`; a red CI stops it before the deploy repo
-is touched. First run: both countries 4.0.61 → 4.0.66, images `4.0.66.6`, !30, nine minutes.
+is touched. First run: both countries 4.0.61 → 4.0.66, images `4.0.66.6`, nine minutes.
 
 ---
 
@@ -113,8 +113,8 @@ Break-glass is unchanged.
 ## 4. Not built
 
 - **Step 4b, GitLab push webhooks to both Argo CD controllers** — deferred by the owner on
-  2026-10-08 ("polls for now"), and decided against on 2026-11-10: devops-shared !49, the
-  draft that built it, is closed unmerged. It would have saved at most a minute per
+  2026-10-08 ("polls for now"), and decided against on 2026-11-10: in devops-shared the
+  draft that built it is closed unmerged. It would have saved at most a minute per
   staging deploy, since both controllers poll every minute (step 4a). For that it needed
   a second internal Ingress for the ApplicationSet controller's webhook port, a Traefik
   `allowedHosts` line, a hand-applied secret, four GitLab webhooks, and two answers from
@@ -147,20 +147,20 @@ for a private repository), Renovate and per-publish country pipelines (decided
   each publish tagged before the next workflow change (4.0.63–4.0.66); step 4a verified on
   the cluster by the owner; webhooks deferred; item 17 built and run; this page rewritten
   as the record on 2026-10-13.
-- 2026-11-03 — the bump by push (decision 133, built as F8 in
-  `docs/fe-country-split-plan.md` §6 _The bump by push_): each publish opens or moves the
+- 2026-11-03 — the bump by push (built as F8 in
+  `docs/fe-country-split-plan.md` §4.11 rule 6 and §4.12): each publish opens or moves the
   bump PR in every country that installed the Niord base bump app, which starts its Base
   bump workflow and CI. Measured on DK #13 (2026-11-02, wall time): Base bump 27 s to 1 min
   17 s, dispatched 2 min 2 s, CI 35 s on the unpinned lock and 4 min 50 s pinned.
-  Estimated: about 4 to 5 billed minutes per country per move while niord-ng is private
+  Estimated: about 4 to 5 billed minutes per country per move while this repository is private
   (about 380 a month for two countries), about 14 (about 1,060 a month) once it is public;
-  the cadence, every publish, is revisited when niord-ng goes public (F8-D14). The image
+  the cadence, every publish, is revisited when this repository goes public. The image
   still follows the bump PR's merge.
 
 ## 6. References
 
 - `.github/workflows/be-ci.yml` (its header explains steps 1, 2 and 5), `publish.yml`.
 - `SIFA-DK/niord-dk`, `SIFA-DK/niord-gl`: `.github/workflows/ci.yml`, `image.yml`.
-- `devops-shared/argocd/test/` (`argocd-cm.yaml`, the two ApplicationSets), `runbooks/bootstrap.md`; !49 (closed) for the webhooks that were not built.
+- `devops-shared/argocd/test/` (`argocd-cm.yaml`, the two ApplicationSets), `runbooks/bootstrap.md`; the closed draft for the webhooks that were not built.
 - `devops-niord/scripts/staging-bump.py`, `tests/test_staging_bump.py`, README "Moving staging to a new base: one command".
 - `be/docs/cicd/design.md` §3–§7, `implementation-plan.md` *The order of work*; `docs/renovate-plan.md`.

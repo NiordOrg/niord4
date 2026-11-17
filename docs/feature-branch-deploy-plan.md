@@ -4,7 +4,7 @@
 country split (R5). Harbor and the GitLab repository `devops-niord` are the owner's side (R5; the GitHub
 repository and organisation settings and the GitLab repository `devops-shared` likewise); nothing here is done to
 them before he says so.
-**Scope:** how a build of an unmerged branch of `niord-ng`, of a country repository (`SIFA-DK/niord-dk`,
+**Scope:** how a build of an unmerged branch of the base product, of a country repository (`SIFA-DK/niord-dk`,
 `SIFA-DK/niord-gl`) or of both reaches staging or a `test-<name>` environment on the test cluster, and what keeps
 it from production and from existing data: a preview workflow here with a Packages repository and a Harbor project
 of its own, preview inputs in the country kit's image template, a deploy command and a promote change in
@@ -63,7 +63,7 @@ administration bundle `niord-web-admin` (classifier `en`, `:26-29`), the image `
 `4.0.<run>`, into the Harbor project `cu3504-mssb-brs` (`:173-174`, `:843-869`), then the tag `v4.0.<run>` and a
 GitHub release on it carrying the source zip and its sha256 (`:975`, `:1040`). Before anything is deployed the
 jars, the bootstrap zip and the image inputs are checked to carry nothing of the sample (`:510-511`, `:824-825`).
-(The line numbers are of `publish.yml` as of the review of #204, 2026-10-25.)
+(The line numbers are of `publish.yml` as of 2026-10-25.)
 
 **A country image comes only from its `main`.** Since 2026-10-08 a country's `image.yml` builds after a green
 CI run of a pin bump pushed to its `main`, tagged `<base>.<run>` (`docs/pipeline-latency-plan.md:71-75`); the
@@ -97,7 +97,7 @@ for every environment but prod, by a preview path beside the release path, which
 
 ## 3. The design
 
-### 3.1 Preview builds of `niord-ng`
+### 3.1 Preview builds of the base product
 
 **The workflow.** A new `.github/workflows/preview.yml`, `workflow_dispatch` only, runnable from any branch. It
 must be on `main` before it can be dispatched (GitHub lists a dispatchable workflow from the default branch) and
@@ -197,7 +197,7 @@ first use, as a release's is after its first check (the same rule's first-pin se
 
 A preview push job of its own, in the country's own `preview` environment with a robot for the preview project,
 pushes preview tags only. It keeps the release jobs' split (`docs/fe-country-split-plan.md` §4.11 rule 1: the
-unprivileged job and the push job, and _As built after the review of PR #184_): npm and the country's code run only in the unprivileged frontend job, with no environment and no
+unprivileged job and the push job, and _As built_): npm and the country's code run only in the unprivileged frontend job, with no environment and no
 secret; the push job runs no npm and no kit code, verifies the hashes, logs in only to `REGISTRY` and pushes only
 `<REGISTRY>/<preview project>/…`, refusing any other reference. The existing push job stays on `main` and the
 `harbor` environment and refuses a pre-release base: the template's tag check already refuses anything but digits
@@ -227,7 +227,7 @@ step 5 of §5 settles it.
 
 **The schema (R3).** The merge request lists what the build does to the environment's schema: the changesets
 the build has that the environment's current build does not, read from the master changelog
-(`be/niord/src/main/resources/db/changelog/db.changelog-master.yaml`) of the two `niord-ng` commits. The commit
+(`be/niord/src/main/resources/db/changelog/db.changelog-master.yaml`) of the two base product commits. The commit
 comes from the base version, not from a country image's labels, which name the country repository's commit
 (`publish-images.sh:18`): the tag `v4.0.N` for a release, the preview run named by the version's `<run>` for a
 preview. For `--env staging` it refuses a build with any new changeset unless `--schema-final` is passed, and
@@ -301,7 +301,7 @@ production: it is changed only when the owner asks for it (`AGENTS.md:52-55`).
 
 - The countries' bump is the Niord base bump app's PR, opened only by `publish.yml`'s `bump` job: after a
   release, on `main`, in the main-only `publish` environment, and never automerged (`docs/fe-country-split-plan.md`
-  §4.11, the never-automerged ruling; §6 there, _The bump by push_). A preview build makes no release and runs
+  §4.11, rule 1 and the never-automerged ruling; §4.12 there, step 1). A preview build makes no release and runs
   no `publish.yml`, and the script refuses any version that is not `4.0.<n>` (§3.1), so no preview reaches a
   country.
 - A pin to a preview never reaches a country's `main`: the base is set in the image job's workspace only, and
@@ -350,8 +350,8 @@ repository's.
 
 | Step | Owner | What | Verified on the test cluster by |
 |---|---|---|---|
-| 1 | owner | The Harbor project for previews, a push robot each for `niord-ng`, `niord-dk` and `niord-gl`, a pull credential sealed for the test cluster only, a retention rule; the preview Packages repository and its machine user, with write access to that repository only | the preview robot pushes a scratch tag there and is refused by `cu3504-mssb-brs`; the release robot is refused by the preview project; a `test-<name>` namespace pulls the tag; the preview token is refused by `NiordOrg/niord`'s registry |
-| 2 | owner | The `preview` environment in `niord-ng` (no branch rule) with the preview Packages token and robot; the same in each country repository, with the countries' read access to the preview repository | a branch's dispatch reaches the secrets; the next `main` publish passes its gate with `publish` and `harbor` unchanged |
+| 1 | owner | The Harbor project for previews, a push robot each for `niord`, `niord-dk` and `niord-gl`, a pull credential sealed for the test cluster only, a retention rule; the preview Packages repository and its machine user, with write access to that repository only | the preview robot pushes a scratch tag there and is refused by `cu3504-mssb-brs`; the release robot is refused by the preview project; a `test-<name>` namespace pulls the tag; the preview token is refused by `NiordOrg/niord`'s registry |
+| 2 | owner | The `preview` environment in the base product's repository (no branch rule) with the preview Packages token and robot; the same in each country repository, with the countries' read access to the preview repository | a branch's dispatch reaches the secrets; the next `main` publish passes its gate with `publish` and `harbor` unchanged |
 | 3 | repo | `preview.yml` and `preview-prune.yml` on `main`; the docs (design §7, Phase 6's `pr-<n>` item and the order of work in `implementation-plan.md`, `:16` and `:22`, a line on the preview path in `docs/security-review-2026-09.md` §7, the README) | a dispatch from a branch publishes the preview set and no tag or release; a dispatch on a draft's skipped runs is refused; the next release is `4.0.N`, `staging-bump.py` still picks it, Frontend CI's upgrade test still finds it; the bump script refuses a preview version (its unit test); the prune deletes a scratch preview and nothing else |
 | 4 | repo | The kit's `templates/image.yml` inputs, the preview push job and the `main` job's pre-release refusal; then each country's `image.yml` and `ci.yml` | a country preview of each row of §3.2's table; the `main` job and `ci.yml` shown red once on a preview base |
 | 5 | owner | `preview-deploy.py` with its tests, the changeset list and the checksum refusal in it and in `staging-bump.py`, and `staging-bump.py`'s refusal of preview runs and tags; the preview chart source and pull credential in the test cluster's AppProject | a `test-<name>` environment from a preview with a changeset, bootstrapped, used, deleted with its volumes; a staging merge request refused without `--schema-final` and opened with it; back to a release with `staging-bump.py`, which passes over a newer preview image |
@@ -384,6 +384,6 @@ repository's.
   draft's skipped runs; release publishing stays `main`-only beside the preview path; `staging-bump.py` ignores
   previews; the consequences on staging of a branch's keys and changesets; the promote's "has run" read from
   staging's pin history.
-- 2026-10-24 (the review of PR #196): the references into the two plans cite sections and rules instead of
+- 2026-10-24 (a review): the references into the two plans cite sections and rules instead of
   line numbers, which move with every change to them; four workflow and README line numbers corrected; the
   country backend image's model named as `niord-dk`'s `image.yml`, as the country-split plan's §5 step 10 does.

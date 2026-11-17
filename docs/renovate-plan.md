@@ -64,27 +64,27 @@ Recorded 2026-11-03. The GitHub side of the chain, the base bump pull requests i
 country repositories, was settled in three steps; the last one replaced Renovate there
 altogether. The GitLab plan of this page is unchanged by it and stays decided against.
 
-**2026-11-01 and 2026-11-02: Mend's hosted app (E1, E2).** The owner's choice for the
+**2026-11-01 and 2026-11-02: Mend's hosted app.** The owner's choice for the
 countries was Renovate as Mend's hosted app on the SIFA-DK organisation. The kit's
 `templates/renovate.json` (RN-2) bumped the `<parent>` and the pack digests weekly, security
 bumps at once, never automerged, without the Dependency Dashboard's approval (dropped by the
-owner on 2026-11-01, decision 93). Its Maven lookup in GitHub Packages needed a credential
+owner on 2026-11-01). Its Maven lookup in GitHub Packages needed a credential
 kept at Mend, `NIORD_PACKAGES_READ`: a machine user's `read:packages` token, the hostRules
-user `niord-renovate` (decision 104). The template, the Base bump workflow and the guides
+user `niord-renovate`. The template, the Base bump workflow and the guides
 were built in the split plan's Renovate step and published in 4.0.111; the app was never
-installed and the credential never made (tracker F1, F2).
+installed and the credential never made.
 
-**2026-11-03 morning: Renovate self-hosted (decision 132).** The owner reversed E1/E2:
+**2026-11-03 morning: Renovate self-hosted.** The owner reversed that choice:
 Renovate as a scheduled workflow in each country's own Actions, written by `init`, reading
 the registry with the country's built-in `GITHUB_TOKEN` and dispatching the Base bump
-workflow with the pull request's number; no Mend app and no machine user, so F2 was dropped.
+workflow with the pull request's number; no Mend app and no machine user, so the credential was dropped.
 It was never built.
 
-**2026-11-03 ~07:50: the bump by push (decision 133).** Both are superseded. A GitHub App of
-SIFA-DK's own, "Niord base bump", is used only by niord-ng's publish run, its `bump` job, to
+**2026-11-03 ~07:50: the bump by push.** Both are superseded. A GitHub App of
+SIFA-DK's own, "Niord base bump", is used only by this repository's publish run, its `bump` job, to
 open the bump pull request on `base-bump/<version>`, or move the one open bump pull request
 to the newer version, in each country repository that installed it. Its private key and id
-live on niord-ng's main-only `publish` environment; a country holds no credential of it. The
+live on this repository's main-only `publish` environment; a country holds no credential of it. The
 reasons, from the discussion of that morning:
 
 - Mend's credential is one per organisation: a machine user's token in every country
@@ -95,17 +95,17 @@ reasons, from the discussion of that morning:
 - [GitHub, from knowledge] Dependabot, weighed beside them, needs a registry token for GitHub
   Packages' Maven endpoint and pauses version updates after 90 days of ignored pull requests.
 - The push needs no schedule anywhere, so nothing pauses, and no credential in a country. It
-  arrives minutes after a release, which absorbs the publish nudge (tracker F7), in private
+  arrives minutes after a release, which absorbs the publish nudge, in private
   and public repositories alike; and [GitHub, from knowledge] an app's pull request, unlike
   one made with the built-in token, starts the country's workflows, so the Base bump
   workflow and CI run on it.
 
-**What carries over.** The Base bump workflow and "green means no task" (decision 93); the
+**What carries over.** The Base bump workflow and "green means no task"; the
 refresh of the pinned packs joins the bump pull request, the Base bump workflow moving them in
 the same pull request; `templates/renovate.json` is retired from the kit in F8-4. The records
 RN-1 to RN-7 and the 4.0.111 entry of `country-kit/API-CHANGES.md` keep their words. The bump
-by push is built, and its sub-PRs recorded, in `docs/fe-country-split-plan.md` §6 _The bump by
-push_.
+by push is built in `docs/fe-country-split-plan.md` §4.11 rule 6 and
+§4.12.
 
 ---
 
@@ -118,7 +118,7 @@ push_.
 - **What exists already:** both `renovate.json5` files, written for self-hosted use; and the
   read-only Harbor robots, one per repo, in the CI/CD variables `REGISTRY_ROBOT_USER` and
   `REGISTRY_ROBOT_PASSWORD` of **both** repos (issue 4 says devops-niord; devops-shared has
-  had its own since 2026-09-26, bootstrap pipeline 8222). No new robot is needed.
+  had its own since 2026-09-26). No new robot is needed.
 - **What is missing:** the job, one GitLab token per repo that can open and merge merge
   requests, and the schedules. Neither project has any access token or schedule today.
 - **What it does not change:** Traefik and Reloader still reach Harbor by hand (the Mirror

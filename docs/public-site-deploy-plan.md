@@ -6,7 +6,7 @@ attachment's address, which wait until a staging has published an issue and a me
 attachment.** Decisions 1 to 3 of section 8 are taken.
 **Scope:** the public site's image, the base Helm chart, DK's and GL's staging and the template
 for test environments. Production is not part of this plan.
-**Repos:** niord-ng (the image and the chart), devops-shared (the Ingress rule), niord-dk and
+**Repos:** niord (the image and the chart), devops-shared (the Ingress rule), niord-dk and
 niord-gl (a bump, no code change), devops-niord (the environments' values).
 
 This is the plan for the open item of Phase 8 in
@@ -82,8 +82,8 @@ editor ─ https://<admin host> ─ Traefik ─ Ingress (proxy) ─ the chart's 
   image's tag. The helper `niord.image` refuses an empty tag for every component but `app`
   today, so it learns this one case. `staging-bump.py` moves two fields (the chart pin and
   `app.image.tag`) and `promote.py` three (those and the Postgres image tag). Neither changes.
-- **Off by default.** niord-ng publishes no image of the site for the generic deployable, so the
-  chart's own defaults render no `info` component. An environment turns it on.
+- **Off by default.** The base product publishes no image of the site for the generic deployable,
+  so the chart's own defaults render no `info` component. An environment turns it on.
 - **Hardened like the other pods.** The pod and container security contexts come from the chart's
   existing helpers (`niord.podSecurityContext`, `niord.containerSecurityContext`). The probes are
   TCP, like the proxy's (as built; HTTP GETs of `/` would log a line every few seconds).
@@ -200,13 +200,13 @@ the three `proxy_cache_valid` directives that do nothing, and the `/wms/` proxy.
 
 | # | Where | What | Verified by |
 |---|---|---|---|
-| 1 | niord-ng, one pull request into `main` | The image change of section 5, the chart's `info` component of section 3, and the records of section 9 that describe them | Info CI; Frontend CI's Example country job, which container-tests the example's image; the local rehearsal and the renders below. Backend CI runs too, because the chart is under `be/`, but it checks nothing of the chart |
-| 2 | niord-ng | The merge publishes base version 4.0.N: the chart, the source zip and the kit | the publish run |
+| 1 | niord, one pull request into `main` | The image change of section 5, the chart's `info` component of section 3, and the records of section 9 that describe them | Info CI; Frontend CI's Example country job, which container-tests the example's image; the local rehearsal and the renders below. Backend CI runs too, because the chart is under `be/`, but it checks nothing of the chart |
+| 2 | niord | The merge publishes base version 4.0.N: the chart, the source zip and the kit | the publish run |
 | 3 | devops-shared, one merge request | The Ingress rule of section 4 (decision 3) | its validator; then step 6's sync |
-| 4 | niord-dk, niord-gl | Merge the bump pull request the Niord base bump app opens. While niord-ng is private, each needs the hand pin its comment describes first | the country's CI |
+| 4 | niord-dk, niord-gl | Merge the bump pull request the Niord base bump app opens. While the base product's repository is private, each needs the hand pin its comment describes first | the country's CI |
 | 5 | devops-niord, one merge request | `scripts/staging-bump.py`: it starts each country's Image run, which builds and container-tests the hardened image for the first time and pushes both images on 4.0.N, and opens the merge request that moves staging. Merge it and wait until both stacks are Healthy | the Image runs; Argo CD |
 | 6 | devops-niord, a merge request of its own | The `info` block in both staging values files (`enabled`, `image.repository`, the Ingress and its host) and in `envs/_template/values.yaml` (decision 2); the validator's refusal of an environment name ending in `-info` | Argo CD; the checks of section 7 |
-| 7 | niord-ng, devops-niord, devops-shared | The remaining records of section 9 | — |
+| 7 | niord, devops-niord, devops-shared | The remaining records of section 9 | — |
 
 Steps 1 and 3 do not depend on each other and can be worked at the same time. Step 6 needs steps
 3 and 5.
@@ -321,7 +321,7 @@ The first version of this plan was reviewed the day it was written. What changed
 | Finding | Change |
 |---|---|
 | The cluster's Ingress rule refuses the site's host; the plan had checked DNS and the certificate only | section 4, step 3, decision 3; devops-shared joins the repositories |
-| CI on `main` does not start a country's Image run: the workflow is disabled, and `staging-bump.py` starts it. A bump pull request needs the hand pin while niord-ng is private | section 1; steps 4 and 5 |
+| CI on `main` does not start a country's Image run: the workflow is disabled, and `staging-bump.py` starts it. A bump pull request needs the hand pin while the base product's repository is private | section 1; steps 4 and 5 |
 | The `info` block does not belong in the bump's merge request, whose branch is rebuilt and force-pushed | step 6, and the rollback |
 | Nothing renders the chart before staging; `niord.image` refuses an empty tag | the renders of step 1; section 3 |
 | Moving nginx's files to `/tmp` can reach into the kit's fixed list of five files | section 5 names the way that does not, and the fallback |
@@ -333,7 +333,7 @@ The first version of this plan was reviewed the day it was written. What changed
 - **Production.** Nothing here prepares it.
 - **The cut-over from the site that runs today** (backlog, _Cut-over_).
 - **The `/wms/` proxy.** It is fixed before a country turns `wmsLayer` on.
-- **An image of the site for the generic deployable**, published by niord-ng, and a
+- **An image of the site for the generic deployable**, published by the base product, and a
   `deploy.sh --info` for the local bundle. The local rehearsal builds the image by hand.
 - **A CI job that renders the chart.** The renders of step 1 are run by hand for this change.
 - **An automated smoke test** of the deployed site. The staging smoke test of
@@ -351,13 +351,13 @@ The first version of this plan was reviewed the day it was written. What changed
 
 | # | State (2026-11-10) | Where |
 |---|---|---|
-| 1 | merged | niord-ng #294 |
-| 2 | published as 4.0.151 | niord-ng's publish run |
-| 3 | merged | devops-shared !107 |
+| 1 | merged | niord |
+| 2 | published as 4.0.151 | niord's publish run |
+| 3 | merged | devops-shared |
 | 4 | merged, after the hand pin; set-up of 4.0.151 passed, no human action | niord-dk #23, niord-gl #22 |
-| 5 | merged: both Image runs green, the site's images `niord-<cc>-info:4.0.151.10` container-tested (168 assertions each) and pushed | devops-niord !52 |
-| 6 | merged five minutes after step 5, with its pipeline's `helm-template` rendering both stagings against the published 4.0.151 chart; not after Argo CD showed step 5 Healthy, which this machine cannot see | devops-niord !51 |
-| 7 | merged: the records of step 1 in #294, staging's in #295 and #296, devops-niord !53 and !54, devops-shared !108, and the backlog's _No environment runs the public site yet_ removed on its own | niord-ng, devops-niord, devops-shared |
+| 5 | merged: both Image runs green, the site's images `niord-<cc>-info:4.0.151.10` container-tested (168 assertions each) and pushed | devops-niord |
+| 6 | merged five minutes after step 5, with its pipeline's `helm-template` rendering both stagings against the published 4.0.151 chart; not after Argo CD showed step 5 Healthy, which this machine cannot see | devops-niord |
+| 7 | merged: the records of step 1 in step 1's pull request, staging's in two more pull requests, two merge requests in devops-niord, one in devops-shared, and the backlog's _No environment runs the public site yet_ removed on its own | niord, devops-niord, devops-shared |
 
 ### As built (step 1)
 
