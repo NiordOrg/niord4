@@ -58,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * indexes in another order than its rows' ids (as the old system stored lists) loads, saves and reloads whole. A
  * message stored with every index 0 (as the faulty versions stored lists), or with a gap, is found by
  * {@link #DAMAGED_LISTS} and restored by {@link #REPAIR_INDEXES}: the diagnostic and the repair offered to the
- * owner for deployments that ran those versions, run here as written (be/docs/country-api.md, Changes, names them).
+ * owner for deployments that ran those versions, run here as written.
  *
  * <p>Create and update commit on the server, so each message is removed afterwards in a fresh transaction. This is
  * a framework-coupled test, see docs/framework-coupled-tests.md.
