@@ -979,7 +979,6 @@ producer CronJob, the `files: mirror` option and the sentence "Attachments are f
   the seed's `${NIORD_HOME}` token stays.
 - `be/k8s/README.md` (`app.persistence` row, the tile-cache note), `be/k8s/helm/niord/values.yaml`'s
   comments.
-- `docs/publications-port-inventory.md`: a line on where the files are now.
 - `be/niord/sample/README.md`: its `repo/` row (the attachments are rows in `niord-sample.sql`, R1c).
 - `be/docs/potential-errors.md`: SETTINGS-6 and UPLOAD-1 are resolved by R1f, REPO-SWEEP1 by R1a's expiry,
   and PUB-DEL1 and EXPORT-THUMB1 by R1d and R1c (D9); each is deleted then. SETTINGS-6 was closed earlier, by

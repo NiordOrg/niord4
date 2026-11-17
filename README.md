@@ -42,8 +42,8 @@ flowchart LR
   then make it yours and deploy) and its in-depth companion, the designers' brief and the
   operators' guide.
 - How the base product is released (one shared version per merge) is in
-  [`be/docs/cicd/design.md`](be/docs/cicd/design.md); how niord-ng became the base product is
-  recorded in [`docs/fe-country-split-plan.md`](docs/fe-country-split-plan.md).
+  [`be/docs/cicd/design.md`](be/docs/cicd/design.md); the rules by which a country builds on
+  the base product are in [`docs/fe-country-split-plan.md`](docs/fe-country-split-plan.md).
 
 ## Try it
 
