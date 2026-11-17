@@ -2072,6 +2072,17 @@ INSERT INTO english_counts (grp, rows) SELECT 'script resources: the voice-broad
 -- field-template's tags is replaced, each guarded by its Danish language; a self-check below stops the run when an
 -- audio block in Danish is left (a template niord_test gains or changes). The backend caches script resources: start
 -- the rig again after this file runs (data/README.md).
+--
+-- After the error hunt (2026-11-14) niord_test holds Denmark's corrected templates (its own, and the base product's
+-- corrected common.ftl, markings.ftl's and work-vessel.ftl's macros),
+-- so nine bodies were made again from the corrected English details: exercise.ftl (an exercise without a type is "an
+-- exercise", a capital without dates), object-adrift.ftl ("have" for a plural object), obstruction-found.ftl ("have"
+-- for several positions; mine.ftl's "The mines" and torpedo.ftl's "Torpedoes" come from their callers),
+-- obstruction-work.ftl and salvage-operations.ftl (a capital without dates), radio-navigation.ftl (capFirst=false on
+-- the type mid-sentence), reduced-depth.ftl ("Reduced water depths" without a depth, never "0 m"),
+-- uncharted-obstruction.ftl and wreck.ftl (a depth without a grouping comma). The other seven templates did not change.
+-- A second self-check below stops the run when a template's audio block is not exactly its body here (a template
+-- missing, or one whose audio block no longer names lang="da" and was therefore left as it was).
 CREATE TEMP TABLE english_audio_template (path text PRIMARY KEY, body text NOT NULL) ON COMMIT DROP;
 INSERT INTO english_audio_template VALUES
   ('templates/tmpl/aton-common.ftl', $ftl$
@@ -2127,9 +2138,11 @@ INSERT INTO english_audio_template VALUES
     $ftl$),
   ('templates/tmpl/exercise.ftl', $ftl$
         <@line>
-            <@renderDateIntervals dateIntervals=part.eventDates format="plain" lang="en" tz="UTC" capFirst=true/>
-            <#if params.exercise_type??>
-                <@renderListValue value=params.exercise_type defaultValue="" lang="en"/>
+            <#if part.eventDates?has_content>
+                <@renderDateIntervals dateIntervals=part.eventDates format="plain" lang="en" tz="UTC" capFirst=true/>
+                ${exerciseText}
+            <#else>
+                ${exerciseText?cap_first}
             </#if>
             will take place
             <@renderPositionList geomParam=part lang="en" format="audio"/>.
@@ -2164,7 +2177,7 @@ INSERT INTO english_audio_template VALUES
   ('templates/tmpl/object-adrift.ftl', $ftl$
         <@line>
             <@renderObject defaultName="an object" format="long" lang="en" capFirst=true/>
-            has been observed adrift <@renderPositionList geomParam=part format="audio" lang="en"/>
+            ${objectVerb} been observed adrift <@renderPositionList geomParam=part format="audio" lang="en"/>
             <#if params.date??><@renderDate date=params.date lang="en" tz="UTC" format="plain"/></#if>.
         </@line>
         <#if params.cancelDate??>
@@ -2175,7 +2188,7 @@ INSERT INTO english_audio_template VALUES
     $ftl$),
   ('templates/tmpl/obstruction-found.ftl', $ftl$
             <@line>
-                ${enObj[0+offset]?cap_first} has been reported
+                ${enObj[0+offset]?cap_first} ${verb} been reported
                 <@renderPositionList geomParam=part lang="en" format="audio" plural=true/>.
                 ${enObj[1+offset]?cap_first} may be dangerous.
             </@line>
@@ -2185,8 +2198,12 @@ INSERT INTO english_audio_template VALUES
         $ftl$),
   ('templates/tmpl/obstruction-work.ftl', $ftl$
             <@line>
-                <@renderDateIntervals dateIntervals=part.eventDates format="plain" lang="en" tz="UTC" capFirst=true/>
-                ${enDetails}
+                <#if part.eventDates?has_content>
+                    <@renderDateIntervals dateIntervals=part.eventDates format="plain" lang="en" tz="UTC" capFirst=true/>
+                    ${enDetails}
+                <#else>
+                    ${enDetails?cap_first}
+                </#if>
                 <@renderPositionList geomParam=part lang="en" format="audio"/>.
                 <@renderWorkVessel vessel=params.vessel! lang="en" format="audio"/>
             </@line>
@@ -2195,7 +2212,7 @@ INSERT INTO english_audio_template VALUES
         <#list params.positions![] as pos>
             <@line>
                 ${computeRadioType(pos)} on
-                <@renderAtonType atonParams=pos defaultName="AtoN" format="long" lang="en"/>
+                <@renderAtonType atonParams=pos defaultName="AtoN" format="long" lang="en" capFirst=false/>
                 <@renderPositionList geomParam=pos format="audio" lang="en"/>
                 <@renderStatus statusParam=pos format="long" lang="en"/>.
             </@line>
@@ -2204,7 +2221,7 @@ INSERT INTO english_audio_template VALUES
   ('templates/tmpl/reduced-depth.ftl', $ftl$
         <#setting locale="en">
         <@line>
-            Water depths down to ${params.water_depth!0?c}m
+            <#if waterDepth?has_content>Water depths down to ${waterDepth}m<#else>Reduced water depths</#if>
             have been observed
             <@renderPositionList geomParam=part format="audio" lang="en"/>
             <#if params.locality?has_content>in the entrance to ${params.locality}</#if>.
@@ -2215,8 +2232,12 @@ INSERT INTO english_audio_template VALUES
     $ftl$),
   ('templates/tmpl/salvage-operations.ftl', $ftl$
         <@line>
-            <@renderDateIntervals dateIntervals=part.eventDates format="plain" lang="en" tz="UTC" capFirst=true/>
-            salvage operations are carried out
+            <#if part.eventDates?has_content>
+                <@renderDateIntervals dateIntervals=part.eventDates format="plain" lang="en" tz="UTC" capFirst=true/>
+                salvage operations are carried out
+            <#else>
+                Salvage operations are carried out
+            </#if>
             <#if params.salvage_type??>
                 on <@renderListValue value=params.salvage_type defaultValue="" lang="en"/>
             </#if>
@@ -2233,7 +2254,7 @@ INSERT INTO english_audio_template VALUES
                 <@renderObstructionType defaultValue="The obstruction" format="long" lang="en" capFirst=true/> is visible above the sea surface.
             <#else>
                 The depth above <@renderObstructionType defaultValue="the obstruction" format="long" lang="en"/> is
-                <#if params.obstruction_depth??>${params.obstruction_depth}m.<#else>unknown.</#if>
+                <#if params.obstruction_depth??>${plainNumber(params.obstruction_depth)}m.<#else>unknown.</#if>
             </#if>
             <@renderObstructionType defaultValue="The obstruction" format="long" lang="en" capFirst=true/>
             is <@renderMarkings markings=params.markings! markingType=params.markingType! lang="en" format="audio" unmarkedText="unmarked"/>
@@ -2249,7 +2270,7 @@ INSERT INTO english_audio_template VALUES
             <#if params.wreck_visible!false>
                 The wreck is visible above the sea surface.
             <#else>
-                The depth above the wreck is <#if params.wreck_depth??>${params.wreck_depth}m.<#else>unknown.</#if>
+                The depth above the wreck is <#if params.wreck_depth??>${plainNumber(params.wreck_depth)}m.<#else>unknown.</#if>
             </#if>
             The wreck is <@renderMarkings markings=params.markings! markingType=params.markingType! lang="en" format="audio" unmarkedText="unmarked"/>
         </@line>
@@ -2290,6 +2311,43 @@ BEGIN
      WHERE content ~ 'promulgation\(''audio''\)\.text"[^>]*>([^<]|<(?!/field-template>))*lang="da"';
     IF danish IS NOT NULL THEN
         RAISE EXCEPTION 'english.sql: these templates still write the audio text in Danish: %', danish;
+    END IF;
+END $$;
+
+-- The second self-check of the audio texts (2026-11-14): every template above exists and its audio block is exactly
+-- its body here. The replacement is guarded by lang="da", so a template whose stored audio block had changed in any
+-- other way (another language, an English block of its own) would be left silently; this stops the run instead.
+DO $$
+DECLARE
+    open_tag constant text := '<field-template field="message.promulgation(''audio'').text" update="append">';
+    wrong text;
+BEGIN
+    SELECT string_agg(e.path, ', ' ORDER BY e.path) INTO wrong
+      FROM english_audio_template e
+      LEFT JOIN public."ScriptResource" r ON r.path = e.path
+     WHERE r.id IS NULL
+        OR strpos(r.content, open_tag) = 0
+        OR substr(r.content, strpos(r.content, open_tag) + length(open_tag),
+                  strpos(substr(r.content, strpos(r.content, open_tag) + length(open_tag)), '</field-template>') - 1)
+           IS DISTINCT FROM e.body;
+    IF wrong IS NOT NULL THEN
+        RAISE EXCEPTION 'english.sql: these templates are missing or their audio block is not the English one this file writes: %', wrong;
+    END IF;
+END $$;
+
+-- The same for the mailing-list templates above: their guards match the content they replace, so a template whose
+-- Danish half or Danish wording took another form would be left Danish silently.
+DO $$
+DECLARE
+    danish text;
+BEGIN
+    SELECT string_agg(path, ', ' ORDER BY path) INTO danish
+      FROM public."ScriptResource"
+     WHERE (path IN ('templates/mailinglist/publish-navwarn.ftl', 'templates/mailinglist/publish-navwarn-gl.ftl')
+            AND content ~ 'lang=''da''')
+        OR (path = 'templates/mailinglist/audio-broadcast.ftl' AND content !~ 'Danish navigational warnings for voice broadcast');
+    IF danish IS NOT NULL THEN
+        RAISE EXCEPTION 'english.sql: these mailing-list templates still write Danish: %', danish;
     END IF;
 END $$;
 

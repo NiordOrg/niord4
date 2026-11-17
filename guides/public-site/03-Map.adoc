@@ -9,6 +9,10 @@ _Map_ in the menu bar shows the messages on a map: the same messages as the _Det
 views, the ones you chose in the filter bar. When it opens, the map is placed so that every message
 on it is in view.
 
+The pictures in this chapter show the map with only _Navigational Warnings_ switched on in the
+filter bar (see <<choosing-messages>>), so that the symbols stand apart. With _Notices to Mariners_
+switched on as well, the map holds many more symbols.
+
 .The Map view
 image::PublicSiteMapPage.png[The Map view, 800]
 
@@ -27,8 +31,8 @@ chart: use it to find the messages, and your charts to navigate.
 Every message is drawn in magenta, in the way an electronic chart draws navigational warnings, and
 carries the letters of its kind: _NW_ for a Navigational Warning, _NM_ for a Notice to Mariners.
 
-.Points, lines and areas on the map
-image::PublicSiteMapSymbols.png["Points, lines and areas on the map", 800]
+.Points and areas on the map
+image::PublicSiteMapSymbols.png[Points and areas on the map, 800]
 
 [cols="30,70",options="header"]
 |===
@@ -69,7 +73,9 @@ buttons of the window then step through the messages of the map in the order of 
 
 Some messages have no position to draw, for example a notice to all ships in a country's waters.
 The Map view lists them in a panel called _Additional Messages_, in the top right corner of the map,
-with their numbers and titles. Click one to open it in its window.
+with their numbers and titles. Click one to open it in its window. The panel is only there when
+some of the messages you chose have no position: in the pictures every warning has one, so the
+panel is not shown.
 
 _Minimize_ folds the panel up to its title, so that it leaves the map free; _Maximize_ opens it
 again.

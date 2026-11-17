@@ -21,6 +21,7 @@ import {
   siteShot,
 } from './support/public-site';
 import { shot } from './support/shot';
+import { settle } from './support/stabilise';
 
 /*
  * The public site's pictures, anonymous and in English (infoUrl adds ?lang=en). A title names
@@ -40,11 +41,58 @@ import { shot } from './support/shot';
 // apart to tell them from each other.
 const THE_BELTS: MapView = { lon: 11.3, lat: 55.45, zoom: 8.2 };
 
-// Storstrømmen and Vordingborg, close up: a warning's point, notices' lines and areas side by side,
-// without the end of a line whose rest lies outside the view in the top left corner.
-const STORSTROMMEN: MapView = { lon: 11.94, lat: 54.975, zoom: 12 };
+// Sejerø Bay and the north-west of Zealand, warnings only: the firing exercises' areas off Gniben,
+// Sejerø and Jægerspris beside the points of the warnings at Kalundborg and in Roskilde Fjord. The
+// copy has no published warning about a line; the text describes a line in words.
+const SEJERO_BAY: MapView = { lon: 11.45, lat: 55.8, zoom: 9.8 };
 
 const MAIL_ADDRESS = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+
+/**
+ * Turns Notices to Mariners off in the filter bar, as a reader does, with a click on its button,
+ * and waits until the map draws the navigational warnings alone. The map pictures show warnings
+ * only (the owner's choice of 2026-11-13): with both kinds on, the copy's hundreds of notices crowd
+ * the map until no symbol can be told from the next. Fails if a notice is still drawn.
+ */
+async function showWarningsOnly(page: Page): Promise<void> {
+  const notices = page.getByRole('button', { name: 'Notices to Mariners' });
+  await expect(notices).toHaveAttribute('aria-pressed', 'true');
+  await notices.click();
+  await expect(notices).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Navigational Warnings' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 60_000 });
+  await settle(page);
+  // The map's features carry their message's main type: none may be a notice's any more.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        interface OlFeature {
+          get(key: string): unknown;
+        }
+        interface OlLayer {
+          getSource?(): { getFeatures?(): OlFeature[] } | null;
+        }
+        const debug = (window as unknown as { ng?: { getComponent?: (e: Element) => unknown } }).ng;
+        const kinds: Record<string, number> = {};
+        for (const host of Array.from(document.querySelectorAll('app-ol-map'))) {
+          const map = (
+            debug?.getComponent?.(host) as { map?: { getAllLayers(): OlLayer[] } } | null
+          )?.map;
+          for (const layer of map?.getAllLayers() ?? []) {
+            for (const feature of layer.getSource?.()?.getFeatures?.() ?? []) {
+              const kind = feature.get('mainType');
+              if (typeof kind === 'string') kinds[kind] = (kinds[kind] ?? 0) + 1;
+            }
+          }
+        }
+        return { warnings: (kinds['NW'] ?? 0) > 0, notices: kinds['NM'] ?? 0 };
+      }),
+    )
+    .toEqual({ warnings: true, notices: 0 });
+}
 
 /**
  * Scrolls the Details view to the first area heading from which the window shows no e-mail
@@ -249,7 +297,7 @@ test.describe('public-site', () => {
   test('public-site/PublicSiteMapPage.png', async ({ page }) => {
     await openInfoView(page, '/messages/map');
     await expect(page.locator('app-ol-map')).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Additional Messages/ })).toBeVisible();
+    await showWarningsOnly(page);
     await showMapAt(page, THE_BELTS);
     await siteShot(page);
   });
@@ -258,7 +306,8 @@ test.describe('public-site', () => {
     await openInfoView(page, '/messages/map');
     await expect(page.locator('app-ol-map')).toBeVisible();
     await page.getByRole('button', { name: 'Minimize' }).click();
-    await showMapAt(page, STORSTROMMEN);
+    await showWarningsOnly(page);
+    await showMapAt(page, SEJERO_BAY);
     await siteShot(page, { target: page.locator('app-message-map'), pad: 0 });
   });
 
@@ -279,6 +328,7 @@ test.describe('public-site', () => {
     const map = page.locator('app-ol-map');
     await expect(map).toBeVisible();
     await page.getByRole('button', { name: 'Minimize' }).click();
+    await showWarningsOnly(page);
     // The message's point in the middle of the map, close enough to stand apart from its
     // neighbours.
     const [lon, lat] = firstPoint(message);
@@ -364,6 +414,7 @@ test.describe('public-site', () => {
       await openInfoView(page, '/messages/map');
       await expect(page.locator('app-ol-map')).toBeVisible();
       await page.getByRole('button', { name: 'Minimize' }).click();
+      await showWarningsOnly(page);
       await showMapAt(page, { lon: 11.3, lat: 55.6, zoom: 6.9 });
       await siteShot(page);
     });

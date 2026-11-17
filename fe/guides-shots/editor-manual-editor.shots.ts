@@ -336,10 +336,10 @@ test.describe('editor-manual: the editor', () => {
     });
   });
 
-  // One interval: the backend keeps one of a part's intervals when a message is saved with two
-  // (be/docs/potential-errors.md, MSG2), so no saved message of the copy has two in one part.
+  // Two intervals in one part: the seed's exercise draft (data/seed-examples.mjs), which keeps both
+  // since a part's intervals are saved in their order (MSG2, fixed 2026-11-12).
   test('editor-manual/TextEditorToolTimeDialog.png', async ({ page }) => {
-    await openExample(page, 'nwDraft');
+    await openExample(page, 'nwTwoIntervals');
     const row = await description(page);
     await row.getByRole('button', { name: 'Insert time', exact: true }).first().click();
     const box = dialog(page, 'Format Message Time');
