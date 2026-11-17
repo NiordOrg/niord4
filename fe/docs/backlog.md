@@ -339,8 +339,9 @@ Background: [`country-deployments.md`](country-deployments.md).
   receives (the split plan, the code/data/configuration plan, `be/docs/potential-errors.md`, DK's `pom.xml`,
   `be/scripts/bootstrap.sh`), and long passages record how DK and GL moved onto the base product. A country
   cannot follow the references, and the rules are harder to find. The next `be/` documents pass replaces each
-  reference with the rule it stands for or a link to a shipped guide, and moves that record into its Changes table. The country
-  guide meanwhile says that the rule a reference states is the rule. Found by the agent route (2026-10-26).
+  reference with the rule it stands for or a link to a shipped guide, and takes that record out (its Changes table
+  starts again, empty, after 4.0.196, and is paused until production). The country guide meanwhile says that
+  the rule a reference states is the rule. Found by the agent route (2026-10-26).
 - **The administration app's English bundle ships keys that nothing reads.** Confirmed dead:
   `shared.auth.accountManagement` (the account menu reads `shared.auth.editAccount`),
   `core.domain.bootstrap.errorTitle` and `errorBody` (no notice uses them: a failed domain bootstrap shows none,
