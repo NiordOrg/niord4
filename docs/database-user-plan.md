@@ -1,12 +1,12 @@
 # The application's own database user
 
 **Status: done on 2026-11-12 (the owner: "lets do an extra account"). The base product's part is
-published as base 4.0.162 (#305): the chart makes the user, and the application builds and
+published as base 4.0.162: the chart makes the user, and the application builds and
 bootstraps a new database as that user. Both stagings connect as their own user, `niord_app`,
-since the same day (devops-niord !59 and !58), and the owner checked them (section 8).**
+since the same day (two merge requests in devops-niord), and the owner checked them (section 8).**
 **Scope:** the base Helm chart, the first changeset, the tests of the new-deployment path, and DK's
 and GL's staging. Production is not part of this plan.
-**Repos:** niord-ng (the chart, the changeset, the tests), devops-niord (the stagings' Secrets and
+**Repos:** niord (the chart, the changeset, the tests), devops-niord (the stagings' Secrets and
 values), niord-dk and niord-gl (a bump, no code change).
 
 This is the plan for F-X100 of [`security-review-2026-09.md`](security-review-2026-09.md): "the
@@ -157,11 +157,11 @@ it, which is every deployment: the Postgres image creates it in the database it 
 
 | # | Step | Repo | State |
 |---|---|---|---|
-| 1 | The first changeset without the comment statement, its old checksum valid; the new-deployment tests as the ordinary user | niord-ng | done: #305, in base 4.0.162 |
-| 2 | The chart: the two users, the init container, Keycloak's user, the checks; the README | niord-ng | done: #305, in base 4.0.162 |
-| 3 | The merge publishes a version. DK and GL are bumped to it and both stagings take it with their values unchanged: nothing about their database changes | niord-ng, niord-dk, niord-gl, devops-niord | done on 2026-11-12: published as 4.0.162, DK and GL bumped, both stagings on it (devops-niord !57) |
-| 4 | Each staging moves: a sealed Secret `niord-postgres-app` beside its values, and the two lines of section 3 in `envs/staging/<cc>/values.yaml`. Only after that staging runs base 4.0.162 or later (step 3): an earlier chart does not know `postgres.admin` and would start Postgres' clients as a user that does not exist | devops-niord | done on 2026-11-12: the sealed Secrets in !59, the values in !58, both merged on the owner's go and checked (section 8) |
-| 5 | The records after the move: F-X100's row in the security review, `be/docs/cicd/design.md` §8 (the secrets an environment holds) with its copy in devops-niord, and `envs/_template` there | niord-ng, devops-niord | done on 2026-11-12: `envs/_template` in !58; the security review, design §8 and this plan in this pull request; the copy in devops-niord after it |
+| 1 | The first changeset without the comment statement, its old checksum valid; the new-deployment tests as the ordinary user | niord | done: in base 4.0.162 |
+| 2 | The chart: the two users, the init container, Keycloak's user, the checks; the README | niord | done: in base 4.0.162 |
+| 3 | The merge publishes a version. DK and GL are bumped to it and both stagings take it with their values unchanged: nothing about their database changes | niord, niord-dk, niord-gl, devops-niord | done on 2026-11-12: published as 4.0.162, DK and GL bumped, both stagings on it (devops-niord) |
+| 4 | Each staging moves: a sealed Secret `niord-postgres-app` beside its values, and the two lines of section 3 in `envs/staging/<cc>/values.yaml`. Only after that staging runs base 4.0.162 or later (step 3): an earlier chart does not know `postgres.admin` and would start Postgres' clients as a user that does not exist | devops-niord | done on 2026-11-12: the sealed Secrets in one merge request, the values in another, both merged on the owner's go and checked (section 8) |
+| 5 | The records after the move: F-X100's row in the security review, `be/docs/cicd/design.md` §8 (the secrets an environment holds) with its copy in devops-niord, and `envs/_template` there | niord, devops-niord | done on 2026-11-12: `envs/_template` in the values' merge request; the security review, design §8 and this plan in this pull request; the copy in devops-niord after it |
 
 A database is handed over by step 4's merge, not before. That merge is the owner's explicit
 say-so for the staging's existing data
@@ -186,7 +186,8 @@ say-so for the staging's existing data
    user's, that user is no superuser, and it owns the database.
 4. The Postgres pod was not restarted by the move.
 
-Checked on both stagings on 2026-11-12, about five minutes after !58's merge. The same on DK and GL:
+Checked on both stagings on 2026-11-12, about five minutes after the values' merge. The same on DK
+and GL:
 
 1. The log: `user niord_app created`, `database niord handed over to niord_app`, and 182 objects
    handed over, the number the staging-shaped run of section 5 handed over.
@@ -222,15 +223,15 @@ Checked on both stagings on 2026-11-12, about five minutes after !58's merge. Th
 
 - 2026-11-12: the question ("can the chart support both its own database and a database hotel"),
   the probes of section 1, and the owner's decision 1.
-- 2026-11-12: steps 1 and 2 built and tried as section 5 says, in one pull request, #305. Its
-  branch was rebased onto #304 (Keycloak 26.8.2, nginx 1.30.6) before the push; the stagings'
+- 2026-11-12: steps 1 and 2 built and tried as section 5 says, in one pull request. Its
+  branch was rebased onto main (Keycloak 26.8.2, nginx 1.30.6) before the push; the stagings'
   values were rendered again against that main, with the same result, and the new install with a
   Keycloak in production mode was run again on 26.8.2.
-- 2026-11-12: #305 merged on the owner's "merge it", its checks green. Backend CI on main and the
-  publish run were green: base 4.0.162 (`v4.0.162`). No environment runs it yet.
-- 2026-11-12: both stagings took 4.0.162 with their values unchanged (devops-niord !57), which
+- 2026-11-12: the pull request merged on the owner's "merge it", its checks green. Backend CI on
+  main and the publish run were green: base 4.0.162 (`v4.0.162`). No environment runs it yet.
+- 2026-11-12: both stagings took 4.0.162 with their values unchanged (devops-niord), which
   ends step 3.
-- 2026-11-12: step 4 prepared as the draft merge request devops-niord !58. It names both Secrets
+- 2026-11-12: step 4 prepared as a draft merge request in devops-niord. It names both Secrets
   in DK's and GL's values and updates the note in `envs/_template`. Both stagings were rendered
   with the 4.0.162 chart before and after. Only the app Deployment changes: it gets the
   `database-user` init container, and the app's container reads `niord-postgres-app`. The Postgres
@@ -240,15 +241,15 @@ Checked on both stagings on 2026-11-12, about five minutes after !58's merge. Th
 - 2026-11-12: the owner printed the test cluster's sealing certificate on the jump server
   (`kubeseal --fetch-cert`, a key made on 2026-10-29). `niord-postgres-app` was sealed with it on a
   workstation for each staging: the user `niord_app` and a random password that nobody holds. The
-  Secrets went in a merge request of their own, devops-niord !59, so their unsealing could be
+  Secrets went in a merge request of their own in devops-niord, so their unsealing could be
   checked before the app depended on them: merged on the owner's go, and both Secrets were there a
   minute later.
-- 2026-11-12: !58 merged on the owner's go, its pipeline green. Both app pods were replaced and
-  ready within three minutes, and the checks of section 8 passed on both stagings. Step 5's records
-  followed: the security review (section 5, item 5 and the decision on F-X100), design §8, this
-  plan and the root `AGENTS.md`, then the copy of design §8 in devops-niord.
+- 2026-11-12: the values' merge request merged on the owner's go, its pipeline green. Both app pods
+  were replaced and ready within three minutes, and the checks of section 8 passed on both stagings.
+  Step 5's records followed: the security review (section 5, item 5 and the decision on F-X100),
+  design §8, this plan and the root `AGENTS.md`, then the copy of design §8 in devops-niord.
 - 2026-11-12: the second recheck of the security review found a hole in the init container's
   script: it ran the hand-over as the superuser, with the default search path, inside the database
-  the application's user owns (SECREV-4). Fixed on the owner's go in #315: the script gives every
+  the application's user owns (SECREV-4). Fixed on the owner's go: the script gives every
   session it opens the search path `pg_catalog`, and `ChartDatabaseUserScriptITTest` runs it in the
   chart's Postgres image. The stagings take it with their next base version.

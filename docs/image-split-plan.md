@@ -2,21 +2,21 @@
 
 **Status:** proposal, 2026-10-01. Nothing is built. Revised the same day after a review:
 one image with a reproducible dependency layer replaces the dependency image of the
-first draft (§2.2); decided 2026-10-03. **Step 1 done 2026-10-03:** PR #121, merged
+first draft (§2.2); decided 2026-10-03. **Step 1 done 2026-10-03:** merged
 with no run in flight, published as 4.0.48 (image step 56 s, dependency layer
 `5b5eb1ec…`, the same bytes as on this workstation); both stagings pinned to 4.0.48
-(devops-niord !21, merged 02:32Z) and checked there the same day: both run 4.0.48 from
+(devops-niord, merged 02:32Z) and checked there the same day: both run 4.0.48 from
 `/app/app.jar`, and a chart-import batch job was resolved from
 `niord-base-4.0.48.jar` on each. The following publish, 4.0.49 (a frontend-only change),
 built the same dependency layer `5b5eb1ec…`; its push log says `Layer already exists`
 for the second and third image, and the first image's upload is the classic image
 store's one upload per publish (§2.2). What remains is to read in Harbor that 4.0.48
 and 4.0.49 name the same blob (open check 1 in §6). 4.0.45 stays unpublished (see §4).
-**Step 2 done 2026-10-03:** PR #125, published as 4.0.50 to `niord/niord-app-en`,
+**Step 2 done 2026-10-03:** published as 4.0.50 to `niord/niord-app-en`,
 `niord/niord-app-dk` and `niord/niord-app-gl`; the dependency layer was uploaded once
 into the first new repository and mounted into the other two. 4.0.49 is the last version
-under the old names. **Step 3 (2026-10-03):** devops-shared !44 merged (the runbook);
-devops-niord !22 moves every environment file to the new names with `M = 4.0.50`;
+under the old names. **Step 3 (2026-10-03):** devops-shared's merge request merged (the runbook);
+devops-niord's merge request moves every environment file to the new names with `M = 4.0.50`;
 both stagings ran `niord/niord-app-<cc>:4.0.50` two minutes after the merge (checked
 by the owner). **Step 4** waits: a later version than 4.0.50 published and a week on both stagings
 (earliest 2026-10-10).
@@ -26,7 +26,7 @@ places in the two devops repositories that name the images. The public site's im
 (`fe/ui-apps/info/Dockerfile`) are not touched. The repository split
 (`be/docs/cicd/design.md` §2.1) is not part of it either; §7 says what this plan does
 so that the repository split needs no rework of the images.
-**Repos:** niord-ng (the images, the workflow, the chart), devops-niord (environment
+**Repos:** niord (the images, the workflow, the chart), devops-niord (environment
 values), devops-shared (one runbook paragraph).
 
 ---
@@ -52,10 +52,10 @@ Two changes, in four steps:
 
 | # | Repo | What | Visible effect |
 |---|---|---|---|
-| 1 | niord-ng | the dependency layer: the `Dockerfile`, a split script, a publish script, `build-image.sh`, `publish.yml` | none; images keep their names, publishes get small |
-| 2 | niord-ng | rename to `niord/niord-app-<country>`: the publish script, the chart default, the scripts and the docs | the next publish pushes to new Harbor repositories |
+| 1 | niord | the dependency layer: the `Dockerfile`, a split script, a publish script, `build-image.sh`, `publish.yml` | none; images keep their names, publishes get small |
+| 2 | niord | rename to `niord/niord-app-<country>`: the publish script, the chart default, the scripts and the docs | the next publish pushes to new Harbor repositories |
 | 3 | devops-niord, devops-shared | every environment file names the new repositories and pins the first renamed version | stagings run the renamed image |
-| 4 | Harbor by hand; niord-ng | retract the versions older than the rename, delete the three old repositories and the older charts; the retraction list loses the old names | none |
+| 4 | Harbor by hand; niord | retract the versions older than the rename, delete the three old repositories and the older charts; the retraction list loses the old names | none |
 
 Steps 1 and 2 are one pull request each, step 3 is one merge request in each devops
 repository, step 4 is a session in the Harbor UI and one small pull request.
@@ -339,7 +339,7 @@ The image name is no longer the module name with a suffix, so `publish-images.sh
 is `<cc>`), in one place.
 
 The public site's images are built as `niord-<cc>-info` (`niord-dk-info`,
-`niord-gl-info`) by each country's image pipeline; `niord-ng`'s Info CI built them
+`niord-gl-info`) by each country's image pipeline; this repository's Info CI built them
 until the country split's P7 and builds none since. The names sit beside the new ones
 without a clash.
 
@@ -378,7 +378,7 @@ a pull request of its own.
 ### Before each merge
 
 - **Main's tip is published and tagged before step 1 merges.** When this was written
-  (2026-10-01) the last Publish run (4.0.45, run 36674088688) had failed on the
+  (2026-10-01) the last Publish run (4.0.45) had failed on the
   organisation's storage quota and main's tip was unpublished. Met since: 4.0.46 and
   4.0.47 (2026-10-02) went through, `tag` job included, so the quota is lifted and
   4.0.47 is the jar-in-one-layer version to compare the first split version with and
@@ -386,7 +386,7 @@ a pull request of its own.
   under that number, and after the merge GitHub would refuse it its tag.
 - **Merge only when nothing is in flight.** This holds for the pull requests of steps
   1, 2 and 4 and for a revert of any of them. No Backend CI, Frontend CI or Info CI run
-  (Info CI since the review of PR #184, 2026-10-22) is in progress for a commit on main, and the last Publish run has finished its `tag` job.
+  (Info CI since the review of 2026-10-22) is in progress for a commit on main, and the last Publish run has finished its `tag` job.
   Two reasons. A publish started by `workflow_run` reads `publish.yml` from the tip of
   main but builds the commit CI tested, so a commit in flight across step 1's merge
   gets the new workflow with a tree that has no `split-jar.sh`. And these pull
@@ -395,7 +395,7 @@ a pull request of its own.
   the tag by hand.
 - **Step 2 merges only after step 1's publish is tagged.**
 
-### Step 1 — niord-ng: the dependency layer
+### Step 1 — niord: the dependency layer
 
 Image names stay `niord/<module>-be`.
 
@@ -465,8 +465,8 @@ of the modules before the failing one may be in Harbor, and no chart or tag exis
 - For a defect, merge a fix and retract 4.0.N, deleting in Harbor what the retraction
   summary lists. The fix must touch a file under `be/` or `fe/`, even when the defect
   is in `publish.yml` alone: only a Backend CI, Frontend CI or Info CI run starts a
-  publish (Info CI since the review of PR #184, 2026-10-22), and as written neither of
-  the first two was filtered on `publish.yml`. Since #143 (2026-10-08) a change to
+  publish (Info CI since the review of 2026-10-22), and as written neither of
+  the first two was filtered on `publish.yml`. Since 2026-10-08 a change to
   `publish.yml` runs Backend CI and is published by its own merge, so the fix no
   longer needs a file under `be/` or `fe/`.
 
@@ -483,7 +483,7 @@ of the modules before the failing one may be in Harbor, and no chart or tag exis
 **Rollback.** Before step 2: revert the pull request, when nothing is in flight. The
 next publish is a jar-in-one-layer image again. After step 2: see "Rollback order".
 
-### Step 2 — niord-ng: the images become `niord/niord-app-<country>`
+### Step 2 — niord: the images become `niord/niord-app-<country>`
 
 **Files**
 
@@ -526,7 +526,7 @@ One merge request in devops-niord, made as soon as step 2 has published version 
 - `chart.version: M` in the `config.yaml` beside each of those five files
 - `envs/_template/README.md`
 - `tests/test_promote.py` (the fixture names), `.gitlab-ci.yml` (one comment)
-- `docs/design.md`, `docs/implementation-plan.md`: copied from niord-ng at tag `vM`
+- `docs/design.md`, `docs/implementation-plan.md`: copied from the base product's repository at tag `vM`
   and compared, not edited in place; `README.md`: the "last synced" date
 
 Every file that gets the new name gets the pin `M` with it, not only the stagings. The
@@ -561,7 +561,7 @@ request: no migration ran, and the old pin and the old name come back together. 
 `-be` image of that version is in Harbor until step 4. If `M` started and then
 misbehaves, roll forward, as `runbooks/rollback.md` says for staging.
 
-### Step 4 — Harbor by hand, and niord-ng: the old repositories go
+### Step 4 — Harbor by hand, and niord: the old repositories go
 
 Not at once. The conditions:
 
@@ -582,7 +582,7 @@ Then:
    and `niord/niord-gl-be`, and in `charts/niord` every chart version older than `M`.
    Those charts default to the `-be` image names and would point at nothing. The space
    is freed at the host's next Harbor garbage collection.
-3. One pull request in niord-ng: `retract-version.yml` drops the `-be` names from its
+3. One pull request in this repository: `retract-version.yml` drops the `-be` names from its
    header and its summary list.
 
 After this step a rollback to a version older than `M` is no longer possible.
@@ -592,7 +592,7 @@ After this step a rollback to a version older than `M` is no longer possible.
 A step's rollback is a plain revert only until the next step merges.
 
 - **Step 3 alone:** as written there. Possible until step 4.
-- **Step 2 after step 3:** revert step 2 in niord-ng; when that publish exists as
+- **Step 2 after step 3:** revert step 2 in this repository; when that publish exists as
   version `P`, one devops-niord merge request puts the `-be` names back together with
   the pin `P`. After step 4: do not revert, roll forward.
 - **Step 1 after step 2:** not `git revert`, which conflicts and would bring `-be`
@@ -660,7 +660,7 @@ hence the range.
 
 The repository split is not part of this plan and has no date.
 `be/docs/cicd/design.md` §2.1 and Phase 1 of `be/docs/cicd/implementation-plan.md`
-describe it: `niord-ng` becomes `niord` (the library, `niord-app`, the chart),
+describe it: this repository becomes `niord` (the library, `niord-app`, the chart),
 `niord-dk` and `niord-gl`. Each country repository then builds its module against
 `niord-base` from GitHub Packages and pushes its own image from its own pipeline. This
 section says what the plan does now so that the repository split needs no rework of
@@ -697,7 +697,7 @@ the images, and what it has to settle itself.
    published without its tag (`publish.yml`, the `tag` job); the checkout then fails
    until the tag is pushed by hand, which is the wanted behaviour and not a reason to
    fall back to main. `build-image.sh` is the monorepo's local build and gets a
-   country variant then. *Settled 2026-10-06 (#134): the four files travel as the
+   country variant then. *Settled 2026-10-06: the four files travel as the
    package `org.niord:niord-image-tools:4.0.<run>` (zip) in `NiordOrg/niord`'s
    registry, published by the build job beside `niord-base`, and the country pipeline
    unpacks it at the base version it pins; since the code/data/config plan's C5b the zip
@@ -724,8 +724,8 @@ the images, and what it has to settle itself.
    administration app; afterwards the country repository does (implementation plan,
    Phase 1 and 8). Open since 2026-09-26: how a bundle built in `niord` reaches the
    country pipeline that builds the image. `publish-images.sh` takes the bundle as a
-   directory either way. *Settled 2026-10-06 (design §2.1) and built the same day
-   (#128): `publish.yml` deploys the three bundles to GitHub Packages beside
+   directory either way. *Settled 2026-10-06 (design §2.1) and built the same day:
+   `publish.yml` deploys the three bundles to GitHub Packages beside
    `niord-base` as `org.niord.web:niord-web-admin`, a zip per country under its
    classifier, and the country pipeline unpacks its bundle at the base version it
    pins; the directory becomes `WEB_DIR`. Since the country split's P5–P7 each
