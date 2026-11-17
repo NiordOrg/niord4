@@ -239,6 +239,19 @@ abstract class PublicationHttpFixture extends ITTest {
         return out;
     }
 
+    /**
+     * A series as read, with its sharing list sorted, for a comparison of two reads. The list is a many-to-many with
+     * no order column, so two reads of one unchanged series can give its ids in different orders (PUBSERIES3 in
+     * be/docs/potential-errors.md). The ids themselves and their number are kept, and every other field is as read.
+     */
+    static Map<String, Object> sharingSorted(Map<String, Object> series) {
+        Map<String, Object> out = new LinkedHashMap<>(series);
+        if (out.get("availableDomainIds") instanceof List<?> ids) {
+            out.put("availableDomainIds", ids.stream().map(String::valueOf).sorted().toList());
+        }
+        return out;
+    }
+
     /** A date as JSON carries it (epoch milliseconds or an ISO-8601 instant), or null. */
     static Long millis(Object date) {
         if (date == null) {

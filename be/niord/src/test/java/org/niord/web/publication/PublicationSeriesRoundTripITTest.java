@@ -245,7 +245,7 @@ class PublicationSeriesRoundTripITTest extends PublicationHttpFixture {
         incomplete.put("mapThumbnails", null);
         refusedWith(as("admin").body(incomplete).put(BASE + "/series/" + seriesId), 400, "SERIES_INVALID",
                 "an ACTIVE series saved without its report");
-        assertEquals(before, editable(seriesId), "the refused save changed nothing");
+        assertEquals(sharingSorted(before), sharingSorted(editable(seriesId)), "the refused save changed nothing");
     }
 
     @Test
@@ -435,7 +435,7 @@ class PublicationSeriesRoundTripITTest extends PublicationHttpFixture {
         refusedWith(as("admin").body(intoOther).post(BASE + "/series"), 403, "NOT_IN_DOMAIN",
                 "a create into another desk's domain");
 
-        assertEquals(before, editable(seriesId), "the series is as it was");
+        assertEquals(sharingSorted(before), sharingSorted(editable(seriesId)), "the series is as it was");
         refusedWith(as("admin").get(BASE + "/editable-series/" + other), 404, "SERIES_NOT_FOUND",
                 "no series was created");
     }
