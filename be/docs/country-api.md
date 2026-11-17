@@ -483,7 +483,9 @@ working) for at least one base product version that both DK and GL have taken.
 ## Changes
 
 No change is recorded. The record starts again, empty, after 4.0.196: what changed up to that version is in the
-`docs/country-api.md` of its kit package.
+`docs/country-api.md` of its kit package. Until production the record is paused as the frontend's is, and gets no
+row (the country kit's README, `country-kit/README.md`, "Paused until production"); the rule of **Compatibility**
+above holds in full from the day it wakes.
 
 | Base product version | Change | What a country does |
 |---|---|---|

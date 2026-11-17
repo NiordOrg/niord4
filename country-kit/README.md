@@ -1488,7 +1488,8 @@ the countries built on it are developed together by the same people, so for now:
 - the boxes of the Base bump comment are information: an unticked box, and the red
   `niord/upgrade-actions` status it sets, hold no merge back;
 - `API-CHANGES.md` gets an entry only when the base product's upgrade test demands one
-  ([The example country](#the-example-country), _The upgrade test_).
+  ([The example country](#the-example-country), _The upgrade test_);
+- the Changes table of the backend contract, `docs/country-api.md`, gets no row.
 
 Not paused:
 
