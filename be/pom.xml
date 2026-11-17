@@ -17,7 +17,6 @@
     <!--      Spring Boot 4 equivalents (CDI->Spring DI, JAX-RS->Spring MVC,   -->
     <!--      quarkus-oidc->spring-security-oauth2-resource-server, …).        -->
     <!--                                                                        -->
-    <!--  See MIGRATION.md for the full dependency map and staged roadmap.     -->
     <!--  Dependencies are added to the module POMs package-by-package as the  -->
     <!--  port advances, so every committed stage keeps `mvn test` green.      -->
     <!-- ==================================================================== -->

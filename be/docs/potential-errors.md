@@ -1066,7 +1066,7 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 - **Location:** `DefaultTexts.read` (`niord/src/main/java/org/niord/core/defaults/DefaultTexts.java`), called from `DictionaryService.init`: when neither layer has a file for a bundle in the default language it throws `IllegalStateException("No default-language text for the '<bundle>' dictionary: neither … nor … is on the class path")`. The language list and the default language still come from the **persisted** `modelLanguages`/`defaultLanguage` settings.
 - **Description:** the default language's text for a bundle may come from the country's texts (`defaults/country/texts/<lang>/`) or from the language pack (`defaults/packs/<lang>/`, for `en` the base product's `defaults/base/texts/en/`); a root-level `<bundle>_<lang>.properties` is no longer read (NG-B). Pointing the English `niord-app` at a database whose default language is `da` (one that `niord-dk` or `niord-gl` has started, since DK's and GL's `defaults/country/settings.json` both set `defaultLanguage` `da` (GL's `main` `ffca4eb8` has one; gh api, 2026-11-02), or whose `defaultLanguage` row is `da`) stops start-up, because `niord-app` has neither for `da`. The IT fixture alone does not: `niord-base-data.sql` holds no `Setting` row since C4b, so the IT start writes `modelLanguages` `["da","en"]` from the test tree's `niord.json` and `defaultLanguage` `en` from the base product's settings file; a missing `da` file would only warn, and the test tree's stand-in `da` pack (`src/test/resources/defaults/packs/da/`) gives one. A language other than the default one with no file in either layer only warns and contributes no texts.
 - **Why it looks wrong:** a missing translation is degraded content, not an integrity violation, yet a default language without a bundle stops the application. `docs/code-data-config-plan.md` keeps this case fatal (§4.2), so the entry stays open under it too.
-- **Exposed by:** the dev-loop run of 2026-08-20; re-read against the code on 2026-10-20; re-read on 2026-11-02 (NG-B1).
+- **Exposed by:** the dev-loop run of 2026-08-20; re-read against the code on 2026-10-20; re-read on 2026-11-02.
 
 
 ## TESTQ3. `PublicationServiceGapITTest` pinned a global PUBLISHED-message count — green on macOS, red on Linux CI
@@ -1601,7 +1601,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   2026-10-25, in the repeated hour.
 - **Decided (the owner, 2026-10-25):** the JVM runs in UTC; the chart and the images set it at the deploy step
   (e.g. `TZ`/`-Duser.timezone=UTC` in `k8s/docker/Dockerfile` and `k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §6 P8); the entry stays
+  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9); the entry stays
   open until that is built.
 
 ## LUCENE-3. A message index of an older Lucene format in the index folder stops the start-up
@@ -1632,7 +1632,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   Sysadmin lists after one. A persistent job repository, or the bootstrap's job logs kept beside its marker, would
   keep the record.
 - **Exposed by:** the operator route of the country guides' verification (2026-10-26,
-  `docs/fe-country-split-plan.md` §6 P8): the launcher started the backend again on a database another route had
+  `docs/fe-country-split-plan.md` §5): the launcher started the backend again on a database another route had
   bootstrapped, and Batch Jobs showed 0 executions for every import job.
 - **Severity:** Low — no data is lost, only the record of what the bootstrap did.
 
@@ -1650,7 +1650,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   (`country-kit/docs/responsibilities-and-upgrades.md`). The sample's Danish content is the accepted exception
   (the split plan's R11); GL's client, the three groups and the Danish default locale are not the sample's.
 - **Exposed by:** the agent and operator routes of the country guides' verification (2026-10-26,
-  `docs/fe-country-split-plan.md` §6 P8).
+  `docs/fe-country-split-plan.md` §5).
 - **Severity:** Low — local runs only. Fix: English as the default locale, only the base product's and the sample's
   clients and groups; GL's client moves to `niord-gl`'s own local set-up.
 
@@ -1665,7 +1665,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Why it looks wrong:** an anonymous read of public data is the normal case for this endpoint, not an error; at
   ERROR level with a stack trace it drowns a log that an operator reads for real failures.
 - **Exposed by:** the person route of the kit move's route re-run (2026-11-02, `docs/fe-country-split-plan.md`
-  §6 the kit move, _KM-9 as built_), `curl -s http://localhost:4200/rest/domains/all` against a local country.
+  §5), `curl -s http://localhost:4200/rest/domains/all` against a local country.
 - **Severity:** Low — log noise only. Fix: skip the Keycloak states, or log at DEBUG, when no user is authenticated.
 
 ## K8S1. `deploy.sh` overwrites the chart's realm with a test realm that names the domain clients differently

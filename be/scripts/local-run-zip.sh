@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Builds org.niord:niord-local-run:<version>:zip, the files a country's launcher takes from the base product for a
-# local run (docs/fe-country-split-plan.md §6 P8 and P9), into <out.zip>:
+# local run (docs/fe-country-split-plan.md §3.4 and §5 step 9), into <out.zip>:
 #
 #   be/scripts/local-run-zip.sh <out.zip>
 #

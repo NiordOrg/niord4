@@ -12,7 +12,6 @@ niord-app/           generic English application — the reference deployable
 docker-compose.yml   local dev services (PostgreSQL/PostGIS + Keycloak + MailHog)
 docs/                design notes, test/coverage notes, potential-errors catalogue
 k8s/                 Helm chart and deploy scripts (OrbStack k8s)
-MIGRATION.md         port roadmap, dependency map, framework-seam strategy
 ```
 
 A country application is *the base library plus overlay resources* — its own settings file, logos
@@ -311,7 +310,6 @@ costs the detection job alone. When detection fails, `Unit tests` runs anyway. P
 Maven version you do, and it runs the *same* `./test-it` you run locally, so the "did the ITs
 really run" check cannot drift between the two.
 
-See **[MIGRATION.md](MIGRATION.md)** for the staged port roadmap and current state, and
-[`docs/cicd/design.md`](docs/cicd/design.md) for the repository/CI layout — one shared version
+See [`docs/cicd/design.md`](docs/cicd/design.md) for the repository/CI layout — one shared version
 per merge, and the per-country repositories, split out since 2026-10-06 (backends) and the country
 split's P5 and P6 (frontends).
