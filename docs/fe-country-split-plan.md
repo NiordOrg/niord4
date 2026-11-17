@@ -1635,9 +1635,10 @@ The maintenance a country does most often, so it must stay boring. **One pull re
    by a hidden marker at the box's end (F8-D11, tightened by F8-5 after the review of #271 found a tick
    hiding a template changed again at a later version). Every other template the kit changed (`CODEOWNERS`,
    `dependabot.yml`, the `be/` init folder, one added or removed) is named in one line of the comment and of
-   the upgrade report, with no box and no red check (F8-6, decision 147, 2026-11-04). While niord-ng is private the country's token cannot read the notes, so
-   the comment's one item is the pin by hand, and a run on the PR after it (Actions, Base bump, Run
-   workflow, `pr <n>`) adds the report and the checklist (decisions 105 and 106). The country's pipeline then
+   the upgrade report, with no box and no red check (F8-6, decision 147, 2026-11-04). The country's own token
+   reads the notes of the public `NiordOrg/niord4`; notes that cannot be read fail the run, which pins nothing
+   (2026-11-17; while niord-ng was private the comment's one item was the pin by hand, decisions 105 and 106).
+   The country's pipeline then
    runs `setup.mjs` on the pinned commit: fetch and verify, check packs, overrides, the API, the
    dependencies; generate; test; build.
 3. **Green: no task.** Green is CI and `niord/upgrade-actions` both green. The country reviews, merges and
@@ -1651,14 +1652,13 @@ The maintenance a country does most often, so it must stay boring. **One pull re
 |---|---|---|
 | the status **`niord/upgrade-actions`** is red, `Base bump: <n> human action(s) unticked` | does each item of the comment's `## Human actions` and ticks its box, never deleting one | at every bump that asks something set-up cannot check |
 | a bump PR has **no Base bump comment** (the status pending, `Base bump: no comment yet; …`) | runs the workflow on it (Actions, Base bump, Run workflow, `pr <n>`) | after a pin pushed before the first run |
-| the status says **"Base bump failed: see the run"** | opens the run: a notes read that failed for another reason than a private repository (runs it again), notes that disagree with the registry's zips (nothing pinned; tells the base product's maintainers), a repository without the kit package's layout | rare |
-| the comment's one item is the **pin by hand** | pins from the release notes, pushes, and runs the workflow on the PR | every base bump while niord-ng is private (decisions 105, 106) |
+| the status says **"Base bump failed: see the run"** | opens the run: a notes read that failed (runs it again), notes that disagree with the registry's zips (nothing pinned; tells the base product's maintainers), a repository without the kit package's layout | rare |
 | a **workflow file** item (`pack.yml`, `base-bump.yml`, an image template to merge into `image.yml`) | copies or merges it by hand: the workflow's token may not push a workflow file | when the kit changes one |
 | new English keys missing in **its own** pack | translates them in the same PR (the report lists them); that push stays on the branch when a newer release moves the PR; `pack.yml` publishes the pack on the merge | most versions with new UI text |
 | new keys missing in a **foreign** pack | the Base bump workflow moves the pin with `--update-pins` at every bump; until the home has published a pack with the keys it waits, then re-runs the workflow on the PR or takes the next release's move, or accepts English via the escape hatch, or writes its own wording (§4.6) | when a home lags |
 | the base product changed a file the country **overrode** | compares with the base product's diff, adjusts its copy, re-accepts | only with overrides |
 | the base product changed the **country API** | does what `API-CHANGES.md` says for that version | rare; deprecated first, so a warning before an error |
-| the base product changed the **set-up stub** (`templates/setup.mjs`) | since the Renovate step the Base bump workflow copies it when the notes confirmed the pins; after a pin by hand the country copies `.niord/kit/templates/setup.mjs` (before the kit package, KM-6: `.niord/base/country-kit/templates/setup.mjs`) over `fe/setup.mjs`, as `API-CHANGES.md` says for that version: on a version change set-up reports the stub as a failed check whose copy command is the report's first To-do item, and stops before staging (without a version change it refuses the stub at once) | rare; a breaking change by `API-CHANGES.md`'s policy (since the review of PR #184) |
+| the base product changed the **set-up stub** (`templates/setup.mjs`) | since the Renovate step the Base bump workflow copies it; in a bump without the workflow the country copies `.niord/kit/templates/setup.mjs` (before the kit package, KM-6: `.niord/base/country-kit/templates/setup.mjs`) over `fe/setup.mjs`, as `API-CHANGES.md` says for that version: on a version change set-up reports the stub as a failed check whose copy command is the report's first To-do item, and stops before staging (without a version change it refuses the stub at once) | rare; a breaking change by `API-CHANGES.md`'s policy (since the review of PR #184) |
 | a **security fix** touched an overridden file | merges the fix into its copy | rare, never skipped |
 | a **country npm package** rejects the new framework version | updates that package | at framework major upgrades |
 | a key the base product **added to its settings file** is missing from the country's | sets a value, or lists the key as using the base product default (the pinned base product's settings-file value) with a reason; the report lists the new keys. A key the base product declares only in code takes its code default and needs nothing (`docs/code-data-config-plan.md` §5.5) | when the base product adds a key to its settings file |

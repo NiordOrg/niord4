@@ -66,6 +66,20 @@ lead lists an entry again and a reused one hides a new entry. Each entry says:
 
 ## Unreleased
 
+**The Base bump workflow no longer asks for a pin by hand.** In
+`.niord/kit/templates/base-bump.yml`, the release notes are read with the workflow's own token only:
+the optional secret `NIORD_NG_RELEASE_READ` is gone, and so is the comment whose one item was the
+pin by hand. Notes that cannot be read (a release not made yet, a rate limit, a server error) fail
+the run, which pins nothing; run it again (Actions, Base bump, Run workflow, `pr <n>`). A lock that
+pins the version already on a dispatch is pinned again from the confirmed notes. Why: the base
+product's repository, `NiordOrg/niord4`, is public, so every country's own token reads the notes.
+
+What a country must do: copy `.niord/kit/templates/base-bump.yml` over
+`.github/workflows/base-bump.yml` (the Base bump comment lists the differing copy as an item), and
+delete the repository secret `NIORD_NG_RELEASE_READ` where one was made. Merge
+`.niord/kit/templates/AGENTS.md` into your `AGENTS.md`: its base bump section no longer describes
+the pin by hand.
+
 **The base product's repository is `NiordOrg/niord4`, public, from 4.0.182.** The Base bump
 template's `BASE_REPO` names it instead of `SIFA-DK/niord-ng`, and the kit's guides download a
 release from it (`gh release download v<version> --repo NiordOrg/niord4`). No export, text or

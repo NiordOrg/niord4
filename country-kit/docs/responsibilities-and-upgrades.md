@@ -135,8 +135,8 @@ flowchart TD
   byhand["Without the app: you push base-bump/version with the parent version moved, and open the pull request"] --> workflow
   app --> workflow["The Base bump workflow fetches the two zips and reads the release notes"]
   workflow --> notes{"Notes readable, and equal to the downloads?"}
-  notes -->|"unreadable: the base repository is private"| pin["One item: pin by hand from the notes, push, then Run workflow with the pr number"]
-  pin --> workflow
+  notes -->|"unreadable"| again["The run fails; nothing is pinned: Run workflow with the pr number again, once the release is made"]
+  again --> workflow
   notes -->|"different"| stop["The run fails; nothing is pinned or run: tell the base product's maintainers"]
   notes -->|"equal"| repin["It pins the lock, runs set-up, copies the stub and the launcher, moves the pinned packs to each home's newest pack, commits as github-actions bot and dispatches CI"]
   repin --> comment["One comment: the upgrade report and Human actions; the status niord/upgrade-actions"]
@@ -168,49 +168,23 @@ flowchart TD
    (`node setup.mjs --update-pins`), and the comment names each moved pin, old and new: compare the
    new digest with the home's `pack-releases.md`. It commits as `github-actions[bot]`, cancels the
    branch's CI runs and dispatches `ci.yml` on the new commit, then posts the Base bump comment and
-   sets the status `niord/upgrade-actions`. When the notes and the downloads differ, the run fails
-   and nothing is pinned or run: tell the base product's maintainers.
-3. **Pin by hand while the notes cannot be read.** While the base product's
-   repository is private, the Base bump workflow cannot read the release notes with your
-   repository's own token, so it pins nothing: its comment's one item is the pin by hand from the
-   notes, and once you have pushed it, running the workflow on the pull request (Actions, Base bump,
-   Run workflow, `pr <n>`) adds the upgrade report and the checklist. When that repository is
-   public, the workflow's own token reads the notes and the pin is automatic. The pin by hand, from
-   the repository root on the pull request's branch:
-
-   ```bash
-   be/mvnw -B -f be/pom.xml dependency:copy \
-     -Dartifact=org.niord.web:niord-fe-src:<version>:zip -DoutputDirectory="$PWD/fe/.niord"
-   be/mvnw -B -f be/pom.xml dependency:copy \
-     -Dartifact=org.niord:niord-country-kit:<version>:zip -DoutputDirectory="$PWD/.niord"
-   (cd fe/.niord && printf '%s\n' '<fe-sha256>  niord-fe-src-<version>.zip' | sha256sum -c)
-   (cd .niord && printf '%s\n' '<kit-sha256>  niord-country-kit-<version>.zip' | sha256sum -c)
-   ```
-
-   Each `sha256sum -c` line takes its line exactly as the notes of release `v<version>` give it
-   (`gh release view v<version> --repo NiordOrg/niord4`; for a version up to 4.0.181, released in
-   the private `SIFA-DK/niord-ng`, a base product maintainer gives them), and fails unless the
-   downloaded zip has that hash
-   ([Starting a country](../README.md#starting-a-country--init) says more). Then set `base.version`
-   and `base.sha256` in `fe/niord-pins.lock.json` to the version and the first line's sha256, and
-   `kit.sha256` to the second line's. Run `node setup.mjs` in `fe/` (copy
-   `.niord/kit/templates/setup.mjs` over `fe/setup.mjs` when it asks), commit and push, then run
-   the workflow on the pull request: it compares your pin with the downloads and rewrites its
-   comment with the upgrade report and the checklist. A newer release moves this pull request with
-   your commit kept, and asks for the pin of the newer version while the notes cannot be read; if
-   the branch comes to conflict with `main`, the next release replaces the pull request.
-
-4. **Read the comment.** The Base bump comment, one per pull request, starts with
+   sets the status `niord/upgrade-actions`. The workflow reads the notes with your repository's own
+   token: the base product's repository, `NiordOrg/niord4`, is public. When the notes and the
+   downloads differ, the run fails and nothing is pinned or run: tell the base product's
+   maintainers. When the notes cannot be read (a release not made yet, a rate limit, a server
+   error), the run fails and nothing is pinned: run it again (Actions, Base bump, Run workflow,
+   `pr <n>`).
+3. **Read the comment.** The Base bump comment, one per pull request, starts with
    `## Base bump: <old> to <new>` and what was pinned and copied, and a line naming every other kit
    template that changed, which asks nothing. Then come `## Human actions`, as
    boxes, or "No human action: review, merge, deploy."; then `## Checked by CI`; and last the whole
    upgrade report, folded. Read `## Human actions` first, then the report's **To do** and
    **To look at**. After a set-up of your own the report is also `fe/.niord/niord-upgrade-report.md`.
-5. **Do each To-do item** on the pull request's branch. [When it is red](#when-it-is-red) says what
+4. **Do each To-do item** on the pull request's branch. [When it is red](#when-it-is-red) says what
    each one means; set-up fails in CI until it is done, so run `node setup.mjs` again until it
    passes. A newer release moves this pull request and your commits stay; if the branch comes to
    conflict with `main`, the next release replaces the pull request.
-6. **Do each human action, and tick its box.** Each item is one thing set-up cannot check: the
+5. **Do each human action, and tick its box.** Each item is one thing set-up cannot check: the
    "What a country must do" of a new section of `.niord/kit/API-CHANGES.md`; a changed template to
    merge, such as `.niord/kit/templates/AGENTS.md` into your `AGENTS.md`, keeping your own sections
    (`init` keeps an existing `AGENTS.md`, so nothing else brings the template's changes to an AI
@@ -224,7 +198,7 @@ flowchart TD
    version's backend contract at `.niord/kit/docs/country-api.md`, and compare your settings file
    with the new version's `.niord/kit/backend/defaults/base/settings.json`
    ([The base product's backend files](country-guide-in-depth.md#the-base-products-backend-files)).
-7. **Review, merge, deploy.** Green means no task: review, merge, deploy. Green is CI and
+6. **Review, merge, deploy.** Green means no task: review, merge, deploy. Green is CI and
    `niord/upgrade-actions` both green on the pull request's last commit. Until your repository has a
    rule that requires these checks, which GitHub's free plan does not offer a private repository, a
    red status does not block the merge button: the review is the gate, so do not merge while either
@@ -241,7 +215,7 @@ a `base-bump/` branch of your own repository that changes `be/pom.xml`.
 1. From an up-to-date `main`, create the branch `base-bump/<version>` in your own repository, never
    in a fork: the workflow pushes only to a branch of this repository.
 2. Move only the `<parent>` version in `be/pom.xml` to the new version, commit and push.
-3. Open the pull request into `main`. The workflow runs on it as on the app's, and steps 2 to 7
+3. Open the pull request into `main`. The workflow runs on it as on the app's, and steps 2 to 6
    above hold as they stand.
 
 With the app installed, a pull request a person opened on `base-bump/` is left alone, and the app
@@ -265,7 +239,8 @@ yourself, on your machine:
    files.
 2. Move both pins in one change: the `<parent>` version in `be/pom.xml`, and `base.version`,
    `base.sha256` and `kit.sha256` in `fe/niord-pins.lock.json`, from the two lines of the release
-   notes, checked as step 3 above checks them ([Set-up](../README.md#set-up), step 1).
+   notes, each checked with `sha256sum -c` against the downloaded zip
+   ([Set-up](../README.md#set-up), step 1).
 3. Run `node setup.mjs` in `fe/` and do the report's To do until it passes. Copy
    `.niord/kit/templates/setup.mjs` over `fe/setup.mjs` when the report says the stub changed, and
    `.niord/kit/templates/start-local.sh` over `start-local.sh` at every bump. Move your foreign
@@ -286,16 +261,15 @@ Each reason set-up, the build or the Base bump workflow stops for has its action
 
 | Stops because                                                                                         | What you do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | How often                                                      |
 | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| the check **`niord/upgrade-actions`** is red, `Base bump: <n> human action(s) unticked`               | do each item of the comment's `## Human actions` and tick its box; never delete one ([How an upgrade works today](#how-an-upgrade-works-today), step 6)                                                                                                                                                                                                                                                                                                                                                            | at every bump that asks something set-up cannot check          |
-| the comment's one item is the **pin by hand**                                                         | pin from the release notes, push, and run the workflow on the pull request (Actions, Base bump, Run workflow, `pr <n>`) ([How an upgrade works today](#how-an-upgrade-works-today), step 3)                                                                                                                                                                                                                                                                                                                        | every base bump while the base product's repository is private |
+| the check **`niord/upgrade-actions`** is red, `Base bump: <n> human action(s) unticked`               | do each item of the comment's `## Human actions` and tick its box; never delete one ([How an upgrade works today](#how-an-upgrade-works-today), step 5)                                                                                                                                                                                                                                                                                                                                                            | at every bump that asks something set-up cannot check          |
 | a bump pull request has **no Base bump comment** (the status pending, `Base bump: no comment yet; …`) | run the workflow on it (Actions, Base bump, Run workflow, `pr <n>`)                                                                                                                                                                                                                                                                                                                                                                                                                                                | after a pin pushed before the first run                        |
-| the status says **`Base bump failed: see the run`**, or names another failure of the run              | open the run. A release-notes read that failed for another reason than a private repository: run it again. Notes that disagree with the registry's zips: nothing is pinned; tell the base product's maintainers. A repository without the kit package's layout: the kit unpacks at `.niord/kit/` at the repository root. A push refused because the branch moved meanwhile: the run of that push re-pins                                                                                                           | rare                                                           |
+| the status says **`Base bump failed: see the run`**, or names another failure of the run              | open the run. Release notes that could not be read (the release not made yet, a rate limit, a server error): run it again. Notes that disagree with the registry's zips: nothing is pinned; tell the base product's maintainers. A repository without the kit package's layout: the kit unpacks at `.niord/kit/` at the repository root. A push refused because the branch moved meanwhile: the run of that push re-pins                                                                                           | rare                                                           |
 | a **workflow file** item: `pack.yml`, `base-bump.yml`, or an image template to merge into `image.yml` | copy or merge it by hand and push: the workflow's token may not push a workflow file                                                                                                                                                                                                                                                                                                                                                                                                                               | when the kit changes one                                       |
 | new English keys are missing in **your own** pack                                                     | translate them in the same pull request; the report lists them ([Language packs](../README.md#language-packs)). Your commit stays when a newer release moves the pull request; `pack.yml` publishes your pack on the merge                                                                                                                                                                                                                                                                                         | most versions with new UI text                                 |
 | new keys are missing in a **foreign** pack                                                            | the Base bump workflow moves the pin to the home's newest pack itself (`node setup.mjs --update-pins`) at every bump. Until the home has published a pack with the keys, the To do names the wait: once it has, run the workflow on the pull request again (Actions, Base bump, Run workflow, `pr <n>`), or let the next release's move bring it. Or accept English in the escape hatch ([Language packs](../README.md#language-packs)), or write your own wording ([Text overrides](../README.md#text-overrides)) | when a home lags                                               |
 | the base product changed a file you **overrode**                                                      | compare with the base product's diff in the report, adjust your copy, then `node setup.mjs --accept-override <file>` ([Guarded overrides](../README.md#guarded-overrides))                                                                                                                                                                                                                                                                                                                                         | only with overrides                                            |
 | the base product changed the **country API**                                                          | do what [API-CHANGES.md](../API-CHANGES.md) says for that version ([The country API](../README.md#the-country-api))                                                                                                                                                                                                                                                                                                                                                                                                | rare; deprecated first, so a warning comes before an error     |
-| the base product changed the **set-up stub**                                                          | the Base bump workflow copies `.niord/kit/templates/setup.mjs` over `fe/setup.mjs` when the notes confirmed the pins; after a pin by hand, copy it yourself when set-up asks. The report names it under To do, with the copy command ([Set-up](../README.md#set-up))                                                                                                                                                                                                                                               | rare; a breaking change in [API-CHANGES.md](../API-CHANGES.md) |
+| the base product changed the **set-up stub**                                                          | the Base bump workflow copies `.niord/kit/templates/setup.mjs` over `fe/setup.mjs`; in a bump without it, copy it yourself when set-up asks. The report names it under To do, with the copy command ([Set-up](../README.md#set-up))                                                                                                                                                                                                                                                                                | rare; a breaking change in [API-CHANGES.md](../API-CHANGES.md) |
 | a **security fix** touched a file you overrode                                                        | merge the fix into your copy ([Guarded overrides](../README.md#guarded-overrides))                                                                                                                                                                                                                                                                                                                                                                                                                                 | rare, never skipped                                            |
 | a **country npm package** rejects the new framework version                                           | update that package ([Country dependencies](../README.md#country-dependencies))                                                                                                                                                                                                                                                                                                                                                                                                                                    | at framework major upgrades                                    |
 | your backend's settings check finds a key the base product **added to its settings file**             | set a value in your settings file, or list the key as using the base product's default, with a reason; set-up cannot see these keys yet, so the report names this as a check it does not make ([The settings file](country-guide-in-depth.md#the-settings-file))                                                                                                                                                                                                                                                   | when the base product adds a key to its settings file          |
@@ -317,13 +291,10 @@ published a pack for the new keys; then the workflow's re-run on the pull reques
 only with what you chose to override, and the report says so in numbers.
 
 What a bump costs in Actions minutes, measured as wall time on a country's bump pull request on
-2026-11-02: the Base bump workflow on the pull request took 27 s to 1 min 17 s while the notes cannot
-be read, and 2 min 2 s when run with `pr <n>` after the pin by hand; CI took 35 s on the unpinned
-lock (set-up stops both jobs) and 4 min 50 s on the pinned commit. Each release moves the pull
-request, so each release costs a move. Billed minutes round each job up, and these are estimates:
-about 4 to 5 per move while the base product's repository is private, about 12 more when you pin
-by hand and run the workflow, and about 14 per move once it is public, when every move pins and runs
-the full CI.
+2026-11-02: the Base bump workflow took 2 min 2 s when it pinned and ran set-up, and CI 4 min 50 s
+on the pinned commit. Each release moves the pull request, so each release costs a move. Billed
+minutes round each job up, and this is an estimate: about 14 per move, when every move pins and
+runs the full CI.
 
 ## The upgrade report
 

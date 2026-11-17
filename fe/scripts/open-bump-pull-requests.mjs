@@ -285,9 +285,8 @@ export function compareVersions(a, b) {
 }
 
 /**
- * The bump pull request's body: what it moves, what the Base bump workflow then does, the pin by
- * hand while the base product's repository is private, how a newer release moves it, and what the
- * app never does.
+ * The bump pull request's body: what it moves, what the Base bump workflow then does, how a newer
+ * release moves it, and what the app never does.
  */
 export function prBody({ version, from, baseRepo, runUrl, replaces, app = 'niord-base-bump' }) {
   const release = baseRepo ? `release v${version} in ${baseRepo}` : `release v${version}`;
@@ -299,8 +298,7 @@ export function prBody({ version, from, baseRepo, runUrl, replaces, app = 'niord
         ]
       : []),
     "The Base bump workflow runs on it: it checks the two zips against the release notes, pins `fe/niord-pins.lock.json`, moves every pinned pack to its home's newest pack, copies the stub and the launcher, commits as github-actions[bot], dispatches CI, and posts one comment with the upgrade report and its `## Human actions`. The check `niord/upgrade-actions` is green when no box is left: green means no task beyond the review, the merge and the deploy.",
-    "While the base product's repository is private, the comment's one item is the pin by hand from the release notes; then Run workflow on the Base bump workflow with `pr` set to this pull request's number.",
-    'A newer release moves this pull request on its own branch, and your commits stay. Each move posts the comment again: a box whose text did not change keeps its tick, and a box the new version adds starts unticked, as does the pin by hand while the repository is private. If this branch comes to conflict with the default branch, the next release replaces this pull request with a fresh one and closes this one with a comment.',
+    'A newer release moves this pull request on its own branch, and your commits stay. Each move posts the comment again: a box whose text did not change keeps its tick, and a box the new version adds starts unticked. If this branch comes to conflict with the default branch, the next release replaces this pull request with a fresh one and closes this one with a comment.',
     'The app never merges, approves, labels or deletes a branch, and touches no other branch or pull request.',
     `${runUrl ? `Opened by the publish run ${runUrl} with` : 'Opened by'} the Niord base bump app, https://github.com/apps/${app}.`,
   ].join('\n\n');

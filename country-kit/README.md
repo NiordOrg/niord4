@@ -302,18 +302,10 @@ from the kit's as an item.
 The release notes decide the pin. Their two lines, `<sha256>  niord-fe-src-<version>.zip` and
 `<sha256>  niord-country-kit-<version>.zip`, equal to the downloads' hashes: the workflow pins
 them. Different: the run fails, and nothing is pinned or run; tell the base product's maintainers.
-A 403, a 404 or `release not found`: the notes are unreadable. While the base product's repository
-is private, the Base bump workflow cannot read the release notes with your repository's own token,
-so it pins nothing: its comment's one item is the pin by hand from the notes, and once you have
-pushed it, running the workflow on the pull request (Actions, Base bump, Run workflow, `pr <n>`)
-adds the upgrade report and the checklist. When that repository is public, the workflow's own token
-reads the notes and the pin is automatic. A lock that pins the version already, by hand, is
-compared with the downloads instead. Any other failure, such as a rate limit, fails the run: run it
-again. An optional repository secret, `NIORD_NG_RELEASE_READ`, a token that can read the base
-product's repository's releases, lets the workflow read the notes before that repository is
-public; nothing asks for it, and once it is public the workflow's own token reads them. Beyond
-that the workflow needs no secret: it reads GitHub Packages and writes to the pull request with its
-own token.
+Unreadable (`release not found` for a release not made yet, a rate limit, a server error): the run
+fails and nothing is pinned; run it again (Actions, Base bump, Run workflow, `pr <n>`). The
+workflow reads the notes with its own token, since the base product's repository is public, and
+needs no secret: it reads GitHub Packages and writes to the pull request with its own token too.
 
 The comment is one per pull request, found by its marker `<!-- niord-base-bump -->` and edited in
 place: `## Base bump: <old> to <new>` with the pins and where they came from (each moved pack pin,
@@ -353,12 +345,9 @@ there. The workflow never pushes a workflow file, which its token may not: a dif
 `pack.yml` or `base-bump.yml` is an item.
 
 The cost, measured as wall time on a country's bump pull request on 2026-11-02: the workflow took
-27 s to 1 min 17 s while the notes cannot be read, and 2 min 2 s run with `pr <n>` after the pin by
-hand; CI took 35 s on the unpinned lock (set-up stops both jobs) and 4 min 50 s on the pinned
-commit. Each release moves the pull request, so each release costs a move. Billed minutes round each
-job up, and these are estimates: about 4 to 5 per move while the base product's repository is
-private, about 12 more for the pin by hand and its run, and about 14 per move once it is public,
-when every move pins and runs the full CI.
+2 min 2 s when it pinned and ran set-up, and CI 4 min 50 s on the pinned commit. Each release moves
+the pull request, so each release costs a move. Billed minutes round each job up, and this is an
+estimate: about 14 per move, when every move pins and runs the full CI.
 [How an upgrade works today](docs/responsibilities-and-upgrades.md#how-an-upgrade-works-today)
 says what a person does with the comment.
 
@@ -1647,8 +1636,8 @@ node .niord/kit/init.mjs <cc> --sha256-file .niord/SHA256SUMS
 The `sha256sum -c` line is the first pins' check, and it refuses: `SHA256SUMS` holds the two lines
 exactly as the notes of the base product's GitHub release `v<version>` give them,
 `<sha256>  niord-fe-src-<version>.zip` and `<sha256>  niord-country-kit-<version>.zip`
-(`gh release view v<version> --repo NiordOrg/niord4`; for a version up to 4.0.181, released in the
-private `SIFA-DK/niord-ng`, a base product maintainer gives the two zips and the two lines), and
+(`gh release view v<version> --repo NiordOrg/niord4`; a version up to 4.0.181 was released before
+the move to that repository, and its notes are not public), and
 `sha256sum -c` fails unless each downloaded zip has its line's hash. Run nothing from either zip
 before both say OK: `unzip` and
 `init` come after. The publish workflow writes both lines when it publishes the zips, and the
@@ -1792,10 +1781,10 @@ workflow's own token, bound to the frontend job's `Set up the workspace` and to 
 takes `workflow_dispatch:` in its `on:`, on a line of its own, since the Base bump workflow
 dispatches it ([The base bump workflow](#the-base-bump-workflow)); that workflow needs no secret.
 
-**The pin by hand.** While the Base bump workflow cannot read the release notes, it asks for the pin
-by hand on a bump pull request's branch. There `be/pom.xml`'s `<parent>` already names the new
-version, so the branch's own `be/mvnw` fetches both zips, and each is checked against its line of
-the notes, from the repository root:
+**A pin by hand.** A bump made without the Base bump workflow, before that workflow is on `main`,
+pins on the bump branch. There `be/pom.xml`'s `<parent>` already names the new version, so the
+branch's own `be/mvnw` fetches both zips, and each is checked against its line of the notes, from
+the repository root:
 
 ```bash
 be/mvnw -B -f be/pom.xml dependency:copy \
@@ -1859,9 +1848,7 @@ others makes no docker call:
   at a space.
 
 The launcher does not check it, but a first maintainer needs one more before it: the GitHub CLI
-`gh`, signed in, for the release's download ([The release](docs/country-guide.md#the-release));
-while the base product's repository is private a maintainer hands the two zips and their lines over
-instead.
+`gh`, signed in, for the release's download ([The release](docs/country-guide.md#the-release)).
 
 The environment it reads:
 

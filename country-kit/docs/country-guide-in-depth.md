@@ -998,12 +998,8 @@ and posts one comment with the upgrade report and `## Human actions`. A move pos
 again, and a box keeps its tick when the thing it is about is unchanged: its text, and for a
 template its content in the kit. The status `niord/upgrade-actions` stays
 red while a box of that comment is unticked. You do the report's To do and each item, tick each
-box, then review, merge and deploy. While the base product's repository is private, the workflow
-cannot read the release notes with your repository's own token, so it pins nothing: its comment's
-one item is the pin by hand from the notes, and once you have pushed it, running the workflow on the
-pull request (Actions, Base bump, Run workflow, `pr <n>`) adds the upgrade report and the checklist.
-When that repository is public, the workflow's own token reads the notes and the pin is automatic.
-It needs no secret.
+box, then review, merge and deploy. The workflow reads the release notes of the public base
+product's repository with your repository's own token, and needs no secret.
 [How an upgrade works today](responsibilities-and-upgrades.md#how-an-upgrade-works-today) gives the
 steps, and [The base bump workflow](../README.md#the-base-bump-workflow) the detail.
 
