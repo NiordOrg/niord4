@@ -294,7 +294,7 @@ three jobs:
   already, and after a failed `compute`, counts the unticked boxes and sets the status on the pull
   request's head.
 
-`BASE_REPO` in its `env:` is the base product's repository, `NiordOrg/niord4` since 4.0.182: the one
+`BASE_REPO` in its `env:` is the base product's repository, `NiordOrg/niord4`: the one
 value in it that changes when that repository moves. A
 country takes the new value with the template at its bump, and the comment lists a copy that differs
 from the kit's as an item.

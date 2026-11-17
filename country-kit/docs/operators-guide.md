@@ -30,7 +30,7 @@ on the Keycloak client of the domain you work in, which you choose in the menu, 
 The base product's bootstrap gives every new deployment the same start, in English only:
 
 - **The master domain**, Keycloak ID `niord-client-master`, named Master, with no message series and
-  no time zone. It is active (since 4.0.123), so a sysadmin with the role on its client reaches the
+  no time zone. It is active, so a sysadmin with the role on its client reaches the
   Sysadmin pages on it; a country's bootstrap may leave it inactive by restating it with
   `"active": false` only.
 - **The base product's templates and scripts:** the message templates, the mail templates and the
@@ -484,13 +484,13 @@ How to see it worked: Sysadmin > Settings lists `niord.home` with the value `${N
 backend's start log says `Default setting niord.home = ${NIORD_HOME} (country)`. Do not change the
 value on the page. The volume itself is verified at the deploy step.
 
-The base product's generic deployable, without a country, follows `NIORD_HOME` too (since 4.0.123):
+The base product's generic deployable, without a country, follows `NIORD_HOME` too:
 when no `niord.home` property or variable is set, its `niord.home` takes the `NIORD_HOME` system
 property, else the environment variable, ahead of the database row; only without any of them does
 it fall back to `${user.home}/.niord`. Check the Settings page on such a deployment before anyone
 enters data.
 
-**The execution mode.** A fresh database starts in mode `test` (since 4.0.124): both frontends then
+**The execution mode.** A fresh database starts in mode `test`: both frontends then
 show a TEST ribbon, the public site included. A production deployment adds `-Dmode=production` to
 its chart value `app.javaOpts`, which the chart passes to the backend as `JAVA_TOOL_OPTIONS`; keep
 the options the value already holds, such as `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, the chart's

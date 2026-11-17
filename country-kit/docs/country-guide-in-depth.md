@@ -328,7 +328,7 @@ The fields:
   `navtexFormat`, its NAVTEX preamble.
 - The domain import adds a domain the database lacks and leaves one it has alone.
 
-The base product's own domain, `niord-client-master`, is active since 4.0.123, with no message
+The base product's own domain, `niord-client-master`, is active, with no message
 series: a sysadmin reaches the Sysadmin pages on it even before your domain's Keycloak client
 exists. To leave it inactive, restate it in your `domains.json` with its `domainId` and
 `"active": false` and nothing else; a restatement that gives any other field, or any other domain
