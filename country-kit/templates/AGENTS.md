@@ -186,16 +186,14 @@ CI and posts one comment: `## Human actions` as boxes, and the upgrade report. T
 
 Each `sha256` is the one on its line in the base product release notes,
 `<sha256>  niord-fe-src-<version>.zip` and `<sha256>  niord-country-kit-<version>.zip`, never one
-computed from a download: the workflow's pin is the download's hash after the notes confirmed it;
-without the notes the workflow pins nothing and you pin by hand from them ("Starting a country" in
-`.niord/kit/README.md` has the commands), then run the workflow on the pull request (Actions, Base
-bump, Run workflow, `pr <n>`).
+computed from a download: the workflow's pin is the download's hash after the notes confirmed it.
+When it cannot read the notes, the run fails and pins nothing: run it again on the pull request
+(Actions, Base bump, Run workflow, `pr <n>`).
 
 Your part:
 
-1. Read the comment. While the base product's repository is private, the workflow cannot read the
-   notes, so the comment's one item is the pin by hand; once it is pushed, running the workflow on
-   the pull request adds the upgrade report and the checklist.
+1. Read the comment: what the workflow pinned and copied, `## Human actions`, and the upgrade
+   report.
 2. Do **To do** of the upgrade report (in the comment, and in `fe/.niord/niord-upgrade-report.md`
    after a set-up of your own): your packs' new keys, each override, and
    `node setup.mjs --update-pins` only when the workflow could not move a pinned pack's pin (its

@@ -32,11 +32,9 @@ name: Base bump
 #            the version already, and after a failed compute: counts the unticked boxes and sets
 #            the status on the pull request's head, pending while there is no comment
 #
-# The notes are read with the repository secret NIORD_NG_RELEASE_READ when it exists, otherwise
-# with this workflow's own token, which reads them once the base product's repository is public.
-# Until then, without the secret, nothing is pinned: the comment's one item is the pin by hand
-# from the notes, and running this workflow on the pull request afterwards (Run workflow, with the
-# pull request's number) adds the report and the checklist. BASE_REPO is the one place that names
+# The notes are read with this workflow's own token: the base product's repository is public.
+# Unreadable notes (a release not made yet, a rate limit, a server error) fail compute, which pins
+# nothing: run this workflow again (Run workflow, pr <n>). BASE_REPO is the one place that names
 # the base product's repository, and the one value that changes when that repository moves.
 #
 # A push with this workflow's token starts no workflow, so apply dispatches ci.yml, which must take
@@ -50,8 +48,7 @@ name: Base bump
 # Event values reach the scripts through env: only, no run block holds an expression, and every
 # one starts with set -euo pipefail. The runs of one pull request never overlap and none is
 # dropped (queue: max). The cost of a bump: compute about 5 to 8 minutes (the Maven fetches of two
-# set-ups and two bootstrap zips; about a minute when the notes cannot be read), apply and recount
-# about a minute each, and the dispatched CI run.
+# set-ups and two bootstrap zips), apply and recount about a minute each, and the dispatched CI run.
 
 on:
   pull_request:
@@ -148,7 +145,7 @@ jobs:
           node-version: '24'
       # NEW is the <parent> version of be/pom.xml, read as the stub reads it (the whole <parent>
       # block, comments left out), OLD the version the base branch's lock pins. A lock that pins
-      # NEW already on a push is recounted only; on a dispatch it is the pin made by hand.
+      # NEW already on a push is recounted only; on a dispatch it is pinned again.
       - name: Decide the versions
         id: versions
         env:
@@ -164,14 +161,12 @@ jobs:
           pinned="$(version_of < fe/niord-pins.lock.json)" || { echo "::error::fe/niord-pins.lock.json is not JSON."; exit 1; }
           [[ "$old" =~ ^4\.0\.[0-9]+$ ]] || { echo "::error::The base branch's fe/niord-pins.lock.json pins no 4.0.<n> version (got '$old')."; exit 1; }
           [ "$new" != "$old" ] || { echo "::error::be/pom.xml's <parent> is the base branch's version, $old: this pull request bumps nothing."; exit 1; }
-          is_pinned=false
-          [ "$pinned" != "$new" ] || is_pinned=true
           already=false
-          if [ "$is_pinned" = true ] && [ "$EVENT" = pull_request ]; then
+          if [ "$pinned" = "$new" ] && [ "$EVENT" = pull_request ]; then
             already=true
             echo "::notice::fe/niord-pins.lock.json pins $new already: the human actions are recounted only."
           fi
-          { echo "new=$new"; echo "old=$old"; echo "pinned=$is_pinned"; echo "already_pinned=$already"; } >> "$GITHUB_OUTPUT"
+          { echo "new=$new"; echo "old=$old"; echo "already_pinned=$already"; } >> "$GITHUB_OUTPUT"
       # The zips come through Maven with the workflow token (the registry is public, any token
       # reads it), bound on the steps that run Maven and on no other.
       - name: Fetch the two zips
@@ -191,39 +186,25 @@ jobs:
           kit="$(sha256sum "$out/niord-country-kit-$NEW.zip" | cut -d' ' -f1)"
           { echo "fe_sha256=$fe"; echo "kit_sha256=$kit"; } >> "$GITHUB_OUTPUT"
       # Before anything of the new version runs. Readable and equal: verified. Readable and
-      # different: the registry and the notes disagree, and nothing is pinned or run. Unreadable,
-      # a 404 or 403 (a private repository answers 404, and gh says "release not found" for a
-      # release not made yet too): nothing is pinned, unless the branch's lock pins the version
-      # already (a pin by hand). Any other failure, a rate limit or a server error, fails the run,
-      # which recount marks red: run it again.
+      # different: the registry and the notes disagree, and nothing is pinned or run. Unreadable
+      # (gh says "release not found" for a release not made yet; a rate limit, a server error):
+      # the run fails, which recount marks red, and nothing is pinned: run it again.
       - name: Check the release notes
         id: notes
         if: steps.versions.outputs.already_pinned == 'false'
         env:
           NEW: ${{ steps.versions.outputs.new }}
-          PINNED: ${{ steps.versions.outputs.pinned }}
           PR: ${{ steps.pr.outputs.pr }}
           FE_SHA256: ${{ steps.zips.outputs.fe_sha256 }}
           KIT_SHA256: ${{ steps.zips.outputs.kit_sha256 }}
-          GH_TOKEN: ${{ secrets.NIORD_NG_RELEASE_READ || github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$FE_SHA256" =~ ^[0-9a-f]{64}$ && "$KIT_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::The two zips were not hashed."; exit 1; }
           if ! body="$(gh release view "v$NEW" --repo "$BASE_REPO" --json body --jq .body 2> "$RUNNER_TEMP/notes.err")"; then
             reason="$(tr '\r\n' '  ' < "$RUNNER_TEMP/notes.err" | sed -E 's/ +/ /g; s/^ //; s/ $//' | cut -c1-200)"
-            if ! grep -Eq 'HTTP 40[34]|release not found' "$RUNNER_TEMP/notes.err" || grep -Eqi 'rate limit' "$RUNNER_TEMP/notes.err"; then
-              echo "::error::Release v$NEW's notes in $BASE_REPO could not be read ($reason): nothing is pinned. Run this workflow again (Actions, Base bump, Run workflow, pr $PR)."
-              exit 1
-            fi
-            echo "reason=$reason" >> "$GITHUB_OUTPUT"
-            if [ "$PINNED" = true ]; then
-              echo "::notice::Release v$NEW's notes in $BASE_REPO cannot be read here ($reason); the branch's lock pins $NEW already, by hand, and is compared with the downloads."
-              { echo "notes=pinned"; echo "go=true"; } >> "$GITHUB_OUTPUT"
-            else
-              echo "::warning::Release v$NEW's notes in $BASE_REPO cannot be read here ($reason): nothing is pinned, and the comment asks for the pin by hand."
-              { echo "notes=unreadable"; echo "go=false"; } >> "$GITHUB_OUTPUT"
-            fi
-            exit 0
+            echo "::error::Release v$NEW's notes in $BASE_REPO could not be read (${reason:-no reason given}): nothing is pinned. Run this workflow again (Actions, Base bump, Run workflow, pr $PR), once the release is made if it is not yet."
+            exit 1
           fi
           lines="$(printf '%s\n' "$body" | tr -d '\r')"
           line_of() { printf '%s\n' "$lines" | grep -E "^[0-9a-f]{64}  $1\$" || true; }
@@ -236,12 +217,12 @@ jobs:
             echo "::error::The registry's zips of $NEW are not the ones release v$NEW's notes in $BASE_REPO name: the notes give '${fe_line:-no line}' and '${kit_line:-no line}', the downloads '$expected_fe' and '$expected_kit'. Nothing is pinned or run; tell the base product's maintainers."
             exit 1
           fi
-          { echo "notes=verified"; echo "go=true"; } >> "$GITHUB_OUTPUT"
+          echo "notes=verified" >> "$GITHUB_OUTPUT"
       # The base branch's own set-up, of the version it pins already: the record the upgrade report
       # compares with, and the old kit's zip. Not fatal: without it the report compares by version.
       - name: Make the set-up record of the old version
         id: record
-        if: steps.notes.outputs.go == 'true'
+        if: steps.notes.outputs.notes == 'verified'
         env:
           BASE_SHA: ${{ steps.pr.outputs.base_sha }}
           HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
@@ -258,13 +239,11 @@ jobs:
             echo "::warning::Set-up at the base branch failed (exit $status): the upgrade report compares with the old version by version."
             echo "record=missing" >> "$GITHUB_OUTPUT"
           fi
-      # The lock's key order is the kit's own (format, base, kit, packs), the packs sorted. A lock
-      # that pins the version already must hold the downloads' hashes.
+      # The lock's key order is the kit's own (format, base, kit, packs), the packs sorted.
       - name: Write the lock
-        if: steps.notes.outputs.go == 'true'
+        if: steps.notes.outputs.notes == 'verified'
         env:
           NEW: ${{ steps.versions.outputs.new }}
-          NOTES: ${{ steps.notes.outputs.notes }}
           FE_SHA256: ${{ steps.zips.outputs.fe_sha256 }}
           KIT_SHA256: ${{ steps.zips.outputs.kit_sha256 }}
         run: |
@@ -272,18 +251,13 @@ jobs:
           node <<'JS'
           const fs = require('node:fs');
           const file = 'fe/niord-pins.lock.json';
-          const { NEW, NOTES, FE_SHA256, KIT_SHA256 } = process.env;
+          const { NEW, FE_SHA256, KIT_SHA256 } = process.env;
           const lock = JSON.parse(fs.readFileSync(file, 'utf8'));
           const fail = (message) => {
             console.log(`::error::${message}`);
             process.exit(1);
           };
           if (lock.format !== 1) fail(`${file} is not a lock file of format 1`);
-          if (NOTES === 'pinned') {
-            if (lock.base?.version !== NEW || lock.base?.sha256 !== FE_SHA256 || lock.kit?.sha256 !== KIT_SHA256)
-              fail(`${file} pins ${NEW} with other hashes than the registry's zips: pin it again from the release notes`);
-            process.exit(0);
-          }
           const packs = Object.fromEntries(
             Object.keys(lock.packs ?? {})
               .sort()
@@ -303,7 +277,7 @@ jobs:
       # this step's.
       - name: Set up the new version
         id: setup
-        if: steps.notes.outputs.go == 'true'
+        if: steps.notes.outputs.notes == 'verified'
         env:
           OLD: ${{ steps.versions.outputs.old }}
           RECORD: ${{ steps.record.outputs.record }}
@@ -360,7 +334,7 @@ jobs:
           { echo "status=$status"; echo "stub=$stub"; echo "update_pins=$update_pins"; } >> "$GITHUB_OUTPUT"
       # The workflow files are never pushed with this workflow's token: a difference is an item.
       - name: Compare the workflow files
-        if: steps.notes.outputs.go == 'true'
+        if: steps.notes.outputs.notes == 'verified'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/work"
@@ -375,7 +349,7 @@ jobs:
       # releases/<yyyy-mm-dd>-<topic>/. Each one new in NEW is a human decision; nothing is imported.
       - name: List the new release folders
         id: releases
-        if: steps.notes.outputs.go == 'true'
+        if: steps.notes.outputs.notes == 'verified'
         env:
           OLD: ${{ steps.versions.outputs.old }}
           NEW: ${{ steps.versions.outputs.new }}
@@ -408,11 +382,10 @@ jobs:
             echo "bootstrap=no-old" >> "$GITHUB_OUTPUT"
           fi
       # The comment, from the report's data: the pins and their source, the human actions as
-      # boxes, what CI checks, and the whole report. With unreadable notes its one box is the pin
-      # by hand, and it prints no hash of the downloads, so nobody copies a pin from it. A box
-      # ticked in this workflow's earlier comment keeps its tick when its text is the same. A box
-      # about a kit template (a merge, a copy, a look, the comparison of every template) ends in a
-      # hidden marker naming the template and the SHA-256 of the kit's template at NEW, which is
+      # boxes, what CI checks, and the whole report. A box ticked in this workflow's earlier comment
+      # keeps its tick when its text is the same. A box about a kit template (a merge, a copy, a
+      # look, the comparison of every template) ends in a hidden marker naming the template and the
+      # SHA-256 of the kit's template at NEW, which is
       # part of its text, so its tick is kept only while the template is the one it was ticked
       # against; a template's box without a marker (an earlier comment from before the markers, a
       # template the kit no longer has) is asked again. So is a workflow file still to copy:
@@ -422,10 +395,8 @@ jobs:
       # boxes, with no box and no marker.
       - name: Build the comment
         id: comment
-        if: steps.notes.outputs.notes != ''
+        if: steps.notes.outputs.notes == 'verified'
         env:
-          NOTES: ${{ steps.notes.outputs.notes }}
-          REASON: ${{ steps.notes.outputs.reason }}
           NEW: ${{ steps.versions.outputs.new }}
           OLD: ${{ steps.versions.outputs.old }}
           PR: ${{ steps.pr.outputs.pr }}
@@ -461,7 +432,7 @@ jobs:
           const path = require('node:path');
           const crypto = require('node:crypto');
           const env = process.env;
-          const { NOTES, NEW, OLD, PR, BASE_REPO, STATUS_CONTEXT, RUNNER_TEMP } = env;
+          const { NEW, OLD, PR, BASE_REPO, STATUS_CONTEXT, RUNNER_TEMP } = env;
           const MARKER = '<!-- niord-base-bump -->';
           // GitHub refuses a comment of more than 65536 characters.
           const LIMIT = 60000;
@@ -553,126 +524,103 @@ jobs:
             }
             close();
           }
-          let report;
-          if (NOTES === 'unreadable') {
-            intro.push(
-              `Nothing is pinned: release v${NEW}'s notes in ${BASE_REPO} cannot be read with this workflow's token (${code(fold(env.REASON || 'no reason given').replaceAll('`', "'"))}). While that repository is private, the pin by hand below is needed; when the release is not made yet, run this workflow again once it is (Actions, Base bump, Run workflow, pr ${PR}). A pin is committed only after the notes confirmed it, so set-up did not run and no upgrade report was made.`,
-            );
-            items.push(
-              [
-                `Pin ${NEW} by hand from release v${NEW}'s notes (${code(`gh release view v${NEW} --repo ${BASE_REPO}`)}; while that repository is private, a base product maintainer gives the two lines). From the repository root, on this branch:`,
-                '',
-                '```bash',
-                `be/mvnw -B -q -f be/pom.xml dependency:copy -Dartifact=org.niord.web:niord-fe-src:${NEW}:zip -DoutputDirectory="$PWD/fe/.niord"`,
-                `be/mvnw -B -q -f be/pom.xml dependency:copy -Dartifact=org.niord:niord-country-kit:${NEW}:zip -DoutputDirectory="$PWD/.niord"`,
-                "(cd fe/.niord && printf '%s\\n' '<the niord-fe-src line of the notes>' | sha256sum -c)",
-                "(cd .niord && printf '%s\\n' '<the niord-country-kit line of the notes>' | sha256sum -c)",
-                '```',
-                '',
-                `Then set ${code('fe/niord-pins.lock.json')}'s ${code('base')} to version ${NEW} with the first line's sha256 and its ${code('kit')} to the second line's, run ${code('node setup.mjs')} in ${code('fe/')} (copy ${code(`${TEMPLATES}/setup.mjs`)} over ${code('fe/setup.mjs')} when it asks), commit and push; then run this workflow on the pull request (Actions, Base bump, Run workflow, pr ${PR}) for the upgrade report and the checklist.`,
-              ].join('\n'),
-            );
-          } else {
-            let data;
-            try {
-              data = JSON.parse(read('fe/.niord/niord-upgrade-report.json') ?? 'null');
-            } catch {
-              data = null;
-            }
-            // A report of another version is an earlier set-up's, not this one's.
-            if (data?.format !== 1 || data.to !== NEW) data = null;
-            report = data ? (read('fe/.niord/niord-upgrade-report.md') ?? '').trimEnd() : '';
-            const pins = `${code(`niord-fe-src-${NEW}.zip`)} sha256 ${code(env.FE_SHA256)} and ${code(`niord-country-kit-${NEW}.zip`)} sha256 ${code(env.KIT_SHA256)}`;
-            intro.push(
-              NOTES === 'pinned'
-                ? `${code('fe/niord-pins.lock.json')} pins ${NEW} already, by hand: ${pins}, which the downloads from the registry match (release v${NEW}'s notes in ${BASE_REPO} cannot be read here).`
-                : `Pinned in ${code('fe/niord-pins.lock.json')} by this workflow's commit: ${pins}, downloaded from the registry and equal to the two lines of release v${NEW}'s notes in ${BASE_REPO}.`,
-            );
-            const done = [];
-            if (env.STUB === 'copied')
-              done.push(`${code('fe/setup.mjs')} is the kit's new stub, ${code(`${TEMPLATES}/setup.mjs`)}.`);
-            done.push(`${code('start-local.sh')} is the kit's launcher of ${NEW}.`);
-            // Each moved pin is a line, not a box: set-up checks the new pack, in CI too.
-            const pinsOf = (file) => {
-              try {
-                return JSON.parse(read(file) ?? '{}').packs ?? {};
-              } catch {
-                return {};
-              }
-            };
-            const from = pinsOf(path.join(RUNNER_TEMP, 'work', 'base-lock.json'));
-            const to = pinsOf('fe/niord-pins.lock.json');
-            for (const lang of (env.UPDATE_PINS ?? '').split(' ').filter(Boolean))
-              done.push(
-                `The pinned pack ${lang} moved from ${from[lang] ? code(from[lang]) : 'no pin'} to ${code(to[lang] ?? 'no pin')}, its home's newest pack (${code('node setup.mjs --update-pins')}): compare the digest with the home's ${code('pack-releases.md')}.`,
-              );
-            if (env.RECORD === 'missing')
-              done.push(
-                `No set-up record of ${OLD} could be made (set-up at the base branch failed), so the report compares with ${OLD} by version.`,
-              );
-            intro.push(done.map((line) => `- ${line}`).join('\n'));
-            if (data) {
-              for (const section of data.sections ?? [])
-                for (const action of section.actions ?? [])
-                  items.push(`${code('country-kit/API-CHANGES.md')}, ${code(fold(section.heading))}: ${fold(action)}`);
-              const merge = (name, part) =>
-                `Merge ${code(`${TEMPLATES}/${name}`)} into ${part}${code('.github/workflows/image.yml')} and push it: the template changed since ${OLD}, and ${NO_PUSH}.`;
-              // The launcher is copied here, and the two workflows are compared with the copies below.
-              const templateItems = {
-                'AGENTS.md': `Merge ${code(`${TEMPLATES}/AGENTS.md`)} into ${code('AGENTS.md')}: the agent template changed since ${OLD}.`,
-                'image.yml': merge('image.yml', ''),
-                'image-backend-job.yml': merge('image-backend-job.yml', 'the backend job of '),
-                'image-frontend-job.yml': merge('image-frontend-job.yml', 'the frontend job of '),
-                'start-local.sh': null,
-                'pack.yml': null,
-                'base-bump.yml': null,
-              };
-              if (data.templatesChanged === null)
-                items.push(
-                  templateItem(
-                    '*',
-                    `Compare each template of ${code(`${TEMPLATES}/`)} with the country's copy (${code('AGENTS.md')}, ${code('.github/workflows/image.yml')}): the templates changed since ${OLD} could not be listed (${fold(data.templatesUnavailable ?? 'no reason given')}).`,
-                  ),
-                );
-              for (const name of data.templatesChanged ?? []) {
-                const item = Object.hasOwn(templateItems, name)
-                  ? templateItems[name]
-                  : `Look at ${code(`${TEMPLATES}/${fold(name)}`)}: it changed since ${OLD}.`;
-                if (item) items.push(templateItem(name, item));
-              }
-              // Every other template the kit changed is one line above the boxes, never a box: it
-              // asks nothing, so the count never sees it, and it carries no template marker.
-              if (data.otherTemplatesChanged === null)
-                intro.push(`Other templates changed since ${OLD}: not available (${fold(data.templatesUnavailable ?? 'no reason given')}).`);
-              else if (Array.isArray(data.otherTemplatesChanged) && data.otherTemplatesChanged.length)
-                intro.push(
-                  `Other templates changed since ${OLD}, in ${code(`${TEMPLATES}/`)}: ${data.otherTemplatesChanged.map((name) => code(fold(name))).join(', ')} (no action: a country that keeps its own copy compares it).`,
-                );
-              if ((data.fixes ?? []).length) labels.push('security');
-            }
-            for (const name of listed('drift.txt')) {
-              const item = templateItem(
-                name,
-                `Copy ${code(`${TEMPLATES}/${name}`)} over ${code(`.github/workflows/${name}`)} and push it: a workflow file, which this workflow's token may not push.`,
-              );
-              items.push(item);
-              fresh.add(item);
-            }
-            for (const folder of listed('releases.txt'))
-              items.push(
-                `Decide on ${code(`releases/${folder}/`)}, new in the bootstrap of ${NEW}: whether your bootstrap and each deployment take it (a sysadmin imports it).`,
-              );
-            if (env.BOOTSTRAP === 'no-new')
-              items.push(
-                `Compare the ${code('releases/')} folders of the bootstrap of ${NEW} with ${OLD}'s by hand: its zip could not be fetched here.`,
-              );
-            if (env.BOOTSTRAP === 'no-old')
-              notes.push(`The bootstrap of ${OLD} could not be fetched: every release folder of ${NEW} is listed.`);
-            if (!data)
-              items.push(
-                `Set-up of ${NEW} wrote no upgrade report (see the Base bump run's log): run ${code('node setup.mjs')} in ${code('fe/')} on this branch and do what ${code('.niord/niord-upgrade-report.md')} asks.`,
-              );
+          let data;
+          try {
+            data = JSON.parse(read('fe/.niord/niord-upgrade-report.json') ?? 'null');
+          } catch {
+            data = null;
           }
+          // A report of another version is an earlier set-up's, not this one's.
+          if (data?.format !== 1 || data.to !== NEW) data = null;
+          const report = data ? (read('fe/.niord/niord-upgrade-report.md') ?? '').trimEnd() : '';
+          const pins = `${code(`niord-fe-src-${NEW}.zip`)} sha256 ${code(env.FE_SHA256)} and ${code(`niord-country-kit-${NEW}.zip`)} sha256 ${code(env.KIT_SHA256)}`;
+          intro.push(
+            `Pinned in ${code('fe/niord-pins.lock.json')} by this workflow's commit: ${pins}, downloaded from the registry and equal to the two lines of release v${NEW}'s notes in ${BASE_REPO}.`,
+          );
+          const done = [];
+          if (env.STUB === 'copied')
+            done.push(`${code('fe/setup.mjs')} is the kit's new stub, ${code(`${TEMPLATES}/setup.mjs`)}.`);
+          done.push(`${code('start-local.sh')} is the kit's launcher of ${NEW}.`);
+          // Each moved pin is a line, not a box: set-up checks the new pack, in CI too.
+          const pinsOf = (file) => {
+            try {
+              return JSON.parse(read(file) ?? '{}').packs ?? {};
+            } catch {
+              return {};
+            }
+          };
+          const from = pinsOf(path.join(RUNNER_TEMP, 'work', 'base-lock.json'));
+          const to = pinsOf('fe/niord-pins.lock.json');
+          for (const lang of (env.UPDATE_PINS ?? '').split(' ').filter(Boolean))
+            done.push(
+              `The pinned pack ${lang} moved from ${from[lang] ? code(from[lang]) : 'no pin'} to ${code(to[lang] ?? 'no pin')}, its home's newest pack (${code('node setup.mjs --update-pins')}): compare the digest with the home's ${code('pack-releases.md')}.`,
+            );
+          if (env.RECORD === 'missing')
+            done.push(
+              `No set-up record of ${OLD} could be made (set-up at the base branch failed), so the report compares with ${OLD} by version.`,
+            );
+          intro.push(done.map((line) => `- ${line}`).join('\n'));
+          if (data) {
+            for (const section of data.sections ?? [])
+              for (const action of section.actions ?? [])
+                items.push(`${code('country-kit/API-CHANGES.md')}, ${code(fold(section.heading))}: ${fold(action)}`);
+            const merge = (name, part) =>
+              `Merge ${code(`${TEMPLATES}/${name}`)} into ${part}${code('.github/workflows/image.yml')} and push it: the template changed since ${OLD}, and ${NO_PUSH}.`;
+            // The launcher is copied here, and the two workflows are compared with the copies below.
+            const templateItems = {
+              'AGENTS.md': `Merge ${code(`${TEMPLATES}/AGENTS.md`)} into ${code('AGENTS.md')}: the agent template changed since ${OLD}.`,
+              'image.yml': merge('image.yml', ''),
+              'image-backend-job.yml': merge('image-backend-job.yml', 'the backend job of '),
+              'image-frontend-job.yml': merge('image-frontend-job.yml', 'the frontend job of '),
+              'start-local.sh': null,
+              'pack.yml': null,
+              'base-bump.yml': null,
+            };
+            if (data.templatesChanged === null)
+              items.push(
+                templateItem(
+                  '*',
+                  `Compare each template of ${code(`${TEMPLATES}/`)} with the country's copy (${code('AGENTS.md')}, ${code('.github/workflows/image.yml')}): the templates changed since ${OLD} could not be listed (${fold(data.templatesUnavailable ?? 'no reason given')}).`,
+                ),
+              );
+            for (const name of data.templatesChanged ?? []) {
+              const item = Object.hasOwn(templateItems, name)
+                ? templateItems[name]
+                : `Look at ${code(`${TEMPLATES}/${fold(name)}`)}: it changed since ${OLD}.`;
+              if (item) items.push(templateItem(name, item));
+            }
+            // Every other template the kit changed is one line above the boxes, never a box: it
+            // asks nothing, so the count never sees it, and it carries no template marker.
+            if (data.otherTemplatesChanged === null)
+              intro.push(`Other templates changed since ${OLD}: not available (${fold(data.templatesUnavailable ?? 'no reason given')}).`);
+            else if (Array.isArray(data.otherTemplatesChanged) && data.otherTemplatesChanged.length)
+              intro.push(
+                `Other templates changed since ${OLD}, in ${code(`${TEMPLATES}/`)}: ${data.otherTemplatesChanged.map((name) => code(fold(name))).join(', ')} (no action: a country that keeps its own copy compares it).`,
+              );
+            if ((data.fixes ?? []).length) labels.push('security');
+          }
+          for (const name of listed('drift.txt')) {
+            const item = templateItem(
+              name,
+              `Copy ${code(`${TEMPLATES}/${name}`)} over ${code(`.github/workflows/${name}`)} and push it: a workflow file, which this workflow's token may not push.`,
+            );
+            items.push(item);
+            fresh.add(item);
+          }
+          for (const folder of listed('releases.txt'))
+            items.push(
+              `Decide on ${code(`releases/${folder}/`)}, new in the bootstrap of ${NEW}: whether your bootstrap and each deployment take it (a sysadmin imports it).`,
+            );
+          if (env.BOOTSTRAP === 'no-new')
+            items.push(
+              `Compare the ${code('releases/')} folders of the bootstrap of ${NEW} with ${OLD}'s by hand: its zip could not be fetched here.`,
+            );
+          if (env.BOOTSTRAP === 'no-old')
+            notes.push(`The bootstrap of ${OLD} could not be fetched: every release folder of ${NEW} is listed.`);
+          if (!data)
+            items.push(
+              `Set-up of ${NEW} wrote no upgrade report (see the Base bump run's log): run ${code('node setup.mjs')} in ${code('fe/')} on this branch and do what ${code('.niord/niord-upgrade-report.md')} asks.`,
+            );
           const lines = [MARKER, `## Base bump: ${OLD} to ${NEW}`, ''];
           for (const paragraph of intro) lines.push(paragraph, '');
           lines.push('## Human actions', '');
@@ -686,29 +634,27 @@ jobs:
               : `The check ${code(STATUS_CONTEXT)} is green.`,
           );
           let comment = `${lines.join('\n')}\n`;
-          if (report !== undefined) {
-            const setUp =
-              env.SETUP_STATUS === '0'
-                ? 'passed'
-                : `failed (exit ${env.SETUP_STATUS || 'unknown'}): CI fails until the report's To do is done`;
-            const before = [
-              '',
-              '## Checked by CI',
-              '',
-              `- Set-up, in the frontend job: the pins, the packs and their translations, the overrides, the branding, the text overrides and the withdrawn pins, and the report's To do. Set-up of ${NEW} here: ${setUp}.`,
-              `- The backend job: the settings keys the base product added (${code('CountryDefaultsChecksTest')}).`,
-              `- The build's audit: dependency advisories (${code('npm run build')} after ${code('npm ci')}).`,
-              '',
-              '<details><summary>The upgrade report (<code>fe/.niord/niord-upgrade-report.md</code>)</summary>',
-              '',
-              '',
-            ].join('\n');
-            const after = '\n\n</details>\n';
-            let text = report || 'Set-up wrote no upgrade report: see the Base bump run.';
-            const room = LIMIT - comment.length - before.length - after.length;
-            if (text.length > room) text = `${text.slice(0, Math.max(0, room - CUT.length - 2))}\n\n${CUT}`;
-            comment += `${before}${text}${after}`;
-          }
+          const setUp =
+            env.SETUP_STATUS === '0'
+              ? 'passed'
+              : `failed (exit ${env.SETUP_STATUS || 'unknown'}): CI fails until the report's To do is done`;
+          const before = [
+            '',
+            '## Checked by CI',
+            '',
+            `- Set-up, in the frontend job: the pins, the packs and their translations, the overrides, the branding, the text overrides and the withdrawn pins, and the report's To do. Set-up of ${NEW} here: ${setUp}.`,
+            `- The backend job: the settings keys the base product added (${code('CountryDefaultsChecksTest')}).`,
+            `- The build's audit: dependency advisories (${code('npm run build')} after ${code('npm ci')}).`,
+            '',
+            '<details><summary>The upgrade report (<code>fe/.niord/niord-upgrade-report.md</code>)</summary>',
+            '',
+            '',
+          ].join('\n');
+          const after = '\n\n</details>\n';
+          let text = report || 'Set-up wrote no upgrade report: see the Base bump run.';
+          const room = LIMIT - comment.length - before.length - after.length;
+          if (text.length > room) text = `${text.slice(0, Math.max(0, room - CUT.length - 2))}\n\n${CUT}`;
+          comment += `${before}${text}${after}`;
           const out = path.join(RUNNER_TEMP, 'base-bump');
           fs.writeFileSync(path.join(out, 'comment.md'), comment);
           fs.writeFileSync(path.join(out, 'labels.txt'), `${labels.join('\n')}\n`);
@@ -719,20 +665,16 @@ jobs:
           { echo "unticked=$unticked"; echo "security=$security"; } >> "$GITHUB_OUTPUT"
       - name: Hand over the files
         id: handover
-        if: steps.notes.outputs.notes != ''
-        env:
-          NOTES: ${{ steps.notes.outputs.notes }}
+        if: steps.notes.outputs.notes == 'verified'
         run: |
           set -euo pipefail
           dir="$RUNNER_TEMP/base-bump"
-          if [ "$NOTES" != unreadable ]; then
-            cp fe/niord-pins.lock.json "$dir/niord-pins.lock.json"
-            cp fe/setup.mjs "$dir/setup.mjs"
-            cp start-local.sh "$dir/start-local.sh"
-            for name in niord-upgrade-report.md niord-upgrade-report.json; do
-              [ ! -f "fe/.niord/$name" ] || cp "fe/.niord/$name" "$dir/$name"
-            done
-          fi
+          cp fe/niord-pins.lock.json "$dir/niord-pins.lock.json"
+          cp fe/setup.mjs "$dir/setup.mjs"
+          cp start-local.sh "$dir/start-local.sh"
+          for name in niord-upgrade-report.md niord-upgrade-report.json; do
+            [ ! -f "fe/.niord/$name" ] || cp "fe/.niord/$name" "$dir/$name"
+          done
           cd "$dir"
           files=()
           for name in niord-pins.lock.json setup.mjs start-local.sh niord-upgrade-report.md niord-upgrade-report.json comment.md labels.txt; do
@@ -741,7 +683,7 @@ jobs:
           sha256sum "${files[@]}" > SHA256SUMS
           echo "sha256sums=$(sha256sum SHA256SUMS | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        if: steps.notes.outputs.notes != ''
+        if: steps.notes.outputs.notes == 'verified'
         with:
           name: base-bump
           path: ${{ runner.temp }}/base-bump/
@@ -780,16 +722,11 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$SHA256SUMS" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::compute gave no SHA-256 of SHA256SUMS."; exit 1; }
-          case "$NOTES" in
-            verified | pinned | unreadable) ;;
-            *) echo "::error::compute gave no verdict on the release notes ('$NOTES')."; exit 1 ;;
-          esac
+          [ "$NOTES" = verified ] || { echo "::error::compute did not verify the release notes ('$NOTES')."; exit 1; }
           cd "$RUNNER_TEMP/base-bump"
           echo "$SHA256SUMS  SHA256SUMS" | sha256sum -c -
           sha256sum -c --strict SHA256SUMS
-          required=(comment.md labels.txt)
-          [ "$NOTES" = unreadable ] || required+=(niord-pins.lock.json setup.mjs start-local.sh)
-          for name in "${required[@]}"; do
+          for name in comment.md labels.txt niord-pins.lock.json setup.mjs start-local.sh; do
             grep -Eq "^[0-9a-f]{64} [ *]${name//./\\.}\$" SHA256SUMS || { echo "::error::SHA256SUMS does not list $name."; exit 1; }
           done
       # Author and committer are github-actions[bot]. A plain push: a branch that moved meanwhile
@@ -797,7 +734,6 @@ jobs:
       # a person's push Run workflow (pr <n>) re-pins.
       - name: Commit and push the pins
         id: push
-        if: needs.compute.outputs.notes == 'verified' || needs.compute.outputs.notes == 'pinned'
         env:
           NEW: ${{ needs.compute.outputs.new }}
           HEAD_REF: ${{ needs.compute.outputs.head_ref }}

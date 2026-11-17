@@ -149,10 +149,7 @@ cat .niord/kit/kit.json
 ```
 
 Run the lines one at a time. Expect two lines ending `OK` from `sha256sum -c`, and `kit.json` naming
-`<version>`. When the download is refused because the base product's repository is private, a base
-product maintainer gives the person the two files: ask the person for them and copy them into
-`.niord/` under those names, then go on from the `printf` line. Run nothing from either zip before
-both say `OK`.
+`<version>`. Run nothing from either zip before both say `OK`.
 
 Stop when: a line says `FAILED` (never change a line and never hash a file yourself; show it), or
 `kit.json` names another version. The detail is in [The release](country-guide.md#the-release).

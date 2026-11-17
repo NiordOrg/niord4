@@ -95,8 +95,8 @@ unzip -q .niord/niord-country-kit-<version>.zip -d .niord/kit
 ```
 
 The two lines come exactly as the notes of release `v<version>` give them
-(`gh release view v<version> --repo NiordOrg/niord4`); for a version up to 4.0.181, released in the
-private `SIFA-DK/niord-ng`, a base product maintainer gives you the two files and the two lines. Run
+(`gh release view v<version> --repo NiordOrg/niord4`); a version up to 4.0.181 was released before
+the move to that repository, and its notes are not public. Run
 nothing from either zip before both say `OK`. Only the kit is unzipped: init reads the source zip in
 memory from `.niord/`, and
 writes `.niord/.gitignore`, holding `*`, so nothing of `.niord/` is committed. The unzip writes no
@@ -370,8 +370,7 @@ Each base version moves in one pull request in your own repository, never in the
 Once an owner installs the Niord base bump app on it, the app opens that pull request minutes after
 each release and moves it to a newer one; without it, push `base-bump/<version>`. Either way the
 Base bump workflow pins, moves your pinned packs, reports and lists the human actions; green means
-no task: review, merge, deploy. While the base product's repository is private, the workflow cannot
-read the release notes: its one item is the pin by hand, then Run workflow with `pr <n>`. See
+no task: review, merge, deploy. See
 [Install the Niord base bump app](responsibilities-and-upgrades.md#install-the-niord-base-bump-app),
 [Without the app](responsibilities-and-upgrades.md#without-the-app-push-base-bumpversion) and
 [How an upgrade works today](responsibilities-and-upgrades.md#how-an-upgrade-works-today).

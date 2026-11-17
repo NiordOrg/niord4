@@ -360,11 +360,11 @@ describe("base-bump.yml: the template's shape", () => {
     assert.doesNotMatch(runOf('recount', 'Count and set the status'), /\bnode\b|\.niord\//);
   });
 
-  it('reads the notes with the optional secret on the gh-only notes step, and binds GITHUB_TOKEN on the Maven steps only', () => {
-    assert.equal(TEXT.split('secrets.').length - 1, 1);
+  it("reads the notes with the workflow's own token on the gh-only notes step, and binds GITHUB_TOKEN on the Maven steps only", () => {
+    assert.doesNotMatch(TEXT, /secrets\./);
     assert.equal(
       stepEnv(TEXT, { job: 'compute', step: 'Check the release notes' }).GH_TOKEN,
-      '${{ secrets.NIORD_NG_RELEASE_READ || github.token }}',
+      '${{ github.token }}',
     );
     assert.doesNotMatch(runOf('compute', 'Check the release notes'), /\bnode\b|\bsh be\/mvnw\b/);
     const holders = steps
@@ -559,10 +559,9 @@ describe("base-bump.yml: the steps' conditions on each path", () => {
     'actions/setup-node@v4',
     'Decide the versions',
   ];
-  const compute = (notes, go) => ({
+  const compute = (notes) => ({
     'steps.versions.outputs.already_pinned': 'false',
     'steps.notes.outputs.notes': notes,
-    'steps.notes.outputs.go': go,
   });
 
   it('runs only the versions when the lock pins the version already', () => {
@@ -572,25 +571,13 @@ describe("base-bump.yml: the steps' conditions on each path", () => {
     );
   });
 
-  it('runs no set-up and writes no lock when the notes cannot be read, but builds and hands over the comment', () => {
-    assert.deepEqual(stepsRunning('compute', compute('unreadable', 'false')), [
-      ...ALWAYS,
-      'Fetch the two zips',
-      'Check the release notes',
-      'Build the comment',
-      'Hand over the files',
-      'actions/upload-artifact@v4',
-    ]);
-  });
-
-  it('runs every step when the notes confirm the zips, or the branch pins them by hand', () => {
+  it('runs every step when the notes confirm the zips', () => {
     const all = steps.filter(({ job }) => job === 'compute').map(({ name }) => name);
-    assert.deepEqual(stepsRunning('compute', compute('verified', 'true')), all);
-    assert.deepEqual(stepsRunning('compute', compute('pinned', 'true')), all);
+    assert.deepEqual(stepsRunning('compute', compute('verified')), all);
   });
 
-  it('stops at the notes when they name other zips', () => {
-    assert.deepEqual(stepsRunning('compute', compute('', ''), ['Check the release notes']), [
+  it('stops at the notes when they cannot be read or name other zips', () => {
+    assert.deepEqual(stepsRunning('compute', compute(''), ['Check the release notes']), [
       ...ALWAYS,
       'Fetch the two zips',
       'Check the release notes',
@@ -609,17 +596,6 @@ describe("base-bump.yml: the steps' conditions on each path", () => {
   it('commits, runs CI, comments, labels and sets the status after a verified pin', () => {
     const all = steps.filter(({ job }) => job === 'apply').map(({ name }) => name);
     assert.deepEqual(stepsRunning('apply', apply('verified')), all);
-    assert.deepEqual(stepsRunning('apply', apply('pinned')), all);
-  });
-
-  it('pushes nothing when the notes cannot be read, and still comments, labels and sets the status', () => {
-    assert.deepEqual(
-      stepsRunning(
-        'apply',
-        apply('unreadable', { 'steps.push.outcome': 'skipped', 'steps.push.outputs.pushed': '' }),
-      ),
-      [...APPLY_FIRST, 'Post the comment', 'Label the pull request', 'Set the status'],
-    );
   });
 
   it('dispatches no CI when there was nothing to push', () => {
@@ -802,7 +778,6 @@ describe('base-bump.yml: Decide the versions', () => {
     assert.deepEqual(result.outputs, {
       new: NEW,
       old: OLD,
-      pinned: 'false',
       already_pinned: 'false',
     });
     assert.deepEqual(result.calls, [`git show ${BASE}:fe/niord-pins.lock.json`]);
@@ -863,21 +838,19 @@ describe('base-bump.yml: Decide the versions', () => {
     const result = decide({ head: '4.0.100' });
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.outputs.old, OLD);
-    assert.equal(result.outputs.pinned, 'false');
+    assert.equal(result.outputs.already_pinned, 'false');
   });
 
   it('recounts only, on a push to a branch whose lock pins NEW already', () => {
     const result = decide({ head: NEW });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(result.outputs.pinned, 'true');
     assert.equal(result.outputs.already_pinned, 'true');
     assert.match(result.stdout, /::notice::fe\/niord-pins\.lock\.json pins 4\.0\.110 already/);
   });
 
-  it('takes a lock that pins NEW on a dispatch as the pin by hand, and goes on', () => {
+  it('pins again on a dispatch, a lock that pins NEW already included', () => {
     const result = decide({ head: NEW, event: 'workflow_dispatch' });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(result.outputs.pinned, 'true');
     assert.equal(result.outputs.already_pinned, 'false');
   });
 
@@ -917,7 +890,6 @@ describe('base-bump.yml: Check the release notes', () => {
       env: {
         ...ENV,
         NEW,
-        PINNED: 'false',
         PR: '12',
         FE_SHA256: FE_SHA,
         KIT_SHA256: KIT_SHA,
@@ -937,7 +909,7 @@ describe('base-bump.yml: Check the release notes', () => {
   it('verifies the downloads against the two lines of the notes', () => {
     const result = notes({ out: body(FE_LINE, KIT_LINE) });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.deepEqual(result.outputs, { notes: 'verified', go: 'true' });
+    assert.deepEqual(result.outputs, { notes: 'verified' });
     assert.deepEqual(result.calls, [CALL]);
   });
 
@@ -966,53 +938,38 @@ describe('base-bump.yml: Check the release notes', () => {
       assert.deepEqual(result.outputs, {});
     });
 
-  it('pins nothing when the notes cannot be read, and says why', () => {
-    const result = notes({ err: 'HTTP 404: Not Found (https://api.github.com/...)\n', exit: 1 });
-    assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.deepEqual(result.outputs, {
-      notes: 'unreadable',
-      go: 'false',
-      reason: 'HTTP 404: Not Found (https://api.github.com/...)',
-    });
-    assert.match(
-      result.stdout,
-      /::warning::Release v4\.0\.110's notes in NiordOrg\/niord4 cannot be read here \(HTTP 404: Not Found/,
-    );
-    assert.deepEqual(result.calls, [CALL]);
-  });
-
-  // gh 2.x answers "release not found" both for a release not made yet and for a repository the
-  // token cannot see (GitHub answers 404 for a private one).
-  it('takes "release not found" as unreadable', () => {
-    const result = notes({ err: 'release not found\r\n', exit: 1 });
-    assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.deepEqual(result.outputs, {
-      notes: 'unreadable',
-      go: 'false',
-      reason: 'release not found',
-    });
-  });
-
-  for (const [what, err] of [
-    ['a server error', 'HTTP 500: Internal Server Error (https://api.github.com/...)\n'],
-    ['a rate limit', 'HTTP 403: API rate limit exceeded for installation ID 1.\n'],
-    ['a failure that says nothing', ''],
+  // gh 2.x answers "release not found" for a release not made yet.
+  for (const [what, err, reason] of [
+    [
+      'a release not made yet',
+      'HTTP 404: Not Found (https://api.github.com/...)\n',
+      'HTTP 404: Not Found (https://api.github.com/...)',
+    ],
+    ["gh's release not found", 'release not found\r\n', 'release not found'],
+    [
+      'a server error',
+      'HTTP 500: Internal Server Error (https://api.github.com/...)\n',
+      'HTTP 500: Internal Server Error (https://api.github.com/...)',
+    ],
+    [
+      'a rate limit',
+      'HTTP 403: API rate limit exceeded for installation ID 1.\n',
+      'HTTP 403: API rate limit exceeded for installation ID 1.',
+    ],
+    ['a failure that says nothing', '', 'no reason given'],
   ])
-    it(`fails on ${what}, pinning nothing and asking for another run`, () => {
+    it(`fails on ${what}, pinning nothing, saying why and asking for another run`, () => {
       const result = notes({ err, exit: 1 });
       assert.equal(result.status, 1, result.stdout + result.stderr);
       assert.deepEqual(result.outputs, {});
-      assert.match(
+      assert.ok(
+        result.stdout.includes(
+          `::error::Release v4.0.110's notes in NiordOrg/niord4 could not be read (${reason}): nothing is pinned. Run this workflow again (Actions, Base bump, Run workflow, pr 12), once the release is made if it is not yet.`,
+        ),
         result.stdout,
-        /::error::Release v4\.0\.110's notes in NiordOrg\/niord4 could not be read \(.*\): nothing is pinned\. Run this workflow again \(Actions, Base bump, Run workflow, pr 12\)\./,
       );
+      assert.deepEqual(result.calls, [CALL]);
     });
-
-  it('goes on with a lock pinned by hand when the notes cannot be read', () => {
-    const result = notes({ err: 'HTTP 403\n', exit: 1 }, { PINNED: 'true' });
-    assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.deepEqual(result.outputs, { notes: 'pinned', go: 'true', reason: 'HTTP 403' });
-  });
 
   it('refuses downloads that were not hashed, asking gh nothing', () => {
     const result = notes({ out: body(FE_LINE, KIT_LINE) }, { KIT_SHA256: '' });
@@ -1039,7 +996,7 @@ describe('base-bump.yml: Write the lock', () => {
     inDir('lock', { 'fe/niord-pins.lock.json': text }, (dir) => {
       const result = runBash(runOf('compute', 'Write the lock'), {
         cwd: dir,
-        env: { NEW, NOTES: 'verified', FE_SHA256: FE_SHA, KIT_SHA256: KIT_SHA, ...env },
+        env: { NEW, FE_SHA256: FE_SHA, KIT_SHA256: KIT_SHA, ...env },
       });
       return { ...result, lock: readIn(dir, 'fe/niord-pins.lock.json') };
     });
@@ -1055,21 +1012,17 @@ describe('base-bump.yml: Write the lock', () => {
       assert.deepEqual(Object.keys(lock.packs), ['da', 'kl']);
     });
 
-  it('leaves a lock pinned by hand that holds the downloads’ hashes as it is', () => {
-    const result = writeLock(pinned, { NOTES: 'pinned' });
+  it('writes a lock that pins the version already (a dispatch) with the downloads’ hashes', () => {
+    assert.equal(writeLock(pinned).lock, pinned);
+    const other = lockText({
+      version: NEW,
+      sha256: FE_SHA,
+      kit: { sha256: 'f'.repeat(64) },
+      packs: PACKS,
+    });
+    const result = writeLock(other);
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.lock, pinned);
-  });
-
-  it('refuses a lock pinned by hand with other hashes than the downloads, leaving it', () => {
-    const other = lockText({ version: NEW, sha256: FE_SHA, kit: { sha256: 'f'.repeat(64) } });
-    const result = writeLock(other, { NOTES: 'pinned' });
-    assert.equal(result.status, 1);
-    assert.match(
-      result.stdout,
-      /::error::fe\/niord-pins\.lock\.json pins 4\.0\.110 with other hashes than the registry's zips/,
-    );
-    assert.equal(result.lock, other);
   });
 
   it('refuses a lock of another format, leaving it', () => {
@@ -1495,10 +1448,8 @@ describe('base-bump.yml: Build the comment', () => {
         files['fe/.niord/niord-upgrade-report.json'] = `${JSON.stringify(report, null, 2)}\n`;
         files['fe/.niord/niord-upgrade-report.md'] = md;
       }
-      if (env.NOTES !== 'unreadable') {
-        files['temp/work/drift.txt'] = drift.map((line) => `${line}\n`).join('');
-        files['temp/work/releases.txt'] = releases.map((line) => `${line}\n`).join('');
-      }
+      files['temp/work/drift.txt'] = drift.map((line) => `${line}\n`).join('');
+      files['temp/work/releases.txt'] = releases.map((line) => `${line}\n`).join('');
       if (baseLock !== undefined) files['temp/work/base-lock.json'] = baseLock;
       if (lock !== undefined) files['fe/niord-pins.lock.json'] = lock;
       write(dir, files);
@@ -1506,7 +1457,6 @@ describe('base-bump.yml: Build the comment', () => {
         cwd: dir,
         env: {
           ...ENV,
-          NOTES: 'verified',
           NEW,
           OLD,
           PR: '12',
@@ -1733,11 +1683,11 @@ describe('base-bump.yml: Build the comment', () => {
     }
   });
 
-  it('says what it did by hand’s pin, the stub, the moved pins and the bootstrap it could not fetch', () => {
+  it('says what it pinned, the stub, the moved pins and the bootstrap it could not fetch', () => {
     const result = build({
       report: data(),
       releases: ['2026-10-21-templates-from-database', '2026-10-30-harbours'],
-      env: { NOTES: 'pinned', STUB: 'copied', UPDATE_PINS: 'da kl', BOOTSTRAP: 'no-old' },
+      env: { STUB: 'copied', UPDATE_PINS: 'da kl', BOOTSTRAP: 'no-old' },
       baseLock: lockText({ version: OLD, sha256: FE_SHA, packs: { da: DA_PIN, kl: KL_PIN } }),
       lock: lockText({
         version: NEW,
@@ -1749,7 +1699,7 @@ describe('base-bump.yml: Build the comment', () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.ok(
       result.comment.includes(
-        `\`fe/niord-pins.lock.json\` pins 4.0.110 already, by hand: \`niord-fe-src-4.0.110.zip\` sha256 \`${FE_SHA}\` and \`niord-country-kit-4.0.110.zip\` sha256 \`${KIT_SHA}\`, which the downloads from the registry match (release v4.0.110's notes in NiordOrg/niord4 cannot be read here).`,
+        `Pinned in \`fe/niord-pins.lock.json\` by this workflow's commit: \`niord-fe-src-4.0.110.zip\` sha256 \`${FE_SHA}\` and \`niord-country-kit-4.0.110.zip\` sha256 \`${KIT_SHA}\`, downloaded from the registry and equal to the two lines of release v4.0.110's notes in NiordOrg/niord4.`,
       ),
     );
     assert.ok(
@@ -1872,20 +1822,6 @@ describe('base-bump.yml: Build the comment', () => {
       result.comment,
     );
     assert.equal(result.outputs.unticked, '4');
-  });
-
-  it('keeps the tick of the pin by hand of the same version, its many lines and all, and not of another', () => {
-    const unreadable = { NOTES: 'unreadable', REASON: 'release not found', BOOTSTRAP: '' };
-    const ticked = (version) =>
-      build({ env: { ...unreadable, NEW: version } }).comment.replace('- [ ] Pin ', '- [x] Pin ');
-    const same = build({ env: unreadable, earlier: ticked(NEW) });
-    assert.equal(same.status, 0, same.stdout + same.stderr);
-    assert.match(boxesOf(same.comment)[0], /^- \[x\] Pin 4\.0\.110 by hand /);
-    assert.equal(same.outputs.unticked, '0');
-    const other = build({ env: unreadable, earlier: crlf(ticked('4.0.105').split('\n')) });
-    assert.equal(other.status, 0, other.stdout + other.stderr);
-    assert.match(boxesOf(other.comment)[0], /^- \[ \] Pin 4\.0\.110 by hand /);
-    assert.equal(other.outputs.unticked, '1');
   });
 
   // The kit's image template at 4.0.105, and again changed at 4.0.110.
@@ -2122,65 +2058,6 @@ describe('base-bump.yml: Build the comment', () => {
     ]);
   });
 
-  it('asks for the pin by hand in one box when the notes cannot be read, printing no download hash', () => {
-    const result = build({
-      env: {
-        NOTES: 'unreadable',
-        REASON: 'release not found',
-        RECORD: '',
-        SETUP_STATUS: '',
-        STUB: '',
-        BOOTSTRAP: '',
-      },
-    });
-    assert.equal(result.status, 0, result.stdout + result.stderr);
-    const { comment } = result;
-    assert.equal(comment.split('\n')[0], MARKER);
-    assert.equal(boxesOf(comment).length, 1);
-    assert.deepEqual(result.outputs, { unticked: '1', security: 'false' });
-    assert.equal(result.labels, 'base bump\n');
-    // gh's reason as given, not a guess at it: a release not made yet reads the same.
-    assert.ok(
-      comment.includes(
-        "Nothing is pinned: release v4.0.110's notes in NiordOrg/niord4 cannot be read with this workflow's token (`release not found`). While that repository is private, the pin by hand below is needed; when the release is not made yet, run this workflow again once it is (Actions, Base bump, Run workflow, pr 12). A pin is committed only after the notes confirmed it, so set-up did not run and no upgrade report was made.",
-      ),
-      comment,
-    );
-    assert.doesNotMatch(comment, /secret/i);
-    assert.ok(!comment.includes(FE_SHA) && !comment.includes(KIT_SHA));
-    assert.ok(!comment.includes('## Checked by CI') && !comment.includes('<details>'));
-    // The item's lines after its first are indented, so the count sees one box.
-    const item = comment
-      .slice(comment.indexOf('- [ ] '), comment.indexOf('\nTick each box'))
-      .trimEnd();
-    for (const line of item.split('\n').slice(1)) assert.match(line, /^(?: {2}.*)?$/, line);
-    assert.match(
-      item,
-      /^- \[ \] Pin 4\.0\.110 by hand from release v4\.0\.110's notes \(`gh release view v4\.0\.110 --repo NiordOrg\/niord4`; /,
-    );
-    for (const line of [
-      '  be/mvnw -B -q -f be/pom.xml dependency:copy -Dartifact=org.niord.web:niord-fe-src:4.0.110:zip -DoutputDirectory="$PWD/fe/.niord"',
-      '  be/mvnw -B -q -f be/pom.xml dependency:copy -Dartifact=org.niord:niord-country-kit:4.0.110:zip -DoutputDirectory="$PWD/.niord"',
-      "  (cd fe/.niord && printf '%s\\n' '<the niord-fe-src line of the notes>' | sha256sum -c)",
-      "  (cd .niord && printf '%s\\n' '<the niord-country-kit line of the notes>' | sha256sum -c)",
-    ])
-      assert.ok(item.split('\n').includes(line), line);
-    assert.match(
-      item,
-      /\(Actions, Base bump, Run workflow, pr 12\) for the upgrade report and the checklist\.$/,
-    );
-  });
-
-  for (const [reason, shown] of [
-    ['HTTP 403: `Resource` not accessible', "`HTTP 403: 'Resource' not accessible`"],
-    ['', '`no reason given`'],
-  ])
-    it(`quotes gh's reason ${JSON.stringify(reason)} as code in the comment`, () => {
-      const result = build({ env: { NOTES: 'unreadable', REASON: reason, BOOTSTRAP: '' } });
-      assert.equal(result.status, 0, result.stdout + result.stderr);
-      assert.ok(result.comment.includes(`with this workflow's token (${shown}).`), result.comment);
-    });
-
   it('cuts a report too long for a comment, pointing to the artifact', () => {
     const md = `${'a line of the upgrade report, long enough\n'.repeat(1700)}`;
     assert.ok(md.length > 70000);
@@ -2206,11 +2083,11 @@ const SET_UP_FILES = {
 };
 
 /** compute's hand-over in a folder of its own: `{ dir, temp, folder, sums }` to `fn`. */
-function handedOver(notes, fn) {
+function handedOver(fn) {
   return inDir(
     'handover',
     {
-      ...(notes === 'unreadable' ? {} : SET_UP_FILES),
+      ...SET_UP_FILES,
       'temp/base-bump/comment.md': `${MARKER}\n## Base bump\n`,
       'temp/base-bump/labels.txt': 'base bump\n',
     },
@@ -2218,7 +2095,7 @@ function handedOver(notes, fn) {
       const temp = slashes(path.join(dir, 'temp'));
       const result = runBash(runOf('compute', 'Hand over the files'), {
         cwd: dir,
-        env: { NOTES: notes, RUNNER_TEMP: temp },
+        env: { RUNNER_TEMP: temp },
       });
       assert.equal(result.status, 0, result.stdout + result.stderr);
       return fn({
@@ -2236,7 +2113,7 @@ describe('base-bump.yml: the hand-over and its check', () => {
     runBash(runOf('apply', 'Verify the files'), { env: { RUNNER_TEMP: temp, ...env } });
 
   it('hands over the files with their SHA256SUMS, and gives the SHA-256 of SHA256SUMS', () => {
-    handedOver('verified', ({ temp, folder, sums }) => {
+    handedOver(({ temp, folder, sums }) => {
       const text = fs.readFileSync(path.join(folder, 'SHA256SUMS'));
       assert.equal(sums, sha256(text));
       assert.deepEqual(
@@ -2265,30 +2142,21 @@ describe('base-bump.yml: the hand-over and its check', () => {
     });
   });
 
-  it('hands over only the comment and the labels when the notes cannot be read', () => {
-    handedOver('unreadable', ({ folder }) => {
-      assert.deepEqual(fs.readdirSync(folder).sort(), ['SHA256SUMS', 'comment.md', 'labels.txt']);
-    });
-  });
-
   it("passes compute's files in apply", () => {
-    handedOver('verified', ({ temp, sums }) => {
+    handedOver(({ temp, sums }) => {
       const result = verify(temp, { NOTES: 'verified', SHA256SUMS: sums });
       assert.equal(result.status, 0, result.stdout + result.stderr);
     });
-    handedOver('unreadable', ({ temp, sums }) => {
-      const result = verify(temp, { NOTES: 'unreadable', SHA256SUMS: sums });
-      assert.equal(result.status, 0, result.stdout + result.stderr);
-    });
   });
 
-  it('refuses a changed byte, another SHA256SUMS, a short SHA-256, an unknown verdict and a missing lock', () => {
-    handedOver('verified', ({ temp, folder, sums }) => {
+  it('refuses a changed byte, another SHA256SUMS, a short SHA-256, unverified notes and a missing lock', () => {
+    handedOver(({ temp, folder, sums }) => {
       for (const [env, message] of [
         [{ SHA256SUMS: sums.slice(1) }, /::error::compute gave no SHA-256 of SHA256SUMS\./],
         [{ SHA256SUMS: 'f'.repeat(64) }, /SHA256SUMS: FAILED/],
-        [{ NOTES: 'maybe' }, /::error::compute gave no verdict on the release notes \('maybe'\)\./],
-        [{ NOTES: '' }, /::error::compute gave no verdict/],
+        [{ NOTES: 'maybe' }, /::error::compute did not verify the release notes \('maybe'\)\./],
+        [{ NOTES: 'unreadable' }, /::error::compute did not verify the release notes/],
+        [{ NOTES: '' }, /::error::compute did not verify the release notes/],
       ]) {
         const result = verify(temp, { NOTES: 'verified', SHA256SUMS: sums, ...env });
         assert.notEqual(result.status, 0, JSON.stringify(env));
@@ -2299,9 +2167,18 @@ describe('base-bump.yml: the hand-over and its check', () => {
       assert.notEqual(changed.status, 0);
       assert.match(changed.stdout + changed.stderr, /comment\.md: FAILED/);
     });
-    handedOver('unreadable', ({ temp, sums }) => {
-      const result = verify(temp, { NOTES: 'verified', SHA256SUMS: sums });
-      assert.equal(result.status, 1);
+    // SHA256SUMS without the lock, and its own SHA-256: every listed file checks out.
+    handedOver(({ temp, folder }) => {
+      const file = path.join(folder, 'SHA256SUMS');
+      const text = fs
+        .readFileSync(file, 'utf8')
+        .split('\n')
+        .filter((line) => !line.endsWith(' niord-pins.lock.json'))
+        .join('\n');
+      fs.writeFileSync(file, text);
+      fs.rmSync(path.join(folder, 'niord-pins.lock.json'));
+      const result = verify(temp, { NOTES: 'verified', SHA256SUMS: sha256(text) });
+      assert.equal(result.status, 1, result.stdout + result.stderr);
       assert.match(result.stdout, /::error::SHA256SUMS does not list niord-pins\.lock\.json\./);
     });
   });
@@ -2700,11 +2577,6 @@ describe('base-bump.yml: Set the status', () => {
       'three boxes left',
       { UNTICKED: '3' },
       call(PUSHED, 'failure', 'Base bump: 3 human action(s) unticked', COMMENT_URL),
-    ],
-    [
-      'the by-hand pin of unreadable notes',
-      { PUSH: 'skipped', CI: 'skipped', UNTICKED: '1', ...NOT_PUSHED },
-      call(HEAD, 'failure', 'Base bump: 1 human action(s) unticked', COMMENT_URL),
     ],
     [
       'nothing to push',
