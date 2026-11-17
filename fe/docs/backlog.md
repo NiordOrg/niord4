@@ -828,7 +828,7 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   Proxying `/img` and `/css/templates` in the dev server closes it, as the user guides' file server does
   (`fe/guides-shots/serve-built.mjs`); a deployment that serves the administration app from another origin
   (`adminAppUrl`) needs the same two passes on its web server. Seen in the manual check of 2026-10-22
-  (`docs/code-data-config-plan.md` §11 C4.2b) and by the user guides' rig (2026-11-11).
+  (`docs/code-data-config-plan.md` §6.4) and by the user guides' rig (2026-11-11).
 - A domain name or domain id made of spaces passes the domain editor: Signal Forms' `required` takes only an empty
   string as empty (`domain-editor.ts`), so Save is enabled, the backend refuses with 400 "A domain needs a name"
   and the editor shows its generic save error without that sentence. Trim before the check, or show the detail.

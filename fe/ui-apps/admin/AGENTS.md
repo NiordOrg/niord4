@@ -38,7 +38,7 @@ behaviour and `@ng-icons/lucide` for icons, wrapped once by the shared component
 - **Every user-visible string is a Transloco key in `languages/en/i18n/admin/en.json` only.**
   Every other language is a country's pack, translated in its repository (Danish is `niord-dk`'s
   `niord-lang-da`, translated in DK's bump PR or ahead of it there;
-  [fe-country-split-plan.md](../../../docs/fe-country-split-plan.md) §6 P5). **No language but
+  [fe-country-split-plan.md](../../../docs/fe-country-split-plan.md) §4.5, §4.6). **No language but
   English is written in a base product PR.** A renamed key is named in `languages/en/renames.json`
   and named as a rename in the PR, so each pack migrates.
   A text that names an authority — the footer link and copyright, a logo, a legal document — is not a

@@ -43,7 +43,7 @@
     {
       "word": "Nuuk",
       "path": "docs/backlog.md",
-      "reason": "the clock-change item of the date-time field: the bug shows only in Greenland's zone, whose spring gap ends a local day; the item and this entry go together when the bug is fixed (fe-country-split-plan §6 P7, D19)"
+      "reason": "the clock-change item of the date-time field: the bug shows only in Greenland's zone, whose spring gap ends a local day; the item and this entry go together when the bug is fixed"
     },
     {
       "word": "Beredskab",
@@ -88,37 +88,37 @@
     {
       "word": "dma.dk",
       "path": "docs/publications/go-live/GO-LIVE-PROCESS.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
     },
     {
       "word": "dma.dk",
       "path": "docs/publications/go-live/PRODUCTION-CUTOVER-RUNBOOK.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
     },
     {
       "word": "dma.dk",
       "path": "docs/publications/go-live/scripts/lib.sh",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
     },
     {
       "word": "t-dma",
       "path": "docs/publications/go-live/GO-LIVE-PROCESS.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
     },
     {
       "word": "t-dma",
       "path": "docs/publications/go-live/PRODUCTION-CUTOVER-RUNBOOK.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
     },
     {
       "word": "t-dma",
       "path": "docs/publications/go-live/scripts/lib.sh",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk (fe-country-split-plan §6 P7, D30)"
+      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
     },
     {
       "word": "Nuuk",
       "path": "ui-apps/info/src/app/shared/utils/zoned-date.spec.ts",
-      "reason": "the day-boundary, gap and overlap cases in Greenland's zone: UTC-2 on the EU summer rule, whose spring gap ends a local day (23:00 becomes 00:00, so the resolved instant changes date); no zone outside Greenland reproduces it, and GL's deployments run in it (fe-country-split-plan §6 P7, D18)"
+      "reason": "the day-boundary, gap and overlap cases in Greenland's zone: UTC-2 on the EU summer rule, whose spring gap ends a local day (23:00 becomes 00:00, so the resolved instant changes date); no zone outside Greenland reproduces it, and GL's deployments run in it"
     },
     {
       "word": "Nuuk",

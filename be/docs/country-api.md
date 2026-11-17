@@ -14,7 +14,7 @@ The contract is enforced, not advised. Three things hold it:
   on its class path, whatever packages it scans; DK and GL start under it today.
 - **The country build group**: niord-base's security tests and the country checks, which `niord-parent` runs in
   every country build that declares niord-base's test-jar (DK and GL since their C6, `docs/code-data-config-plan.md`
-  §11), with a workflow step from a country's C6 that fails when the group ran no test (§ The country build group).
+  §9), with a workflow step from a country's C6 that fails when the group ran no test (§ The country build group).
 - **The override check** (`check-overrides.sh` in `niord-image-tools`), which a country's workflow runs over its
   jar after the package step, from that country's C6.
 
@@ -94,7 +94,7 @@ check covers every handler method of Spring MVC's `RequestMappingHandlerMapping`
 framework handlers are exempt: `BasicErrorController` (the `/error` page). The guard does not check role names (a
 misspelt role fails closed); niord-base's `RestControllerSecurityAnnotationTest` does, for its own controllers.
 
-Outside the guard, and refused by review (`docs/code-data-config-plan.md` §11 C5b, Decisions): an HTTP endpoint that
+Outside the guard, and refused by review (`docs/fe-country-split-plan.md` §4.11 rule 3): an HTTP endpoint that
 is not such a handler method, that is a servlet or `ServletRegistrationBean`, a servlet filter, a `RouterFunction`, an
 `HttpRequestHandler` behind a handler mapping of its own, the actuator's own mapping, and SECOM's RESTEasy endpoints
 in niord-base. None of them carries a JSR-250 annotation that method security would read, so under `permitAll` such

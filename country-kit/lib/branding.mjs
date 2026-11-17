@@ -37,7 +37,7 @@
  *      fails; while any list holds an entry, one warning says so, since go-live requires every
  *      list empty. The list is never staged: staging copies only the files the schema names.
  *   6. What the base product's specs once held on the copies of the countries' files it carried
- *      (fe-country-split-plan D23). A brandable PNG whose schema entry gives a `width` or `height`
+ *      (fe-country-split-plan §4.6). A brandable PNG whose schema entry gives a `width` or `height`
  *      has that size, read from its header chunk (IHDR: bytes 12-15, the width at byte 16 and the
  *      height at 20, big-endian); a PNG without an IHDR chunk first fails. A value of a key whose
  *      entry `forbids` `year` holds no four digits standing alone once its character references

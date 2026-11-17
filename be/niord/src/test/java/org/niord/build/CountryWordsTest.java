@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The base product guard's backend half (docs/fe-country-split-plan.md §4.8, docs/code-data-config-plan.md §11 C5):
+ * The base product guard's backend half (docs/fe-country-split-plan.md §4.8, docs/code-data-config-plan.md §2, S3):
  * no file of niord-base's {@code bootstrap/} and {@code src/main/}, or of niord-app's {@code src/main/}, names a
  * country word, a Danish locale chosen in a template or a Danish or Faroese place name, unless an entry of its list,
  * {@code src/test/resources/build/country-words.json}, permits that word or pattern in that file with its reason, on
