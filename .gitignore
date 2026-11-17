@@ -15,3 +15,6 @@ dist/
 *.stackdump
 Thumbs.db
 *.iml
+# Per-developer Claude Code files: machine-local, never shared
+.claude/settings.local.json
+CLAUDE.local.md
