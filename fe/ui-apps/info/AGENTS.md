@@ -425,8 +425,7 @@ The live defects you will meet before you have changed anything are in
 - The gate for this application is the **Info gate** of `.github/workflows/info-ci.yml`: format and
   documentation, lint and the guard tests, the unit suite, the paths and contents checks, and the
   base build with its URL, separation and bundle checks — one work job after one `npm ci`. It is
-  the check branch protection will require; that is switched on before production go-live, and
-  until then the gate is advisory — a red one blocks no merge. A pull request confined to
+  a check the ruleset on `main` requires: a red gate blocks the merge. A pull request confined to
   `ui-apps/info/` runs that workflow and, of Frontend CI, only the `Example country` job and the
   `Frontend gate` (the example builds the public site too); the administration jobs are skipped.
   A push to `main` confined to `ui-apps/info/` runs Info CI alone, and Info CI then starts the
