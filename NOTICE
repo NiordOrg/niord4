@@ -72,12 +72,19 @@ Each entry says what the files themselves state.
       "Copyright 2014 GitHub Inc.", under the Apache License, Version 2.0
       (its header).
 
+  be/mvnw, be/mvnw.cmd
+      The start scripts of the Apache Maven Wrapper, version 3.3.4. Their
+      headers read "Licensed to the Apache Software Foundation (ASF) under
+      one or more contributor license agreements" and place them under the
+      Apache License, Version 2.0.
+
   fe/shared-map/portrayal/*.svg
       The six map symbols. Their comments name the IHO S-124 symbol each one
-      draws and say that the letters are outlines of Liberation Sans Bold
-      2.1.5 (SIL OFL). fe/docs/map-portrayal.md describes how they follow
-      the IHO S-124 portrayal catalogue, Edition 2.0.0, which is not in this
-      repository.
+      draws or follows. The four with letters (nw-point.svg, nw-tag.svg,
+      nm-point.svg, nm-tag.svg) say that the letters are outlines of
+      Liberation Sans Bold 2.1.5 (SIL OFL). fe/docs/map-portrayal.md
+      describes how the symbols follow the IHO S-124 portrayal catalogue,
+      Edition 2.0.0, which is not in this repository.
 
   be/niord/src/main/resources/aton/INT-1-preset.xml
       The INT-1 seamark preset from
