@@ -7,7 +7,7 @@
 // they belong to the shell, not to the screen.
 //
 // Usage (from the repo root, dev server on APP_URL, backend reachable from it):
-//   NIORD_USER=test-admin NIORD_PASS=test1234 node scripts/perf/publications-requests.mjs
+//   NIORD_USER=<user> NIORD_PASS=<password> node scripts/perf/publications-requests.mjs
 // Options: APP_URL (default http://localhost:4200), REPORT_ONLY=1 (never fail),
 //          OUT=path for the raw JSON (default scripts/perf/last-run.json).
 // Exit code 1 when any screen is over budget, so it can gate a deploy check.
