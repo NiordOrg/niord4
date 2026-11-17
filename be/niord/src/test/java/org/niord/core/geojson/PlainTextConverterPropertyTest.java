@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * over whole feature collections generated from a fixed seed: several features of every type the text view knows,
  * positions anywhere on the globe, and names in one or two languages on the features and on single positions.
  * <p>
- * Phase 1's {@link PlainTextConverterGridTest} holds single points over a grid of minutes and the refused forms;
+ * {@link PlainTextConverterGridTest} holds single points over a grid of minutes and the refused forms;
  * this class holds the geometry types, the names and the order of a whole text.
  */
 public class PlainTextConverterPropertyTest {

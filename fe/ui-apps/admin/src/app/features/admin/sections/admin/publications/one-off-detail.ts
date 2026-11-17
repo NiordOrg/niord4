@@ -143,7 +143,7 @@ export class OneOffDetail {
   }
 
   /**
-   * What the banner says when the publication cannot be shown (L-174).
+   * What the banner says when the publication cannot be shown.
    *
    * A publication the server says is not there, a series that is not a one-off
    * included, is named as such, and the banner offers no Retry (the template

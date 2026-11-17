@@ -67,7 +67,7 @@ class PublicationPublicReadsRoundTripITTest extends PublicationHttpFixture {
 
         Map<String, Object> open = byId(publicId);
         assertEquals("OPEN", open.get("status"), "an open issue resolves by id");
-        // Each loop below asserts per desc; an answer with no desc would pass them all (detector check MC). The read
+        // Each loop below asserts per desc; an answer with no desc would pass them all. The read
         // asks for lang=en and answers that language's desc only
         assertEquals(List.of("en"), listOf(open, "descs").stream().map(d -> d.get("lang")).toList(),
                 "the English desc the read asked for: " + open);

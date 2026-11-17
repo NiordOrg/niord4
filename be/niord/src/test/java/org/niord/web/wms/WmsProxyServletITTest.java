@@ -124,7 +124,7 @@ class WmsProxyServletITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // The gate reads wmsProtected live (SECOM-UI-1, L-019): a change on the Settings page applies to
+    // The gate reads wmsProtected live (SECOM-UI-1): a change on the Settings page applies to
     // the next request, without a restart. Every write commits, so each test puts the row back.
     // ------------------------------------------------------------------------------------------- //
 

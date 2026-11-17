@@ -335,7 +335,7 @@ class AreaRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // An update keeps the area's place among its siblings unless the body names one (L-156)
+    // An update keeps the area's place among its siblings unless the body names one
     // ------------------------------------------------------------------------------------------- //
 
     /** Renames an area with a body that carries no siblingSortOrder, as the area editor's save does. */
@@ -480,7 +480,7 @@ class AreaRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // An area's geometry is stored on the globe (CG8, L-009)
+    // An area's geometry is stored on the globe (CG8)
     // ------------------------------------------------------------------------------------------- //
 
     /** Reads back the first coordinate of an area's stored point geometry, as [lon, lat]. */

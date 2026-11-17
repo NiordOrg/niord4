@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the next. Nothing in the schema needs a parameter, so the guard refuses the pair in every file
  * under {@code db/changelog/changes} and in the master changelog, and names the file and line.
  * <p>
- * Owed from pull request #322. No file holds the pair today: the guard keeps it that way.
+ * No file holds the pair today: the guard keeps it that way.
  */
 class ChangelogPlaceholderGuardTest {
 

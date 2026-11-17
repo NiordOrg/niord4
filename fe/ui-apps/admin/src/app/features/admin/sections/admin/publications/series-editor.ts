@@ -976,7 +976,7 @@ export class PublicationSeriesEditor {
     this.descs.set(descs);
     this.criteria.set(series.criteria);
     this.reportParams.set(reportParams);
-    // A copy carries the source's sharing, which is decision 3's whole point: a
+    // A copy carries the source's sharing, and that is the point of it: a
     // series copied from one that every desk could cite is one every desk can
     // still cite, unless the admin says otherwise here.
     const availableDomainIds = toAvailableDomainIds({ ...series, domainId: next.domainId });

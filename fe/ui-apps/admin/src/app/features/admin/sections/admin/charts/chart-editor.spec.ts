@@ -344,7 +344,7 @@ describe('ChartEditor', () => {
     req.flush({});
   });
 
-  it('a scale of 0 or below keeps Save disabled; an empty scale stays allowed (L-178)', () => {
+  it('a scale of 0 or below keeps Save disabled; an empty scale stays allowed', () => {
     const { fixture, host } = setup();
     host.model.set({ mode: 'edit', chart: { chartNumber: '101', active: true, scale: 50000 } });
     fixture.detectChanges();
@@ -365,7 +365,7 @@ describe('ChartEditor', () => {
     expect(editor.saveDisabled()).toBe(false);
   });
 
-  it('the scale input carries min="1", so the browser marks a lower value (L-178)', () => {
+  it('the scale input carries min="1", so the browser marks a lower value', () => {
     const { fixture, host } = setup();
     host.model.set(ADD_MODEL);
     fixture.detectChanges();

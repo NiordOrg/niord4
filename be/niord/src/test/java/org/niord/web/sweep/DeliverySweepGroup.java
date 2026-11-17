@@ -122,7 +122,7 @@ class DeliverySweepGroup implements SweepGroup {
                             .json(atonBody("buoy_cardinal")).note("malformed scale"),
                             Cell.status(400, "Failed to convert 'scale' with value: 'abc'"));
                     // The tags as a list are read as no tags and the icon is drawn without them (200), as the old
-                    // system's deserializer read them; no screen calls it: not a fault (wave 3b's second reader)
+                    // system's deserializer read them; no screen calls it: not a fault
                     SweepResponse listed = ctx.ok(as, SweepRequest.post("/rest/aton-icon/svg")
                             .json(atonBodyWithTagList("buoy_cardinal"))
                             .note("the tags as a list of key-value objects"));

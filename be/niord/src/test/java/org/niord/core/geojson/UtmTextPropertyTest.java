@@ -35,8 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The reference is a forward conversion written here from the published series (Snyder, "Map Projections: A
  * Working Manual", USGS 1987, pp. 61-64), WGS 84, standard 6-degree zones and standard band letters; it is exact to
  * well below a centimetre inside a zone. So a property that fails here names the product's reading, not a round trip
- * through its own forward conversion ({@code latLon2UTM}, which no product code calls). Phase 1 covered the northern
- * round trip through that forward conversion (PlainTextConverterGridTest).
+ * through its own forward conversion ({@code latLon2UTM}, which no product code calls). The northern round trip
+ * through that forward conversion is covered by PlainTextConverterGridTest.
  */
 public class UtmTextPropertyTest {
 
@@ -129,8 +129,8 @@ public class UtmTextPropertyTest {
         // inverse series of the same projection, good to millimetres inside a zone. It is read back up to 8 m off,
         // always in latitude, nothing on a zone's central meridian and most at its edges: the inverse adds the D^4
         // term of the latitude series where the series (Snyder 8-17) subtracts it
-        // (UTMCoordinateConversion.UTM2LatLon, "phi1 - fact1 * (fact2 + fact3 + fact4)"). Phase 1 measured the same
-        // 8 m through the product's own forward conversion (PlainTextConverterGridTest). Pinned: the count beyond a
+        // (UTMCoordinateConversion.UTM2LatLon, "phi1 - fact1 * (fact2 + fact3 + fact4)"). The same 8 m shows
+        // through the product's own forward conversion (PlainTextConverterGridTest). Pinned: the count beyond a
         // metre and the worst case below 10 m, so the fix fails this test.
         Random random = new Random(SEED);
         List<String> failures = new ArrayList<>();
@@ -204,7 +204,7 @@ public class UtmTextPropertyTest {
 
     @Test
     public void theBandLettersCase_changesNothing() throws Exception {
-        // G5-7 of the first stage (phase2/static/verify/g5.md), fixed by P1-11: a lower-case southern band letter
+        // A fault that is fixed: a lower-case southern band letter
         // was read as a northern one ("32c ..." landed about 10,000 km from the position typed). The band letter is
         // read in either case, glued to the zone or spaced: every line reads as its upper-case form, to the
         // millimetre, in both hemispheres.
@@ -232,7 +232,7 @@ public class UtmTextPropertyTest {
 
     @Test
     public void theSmallestLowerCaseSouthernBand_isReadAsSouthern() throws Exception {
-        // G5-7, the smallest input: band C (80° S to 72° S) in lower case, glued and spaced, is the same position as
+        // The smallest input: band C (80° S to 72° S) in lower case, glued and spaced, is the same position as
         // in upper case, in the southern hemisphere.
         double[] upper = read("32C 500000 1500000");
         assertTrue(upper[1] < -72 && upper[1] > -80, "upper case: " + upper[1]);

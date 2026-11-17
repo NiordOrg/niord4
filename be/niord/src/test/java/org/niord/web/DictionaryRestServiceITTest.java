@@ -274,7 +274,7 @@ class DictionaryRestServiceITTest extends ITTest {
 
     /**
      * The export copies the entries without the asAdded mark, which is this deployment's bookkeeping, and leaves the
-     * cached dictionary's marks as they are (the second review of PR #179)
+     * cached dictionary's marks as they are
      */
     @Test
     void exportDictionaryAsJsonCarriesNoAsAddedAndLeavesTheCacheAsItIs() {

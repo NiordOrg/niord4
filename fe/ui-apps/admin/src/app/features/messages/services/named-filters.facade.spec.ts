@@ -143,7 +143,7 @@ describe('NamedFiltersFacade', () => {
     expect(s.facade.lastError()).toBeDefined();
   });
 
-  // L-043: a failed load must not read as "no saved filters"; the menu needs to tell the two apart.
+  // A failed load must not read as "no saved filters"; the menu needs to tell the two apart.
   it('loadFailed is true after a failed load and false after a good one', async () => {
     s.auth.isAuthenticated.set(true);
     expect(s.facade.loadFailed()).toBe(false);
@@ -202,7 +202,7 @@ describe('NamedFiltersFacade', () => {
     expect(s.facade.loadFailed()).toBe(false);
   });
 
-  // L-043: a delete that failed left the filter in place without a word.
+  // A delete that failed left the filter in place without a word.
   it('a failed delete shows the remove error as a toast and keeps the list', async () => {
     const notifications = TestBed.inject(NotificationService);
     const filter = { id: 7, name: 'Foo', parameters: '' } as NamedFilter;

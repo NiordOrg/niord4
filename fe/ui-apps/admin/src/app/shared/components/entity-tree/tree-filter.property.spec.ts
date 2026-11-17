@@ -6,7 +6,7 @@ import { filterTree, seedExpandKeys, setEquals } from './tree-filter';
 
 /**
  * Properties of the area, category and group trees' search, over generated trees and queries from a
- * fixed seed (error hunt, phase 2): every node whose label holds the query, in any case, is shown;
+ * fixed seed: every node whose label holds the query, in any case, is shown;
  * every node shown either matches, lies under a match, or leads to one; the nodes leading to a match
  * are expanded; nothing outside the tree is expanded; and an empty query changes nothing.
  * (The tree component's own caching of pruned rows is the backlog's "The entity tree's search prunes

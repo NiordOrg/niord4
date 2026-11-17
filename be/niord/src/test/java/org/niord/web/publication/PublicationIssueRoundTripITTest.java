@@ -167,7 +167,7 @@ class PublicationIssueRoundTripITTest extends PublicationHttpFixture {
         assertEquals(4, intOf(published, "memberCount"), "the frozen member count");
         assertNotNull(published.get("successorId"), "a weekly series opens its next issue");
         // The next issue opens where this release closed: its period starts at the stamped cut-off, so it covers the
-        // weeks after this one and not these again (detector check MC, M06: a successor chained off the old start)
+        // weeks after this one and not these again (as a successor chained off the old start would)
         Map<String, Object> successor = editable((String) published.get("successorId"));
         assertEquals("OPEN", successor.get("status"), "the successor is OPEN");
         assertEquals(SEP_30, millis(successor.get("intervalFrom")), "the successor's period starts at the stamped cut-off");

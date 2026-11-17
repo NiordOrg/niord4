@@ -572,7 +572,7 @@ public class PublicationApiContractTest {
      * publishes the issue as it stands: what an issue says differently from its
      * series is decided on the open issue through the edit body, and a name typed
      * at the last moment beside a document already rendered was a second way to
-     * say it, and one that could disagree with the file (decision 28). The create
+     * say it, and one that could disagree with the file. The create
      * body is a record, so its shape is readable here; the publish body is a map,
      * so what is pinned is that the endpoint no longer reads the key at all.
      */

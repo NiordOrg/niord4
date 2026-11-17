@@ -1,7 +1,7 @@
 /**
  * Extracts every HTTP call the administration app and the public site make, from their sources,
- * for the endpoint-role guard (`scripts/endpoint-roles.test.mjs`). Ported from the error hunt's
- * wave 1 (`fe-calls.mjs`, a regex scan) to the TypeScript syntax tree, so that a URL built in a
+ * for the endpoint-role guard (`scripts/endpoint-roles.test.mjs`). It reads the TypeScript syntax
+ * tree, where an earlier version scanned the text with patterns, so that a URL built in a
  * helper, a field or another service is followed to where it is called.
  *
  * A call is a site that sends a request or opens an address:

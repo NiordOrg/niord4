@@ -119,7 +119,7 @@ class CheckOverridesTest {
     }
 
     /**
-     * The first review of PR #179 reproduced this one: a country's jar replacing an import job's definition, listed
+     * A review reproduced this one: a country's jar replacing an import job's definition, listed
      * with niord-base's correct fingerprint, passed the check. Only a static image may be overridden.
      */
     @Test

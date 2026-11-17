@@ -60,7 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * The firing exercises at the boundaries of the day and of the zone (error hunt 2026-11-12, track B2): the hourly
+ * The firing exercises at the boundaries of the day and of the zone: the hourly
  * {@link FiringExerciseService#updateFiringExercises()} turns the firing periods of the coming days into a published
  * warning per firing area, whose time part prints each period in the target domain's zone and whose publication ends
  * with the last period's end.
@@ -243,7 +243,7 @@ class FiringExerciseBoundaryITTest extends ITTest {
     }
 
     /**
-     * FIRING2 (error hunt 2026-11-12, track B2): a period typed into the schedule editor as "09:00" to "00:00" ("until
+     * FIRING2 (2026-11-12): a period typed into the schedule editor as "09:00" to "00:00" ("until
      * midnight") was stored with its end at 00:00 of its own day, before its start, and the hourly run then ended the
      * warning's publication before the firing. A period that does not end after it starts is now refused, and nothing
      * is stored.

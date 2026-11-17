@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The round trips wave 1 left (tracks A1 and A2, "Not covered"): a message's attachment captions and reference
+ * The round trips the earlier round-trip classes left uncovered: a message's attachment captions and reference
  * descriptions in two languages; a message series switched between its numbering kinds and the next number it then
  * gives; and a Password setting saved back as the settings API reads it.
  *

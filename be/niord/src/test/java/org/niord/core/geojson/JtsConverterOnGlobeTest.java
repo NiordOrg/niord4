@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link JtsConverter#toJtsOnGlobe(GeometryVo)} (CG8, L-009): a geometry that is to be stored is
+ * Unit tests for {@link JtsConverter#toJtsOnGlobe(GeometryVo)} (CG8): a geometry that is to be stored is
  * moved onto the globe by whole turns of 360 degrees, the whole geometry by the same turns, and a latitude beyond
  * 90 is refused. And for the places that build an entity from a value object, which store through it: a message
  * part's feature, an area and a chart, by their constructors and by their mappers.
@@ -93,7 +93,7 @@ public class JtsConverterOnGlobeTest {
 
     @Test
     void aPositionTenTurnsWestOfItsPlace_isBroughtBackByTenTurns() {
-        // The legacy row in L-099 held points about ten turns west of their place
+        // A legacy row held points about ten turns west of their place
         Geometry g = JtsConverter.toJtsOnGlobe(new PointVo(new double[] {10.5 - 3600.0, 55.25}));
         assertEquals(10.5, g.getCoordinate().x, 1e-9);
         assertEquals(55.25, g.getCoordinate().y, EXACT);

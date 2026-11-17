@@ -1,8 +1,8 @@
 /**
- * Tests for the kit's own tooling in niord-ng's tree: the kit sits beside fe/, so it carries the
- * configuration Prettier, ESLint and git look for in the folder of a file, and its tests find the
- * base product's npm packages through test-fixtures/base-modules.mjs. None of it is in the source
- * zip.
+ * Tests for the kit's own tooling in the base product's tree: the kit sits beside fe/, so it
+ * carries the configuration Prettier, ESLint and git look for in the folder of a file, and its
+ * tests find the base product's npm packages through test-fixtures/base-modules.mjs. None of it is
+ * in the source zip.
  *
  *   npm run test:guards      # from fe/
  *

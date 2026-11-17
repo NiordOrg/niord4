@@ -198,7 +198,7 @@ class BatchSettingsImportProcessorITTest extends ITTest {
 
     /**
      * The guard tests the type the row (else the catalog) gives, not the file's: an entry without a type, as a
-     * hand-made file has it, does not clear the password either (the second review of PR #179)
+     * hand-made file has it, does not clear the password either
      */
     @Test
     @Transactional

@@ -250,7 +250,7 @@ function resetFacade(): void {
 }
 
 /**
- * A series that cannot be read, on the archive view (L-174).
+ * A series that cannot be read, on the archive view.
  *
  * A link to a series that does not exist used to read as a failed load with a
  * Retry that fetched the same 404, and this branch had no way back but the

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# The launcher library: the country-neutral functions of a local run, sourced by niord-ng's ../../start-local.sh
+# The launcher library: the country-neutral functions of a local run, sourced by the base product's ../../start-local.sh
 # and by a country's launcher, which takes it from org.niord:niord-local-run (be/scripts/local-run-zip.sh): there it
 # is in scripts/ beside bootstrap.sh, which it finds in its own folder, and load-sample.sh. The zip keeps no exec
 # bits, so the library runs both scripts with bash. It only defines things: it never runs set -e or changes another

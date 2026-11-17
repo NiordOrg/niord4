@@ -68,7 +68,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link WmsProxyServlet} {@code wmsProtected} security gate (WEB4).
  *
  * <p>The gate reads the {@code wmsProtected} setting through {@link SettingsService} on every request, so a change
- * on the Settings page applies at once (SECOM-UI-1, L-019); the tests hand the servlet a mocked
+ * on the Settings page applies at once (SECOM-UI-1); the tests hand the servlet a mocked
  * {@link SettingsService} ({@link #protect}). The setting has a {@code "true"} default. If it ever resolves to
  * {@code null} (explicit null override / misconfiguration), the auto-unbox in the original
  * {@code if (wmsProtected && ...)} would throw a {@code NullPointerException} — HTTP 500 — and, worse, a

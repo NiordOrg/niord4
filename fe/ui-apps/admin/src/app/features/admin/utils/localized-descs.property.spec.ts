@@ -4,7 +4,7 @@ import { currentDesc, orderDescs, padAndOrderDescs } from './localized-descs';
 
 /**
  * Properties of the language fallback and the per-language lists of the admin forms, over generated
- * texts from a fixed seed (error hunt, phase 2): padding never drops a text the server sent and
+ * texts from a fixed seed: padding never drops a text the server sent and
  * gives every configured language one entry in the configured order; ordering is a permutation;
  * and the one text shown for the reader's language takes each field from the reader's language,
  * else the default language, else the first text that has it.

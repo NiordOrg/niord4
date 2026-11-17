@@ -118,7 +118,7 @@ export class OneOffDetailFacade {
             );
           }),
           // A failed read and a URL pointing at nothing both fail the page, but
-          // they are not the same answer (L-174). A publication that is not in
+          // they are not the same answer. A publication that is not in
           // the estate (a series that is not a one-off included) is refused with
           // a coded 404, and the page says so without Retry, which could only
           // meet the same 404. Any other failure keeps Retry.

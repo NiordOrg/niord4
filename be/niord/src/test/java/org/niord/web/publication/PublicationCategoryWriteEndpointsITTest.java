@@ -251,7 +251,7 @@ class PublicationCategoryWriteEndpointsITTest extends PublicationHttpFixture {
 
     /**
      * Clearing a category's Order on the categories tab sent {@code "priority": null}; the update answered 200 and kept
-     * the old number, so the screen said the category was saved while the public page kept the old order (L-173). An
+     * the old number, so the screen said the category was saved while the public page kept the old order. An
      * explicit null is refused with CATEGORY_INVALID and changes nothing; a body without the key still keeps the stored
      * Order, so a partial API body works as before.
      */

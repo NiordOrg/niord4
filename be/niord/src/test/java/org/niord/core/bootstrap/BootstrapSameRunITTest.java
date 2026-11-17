@@ -821,8 +821,7 @@ class BootstrapSameRunITTest {
 
     /**
      * The job log of each of the later archive's imports says, a line per entry the earlier archive created, what was
-     * added, what was replaced (the old value and the new) and what was kept (the review of PR #188, and the ruling
-     * of 2026-10-24)
+     * added, what was replaced (the old value and the new) and what was kept (the ruling of 2026-10-24)
      */
     @Test
     @Order(11)

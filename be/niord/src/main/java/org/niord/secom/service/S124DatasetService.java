@@ -151,7 +151,7 @@ public class S124DatasetService extends BaseService {
         // dataset take turns: without it, a writer that read the dataset and the PUBLISHED
         // message just before a cancel committed went on to write its ACTIVE row over the
         // committed CANCELLED one (no version column guards the row), and the cancelled warning
-        // was served and pushed as in force again (PR #322's second CI run). When there is no row
+        // was served and pushed as in force again (seen in a CI run). When there is no row
         // yet, the message's dataset lock (see lockByMessageUid) makes a writer that is creating it
         // and a writer that finds none take turns as well.
         S124Dataset dataset = lockByMessageUid(messageUid);
@@ -360,7 +360,7 @@ public class S124DatasetService extends BaseService {
      * of its dataset: every writer that can create a message's dataset (the eligible units, the
      * JMS status listener) takes the message's dataset lock first ({@link #lockByMessageUid}), so
      * those writers take turns and the second one finds the row the first committed (SECOM1's
-     * create race, gone since pull request #322). The cancellation units take only the row lock
+     * create race, closed by this). The cancellation units take only the row lock
      * ({@link #cancelIfStale}); they never create a row. An eligible unit that fails is re-run
      * once, since such a failure may pass, and is logged and counted failed if it fails again; a
      * cancellation unit that fails is logged and counted failed. The sweep is idempotent, so the

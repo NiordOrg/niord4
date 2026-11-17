@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * MAILLIST2 (iii) on the SECOM side: {@code SecomMessageStatusListener.run} had the same uncaught poll loop as the
- * mailing-list listener, submitted with its {@code Future} discarded. The error hunt of 2026-11-12, wave 2 (track
- * C-tests); a regression test of the fix now.
+ * mailing-list listener, submitted with its {@code Future} discarded. Written on 2026-11-12; a regression test of
+ * the fix now.
  */
 class SecomMessageStatusListenerFaultTest {
 

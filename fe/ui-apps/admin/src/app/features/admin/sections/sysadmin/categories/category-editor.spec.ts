@@ -81,7 +81,7 @@ describe('CategoryEditor', () => {
     expect(req.request.method).toBe('PUT');
     const body = req.request.body as AdminCategory;
     expect(body.descs).toEqual([{ lang: 'en', name: 'Buoys and beacons' }]);
-    // The backend keeps the stored order when the body carries none (L-157).
+    // The backend keeps the stored order when the body carries none.
     expect('siblingSortOrder' in body).toBe(false);
     req.flush({});
   });
@@ -122,7 +122,7 @@ describe('CategoryEditor Test', () => {
 
   const TEMPLATE: AdminCategory = { ...STORED, type: 'TEMPLATE', messageId: 'NW-001-26' };
 
-  it('a refused Test says why: the toast carries the answer detail (L-179)', () => {
+  it('a refused Test says why: the toast carries the answer detail', () => {
     const { open, editor, errors, httpTesting } = setup();
     open({ mode: 'edit', category: TEMPLATE });
 

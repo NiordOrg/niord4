@@ -1,5 +1,5 @@
 /**
- * ESLint's configuration for the kit's scripts in niord-ng's tree, run from this folder:
+ * ESLint's configuration for the kit's scripts in the base product's tree, run from this folder:
  *
  *   npm run lint:kit         # from fe/, which runs ESLint here; npm run lint:scripts runs it too
  *

@@ -222,7 +222,8 @@ describe('the include list', () => {
       'country-kit/templates/AGENTS.md',
       'country-kit/templates/pack.yml',
       'country-kit/templates/base-bump.yml',
-      // niord-ng's tooling for the kit's folder at the repository root, and the kit's test helper.
+      // The base product's tooling for the kit's folder at the repository root, and the kit's test
+      // helper.
       'country-kit/.gitattributes',
       'country-kit/.prettierrc',
       'country-kit/eslint.config.mjs',

@@ -368,7 +368,7 @@ SELECT 'dictionaries: languages swapped (English and Danish rows)', (SELECT coun
 
 -- Rule: 'EfS' is the Danish abbreviation of the Notices to Mariners (Efterretninger for Søfarende); in English it is
 -- NtM. The almanac's 'EfS A' takes the base product's title (pdf.nm_almanac.title), any other 'EfS' becomes 'NtM'.
--- The owner kept 'EfS A' as Denmark's English value on 2026-11-03 (decision 141); the ruling of 2026-11-11 puts no
+-- The owner kept 'EfS A' as Denmark's English value on 2026-11-03; the ruling of 2026-11-11 puts no
 -- Danish text in the guides, so the copy takes the base title, and Denmark's own value is the owner's decision.
 WITH u AS (
     UPDATE public."DictionaryEntryDesc"

@@ -58,10 +58,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * The bootstrap runner's wait for a job (docs/code-data-config-plan.md §7.2), with the marker, the batch service and
- * the job operator mocked and a deadline of milliseconds. The first review of PR #179 found that a job past its
+ * the job operator mocked and a deadline of milliseconds. A first review found that a job past its
  * deadline left the run {@code failed}, and so open to a retry, while its execution could still write: the runner now
- * asks it to stop and marks the run failed only once the execution has ended, touching the marker meanwhile. The
- * review of PR #188 found that a retry with more than one archive applies a later archive's entries to the failed
+ * asks it to stop and marks the run failed only once the execution has ended, touching the marker meanwhile. A
+ * later review found that a retry with more than one archive applies a later archive's entries to the failed
  * attempt's rows as whole updates: the claim then allowed a retry with one archive only. The owner's ruling of
  * 2026-10-24 (docs/code-data-config-plan.md D4) removed every retry: a bootstrap runs once, on a new, empty database;
  * a failed run, or one that broke off, is refused whatever the number of archives, and the remedy is a database
@@ -435,7 +435,7 @@ class BootstrapRunnerTest {
     /**
      * The domain import keeps an existing domain as it is, apart from its active flag within the first bootstrap, so a
      * later archive's other values for a domain an earlier one gives would be lost: a restatement that gives more than
-     * the active flag is refused before the marker is claimed (decision 9)
+     * the active flag is refused before the marker is claimed
      */
     @Test
     void aLaterArchiveRestatingADomainIdIsRefusedBeforeTheMarkerIsClaimed() {

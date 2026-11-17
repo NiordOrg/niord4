@@ -723,7 +723,7 @@ describe('IssueDetail — the document panel', () => {
   });
 
   /**
-   * L-045. On a series whose document is uploaded by hand the release generates
+   * On a series whose document is uploaded by hand the release generates
    * nothing: it is refused for the missing file. The confirm used to promise a
    * generated document there too; it now says to upload another.
    */
@@ -1435,7 +1435,7 @@ describe('IssueDetail — the period being edited', () => {
 });
 
 /**
- * L-046. ISSUE_NOT_OPEN said "Only an open issue can be previewed" for every
+ * ISSUE_NOT_OPEN said "Only an open issue can be previewed" for every
  * write it refused: an edit, a curation, an upload or a file clear on a page
  * that had gone stale. Those now read the neutral sentence, and the preview
  * keeps its own.

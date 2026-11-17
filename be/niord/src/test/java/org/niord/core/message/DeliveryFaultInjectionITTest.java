@@ -580,7 +580,7 @@ class DeliveryFaultInjectionITTest extends ITTest {
      * whose publish-from date passed two minutes ago is PUBLISHED, and a PUBLISHED one whose publish-to date passed
      * two minutes ago (earlier today, not in another year) is EXPIRED, each with its status event on the topic. A
      * sweep that read "due" by the day instead of the minute, skipped today's expiries or no longer broadcast fails
-     * here (detector check MC, M12 and M13).
+     * here.
      */
     @Test
     void dueWarningsArePublishedAndExpiredByTheSweepsAndTheirChangesBroadcast() throws Exception {

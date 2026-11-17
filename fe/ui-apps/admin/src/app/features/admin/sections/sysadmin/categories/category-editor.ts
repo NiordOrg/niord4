@@ -270,7 +270,7 @@ export class CategoryEditor {
       },
       error: (error: unknown) => {
         this.testing.set(false);
-        // L-179. The answer names why the run was refused (an example message outside the
+        // The answer names why the run was refused (an example message outside the
         // current domain, a script that failed): show it; the fixed text stays for an answer
         // without one.
         const detail = problemDetail(error);

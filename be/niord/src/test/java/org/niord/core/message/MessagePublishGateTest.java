@@ -48,7 +48,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * The publish gate (MSG10, L-003): a change to VERIFIED or PUBLISHED over the status endpoints is held to what the
+ * The publish gate (MSG10): a change to VERIFIED or PUBLISHED over the status endpoints is held to what the
  * editor's own Verify and Publish allow. A message without a title in any language, or with a MANDATORY promulgation
  * type not ticked, may become neither; a message whose publish-from date is still ahead may become VERIFIED but not
  * PUBLISHED. Every other target status passes.

@@ -304,7 +304,7 @@
     "steps": "Edit templates/messages/nm-accumulated-report-pdf.ftl (deep link ?path=); History...; tick both revisions",
     "crop": "the Revision History dialog",
     "needsData": "A path with a revision whose source is recorded: in the copy only templates/messages/nm-accumulated-report-pdf.ftl (an Import revision of 2026-11-02 and an older one without source). No revision with the source Editor exists, and making one means saving a script resource",
-    "note": "The User column shows who saved: personal data unless scrubbed. Both revisions read Version 1: the application gives a resource's first niord-ng change the version number of its previous entry (SCRIPT9 in be/docs/potential-errors.md). The text does not promise distinct numbers: it says two revisions can share one and their times tell them apart (review 2026-11-12). The copy has no other path with an Import revision to show instead."
+    "note": "The User column shows who saved: personal data unless scrubbed. Both revisions read Version 1: the application can give a resource's change the version number of its previous entry (SCRIPT9 in be/docs/potential-errors.md). The text does not promise distinct numbers: it says two revisions can share one and their times tell them apart (review 2026-11-12). The copy has no other path with an Import revision to show instead."
   },
   {
     "manual": "sysadmin-manual", "chapterFile": "10-Categories.adoc", "line": 17, "file": "CategoriesPage.png", "caption": "Categories", "inline": false,

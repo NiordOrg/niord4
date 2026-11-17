@@ -32,11 +32,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Which failures of a scheduled publication count as two transactions crossing (the orchestrator's decision 15, and
- * the review's finding R2): those leave the message VERIFIED for the next minute, every other failure sets it back to
- * DRAFT. Besides a deadlock and a lock timeout, a version conflict (another transaction changed the message or a
- * recording publication's tag first) and a connection the unit could not get in time are crossings too: none of them
- * is a fault of the message, and the next minute's unit reads everything afresh.
+ * Which failures of a scheduled publication count as two transactions crossing: those leave the message VERIFIED
+ * for the next minute, every other failure sets it back to DRAFT. Besides a deadlock and a lock timeout, a version
+ * conflict (another transaction changed the message or a recording publication's tag first) and a connection the
+ * unit could not get in time are crossings too: none of them is a fault of the message, and the next minute's unit
+ * reads everything afresh.
  */
 class ScheduledMessageServiceTest {
 

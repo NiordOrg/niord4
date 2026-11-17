@@ -80,7 +80,7 @@ public class NiordApp {
 
     // Both frontends label every deployment whose mode is not 'production' with a ribbon, the public
     // site in front of mariners. Until 2026-11-04 the settings file therefore said 'production', so that a
-    // database nobody configured read as production; the owner ruled the other way round (decision 146): a
+    // database nobody configured read as production; the owner ruled the other way round: a
     // forgotten setting shows a TEST ribbon rather than a test site passing as production. The settings file
     // (defaults/base/settings.json, or a country's) says 'test', and a production deployment sets
     // mode=production by environment, a system property or environment variable named like the key, which

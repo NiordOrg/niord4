@@ -338,7 +338,7 @@ export class SeriesDetailFacade {
   });
 
   /**
-   * Whether the series read failed because the series is not there (L-174).
+   * Whether the series read failed because the series is not there.
    *
    * The server's coded 404 SERIES_NOT_FOUND: a link to a series that was
    * deleted, or an id that never existed. The screen says so and offers no

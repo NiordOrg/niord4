@@ -933,7 +933,7 @@ describe('the production-build guard', () => {
 
   it('refuses a workspace set up from a local checkout or pack, and one never set up', () => {
     assert.match(
-      refusal(workspace({ provenance: 'local: /x/niord-ng/fe @ abc' })),
+      refusal(workspace({ provenance: 'local: /x/niord/fe @ abc' })),
       /set up from a local source/,
     );
     assert.match(

@@ -508,7 +508,7 @@ describeScenario('a weekly publication from its series to an amended issue', () 
       expect(epoch(issue.intervalTo), 'the planned cut-off is the cadence close').toBe(
         plannedCutoff,
       );
-      // E4-1: bounds the dialog proposed and nobody changed are recorded as nominal.
+      // Bounds the dialog proposed and nobody changed are recorded as nominal.
       expect(issue.intervalFromSource).toBe('NOMINAL');
       expect(issue.intervalToSource).toBe('NOMINAL');
       issueName = english(issue.descs, 'name');
@@ -540,7 +540,7 @@ describeScenario('a weekly publication from its series to an amended issue', () 
       return normalise(await pdfText(new Uint8Array(await response.body())));
     };
 
-    await test.step('E4-5: a preview named for an earlier instant holds what stood then', async () => {
+    await test.step('a preview named for an earlier instant holds what stood then', async () => {
       // A second before the run's notice was published, the notice was not yet a member.
       const before = epoch(notice?.publishDateFrom) - 1000;
       await api.post(`/rest/publication-issues/issue/${issueId}/preview`, { at: before });
@@ -556,7 +556,7 @@ describeScenario('a weekly publication from its series to an amended issue', () 
         (r) => r.url().includes(`/issue/${issueId}/preview`) && r.method() === 'POST',
       );
       await generatePreview();
-      // E4-5: the screen names the instant it shows, the planned cut-off or now, and the backend
+      // The screen names the instant it shows, the planned cut-off or now, and the backend
       // renders at it. The planned cut-off lies ahead, so either is now.
       const at = Number(((await sent).postDataJSON() as { at?: unknown } | null)?.at);
       expect(
@@ -590,7 +590,7 @@ describeScenario('a weekly publication from its series to an amended issue', () 
     await test.step('the issue page, the admin API and the history agree on the release', async () => {
       const banner = detail.getByTestId('issue-published-banner');
       await expect(banner).toContainText('Published.');
-      // E4-2: the banner names no time; the header line names the publication time.
+      // The banner names no time; the header line names the publication time.
       expect(await banner.innerText()).not.toMatch(/\d{1,2}:\d{2}/);
 
       const bench = await workbench(api);
@@ -607,7 +607,7 @@ describeScenario('a weekly publication from its series to an amended issue', () 
       issueName = english(issue.descs, 'name');
       expectShows('issue name', issueName, SERIES_NAME);
       await expect(detail.locator(':scope > header h2')).toHaveText(issueName);
-      // E4-4: the pattern ends in .pdf, so nothing reads as tailored.
+      // The pattern ends in .pdf, so nothing reads as tailored.
       await expect(detail.getByTestId('issue-tailored-mark')).toHaveCount(0);
 
       const members = await expectMembersMatchApi(detail, api, 'published issue');
@@ -682,7 +682,7 @@ describeScenario('a weekly publication from its series to an amended issue', () 
     const shortIds = [notice?.shortId ?? '', lateNotice?.shortId ?? ''];
     const detail = await openIssue(page);
 
-    await test.step('E4-6: the released issue names the notice published into its period', async () => {
+    await test.step('the released issue names the notice published into its period', async () => {
       const bench = await workbench(api);
       expect(
         bench.publishedSinceRelease?.map((m) => m.messageUid),

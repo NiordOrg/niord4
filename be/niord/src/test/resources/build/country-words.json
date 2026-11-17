@@ -29,7 +29,7 @@
     {
       "name": "place",
       "pattern": "Skagen|Blåvand|Hammer\\s+Odde|Tórshavn|Torshavn",
-      "reason": "Danish and Faroese place names in base product data (the DGPS stations removed after #179)"
+      "reason": "Danish and Faroese place names in base product data (the DGPS stations have been removed)"
     }
   ],
   "strip": [
@@ -42,7 +42,7 @@
     {
       "path": "niord/bootstrap/releases/2026-10-21-templates-from-database/script-resources.json",
       "pattern": "da-locale",
-      "reason": "a frozen release record, never rewritten (§4.6): its copy of tmpl/object-adrift.ftl from before #179; file-wide, as the record is frozen and never gains a line"
+      "reason": "a frozen release record, never rewritten (§4.6): its older copy of tmpl/object-adrift.ftl; file-wide, as the record is frozen and never gains a line"
     },
     {
       "path": "niord/bootstrap/releases/2026-10-21-templates-from-database/script-resources.json",

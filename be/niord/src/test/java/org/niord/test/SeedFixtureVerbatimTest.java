@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Liquibase makes every environment variable and system property a changelog parameter, matched without regard to
  * case, and its {@code sqlFile} change replaced each {@code ${name}} of the fixture with it: on GitHub's runners
  * ({@code LANG=C.UTF-8}) the {@code ${lang}} of {@code common.ftl}'s subject field templates reached the database as
- * {@code C.UTF-8} (PR #322's first CI run). The test sets the system property {@code lang}, which Liquibase reads the
+ * {@code C.UTF-8} (seen in a CI run). The test sets the system property {@code lang}, which Liquibase reads the
  * same way as the environment's {@code LANG}, while the changelog is parsed, and reads the statements the seed
  * changeset sends: the template rows keep {@code ${lang}}, and nothing says {@code C.UTF-8}.
  */

@@ -75,7 +75,7 @@ describe('AreaEditor', () => {
     expect(req.request.method).toBe('PUT');
     const body = req.request.body as AdminArea;
     expect(body.descs).toEqual([{ lang: 'en', name: 'North Sea, east' }]);
-    // The backend keeps the stored order when the body carries none (L-156).
+    // The backend keeps the stored order when the body carries none.
     expect('siblingSortOrder' in body).toBe(false);
     req.flush({});
   });

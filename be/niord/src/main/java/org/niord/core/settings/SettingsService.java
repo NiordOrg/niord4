@@ -575,7 +575,7 @@ public class SettingsService extends BaseService {
      * The value a database row gives a read: its own, except that a number setting left empty (an Integer, Long,
      * Float or Double row, by the row's type, else the catalog's, whose value is null) reads as its default, as a
      * setting the database lacks does and as the {@code @Setting} injection already did at the next start (the
-     * owner's answer 14 of the phase 2 error hunt, L-180). Any other type keeps an empty value as meant.
+     * owner's ruling). Any other type keeps an empty value as meant.
      *
      * @param row     the database row
      * @param setting the setting read, with its own default as the value

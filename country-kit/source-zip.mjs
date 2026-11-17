@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * The two zips niord-ng publishes for a country, each at the version of the release:
+ * The two zips the base product publishes for a country, each at the version of the release:
  *
  *   fe-src  the base product's source zip, `org.niord.web:niord-fe-src:<version>:zip`, what a
  *           country's set-up fetches, verifies by its sha256 and builds from (the default)

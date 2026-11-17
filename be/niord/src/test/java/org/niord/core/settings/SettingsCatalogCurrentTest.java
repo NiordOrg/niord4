@@ -154,8 +154,8 @@ class SettingsCatalogCurrentTest {
     /**
      * A change on the Settings page reaches a value injected into a field only at the next start, so the description
      * of every editable key read that way ends with "Read at start-up.", and the description of a key read at each use
-     * does not (SECOM-UI-1, L-019). {@code wmsProtected} names what it guards: the WMS map tiles, not the API
-     * (SETTINGS-12, L-036). A key read live from now on moves to {@link #READ_LIVE}, and its text loses the sentence.
+     * does not (SECOM-UI-1). {@code wmsProtected} names what it guards: the WMS map tiles, not the API
+     * (SETTINGS-12). A key read live from now on moves to {@link #READ_LIVE}, and its text loses the sentence.
      */
     @Test
     void theSettingsReadAtStartUpSaySo() throws Exception {

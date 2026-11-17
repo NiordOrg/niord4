@@ -230,8 +230,7 @@ class BootstrapITTest {
     }
 
     /**
-     * The claim commits at once, in a transaction of its own, also when the caller holds one that is rolled back (the
-     * review of PR #188)
+     * The claim commits at once, in a transaction of its own, also when the caller holds one that is rolled back
      */
     @Test
     @Order(2)
@@ -477,7 +476,7 @@ class BootstrapITTest {
     }
 
     /**
-     * Empties the database as a recreated one is (decision 20): every table the claim probes truncated in one
+     * Empties the database as a recreated one is: every table the claim probes truncated in one
      * statement, apart from the dictionaries, whose rows outside the default texts' dictionaries are deleted
      * (start-up's texts stay, as on a recreated database's first start); the marker back to {@code pending}; the JPA
      * second-level cache evicted. The claim's own definition of empty then holds.
@@ -619,7 +618,7 @@ class BootstrapITTest {
         assertEquals(List.of("sysadmin"), jdbc.queryForList("SELECT DISTINCT coalesce(u.username, 'none') "
                         + "FROM public.\"ScriptResourceHistory\" h LEFT JOIN public.\"User\" u ON h.user_id = u.id",
                 String.class), "every history row names the sysadmin who ran the bootstrap");
-        assertEquals(45, count("Category"), "the base product's 45 categories (decision 145)");
+        assertEquals(45, count("Category"), "the base product's 45 categories");
         assertEquals(List.of("Light", "Light buoy", "Buoy", "Beacon", "Obstruction", "Drifting object",
                         "Radio navigation", "Firing Exercises"),
                 jdbc.queryForList("SELECT d.name FROM public.\"Category\" c JOIN public.\"CategoryDesc\" d "

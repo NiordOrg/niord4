@@ -73,7 +73,7 @@ describe('MessageMailDialog', () => {
     expect(editor.sendDisabled()).toBe(false);
   });
 
-  it('runs the send itself and closes only when it succeeds, then emits the MailRequest (L-161)', () => {
+  it('runs the send itself and closes only when it succeeds, then emits the MailRequest', () => {
     const { fixture, service } = setup();
     const answer = new Subject<void>();
     const sender = vi.fn<MailSender>(() => answer);
@@ -100,7 +100,7 @@ describe('MessageMailDialog', () => {
     expect(emitted).toEqual(TYPED);
   });
 
-  it('a failed send keeps the dialog open with what was typed, and Send can be pressed again (L-161)', () => {
+  it('a failed send keeps the dialog open with what was typed, and Send can be pressed again', () => {
     const { fixture, service } = setup();
     let fail = true;
     const sender = vi.fn<MailSender>(() =>

@@ -4,7 +4,7 @@ import { hashUrlTarget } from './hash-url';
 
 /**
  * Properties of the rewrite of the old hash-routed public site's links, over generated addresses
- * from a fixed seed (error hunt, phase 2): whatever a fragment holds, the result stays on this site
+ * from a fixed seed: whatever a fragment holds, the result stays on this site
  * and an address on the teaser stays on the teaser; and every query parameter the old link carried
  * reaches the new address, also when it carried one query before the fragment and another inside
  * the route.

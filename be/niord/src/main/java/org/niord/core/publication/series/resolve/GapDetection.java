@@ -243,7 +243,7 @@ public final class GapDetection {
      * stretch CAN hold is a release that was later withdrawn -- and withdrawing
      * is the statement that what went out for that period should not stand, so
      * the period is uncovered again and comes back as a MISSING row, exactly as
-     * it does on a tiling series (decision 12).
+     * it does on a tiling series.
      *
      * The stretch is tiled from the previous release's cut-off, as uncovered()
      * tiles it, with the same rounding slack for a release that drifted by
