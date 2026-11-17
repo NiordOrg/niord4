@@ -2024,8 +2024,9 @@ script-resource history dialog has a Source column.
   reads `pending`.
 
 Open entries of `be/docs/potential-errors.md` that belong to these rules: DICT1 (a missing default-language
-file stays fatal, §4.2), CDI1 (`CdiUtils`' static last-started context), SETTINGS-4 (`pdfEncryptionPassword`'s
-non-empty code default, published in the settings catalog) and SETTINGS-5 (`mailSender`'s code default).
+file stays fatal, §4.2), CDI1 (`CdiUtils`' static last-started context), SETTINGS-4 (a stored
+`pdfEncryptionPassword` row may still hold the former published default; the code default is empty) and
+SETTINGS-5 (`mailSender`'s code default).
 
 ---
 
