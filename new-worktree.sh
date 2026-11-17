@@ -4,7 +4,7 @@
 # worked on and run at the same time, each with its own dev server:
 #
 #   ./new-worktree.sh fix/actions-menu        the branch (created from main when it does not exist yet),
-#                                             in ../niord-ng-wt/fix-actions-menu, on the first free slot
+#                                             in ../niord-wt/fix-actions-menu, on the first free slot
 #   ./new-worktree.sh fix/actions-menu 3      ... on slot 3
 #   ./new-worktree.sh --list                  the worktrees and their slots
 #
@@ -20,16 +20,16 @@
 # The worktree gets its own fe/node_modules (npm ci; skip with --no-install). Never link node_modules
 # between worktrees: removing the worktree would delete the install it points at.
 #
-# Done with the branch:   git worktree remove ../niord-ng-wt/<folder>   (the branch itself stays)
+# Done with the branch:   git worktree remove ../niord-wt/<folder>   (the branch itself stays)
 #
 # Environment overrides:
-#   NIORD_WORKTREE_ROOT   where the worktrees go (default: niord-ng-wt next to this checkout — outside it, so
+#   NIORD_WORKTREE_ROOT   where the worktrees go (default: niord-wt next to this checkout — outside it, so
 #                         the IDE and the repository-wide tools do not index a second copy of everything)
 #   NIORD_WORKTREE_BASE   what a new branch starts from (default main)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WT_ROOT="${NIORD_WORKTREE_ROOT:-$(dirname "$ROOT")/niord-ng-wt}"
+WT_ROOT="${NIORD_WORKTREE_ROOT:-$(dirname "$ROOT")/niord-wt}"
 BASE="${NIORD_WORKTREE_BASE:-main}"
 
 die() { echo "!! $*" >&2; exit 1; }
