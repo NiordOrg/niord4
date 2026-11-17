@@ -12,7 +12,7 @@ up, it never runs in CI (its configuration refuses), and the source zip does not
   (any `./start-local.sh` run starts them).
 - Git Bash (on Windows), JDK 25 and Node, as for `./start-local.sh`; `npm ci` done in `fe/`.
 - Playwright's Chromium: `npx playwright install chromium` in `fe/`.
-- The database `niord_guides` and the Niord home `~/.niord-ng-guides`, made by the data scripts
+- The database `niord_guides` and the Niord home `~/.niord-local/niord_guides`, made by the data scripts
   in `data/` (step 1; their own README says what they copy, scrub and check). The rig refuses to
   start without the database, and refuses one that still holds an e-mail address outside
   `example.org` in a user, contact or mail recipient.
@@ -30,7 +30,7 @@ up, it never runs in CI (its configuration refuses), and the source zip does not
    it, checks it and applies `prepare.sql`, `english.sql` and `english-history.mjs` (the copy's
    English-language texts made English, its message history too: the guides show no Danish text);
    `bash fe/guides-shots/data/make-guides-home.sh` makes
-   the Niord home `~/.niord-ng-guides` from the test data's home. Neither writes to any other
+   the Niord home `~/.niord-local/niord_guides` from the test data's home. Neither writes to any other
    database or home. After the first backend start on a new copy, a sysadmin runs the repository
    import once (`data/README.md`, "After a backend start"), or attachments and publication files
    answer 404; then, in the same backend run, `node fe/guides-shots/data/seed-examples.mjs` makes
@@ -41,7 +41,7 @@ up, it never runs in CI (its configuration refuses), and the source zip does not
    `make-guides-home.sh`, step 2, the repository import, `seed-examples.mjs`, step 3.
 2. **Start the stack.** From the repository root: `bash fe/guides-shots/start-rig.sh`. It starts
    the backend as `./start-local.sh --slot 6` would, on `niord_guides` with the Niord home
-   `~/.niord-ng-guides`, builds both frontends once (the `local` configuration, into
+   `~/.niord-local/niord_guides`, builds both frontends once (the `local` configuration, into
    `.local-run/guides-dist/`) and serves those files with `serve-built.mjs`: the administration
    app on 4106, the public site on 4406, the backend on 8894, beside Keycloak on 8080 and MailHog
    on 8025. Ctrl+C stops it. No dev server runs, so the pages are fixed files for the whole run:
@@ -219,7 +219,7 @@ the report, or takes it out when it shows no address any more.
   applications on their ports, `/rest` passed to the backend, and for the administration app also
   `/img/` and `/css/templates/` when the build has no such file, as a deployment's web server
   does; deep links answered with the page).
-- `data/`: step 1, the scripts that make `niord_guides` and `~/.niord-ng-guides`
+- `data/`: step 1, the scripts that make `niord_guides` and `~/.niord-local/niord_guides`
   (`make-guides-db.sh`, `scrub.sql`, `check.sql`, `check-names.sh`, `prepare.sql`, `english.sql`,
   `english-history.mjs`, `report.sql`, `dict-diff.js`, `make-guides-home.sh`), with their README,
   and `seed-examples.mjs`, the example rows made through the backend once the rig is up.

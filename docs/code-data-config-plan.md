@@ -1856,7 +1856,7 @@ As built:
   prints the state, names `--reset` and posts nothing, and when its own post fails it reads the marker again and
   names `--reset` on `failed`, on `in-progress` once it is final, and on `pending` for a database that holds data,
   while `applied` loads the sample (§7.2, *Who calls it*). It takes no `NIORD_DB` but `niord_sample`
-  and no `NIORD_HOME_DIR` but `~/.niord-ng-sample` (exit 2). The sample users are the
+  and no `NIORD_HOME_DIR` but `~/.niord-local/niord_sample` (exit 2). The sample users are the
   local realm's four users with `example.org` addresses.
 - **No sample in a jar or image**: `CoreResourcePackagingTest` for niord-base's classes (the whole classes
   folder), and `be/k8s/scripts/check-no-sample.sh` over the built jars and the

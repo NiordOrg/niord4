@@ -764,7 +764,7 @@ sub-PRs of their own.
    country did at C5b): a country runs `repo-import` once per deployment, the two settings are gone, and
    `RepositoryService` has no `Path` API any more. `./start-local.sh` changes only through `--sample`
    (R1c); its other durable state is in the local database now. A local database from before R1 answers
-   404 for every attachment until the developer runs `repo-import` once against the old `~/.niord-ng/repo`
+   404 for every attachment until the developer runs `repo-import` once against the Niord home's old `repo/`
    or starts over with `--sample --reset`: one line here and in `README.md`.
 7. The feature PR into `main`, CI green; the release notes name the import job and the window. Its release
    is the one each country moves to before R2.

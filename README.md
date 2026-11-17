@@ -68,7 +68,7 @@ once a sysadmin adds `da` to the model languages on the Settings page and reload
 stops it; running the command again starts it again with its data, and
 `./start-local.sh --sample --reset` starts from scratch. The sample is loaded once, so after a
 `git pull` that changes it, `--reset` loads the new one. The repository files (attachments, publication
-files) are rows of the database, so a local database from the days they were files under `~/.niord-ng/repo`
+files) are rows of the database, so a local database from the days they were files under the Niord home's `repo/`
 answers 404 for every attachment until a sysadmin runs the `repo-import` batch job once against that folder
 (`POST /rest/batch/repo-import` with `{"dir": "<home>/repo"}`), or `--sample --reset` starts over.
 
@@ -140,7 +140,7 @@ image on pull requests, and the base build's image is a manual tool (`fe/AGENTS.
 Everything at once — containers, backend and frontend (Git Bash on Windows, or any Unix shell):
 
 ```bash
-./start-local.sh           # generic English app (niord-app): database `niord`, files in ~/.niord-ng
+./start-local.sh           # generic English app (niord-app): database `niord`, files in ~/.niord-local/niord
 ./start-local.sh --sample  # the sample deployment: niord_sample, both frontends, sample users
 ./start-local.sh --sample --reset  # ... from scratch: drops niord_sample (and nothing else) first
 ./start-local.sh --info    # the public site (fe/ui-apps/info) instead of the administration app, on 4400
@@ -158,15 +158,15 @@ copies the realm to `~/.niord-local/keycloak/` first, where the compose file mou
 [be/README.md](be/README.md#run-locally) says when `niord-keycloak` is recreated once and how an edited realm
 reaches it. See the header of `start-local.sh` for the details and overrides (`NIORD_DB`, `NIORD_HOME_DIR`, `JAVA_HOME`);
 `--sample` takes neither `NIORD_DB` nor `NIORD_HOME_DIR`, and refuses either one set to anything but
-its own `niord_sample` and `~/.niord-ng-sample`.
+its own `niord_sample` and `~/.niord-local/niord_sample`.
 
 ### Several branches at the same time
 
 One git worktree per branch, each with a slot that keeps its ports apart from the others:
 
 ```bash
-./new-worktree.sh fix/actions-menu      # ../niord-ng-wt/fix-actions-menu, first free slot (1-9), npm ci
-cd ../niord-ng-wt/fix-actions-menu
+./new-worktree.sh fix/actions-menu      # ../niord-wt/fix-actions-menu, first free slot (1-9), npm ci
+cd ../niord-wt/fix-actions-menu
 ./start-local.sh --fe-only              # frontend on 4100 + slot, /rest proxied to the backend on 8888
 ./start-local.sh --fe-only --info       # ... the public site instead, on 4400 + slot
 ./start-local.sh --fe-only --admin --info  # ... both frontends

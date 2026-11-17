@@ -38,7 +38,7 @@ cat .local-run/slot                # your slot N
 - Ports 4100 and 8888 and every other slot's ports are not yours, even when something on them looks stuck.
 - Do not edit, check out, stash or commit in any other worktree or in the main checkout. Do not switch your
   worktree to another branch.
-- The database and the files under `~/.niord-ng` are shared: do not reseed, wipe or bulk-rewrite data
+- The database and the files under `~/.niord-local/niord` are shared: do not reseed, wipe or bulk-rewrite data
   without asking. Data you create for a test should be recognisable as yours.
 - Never link or copy `fe/node_modules` from another checkout; run `npm ci` in your own `fe/`.
 
