@@ -287,7 +287,7 @@ otherwise reject the bulk load. The seed is loaded as the file says, by `org.nio
 (a Liquibase custom change in the test-jar), not by Liquibase's `sqlFile`: `sqlFile` replaces each `${name}` with
 a changelog parameter, and Liquibase makes every environment variable and system property one, matched without
 regard to case, so on GitHub's runners (`LANG=C.UTF-8`) the templates' `${lang}` reached the test database as
-`C.UTF-8` (PR #322). `SeedFixtureVerbatimTest` keeps it so. The changeset after `seed-base-data` removed rows the old dump carried but the
+`C.UTF-8`. `SeedFixtureVerbatimTest` keeps it so. The changeset after `seed-base-data` removed rows the old dump carried but the
 application had retired (`retire-map-image-settings-after-seed`); it stays as applied history, and since C4b,
 with no `Setting` row in the fixture, it deletes nothing. The dump itself is never edited, because a changed
 file changes the checksum of the `seed-base-data` changeset a seeded database has already applied, and
@@ -473,8 +473,8 @@ Surefire execution does not redirect its output, so the settings report reaches 
 `failIfNoSpecifiedTests` false, so a country's `-Dtest=<its own test>` does not fail it.
 
 Two members skip themselves where they do not apply: `MailHtmlTest`'s frontend check
-(`theMessageClassesAreTheFrontendsVocabulary`) outside a niord-ng tree, since the frontend's list is checked in
-niord-ng's own build, and `CountryDefaultsChecksTest` where the class path holds no `defaults/country/` or
+(`theMessageClassesAreTheFrontendsVocabulary`) outside a base product checkout, since the frontend's list is checked in
+the base product's own build, and `CountryDefaultsChecksTest` where the class path holds no `defaults/country/` or
 `defaults/packs/` (a country before the code/data/config plan's C6); niord-base's own run reads the stand-in `da`
 pack, so the test runs there. A member reads nothing outside
 its class path, and the guard's configuration and controller fixtures live in `org.example.country`, outside

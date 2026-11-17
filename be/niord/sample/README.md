@@ -26,8 +26,8 @@ zips and docker export tars, and refuses a docker save tar).
   `dma-nm-annex`), `archive/promulgation-types.json` (`NAVTEX`, `Audio` and `Twitter` with their domain links), and
   the four scripts `templates/mailinglist/fetch-firing-exercises.js` and `audio-broadcast.ftl` (named by the
   mailing lists) and `templates/tmpl/dgps.ftl` and `dgps.js` (named by the category Radio navigation/DGPS) are
-  copied unchanged from `SIFA-DK/niord-dk`'s bootstrap, `be/bootstrap/` on `feature/p5-dk-moves` at `68b95cf`
-  (DK's merged bootstrap after its #2–#4), as Danish sample content. One exception: since the country split's P7,
+  copied unchanged from `SIFA-DK/niord-dk`'s bootstrap, `be/bootstrap/`,
+  as Danish sample content. One exception: since the country split's P7,
   the `Audio` entry of `archive/promulgation-types.json` restates the base product's `Audio` (English, priority 50)
   with its `niord-nw` link, as its `NAVTEX` and `Twitter` entries restate theirs. Within the bootstrap run a value
   this archive gives replaces the base product's (the owner's ruling of 2026-10-24), and a changed base row is what
@@ -44,8 +44,8 @@ zips and docker export tars, and refuses a docker save tar).
   `dgps` and `dgps_station_list`), `charts.json` (172), `areas.json` (55), `sources.json` (29),
   `publication-categories.json` (4), `publications.json` (8) and `mailing-lists.json` (5 definitions, all
   inactive, with no recipient). Changed from the zip: every `niord-client-*` domain id renamed `niord-*`, and every
-  category's `messageId` removed (they named Danish messages the sample does not have); and, in the review of #192
-  (2026-10-23), the zip's own defects mended: the last five sources' English descriptions paired with their own
+  category's `messageId` removed (they named Danish messages the sample does not have); and, in a review
+  of 2026-10-23, the zip's own defects mended: the last five sources' English descriptions paired with their own
   organisations again (SVN with RDN, TBST with TBST, VBC with NAVWEAPONCEN DNK, VD with VD, VFK with DC DNK), the
   space at the end of two source names and three chart names removed, the mailing lists' typos corrected, and the
   publications' six plain-http links to 2015 and 2016 documents left out; since the owner's ruling of 2026-11-03
@@ -54,7 +54,7 @@ zips and docker export tars, and refuses a docker save tar).
 - `messages/messages.json` was written for the sample on 2026-10-22: navigational warnings and notices to
   mariners in Danish waters, in every status, with geometry and four generated attachments, in English and Danish.
   The objects they describe are fictitious (`SAMPLE-1`, …), and every position lies at sea where the vicinity
-  says (judged from general geography; nine were moved there in the review of #192, and two firing-area titles
+  says (judged from general geography; nine were moved there in that review, and two firing-area titles
   lost a doubled period). They are never exported from a Niord environment or a local import of one.
 
 ## The safety rules
