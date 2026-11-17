@@ -638,11 +638,10 @@ earlier one failed, so one red check never hides another.
 - **Info gate** runs, and is skipped, on the same terms as the Frontend gate.
 
 Neither trigger is path-filtered on `pull_request`: a check that never reports would block a merge
-forever once branch protection requires it, so the work jobs are skipped instead. Both **Detect**
+forever, since the ruleset on `main` requires it, so the work jobs are skipped instead. Both **Detect**
 steps list a moved file under its old and its new path (`git diff --no-renames`), so a move between
-the applications runs both workflows. The two gates are the checks branch protection will require;
-it is switched on before production go-live, and until then both are advisory — a red gate blocks
-no merge. On `push`, Frontend CI leaves out `fe/ui-apps/info/` like its Detect step does, so a merge
+the applications runs both workflows. The two gates are checks the ruleset on `main` requires: a
+red gate blocks the merge. On `push`, Frontend CI leaves out `fe/ui-apps/info/` like its Detect step does, so a merge
 confined to the public site runs Info CI alone, and Info CI starts the publish run
 (`.github/workflows/publish.yml` follows Backend CI, Frontend CI and Info CI on `main`: the source zip it
 publishes carries the public site's sources, so such a merge publishes a version).

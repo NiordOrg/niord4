@@ -33,10 +33,9 @@ The nested files own everything specific to a half. This file holds only what is
   `--dk`/`--gl` refuse and name it. Prerequisites: JDK 25,
   Node 22+, Docker Desktop.
 - **CI reads workflows from `.github/workflows/` at the root only** (`be-ci.yml`, `fe-ci.yml`,
-  `info-ci.yml`, `guides.yml`); copies under `be/` or `fe/` are inert. The frontend checks branch protection will
-  require are the `Frontend gate` job for the administration app and the `Info gate` job for the
-  public site (see README). Branch protection is switched on before production go-live; until then
-  every check is advisory and a red one blocks no merge, so read the checks before merging.
+  `info-ci.yml`, `guides.yml`); copies under `be/` or `fe/` are inert. A ruleset on `main` requires three checks:
+  the backend's `Unit tests`, the `Frontend gate` for the administration app and the `Info gate` for
+  the public site (see README).
 - **CI runs on every pull request** and on `main`, drafts and sub-PRs into a `feature/**` branch
   included: the repository is public, so Actions minutes cost nothing. A documentation-only backend change (`be/docs/`, Markdown under `be/`) runs no Backend CI and
   publishes nothing; a change to `publish.yml` runs Backend CI and is published by its own merge.

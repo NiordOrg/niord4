@@ -56,13 +56,9 @@ no new data after the backup, and stands.
 
 ### The repository and the backend settings
 
-- **Branch protection on `main`.** No rule protects `main` yet: the `Frontend gate` job (`fe-ci.yml`), the
-  `Info gate` job (`info-ci.yml`) and the backend unit-test job (`be-ci.yml`) report on every pull request,
-  but a red one blocks nothing, so all three are advisory. The repository is public since 2026-11-17, which makes
-  rulesets available to it; a ruleset on `main` is to require those three checks. Each of them is skipped when the
-  PR does not touch its part, and a skipped check counts as passing.
-  The same ruleset requires review for changes under `.github/` (with a `CODEOWNERS` entry naming the
-  maintainers): until then whoever may write `main` may also edit `.github/maintainers` or the two release
+- **Review for changes under `.github/`.** A ruleset on `main` requires the `Frontend gate`, the `Info gate`
+  and the backend's `Unit tests` since 2026-11-17, but no review. A rule requiring a maintainer's review for
+  changes under `.github/` (with a `CODEOWNERS` entry naming the maintainers) is still to come: until then whoever may write `main` may also edit `.github/maintainers` or the two release
   workflows in the same push, so who may retract or break-glass is in effect who may write `main`, and write
   access only for named maintainers is what carries the rule ([fe-country-split-plan](../../docs/fe-country-split-plan.md)
   §4.11 rule 1).

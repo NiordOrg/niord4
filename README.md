@@ -120,10 +120,12 @@ everything else under `fe/`, the kit `country-kit/` and the backend's endpoint t
 the workspace configuration or the scripts the public site's jobs run (`fe/AGENTS.md` → _Guards_ has
 the list).
 
-The checks branch protection will require are **`Frontend gate`**, **`Info gate`** and the backend's
-**`Unit tests`**. Each gate is green only when every other job of its workflow succeeded, so jobs can
-be added, merged or re-sharded without touching branch protection. A job skipped by its condition
-reports "skipped", which branch protection counts as passing: that is how a gate, and `Unit tests`,
+A ruleset on `main` (Settings → Rules) requires three checks before a pull request merges:
+**`Frontend gate`**, **`Info gate`** and the backend's **`Unit tests`**, each from GitHub Actions; a
+branch need not be up to date with `main` first, and the ruleset also refuses force pushes to `main`
+and its deletion. Each gate is green only when every other job of its workflow succeeded, so jobs can
+be added, merged or re-sharded without touching the ruleset. A job skipped by its condition
+reports "skipped", which the ruleset counts as passing: that is how a gate, and `Unit tests`,
 answer for a PR that does not touch their part. `Unit tests`
 runs anyway when change detection fails. A required check matches a check run by its name in any
 workflow, so no other job may be named `Unit tests` (the administration app's is `Admin unit

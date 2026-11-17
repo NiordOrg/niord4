@@ -320,16 +320,15 @@ two meet.
   visit: its readers are at sea on a metered link and the baseline is checked in.
 - `node scripts/publications/spec-check.js` after any edit to the two publications specifications.
 - **Two gates, one per application**: `Frontend gate` in `.github/workflows/fe-ci.yml` and
-  `Info gate` in `.github/workflows/info-ci.yml`, the checks branch protection will require. It is
-  switched on before production go-live; until then both are advisory, and a red gate blocks no
-  merge. A change confined to `ui-apps/info/` runs the public site's workflow and, of Frontend CI,
+  `Info gate` in `.github/workflows/info-ci.yml`, checks the ruleset on `main` requires: a red gate
+  blocks the merge. A change confined to `ui-apps/info/` runs the public site's workflow and, of Frontend CI,
   only the `Example country` job and the gate, because the example builds the public site too. The
   example job runs on a change to what its zip or harness reads — the zip's include list, the kit,
   `be/pom.xml`, the Maven wrapper and the English backend bundles — and not on `docs/`, the other
   `scripts/` files or another language's pack (`verify-local`'s `EXAMPLE_RULE` is the same expression). Everything else
   under `fe/` runs Frontend CI, and Info CI as well when it reaches something the public site's jobs
   read — the shared folders, the workspace configuration, the Node and Prettier settings, the info
-  scripts, the paths guard and the guard tests. Each gate job is the only name branch protection
+  scripts, the paths guard and the guard tests. Each gate job is the only name the ruleset
   needs, so jobs can be added, merged or re-sharded without touching it — but never name one
   `Unit tests`, the backend's required check, which matches a job of that name in any workflow. A
   gate is skipped (which counts as passing) when its application is untouched.

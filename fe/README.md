@@ -263,8 +263,8 @@ Info CI, every job pinned to `niord-info`:
   checks the example's image on pull requests.
 - **Info gate** — green only when it is.
 
-The two gates are the checks branch protection will require. It is switched on before production
-go-live; until then both are advisory, and a red gate blocks no merge.
+The two gates are checks the ruleset on `main` requires, beside the backend's `Unit tests`: a red
+gate blocks the merge.
 
 A change confined to `fe/ui-apps/info/` runs Info CI and, of Frontend CI, only the example country
 and the gate: Frontend CI drops that folder before it decides whether the administration app was
