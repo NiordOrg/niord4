@@ -382,8 +382,8 @@ class MessageReportRestServiceITTest extends ITTest {
 
     /**
      * A built-in report is data: on a database that does not have it (not bootstrapped yet, or deleted by an
-     * operator), the public site's list PDF answers 404 with the reason, not 409 with a stack trace in the log (the
-     * second review of PR #179). The report is hidden by renaming it, and renamed back.
+     * operator), the public site's list PDF answers 404 with the reason, not 409 with a stack trace in the log. The
+     * report is hidden by renaming it, and renamed back.
      */
     @Test
     void listPdf_withoutThePublicReportAnswers404NamingIt() {

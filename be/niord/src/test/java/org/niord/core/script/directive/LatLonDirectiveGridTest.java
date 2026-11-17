@@ -34,7 +34,7 @@ import static org.niord.core.script.directive.DirectiveTestSupport.render;
  * decimals a template can ask for, and over a grid of positions with minutes just below the next unit. What
  * {@code PositionFormatterRoundingTest} checks on the formatter, this checks through the directive: the
  * format a template names is the format it gets, and both the latitude and the longitude read back on their own
- * side of the globe (error hunt 2026-11-12, detector check: the first version read back the latitude only and
+ * side of the globe (the first version read back the latitude only and
  * accepted either hemisphere letter, so a formatter that printed every position north and east passed it).
  */
 public class LatLonDirectiveGridTest {

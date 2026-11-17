@@ -1108,7 +1108,7 @@ describe('OneOffDetail', () => {
   });
 
   /**
-   * A URL pointing at nothing says so, with the way back and no Retry (L-174).
+   * A URL pointing at nothing says so, with the way back and no Retry.
    *
    * The server refuses the read with a coded 404 for an id it has no one-off
    * for, a series that is not a one-off included. Retry would only fetch the

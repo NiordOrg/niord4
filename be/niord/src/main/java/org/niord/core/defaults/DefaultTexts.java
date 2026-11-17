@@ -46,7 +46,7 @@ import java.util.TreeMap;
  * </ol>
  * Both layers are read with {@code getResource}: {@link DefaultsGuard} has already refused a second copy. No other
  * file is read: a root-level {@code <bundle>_<lang>.properties} is not (the transitional third layer was removed in
- * NG-B, after GL's bump onto the staged packs, niord-gl #10; docs/code-data-config-plan.md §4.1).
+ * NG-B, after GL's bump onto the staged packs; docs/code-data-config-plan.md §4.1).
  *
  * <p>A language with no file in either layer contributes nothing and logs a warning; at runtime the default language
  * serves its texts. The default language must have a file in either layer for every bundle (DICT1).

@@ -14,7 +14,7 @@ The contract is enforced, not advised. Three things hold it:
   on its class path, whatever packages it scans; DK and GL start under it today.
 - **The country build group**: niord-base's security tests and the country checks, which `niord-parent` runs in
   every country build that declares niord-base's test-jar (DK and GL since their C6, `docs/code-data-config-plan.md`
-  §11), with a workflow step from a country's C6 that fails when the group ran no test (§ The country build group).
+  §9), with a workflow step from a country's C6 that fails when the group ran no test (§ The country build group).
 - **The override check** (`check-overrides.sh` in `niord-image-tools`), which a country's workflow runs over its
   jar after the package step, from that country's C6.
 
@@ -94,7 +94,7 @@ check covers every handler method of Spring MVC's `RequestMappingHandlerMapping`
 framework handlers are exempt: `BasicErrorController` (the `/error` page). The guard does not check role names (a
 misspelt role fails closed); niord-base's `RestControllerSecurityAnnotationTest` does, for its own controllers.
 
-Outside the guard, and refused by review (`docs/code-data-config-plan.md` §11 C5b, Decisions): an HTTP endpoint that
+Outside the guard, and refused by review (`docs/fe-country-split-plan.md` §4.11 rule 3): an HTTP endpoint that
 is not such a handler method, that is a servlet or `ServletRegistrationBean`, a servlet filter, a `RouterFunction`, an
 `HttpRequestHandler` behind a handler mapping of its own, the actuator's own mapping, and SECOM's RESTEasy endpoints
 in niord-base. None of them carries a JSR-250 annotation that method security would read, so under `permitAll` such
@@ -188,7 +188,7 @@ has no count: it packages with `-DskipTests` after a green CI run, which has cou
 with every other test, and a `-Dtest=` or
 `-Dit.test=` filter applies to it as well: the group's executions do not fail when the filter names none of their
 classes, so a country can run one test of its own. Two members skip themselves where they do not apply:
-`MailHtmlTest`'s frontend check outside a niord-ng tree, and `CountryDefaultsChecksTest` while the class path holds no
+`MailHtmlTest`'s frontend check outside a base product checkout, and `CountryDefaultsChecksTest` while the class path holds no
 `defaults/country/` and no `defaults/packs/`. A country whose `be/` ever becomes an aggregator with `pom` packaging sets
 `niord.countryGroup.skip` to `true` in that aggregator only: Surefire refuses `groups` on a project without a test
 class path, which is why the base product's own reactor pom switches the group off (the profile
@@ -266,7 +266,7 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   each job and its data file): its templates and scripts, domains and series, data dictionaries, parameter types,
   reports and promulgation types, and the languages and domain links it adds to the base product's entries. It is
   applied once, to a fresh database, after the pinned base product's `niord-bootstrap` zip in the same run. Since
-  its bump to 4.0.87 (P5e, niord-dk #6 on `feature/p5-dk-moves`), DK's holds its 56 templates and scripts (42
+  its bump to 4.0.87, DK's holds its 56 templates and scripts (42
   shadows of base product templates, 14 of its own), its 5 domains with their 6 series, the 4 DGPS stations of the
   `aton` dictionary and the `da` of the 111 base product `aton` keys, the parameter types `dgps` and
   `dgps_station_list` and additions carrying the `da` of the 13 base product composite types' template parameters,
@@ -275,7 +275,7 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   `Twitter` to its domains. From the base product version with the country split's P7, whose bootstrap carries
   `Audio`, DK's `Audio` row restates the base product's: on a fresh database its `da` replaces the base product's
   English and its `niord-nw` link is added (see Changes).
-  Since its bump to 4.0.87 (P6e, niord-gl #7 on `feature/p6-gl-moves`), GL's holds its 86 templates and scripts (46
+  Since its bump to 4.0.87, GL's holds its 86 templates and scripts (46
   shadows, 40 of its own), the domain `niord-gl-nw` with its series `ako-nw`, the DGPS stations and types whole with
   their `da` and `kl`, the `da` and `kl` of the 111 base product `aton` keys, additions carrying the `da` and `kl`
   of the 13 base product composite types' template parameters, additions carrying the `da` and `kl` of the 13 base
@@ -284,7 +284,7 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   database its `kl`, priority 10 and `MANDATORY` replace or fill the base product's English, 50 and empty
   requirement, with no domain link, see Changes) and `Navtex GL`, and an addition linking `NAVTEX` to
   `niord-gl-nw`. GL restates nothing whole but `Audio`. Neither holds mailing lists.
-  From the base product version with CAT45 (the owner's ruling of 2026-11-04, decision 145), the base product's
+  From the base product version with CAT45 (the owner's ruling of 2026-11-04), the base product's
   `categories.json` holds 45 categories in English, with no domain links and no `messageId`: the 13 above and the
   32 under `Buoy`, `Beacon`, `Obstruction`, `Drifting object` and `Radio navigation`, with `Radio navigation`/`DGPS`
   naming no script and no template parameter. DK's and GL's archives give the names of the 13 only. A country
@@ -367,7 +367,7 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   a country's IT fixture writes its own templates over them, creating or replacing each path, and needs the base
   product's half for no path: a completion that creates only missing paths never writes a country's copy of a base
   product template, and the IT renders the base product's (see Changes). Since DK's and GL's bumps to 4.0.97
-  (`niord-dk` #10, `niord-gl` #9, 2026-10-25) their fixtures, `DkBootstrapTemplates.writeDksTemplates` and
+  (2026-10-25) their fixtures, `DkBootstrapTemplates.writeDksTemplates` and
   `GlBootstrapTemplates.writeTemplates`, write only the country's templates over the test-jar's rows, creating or
   replacing each path (an equal row is left), and the base product's half is gone; the create-only completion
   (`addMissingTemplates`) is history. The unpacked base product's bootstrap stays for the countries' bootstrap

@@ -274,7 +274,7 @@ class DefaultTextsChecksTest {
         assertEquals("line 2: no such key in defaults/base/texts/en/", findings.getFirst().detail());
     }
 
-    /** The bracket form, as fa-list-pdf.ftl reads pdf.fa.subtitle, is checked too (the second review of PR #179) */
+    /** The bracket form, as fa-list-pdf.ftl reads pdf.fa.subtitle, is checked too */
     @Test
     void aTemplateThatUsesAMissingKeyInTheBracketFormFails() throws IOException {
         write(root, "templates/messages/list.ftl", "${text['present.key']}\n${text[\"missing.key\"]}\n");

@@ -540,12 +540,12 @@ describe('init', () => {
       );
     });
 
-    it("no --version in niord-ng's tree, and one that is not a version", () => {
+    it("no --version in the base product's tree, and one that is not a version", () => {
       const root = repository();
       assertRefused(
         root,
         () => run(root, { kit: KIT }),
-        /^the kit at .* is niord-ng's tree, which names no version: give --version <v>$/,
+        /^the kit at .* is the base product's tree, which names no version: give --version <v>$/,
       );
       assertRefused(root, () => run(root, { kit: KIT, version: 'v4' }), /"v4" is not/);
     });
@@ -586,12 +586,12 @@ describe('init', () => {
       assert.ok(run(root, { version: VERSION }).written.includes('be/pom.xml'));
     });
 
-    it("is --version in niord-ng's tree", () => {
+    it("is --version in the base product's tree", () => {
       assert.equal(kitVersion({ kit: KIT, version: '4.0.0-n2' }), '4.0.0-n2');
       assert.throws(() => kitVersion({ kit: KIT }), /names no version/);
     });
 
-    it("writes the --version given when it runs from niord-ng's tree", () => {
+    it("writes the --version given when it runs from the base product's tree", () => {
       const version = '4.0.0-n2';
       const root = repository({ version });
       fs.writeFileSync(path.join(root, 'answers.json'), JSON.stringify(ANSWERS));
@@ -919,7 +919,7 @@ describe('init', () => {
     it('exits 2 on an unknown argument and on a flag without its value, naming its usage', () => {
       const root = repository();
       const usage =
-        "(init [<cc>] [--answers <file>] --sha256-file <file> | --zip-sha256 <fe-sha256> --kit-sha256 <kit-sha256> [--version <v>, niord-ng's tree only])";
+        "(init [<cc>] [--answers <file>] --sha256-file <file> | --zip-sha256 <fe-sha256> --kit-sha256 <kit-sha256> [--version <v>, the base product's tree only])";
       for (const [args, argument] of [
         [['--zip-sha256', SHA, '--kit-sha256'], '--kit-sha256'],
         [['--answers', '--sha256-file', '.niord/SHA256SUMS'], '--answers'],

@@ -96,7 +96,7 @@ class ScriptResourceCheckTest {
     }
 
     /**
-     * The two rules the second review of PR #179 asked for: within the allowed java.util., the sub-packages that reach
+     * Two rules a review asked for: within the allowed java.util., the sub-packages that reach
      * files, service loading and threads; and the org, com, net and edu roots the engine exposes, other than
      * niord-base's own packages
      */

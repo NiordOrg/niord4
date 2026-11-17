@@ -31,7 +31,7 @@ import liquibase.statement.SqlStatement;
  * name matched without regard to case. The fixture is a dump of the base product's templates and scripts, whose
  * FreeMarker is full of {@code ${...}}: on GitHub's Ubuntu runners, whose {@code LANG} is {@code C.UTF-8}, every
  * {@code ${lang}} of {@code common.ftl} reached the database as {@code C.UTF-8}, and the subject field templates
- * printed {@code part.getDesc('C.UTF-8')} (PR #322's first CI run). Any other name the templates use, such as
+ * printed {@code part.getDesc('C.UTF-8')} (seen in a CI run). Any other name the templates use, such as
  * {@code ${title}}, {@code ${year}} or {@code ${number}}, would be taken the same way from a machine that sets it.
  * This change splits and runs the file as {@code sqlFile} does (statements split at {@code ;}, comments kept), but
  * reads it without the expansion. No deployment runs it: deployments use the bare master changelog, and their

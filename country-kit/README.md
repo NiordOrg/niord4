@@ -11,7 +11,7 @@ the lint plugin, `lib/country-lint.cjs` (CommonJS, as ESLint loads it), and the 
 asset resolution reads the workspace's installed `@angular/build` (`lib/asset-outputs.mjs`).
 
 The kit finds the base product through one module, `lib/where.mjs`, never by taking its own parent
-folder for granted. It tells the two layouts apart: in niord-ng's tree the kit is `country-kit/` at
+folder for granted. It tells the two layouts apart: in the base product's tree the kit is `country-kit/` at
 the repository root, beside the base product `fe/`; a country runs the kit package, unpacked at
 `<root>/.niord/kit` with its marker `kit.json` (`{"package":"niord-country-kit","version":"<version>"}`),
 and the kit finds the base product at `<root>/fe/.niord/base`. Any other place is refused, with the
@@ -35,7 +35,7 @@ link into.
 | [templates/setup.mjs](templates/setup.mjs)                                                                                     | the set-up stub a country commits as `fe/setup.mjs`, byte for byte; it verifies the kit package and the source zip by their hashes and hands over to the kit                                                                                             |
 | [setup-kit.mjs](setup-kit.mjs) and `lib/`                                                                                      | the kit's half of set-up: the checks, staging, the build report, the generated workspace                                                                                                                                                                 |
 | [guard-build.mjs](guard-build.mjs)                                                                                             | run first by the generated `build` script: refuses a workspace staged from a local source                                                                                                                                                                |
-| [lib/where.mjs](lib/where.mjs)                                                                                                 | where the kit is, and so where it finds the base product, the workspace and the backend: niord-ng's tree, a country's unpacked zip or the kit package with its `kit.json`; any other place is refused                                                    |
+| [lib/where.mjs](lib/where.mjs)                                                                                                 | where the kit is, and so where it finds the base product, the workspace and the backend: the base product's tree, a country's unpacked zip or the kit package with its `kit.json`; any other place is refused                                            |
 | [init.mjs](init.mjs) and `templates/`                                                                                          | starts a country repository from a handful of answers: the whole country, backend included (from `templates/be/`), its launcher, `start-local.sh` (below), and its workflows, `ci.yml` from `templates/ci.yml` among them                                |
 | [init-answers.schema.json](init-answers.schema.json) and [lib/answers.mjs](lib/answers.mjs)                                    | init's answers: the schema and the reader with the rules a schema cannot say                                                                                                                                                                             |
 | [lib/scaffold.mjs](lib/scaffold.mjs) and [lib/image-workflow.mjs](lib/image-workflow.mjs)                                      | the scaffold init writes from the answers (`be/` whole, the manifest, `info.config.ts`, `CODEOWNERS`, `ci.yml`, `image.yml`, the root README) and the image workflow's jobs                                                                              |
@@ -49,7 +49,7 @@ link into.
 | [lib/pack-archive.mjs](lib/pack-archive.mjs)                                                                                   | a pack's canonical archive: its layout, its build and its reader, and the staging into `.niord/packs/<lang>/`                                                                                                                                            |
 | [lib/oci.mjs](lib/oci.mjs)                                                                                                     | the kit's OCI client: a pack and its withdrawn marker pushed and pulled; `pack.yml`'s publish and withdraw commands                                                                                                                                      |
 | [lib/pins.mjs](lib/pins.mjs), [lib/published-catalogs.mjs](lib/published-catalogs.mjs)                                         | the pins of `niord-pins.lock.json`; the catalogs of the published base product versions, through Maven                                                                                                                                                   |
-| [zip-include.json](zip-include.json), [kit-include.json](kit-include.json), `source-zip.mjs`                                   | what the source zip and the kit package hold; their builds, their verification and their guard command (niord-ng's publish tool, which the kit package leaves out)                                                                                       |
+| [zip-include.json](zip-include.json), [kit-include.json](kit-include.json), `source-zip.mjs`                                   | what the source zip and the kit package hold; their builds, their verification and their guard command (the base product's publish tool, which the kit package leaves out)                                                                               |
 | `country-words.json`, [lib/country-words.mjs](lib/country-words.mjs)                                                           | the country-word guard over fe/ and the zip: the words, their allow-list with reasons, and its check; not in the zip                                                                                                                                     |
 | [docs/](docs/)                                                                                                                 | the guides: who does what and how an upgrade works, the country guide and its in-depth guide, the set-up prompt for an AI agent, the designers' brief, the operators' guide; read them at `.niord/kit/docs/` after set-up, the version you build against |
 | [API-CHANGES.md](API-CHANGES.md)                                                                                               | the country API's compatibility policy and every change to it, with what a country must do                                                                                                                                                               |
@@ -68,7 +68,7 @@ link into.
 
 The `*.test.mjs` files beside them are the kit's own tests, run by the base product's `test:guards`;
 they are not in the zip, and neither is `country-words.json`, which only the base product runs, nor
-niord-ng's tooling for the folder, `eslint.config.mjs`, `.prettierrc` and `.gitattributes`.
+the base product's tooling for the folder, `eslint.config.mjs`, `.prettierrc` and `.gitattributes`.
 
 ## Set-up
 
@@ -294,8 +294,8 @@ three jobs:
   already, and after a failed `compute`, counts the unticked boxes and sets the status on the pull
   request's head.
 
-`BASE_REPO` in its `env:` is the base product's repository, `NiordOrg/niord4` since 4.0.182 (before
-it, the private `SIFA-DK/niord-ng`): the one value in it that changes when that repository moves. A
+`BASE_REPO` in its `env:` is the base product's repository, `NiordOrg/niord4` since 4.0.182: the one
+value in it that changes when that repository moves. A
 country takes the new value with the template at its bump, and the comment lists a copy that differs
 from the kit's as an item.
 
@@ -1478,6 +1478,30 @@ already pushed when it runs. Every run block of the three jobs starts `set -euo 
 the other security headers, the proxy allow-list and the query maps are the base product's and
 never parameters: a feature that needs another backend path or CSP source is a base product change.
 
+## Paused until production
+
+Until the first production deployment, or the first country that the base product's own developers
+do not maintain, whichever comes first, part of the upgrade contract is paused. The base product and
+the countries built on it are developed together by the same people, so for now:
+
+- a country's base bump is merged when its CI is green;
+- the boxes of the Base bump comment are information: an unticked box, and the red
+  `niord/upgrade-actions` status it sets, hold no merge back;
+- `API-CHANGES.md` gets an entry only when the base product's upgrade test demands one
+  ([The example country](#the-example-country), _The upgrade test_).
+
+Not paused:
+
+- the base product's upgrade test itself. It runs in Frontend CI's Example country job, so it is
+  part of the required `Frontend gate`, and it is what says that a change breaks a country at its
+  next bump;
+- a value for every new English text in a country's pack: a draft, listed unaccepted
+  ([Language packs](#language-packs)). An accepted translation is never rewritten in a bump.
+
+The rest of this README, `API-CHANGES.md` and the guides describe the contract in full, as it
+holds again from the day it wakes. One deliberate pull request, decided by the base product's
+owner, wakes it, and that pull request deletes this section.
+
 ## The upgrade report
 
 A version bump — a new `<parent>` in `../be/pom.xml` with its pin — makes `node setup.mjs` write
@@ -1636,8 +1660,7 @@ node .niord/kit/init.mjs <cc> --sha256-file .niord/SHA256SUMS
 The `sha256sum -c` line is the first pins' check, and it refuses: `SHA256SUMS` holds the two lines
 exactly as the notes of the base product's GitHub release `v<version>` give them,
 `<sha256>  niord-fe-src-<version>.zip` and `<sha256>  niord-country-kit-<version>.zip`
-(`gh release view v<version> --repo NiordOrg/niord4`; a version up to 4.0.181 was released before
-the move to that repository, and its notes are not public), and
+(`gh release view v<version> --repo NiordOrg/niord4`; release notes exist from 4.0.182), and
 `sha256sum -c` fails unless each downloaded zip has its line's hash. Run nothing from either zip
 before both say OK: `unzip` and
 `init` come after. The publish workflow writes both lines when it publishes the zips, and the
@@ -1665,7 +1688,7 @@ node .niord/kit/init.mjs [<cc>] [--answers <file>] \
   version's names and a missing line are each refused.
 - `--zip-sha256 <fe-sha256> --kit-sha256 <kit-sha256>` is the same input as two flags. Give one
   form: both, or neither, is refused.
-- `--version <v>` only in niord-ng's tree, whose kit names no version. In the kit package the
+- `--version <v>` only in the base product's tree, whose kit names no version. In the kit package the
   version is its `kit.json`'s, and a `--version` that differs is refused.
 - `--answers <file>` reads the answers from a file (below).
 

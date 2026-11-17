@@ -106,8 +106,9 @@ function parseArgs(argv) {
 }
 
 /**
- * True when `kit` is a country's kit (the layout resolver finds it outside niord-ng's tree) and
- * `cwd` is the workspace it serves, the country's fe/. Throws on a kit in no layout it knows.
+ * True when `kit` is a country's kit (the layout resolver finds it outside the base product's
+ * tree) and `cwd` is the workspace it serves, the country's fe/. Throws on a kit in no layout it
+ * knows.
  */
 export function isCountryWorkspace(kit, cwd) {
   const layout = where(kit);

@@ -116,7 +116,7 @@ export class ChartEditor {
     required(path.chartNumber);
     // chartNumber is the immutable string PK (the PUT path id) — locked on edit.
     disabled(path.chartNumber, { when: () => this.model()?.mode === 'edit' });
-    // L-178. A scale is 1:n with n at least 1; an empty scale stays allowed (the rule
+    // A scale is 1:n with n at least 1; an empty scale stays allowed (the rule
     // skips null). [formField] reflects it onto the input as min="1", so the browser
     // marks a lower value the user typed.
     min(path.scale, 1);

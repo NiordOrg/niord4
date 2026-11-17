@@ -57,8 +57,8 @@ import java.util.stream.Collectors;
  * Besides signature, expiry and issuer, a token must have been issued to one of the configured clients
  * ({@link #authorizedPartyValidator(String[])}). {@code @EnableMethodSecurity(jsr250Enabled = true)} keeps the
  * {@code @RolesAllowed} / {@code @PermitAll} annotations used throughout the REST layer enforcing —
- * <strong>without this flag they would silently become a fail-OPEN no-op</strong>
- * (see MIGRATION.md risk #2). {@code RestControllerSecurityAnnotationTest} asserts that every
+ * <strong>without this flag they would silently become a fail-OPEN no-op</strong>.
+ * {@code RestControllerSecurityAnnotationTest} asserts that every
  * handler method carries one of the annotations, so nothing is open merely by omission.
  *
  * <p>HTTP authorization is left permissive ({@code permitAll}); authorization is enforced at the

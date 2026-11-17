@@ -100,7 +100,7 @@ public abstract class ITTest {
      * runs ({@code java.io.tmpdir/niord}, or an exported {@code NIORD_HOME}, whose job logs are therefore deleted
      * too). Without this, a job's log could hold an earlier run's lines: a line an assertion looks for could come
      * from that run, and a failure it wrote could break a test that asserts a silent log (the import round trips,
-     * detector check of 2026-11-12). CI and {@code verify-local} start from an empty home, so for them this deletes
+     * seen on 2026-11-12). CI and {@code verify-local} start from an empty home, so for them this deletes
      * nothing. Only the batch-job folder is touched; the rest of the home is used as it is.
      *
      * <p>The home is found in the application's own order ({@code SettingsService.overrideOf}): the

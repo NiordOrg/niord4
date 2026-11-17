@@ -383,8 +383,8 @@ export class PublicationsPage {
   /**
    * What the reader is looking for, held in the address bar.
    *
-   * Linked to the query parameter, as the series screen's archive filter is
-   * (L-175). The router keeps this page when only the query changes, so a filter
+   * Linked to the query parameter, as the series screen's archive filter
+   * is. The router keeps this page when only the query changes, so a filter
    * read once from the snapshot stayed on screen after Back had moved the
    * address, and a reload then showed another list. The writes below are this
    * component's own and the address echoes them back unchanged; a navigation

@@ -297,7 +297,7 @@ class ReferenceDataSweepGroup implements SweepGroup {
                 .sweep((ctx, as) -> {
                     // The limit defaults to 0, which the query takes for "no row": the search without a limit
                     // answers no area, as the old system's did (it also passed 0 to setMaxResults); every caller
-                    // sends a limit. Not a fault (wave 3b's second reader)
+                    // sends a limit. Not a fault
                     SweepResponse unlimited = ctx.ok(as, SweepRequest.get("/rest/areas/search").query("lang", "en")
                             .query("name", AREA_ROOT));
                     ctx.checkEquals(List.of(), unlimited.json().getList("$"),

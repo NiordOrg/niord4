@@ -32,7 +32,7 @@ import {
  * reads the warning the backend makes from them in the admin API, the public API, on the Status
  * page, in its PDF and on the public site. Then a period's start is changed and the warning
  * follows; the backend is restarted and everything read again; a period is removed and the
- * warning follows again. Two checks of faults the error hunt found close it: a period across
+ * warning follows again. Two checks of earlier faults close it: a period across
  * midnight survives a save of its next day, and a firing that ended earlier today makes no warning.
  *
  * The set-up makes what the sample lacks: the firing schedule of the Firing Areas domain, made once

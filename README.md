@@ -1,18 +1,15 @@
-# niord-ng
+# Niord
 
-Combined repository for the next-generation Niord stack (NW + NM T&P editing and
-publishing system):
+Niord is the maritime safety information system for Navigational Warnings and Notices to
+Mariners: the NW and NM T&P editing and publishing system. This repository holds the whole
+product, backend and frontend:
 
 - **`be/`** — Spring Boot 4 backend (Maven reactor: `niord/` country-neutral base
   library + `niord-app/` generic English application; a country application, such as the Danish one in
-  `SIFA-DK/niord-dk`, is a repository of its own, built on the published library). Imported from `kaspernielsen/niord-port` with full history; the
-  legacy `quarkus/` and `oldest-code/` reference trees stay behind in the
-  archived repo.
+  `SIFA-DK/niord-dk`, is a repository of its own, built on the published library).
 - **`fe/`** — Angular 22 workspace with two applications: the administration
-  web app (`fe/ui-apps/admin/`, imported from `MadsenJensen/niord-app` with full
-  history) and the public site for mariners (`fe/ui-apps/info/`, brought in from
-  `NiordOrg/niord-info` and `kaspernielsen/niord-info`), which ships as a
-  container image of its own.
+  web app (`fe/ui-apps/admin/`) and the public site for mariners (`fe/ui-apps/info/`),
+  which ships as a container image of its own.
 - **`country-kit/`** — the country kit, beside `fe/`: the set-up, `init`, the pack tools and
   checks a country repository builds its frontend with, its guides and the example country,
   published as its own package, `org.niord:niord-country-kit`, at the same version as the frontend
@@ -20,7 +17,7 @@ publishing system):
 
 ## The base product and its countries
 
-niord-ng is the **base product**: the whole system, the same for every country and knowing none of
+This repository is the **base product**: the whole system, the same for every country and knowing none of
 them. Each country that runs Niord is a repository of its own on top of it. A country pins one
 released version of the base product and adds only what makes its deployment its own: its
 configuration, branding, languages, texts and starting data. It never copies or edits the base
@@ -31,19 +28,20 @@ new version, and a country's own choices stay in its repository through every up
 
 ```mermaid
 flowchart LR
-  ng["niord-ng: the base product"] --> rel["A released version: the backend library, the frontend source zip and the country kit, the bootstrap and launcher packages"]
+  base["Niord: the base product"] --> rel["A released version: the backend library, the frontend source zip and the country kit, the bootstrap and launcher packages"]
   rel --> dk["niord-dk: the Danish deployment, on a pinned version"]
   rel --> new["A new country: its own repository, on a pinned version"]
 ```
 
-- The Danish deployment is built this way in [`SIFA-DK/niord-dk`](https://github.com/SIFA-DK/niord-dk).
+- The Danish deployment is built this way in `SIFA-DK/niord-dk`, a repository that is not public yet.
 - To start a country, read the guides in [`country-kit/docs/`](country-kit/docs/README.md):
   the idea in more detail, the country guide's standard path (`init` from a handful of answers,
   then make it yours and deploy) and its in-depth companion, the designers' brief and the
   operators' guide.
 - How the base product is released (one shared version per merge) is in
-  [`be/docs/cicd/design.md`](be/docs/cicd/design.md); how niord-ng became the base product is
-  recorded in [`docs/fe-country-split-plan.md`](docs/fe-country-split-plan.md).
+  [`be/docs/cicd/design.md`](be/docs/cicd/design.md); the model behind the split, a base product that
+  knows no country and the contracts a country builds on, is in
+  [`docs/fe-country-split-plan.md`](docs/fe-country-split-plan.md).
 
 ## Try it
 
@@ -80,8 +78,8 @@ so never expose it. A country deploys with the Helm chart (`be/k8s/`).
 ## CI
 
 GitHub Actions only reads workflows from `.github/workflows/` at the **root** of a repository, so
-that is the only place a workflow in this monorepo does anything. Both imported projects brought
-their own `.github/` directory along, and those copies are inert wherever they still sit.
+that is the only place a workflow in this repository does anything: a `.github/` directory under
+`be/` or `fe/` would be inert.
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
@@ -243,3 +241,8 @@ npm run start:local           # http://localhost:4200, /rest proxied to the loca
 ```
 
 See `be/README.md` and `fe/README.md` for the full instructions of each part.
+
+## Licence
+
+Niord is licensed under the Apache License 2.0: see [LICENSE](LICENSE). [NOTICE](NOTICE) holds the
+copyright lines and names the parts that are under a licence of their own.

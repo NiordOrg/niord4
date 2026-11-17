@@ -58,7 +58,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.niord.test.DeliveryFixtures.uniq;
 
 /**
- * The auto-publish sweep and a lock conflict (SCHED3, the orchestrator's decision 15): when one message's publication
+ * The auto-publish sweep and a lock conflict (SCHED3): when one message's publication
  * fails because it met another transaction's lock, a deadlock ({@code 40P01}) or a lock timeout ({@code 55P03}), the
  * message stays VERIFIED and the next minute's sweep publishes it. Any other failure still sets the message back to
  * DRAFT. A due warning must not end among the drafts because two transactions crossed.

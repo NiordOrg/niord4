@@ -13,12 +13,14 @@
  * Text files are `{{slot}}` templates in templates/be/ and templates/ci.yml, filled by fill(),
  * which refuses a slot left unfilled and a slot the template does not have. JSON files, the
  * language block of the pom, info.config.ts and the README are generated in code. The pom
- * template is pom.xml.tmpl: a file named pom.xml would join the Maven cache key of niord-ng's CI
- * (the hash of every pom.xml) and be read as an invalid pom by GitHub's dependency graph.
+ * template is pom.xml.tmpl: a file named pom.xml would join the Maven cache key of the base
+ * product's CI (the hash of every pom.xml) and be read as an invalid pom by GitHub's dependency
+ * graph.
  *
  * Every backend file the kit package carries (the Maven wrapper, the base product's settings file
- * and its catalog) is read through lib/where.mjs kitBackendBytes, so a package and niord-ng's tree
- * give the same bytes. The settings file is generated from the base product's file and catalog:
+ * and its catalog) is read through lib/where.mjs kitBackendBytes, so a package and the base
+ * product's tree give the same bytes. The settings file is generated from the base product's file
+ * and catalog:
  * the answered keys in `values`, every other key of the base product's file in `useBaseDefault`
  * with a reason (USE_BASE_DEFAULT_REASONS, or the base product's default at the version for a key
  * the table does not know yet), and a required catalog key no answer sets refused.

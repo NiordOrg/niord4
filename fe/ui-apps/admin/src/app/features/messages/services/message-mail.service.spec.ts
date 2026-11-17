@@ -29,7 +29,7 @@ interface Opts {
 
 function setup(opts: Opts = {}) {
   let sender: MailSender | undefined;
-  // The dialog runs the send itself (L-161): the fake keeps the sender it is given, so a test
+  // The dialog runs the send itself: the fake keeps the sender it is given, so a test
   // can press Send through it, and answers the dialog's result only when a test asks for one.
   const open = vi.fn<
     (ids: readonly string[], send: MailSender) => Observable<MailRequest | undefined>
@@ -117,7 +117,7 @@ describe('MessageMailService', () => {
     expect(next).toHaveBeenCalledWith(undefined);
   });
 
-  it('success: temp tag → send → "queued" toast; the query carries tag and lang, the body the mail (L-153)', () => {
+  it('success: temp tag → send → "queued" toast; the query carries tag and lang, the body the mail', () => {
     const { service, pressSend, createTempMessageTag, send, success, error } = setup();
     service.mailSelection(['m1', 'm2']).subscribe();
     // Nothing is sent before Send is pressed in the dialog.
@@ -142,7 +142,7 @@ describe('MessageMailService', () => {
     expect(outcome).toEqual({ done: true, failed: false });
   });
 
-  it('temp-tag failure → error toast, send never called, and the dialog hears of the failure (L-161)', () => {
+  it('temp-tag failure → error toast, send never called, and the dialog hears of the failure', () => {
     const { service, pressSend, send, success, error } = setup({ tempTagError: true });
     service.mailSelection(['m1']).subscribe();
 
@@ -155,7 +155,7 @@ describe('MessageMailService', () => {
     expect(outcome).toEqual({ done: false, failed: true });
   });
 
-  it('a refused send names the refusal in the toast and fails the sender (L-161)', () => {
+  it('a refused send names the refusal in the toast and fails the sender', () => {
     const { service, pressSend, success, error } = setup({
       sendError: refusal("'someone' is not a mail address"),
     });

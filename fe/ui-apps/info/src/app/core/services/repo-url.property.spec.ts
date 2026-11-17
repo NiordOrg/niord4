@@ -4,7 +4,7 @@ import { normalizeAttachmentPath, normalizeRepoUrl, normalizeRepoUrlsInHtml } fr
 
 /**
  * Properties of the public site's repository links, over generated file names and links from a
- * fixed seed (error hunt, phase 2): an attachment's address names exactly the stored file, in
+ * fixed seed: an attachment's address names exactly the stored file, in
  * either of the two spellings the backend hands out; a link to this site's repository loads from
  * this origin with its query and fragment, and every other link is left as it was.
  */

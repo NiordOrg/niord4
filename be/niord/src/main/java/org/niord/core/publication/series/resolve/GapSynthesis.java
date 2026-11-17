@@ -240,8 +240,8 @@ public final class GapSynthesis {
         // not query-backed at all -- an issue has no start to read, and needs
         // none: each release carries everything standing at its cut-off, so two
         // consecutive releases cover the stretch between them by definition. The
-        // one thing that stretch can hold is a release that was withdrawn, which
-        // is the period decision 12 says is uncovered again.
+        // one thing that stretch can hold is a release that was withdrawn, whose
+        // period is uncovered again.
         List<Issue> dated = covering.stream()
                 .filter(i -> i.effectiveCutoff() != null)
                 .toList();

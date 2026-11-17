@@ -165,7 +165,7 @@ export interface PublicationCategory {
    * Where the category sorts on the public page. Every category has one: the
    * column cannot hold "no order". The categories tab always sends a number;
    * on update the server keeps an omitted priority as it is and refuses an
-   * explicit `null` (L-173).
+   * explicit `null`.
    */
   readonly priority?: number | null;
   readonly publish?: boolean;

@@ -1743,7 +1743,7 @@ describe('base-bump.yml: Build the comment', () => {
 
   // The earlier comment as GitHub may give it after an edit in the browser: CRLF.
   const crlf = (lines) => `${lines.join('\r\n')}\r\n`;
-  // The agent template's box as F8-4 wrote it, without the marker, and as it is written now.
+  // The agent template's box as it was first written, without the marker, and as it is written now.
   const AGENTS_TEXT =
     'Merge `.niord/kit/templates/AGENTS.md` into `AGENTS.md`: the agent template changed since 4.0.97.';
   const AGENTS_ITEM = `${AGENTS_TEXT}${mark('AGENTS.md')}`;

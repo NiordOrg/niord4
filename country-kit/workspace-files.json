@@ -63,7 +63,7 @@
     "CLAUDE.md": "the base product's one-line importer of AGENTS.md for Claude Code; a country's is at its repository root, from init",
     "LICENSE": "in the zip as the base product's licence; a country repository has its own",
     "README.md": "the base product's; the country repository has its own",
-    "country-kit": "the kit; in niord-ng's tree beside fe/, not in fe/; a package of its own, unpacked at the repository root's .niord/kit/, which the generated scripts and lint configuration name as ../.niord/kit/",
+    "country-kit": "the kit; in the base product's tree beside fe/, not in fe/; a package of its own, unpacked at the repository root's .niord/kit/, which the generated scripts and lint configuration name as ../.niord/kit/",
     "docs": "the base product's documentation, never in the zip",
     "eslint-shared.cjs": "in the zip, read from .niord/base/ by the base product's eslint.config.js",
     "guides-shots": "the screenshot rig of the base product's user guides (guides/ at the repository root), never in the zip; it runs on a local copy of test data and takes the pictures of the base product's own screens",

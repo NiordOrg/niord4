@@ -222,8 +222,7 @@ class BootstrapFolderTest {
                         "Obstruction", "Drifting object", "Radio navigation"),
                 categories.stream().map(BootstrapFolderTest::englishName).toList());
         assertEquals(45, count(categories),
-                "the base product's 45 categories: the 13 the bootstrap had and the 32 that were the demo archive's "
-                        + "(decision 145)");
+                "the base product's 45 categories: the 13 the bootstrap had and the 32 that were the demo archive's");
         assertEquals(Map.of("Buoy", 5, "Beacon", 3, "Obstruction", 14, "Drifting object", 2, "Radio navigation", 3),
                 childCounts(categories.subList(3, categories.size())), "the children of the five roots added");
         assertTrue(categories.stream().allMatch(BootstrapFolderTest::noDomainOrMessage),

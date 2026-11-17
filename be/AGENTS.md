@@ -8,9 +8,8 @@ suite) and `niord-app/` (the generic English deployable). The Danish and Greenla
 and shares nothing with the others except through `niord` ([docs/cicd/design.md](docs/cicd/design.md)
 §2.1). Repository-wide rules are in the [root AGENTS.md](../AGENTS.md).
 
-Spring is permanent. The application was ported from Quarkus and the Quarkus reactor stayed behind in the
-archived `kaspernielsen/niord-port` repository; Spring-specific code and Spring-specific tests are correct,
-not a compromise. `MIGRATION.md` records the port's intent and is stale where it says Jersey, JTA or MySQL.
+Spring is permanent. The application was ported from Quarkus, and the Quarkus reactor is not in this
+repository; Spring-specific code and Spring-specific tests are correct, not a compromise.
 
 ## Stack, in one line each
 
@@ -205,5 +204,3 @@ must be online to fetch the JUnit provider.
 4. [potential-errors.md](docs/potential-errors.md), [untestable-code.md](docs/untestable-code.md) — open findings
 5. [secom-design.md](docs/secom-design.md), [secom-go-live.md](docs/secom-go-live.md) — the SECOM/S-124 subsystem
 6. [lucene-postgres-toggle.md](docs/lucene-postgres-toggle.md) — the message full-text backend switch
-7. [../docs/publications-port-inventory.md](../docs/publications-port-inventory.md) — the publications redesign: what
-   was ported, the rulings, the open gaps

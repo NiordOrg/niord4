@@ -1,5 +1,5 @@
 /**
- * The base product's npm packages, for the kit's tests. In niord-ng's
+ * The base product's npm packages, for the kit's tests. In the base product's
  * tree the kit sits beside fe/, so Node does not find fe/node_modules from the kit's files; an
  * ESM import cannot be redirected by NODE_PATH, so the packages are required through the base
  * product's package.json instead:

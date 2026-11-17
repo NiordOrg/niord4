@@ -227,7 +227,7 @@ comparison that is like for like needs both variants of the same backend shape.
 This is the current result; the first result, below it, is kept as the record of the state the fixes started from.
 
 Measured on 2026-09-29, 01:21 to 02:52 UTC, on the same workstation as the first result, with the other backend
-still running on it. Old: `niord-dk` at `7b813d76`. New: `niord-dk` at the branch head, with the changes below.
+still running on it. Old: `niord-dk` at the first result's merge base. New: `niord-dk` at the branch head, with the changes below.
 The same data, set (50) and pool (173). Per latency, two runs of each variant in each static-map model, in the order
 old (static), old (fetching), new, old (static), old (fetching), new; the new variant's runs serve both models, as
 the tile renderer never asks for a static map. Case 2c: five starts per variant and model. Two of the twelve runs
@@ -348,7 +348,7 @@ against 1.13 before, 1.03 at 50 ms against 1.08; every 4 and 4b `stale` row at 2
   runs of cases 3, 5 and 6 passed every row.
 
 These rows were not made to pass; whether they block the merge is the product owner's decision. The final verdict on
-images of places without cached tiles is the real-network run at the next niord-ng test deployment (below).
+images of places without cached tiles is the real-network run at the next test deployment (below).
 
 <details>
 <summary>All rows, fetching model, 250 ms</summary>
@@ -631,7 +631,7 @@ Superseded by the result above. It is the record of the state the fixes started 
 
 Measured on 2026-09-28, 22:21 to 23:22 UTC, on a developer workstation: Windows 11, 22 logical processors,
 Temurin 25, Node 24.15, the corporate endpoint protection active, and another backend running on the machine
-that used about one processor core throughout (both variants shared it). Old: `niord-dk` at `7b813d76`, the merge
+that used about one processor core throughout (both variants shared it). Old: `niord-dk` at the merge
 base. New: `niord-dk` at the branch head, with the two changes below. The data: the copies of the test data
 (51,577 messages); the set: the 50 NM messages of the `--filter` above; the pool of cases 4b and 7: the 173
 published messages with a geometry (the pool filter finds no more). Two runs of each variant per latency, in the
@@ -909,7 +909,7 @@ gave 771.1 ms (median page makespan) and 86.4 / 111.4 ms (median / p95 per reque
 
 The raw result files are not kept in the repository; this table is the record.
 
-**At the next niord-ng test deployment** (Kubernetes, on the test database), in this order:
+**At the next test deployment** (Kubernetes, on the test database), in this order:
 
 1. Check that the application pod reaches `https://tile.openstreetmap.org` (a HEAD of `/0/0/0.png` from the pod,
    or from a throwaway pod carrying the application's labels, so that the same network policy applies). If the
@@ -918,7 +918,7 @@ The raw result files are not kept in the repository; this table is the record.
    the tile fetcher uses the JVM's default proxy selector.
 2. Set `mapTileContact` (the sysadmin settings page) to the operator's e-mail address or URL: the OSM tile
    policy asks for a contact in the User-Agent.
-3. Run `remote` with the command above against the niord-ng host, and hold its table against this one. They are
+3. Run `remote` with the command above against that deployment's host, and hold its table against this one. They are
    different systems on different hardware, so this is a guide, not the gate (the gate is the local
    comparison): R1, R2 at concurrency 6 and R5 should be no slower; R3 is held against the R3 above while
    holding 50 map images (the result file lists `mapImagesPerPdf`); R4 against R4. Check whether a burst of

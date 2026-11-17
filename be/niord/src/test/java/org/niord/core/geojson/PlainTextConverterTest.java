@@ -439,7 +439,7 @@ public class PlainTextConverterTest {
 
     @Test
     public void utmLineWithLowerCaseSouthernBandIsReadAsSouthern() throws Exception {
-        // L-048: a lower-case band letter, glued to the zone or spaced, reads as the upper-case one. Band M is
+        // A lower-case band letter, glued to the zone or spaced, reads as the upper-case one. Band M is
         // southern (8° S to 0°), so the point lies south of the equator, not mirrored into the north.
         double[] upper = ((PointVo) singleGeometry(enDa().fromUtmText("33 M 500000 9500000"))).getCoordinates();
         assertTrue(upper[1] < 0 && upper[1] > -8, "band M lies between 8 deg S and the equator: " + upper[1]);
@@ -451,7 +451,7 @@ public class PlainTextConverterTest {
 
     @Test
     public void utmLineWithAZoneOrBandThatDoesNotExistIsRefused() {
-        // L-155: zones are 1 to 60 and bands C to X without I and O; anything else is refused, naming the line
+        // Zones are 1 to 60 and bands C to X without I and O; anything else is refused, naming the line
         for (String line : new String[] { "0 V 500000 6200000", "61 V 500000 6200000", "32 Y 500000 6200000",
                 "32I 500000 6200000", "32 624726 6207884" }) {
             Exception e = assertThrows(Exception.class, () -> enDa().fromUtmText(line), line);

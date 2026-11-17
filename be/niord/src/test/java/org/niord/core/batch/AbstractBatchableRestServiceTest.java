@@ -54,7 +54,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 /**
  * The upload of a batch-job file ({@link AbstractBatchableRestService}): a form field named
  * {@value BootstrapRun#PROPERTY}, the bootstrap runner's own token (docs/code-data-config-plan.md §7.2), is refused
- * with 400 before any job starts, so no upload can put a copied token into a job's properties (the review of PR #188).
+ * with 400 before any job starts, so no upload can put a copied token into a job's properties.
  * Every upload endpoint, the six imports the bootstrap runs among them, goes through this one method. No upload is
  * held in memory: the JSON check, the endpoint's check and the job start each open a stream of their own from the
  * uploaded part.

@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *         no/null status(0).</li>
  *     <li>When the domain and the status rank tie, the newer {@code publishDateFrom} is preferred (a message
  *         without one last), then the higher id (a message without one last), so a short id two messages share
- *         resolves to the same message whatever order the database returns them in (L-014, MSG11). Messages built
+ *         resolves to the same message whatever order the database returns them in (MSG11). Messages built
  *         without a date or an id still tie.</li>
  * </ol>
  *
@@ -323,7 +323,7 @@ public class MessageIdMatchComparatorTest {
     }
 
     // ------------------------------------------------------------------
-    // The final tie-break (rule 3): newest publish date, then highest id (L-014, MSG11)
+    // The final tie-break (rule 3): newest publish date, then highest id (MSG11)
     // ------------------------------------------------------------------
 
     /** Builds a message of the given series and status, with a publish date (or none) and an id (or none). */

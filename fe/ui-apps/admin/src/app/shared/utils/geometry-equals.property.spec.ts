@@ -6,7 +6,7 @@ import { geometryCollectionsEqual } from './geometry-equals';
 
 /**
  * Properties of the geometry editor's "nothing changed" test, over generated collections from a
- * fixed seed (error hunt, phase 2): equality is reflexive and symmetric; the floating-point noise of
+ * fixed seed: equality is reflexive and symmetric; the floating-point noise of
  * the editor's projection round trip is no change; a moved position, a renamed position, an added or
  * removed feature, and a changed type each are a change; the order of property keys and the editor's
  * `selected` flag are not.

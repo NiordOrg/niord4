@@ -64,7 +64,7 @@ type TextModel = Record<string, string>;
  */
 interface CategoryFormModel {
   categoryId: string;
-  /** `null` while the box is empty; the form then holds Save back (L-173). */
+  /** `null` while the box is empty; the form then holds Save back. */
   priority: number | null;
   publish: boolean;
   names: TextModel;
@@ -258,7 +258,7 @@ export class PublicationCategoriesTab {
     // counter under the field says by how much.
     validate(path.names, ({ value }) => lengthErrorAny(value(), TEXT_MAX));
     validate(path.descriptions, ({ value }) => lengthErrorAny(value(), TEXT_MAX));
-    // L-173. Every category has an Order: the column cannot hold "none", and an
+    // Every category has an Order: the column cannot hold "none", and an
     // emptied box used to be sent as null, kept as the old number by the server
     // and reported as saved. Required, so Save waits and the field says why.
     required(path.priority);
@@ -305,7 +305,7 @@ export class PublicationCategoriesTab {
       .some((error) => PRIORITY_ERRORS.has(error.kind)),
   );
 
-  /** Order is empty; the field says it is needed (L-173). */
+  /** Order is empty; the field says it is needed. */
   protected readonly priorityMissing = computed(() =>
     this.form
       .priority()
@@ -450,7 +450,7 @@ export class PublicationCategoriesTab {
     }
     const value = this.formModel();
     // Always a number here: Order is required, so an empty box keeps Save
-    // disabled (L-173). The server refuses an explicit null on update, and the
+    // disabled. The server refuses an explicit null on update, and the
     // column could not hold "no order" anyway.
     const priority = value.priority;
     if (priority === null) {
@@ -490,7 +490,7 @@ export class PublicationCategoriesTab {
         this.editorModel.set(undefined);
         this.refresh();
       },
-      // L-047. Through the section's code mapping, so a duplicate id or a
+      // Through the section's code mapping, so a duplicate id or a
       // category the server's own checks refuse says why; anything else keeps
       // the generic sentence. The drawer stays open on what was typed.
       error: (response: unknown) => {

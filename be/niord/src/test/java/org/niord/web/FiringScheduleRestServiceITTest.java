@@ -530,7 +530,7 @@ class FiringScheduleRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // L-103 (decision 12): a period stored with its end before its start is read as ending the next day, so
+    // A period stored with its end before its start is read as ending the next day, so
     // the next day lists its early hours, and that day's save may send it back as it is stored
     // ------------------------------------------------------------------------------------------- //
 

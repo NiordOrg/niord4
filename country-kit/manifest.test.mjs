@@ -212,7 +212,7 @@ const override = () => ({
     'ui-apps/admin/src/app/features/editor/foo/foo.html': HASH,
     'ui-apps/admin/src/app/shared/forms/field.css': HASH,
   },
-  reason: 'DK workflow step, niord-dk#140',
+  reason: "DK's own workflow step",
   added: '2026-11-20',
 });
 

@@ -108,7 +108,7 @@ export class TemplateParamsField {
     );
   }
 
-  /** The ids of every row but `index` (all rows when adding): the dialog refuses them (L-181). */
+  /** The ids of every row but `index` (all rows when adding): the dialog refuses them. */
   private idsBesides(index: number | null): string[] {
     return this.templateParams()
       .filter((_, i) => i !== index)

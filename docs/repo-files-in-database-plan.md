@@ -1,7 +1,7 @@
 # Repository files in the database: the volume a cache, one thing to back up
 
 **Status:** written 2026-10-22 at the owner's request; D1 to D3 were decided the same day, D4 to D10 on
-2026-10-24 and D11 on 2026-10-27 (§2); no decision is open. **R1 is done: merged into `main` as #232 on
+2026-10-24 and D11 on 2026-10-27 (§2); no decision is open. **R1 is done: merged into `main` on
 2026-11-10 and released as 4.0.146** (its state under § R1). **R2 is done: DK and GL staging run base
 4.0.147 on the store since 2026-11-10; neither had a file to import, so no import ran** (its state under
 § R2). R0's measurements
@@ -19,8 +19,8 @@ optional mirror of the file tree (`be/docs/cicd/design.md` §9, copied to `devop
 unanswered, and no backup of any kind exists today (`devops-niord/docs/phase-0-answers.md` H4). When no
 durable byte lives outside the database and the database lives in the hotel, the hotel's backup is the
 deployment's backup, and this repository builds and runs no backup job at all.
-File and line references are against `main` @ `195d102d` (2026-10-23), `devops-niord` `main` @ `80c1ac2` and
-`devops-shared` `origin/main` @ `c53bf5d`. **[I]** marks an inference not confirmed by code or a run.
+File and line references are against the `main` of 2026-10-23 and the `main` of `devops-niord` and of
+`devops-shared` at that time. **[I]** marks an inference not confirmed by code or a run.
 **Scope:** every durable file the backend keeps on disk, the caches and work folders next to them, the
 application's volume in the chart and the environment values, and the chart seams the later move of
 PostgreSQL (with Keycloak's database) to the hotel will need. The move itself is a separate project (D11).
@@ -31,7 +31,7 @@ sea-chart (WMS) tiles' cache came into scope on 2026-10-24 (D10, R5), as a cache
 in the database; since 2026-11-10 it is a cache on the application's volume with a plan of its own
 ([`sea-chart-tile-cache-plan.md`](sea-chart-tile-cache-plan.md)), and of this plan only D10's "never in the
 database" still speaks of it.
-**Repos:** `niord-ng` (niord-base, the chart, the sample, and `be/docs/cicd/`, which owns the design and
+**Repos:** `niord` (niord-base, the chart, the sample, and `be/docs/cicd/`, which owns the design and
 implementation plan that `devops-niord` copies); `niord-dk` and `niord-gl` (each on the release that carries
 the store, and its image, before R2); `devops-niord` (values, runbooks, its copies of the design);
 `devops-shared`, which has no backup component but whose monitoring and log-collection documents name the
@@ -139,8 +139,8 @@ A file write happens inside the database transaction, so a rollback leaves the b
 | `temp/<uuid>/<rev>/…` | an edit session: empty at the start of an edit (`MessageRestService.java:344`, `PublicationService.java:590`), the source message's folder copied in only when a message is copied (`:424`); then uploads and custom thumbnails; the extracted message archive of an import (`BatchMsgArchiveImportReader.java:112-149`) and of a batch set (`BatchSetService.java:113-145`) | `DELETE /rest/repo/file` (temp only, EDITOR); the hourly sweep deletes every entry whose own mtime is older than a day (`RepositoryService.java:697-722`). A copied message's folder keeps the source's dates (`copyDirectory(…, true)`), so its edit folder can be swept at the next hourly run (REPO-SWEEP1 in `be/docs/potential-errors.md`) |
 | `${niord.home}/batch-jobs/<job>/execution/<y>/<m>/<n>/` | the uploaded data file's copy and one log file per handler (`BatchData.java:114-145`, `AbstractItemHandler.java:66-97`) | `batchFileExpiryDays` = 10 (`BatchService.java:616-657`) |
 
-The watched folders (`batch-jobs/<job>/in/`, `batch-sets/`) are gone since `code-data-config-plan.md` C4.2b
-(#179): no folder on the server starts a job (`BatchService.java:71-73`).
+The watched folders (`batch-jobs/<job>/in/`, `batch-sets/`) are gone since `code-data-config-plan.md` C4.2b:
+no folder on the server starts a job (`BatchService.java:71-73`).
 
 ### 3.4 Not files of the application
 
@@ -179,7 +179,7 @@ showing the row's value while the variable wins, as it does for `authServerUrl`.
 weighed and set aside: an upper-snake lookup in `peek` would widen the environment override to every setting
 key, and `-Dniord.home` in `app.javaOpts` is lost as soon as an environment sets its own Java options. The
 Spring key `niord.home` in the ConfigMap and in `niord-core-defaults.yml:78` is read by nothing and goes
-(R1f). Fixed in code on 2026-11-03 instead (the owner's ruling, decision 138; the E-fixes): `niord.home`
+(R1f). Fixed in code on 2026-11-03 instead (the owner's ruling; the E-fixes): `niord.home`
 follows `NIORD_HOME` when no `niord.home` property or variable is set, so the generic image's home is the
 volume without R1f's variable, which R1f may still pass but no longer needs for SETTINGS-6.
 
@@ -612,14 +612,14 @@ Its attachments then come along instead of 404-ing.
 ## 6. Phases and order
 
 Each phase is one PR into `main` or a feature branch with sub-PRs, verified in proportion
-(`CLAUDE.md`): a sub-PR runs `./verify-local --base origin/feature/repo-in-db`; the feature PR runs CI.
+(the root `AGENTS.md`): CI runs on every pull request, a sub-PR's included.
 
 ### R0: measure and ask (no code; a week of waiting at most)
 
 **State (2026-11-10):** not run, and R2 does not wait for it: the owner, "no need to take measurements". What
 R2 needed from it is read on the day by the runbook's check before the window: each tree's top-level folders,
 its size, and the free space of the chart's Postgres volume against the database and the trees. The SETTINGS-6
-bullet is moot (fixed in code on 2026-11-03, decision 138), and so is the UPLOAD-1 bullet (R1f set the limits,
+bullet is moot (fixed in code on 2026-11-03), and so is the UPLOAD-1 bullet (R1f set the limits,
 and R1 is released). What remains is for later: the legacy production's numbers and its HTML query, which size
 production's import (§6), and the host questions, which belong to the separate hotel project (D11). The bullets
 below are the original text.
@@ -644,7 +644,7 @@ one query on the legacy database.
   `SettingsService.java:363`, names the home itself), `ls /niord-home`, and the environment with
   `kubectl exec -- env` (not `sh -c env`: `dash` hides a dotted name). The country jars ship the token
   `${NIORD_HOME}`, so the volume should hold the files; the check is a confirmation. The generic image is
-  the known exposure (§3.5; fixed in code on 2026-11-03, decision 138).
+  the known exposure (§3.5; fixed in code on 2026-11-03).
 - **What an upload of a 2 MB attachment does today (UPLOAD-1),** on staging: it decides whether R1f's
   multipart limits fix a live defect or only make a default explicit.
 - **How much old message HTML links to a thumbnail or a map image by path,** on the legacy production's
@@ -665,11 +665,11 @@ on the volume as they are; nothing here depends on their numbers), and the dupli
 **Done when:** the numbers are in §11 of this document and the host's answers are recorded. R1 does
 not wait for the host; R3 does.
 
-### R1: the store (`feature/repo-in-db`)
+### R1: the store
 
-**Merged into `main` as #232 on 2026-11-10 and released as 4.0.146**, the first base with the store.
+**Merged into `main` on 2026-11-10 and released as 4.0.146**, the first base with the store.
 
-**State (2026-10-27):** R1a to R1f are built on `feature/repo-in-db`, as one change set rather than six
+**State (2026-10-27):** R1a to R1f are built on one feature branch, as one change set rather than six
 sub-PRs, since the four of R1a to R1d cannot be verified apart (below) and R1e and R1f are small. What
 differs from the text below: the archive reader refuses an absolute entry name as it refuses a climbing one;
 `GET /rest/repo/list/<folder>` answers an empty list, not 404, for a folder outside the served roots (the REST
@@ -729,7 +729,7 @@ sub-PRs of their own.
    reaches, `batch-jobs/batch-set/execution/<uuid>/`: the expiry walks only `batch-jobs/<job>/execution/`
    (`BatchService.java:616-657`), and a folder anywhere else under `batch-jobs/` would stay forever, where
    today the unzip in `repo/temp/` is gone after a day. `BatchMsgArchiveImportReader` deletes its temp rows
-   when the job ends (§4.4). The sample's four attachments (`niord/sample/repo/`, #192) become rows:
+   when the job ends (§4.4). The sample's four attachments (`niord/sample/repo/`) become rows:
    `regen-sample.sh` writes them into `niord-sample.sql` instead of copying them out of the repository root
    (`:716-718`), `load-sample.sh` stops copying them into the home (`:96-98`), and
    `SampleSafetyCheck.ALLOWED_TABLES` (`:72`) and `SampleFolderTest` (`:80-81`) admit the store table. The
@@ -738,7 +738,7 @@ sub-PRs of their own.
    `"<table>_SEQ"` sequences (`:709-710`), so an identity column would have made `--sample` load nothing or
    collide on its first upload; keyed on `path`, the sample's rows load as any other (§4.1).
    The sample is regenerated in any case, since `SampleFolderTest` takes the changeset list from the master
-   changelog (`:156-158`). Draft #196 (C4b) changes the same sample files; whichever lands second rebases.
+   changelog (`:156-158`). The draft of C4b changes the same sample files; whichever lands second rebases.
 4. **R1d, publications:** `IssueFileService`, `IssuePublishService`'s render step, `IssueArchiveService`,
    `IssuePreviewService`, `IssueDeleteService` (PUB-DEL1 fixed here, D9: the delete leaves a folder alone
    when a legacy `Publication.repoPath` names the same path, with an IT), `PublicationService`/
@@ -774,8 +774,8 @@ boots from the bare master, and the volume the chart mounts holds no durable fil
 
 ### R2: the cutover on staging
 
-**State (2026-11-10): done on both stagings, with nothing to import.** `SIFA-DK/niord-dk` #22 and
-`SIFA-DK/niord-gl` #21 moved the countries to base 4.0.147 (4.0.146 and the LUCENE-2 fix, #289; the base bump
+**State (2026-11-10): done on both stagings, with nothing to import.** `SIFA-DK/niord-dk` and
+`SIFA-DK/niord-gl` moved to base 4.0.147 (4.0.146 and the LUCENE-2 fix; the base bump
 app moved both pull requests from 4.0.146 to 4.0.147 while their CI ran, so the hand pin was made twice), and
 `scripts/staging-bump.py` built `niord-app-dk`/`-gl:4.0.147.9`. The check before the window found the same on
 both stacks: the volume's `repo/` held `temp/` only, no `messages/` and no `publications/`;
@@ -784,13 +784,13 @@ both stacks: the volume's `repo/` held `temp/` only, no `messages/` and no `publ
 links in message texts: none). The text below this paragraph expected the volumes to keep the trees of the
 databases before the new ones of 2026-11-05 (`devops-niord/runbooks/fresh-database.md`); they did not. So:
 
-- **DK** followed the runbook to its step 4: `devops-niord` !46 (the release with `app.replicaCount: 0`), the
-  copy `niord_before_r2`, !48 (the start). The import was then left out, since it had nothing to read; its
+- **DK** followed the runbook to its step 4: in `devops-niord` the release with `app.replicaCount: 0`, the
+  copy `niord_before_r2`, then the start. The import was then left out, since it had nothing to read; its
   only output would have been the check from the rows' side, which the counts above had made. The copy was
   checked against the stopped database with `pg_dump | grep -vE '^\\(un)?restrict ' | md5sum`: PostgreSQL 18's
   `pg_dump` writes a random `\restrict` key into every plain dump, so two raw dumps of the same database never
   hash alike. The owner dropped the copy the same day, once the cutover was done.
-- **GL** moved by a plain release, !47: no `replicaCount: 0`, no copy, no import.
+- **GL** moved by a plain release: no `replicaCount: 0`, no copy, no import.
 
 The owner left out the runbook's smoke list (an upload, its thumbnail and its download); the store's write and
 read paths are covered by the R1 integration tests, and nothing was moved. What the volumes keep of the old
@@ -844,7 +844,7 @@ the CA.
 
 ### R4: the record
 
-**State (2026-11-10): done**, in niord-ng, `devops-niord` and `devops-shared`, documentation only. What
+**State (2026-11-10): done**, in this repository, `devops-niord` and `devops-shared`, documentation only. What
 differs from the text below, which was written before D11:
 
 - **The backup CronJob stays in the design, Phase 7 and the monitoring lists.** D11 keeps the nightly
@@ -930,7 +930,7 @@ directives do nothing*).
 | The read runs inside a caller's transaction and holds it open while a slow client reads | §4.3 | the controller is not transactional, and the stream is read by Spring after the handler returns; an IT asserts no transaction is active in the stream |
 | The hotel is not PostgreSQL 18, or has no PostGIS (the separate project's risk, D11) | G1 | the suite against the offered version before any decision; nothing in this plan depends on the version |
 | Thirty-odd test classes touch the repository on disk (`be/niord/src/test`: the repo, publication, map-image, export and batch tests), and so do the sample's loader and its checks | R1 | the REST contract is unchanged, so most ITs change only their fixtures; the folder-level unit tests are rewritten, not deleted |
-| A deployment of the generic image, or of a country that lists `niord.home` in `useBaseDefault`, writes its files to the container layer and not the volume (§3.5) | now | the chart passes an environment variable named exactly `niord.home` (R1f); R0 confirms that the DK and GL stagings resolve to the volume (fixed in code 2026-11-03, decision 138) |
+| A deployment of the generic image, or of a country that lists `niord.home` in `useBaseDefault`, writes its files to the container layer and not the volume (§3.5) | now | the chart passes an environment variable named exactly `niord.home` (R1f); R0 confirms that the DK and GL stagings resolve to the volume (fixed in code 2026-11-03) |
 
 ---
 
@@ -979,7 +979,6 @@ producer CronJob, the `files: mirror` option and the sentence "Attachments are f
   the seed's `${NIORD_HOME}` token stays.
 - `be/k8s/README.md` (`app.persistence` row, the tile-cache note), `be/k8s/helm/niord/values.yaml`'s
   comments.
-- `docs/publications-port-inventory.md`: a line on where the files are now.
 - `be/niord/sample/README.md`: its `repo/` row (the attachments are rows in `niord-sample.sql`, R1c).
 - `be/docs/potential-errors.md`: SETTINGS-6 and UPLOAD-1 are resolved by R1f, REPO-SWEEP1 by R1a's expiry,
   and PUB-DEL1 and EXPORT-THUMB1 by R1d and R1c (D9); each is deleted then. SETTINGS-6 was closed earlier, by
@@ -993,7 +992,7 @@ producer CronJob, the `files: mirror` option and the sentence "Attachments are f
 |---|---|---|---|---|---|---|
 | DK staging (2026-11-10, R2) | none (`repo/` held `temp/` only) | none | empty | 24 MB | | |
 | GL staging (2026-11-10, R2) | none (`repo/` held `temp/` only) | none | empty | 24 MB | | |
-| Legacy DK production | 490 MB with `repo/publications` (the scan below) | | none (a niord-ng folder) | | | |
+| Legacy DK production | 490 MB with `repo/publications` (the scan below) | | none (the folder is new with this backend) | | | |
 
 Lucene rebuild at start on the largest tree: — . Import rate measured on staging (R2): none; neither
 staging had a file to import (§ R2).
@@ -1053,14 +1052,14 @@ same standard area). Upload thumbnails: 0.1 MB of copies. This is what decided D
   temp sweep goes by mtime; the `DELETE /file` bodies; `getHashedSubfolder` deleted; 16/22 files, not 26;
   which repository tests are the contract; line drift. Three suspected bugs recorded as PUB-DEL1,
   REPO-SWEEP1 and EXPORT-THUMB1 in `be/docs/potential-errors.md`.
-- 2026-10-24, a third review, against `main` @ `195d102d` (seven pull requests past the first base: 131
+- 2026-10-24, a third review, against the `main` of 2026-10-23 (seven pull requests past the first base: 131
   citations checked, 111 held), the editor's code and the devops repositories, applied the same day; the
   working tree was moved onto that `main`. Reversed: the move on save (§4.3), since the editor keeps its temp
   folder after a save whose reload failed, two sessions on one message save into one revision folder, and an
   archive that lists a message twice shares one temp folder; the save copies, as today. Before R1: the
   changeset is `V009` (`V006` to `V008` exist); §3.5 and its entry follow `main`'s settings files (the
   library's `niord.json` is gone), the entry renumbered SETTINGS-6 (SETTINGS-4 is taken); WEB14 withdrawn in
-  favour of `main`'s UPLOAD-1; the sample's attachments (#192) become rows in R1c; R2 waits for each country
+  favour of `main`'s UPLOAD-1; the sample's attachments become rows in R1c; R2 waits for each country
   on R1's release; the rollback is stated as it is (the files written since, the rewritten archive paths),
   with a dump and a volume snapshot taken first; both stagings self-heal and prune, so the window's steps are
   merge requests, and R3 removes the chart's Postgres in a second merge after the restore proof, the old
@@ -1127,7 +1126,7 @@ same standard area). Upload thumbnails: 0.1 MB of copies. This is what decided D
   each proxy's own disk, bounded, keyed on the request URI, `auth_request` in front of the backend's servlet
   so `wmsProtected` keeps its meaning; never in the database; a cache like the others, backed up by nobody.
   The scope line, the summary table, D7 and §8 follow; the backlog entry now points here.
-- 2026-10-27, R1 built on `feature/repo-in-db` (its state under § R1): V009 and `RepoStore`, `RepoPaths`,
+- 2026-10-27, R1 built on its feature branch (its state under § R1): V009 and `RepoStore`, `RepoPaths`,
   `RepoFileInfo`, `RepoFileResource`, `RepoCache`; `RepositoryService` on the store with its REST contract;
   `ThumbnailService` drawing from a spool of the row into the cache tree; the map-image endpoint serving the
   cache image itself and redirecting to a custom thumbnail row; the AtoN tiles under `aton-tiles/` with a
@@ -1136,10 +1135,10 @@ same standard area). Upload thumbnails: 0.1 MB of copies. This is what decided D
   regenerated (71 keys); the sample scripts and checks; `RepoImportService` with the `repo-import` job and
   `POST /rest/batch/repo-import`; the chart's `niord.home` variable and cache comments, the multipart limits,
   the texts, the country contract's new row, the README line; the sample and the IT fixture regenerated.
-  `./verify-local` on 2026-10-27 (`774c1de0`): unit 5218 tests green, integration 3371 tests with three failures
+  `./verify-local` on 2026-10-27: unit 5218 tests green, integration 3371 tests with three failures
   of `MessageSeriesServiceITTest`, an order dependency on publication-series tests that commit series they never
   delete (unchanged since the publications port; `be/docs/potential-errors.md` IT-ORDER1), the no-sample check
-  green. The feature PR into `main` (#232) is opened as a draft for the owner's review and CI. Simplified the
+  green. The feature PR into `main` is opened as a draft for the owner's review and CI. Simplified the
   same day after a four-angle review (reuse, simplification, efficiency, altitude): a write is one statement
   with the hash computed in the database and the expiry derived from the path (a temp row expires a day after
   its write, nothing else does, and no caller says so), the served-root, containment, LIKE-escape and
@@ -1211,8 +1210,8 @@ same standard area). Upload thumbnails: 0.1 MB of copies. This is what decided D
   `RepoStore.open`, gone since the fourth review (now `readAll`, `copyTo`, `spool`). The non-finding: `GET
   /rest/repo/list/{folder}` was said to have dropped sub-folders, but main's listing filtered to regular files
   too, so `directory` was always false before as well; nothing changed.
-- 2026-11-10, R1 merged into `main` as #232 and released as 4.0.146. R2's runbook written in `devops-niord`
-  (`runbooks/repo-files-cutover.md`, merge request !45), with the README's note that the first move to 4.0.146
+- 2026-11-10, R1 merged into `main` and released as 4.0.146. R2's runbook written in `devops-niord`
+  (`runbooks/repo-files-cutover.md`), with the README's note that the first move to 4.0.146
   is not a pin change alone and the comment of `envs/_template/values.yaml`. The owner: R2 does not wait for R0's
   measurements ("no need to take measurements"); the runbook reads what R2 needs on the day. The runbook
   simplifies §4.8 in three places: the stop and the release are one merge request; the rollback point is a copy
@@ -1220,13 +1219,13 @@ same standard area). Upload thumbnails: 0.1 MB of copies. This is what decided D
   volume. It also says how a sysadmin gets the import's token on staging (a signed-in browser, since the shared
   Keycloak's `niord-web` has no password grant), and that the public site's checks wait for its deployment.
   The status line, D5, §4.8, R0, R1, R2, §7 and §8 follow; R2's text no longer names the 4.0.66 images.
-- 2026-11-10, R2 done on both stagings. The countries moved to base 4.0.147 (niord-dk #22, niord-gl #21) and
+- 2026-11-10, R2 done on both stagings. The countries moved to base 4.0.147 and
   staging to `niord-app-dk`/`-gl:4.0.147.9`. The check before the window showed that neither volume held a
   `messages/` or `publications/` tree and neither database referred to a file, contrary to R2's expectation
   that the volumes kept the trees from before the new databases of 2026-11-05. DK ran the runbook's stop, copy
-  and start (`devops-niord` !46, !48) and left out the import; GL moved by a plain release (!47). The owner
+  and start (in `devops-niord`) and left out the import; GL moved by a plain release. The owner
   left out the smoke list. No import rate was measured, so §11 has none and R4 says production's import is
-  sized on its own tree. DK's copy `niord_before_r2` was kept as `devops-niord` open issue 11 and dropped by
+  sized on its own tree. DK's copy `niord_before_r2` was kept as an open issue in `devops-niord` and dropped by
   the owner the same day; the issue is deleted. The status line, R2, R4 and §11 follow.
 - 2026-11-10, R4 done, at the owner's go ("update the docs"): `be/docs/cicd/design.md` §6 (the hotel is a
   separate project and more than values; the superuser premise is gone), §6's monitoring list, §9 (the dump

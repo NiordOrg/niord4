@@ -62,7 +62,7 @@ const OLD_CHANGES = [
   '',
   '- **What a country must do**, concretely: the import to change.',
   '',
-  '## Unreleased: first in the version PR A publishes',
+  '## Unreleased: first in the next published version',
   '',
   '**The country API is introduced.**',
   '',
@@ -230,7 +230,7 @@ describe('the fixture upgrade kit package', () => {
 });
 
 describe("the upgrade test's API-CHANGES.md sections", () => {
-  const UNRELEASED = 'Unreleased: first in the version PR A publishes';
+  const UNRELEASED = 'Unreleased: first in the next published version';
 
   it("reads each version section's answers, never a policy section; 'Nothing' asks for no action", () => {
     const sections = upgradeSections(

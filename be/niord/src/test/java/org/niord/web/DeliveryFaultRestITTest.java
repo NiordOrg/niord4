@@ -362,7 +362,7 @@ class DeliveryFaultRestITTest extends ITTest {
     void aSelfIntersectingWktPolygonIsAppliedAsGivenWithoutAServerError() {
         // The search swallows its own failures into an empty answer (PORT-2), and an empty answer also leaves
         // NW-001-26 out, so the status and the body alone cannot tell "applied" from "failed and swallowed". The log
-        // of the search says which: nothing at WARN or above (detector check MC).
+        // of the search says which: nothing at WARN or above.
         var log = org.niord.test.JmsFaults.captureLog(org.niord.core.message.MessageSearchService.class);
         try {
             given().queryParam("messageSeries", "dma-nw").queryParam("lang", "en")
@@ -384,7 +384,7 @@ class DeliveryFaultRestITTest extends ITTest {
     /**
      * A signed-in user who is not an editor may not publish a warning: {@code PUT /message/{id}/status} answers 403
      * and the warning stays VERIFIED. The pins of this class send every status change as an administrator, so a
-     * status change opened to every user passed them (detector check MC, M16).
+     * status change opened to every user passed them.
      */
     @Test
     void aStatusChangeIsRefusedToAUserWhoIsNotAnEditorAndChangesNothing() {

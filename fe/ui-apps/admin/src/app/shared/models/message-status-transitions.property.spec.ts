@@ -4,7 +4,7 @@ import { VALID_STATUS_TRANSITIONS, validTransitionsFor } from './message-status-
 import { MESSAGE_STATUSES, type MessageStatus } from './message-status.model';
 
 /**
- * Properties of the table of status changes an editor may make by hand (error hunt, phase 2), over
+ * Properties of the table of status changes an editor may make by hand, over
  * every status and every path through the table: the table names only known statuses and no status
  * changes to itself; the terminal statuses lead nowhere; every path that starts as a draft ends in
  * a terminal status; nothing published goes back to draft or verified, so a published warning can

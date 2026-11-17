@@ -553,8 +553,8 @@ node setup.mjs --update-pins
 ```
 
 Before you commit a first pin, compare the digest it wrote with the one the home's
-`pack-releases.md`, at the root of its repository, records: for `da`,
-https://github.com/SIFA-DK/niord-dk/blob/main/pack-releases.md; when you cannot read the home's
+`pack-releases.md`, at the root of its repository, records: for `da`, the one in
+`SIFA-DK/niord-dk`, a repository that is not public yet; when you cannot read the home's
 repository, its maintainers give you the line. Every later move of the pin is a reviewed pull
 request ([Pinning a pack](../README.md#pinning-a-pack)). When a home withdraws the tag you pin,
 set-up fails with the reason until you move the pin

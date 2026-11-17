@@ -439,7 +439,7 @@ class CategoryRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // An update keeps the category's place among its siblings unless the body names one (L-157)
+    // An update keeps the category's place among its siblings unless the body names one
     // ------------------------------------------------------------------------------------------- //
 
     /** Reads back the stored sibling sort order of a category. */

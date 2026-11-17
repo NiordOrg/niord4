@@ -4,9 +4,9 @@ import { formatByteSize } from './format-byte-size';
 
 /**
  * Properties of the byte sizes in the file uploader and the attachments table, over generated sizes
- * from a fixed seed and every unit edge (error hunt, phase 2): the text reads back within the
+ * from a fixed seed and every unit edge: the text reads back within the
  * rounding of its one decimal, a larger file never shows a smaller size, and no unit shows 1024 or
- * more (phase 1's B1-14, "1024.0 KB", was fixed on this branch).
+ * more (an earlier fault, "1024.0 KB", is fixed).
  */
 
 /** A small seeded generator (mulberry32): the same seed gives the same inputs on every run. */

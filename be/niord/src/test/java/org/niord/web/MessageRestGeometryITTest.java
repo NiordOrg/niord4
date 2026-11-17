@@ -348,7 +348,7 @@ class MessageRestGeometryITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // Saving a message: its geometry is stored on the globe (CG8, L-009)
+    // Saving a message: its geometry is stored on the globe (CG8)
     //
     // The geometry editor sends what the map gave it: a point drawn on a wrapped world copy, or read
     // from a dropped file, can lie beyond 180 degrees. The save moves the whole geometry by whole turns

@@ -29,7 +29,7 @@ const MADE_LATER = Object.freeze([
   'be/target/', // Maven, (cd be && ./mvnw verify)
 ]);
 
-/** The names a route of niord-ng's own gives in its brief, which a country never has. */
+/** The names a route of the base product's own gives in its brief, which a country never has. */
 const STAND_INS = Object.freeze([
   /NIORD_LOCAL_BASE_REPO/,
   /MAVEN_ARGS/,

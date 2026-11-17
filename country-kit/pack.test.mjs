@@ -945,7 +945,7 @@ describe('pack tools', () => {
     assert.equal(fs.readFileSync(path.join(fe, 'languages/da/i18n/admin/da.json'), 'utf8'), own);
   });
 
-  it("refuses a tree that is neither niord-ng's fe/ nor a country's .niord/base/", async () => {
+  it("refuses a tree that is neither the base product's fe/ nor a country's .niord/base/", async () => {
     const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'pack-elsewhere-'));
     temporary.push(elsewhere);
     assert.throws(() => packsLayout(elsewhere), /is not where the kit finds the base product: /);

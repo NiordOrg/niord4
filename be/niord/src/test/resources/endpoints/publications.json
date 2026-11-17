@@ -932,7 +932,7 @@
       "expectedLog": [],
       "knownFault": [],
       "exempt": null,
-      "note": "An unknown id answers 204 with no body (the probe, full run), as the old system's handler did; editable-publication answers it 404. No screen calls this read and the release calls it only with an id it has just found: not a fault (wave 3b's second reader).",
+      "note": "An unknown id answers 204 with no body (the probe, full run), as the old system's handler did; editable-publication answers it 404. No screen calls this read and the release calls it only with an id it has just found: not a fault.",
       "reviewed": true
     },
     {

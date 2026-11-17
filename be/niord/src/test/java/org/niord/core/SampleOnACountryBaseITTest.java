@@ -64,7 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The sample on a country's base (docs/code-data-config-plan.md §8; docs/fe-country-split-plan.md P8, decision (c)):
+ * The sample on a country's base (docs/code-data-config-plan.md §8; docs/fe-country-split-plan.md §3.4):
  * the base product's sample loads on any country's backend after the base product's bootstrap. A country's first
  * start writes its own default texts before any bootstrap (DefaultTexts, whose result DictionaryService adds where
  * the database lacks it), so the base rows' ids differ from those of a base-only first start; the sample's own rows

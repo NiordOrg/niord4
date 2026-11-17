@@ -156,7 +156,7 @@ class AudioPromulgationGenerationITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // messagePromulgationGenerated: after every template run and every Generate (L-241, PROM20)
+    // messagePromulgationGenerated: after every template run and every Generate (PROM20)
     // ------------------------------------------------------------------------------------------- //
 
     /** Adds an Audio promulgation of the given type with the given tick and text to the message. */

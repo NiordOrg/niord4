@@ -3,7 +3,7 @@
 What the security review of September 2026 found, what the fix sweep that followed it did, and what is
 left.
 
-**What was reviewed.** The whole repository at `main` @ `9b3f74ea` (2026-09-24): the backend, both
+**What was reviewed.** The whole repository at `main` as of 2026-09-24: the backend, both
 frontend applications, the CI workflows and the build, and the Helm chart with the Keycloak realm it
 imports.
 
@@ -51,46 +51,46 @@ N-07 stay fixed, F-X68 stays accepted and F-X100 stays deferred — so no other 
 
 ## 2. The sweep
 
-The fixes were made on one feature branch, `feature/security-review-fixes`, cut from `main` @
-`09a1ba38` (the reviewed commit plus #67 to #70), with one pull request per phase, each squash-merged
-into the branch. The phases are numbered in planning order; the table lists them by pull request.
+The fixes were made on one feature branch, cut from `main` four merges after the reviewed commit,
+with one pull request per phase, each squash-merged
+into the branch. The phases are numbered in planning order; the table lists them in the order their pull requests were opened.
 
-| PR | Phase | What it covered | Findings |
-|---|---|---|---|
-| #71 | P11 | CI and build: the publish gate, workflow inputs, action references, Maven repository order | F-X73, F-X106, F-X107, F-X108, F-X109 |
-| #72 | P12 | Administration app: rich-text attributes and the web-settings overlay | F-X112, N-19, N-21 |
-| #73 | P10 | SECOM: outbound limits before the cut-over | F-X13, F-X14, F-X152, F-X156 |
-| #74 | P05 | Anonymous message search: status floor, limits and GML references | F-X1, F-X63, F-X44, F-X7, N-13, F-X17 |
-| #75 | P02 | Repository: path containment and safe serving | F-X83, F-X29, F-X57, F-X30, F-X52, F-X45, F-X55 |
-| #76 | P01 | Script engines: sandboxed Nashorn, no caller-supplied scripts | F-X42, F-X43, F-X22, N-05, F-X139 |
-| #77 | P07 | Messages: tags, comments, history and the viewing check | F-X9, F-X87, F-X4, N-06, N-11, F-X2, N-07, F-X12 |
-| #78 | P03 | Uploads, archives, exports and served HTML | F-X160, F-X50, F-X49, N-01, N-14, N-08, N-23, F-X21, F-X145 |
-| #79 | P09 | Anonymous resource limits: tiles, reformat, PDFs, JSON parsing | F-X24, F-X28, F-X86, F-X113 |
-| #80 | P00 | Test stability: one Lucene index writer at a time across Spring contexts; the SECOM outbox schedule off in the SECOM integration tests | — |
-| #81 | P08 | Tickets, domains, tokens and role tiers | N-02, N-10, F-X37, N-12, N-22, F-X15, N-04, N-09, F-X23 |
-| #82 | P06 | Publications: the anonymous public tier and domain guards | F-X60, F-X121, F-X85, F-X16, F-X126, F-X127, N-16, N-18 |
-| #83 | P04 | Outbound fetches: mail, PDF rendering, Keycloak admin, WMS proxy | F-X147, F-X46, F-X138, F-X36, F-X40, F-X77 |
-| #84 | P13 | Follow-ups: the unlock-tag domain rule, comment mail links, shared helpers, archive edit folders | the rest of F-X4 |
-| — | P14 | This record, `be/docs/potential-errors.md` and `fe/docs/backlog.md` | — |
-| #87 | P15 | The external review: the comment-mail cap counts mailboxes | N-07 |
+| Phase | What it covered | Findings |
+|---|---|---|
+| P11 | CI and build: the publish gate, workflow inputs, action references, Maven repository order | F-X73, F-X106, F-X107, F-X108, F-X109 |
+| P12 | Administration app: rich-text attributes and the web-settings overlay | F-X112, N-19, N-21 |
+| P10 | SECOM: outbound limits before the cut-over | F-X13, F-X14, F-X152, F-X156 |
+| P05 | Anonymous message search: status floor, limits and GML references | F-X1, F-X63, F-X44, F-X7, N-13, F-X17 |
+| P02 | Repository: path containment and safe serving | F-X83, F-X29, F-X57, F-X30, F-X52, F-X45, F-X55 |
+| P01 | Script engines: sandboxed Nashorn, no caller-supplied scripts | F-X42, F-X43, F-X22, N-05, F-X139 |
+| P07 | Messages: tags, comments, history and the viewing check | F-X9, F-X87, F-X4, N-06, N-11, F-X2, N-07, F-X12 |
+| P03 | Uploads, archives, exports and served HTML | F-X160, F-X50, F-X49, N-01, N-14, N-08, N-23, F-X21, F-X145 |
+| P09 | Anonymous resource limits: tiles, reformat, PDFs, JSON parsing | F-X24, F-X28, F-X86, F-X113 |
+| P00 | Test stability: one Lucene index writer at a time across Spring contexts; the SECOM outbox schedule off in the SECOM integration tests | — |
+| P08 | Tickets, domains, tokens and role tiers | N-02, N-10, F-X37, N-12, N-22, F-X15, N-04, N-09, F-X23 |
+| P06 | Publications: the anonymous public tier and domain guards | F-X60, F-X121, F-X85, F-X16, F-X126, F-X127, N-16, N-18 |
+| P04 | Outbound fetches: mail, PDF rendering, Keycloak admin, WMS proxy | F-X147, F-X46, F-X138, F-X36, F-X40, F-X77 |
+| P13 | Follow-ups: the unlock-tag domain rule, comment mail links, shared helpers, archive edit folders | the rest of F-X4 |
+| P14 | This record, `be/docs/potential-errors.md` and `fe/docs/backlog.md` | — |
+| P15 | The external review: the comment-mail cap counts mailboxes | N-07 |
 
 **Verification.** Every phase added tests for what it changed, rewrote the tests that pinned the old
-behaviour, and ran them locally. Pull requests #71 to #82 also had the full CI run: backend unit and
+behaviour, and ran them locally. The first twelve phases of the table, P11 to P06, also had the full CI run: backend unit and
 integration tests, and the administration app's and the public site's gates where those changed. The
-integration run of #79 failed twice on two flakes unrelated to the change, a Lucene index lock held by
+integration run of P09 failed twice on two flakes unrelated to the change, a Lucene index lock held by
 another Spring context's indexer and the SECOM outbox schedule sending a test's entry a second time;
-#80 fixed both. The Lucene flake had also hit #76, where a re-run passed. #79 was merged with its
-integration check red; #80 to #82 ran the suite green on top of it.
+P00 fixed both. The Lucene flake had also hit P01, where a re-run passed. P09 was merged with its
+integration check red; P00, P08 and P06 ran the suite green on top of it.
 
 **The CI outage.** GitHub Actions stopped starting jobs on 2026-09-25 (the account's billing and
-spending limit), so the checks of #83 and #84 failed without starting a job. Both were verified with the
+spending limit), so the checks of P04 and P13 failed without starting a job. Both were verified with the
 full backend suite run locally on Windows instead, whose only failures were the ones `main` already has
-on these workstations. The pull request of `feature/security-review-fixes` into `main` must get a full CI
+on these workstations. The pull request of the feature branch into `main` must get a full CI
 run once Actions works again.
 
-**The external review.** An external review of the sweep's pull requests, #71 to #85, found a gap in the
-N-07 fix of #77: the comment endpoints capped the number of strings in the recipient list, and one RFC 822
-group address is a single string that names many mailboxes, each of which gets the mail. P15 (#87) closes it: a
+**The external review.** An external review of the sweep's pull requests found a gap in the
+N-07 fix of P07: the comment endpoints capped the number of strings in the recipient list, and one RFC 822
+group address is a single string that names many mailboxes, each of which gets the mail. P15 closes it: a
 recipient that is a group, or holds more than one address, is answered 400 before the comment is saved,
 so a comment is mailed to at most 20 mailboxes. The e-mail suggestions the comment dialog offers
 (`GET /rest/users/search-emails`) now quote a display name that holds a comma or another special character, so
@@ -109,103 +109,103 @@ Niord roles as client roles, and logins through `niord-web` or a client listed i
 Sorted by severity, then area. Sections 4 to 6 say what remains of each mitigated, deferred and
 accepted finding.
 
-| Id | Severity | Area | Weakness | Status | PR |
+| Id | Severity | Area | Weakness | Status | Phase |
 |---|---|---|---|---|---|
-| F-X29 | high | Backend | The repository served uploaded HTML inline on the backend origin | fixed | #75 |
-| F-X42 | high | Backend | Template execution evaluated a caller-supplied script outside any sandbox | fixed | #76 |
-| F-X43 | high | Backend | The legacy publication tag filter ran as an unsandboxed script for domain admins | fixed | #76 |
-| F-X83 | high | Backend | The repository's "not found" answer reflected the request path as HTML on the backend origin | fixed | #75 |
-| F-X147 | high | Backend | Mail assembly fetched any image or style-sheet address found in message HTML | fixed | #83 |
-| F-X160 | high | Backend | Batch upload file names were used as given, so a file could land outside its job folder | fixed | #78 |
-| N-01 | high | Backend | The message export read attachment files by a stored name with no containment check | fixed | #78 |
-| F-X112 | high | Frontend | The rich-text editor kept every attribute of a publication span | fixed | #72 |
-| F-X73 | high | CI/CD | The publish workflow did not check that its trigger was a push to main in this repository | fixed | #71 |
+| F-X29 | high | Backend | The repository served uploaded HTML inline on the backend origin | fixed | P02 |
+| F-X42 | high | Backend | Template execution evaluated a caller-supplied script outside any sandbox | fixed | P01 |
+| F-X43 | high | Backend | The legacy publication tag filter ran as an unsandboxed script for domain admins | fixed | P01 |
+| F-X83 | high | Backend | The repository's "not found" answer reflected the request path as HTML on the backend origin | fixed | P02 |
+| F-X147 | high | Backend | Mail assembly fetched any image or style-sheet address found in message HTML | fixed | P04 |
+| F-X160 | high | Backend | Batch upload file names were used as given, so a file could land outside its job folder | fixed | P03 |
+| N-01 | high | Backend | The message export read attachment files by a stored name with no containment check | fixed | P03 |
+| F-X112 | high | Frontend | The rich-text editor kept every attribute of a publication span | fixed | P12 |
+| F-X73 | high | CI/CD | The publish workflow did not check that its trigger was a push to main in this repository | fixed | P11 |
 | F-X92 | high | Deployment | The chart's Keycloak runs in development mode with committed seed credentials | deferred | — |
-| F-X1 | medium | Backend | Anonymous message-id search returned non-public messages | fixed | #74 |
-| F-X2 | medium | Backend | Comments of any message, with e-mail addresses, were readable across domains | fixed | #77 |
-| F-X4 | medium | Backend | Plain users could unlock and change locked public tags, across domains | fixed | #77, #84 |
-| F-X13 | medium | Backend | SECOM deliveries went to whatever endpoint the registry named | fixed | #73 |
-| F-X14 | medium | Backend | The SECOM outbox had no per-node limit | mitigated | #73 |
-| F-X15 | medium | Backend | The Niord-integration endpoints were open to an admin of any domain | fixed | #81 |
-| F-X21 | medium | Backend | The S-124 endpoint returned generation errors as HTML | fixed | #78, #96 |
-| F-X22 | medium | Backend | Caller-supplied AtoN filters were evaluated with the engine's globals reachable | fixed | #76 |
-| F-X24 | medium | Backend | The anonymous AtoN tile and icon endpoints did unbounded work and wrote files per request | fixed | #79 |
-| F-X28 | medium | Backend | The NAVTEX and SafetyNET reformat endpoints were anonymous and quadratic in the text length | fixed | #79 |
-| F-X30 | medium | Backend | The general repository upload was not confined to the temporary area | fixed | #75 |
-| F-X44 | medium | Backend | Anonymous free-text search accepted the full query syntax | fixed | #74 |
-| F-X45 | medium | Backend | A publication file name from the request body was not reduced to a bare name | fixed | #75 |
-| F-X46 | medium | Backend | Report parameters reached the PDF as markup | fixed | #83 |
-| F-X50 | medium | Backend | The message-archive import could extract entries outside its folder | fixed | #78 |
-| F-X52 | medium | Backend | The repository folder sync took its paths from the request body | fixed | #75 |
-| F-X60 | medium | Backend | The anonymous legacy publication listing included unreleased rows and their file links | fixed | #82 |
-| F-X63 | medium | Backend | Anonymous searches accepted any result size | fixed | #74 |
-| F-X85 | medium | Backend | Files of unreleased publication issues can be downloaded through the public host | mitigated | #82 |
-| F-X86 | medium | Backend | Anonymous PDF rendering had no concurrency limit | fixed | #79 |
-| F-X121 | medium | Backend | The anonymous publication lookup resolves at the internal audience | mitigated | #82 |
-| F-X126 | medium | Backend | Curation could include a non-public message in a public issue | fixed | #82 |
-| F-X127 | medium | Backend | The publication-series batch import bypassed the domain guard | fixed | #82 |
+| F-X1 | medium | Backend | Anonymous message-id search returned non-public messages | fixed | P05 |
+| F-X2 | medium | Backend | Comments of any message, with e-mail addresses, were readable across domains | fixed | P07 |
+| F-X4 | medium | Backend | Plain users could unlock and change locked public tags, across domains | fixed | P07, P13 |
+| F-X13 | medium | Backend | SECOM deliveries went to whatever endpoint the registry named | fixed | P10 |
+| F-X14 | medium | Backend | The SECOM outbox had no per-node limit | mitigated | P10 |
+| F-X15 | medium | Backend | The Niord-integration endpoints were open to an admin of any domain | fixed | P08 |
+| F-X21 | medium | Backend | The S-124 endpoint returned generation errors as HTML | fixed | P03, section 8 |
+| F-X22 | medium | Backend | Caller-supplied AtoN filters were evaluated with the engine's globals reachable | fixed | P01 |
+| F-X24 | medium | Backend | The anonymous AtoN tile and icon endpoints did unbounded work and wrote files per request | fixed | P09 |
+| F-X28 | medium | Backend | The NAVTEX and SafetyNET reformat endpoints were anonymous and quadratic in the text length | fixed | P09 |
+| F-X30 | medium | Backend | The general repository upload was not confined to the temporary area | fixed | P02 |
+| F-X44 | medium | Backend | Anonymous free-text search accepted the full query syntax | fixed | P05 |
+| F-X45 | medium | Backend | A publication file name from the request body was not reduced to a bare name | fixed | P02 |
+| F-X46 | medium | Backend | Report parameters reached the PDF as markup | fixed | P04 |
+| F-X50 | medium | Backend | The message-archive import could extract entries outside its folder | fixed | P03 |
+| F-X52 | medium | Backend | The repository folder sync took its paths from the request body | fixed | P02 |
+| F-X60 | medium | Backend | The anonymous legacy publication listing included unreleased rows and their file links | fixed | P06 |
+| F-X63 | medium | Backend | Anonymous searches accepted any result size | fixed | P05 |
+| F-X85 | medium | Backend | Files of unreleased publication issues can be downloaded through the public host | mitigated | P06 |
+| F-X86 | medium | Backend | Anonymous PDF rendering had no concurrency limit | fixed | P09 |
+| F-X121 | medium | Backend | The anonymous publication lookup resolves at the internal audience | mitigated | P06 |
+| F-X126 | medium | Backend | Curation could include a non-public message in a public issue | fixed | P06 |
+| F-X127 | medium | Backend | The publication-series batch import bypassed the domain guard | fixed | P06 |
 | F-X128 | medium | Backend | The anonymous issue lookup by id shows the titles of unreleased issues | accepted | — |
-| F-X138 | medium | Backend | The PDF renderer fetched any resource named in message markup | fixed | #83 |
-| F-X145 | medium | Backend | The mailing-list report HTML was served unsandboxed from the backend origin | fixed | #78 |
-| F-X152 | medium | Backend | A slow SECOM peer could hold the shared scheduler thread | mitigated | #73 |
-| F-X156 | medium | Backend | SECOM GetSummary built a signed exchange set per item, with no page-size cap | fixed | #73 |
-| N-02 | medium | Backend | The NiordDomain header overrode the domain a ticket was issued for | fixed | #81 |
+| F-X138 | medium | Backend | The PDF renderer fetched any resource named in message markup | fixed | P04 |
+| F-X145 | medium | Backend | The mailing-list report HTML was served unsandboxed from the backend origin | fixed | P03 |
+| F-X152 | medium | Backend | A slow SECOM peer could hold the shared scheduler thread | mitigated | P10 |
+| F-X156 | medium | Backend | SECOM GetSummary built a signed exchange set per item, with no page-size cap | fixed | P10 |
+| N-02 | medium | Backend | The NiordDomain header overrode the domain a ticket was issued for | fixed | P08 |
 | N-03 | medium | Backend | The legacy publication write endpoints have no domain guard | accepted | — |
-| N-04 | medium | Backend | A domain admin could replace the global dictionaries by upload | fixed | #81 |
-| N-05 | medium | Backend | The anonymous category search ran a new script engine per category for caller-supplied AtoNs | fixed | #76 |
-| N-06 | medium | Backend | TEMP message tags were readable by every caller | fixed | #77 |
-| N-07 | medium | Backend | A comment could mail any message to any number of recipients, markup unescaped | fixed | #77, #87 |
-| N-08 | medium | Backend | Batch data files were served inline with a type taken from the extension | fixed | #78 |
-| N-09 | medium | Backend | Batch jobs were not scoped to a domain | fixed | #81 |
-| F-X106 | medium | CI/CD | The break-glass publish could be run from any branch | fixed | #71 |
-| F-X113 | medium | Dependencies | A Jackson number-parsing weakness was reachable before authorization | fixed | #79 |
+| N-04 | medium | Backend | A domain admin could replace the global dictionaries by upload | fixed | P08 |
+| N-05 | medium | Backend | The anonymous category search ran a new script engine per category for caller-supplied AtoNs | fixed | P01 |
+| N-06 | medium | Backend | TEMP message tags were readable by every caller | fixed | P07 |
+| N-07 | medium | Backend | A comment could mail any message to any number of recipients, markup unescaped | fixed | P07, P15 |
+| N-08 | medium | Backend | Batch data files were served inline with a type taken from the extension | fixed | P03 |
+| N-09 | medium | Backend | Batch jobs were not scoped to a domain | fixed | P08 |
+| F-X106 | medium | CI/CD | The break-glass publish could be run from any branch | fixed | P11 |
+| F-X113 | medium | Dependencies | A Jackson number-parsing weakness was reachable before authorization | fixed | P09 |
 | F-X70 | medium | Deployment | The admin application's Keycloak client allows any redirect URI and origin and does not enforce PKCE | deferred | — |
 | F-X72 | medium | Deployment | An unused confidential Keycloak client holds a privileged service account | deferred | — |
 | F-X6 | low | Backend | The message map image is served without a viewing check | accepted | — |
-| F-X7 | low | Backend | The anonymous export carried system-only message details | fixed | #74 |
-| F-X9 | low | Backend | A public tag made a draft readable anonymously | fixed | #77 |
-| F-X12 | low | Backend | Message history was readable across domains | fixed | #77 |
-| F-X16 | low | Backend | The anonymous publication filter resolved publications in internal categories | fixed | #82 |
-| F-X17 | low | Backend | S-124 GML resolved non-public referenced messages | fixed | #74 |
+| F-X7 | low | Backend | The anonymous export carried system-only message details | fixed | P05 |
+| F-X9 | low | Backend | A public tag made a draft readable anonymously | fixed | P07 |
+| F-X12 | low | Backend | Message history was readable across domains | fixed | P07 |
+| F-X16 | low | Backend | The anonymous publication filter resolved publications in internal categories | fixed | P06 |
+| F-X17 | low | Backend | S-124 GML resolved non-public referenced messages | fixed | P05 |
 | F-X19 | low | Backend | The SECOM client-certificate header is trusted from any caller inside the cluster | accepted | — |
-| F-X23 | low | Backend | Any signed-in user could list every user's name and e-mail address | mitigated | #81 |
-| F-X36 | low | Backend | The Keycloak admin URL came from the request host, and TLS was not verified | fixed | #83 |
-| F-X37 | low | Backend | Tokens from any client of the realm were accepted, and realm roles were mapped | fixed | #81 |
-| F-X40 | low | Backend | The WMS proxy forwarded the caller's query parameters and logged its token | fixed | #83 |
-| F-X49 | low | Backend | The batch-set archive could extract entries outside its folder | fixed | #78 |
-| F-X55 | low | Backend | The thumbnail decoder had no image-size limit | fixed | #75 |
-| F-X57 | low | Backend | Repository reads relied on the HTTP firewall alone for containment | fixed | #75 |
+| F-X23 | low | Backend | Any signed-in user could list every user's name and e-mail address | mitigated | P08 |
+| F-X36 | low | Backend | The Keycloak admin URL came from the request host, and TLS was not verified | fixed | P04 |
+| F-X37 | low | Backend | Tokens from any client of the realm were accepted, and realm roles were mapped | fixed | P08 |
+| F-X40 | low | Backend | The WMS proxy forwarded the caller's query parameters and logged its token | fixed | P04 |
+| F-X49 | low | Backend | The batch-set archive could extract entries outside its folder | fixed | P03 |
+| F-X55 | low | Backend | The thumbnail decoder had no image-size limit | fixed | P02 |
+| F-X57 | low | Backend | Repository reads relied on the HTTP firewall alone for containment | fixed | P02 |
 | F-X64 | low | Backend | Administration configuration is readable anonymously through open GET endpoints | accepted | — |
 | F-X68 | low | Backend | Staff can have the backend mail a message to any address | accepted | — |
-| F-X77 | low | Backend | Password settings and the WMS token were written to the log | fixed | #83 |
-| F-X87 | low | Backend | The public host's message PDF rendered a non-published message in a public tag | fixed | #77 |
+| F-X77 | low | Backend | Password settings and the WMS token were written to the log | fixed | P04 |
+| F-X87 | low | Backend | The public host's message PDF rendered a non-published message in a public tag | fixed | P07 |
 | F-X129 | low | Backend | The curation reads are not scoped to a domain | accepted | — |
-| F-X139 | low | Backend | Template parameters were printed unescaped into HTML fields | fixed | #76 |
-| F-X146 | low | Backend | Message markup was mailed to subscribers as the editor wrote it | fixed | #96 |
+| F-X139 | low | Backend | Template parameters were printed unescaped into HTML fields | fixed | P01 |
+| F-X146 | low | Backend | Message markup was mailed to subscribers as the editor wrote it | fixed | section 8 |
 | F-X157 | low | Backend | TLS verification towards the SECOM registry can be switched off, and an http registry is accepted | accepted | — |
-| N-10 | low | Backend | Domain roles were granted for any client the NiordDomain header named | fixed | #81 |
-| N-11 | low | Backend | DOMAIN message tags were visible to anonymous callers that named the domain | fixed | #77 |
-| N-12 | low | Backend | Anonymous callers could have unlimited tickets issued, each logged at INFO | mitigated | #81 |
-| N-13 | low | Backend | Anonymous search could filter on staff user names and on internal comments | fixed | #74 |
-| N-14 | low | Backend | The geometry template name was not restricted | fixed | #78 |
+| N-10 | low | Backend | Domain roles were granted for any client the NiordDomain header named | fixed | P08 |
+| N-11 | low | Backend | DOMAIN message tags were visible to anonymous callers that named the domain | fixed | P07 |
+| N-12 | low | Backend | Anonymous callers could have unlimited tickets issued, each logged at INFO | mitigated | P08 |
+| N-13 | low | Backend | Anonymous search could filter on staff user names and on internal comments | fixed | P05 |
+| N-14 | low | Backend | The geometry template name was not restricted | fixed | P03 |
 | N-15 | low | Backend | Estate-wide publication categories can be changed by an admin of any domain | accepted | — |
-| N-16 | low | Backend | The legacy publication search-details served the system shape to any user | fixed | #82 |
+| N-16 | low | Backend | The legacy publication search-details served the system shape to any user | fixed | P06 |
 | N-17 | low | Backend | The anonymous legacy publication search loads both publication tables on every call | accepted | — |
-| N-18 | low | Backend | The estate-wide legacy import and its undo were open to one domain's admin | fixed | #82 |
+| N-18 | low | Backend | The estate-wide legacy import and its undo were open to one domain's admin | fixed | P06 |
 | N-20 | low | Backend | The shipped defaults reach the WMS over plain HTTP (the map-image server they also reached is gone) | accepted | — |
-| N-19 | low | Frontend | The rich-text editor kept any class on links and table cells | fixed | #72 |
-| F-X107 | low | CI/CD | The retract workflow expanded its reason input into the script and did not gate the tag delete | fixed | #71 |
-| F-X108 | low | CI/CD | Workflow actions were referenced by movable tags, one of them third-party | fixed | #71, #96 |
-| F-X109 | low | Dependencies | Maven consulted JitPack before the repository that publishes the SECOM library | mitigated | #71 |
+| N-19 | low | Frontend | The rich-text editor kept any class on links and table cells | fixed | P12 |
+| F-X107 | low | CI/CD | The retract workflow expanded its reason input into the script and did not gate the tag delete | fixed | P11 |
+| F-X108 | low | CI/CD | Workflow actions were referenced by movable tags, one of them third-party | fixed | P11, section 8 |
+| F-X109 | low | Dependencies | Maven consulted JitPack before the repository that publishes the SECOM library | mitigated | P11 |
 | F-X76 | low | Deployment | Chart credentials are plain values with weak defaults | deferred | — |
 | F-X96 | low | Deployment | The chart's public entry point serves plain HTTP only | deferred | — |
 | F-X99 | low | Deployment | The chart's pods have no security-context hardening | deferred | — |
 | F-X100 | low | Deployment | One database superuser is shared by every release | deferred | — |
 | F-X114 | low | Deployment | The chart pins an outdated Keycloak release | deferred | — |
 | F-X116 | low | Deployment | The chart uses end-of-life nginx and MailHog images | deferred | — |
-| N-22 | info | Backend | The security guard tests covered only public methods of REST controllers | fixed | #81 |
-| N-23 | info | Backend | Unused Java deserialization of batch data files | fixed | #78 |
-| N-21 | info | Frontend | The web-settings overlay could move the WMS prefix that receives users' tokens | fixed | #72 |
+| N-22 | info | Backend | The security guard tests covered only public methods of REST controllers | fixed | P08 |
+| N-23 | info | Backend | Unused Java deserialization of batch data files | fixed | P03 |
+| N-21 | info | Frontend | The web-settings overlay could move the WMS prefix that receives users' tokens | fixed | P12 |
 
 ---
 
@@ -229,10 +229,10 @@ The deployment — the Helm chart in `be/k8s/helm/niord`, the Keycloak it runs a
 was still being built when the review ran. Its nine findings are rechecked against the finished
 deployment before production go-live; the "Before production go-live" list in
 [`fe/docs/backlog.md`](../fe/docs/backlog.md) points here. Chart changes merged on `main` after the
-review probably address some of them: #68 (every pod meets the restricted Pod Security standard, F-X99),
-#69 (credentials from Secrets, F-X76) and #108 (`keycloak.mode: production`: a realm with no
+review probably address some of them: every pod meets the restricted Pod Security standard (F-X99),
+credentials come from Secrets (F-X76), and `keycloak.mode: production` gives a realm with no
 `niord-web-admin` client and no client secret from the repository, and a `niord-web` limited to the
-environment's origin with PKCE and no password grant — F-X70, F-X72, for an environment that sets it). F-X92 stays open: #108
+environment's origin with PKCE and no password grant (F-X70, F-X72, for an environment that sets it). F-X92 stays open: that mode
 runs Keycloak in production mode with its admin from a Secret, but keeps the test users with the passwords
 in the repository. The owner ruled on 2026-09-29 that they are not changed, also when staging goes on the
 Internet. The recheck decides for production.
@@ -249,12 +249,12 @@ table below is still what the last recheck before go-live holds production to.
 | F-X92 | high | Keycloak runs in production mode, and no credential committed to the repository or defaulted by the chart — the bootstrap admin, a seeded user — works against a production realm or holds a Niord role there. |
 | F-X70 | medium | The `niord-web` client lists the exact redirect URIs and web origins of each public host, and requires PKCE. |
 | F-X72 | medium | No unused client with a service account that can manage the realm exists in a production realm, and no client secret comes from the repository. |
-| F-X76 | low | Every credential of a production release comes from a Secret, and no weak default from `values.yaml` reaches it. #69 moved the Postgres and Keycloak credentials and the SECOM store passwords into Secrets; check what else a release carries. |
+| F-X76 | low | Every credential of a production release comes from a Secret, and no weak default from `values.yaml` reaches it. A chart change after the review moved the Postgres and Keycloak credentials and the SECOM store passwords into Secrets; check what else a release carries. |
 | F-X96 | low | Every public host is served over https only, so tokens and passwords never cross the network in clear text. |
-| F-X99 | low | Every pod runs as a non-root user under the restricted Pod Security standard. #68 did this for the chart's own pods. The public site's image runs as its unprivileged user 101 on port 8080 since the chart deploys it as its `info` component ([public-site-deploy-plan.md](public-site-deploy-plan.md)); its container test runs it as a restricted pod does. |
-| F-X100 | low | The application connects to its database as a user that owns that database and is not a superuser (the owner's ruling of 2026-09-26, section 8). One Postgres per country (design §6, #70) already keeps the countries apart, so a user per country is no longer the goal. #69 still connects as the environment's admin user, and the base-data seed disables triggers, which needs a superuser (design §6): the recheck also settles how the seed runs. |
+| F-X99 | low | Every pod runs as a non-root user under the restricted Pod Security standard. A chart change after the review did this for the chart's own pods. The public site's image runs as its unprivileged user 101 on port 8080 since the chart deploys it as its `info` component ([public-site-deploy-plan.md](public-site-deploy-plan.md)); its container test runs it as a restricted pod does. |
+| F-X100 | low | The application connects to its database as a user that owns that database and is not a superuser (the owner's ruling of 2026-09-26, section 8). One Postgres per country (design §6) already keeps the countries apart, so a user per country is no longer the goal. The application still connects as the environment's admin user, and the base-data seed disables triggers, which needs a superuser (design §6): the recheck also settles how the seed runs. |
 | F-X114 | low | Keycloak runs a current patch release. |
-| F-X116 | low | The proxy, which also terminates SECOM mutual TLS, runs a supported nginx release, and MailHog is not part of a production release. (The SECOM mutual-TLS listener was removed on 2026-10-14, #154: SECOM Edition 2 takes identity from the signed envelope.) |
+| F-X116 | low | The proxy, which also terminates SECOM mutual TLS, runs a supported nginx release, and MailHog is not part of a production release. (The SECOM mutual-TLS listener was removed on 2026-10-14: SECOM Edition 2 takes identity from the signed envelope.) |
 
 Three more items belong to the same recheck:
 
@@ -266,9 +266,9 @@ Three more items belong to the same recheck:
 
 ### The recheck of 2026-11-12
 
-**What it was held against.** The chart at `main` @ `3affa4be`; the two stagings as their values pin
-them (chart 4.0.151, `devops-niord` @ `84de6ed`); the test cluster's shared Keycloak and its entry
-point, Traefik (`devops-shared` @ `ad4771b`); and the production values parked in `devops-niord`
+**What it was held against.** The chart at `main` on that day; the two stagings as their values pin
+them (chart 4.0.151, in `devops-niord`); the test cluster's shared Keycloak and its entry
+point, Traefik (in `devops-shared`); and the production values parked in `devops-niord`
 (`reference/pending/envs/prod/`). The deployment has changed shape twice since the review. The stagings
 sign in through one shared Keycloak for the cluster, with a realm per country that a platform admin
 creates once from the realm the chart renders (2026-11-05). And the public site is the chart's sixth
@@ -314,8 +314,8 @@ The three items that belong to the same recheck:
   open issue 8): without it a limit cannot tell one client from another.
 - **The go-live checks of the three accepted findings.**
   - **F-X19** needs its check no longer. The backend ignores the client-certificate header unless
-    `niord.secom.trust-cert-header` is set, which the chart never does, and the proxy blanks the header
-    (#154). No NetworkPolicy exists; the owner ruled it a minor nice-to-have on 2026-11-10, the host's
+    `niord.secom.trust-cert-header` is set, which the chart never does, and the proxy blanks the header.
+    No NetworkPolicy exists; the owner ruled it a minor nice-to-have on 2026-11-10, the host's
     firewall being restrictive.
   - **F-X157** waits for SECOM, which is off on both stagings and in the parked production values. The
     setting defaults to off. Its check belongs in the SECOM cutover runbook (`devops-niord`,
@@ -329,17 +329,17 @@ The three items that belong to the same recheck:
 go:
 
 1. Keycloak on 26.8.2: the shared Keycloak's pin (`devops-shared`) and the chart's, with its mirror in
-   Harbor (F-X114). Done on 2026-11-12: the chart and the local compose file on 26.8.2 (#304,
-   published as 4.0.161), the image mirrored in Harbor, the shared Keycloak on 26.8.2 (devops-shared
-   !113), and the parked production values on 26.8.2 (devops-niord !56, on the owner's request). From
+   Harbor (F-X114). Done on 2026-11-12: the chart and the local compose file on 26.8.2
+   (published as 4.0.161), the image mirrored in Harbor, the shared Keycloak on 26.8.2 (devops-shared),
+   and the parked production values on 26.8.2 (devops-niord, on the owner's request). From
    26.8.2 the Admin REST API refuses a token without the client scope `kc-admin-api`, and the
    backend's admin calls carry the signed-in user's `niord-web` token: the realms the chart, the
    local run and the tests import now give `niord-web` that scope, and the owner gave it to
    `niord-web` in `niord-dk` and `niord-gl` by hand after the upgrade (devops-shared,
-   `runbooks/keycloak.md`, Upgrades). Both stagings run base 4.0.162 since devops-niord !57, and
+   `runbooks/keycloak.md`, Upgrades). Both stagings run base 4.0.162 (devops-niord), and
    the owner checked them the same day. Watching Keycloak's security releases stays open.
 2. The proxy on a maintained nginx line (F-X116). Done the same day: nginx 1.30.6, the stable line,
-   on Alpine 3.24 (#304), mirrored in Harbor, and the proxy of both stagings since devops-niord !57.
+   on Alpine 3.24, mirrored in Harbor, and the proxy of both stagings since their move to base 4.0.162.
    1.30 ends when 1.32 comes out, expected in April 2027. The public site's Alpine 3.22 base is
    maintained until 2027-05-01 and stays for now.
 3. A chart value that renders the production realm without the test users (F-X92).
@@ -349,9 +349,9 @@ go:
 5. The application's own database user (F-X100). A plan first: it depends on when the database moves
    to the host's database hotel, and the first changeset's statement is in the way on either road.
    The plan is [database-user-plan.md](database-user-plan.md), decided and built on the same day: the
-   chart makes the user, and the first changeset builds as one (#305, published as 4.0.162). Done on
+   chart makes the user, and the first changeset builds as one (published as 4.0.162). Done on
    both stagings the same day: they connect as `niord_app`, a user that owns its database and is not
-   a superuser, since devops-niord !59 (the sealed Secrets) and !58 (the values). The owner checked
+   a superuser, since two merges in devops-niord (the sealed Secrets and the values). The owner checked
    them: every session on each database is that user's, the app reads and saves, and the Postgres
    pods were not restarted. Production's values name both Secrets when they are written.
 6. The read of the running realms and of the stagings' settings, from the jump server (F-X70, F-X72,
@@ -380,14 +380,14 @@ entry point and https, its realm and its admins, its Secrets, and its values.
 
 **What changed in between.** The first recheck led to three changes on the same day, and the owner
 asked for the recheck again from the latest commits. The chart went to Keycloak 26.8.2 and nginx 1.30.6
-(#304, base 4.0.161). The application got a database user of its own (#305, base 4.0.162;
+(base 4.0.161). The application got a database user of its own (base 4.0.162;
 [database-user-plan.md](database-user-plan.md)). Both stagings took base 4.0.162 and then a second
-sealed Secret for that user (devops-niord !57, !59, !58), and the shared Keycloak's pin went to 26.8.2
-(devops-shared !113).
+sealed Secret for that user (devops-niord), and the shared Keycloak's pin went to 26.8.2
+(devops-shared).
 
-**What it was held against.** `main` @ `a538e16d`; the published chart 4.0.162, pulled from Harbor,
-whose templates, values and realm file are `main`'s; `devops-niord` @ `dd8c32a`; `devops-shared` @
-`ddb8fca`. The method was the first recheck's. Every value set was rendered again. The production realm
+**What it was held against.** `main` at its latest commit; the published chart 4.0.162, pulled from Harbor,
+whose templates, values and realm file are `main`'s; `devops-niord` and `devops-shared` at theirs.
+The method was the first recheck's. Every value set was rendered again. The production realm
 was imported into a throwaway Keycloak 26.8.2 and read back. The chart's `database-user` script, taken
 from the staging render, was run in throwaway PostGIS containers. The test cluster and production were
 out of reach as before: what the stagings run is taken from their values and from the owner's checks of
@@ -418,7 +418,7 @@ still name the WMS over plain http (N-20).
    who can run SQL as the application's user can become the superuser at the pod's next start. Not
    fixed: on the owner's word of 2026-11-12 it is recorded as SECREV-4 in
    [`be/docs/potential-errors.md`](../be/docs/potential-errors.md), with the remedy that was tried.
-   Fixed in the chart the same day, on the owner's go (#315): every session of the script has the
+   Fixed in the chart the same day, on the owner's go: every session of the script has the
    search path `pg_catalog`, set by the client, which also overrides a search path set on the
    database, a second way to the same end that the recheck had not tried. A schema named after the
    superuser, which it had not tried either, was a third; the fix closes all three.
@@ -426,7 +426,7 @@ still name the WMS over plain http (N-20).
    planted in each of the three places, and checks that the hand-over still reaches every kind of
    object. The databases Job, which also connects to the application's database as the superuser,
    was tried the same way and needed nothing. SECREV-4 is closed; the stagings run the script
-   without the fix until they take the base version #315 publishes.
+   without the fix until they take a base version that carries it.
 2. A chart value that renders the production realm without the test users (F-X92).
 3. The guards (F-X76, F-X92): the chart refuses production mode with a default database credential,
    and the deploy repository's validator refuses a staging or production environment that renders dev
@@ -450,13 +450,13 @@ stays open and why the risk is low. (F-X146 was the twelfth; it is fixed since t
 
 | Id | Severity | What stays open | Why it is accepted |
 |---|---|---|---|
-| F-X128 | medium | Anyone can read the title and status of an unreleased publication issue by its id. | Titles only: the document link of an unreleased issue is withheld since #82. A public-only variant of the endpoint means changing its callers too. |
+| F-X128 | medium | Anyone can read the title and status of an unreleased publication issue by its id. | Titles only: the document link of an unreleased issue is withheld since P06. A public-only variant of the endpoint means changing its callers too. |
 | N-03 | medium | The legacy publication write endpoints check the admin role, not the publication's domain. | Admins only, on the previous publication model, which no screen of the administration app edits any more; locking its admin is on the publications go-live task sheet (`fe/docs/publications/go-live/GO-LIVE-TASKS.md`). |
 | F-X6 | low | The map image of a message, drafts included, is served to anyone who has the message's UID. | The UID is a random UUID, and the image shows the geometry only. |
 | F-X64 | low | Many open GET endpoints return administration configuration to anonymous callers. | Configuration, not message content. Closing it means deciding, endpoint by endpoint, which reads the public site and the administration app's guest mode need; `be/docs/potential-errors.md` (SECAUD-12) keeps the systemic item. |
-| N-17 | low | The anonymous legacy publication search loads both publication tables on every call, whatever page it asks for. | The cost is bounded by the size of the two tables, and anonymous callers get the public tier and at most 1000 rows (#82, #84). |
+| N-17 | low | The anonymous legacy publication search loads both publication tables on every call, whatever page it asks for. | The cost is bounded by the size of the two tables, and anonymous callers get the public tier and at most 1000 rows (P06, P13). |
 | F-X19 | low | The backend trusts the SECOM client-certificate header that the proxy sets, from any caller that reaches it inside the cluster. | Only a workload inside the cluster can bypass the proxy. Recheck at go-live that the cluster's network policy lets only the proxy reach the backend's SECOM path. |
-| F-X68 | low | Staff can have the backend mail a message to any address: an editor through the mail dialog, any user of the message's domain through a comment (at most 20 addresses since #77, each a single mailbox since #87: a group address is refused). | Mailing messages is the feature, and the senders are signed-in staff. The owner accepted who may be a recipient as it is on 2026-09-26 (section 8): own domain only; attributable through the Reply-To, the scheduled-mail record and the log; comment mails capped at 20 single mailboxes. |
+| F-X68 | low | Staff can have the backend mail a message to any address: an editor through the mail dialog, any user of the message's domain through a comment (at most 20 addresses since P07, each a single mailbox since P15: a group address is refused). | Mailing messages is the feature, and the senders are signed-in staff. The owner accepted who may be a recipient as it is on 2026-09-26 (section 8): own domain only; attributable through the Reply-To, the scheduled-mail record and the log; comment mails capped at 20 single mailboxes. |
 | F-X129 | low | The curation reads of a publication series are not limited to its domain. | Read-only, and for curators and admins only. |
 | F-X157 | low | A sysadmin setting (`secomServiceRegistryInsecure`, off by default) switches off TLS verification towards the SECOM registry, and an http registry address is accepted. | Meant for test registries. Recheck at go-live that the setting is off and the registry address is https. |
 | N-15 | low | The publication categories are shared by every domain, and an admin of any domain can rename them or change whether they publish. | Admins only. Categories owned per domain would be a change to the model. |
@@ -468,9 +468,9 @@ add no finding to the count above.
 | Id | What stays open | Why it is accepted |
 |---|---|---|
 | F-X112, F-X145 | Message HTML is stored as the editor's browser sends it; the server does not clean it on save. | The administration app's editor narrows the markup it keeps, both applications clean message HTML before they show it, the mailing-list report is sandboxed, and every mail made from a message carries the message's texts cleaned and its attachment images' attributes checked (F-X146). |
-| N-04 | Dictionary text is printed unescaped by the FreeMarker templates. | Only a sysadmin can upload dictionaries since #81. |
+| N-04 | Dictionary text is printed unescaped by the FreeMarker templates. | Only a sysadmin can upload dictionaries since P08. |
 | N-07 | Who may receive a comment mail. | As F-X68: accepted as it is. |
-| F-X108 | GitHub's own `actions/*` are referenced by major tag, not by commit SHA. | GitHub publishes them. Since #71 no third-party action is used (the Harbor login runs the docker CLI), and one added later is pinned to a commit SHA; Dependabot security updates now cover the workflows too. |
+| F-X108 | GitHub's own `actions/*` are referenced by major tag, not by commit SHA. | GitHub publishes them. Since P11 no third-party action is used (the Harbor login runs the docker CLI), and one added later is pinned to a commit SHA; Dependabot security updates now cover the workflows too. |
 
 ---
 
@@ -603,14 +603,14 @@ section:
   2026-11-12 (each entry is claimed with a lease before it is sent, `be/docs/secom-design.md` D6) and
   removed from that file again.
 - **SECREV-3** — `LineDirective` can pass a line length of zero or less to `TextUtils.maxLineLength`.
-  Fixed 2026-11-12 (#316) and removed from that file again: a length below 1 is refused.
+  Fixed 2026-11-12 and removed from that file again: a length below 1 is refused.
 - **SECREV-4** — the chart's `database-user` script runs as the superuser, with the default search path,
   inside the database the application's user owns (the second recheck of 2026-11-12, section 5). Fixed
-  the same day (#315) and removed from that file again.
+  the same day and removed from that file again.
 
 The same file's SECAUD-12 now carries F-X64 as accepted; SECAUD-15, MASSASSIGN-2, MASSASSIGN-3 and
 RENDER6 are removed, because the sweep closed them; and U6, SECAUD-9, LUCENE-2, TMPL6, PORT-5 and REPO3
-now describe the code as the sweep left it. Since then LUCENE-2 was fixed (#289) and removed from that file,
+now describe the code as the sweep left it. Since then LUCENE-2 was fixed and removed from that file,
 and the open RENDER6 there now (the message-list PDF's labels and time stamp) is a later, unrelated entry
 under the reused code.
 
@@ -625,13 +625,13 @@ New items in [`fe/docs/backlog.md`](../fe/docs/backlog.md):
 
 ### The owner's rulings of 2026-09-26
 
-The sweep left five options open. The owner ruled on each of them on 2026-09-26, and #96 implements the
+The sweep left five options open. The owner ruled on each of them on 2026-09-26, and a follow-up to the sweep implements the
 rulings.
 
 | # | Option the sweep did not take | The owner's ruling | What was done |
 |---|---|---|---|
-| 1 | Sanitising message HTML on the server (F-X112, F-X145, F-X146), and escaping dictionary text in the FreeMarker templates (N-04) | Clean subscriber mails with the allow-list the comment mail already uses; stored message HTML stays as it is. N-04 is accepted: only a sysadmin can upload dictionaries since #81. | `MailHtml` holds both allow-lists. A comment keeps the comment mail's list (formatting and links; no classes, images, styles or scripts). The texts of each message — title, vicinity, publications, source, the subject and details of each part, the description of each reference, the caption of each attachment — are cleaned before a mailing-list template runs, and before `MessageMailService` renders the mail dialog's mail and the message in a comment mail. The ruling is about active and foreign content, not the message's formatting, so a message text keeps, on top of the comment list, the classes of the frontends' message-HTML vocabulary (`fe/shared-html/message-html-classes.ts`, mirrored in `MailHtml` and held to it by `MailHtmlTest`) on the elements they are meant for, and images from the backend's own `baseUri` origin with their alternative text and a plain-length size; any other class, foreign or `data:` images, styles and scripts go. The path, width and height of an attachment, which the templates print into the attributes of its image, are checked there too, and the SafetyNET cancellation mail escapes the SafetyNET id. `MessageMailService` escapes the recipient's and the sender's names, which `message-mail.ftl` prints into the greeting and the regards, before it renders the mail, so every stored copy of the template is covered. F-X146 is fixed. |
+| 1 | Sanitising message HTML on the server (F-X112, F-X145, F-X146), and escaping dictionary text in the FreeMarker templates (N-04) | Clean subscriber mails with the allow-list the comment mail already uses; stored message HTML stays as it is. N-04 is accepted: only a sysadmin can upload dictionaries since P08. | `MailHtml` holds both allow-lists. A comment keeps the comment mail's list (formatting and links; no classes, images, styles or scripts). The texts of each message — title, vicinity, publications, source, the subject and details of each part, the description of each reference, the caption of each attachment — are cleaned before a mailing-list template runs, and before `MessageMailService` renders the mail dialog's mail and the message in a comment mail. The ruling is about active and foreign content, not the message's formatting, so a message text keeps, on top of the comment list, the classes of the frontends' message-HTML vocabulary (`fe/shared-html/message-html-classes.ts`, mirrored in `MailHtml` and held to it by `MailHtmlTest`) on the elements they are meant for, and images from the backend's own `baseUri` origin with their alternative text and a plain-length size; any other class, foreign or `data:` images, styles and scripts go. The path, width and height of an attachment, which the templates print into the attributes of its image, are checked there too, and the SafetyNET cancellation mail escapes the SafetyNET id. `MessageMailService` escapes the recipient's and the sender's names, which `message-mail.ftl` prints into the greeting and the regards, before it renders the mail, so every stored copy of the template is covered. F-X146 is fixed. |
 | 2 | Validating a message's short id when it is saved (F-X21) | Refuse `<`, `>`, `"` and `&` in a message short id when a message is saved (400). Formats with slashes and spaces, such as `FA/EK-D-371 2017` and `A/1 2024`, stay valid. | Creating and updating a message refuse such a short id with 400, and such a message id of a reference, which names another message by its short id; an id the stored message already has is kept, so a message saved before stays editable. The message import and the message-archive import refuse them too. Ids Niord generates are not checked. The Niord-integration import, which reads another Niord server rather than a request, is not checked. Accepted edge: a copy made with a reference to a message whose short id was saved with such a character before the rule is refused when it is saved; no short-id format in use produces one. The editor shows its general save error for the 400, not the reason (`fe/docs/backlog.md`, Editor). |
 | 3 | Referencing GitHub's own actions by commit SHA, and a Dependabot configuration (F-X108) | `actions/*` on major tags is accepted. Dependabot alerts and security updates are switched on (done on 2026-09-26). | `.github/dependabot.yml` opens no version-update pull requests and groups the security updates of each ecosystem into one pull request: Maven under `be/` (the SECOM test client, outside the reactor, in a pull request of its own), npm under `fe/`, GitHub Actions. |
-| 4 | Per-country database users (F-X100, with #69) | Stays deferred to the go-live recheck, with a narrower goal: the application connects as a non-superuser owner of its own database. One Postgres per country (design §6, #70) already separates DK and GL. | Section 5. |
+| 4 | Per-country database users (F-X100) | Stays deferred to the go-live recheck, with a narrower goal: the application connects as a non-superuser owner of its own database. One Postgres per country (design §6) already separates DK and GL. | Section 5. |
 | 5 | Who may receive a message mail or a comment mail (F-X68, N-07) | Accepted as it is: own domain only; attributable (Reply-To, the scheduled-mail record, the log); comment mails capped at 20 single mailboxes. | Section 6. |

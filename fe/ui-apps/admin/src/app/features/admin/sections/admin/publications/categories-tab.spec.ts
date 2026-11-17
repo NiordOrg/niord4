@@ -447,7 +447,7 @@ describe('PublicationCategoriesTab', () => {
   });
 
   /**
-   * L-173. Every category has an Order: the column cannot hold "none", and it
+   * Every category has an Order: the column cannot hold "none", and it
    * decides where the category sorts on the public page. A cleared box used to
    * be sent as `null`, the server kept the stored number, and the toast said
    * "Category saved". The drawer now holds Save back and says why, and what it
@@ -485,7 +485,7 @@ describe('PublicationCategoriesTab', () => {
     httpTesting.expectOne((r) => r.url.includes('/publication-categories/all')).flush([INTERNAL]);
   });
 
-  /** L-173 on a new category: its Order starts filled in, and clearing it holds Save back too. */
+  /** A new category: its Order starts filled in, and clearing it holds Save back too. */
   it('will not create a category whose Order was cleared', () => {
     const { fixture, httpTesting, tab } = setup();
 
@@ -504,7 +504,7 @@ describe('PublicationCategoriesTab', () => {
   });
 
   /**
-   * L-047. A refused save says why. The handler used to ignore the answer, so a
+   * A refused save says why. The handler used to ignore the answer, so a
    * duplicate id on create read only "The category could not be saved".
    */
   it('names a duplicate id on create, and keeps the drawer open', () => {
@@ -530,7 +530,7 @@ describe('PublicationCategoriesTab', () => {
     expect(tab.saveDisabled()).toBe(false);
   });
 
-  /** L-047. The server's own checks of a category (id, name, Order) reach the screen too. */
+  /** The server's own checks of a category (id, name, Order) reach the screen too. */
   it('names a category the server refused as it stands', () => {
     const { fixture, httpTesting, tab, notifications } = setup();
 

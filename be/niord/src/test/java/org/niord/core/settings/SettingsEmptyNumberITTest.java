@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * A number setting left empty means its default (L-180; the owner's answer 14 of the phase 2 error hunt): an Integer,
+ * A number setting left empty means its default (the owner's ruling): an Integer,
  * Long, Float or Double row whose value is null reads as the setting's default, live through
  * {@link SettingsService#get} and {@link SettingsService#peek}, as the {@code @Setting} injection already read it at
  * the next start. Before, the Settings page saved the emptied value with 200, a live read gave null, and an injected

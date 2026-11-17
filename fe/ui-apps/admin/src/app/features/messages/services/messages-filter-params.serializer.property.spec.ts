@@ -34,8 +34,8 @@ import {
 } from './messages-filter-params.serializer';
 
 /**
- * Properties of the Messages filter's address, over generated filters from a fixed seed (error hunt,
- * phase 2): a bookmark, a shared link and a saved filter must give back the filter they were made
+ * Properties of the Messages filter's address, over generated filters from a fixed seed:
+ * a bookmark, a shared link and a saved filter must give back the filter they were made
  * from. The round trip runs the way the application runs it: `toQuery`, the URL sync's map of
  * parameters (the reference filter renamed to `refMessageId`), Angular's own URL serializer
  * writing the address and reading it back, the sync's rename back, and `fromQuery`.

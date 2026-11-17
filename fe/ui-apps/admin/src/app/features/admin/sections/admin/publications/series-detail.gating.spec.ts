@@ -438,7 +438,7 @@ describe('SeriesDetail — the archive gate', () => {
 });
 
 /**
- * L-044. An activation or a reinstatement the series rules refuse says which
+ * An activation or a reinstatement the series rules refuse says which
  * step failed and lists the rules, in the words the series editor uses.
  *
  * It used to say "The publication could not be saved as it stands", the save

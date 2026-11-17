@@ -425,7 +425,7 @@ describe('Select (app-select primitive)', () => {
     expect(q('.sel-panel')).not.toBeNull();
   });
 
-  // --- Object options without optionLabel: matched by identity (L-166) ---
+  // --- Object options without optionLabel: matched by identity ---
   it('marks only the held option when the options are objects without optionLabel', async () => {
     interface Pair {
       readonly from: string;
@@ -488,7 +488,7 @@ describe('Select (app-select primitive)', () => {
     expect(selected.map((el) => el.textContent?.trim())).toEqual(['2']);
   });
 
-  // --- Action mode: clearOnPick + (picked) (L-165) ---
+  // --- Action mode: clearOnPick + (picked) ---
   describe('clearOnPick (an action trigger)', () => {
     @Component({
       imports: [Select],

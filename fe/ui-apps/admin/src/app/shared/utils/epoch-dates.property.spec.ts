@@ -4,7 +4,7 @@ import { withEpochDates } from './epoch-dates';
 
 /**
  * Properties of the publications payloads' date normalisation, over generated instants, offsets
- * and payloads from a fixed seed (error hunt, phase 2): an ISO date-time with an offset in a declared
+ * and payloads from a fixed seed: an ISO date-time with an offset in a declared
  * date field becomes the instant it names, at any offset and any length of fraction the pattern
  * accepts; anything else, and anything in an opaque container, is left exactly as it came; the input
  * is never changed and a container with nothing to convert comes back as the same object.

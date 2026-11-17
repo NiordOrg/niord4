@@ -150,7 +150,7 @@ class DictionaryImportITTest extends ITTest {
     /**
      * A ticked overwrite writes each language the file carries whole, value and long value, so a long value the file
      * lacks is cleared; the preview lists such a key under overwrite with the row's long value and none incoming, so
-     * the dialog can show the clearing (the first review of PR #179)
+     * the dialog can show the clearing
      */
     @Test
     void aLongValueTheFileLacksIsShownAndClearedOnlyWhenTicked() {
@@ -181,7 +181,7 @@ class DictionaryImportITTest extends ITTest {
 
     /**
      * The import reads the deleted keys from the database, not from this node's snapshot: a deleted mark written by
-     * another node (here by SQL, which the snapshot never sees) is honoured (the second review of PR #179)
+     * another node (here by SQL, which the snapshot never sees) is honoured
      */
     @Test
     void aDeletedMarkTheSnapshotHasNotSeenIsHonoured() {
@@ -227,7 +227,7 @@ class DictionaryImportITTest extends ITTest {
 
     /**
      * A tick carries the fingerprint of the row the preview showed: a key changed between the preview and the job is
-     * kept, and the job log says so (the second review of PR #179)
+     * kept, and the job log says so
      */
     @Test
     void aTickedKeyChangedSinceThePreviewIsKept() {
@@ -254,8 +254,7 @@ class DictionaryImportITTest extends ITTest {
 
     /**
      * A key a list parameter type holds among its values cannot be deleted: the database would refuse it at commit.
-     * The delete answers 409 naming the type, before any write, and the delete confirmation's users name it (the
-     * second review of PR #179).
+     * The delete answers 409 naming the type, before any write, and the delete confirmation's users name it.
      */
     @Test
     void aKeyAParameterTypeListsIsNotDeleted() {

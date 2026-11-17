@@ -1622,7 +1622,7 @@ describe('PublicationSeriesEditor', () => {
   });
 
   /**
-   * A2-8. A series can declare a language the build-time list does not carry —
+   * A series can declare a language the build-time list does not carry —
    * imported data does, and the backend can be configured wider than the build.
    *
    * Iterating the installation list alone meant every tick of ANY checkbox

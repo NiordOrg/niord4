@@ -525,7 +525,7 @@ class TemplateExecutionServiceITTest extends ITTest {
     }
 
     /**
-     * PROM20 (L-241): a template run resets every promulgation's text and keeps its tick, and a template that writes
+     * PROM20: a template run resets every promulgation's text and keeps its tick, and a template that writes
      * no audio text (none of the base product's does) left a ticked Audio with no text; the save keeps only a
      * promulgation with data, so the tick was dropped without a word. The run now gives the ticked Audio the text of
      * the English details (the seeded Audio type's language), and the message the save builds keeps it ticked.

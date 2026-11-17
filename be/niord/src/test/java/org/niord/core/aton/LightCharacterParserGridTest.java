@@ -34,8 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>
  * The property: a number in the light character is the number in the model, or the character is refused (and
  * the directive then prints it as written). A number may not change on the way: the period, elevation and range,
- * and the group's numbers ("Fl(2)" is two flashes), as well as the phase and the colours written (error hunt
- * 2026-11-12, detector check: a parser that kept "grouped" and lost the numbers passed the first version).
+ * and the group's numbers ("Fl(2)" is two flashes), as well as the phase and the colours written (a parser that
+ * kept "grouped" and lost the numbers passed the first version of this test).
  */
 public class LightCharacterParserGridTest {
 

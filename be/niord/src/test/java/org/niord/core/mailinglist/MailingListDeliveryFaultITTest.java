@@ -398,7 +398,7 @@ class MailingListDeliveryFaultITTest extends ITTest {
      * assertion: the status change is kept for a later delivery (an outbox), or a record of the failed broadcast
      * exists; the mail is queued once the broker is back. NB: the pin counts the first warning's mail rows, so it
      * flips for the outbox form of the fix; a fix that only records the failed broadcast must add an assertion on
-     * that record (detector check MC).
+     * that record.
      */
     @Test
     void aStatusChangeThatCannotReachTheBrokerIsLostWithoutARecord_documentsBug() throws Exception {
@@ -424,7 +424,7 @@ class MailingListDeliveryFaultITTest extends ITTest {
 
         // Control, with the broker back: a second warning on the same list is published and its mail is made, so the
         // listener is alive and the list delivers, and the first warning's missing mail is the lost event. Without
-        // it this test passed for any reason the listener made no mail at all (detector check MC); the single
+        // it this test passed for any reason the listener made no mail at all; the single
         // listener thread handles the events in order, so the first one's mail would exist by now.
         String control = committedDraft("IT broker back " + n);
         String controlSubject = "IT-BROKER-BACK-" + n;

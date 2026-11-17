@@ -192,7 +192,7 @@ class MissingPathReportITTest extends ITTest {
     /**
      * What the start writes: on the seeded database ({@code existing}) one warning naming the missing paths and the
      * endpoint; while a bootstrap is still to come ({@code pending}, {@code in-progress}, {@code failed}) nothing,
-     * since the bootstrap brings the rows (the second review of PR #179). The marker is set and restored in
+     * since the bootstrap brings the rows. The marker is set and restored in
      * committed transactions, as the report reads it in one of its own, and so is the planted missing path.
      */
     @Test

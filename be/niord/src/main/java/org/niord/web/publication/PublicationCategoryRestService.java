@@ -258,7 +258,7 @@ public class PublicationCategoryRestService extends org.niord.core.batch.Abstrac
         // {"priority": "100"} -- a 500 out of an ordinary form save. An absent
         // priority keeps the stored one, so a partial body works. An explicit null
         // is a cleared Order: the column holds a whole number, and keeping the old
-        // one while answering 200 told the editor the change was saved (L-173).
+        // one while answering 200 told the editor the change was saved.
         if (body.containsKey("priority")) {
             Object priority = body.get("priority");
             if (priority == null) {
