@@ -1,12 +1,12 @@
 # The sea-chart tile cache
 
 **Status: decided by the owner on 2026-11-10 and 2026-11-12 (section 8). Step 1, the cache in the
-backend, is built and waits for its merge as #299 (section 11). Step 2, the dashboard, is prepared
+backend, is built and on `main` (section 11). Step 2, the dashboard, is prepared
 as a draft merge request in devops-shared (!112) and waits for the owner's go. Steps 3 to 5 are
 open: the countries' settings, the provider's settings and the checks on staging.**
 **Scope:** the backend's WMS proxy and a cache on the application's volume, for the administration
 app. The public site gets no cache. Production is not part of this plan.
-**Repos:** niord-ng (the cache, one pull request), devops-shared (the dashboard), niord-dk and
+**Repos:** niord (the cache, one pull request), devops-shared (the dashboard), niord-dk and
 niord-gl (the administration app's `wmsUrl`, two settings, a bump), and each staging's settings (the
 provider's address and token).
 
@@ -271,7 +271,7 @@ be/test-it --its-only -pl niord -Dit.test='WmsProxyHttpITTest,WmsProxyServletITT
 
 | | Step | Where | State |
 |---|---|---|---|
-| 1 | The cache, its tests, the two settings with the regenerated catalog, and the records of section 9, as one pull request into `main`. Merged by the owner: a merge under `be/` publishes a version | niord-ng | built, #299; waits for its merge (section 11) |
+| 1 | The cache, its tests, the two settings with the regenerated catalog, and the records of section 9, as one pull request into `main`. Merged by the owner: a merge under `be/` publishes a version | niord | built and merged (section 11) |
 | 2 | The dashboard of section 5, as a merge request | devops-shared | prepared, draft !112 (section 11); merged on the owner's go, since it deploys to the test cluster |
 | 3 | `map.wmsUrl: '/wms/'`: a line in DK's `environment.production.ts`, an environment file of its own for GL. `wmsCacheDays: 7` and `wmsCacheMaxMb: 1000` in each `defaults/country/settings.json`. All in the release that first carries the base version of step 1 | niord-dk, niord-gl | not started; on the owner's go |
 | 4 | The provider's current address, its layers and the token (`wmsProvider`, `wmsLayers`, `wmsPassword`) on each staging's Settings page, before step 3 deploys | the owner, who has the token | not started |
@@ -336,7 +336,7 @@ location is left as it is.
 
 ## 11. Execution record
 
-### Step 1, as built (2026-11-12, pull request #299)
+### Step 1, as built (2026-11-12)
 
 - `WmsTileKey`, `WmsTileCache` and the changes to `WmsProxyServlet` are as sections 3 to 5 say.
   The provider request of the uncached path is unchanged, the order of its parameters included.
