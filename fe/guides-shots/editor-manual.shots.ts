@@ -509,8 +509,8 @@ test.describe('editor-manual', () => {
     await runAction(page, 'Report...');
     const reports = dialog(page, 'Execute Mailing List Report');
     // Running a report reads the published messages and writes nothing. Not the Danish coastal
-    // warnings: their report prints the copy's NW-319-26 at "56° 60.0'N", a position the backend's
-    // formatter rounds without carrying into the degrees (be/docs/potential-errors.md, POS1).
+    // warnings: their report prints the copy's NW-319-26 at "56° 60.0'N", a text stored in the
+    // message before the formatter's rounding was fixed (POS1, fixed 2026-11-12).
     await reports
       .getByRole('row', { name: /^Active coastal warnings - Greenland Daily/ })
       .getByRole('button', { name: 'Execute' })

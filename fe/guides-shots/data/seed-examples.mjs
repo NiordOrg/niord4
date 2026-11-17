@@ -6,10 +6,13 @@
 //
 //   node fe/guides-shots/data/seed-examples.mjs
 //
+// It first runs the check of the imported repository files (repo-files.mjs check-db) and stops, making nothing, when
+// RepoFile is empty or a row holds an address default-deny does not keep.
+//
 // It makes, each only when the copy does not have it yet (found again by its "Guide example" title or name):
 //   - two English drafts of niord-nw saved by editor ("Recently edited drafts" lists them), one with two event-date
-//     intervals in one part (the backend reads one of them back while DateInterval's index is not written: the
-//     script warns then);
+//     intervals in one part, the picture of the Insert time dialog (the script warns when the backend reads fewer
+//     back: that was MSG2, fixed 2026-11-12, so a warning means it has returned);
 //   - one verified English niord-nw warning that cancels a published niord-nw warning (a reference of type
 //     CANCELLATION), so the publish dialog offers "Also cancel the referenced messages"; nothing is published;
 //   - two comments on the first draft, by admin (acknowledged by editor) and by user (not acknowledged);
@@ -37,6 +40,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { deflateSync } from 'node:zlib';
+import { checkDb } from './repo-files.mjs';
 
 const BACKEND_URL = (process.env.GUIDES_BACKEND_URL ?? 'http://localhost:8894').replace(/\/$/, '');
 const KEYCLOAK_URL = (process.env.GUIDES_KEYCLOAK_URL ?? 'http://localhost:8080/auth').replace(
@@ -342,7 +346,7 @@ async function nwDrafts(baltic) {
   if (intervals < 2) {
     console.warn(
       `warning: "${DRAFT_EXERCISE}" was saved with 2 event-date intervals in one part, and the backend reads back ` +
-        `${intervals} (two DateInterval rows with the same indexNo).`,
+        `${intervals}: the fault MSG2 (fixed 2026-11-12) has returned, or this backend is older than the fix.`,
     );
   }
 
@@ -992,6 +996,16 @@ async function firingExercises() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+
+// First the check of the imported repository files (repo-files.mjs check-db, about a minute): the script stops, and
+// makes nothing, when niord_guides' RepoFile is empty (the repository import has not run) or a row holds an address
+// default-deny does not keep (since 2026-11-14 this step runs it; nobody has to remember to).
+if ((await checkDb()) !== 0) {
+  console.error(
+    'seed-examples: stopped before making anything: the check of the imported repository files failed (above).',
+  );
+  process.exit(1);
+}
 
 const baltic = await areaId('The Baltic Sea');
 const { adrift } = await nwDrafts(baltic);

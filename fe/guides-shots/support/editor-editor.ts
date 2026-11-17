@@ -35,6 +35,14 @@ const RULES = {
     ` where b.message_id = m.id and t."typeId" = 'navtex' and b.promulgate)` +
     ` and exists (select 1 from "DateInterval" di join "MessagePart" p on p.id = di."messagePart_id"` +
     ` where p.message_id = m.id) order by m.id`,
+  /**
+   * A draft NW with two event-date intervals in one part (the seed's exercise draft). The parts are
+   * counted in one pass: a count per part of every message ran past the two minutes psql gets.
+   */
+  nwTwoIntervals:
+    `select m.uid from ${english('niord-nw', 'DRAFT')}` +
+    ` and m.id in (select p.message_id from "DateInterval" di join "MessagePart" p` +
+    ` on p.id = di."messagePart_id" group by p.id, p.message_id having count(*) >= 2) order by m.id`,
   /** A draft NM with a details part and a note part, a reference, charts, a source and an end date. */
   nmDraft:
     `select m.uid from ${english('niord-nm', 'DRAFT')} and ${PARTS} = 'DETAILS+NOTE'` +

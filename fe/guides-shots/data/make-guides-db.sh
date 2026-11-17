@@ -3,7 +3,12 @@
 # Danish test data (niord_test) with the personal data removed (scrub.sql), checked (check.sql), prepared
 # (prepare.sql), its English-language texts made English (english.sql, and english-history.mjs for the history
 # snapshots) and described (report.sql, dict-diff.js);
-# check-names.sh, the check of the staff names, runs inside the container.
+# check-names.sh, the check of the staff names and the persons' addresses, runs inside the container;
+# english-history.mjs also replaces the persons' addresses and the addresses of a person's form in the history
+# snapshots and checks that none is left; check.sql checks the addresses of a person's form in the texts.
+# Default-deny (2026-11-14): an address outside example.org that is neither on scrub.sql's functional list nor made
+# of scrub-lists.mjs's role words only is replaced too (scrub.sql, english-history.mjs) and checked (check.sql, run
+# again on the finished copy, and english-history.mjs).
 #
 #   bash make-guides-db.sh            (Git Bash)
 #   "%LOCALAPPDATA%\Programs\Git\bin\bash.exe" make-guides-db.sh    (PowerShell or cmd, Git not on the PATH)
@@ -34,6 +39,17 @@ winpath() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else pr
 
 started=$SECONDS
 command -v docker >/dev/null 2>&1 || die "docker is not on the PATH."
+NODE="$(command -v node 2>/dev/null || true)"
+[[ -n "$NODE" ]] || { [[ -x "/c/Program Files/nodejs/node.exe" ]] && NODE="/c/Program Files/nodejs/node.exe"; }
+[[ -n "$NODE" ]] || die "node is not on the PATH: it reads scrub.sql's lists for check-names.sh, and english-history.mjs needs it."
+# scrub.sql's lists for check-names.sh, which runs in the container and cannot read this folder (scrub-lists.mjs reads
+# them from scrub.sql, so they are written there only)
+FUNCTIONAL_LIST="$("$NODE" "$(winpath "$HERE/scrub-lists.mjs")" functional)"
+PRIVATE_MAIL_LIST="$("$NODE" "$(winpath "$HERE/scrub-lists.mjs")" private-mail)"
+PRIVATE_CONTACT_LIST="$("$NODE" "$(winpath "$HERE/scrub-lists.mjs")" private-contact)"
+# default-deny's role words, for scrub.sql and check.sql (scrub-lists.mjs keeps them)
+ROLE_WORDS_LIST="$("$NODE" "$(winpath "$HERE/scrub-lists.mjs")" role-words)"
+[[ -n "$FUNCTIONAL_LIST" && -n "$ROLE_WORDS_LIST" ]] || die "scrub-lists.mjs gave no functional list or no role words."
 [[ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" == "true" ]] \
     || die "The container $CONTAINER is not running (start the shared containers first, e.g. ./start-local.sh)."
 [[ "$(docker exec "$CONTAINER" psql -X -U niord -d postgres -tAc "select 1 from pg_database where datname = '$SOURCE_DB'")" == "1" ]] \
@@ -65,14 +81,16 @@ dst_counts="$(docker exec "$CONTAINER" psql -X -U niord -d "$TARGET_DB" -tAc "$c
 echo "   Message/MessageHistory/User rows: $dst_counts, as in $SOURCE_DB"
 
 echo ">> Scrubbing $TARGET_DB (scrub.sql, one transaction)"
-psql_db "$TARGET_DB" --single-transaction -q -f - <"$HERE/scrub.sql"
+psql_db "$TARGET_DB" --single-transaction -q -v role_words="$ROLE_WORDS_LIST" -f - <"$HERE/scrub.sql"
 
 echo ">> Self-check (check.sql)"
-psql_db "$TARGET_DB" -q -f - <"$HERE/check.sql" || die "The self-check failed: $TARGET_DB still holds personal data in a scrubbed column."
+psql_db "$TARGET_DB" -q -v functional="$FUNCTIONAL_LIST" -v role_words="$ROLE_WORDS_LIST" -f - <"$HERE/check.sql" \
+    || die "The self-check failed: $TARGET_DB still holds personal data in a scrubbed column."
 
-echo ">> Self-check of the staff names and initials (check-names.sh, inside the container: the words are read from $SOURCE_DB and never leave it)"
-docker exec -i "$CONTAINER" sh -s <"$HERE/check-names.sh" \
-    || die "The staff-name self-check failed: $TARGET_DB still holds a colleague's name or initials, or the private contact."
+echo ">> Self-check of the staff names, initials and addresses (check-names.sh, inside the container: the words and addresses are read from $SOURCE_DB and never leave it)"
+docker exec -i -e GUIDES_FUNCTIONAL="$FUNCTIONAL_LIST" -e GUIDES_PRIVATE_MAIL="$PRIVATE_MAIL_LIST" \
+    -e GUIDES_PRIVATE_CONTACT="$PRIVATE_CONTACT_LIST" "$CONTAINER" sh -s <"$HERE/check-names.sh" \
+    || die "The staff-name self-check failed: $TARGET_DB still holds a colleague's name, initials or address, or the private contact."
 
 echo ">> Preparing $TARGET_DB for the screenshots (prepare.sql, one transaction)"
 psql_db "$TARGET_DB" --single-transaction -q -At -f - <"$HERE/prepare.sql"
@@ -89,13 +107,15 @@ fi
 echo ">> Making the English-language texts English (english.sql, one transaction)"
 psql_db "$TARGET_DB" --single-transaction -q -At -f - <"$HERE/english.sql"
 
-NODE="$(command -v node 2>/dev/null || true)"
-[[ -n "$NODE" ]] || { [[ -x "/c/Program Files/nodejs/node.exe" ]] && NODE="/c/Program Files/nodejs/node.exe"; }
+echo ">> Making the message history snapshots English and taking the persons' addresses out of them (english-history.mjs, ~1.5 min; gzip, which SQL cannot rewrite)"
+[[ -n "$NODE" ]] || die "node is not on the PATH: the history snapshots would keep their Danish entries and the persons' addresses."
+GUIDES_DB_CONTAINER="$CONTAINER" GUIDES_SOURCE_DB="$SOURCE_DB" "$NODE" "$(winpath "$HERE/english-history.mjs")" \
+    || die "english-history.mjs failed, a snapshot of a live message still holds a Danish English text (named above): add a rule to english.sql, or a snapshot still holds a person's address (rows named above): see scrub.sql."
 
-echo ">> Making the message history snapshots English (english-history.mjs, ~1.5 min; gzip, which SQL cannot rewrite)"
-[[ -n "$NODE" ]] || die "node is not on the PATH: the history snapshots would keep their Danish entries."
-GUIDES_DB_CONTAINER="$CONTAINER" "$NODE" "$(winpath "$HERE/english-history.mjs")" \
-    || die "english-history.mjs failed, or a snapshot of a live message still holds a Danish English text (named above): add a rule to english.sql."
+# check.sql once more, on the finished copy: prepare.sql and english.sql write texts after the first run
+echo ">> Self-check of the finished copy (check.sql again, after prepare.sql, english.sql and english-history.mjs)"
+psql_db "$TARGET_DB" -q -v functional="$FUNCTIONAL_LIST" -v role_words="$ROLE_WORDS_LIST" -f - <"$HERE/check.sql" \
+    || die "The self-check of the finished copy failed: a step after the scrub wrote personal data into $TARGET_DB."
 
 echo ">> Report (report.sql)"
 psql_db "$TARGET_DB" -q -f - <"$HERE/report.sql"

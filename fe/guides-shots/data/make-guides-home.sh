@@ -10,7 +10,15 @@
 # Left out: message-index*/ (Lucene indexes, rebuilt at start-up), batch-jobs/ (batch job data files and logs),
 #           publication-preview/ (previews made while curating, made again on demand), repo/temp/ (edit sessions),
 #           niord.json.bak-* (an old copy of the settings file), and the attachment folders of the messages that were
-#           never public (DRAFT, VERIFIED, DELETED, IMPORTED in niord_test), which nobody has checked for personal data.
+#           never public (DRAFT, VERIFIED, DELETED, IMPORTED in niord_test), which nobody has checked for personal data;
+#           and every repository file that holds a person's address (repo-files.mjs leave-out: scrub.sql's persons and
+#           the addresses of a person's form, read from niord_test into memory; in the bytes and in what a PDF, a docx
+#           or a zip holds inflated). A check then fails the run when a file still holds one (repo-files.mjs check).
+#           Since 2026-11-14 (default-deny): every repository file that holds any address outside example.org that
+#           is neither on scrub.sql's functional list nor made of scrub-lists.mjs's role words only, also read the way
+#           a PDF reader shows it (the text pieces joined; pdftotext's text when pdftotext is there); a PDF keeps its
+#           name as a one-page placeholder ("Example document. The original is left out of the guides' copy."),
+#           a file of any other kind is left out.
 # Made empty: publication-archive/.
 # The target is deleted and made again on every run, so a second run gives the same result as the first.
 set -euo pipefail
@@ -20,6 +28,7 @@ SRC="${HOME}/.niord-ng-dk"
 DST="${HOME}/.niord-ng-guides"
 CONTAINER=niord-db
 SOURCE_DB=niord_test
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 die() { echo "!! $*" >&2; exit 1; }
 winpath() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
@@ -29,7 +38,7 @@ winpath() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else pr
 command -v robocopy >/dev/null 2>&1 || die "robocopy is not on the PATH (this script runs on Windows)."
 NODE="$(command -v node 2>/dev/null || true)"
 [[ -n "$NODE" ]] || { [[ -x "/c/Program Files/nodejs/node.exe" ]] && NODE="/c/Program Files/nodejs/node.exe"; }
-[[ -n "$NODE" ]] || die "node is needed to blank the secrets in niord.json."
+[[ -n "$NODE" ]] || die "node is needed to leave out the files with a person's address and to blank the secrets in niord.json."
 
 started=$SECONDS
 
@@ -58,6 +67,18 @@ rc2=$?
 set -e
 (( rc < 8 && rc2 < 8 )) || die "robocopy failed (exit codes $rc and $rc2)."
 
+# A person's address in a repository file (mailto: links in PDFs and documents): the file is left out of the guides
+# home, so the repository import never puts it into niord_guides. Only the guides home is changed; the persons'
+# addresses are read from $SOURCE_DB into memory and never written or printed.
+echo ">> Leaving out the repository files that hold a person's address (repo-files.mjs, about 5 minutes; a PDF becomes a placeholder)"
+GUIDES_DB_CONTAINER="$CONTAINER" GUIDES_SOURCE_DB="$SOURCE_DB" \
+    "$NODE" "$(winpath "$HERE/repo-files.mjs")" leave-out "$(winpath "$DST/repo")" \
+    || die "repo-files.mjs could not leave out the files with a person's address."
+echo ">> Check: no repository file of the guides home holds a person's address (repo-files.mjs, about 5 minutes)"
+GUIDES_DB_CONTAINER="$CONTAINER" GUIDES_SOURCE_DB="$SOURCE_DB" \
+    "$NODE" "$(winpath "$HERE/repo-files.mjs")" check "$(winpath "$DST/repo")" \
+    || die "The check failed: a repository file of $DST still holds a person's address."
+
 echo ">> Writing niord.json with its secrets blank"
 "$NODE" -e '
 const fs = require("fs");
@@ -85,3 +106,4 @@ done
 echo ">> Done in $((SECONDS - started)) s. $SRC was only read."
 echo "   The repository files reach the database only through the repo-import batch job, once, as sysadmin:"
 echo "   POST /rest/batch/repo-import {\"dir\": \"$(winpath "$DST/repo" | tr '\\' '/')\"}"
+echo "   and then node fe/guides-shots/data/seed-examples.mjs, which first checks the imported rows (repo-files.mjs check-db)"
