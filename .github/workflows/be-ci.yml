@@ -27,19 +27,13 @@ name: Backend CI
 # ---------------------------------------------------------------------------------------------
 # Which pull requests
 # ---------------------------------------------------------------------------------------------
-# Only pull requests into main, and only once they are ready for review. Actions minutes are
-# billed (the organisation's Free plan has 2,000 a month for every repository together), and the
-# sub-PRs into a long-lived `feature/**` branch were most of them: those run no CI at all — the
-# session that makes one verifies it with ./verify-local and puts the summary in the PR — and the
-# feature branch's own PR into main runs everything. `pull_request` has no draft filter, so a push
-# to a draft still starts a run; every job then skips itself (see `changes`) and the run costs
-# nothing. Marking the PR ready for review (`ready_for_review`) starts the full run on the same
-# commit. fe-ci.yml explains what a skipped job means for a required check, and why a re-run is
-# never skipped as a draft.
+# Every pull request, into main or any other branch (a sub-PR into a long-lived `feature/**` branch
+# included), drafts too: the repository is public, so its GitHub-hosted runners cost nothing. A
+# newer push to the same pull request cancels the run in flight (`concurrency`, below).
 #
-# `edited` is not among the types: it fires on every title and description edit too. A PR opened
-# into a `feature/**` branch and later retargeted to main therefore starts no run until its next
-# push — or close and reopen it, or mark it draft and ready again.
+# `edited` is not among the types: it fires on every title and description edit too. A PR
+# retargeted to another base therefore runs against the new base only at its next push — or close
+# and reopen it.
 #
 # ---------------------------------------------------------------------------------------------
 # Why `pull_request` is not path-filtered
@@ -51,7 +45,7 @@ name: Backend CI
 # `if:` when the PR does not touch be/. A job skipped by its condition still reports — as
 # "skipped", which branch protection counts as passing — and costs no runner time, so a
 # frontend-only PR costs the one detection job, a minute. `Unit tests` skips only when detection
-# succeeded and found no backend change (or on a draft's first attempt): when `Detect` fails, the
+# succeeded and found no backend change: when `Detect` fails, the
 # unit tests run anyway, so a broken detection step can never turn the required check green by
 # itself.
 #
@@ -207,9 +201,6 @@ name: Backend CI
 # Frontend CI for such a pull request only to check this was judged not worth its minutes.
 on:
   pull_request:
-    branches: [ main ]
-    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
-    types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches: [ main ]
     paths:
@@ -241,8 +232,8 @@ on:
         type: boolean
         default: true
 
-# A newer push to the same pull request cancels its in-flight run, so superseded builds are not
-# paid for. Push and dispatch runs are never cancelled or replaced: each gets a group of its own
+# A newer push to the same pull request cancels its in-flight run, so a superseded build holds no
+# runner. Push and dispatch runs are never cancelled or replaced: each gets a group of its own
 # (its run id). publish.yml publishes a main commit only when every CI run for it concluded
 # success, and a frontend-only merge only when the newest Backend CI run it contains did — so one
 # cancelled run on main would block publishing until the next backend change. A shared group with
@@ -263,13 +254,10 @@ env:
 jobs:
   # ---------------------------------------------------------------------------
   # Does this change touch the backend at all? See the trigger comment above for
-  # why this is a job rather than a `paths:` filter on `pull_request`. Skipped on
-  # a draft's first attempt, and with it every job below (a re-run reuses the
-  # draft flag of the run it repeats, and must not skip again: see fe-ci.yml).
+  # why this is a job rather than a `paths:` filter on `pull_request`.
   # ---------------------------------------------------------------------------
   changes:
     name: Detect backend changes
-    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # A job-level block replaces the workflow's, so `contents: read` is restated or the checkout
@@ -489,9 +477,8 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Fast lane: compile everything + run the unit tests (Surefire). No Docker.
-  # This is the job to mark as a required status check. It skips itself on a
-  # draft's first attempt, when detection succeeded and found no backend
-  # change, and on a push to main whose content a pull request run already
+  # This is the job to mark as a required status check. It skips itself when
+  # detection succeeded and found no backend change, and on a push to main whose content a pull request run already
   # tested (`tested`, the fingerprint above; step 2b), and runs when detection failed (`!cancelled()`, not the default
   # `success()`); see the trigger comment above. No other job in any workflow may
   # be named `Unit tests`: a required check matches a check run by name alone.
@@ -500,7 +487,7 @@ jobs:
     name: Unit tests
     needs: changes
     if: >-
-      ${{ !cancelled() && (!github.event.pull_request.draft || github.run_attempt > 1)
+      ${{ !cancelled()
       && !(needs.changes.result == 'success' && needs.changes.outputs.backend != 'true')
       && needs.changes.outputs.tested != 'true' }}
     runs-on: ubuntu-latest
@@ -738,7 +725,7 @@ jobs:
   # Testcontainers), be/scripts/check-country-build-group.sh and the override
   # check, as a country's ci.yml runs them. Runs when Detect's scaffold output
   # is true: the scaffold rule on a pull request, every push to main and every
-  # dispatch; a draft's first attempt skips `changes` and with it this job. Not
+  # dispatch. Not
   # a required check. No `npm ci`: the kit, the source zip and the set-up are
   # Node built-ins (fe-ci.yml's Example job relies on the same), so setup-node
   # has no npm cache to restore. The workflow's `contents: read` is all it needs.

@@ -222,13 +222,12 @@ live in its repository, and every list is empty at its go-live; no build ships t
 Two GitHub Actions workflows, one per application, both at the **repository root** (GitHub reads
 workflows nowhere else): [`.github/workflows/fe-ci.yml`](../.github/workflows/fe-ci.yml) for the
 administration app and [`.github/workflows/info-ci.yml`](../.github/workflows/info-ci.yml) for the
-public site. Each runs on pull requests into `main` once they are ready for review and on pushes to
-`main` that touch its inputs; a draft runs nothing, and a pull request into a `feature/**` branch
-runs no CI at all — verify it with `./verify-local` at the repository root, which runs the same
-steps (the example country's image only when Docker runs; see the root `AGENTS.md`). Each work
+public site. Each runs on every pull request and on pushes to `main` that touch its inputs;
+`./verify-local` at the repository root runs the same steps locally (the example country's image
+only when Docker runs; see the root `AGENTS.md`). Each work
 job runs after its own `npm ci` on the Node version in `.nvmrc` — Frontend CI's side by side, Info CI's one job; within a job every step runs even when an earlier one failed,
-so one red check never hides another. GitHub bills every job rounded up to a whole minute, which is
-why there are a few and not one per check.
+so one red check never hides another. Every job pays its own `npm ci`, which is why there are a
+few and not one per check.
 
 Frontend CI, its administration jobs pinned to `niord-app`:
 

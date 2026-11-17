@@ -69,9 +69,7 @@ name: Frontend CI
 # ---------------------------------------------------------------------------------------------
 # Which pull requests
 # ---------------------------------------------------------------------------------------------
-# Only pull requests into main, and only once they are ready for review — the reasons are in
-# be-ci.yml. Sub-PRs into `feature/**` run no CI (./verify-local instead); a push to a draft starts
-# a run in which every job skips itself, which costs nothing; `ready_for_review` starts the real run.
+# Every pull request, into any branch, drafts too — the reasons are in be-ci.yml.
 #
 # ---------------------------------------------------------------------------------------------
 # Why `pull_request` is not path-filtered, and why there is a gate job
@@ -79,7 +77,7 @@ name: Frontend CI
 # A workflow that a `paths:` filter skips never reports its checks, so a required check would sit
 # at "Expected — waiting for status to be reported" forever on a backend-only PR. The filter
 # therefore lives in the `changes` job, and the work jobs are skipped with a job-level `if:` when
-# the frontend is untouched — a skipped job costs no runner time.
+# the frontend is untouched — a skipped job takes no runner.
 #
 # A matrix changes its check names with its size, and the work jobs change as they are merged or
 # split, so the `gate` job is the ONLY name branch protection needs: "Frontend gate". It fails
@@ -87,26 +85,16 @@ name: Frontend CI
 # never touches branch protection.
 #
 # What a skipped job means for a required check: GitHub reports a job that its `if:` skipped as
-# "skipped", and branch protection counts "skipped" as passing. The gate uses that in exactly two
-# cases and runs in every other (a failed work job, a failed or cancelled detection, a push):
-#
-#   - Detection succeeded and found that neither the administration app's jobs nor the example
+# "skipped", and branch protection counts "skipped" as passing. The gate uses that in exactly one
+# case and runs in every other (a failed work job, a failed or cancelled detection, a push):
+# detection succeeded and found that neither the administration app's jobs nor the example
 #     country had to run. Nothing needed to run, and a gate that ran would only have confirmed
-#     that; skipped, it costs no runner minute, so a backend-only PR costs this workflow its
-#     detection job alone — unless it changes the parent pom, the Maven wrapper, the base
-#     settings file or its catalog, the PDF logo or an English backend bundle, which the example
-#     reads, or the endpoint table, which the administration jobs read. A change confined to fe/ui-apps/info/ runs the example country (it builds the
-#     public site) and the gate with it, but not the administration jobs.
-#   - The PR is a draft, on the run's first attempt. Nothing ran, and "passing" there is harmless
-#     because GitHub does not merge a draft. Marking it ready for review starts a new run on the
-#     same commit whose gate replaces the skipped one. That gate may only appear on the PR once its
-#     work jobs finish, so for those few minutes the draft's skipped gate is still the newest on
-#     the commit: merge on the ready run's gate, not before it has reported.
-#
-# A re-run is never skipped as a draft (`github.run_attempt > 1` in each draft condition). It reuses
-# the event payload of the run it repeats, draft flag included, so re-running a draft-era run after
-# the ready run's gate went red would otherwise post a newer skipped — passing — gate on the same
-# commit. Re-run, a draft-era run does the real work and its gate reports what that work found.
+#     that; skipped, it takes no runner, so a backend-only PR costs this workflow its
+# detection job alone — unless it changes the parent pom, the Maven wrapper, the base settings
+# file or its catalog, the PDF logo or an English backend bundle, which the example reads, or the
+# endpoint table, which the administration jobs read. A change confined to fe/ui-apps/info/ runs
+# the example country (it builds the public site) and the gate with it, but not the
+# administration jobs.
 #
 # `push` has no such constraint, so it is path-filtered the cheap way, at the trigger — with the
 # same exclusion `Detect` makes: a merge confined to fe/ui-apps/info/ runs Info CI alone, and Info
@@ -120,9 +108,6 @@ name: Frontend CI
 # break them. Backend CI runs for it as well.
 on:
   pull_request:
-    branches: [ main ]
-    # The default three plus ready_for_review: a draft does no work, marking it ready runs it all.
-    types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches: [ main ]
     paths:
@@ -135,8 +120,8 @@ on:
       - '.github/workflows/retract-version.yml'
   workflow_dispatch:
 
-# A newer push to the same pull request cancels its in-flight run, so superseded builds are not
-# paid for. Push and dispatch runs get a group of their own (their run id) and are never cancelled
+# A newer push to the same pull request cancels its in-flight run, so a superseded build holds no
+# runner. Push and dispatch runs get a group of their own (their run id) and are never cancelled
 # or replaced: publish.yml needs every main commit's CI to conclude (see be-ci.yml).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -152,12 +137,10 @@ env:
 jobs:
   # ---------------------------------------------------------------------------
   # Does this change touch the frontend at all? See the trigger comment above for
-  # why this is a job rather than a `paths:` filter on `pull_request`. Skipped on
-  # a draft's first attempt, and with it every job below.
+  # why this is a job rather than a `paths:` filter on `pull_request`.
   # ---------------------------------------------------------------------------
   changes:
     name: Detect frontend changes
-    if: ${{ !github.event.pull_request.draft || github.run_attempt > 1 }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -569,15 +552,14 @@ jobs:
   # The status check for branch protection to require. Runs also when a work job
   # failed or change detection did not succeed, and is green only if detection
   # succeeded and every work job that should have run succeeded. Skipped — which
-  # counts as passing, see the trigger comment — on a draft's first attempt and
-  # when detection found neither the administration app nor the example country
+  # counts as passing, see the trigger comment — when detection found neither the administration app nor the example country
   # to run.
   # ---------------------------------------------------------------------------
   gate:
     name: Frontend gate
     needs: [ changes, checks, unit-tests, example ]
     if: >-
-      ${{ always() && (!github.event.pull_request.draft || github.run_attempt > 1)
+      ${{ always()
       && !(needs.changes.result == 'success' && needs.changes.outputs.frontend != 'true'
       && needs.changes.outputs.example != 'true') }}
     runs-on: ubuntu-latest

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Verify a branch locally the way CI would, for the pull requests CI does not run on — the sub-PRs
-# into a `feature/**` branch (root AGENTS.md) — and print a summary to paste into the PR.
+# Verify a branch locally the way CI would, before a push or where CI is not at hand, and print a
+# summary. CI itself runs on every pull request (root AGENTS.md).
 #
 #   ./verify-local                   the parts the branch changed, against origin/main
 #   ./verify-local --base <ref>      ... against another base: origin/feature/<name> for a sub-PR
@@ -72,7 +72,7 @@
 #                        set-up, niord-base and its test-jar installed from the working tree, yy's
 #                        be/mvnw verify (the country build group on Testcontainers), the group
 #                        check and the override check. That needs Docker, and without it the row
-#                        is a FAIL: there is no Backend CI job for a sub-PR. When nothing else asks
+#                        is a FAIL, not a skip. When nothing else asks
 #                        for the part (EXAMPLE_RULE does not match, and neither --upgrade-from
 #                        nor --fe-only asks for it), it runs --backend --skip-frontend, as
 #                        Backend CI's Generated country job does: init, set-up and the backend,
@@ -526,7 +526,7 @@ verify_example() {
     local docker=false
     docker info >/dev/null 2>&1 && docker=true
     # The generated country's backend (a scaffold change) runs its integration tests on
-    # Testcontainers. Without Docker it is a FAIL, not a skip: this run is a sub-PR's only proof.
+    # Testcontainers. Without Docker it is a FAIL, not a skip, which would read as a pass.
     if $DO_SCAFFOLD && ! $docker; then
         EXAMPLE_RESULT=FAIL; EXAMPLE_DETAIL="the scaffold inputs changed and the generated country's backend needs Docker: start Docker Desktop"; return
     fi
