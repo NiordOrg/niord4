@@ -1660,7 +1660,7 @@ describe('the upgrade report: Unreleased compared per entry', () => {
     ]);
   });
 
-  // API-CHANGES.md's Unreleased entry on the service worker's media/ cache wraps the phrase so.
+  // An entry of API-CHANGES.md is wrapped at 100 columns, so the phrase can break at any of its spaces.
   it('reads a "What a country must do" that wraps across lines', () => {
     const { data, markdown } = between(
       unreleased(A),
