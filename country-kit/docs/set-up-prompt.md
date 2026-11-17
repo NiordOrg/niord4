@@ -205,7 +205,7 @@ With languages, set-up prints `setup: --update-pins: <lang>: no pin -> <the pin>
 the pin ending in its `sha256:` digest, and then a line ending
 `review the new digests, and a first pin against the home's pack-releases.md`. Show the person each
 new pin's line and its home's record, the `pack-releases.md` at the root of the home's repository:
-for `da`, https://github.com/SIFA-DK/niord-dk/blob/main/pack-releases.md (when the person cannot
+for `da`, the one in `SIFA-DK/niord-dk`, a repository that is not public yet (when the person cannot
 read that repository, its maintainers give the line). Stop when: the person has not confirmed that
 each new digest is the one the record lists for its tag. The comparison is the person's: go on to
 step 9 only with their yes, so nothing is committed at step 11 without it.

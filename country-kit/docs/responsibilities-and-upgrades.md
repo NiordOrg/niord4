@@ -169,7 +169,7 @@ flowchart TD
    new digest with the home's `pack-releases.md`. It commits as `github-actions[bot]`, cancels the
    branch's CI runs and dispatches `ci.yml` on the new commit, then posts the Base bump comment and
    sets the status `niord/upgrade-actions`. The workflow reads the notes with your repository's own
-   token: the base product's repository, `NiordOrg/niord4`, is public. When the notes and the
+   token: the base product's repository is public. When the notes and the
    downloads differ, the run fails and nothing is pinned or run: tell the base product's
    maintainers. When the notes cannot be read (a release not made yet, a rate limit, a server
    error), the run fails and nothing is pinned: run it again (Actions, Base bump, Run workflow,
@@ -202,7 +202,9 @@ flowchart TD
    `niord/upgrade-actions` both green on the pull request's last commit. Until your repository has a
    rule that requires these checks, which GitHub's free plan does not offer a private repository, a
    red status does not block the merge button: the review is the gate, so do not merge while either
-   is red.
+   is red. While the upgrade contract is paused
+   ([Paused until production](../README.md#paused-until-production)), a bump is merged when its CI
+   is green and the boxes of the comment are information.
 
 It worked when CI is green, `niord/upgrade-actions` is green with every box of the comment ticked,
 and the review is done.

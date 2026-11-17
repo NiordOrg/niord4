@@ -95,8 +95,7 @@ unzip -q .niord/niord-country-kit-<version>.zip -d .niord/kit
 ```
 
 The two lines come exactly as the notes of release `v<version>` give them
-(`gh release view v<version> --repo NiordOrg/niord4`); a version up to 4.0.181 was released before
-the move to that repository, and its notes are not public. Run
+(`gh release view v<version> --repo NiordOrg/niord4`); release notes exist from 4.0.182. Run
 nothing from either zip before both say `OK`. Only the kit is unzipped: init reads the source zip in
 memory from `.niord/`, and
 writes `.niord/.gitignore`, holding `*`, so nothing of `.niord/` is committed. The unzip writes no
