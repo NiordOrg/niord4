@@ -2832,3 +2832,28 @@ they say otherwise; every other path is from the repository root.
 - **Exposed by:** the integration of the error hunt's phase 2 fix stage, 2026-11-16 (five failures in its first
   whole run, reproduced by its check with the repair taken out).
 - **Severity:** Low, tests only. Fix: let the two classes count only the messages they make.
+
+## PUBSERIES3. A publication series' sharing list comes back in no defined order
+
+- **Location:** `org/niord/core/publication/series/PublicationSeries.java` `availableDomains` (212-216), a
+  `@ManyToMany` list on the join table `PublicationSeries_AvailableDomain` with neither `@OrderColumn` nor
+  `@OrderBy`; the answer is built from it in `toVo` (891-896), which adds the domain ids to
+  `SystemPublicationSeriesVo.availableDomainIds` in the order the list was loaded.
+- **Description:** the join rows are read in the order the query plan gives, so `availableDomainIds` in
+  `GET /rest/publication-series/editable-series/{seriesId}`, in the export and in every answer of a create or a
+  save can list the same domains in another order than they were sent or last read. Two reads of one unchanged
+  series, with no committed write between them, came back as `[niord-nm, niord-fa]` and then
+  `[niord-fa, niord-nm]`. Nothing is decided by the order: the list is a set of domains (the visibility predicate
+  in `SeriesVisibility` joins it, and `SeriesAvailabilityResolver.resolve` drops duplicates and the owner), and the
+  administration app shows a tick per domain.
+- **Why it looks wrong:** two exports of the same data can differ, and a client that compares a read with what it
+  sent or read before, as a list, sees a change where there is none.
+- **Exposed by:** an integration run on CI, 2026-11-17: `PublicationSeriesExportImportRoundTripITTest
+  .aRowUploadedFromAnotherDeskIsSkippedAndTheStoredSeriesIsUntouched` and `PublicationSeriesRoundTripITTest
+  .anActiveSeriesEditedIntoIncompletenessIsRefusedAndKeepsWhatItHad` each compared a whole series before and after
+  a refused write and failed on the order of this list alone. Read in the code; not reproduced on a workstation.
+  The tests now compare the list without regard to its order (`PublicationHttpFixture.sharingSorted`) and
+  everything else as before; what is left is the product's half. The same kind as DB5 and MSG9.
+- **Severity:** Low. Fix: `@OrderBy("domainId")` on `availableDomains` (mapping only, no Liquibase change; the
+  order is then by domain id, not the order sent, which no reader needs), and the tests then compare the list as it
+  is read.
