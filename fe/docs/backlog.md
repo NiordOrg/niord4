@@ -863,6 +863,12 @@ Background: [`testing.md`](testing.md).
   `fe/`. Found in KM-2 (2026-11-01). The fix runs husky from the root (it refuses a folder named with `..`), for
   instance a `prepare` of `cd .. && husky fe/.husky`, and the hook then has to `cd fe` before `npx lint-staged`,
   since git runs hooks at the repository root. Tooling only; nothing in production depends on it.
+- **`node scripts/ci-test-shard.mjs 1 1` cannot start on Windows.** It passes every spec file of the shard to
+  `ng test` as its own absolute `--include`; for the whole suite (532 files on 2026-11-19) that command line is
+  far past Windows' limit of 32 767 characters, so the spawn fails, the script prints only its "Shard 1/1" line
+  and exits 1 without a test having run. CI runs on Linux and is not affected; on Windows run the suite as
+  `npm test -- --watch=false`, as `./verify-local` does. A fix would pass workspace-relative patterns, or a
+  shared folder pattern when the shard is the whole suite. Tooling only.
 - No accessibility check runs in CI. The only automated check there is the Angular template accessibility lint
   rule set. Both applications have an axe-core scan as a manual tool, run by no workflow (see
   [testing.md](testing.md)): the public site's `npm run a11y:info`, and the administration app's
