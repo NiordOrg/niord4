@@ -346,15 +346,46 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   from the backend's own origin (`org/niord/core/script/pdf/SameOriginUserAgent`). The same line is in the
   Greenland repository's copy of the template.
 - **Description:** since the request firewall accepts `%25` and `%3B` on a repository file's path, a file whose
-  name holds `%` or `;` opens in both frontends. The template does not encode the path, so the renderer asks for
-  a raw `%` (an invalid escape) or a raw `;` (a path parameter, refused by the firewall), and the image is
-  presumably missing from the PDF. Not checked by running it.
+  name holds `%` or `;` opens in the administration app (on the public site, a `;` does not yet: REPO6). The
+  template does not encode the path, so the renderer asks for a raw `%` (an invalid escape) or a raw `;` (a path
+  parameter, refused by the firewall), and the image is presumably missing from the PDF. Not checked by running it.
 - **Why it looks wrong:** the attachment shows in the admin app and on the public site but not in the printed
   message.
 - **Exposed by:** reading the template while the firewall was opened for such names, 2026-11-18; no test.
 - **Severity:** Low — an image attachment whose name holds one of these characters is rare. The template is data:
   a fix (`?url` on each segment, or a path the code encodes) ships in a release folder and reaches a database only
   by import.
+
+## REPO6 — A repository file whose name holds `;` still does not open on the public site, nor does a stored link with a raw `;`
+
+- **Location:** the public site's nginx, `fe/ui-apps/info/nginx/default.conf.template`, location
+  `^~ /rest/repo/file/` (`proxy_pass ${NIORD_SERVER_URL}/rest/repo/file/;`); and the stored links that point at
+  repository files: a publication desc's `link` written by `RepositoryService.getRepoUri` before it encoded a `;`,
+  a legacy publication link kept as it was (`IssuePublicationMapping.linkOf` returns an explicit link untouched),
+  and any message HTML that names a file.
+- **Description:** the request firewall accepts `%25` and `%3B` on `/rest/repo/file/**` and `/rest/repo/thumb/**`,
+  and the links the backend derives now write `;` as `%3B` (`WebUtils.encodeURI`, `IssuePublicationMapping.linkOf`).
+  Two parts are left:
+  1. The public site's location passes the request on with a URI part, so nginx decodes the path and escapes it
+     again. A `%` comes out as `%25` again, but a `;` comes out raw, and the backend refuses a raw `;` with 400 (a
+     path parameter to Tomcat and Spring; `RepositoryRestServiceITTest` asserts that refusal). A published issue
+     document or an attachment whose name holds `;` therefore opens in the administration app and not on the
+     public site.
+  2. A link stored before this change with a raw `;` after `/rest/repo/file/` stays refused everywhere, and no
+     firewall setting can serve it: Tomcat would cut the name at the `;`.
+- **Why it looks wrong:** the file is listed and linked on the public site, and a mariner who follows the link gets
+  an error.
+- **Suggested fix:** for part 1, let the location pass the request line on as it arrived
+  (`proxy_pass ${NIORD_SERVER_URL};`), as the message-id locations of the same file do, guarded by a `map` on
+  `$request_uri` that admits RFC 3986 path characters (unreserved, `%XX`, `!$&'()*+,=:@`, no raw `;`), refuses
+  `%2E`, `%2F`, `%5C`, `%00` and their doubly encoded forms, and refuses `..` only as a whole segment, so that the
+  links that open today (with `:`, sub-delims or `Rapport..pdf`) keep opening; prove it with the public site's
+  container test, adding a `%25` and a `%3B` file path. This is a change to the public site's image, made apart
+  from code changes. For part 2, count the stored links first (fe/docs/backlog.md, section 1, the repository
+  file names); rewriting them is data, not code.
+- **Exposed by:** reading the public site's proxy while the firewall was opened for such names, 2026-11-18; not
+  run through the image.
+- **Severity:** Low — a file name with `;` is rare; to be weighed by the count at the first restore.
 
 ## INT4 — `NiordIntegrationExecutionService.processNiordIntegration` still swallows a failed re-import and shares one transaction per target series
 

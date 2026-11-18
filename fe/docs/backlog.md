@@ -43,6 +43,14 @@ no new data after the backup, and stands.
 
 - **Stored date offsets.** Date intervals and firing periods written before the time-zone handling was fixed
   carry browser-zone offsets and were never retro-corrected. A data review, not a code change.
+- **Repository file names and links.** At the first restore from the old system, count what the repository
+  import carries over that may still not open: file names under the old repository folder that hold a `%`, a
+  `;` (not yet opened by the public site) or a `\` (a `\` becomes a folder separator on import, so the file lands
+  under another path), file names
+  that hold a valid `%XX` escape (`50%20off.pdf`, which both frontends read as already encoded and ask for under
+  the wrong name), and stored links with a raw `;` after `/rest/repo/file/` (in the publication descs' `link`
+  and in message texts), which the backend refuses. The counts decide whether these need a fix of their own; see
+  REPO6 in [`be/docs/potential-errors.md`](../../be/docs/potential-errors.md).
 - **Protected-WMS redirect flood.** The WMS answers a no-data tile with a redirect to a blank image; because the
   protected loader fetches tiles with auth headers, the redirect fails the CORS preflight and a pan or zoom
   floods the console. The fix belongs at the gateway or the proxy servlet — a frontend workaround was tried and
