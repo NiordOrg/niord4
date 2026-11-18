@@ -149,7 +149,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 58,
+    "line": 61,
     "file": "PublicSiteDetailsPage.png",
     "caption": "The Details view",
     "inline": false,
@@ -198,12 +198,12 @@
     "steps": "Open /messages/details; wait until Print is enabled (the list has arrived)",
     "crop": "the row of buttons (div.filter-bar > div > div) with a 12 px margin in the bar's colour",
     "needsData": "published messages (any)",
-    "note": "The last main type left on cannot be turned off; the guide text says so. Show Active Now is not pressed: in this version it changes nothing (fe/docs/backlog.md), and the guide says so, so the picture shows the default state. No area row in the base build."
+    "note": "The last main type left on cannot be turned off; the guide text says so. Show Active Now is not pressed, the state the site opens in; the guide describes in words what pressing it does. No area row in the base build."
   },
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 71,
+    "line": 74,
     "file": "PublicSiteListPage.png",
     "caption": "The List view",
     "inline": false,
@@ -221,7 +221,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 81,
+    "line": 84,
     "file": "PublicSiteMessageCard.png",
     "caption": "A message in the Details view",
     "inline": false,
@@ -239,7 +239,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 145,
+    "line": 148,
     "file": "PublicSiteMessageDialog.png",
     "caption": "A message opened from the list",
     "inline": false,
@@ -257,7 +257,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 195,
+    "line": 198,
     "file": "PublicSitePrintPdf.png",
     "caption": "The printed list",
     "inline": false,
