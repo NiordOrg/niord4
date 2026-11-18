@@ -50,7 +50,8 @@ host's localhost by OrbStack):
 The app image serves the administration app at the root of this origin, next to the REST
 API and Keycloak (an image built with --no-web serves none);
 {{- if not .Values.keycloak.enabled }} its users are those of the realm
-"{{ .Values.keycloak.realm }}" on a Keycloak this release does not render, whose own database keeps them.
+"{{ .Values.keycloak.realm }}" on the Keycloak at {{ include "niord.keycloak.host" . }}, which this release does not render
+(an infra release's dev-mode Keycloak has the test users, e.g. sysadmin / sysadmin).
 {{- else if or (ne (toString .Values.keycloak.mode) "production") .Values.keycloak.testUsers }} seeded realm users
 (e.g. sysadmin / sysadmin) sign in through it.
 {{- else }} the realm has no user
