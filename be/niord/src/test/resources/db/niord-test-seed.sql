@@ -966,6 +966,35 @@ CREATE SEQUENCE public."MailingListDesc_SEQ"
 
 
 --
+-- Name: MailingListStatusChange; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."MailingListStatusChange" (
+    id bigint NOT NULL,
+    "messageUid" character varying(36) NOT NULL,
+    status character varying(32) NOT NULL,
+    created timestamp(6) with time zone NOT NULL,
+    "dueAt" timestamp(6) with time zone NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    "lastError" text
+);
+
+
+--
+-- Name: MailingListStatusChange_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public."MailingListStatusChange" ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public."MailingListStatusChange_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: MailingListTrigger; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4720,6 +4749,14 @@ COPY public."MailingListDesc" (id, lang, description, name, entity_id) FROM stdi
 
 
 --
+-- Data for Name: MailingListStatusChange; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public."MailingListStatusChange" (id, "messageUid", status, created, "dueAt", attempts, "lastError") FROM stdin;
+\.
+
+
+--
 -- Data for Name: MailingListTrigger; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -6424,6 +6461,13 @@ SELECT pg_catalog.setval('public."MailingListDesc_SEQ"', 1000010, true);
 
 
 --
+-- Name: MailingListStatusChange_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public."MailingListStatusChange_id_seq"', 1, false);
+
+
+--
 -- Name: MailingListTriggerDesc_SEQ; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
@@ -6978,6 +7022,14 @@ ALTER TABLE ONLY public."IssueOverride"
 
 ALTER TABLE ONLY public."MailingListDesc"
     ADD CONSTRAINT "MailingListDesc_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: MailingListStatusChange MailingListStatusChange_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."MailingListStatusChange"
+    ADD CONSTRAINT "MailingListStatusChange_pkey" PRIMARY KEY (id);
 
 
 --
@@ -7882,6 +7934,13 @@ ALTER TABLE ONLY public."Sequence"
 
 ALTER TABLE ONLY public."User"
     ADD CONSTRAINT user_username UNIQUE (username);
+
+
+--
+-- Name: MailingListStatusChange_due_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "MailingListStatusChange_due_idx" ON public."MailingListStatusChange" USING btree ("dueAt", id);
 
 
 --

@@ -2426,6 +2426,16 @@ INSERT INTO public."MailingListDesc" (id, lang, description, name, entity_id) VA
 ALTER TABLE public."MailingListDesc" ENABLE TRIGGER ALL;
 
 --
+-- Data for Name: MailingListStatusChange; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+ALTER TABLE public."MailingListStatusChange" DISABLE TRIGGER ALL;
+
+
+
+ALTER TABLE public."MailingListStatusChange" ENABLE TRIGGER ALL;
+
+--
 -- Data for Name: MailingListTrigger; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -8025,6 +8035,13 @@ SELECT pg_catalog.setval('public."IssueOverride_SEQ"', 1, false);
 --
 
 SELECT pg_catalog.setval('public."MailingListDesc_SEQ"', 1000010, true);
+
+
+--
+-- Name: MailingListStatusChange_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public."MailingListStatusChange_id_seq"', 1, false);
 
 
 --

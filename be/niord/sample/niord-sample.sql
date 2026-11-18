@@ -29,7 +29,7 @@ BEGIN
         RAISE EXCEPTION 'niord-sample: the bootstrap marker of % does not read applied: the sample is loaded after the base product''s bootstrap (./start-local.sh --sample)', current_database();
     END IF;
     IF (SELECT string_agg(id, ',' ORDER BY id) FROM public.databasechangelog)
-            IS DISTINCT FROM '001-baseline-schema,002-message-search-text,003-secom,004-publication-series,005-retire-map-image-settings,006-defaults-ledger,007-bootstrap-state,008-script-resource-history-source,009-repo-files,010-message-list-index-default,011-message-filter-parameters-text' THEN
+            IS DISTINCT FROM '001-baseline-schema,002-message-search-text,003-secom,004-publication-series,005-retire-map-image-settings,006-defaults-ledger,007-bootstrap-state,008-script-resource-history-source,009-repo-files,010-message-list-index-default,011-message-filter-parameters-text,012-mailing-list-status-change' THEN
         RAISE EXCEPTION 'niord-sample: the schema''s Liquibase changesets are not the ones the sample was made on; %', stale;
     END IF;
     IF EXISTS (SELECT 1 FROM public."Area" WHERE id >= 1000001) OR (SELECT last_value FROM public."Area_SEQ") >= 1000001 THEN
