@@ -307,6 +307,24 @@ public class MailingListMessageListenerTest {
         assertTrue(executionService.attemptedTriggerIds.isEmpty());
     }
 
+    /**
+     * A row whose triggers ran but whose delete fails is logged with its own row, message and status (not the topic's
+     * prompt), and the pass stops there; the row's lease makes it due again.
+     */
+    @Test
+    public void aRowWhoseDeleteFailsStopsThePass() {
+        mailingListService.triggers = triggers(1);
+        outbox.failComplete = true;
+        outbox.due.add(new Claim(14, "uid-14", Status.PUBLISHED));
+        outbox.due.add(new Claim(15, "uid-15", Status.PUBLISHED));
+
+        assertEquals(0, listener.drainOutbox(), "the failed delete is caught, not thrown");
+
+        assertEquals(List.of("uid-14"), executionService.executedUids, "the first row's triggers ran");
+        assertEquals(1, outbox.due.size(), "and the pass stopped there");
+        assertTrue(outbox.failures.isEmpty(), "the run did not fail, so no error is written on the row");
+    }
+
     /** The per-minute sweep takes the rows no prompt came for, such as a row committed while the broker was down */
     @Test
     public void theSweepDrainsTheRowsTheTopicDidNotPromptFor() {
@@ -418,8 +436,13 @@ public class MailingListMessageListenerTest {
             return Optional.ofNullable(due.poll());
         }
 
+        boolean failComplete;
+
         @Override
         public void complete(long id) {
+            if (failComplete) {
+                throw new IllegalStateException("simulated delete failure of " + id);
+            }
             completed.add(id);
         }
 

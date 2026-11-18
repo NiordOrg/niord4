@@ -52,7 +52,9 @@ import jakarta.jms.ConnectionFactory;
  * mailed. One drain runs at a time on a node; nodes sharing a database take different rows (see
  * {@link MailingListStatusChangeOutbox#claimNextDue}).
  * <p>
- * The order holds while no row fails. A row whose triggers could not be looked up waits a few minutes (one more for
+ * The order holds on one node while no row fails. Nodes sharing a database take rows independently (the drain lock is
+ * per node), so across nodes two status changes of one message may be mailed at once or in reverse with no failure at
+ * all; the chart runs one replica. A row whose triggers could not be looked up waits a few minutes (one more for
  * each time it was taken, at most its lease), and the next passes take the rows after it meanwhile: a later status
  * change of the same message (CANCELLED after PUBLISHED) may then be mailed before it. A row whose node stopped while
  * running it waits out its lease. Such a row is tried again with an ERROR each time; its {@code attempts} and
@@ -145,7 +147,7 @@ public class MailingListMessageListener implements Runnable {
             log.debug("Received a message status update, draining the status-change outbox");
             drainOutbox();
         } catch (Throwable e) {
-            log.error("Failed draining the status-change outbox on JMS message " + message, e);
+            log.error("Failed draining the status-change outbox, prompted by a status change on the topic", e);
         }
     }
 
@@ -227,7 +229,14 @@ public class MailingListMessageListener implements Runnable {
                 } finally {
                     running = null;
                 }
-                outbox.complete(claim.id());
+                try {
+                    outbox.complete(claim.id());
+                } catch (Throwable e) {
+                    log.error("Failed deleting the status-change outbox row " + claim.id() + " of message "
+                            + claim.messageUid() + " in status " + claim.status() + " after its triggers ran; its "
+                            + "mails are made again when its lease runs out", e);
+                    return done;
+                }
                 if (!givenUp) {
                     done++;
                 }
