@@ -554,26 +554,6 @@ service/REST integration tests. Tests pinning the current (incorrect) behaviour 
 - **Severity:** Low — formatting quirk in generated plain-text fields (e.g. NAVTEX/subject text). Related
   to the "prefer robustness over correctness" clean-up philosophy of the template helpers.
 
-## TMPL6. Template field-template assignment silently swallows failures (robustness over correctness)
-
-- **Location:** `org.niord.core.category.ScriptExecutionService.applyFieldTemplates` — the
-  `catch (ScriptException e)` around the assignment logs and continues. Since 2026-09 a field template whose
-  field is not a plain property path is logged and skipped the same way, before anything is evaluated.
-- **Why it is worth noting:** when a field-template targets a field that does not exist on the message
-  (e.g. `part.getDesc('da').subject` where the part has no `da` description, or a missing promulgation),
-  the Nashorn assignment throws `TypeError`/`ScriptException`, which is caught and logged at ERROR but
-  otherwise ignored — the field is silently left unset and template execution "succeeds". This is the
-  same swallow-and-continue philosophy as the Freemarker directives' fallbacks; it makes
-  authoring errors in templates hard to notice.
-- **Exposed by:** `TemplateExecutionServiceITTest.executeScriptResources_fieldTemplateForMissingDescIsSwallowed`.
-  Seen live in the error hunt's wave 3 (2026-11-12): a DK category's field template writing
-  `part.getDesc('da').details` in an English-only copy logged "Error applying field template ... TypeError: Cannot
-  set property "details" of null" on every template preview, and the preview succeeded. Since 2026-11-13 Generate
-  fails when a promulgation type's script fails (`PromulgationManager.generateMessagePromulgation`), and that check
-  wraps the call that ends here (`applyFreemarkerTemplate` 78-92 calls `applyFieldTemplates`); a failure swallowed
-  here never reaches it, so a failed field assignment still changes a generated text without a word.
-- **Severity:** Low — by design, but it hides template authoring mistakes.
-
 ---
 
 # Potential errors — `core.message` entity layer

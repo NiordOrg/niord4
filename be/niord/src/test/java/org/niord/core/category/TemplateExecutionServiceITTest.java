@@ -38,6 +38,7 @@ import org.niord.core.script.ScriptResourceService;
 import org.niord.test.ITTest;
 import org.niord.test.ScriptResourceFixtures;
 
+import javax.script.ScriptException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -74,6 +75,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       {@code message.promulgation('navtex').text}.</li>
  *   <li>{@code templates/it/template-exec-typeprom-it.ftl} appends {@code "TYPEPROMMARKER"} to the
  *       per-type-loop {@code promulgation.text} binding.</li>
+ *   <li>{@code templates/it/template-exec-badfield-it.ftl} sets the English subject and the details of a
+ *       language no deployment has ({@code xx}), which cannot be assigned.</li>
  * </ul>
  *
  * <p>The tests for the real Danish DGPS template pair (which ships only with the niord-dk
@@ -88,6 +91,7 @@ class TemplateExecutionServiceITTest extends ITTest {
     private static final String FM_APPEND_PATH  = "templates/it/template-exec-append-it.ftl";
     private static final String FM_MSGPROM_PATH = "templates/it/template-exec-msgprom-it.ftl";
     private static final String FM_TYPEPROM_PATH = "templates/it/template-exec-typeprom-it.ftl";
+    private static final String FM_BADFIELD_PATH = "templates/it/template-exec-badfield-it.ftl";
 
     @Autowired
     TemplateExecutionService templateExecutionService;
@@ -110,7 +114,7 @@ class TemplateExecutionServiceITTest extends ITTest {
     @BeforeEach
     void addTheTestTemplates() {
         ScriptResourceFixtures.ensure(resourceService, FM_PATH, JS_PATH, FM_APPEND_PATH, FM_MSGPROM_PATH,
-                FM_TYPEPROM_PATH);
+                FM_TYPEPROM_PATH, FM_BADFIELD_PATH);
     }
 
     // --------------------------------------------------------------------------------------- //
@@ -295,18 +299,37 @@ class TemplateExecutionServiceITTest extends ITTest {
 
     @Test
     @Transactional
-    void executeScriptResources_fieldTemplateForMissingDescIsSwallowed() throws Exception {
+    void executeScriptResources_fieldTemplateForMissingDescFails() {
         SystemMessageVo m = newMessage();
-        // A DETAILS part with NO descriptions: the field path part.getDesc('en') resolves to null,
-        // so the Nashorn assignment fails. TemplateExecutionService catches and logs ScriptException
-        // ("Prefer robustness over correctness"), so no exception escapes and nothing is set.
+        // A DETAILS part with NO descriptions: the field path part.getDesc('en') resolves to null, so the Nashorn
+        // assignment fails. The run fails with a ScriptException naming the template, once every field was tried,
+        // instead of leaving the fields unset without a word.
         MessagePartVo part = new MessagePartVo();
         part.setType(MessagePartType.DETAILS);
         m.checkCreateParts().add(part);
 
-        scriptExecutionService.executeScriptResources(List.of(FM_PATH), contextFor(m, part, "Alpha"));
+        ScriptException e = assertThrows(ScriptException.class, () -> scriptExecutionService.executeScriptResources(
+                List.of(FM_PATH), contextFor(m, part, "Alpha")));
 
+        assertTrue(e.getMessage().startsWith("Template " + FM_PATH + ": 2 field template(s) could not be applied"),
+                e.getMessage());
         assertNull(part.getDescs(), "no description should have been created by the failed assignment");
+    }
+
+    @Test
+    @Transactional
+    void executeTemplate_aFieldForALanguageTheDeploymentLacksFailsTheRun() {
+        // A template written for a language this deployment does not have: the editor's template run fails,
+        // so neither the preview nor Apply gets a message with that field left unset
+        Category template = new Category();
+        template.setType(CategoryType.TEMPLATE);
+        template.getScriptResourcePaths().add(FM_BADFIELD_PATH);
+
+        ScriptException e = assertThrows(ScriptException.class,
+                () -> templateExecutionService.executeTemplate(template, newMessage(), null));
+
+        assertTrue(e.getMessage().contains(FM_BADFIELD_PATH), e.getMessage());
+        assertTrue(e.getMessage().contains("part.getDesc('xx').details"), e.getMessage());
     }
 
     // --------------------------------------------------------------------------------------- //

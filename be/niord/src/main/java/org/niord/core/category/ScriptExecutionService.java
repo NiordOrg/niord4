@@ -29,6 +29,7 @@ import jakarta.inject.Inject;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -77,7 +78,7 @@ public class ScriptExecutionService {
      */
     private void applyFreemarkerTemplate(
             Map<String, Object> contextData,
-            String scriptResourcePath) throws IOException, TemplateException {
+            String scriptResourcePath) throws IOException, TemplateException, ScriptException {
 
         // Run the associated Freemarker template to get a result in the "FieldTemplates" format
         String fieldTemplateTxt = templateService.newFmTemplateBuilder()
@@ -88,7 +89,12 @@ public class ScriptExecutionService {
 
         List<FieldTemplate> fieldTemplates = FieldTemplateProcessor.parse(fieldTemplateTxt);
 
-        applyFieldTemplates(fieldTemplates, contextData);
+        try {
+            applyFieldTemplates(fieldTemplates, contextData);
+        } catch (ScriptException e) {
+            // Name the template that holds the bad field
+            throw new ScriptException("Template " + scriptResourcePath + ": " + e.getMessage());
+        }
     }
 
     /**
@@ -99,21 +105,30 @@ public class ScriptExecutionService {
      * <p>
      * The field templates are the output of a Freemarker template, which prints values the caller of the
      * template execution supplied. So a field is only assigned when it has the shape of a property path from
-     * the context data ({@link FieldTemplatePath}), and the assignment runs on a sandboxed engine.
+     * the context data ({@link FieldTemplatePath}), and the assignment runs on a sandboxed engine. A field of
+     * another shape is never evaluated.
+     * <p>
+     * A field that is not a property path, or that cannot be assigned (a description in a language the part does
+     * not have, a promulgation the message does not carry), fails the run after the other fields have been tried,
+     * and each such field is logged: a template that leaves a field unset is a failed script, and Generate and the
+     * template dialog fail when a script fails.
      *
      * @param fieldTemplates the field templates to apply
+     * @throws ScriptException naming every field that could not be applied
      */
-    void applyFieldTemplates(List<FieldTemplate> fieldTemplates, Map<String, Object> contextData) {
+    void applyFieldTemplates(List<FieldTemplate> fieldTemplates, Map<String, Object> contextData) throws ScriptException {
 
         ScriptEngine jsEngine = NashornEngines.sandboxed();
 
         // Update the JavaScript engine bindings from the context data
         contextData.forEach(jsEngine::put);
 
+        List<String> failures = new ArrayList<>();
         for (FieldTemplate fieldTemplate : fieldTemplates) {
 
             if (!FieldTemplatePath.isValid(fieldTemplate.getField(), contextData.keySet())) {
                 log.error("Skipping field template with an unsupported field expression: " + fieldTemplate.getField());
+                failures.add(fieldTemplate.getField() + " (not a property path)");
                 continue;
             }
 
@@ -124,9 +139,14 @@ public class ScriptExecutionService {
             } catch (ScriptException e) {
                 // Apply the result of the field templates
                 log.error("Error applying field template " + fieldTemplate + ": " + e.getMessage());
+                failures.add(fieldTemplate.getField() + " (" + e.getMessage() + ")");
             }
         }
 
+        if (!failures.isEmpty()) {
+            throw new ScriptException(failures.size() + " field template(s) could not be applied: "
+                    + String.join("; ", failures));
+        }
     }
 
     /** Returns a JavaScript that either assigns or appends the content to the field **/

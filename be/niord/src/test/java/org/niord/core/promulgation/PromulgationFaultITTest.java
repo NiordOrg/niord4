@@ -456,9 +456,10 @@ class PromulgationFaultITTest extends ITTest {
     }
 
     /**
-     * Three NAVTEX-backed types generate the text of one message: one whose script rewrites the text (the
-     * control: its rewrite shows in the result), one whose script throws while it renders (an undefined value), and
-     * one whose script path has no resource. The script adjusts the broadcast text (a header, a cancellation footer,
+     * Four NAVTEX-backed types generate the text of one message: one whose script rewrites the text (the
+     * control: its rewrite shows in the result), one whose script throws while it renders (an undefined value),
+     * one whose script path has no resource, and one whose script writes a field that cannot be assigned (a
+     * promulgation the message does not carry), which used to be logged and skipped. The script adjusts the broadcast text (a header, a cancellation footer,
      * the wording), so a failing script fails Generate for its type with a {@code PromulgationException} that names
      * the type and carries the script's error as its cause, instead of answering the unscripted text. Over HTTP,
      * Generate answers 500 for the failing type with a problem detail that names the type and quotes neither the
@@ -476,9 +477,13 @@ class PromulgationFaultITTest extends ITTest {
         String okType = navtexBackedType("it-p12ok-" + n, rewrite);
         assertEquals("SCRIPTED BUOY ADRIFT", generatedText(okType), "control: a working script rewrites the text");
 
+        String unassignable = scriptResource("templates/it/prom12-unassignable-" + n + ".ftl",
+                "<field-template field=\"message.promulgation('it-none-" + n + "').text\">X</field-template>");
+
         String boomType = navtexBackedType("it-p12boom-" + n, boom);
         String missingType = navtexBackedType("it-p12miss-" + n, "templates/it/prom12-missing-" + n + ".ftl");
-        for (String typeId : List.of(boomType, missingType)) {
+        String unassignableType = navtexBackedType("it-p12unas-" + n, unassignable);
+        for (String typeId : List.of(boomType, missingType, unassignableType)) {
             PromulgationException failure = generateFailure(typeId);
             assertTrue(failure.getMessage().contains("promulgation type " + typeId + " failed"),
                     "the failure names the type: " + failure.getMessage());
@@ -488,5 +493,6 @@ class PromulgationFaultITTest extends ITTest {
         assertEquals(200, generateOverHttp(okType).statusCode(), "control: Generate over HTTP answers the working type");
         assertGenerateFailsReadably(boomType, "noSuchValue");
         assertGenerateFailsReadably(missingType, "prom12-missing-" + n);
+        assertGenerateFailsReadably(unassignableType, "it-none-" + n);
     }
 }
