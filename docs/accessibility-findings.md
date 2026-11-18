@@ -154,7 +154,9 @@ widget. These are now hand-written in `fe/ui-apps/admin/src/app/shared/forms/`:
 All three base widgets declare `combobox` and `listbox` roles and have keyboard handlers. The
 accessibility is not missing. It is unverified. Combobox and date picker are the two patterns most
 often subtly wrong in custom code, for example in how the active option is announced, or how the
-calendar grid is navigated. Nobody has tested these with a screen reader.
+calendar grid is navigated. Nobody has tested these with a screen reader. Reading the code found one
+fault, since fixed: the date and time fields' trigger hid the chosen value whenever the field was
+named, because a button's name replaces its content; the value is now the button's description.
 
 ### What does not exist
 

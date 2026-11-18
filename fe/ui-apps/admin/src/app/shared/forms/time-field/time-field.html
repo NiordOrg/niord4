@@ -5,12 +5,13 @@
     class="flex min-w-0 flex-1 items-center gap-2 bg-transparent text-left"
     [disabled]="disabled()"
     [attr.aria-label]="ariaLabel() || null"
+    [attr.aria-describedby]="describedBy()"
     aria-haspopup="dialog"
     [attr.aria-expanded]="popover()?.shown() ?? false"
     (click)="toggle()"
   >
     <app-icon name="lucideClock" class="shrink-0 text-fg-muted" />
-    <span class="min-w-0 flex-1 truncate" [class.text-fg-subtle]="!hasValue()">
+    <span [id]="valueId" class="min-w-0 flex-1 truncate" [class.text-fg-subtle]="!hasValue()">
       {{ hasValue() ? displayValue() : placeholder() }}
     </span>
   </button>

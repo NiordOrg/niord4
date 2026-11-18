@@ -11,12 +11,13 @@
     [disabled]="isDisabled()"
     [attr.aria-disabled]="zoneMissing() ? 'true' : null"
     [attr.aria-label]="ariaLabel() || null"
+    [attr.aria-describedby]="describedBy()"
     aria-haspopup="dialog"
     [attr.aria-expanded]="popover()?.shown() ?? false"
     (click)="toggle()"
   >
     <app-icon name="lucideCalendar" class="shrink-0 text-fg-muted" />
-    <span class="min-w-0 flex-1 truncate" [class.text-fg-subtle]="!hasValue()">
+    <span [id]="valueId" class="min-w-0 flex-1 truncate" [class.text-fg-subtle]="!hasValue()">
       {{ hasValue() ? displayValue() : placeholder() }}
     </span>
   </button>
