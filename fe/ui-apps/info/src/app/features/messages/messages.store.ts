@@ -239,6 +239,10 @@ export class MessagesStore {
    * The list narrowed to the messages in force at this moment while active-now is pressed,
    * judged from the event dates every message carries (see `isActiveAt`). A publication is never
    * narrowed: the bar leaves the chip out while one is browsed.
+   *
+   * "This moment" is the moment the chip was pressed or the list last changed: nothing ticks the
+   * clock, so a page left open with the chip pressed keeps a message whose interval has since
+   * ended until the next read or press.
    */
   private readonly inForce = computed<Message[]>(() =>
     this.activeNowOnly() && !this.publicationId()
