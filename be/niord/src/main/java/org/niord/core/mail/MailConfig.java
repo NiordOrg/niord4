@@ -20,6 +20,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -45,11 +47,15 @@ import jakarta.mail.Session;
  *     stops the start, rather than sending in clear text. In both TLS modes the relay's certificate is checked,
  *     against the JVM's trust store, and its name against the host.</li>
  * </ul>
+ * A login with the TLS mode {@code none}, which sends it in clear text, and a user name with a blank password are
+ * each logged as a WARN at the start, which goes on: a relay on a trusted network may be meant.
  */
 // PORT: was a CDI @Component with a @Produces method; per §6 the producer moves to
 // an @Configuration class exposing the Session via a @Bean method.
 @Configuration
 public class MailConfig {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MailConfig.class);
 
     @Value("${niord.smtp.host}")
     String host;
@@ -78,6 +84,7 @@ public class MailConfig {
     @Bean
     public Session createMailSession() {
         Properties props = sessionProperties();
+        configurationWarnings().forEach(log::warn);
         if (StringUtils.isBlank(username)) {
             return Session.getInstance(props);
         }
@@ -104,7 +111,7 @@ public class MailConfig {
         props.put("mail.smtp.timeout", String.valueOf(readTimeoutMs));
         props.put("mail.smtp.writetimeout", String.valueOf(writeTimeoutMs));
 
-        String mode = StringUtils.defaultIfBlank(tls, "none").trim().toLowerCase(Locale.ROOT);
+        String mode = tlsMode();
         switch (mode) {
             case "none" -> { }
             case "starttls" -> {
@@ -127,5 +134,30 @@ public class MailConfig {
             props.put("mail.smtp.user", username);
         }
         return props;
+    }
+
+    /** The TLS mode as configured, trimmed and in lower case; {@code none} when unset */
+    private String tlsMode() {
+        return StringUtils.defaultIfBlank(tls, "none").trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * What the start logs as a WARN about the login, without stopping it: a login sent to the relay without TLS
+     * (a relay on a trusted network may be meant), and a user name with a blank password. The password itself is
+     * never named.
+     */
+    List<String> configurationWarnings() {
+        List<String> warnings = new ArrayList<>();
+        if (StringUtils.isNotBlank(username)) {
+            if ("none".equals(tlsMode())) {
+                warnings.add("The mail login (niord.smtp.username) is sent to the relay without TLS: set "
+                        + "niord.smtp.tls to starttls or ssl, unless the relay is on a trusted network");
+            }
+            if (StringUtils.isBlank(password)) {
+                warnings.add("niord.smtp.username is set and niord.smtp.password is blank: the mail login is sent "
+                        + "with an empty password");
+            }
+        }
+        return warnings;
     }
 }

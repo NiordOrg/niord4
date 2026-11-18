@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -134,6 +135,45 @@ class MailConfigTest {
         assertEquals("true", props.getProperty("mail.smtp.ssl.enable"));
         assertEquals("true", props.getProperty("mail.smtp.ssl.checkserveridentity"));
         assertNull(props.get("mail.smtp.starttls.enable"));
+    }
+
+    @Test
+    void aLoginWithoutTlsIsWarnedAbout_andTheStartGoesOn() {
+        MailConfig config = config("relay.example.com", 25);
+        config.username = "niord-relay";
+        config.password = "it-not-a-real-password";
+
+        List<String> warnings = config.configurationWarnings();
+
+        assertEquals(1, warnings.size(), warnings.toString());
+        assertTrue(warnings.get(0).contains("without TLS"), warnings.get(0));
+        assertFalse(warnings.get(0).contains("it-not-a-real-password"), "the password is never named");
+        assertNotNull(config.createMailSession(), "the start goes on");
+    }
+
+    @Test
+    void aLoginWithABlankPasswordIsWarnedAbout() {
+        MailConfig config = config("relay.example.com", 587);
+        config.username = "niord-relay";
+        config.password = " ";
+        config.tls = "starttls";
+
+        List<String> warnings = config.configurationWarnings();
+
+        assertEquals(1, warnings.size(), warnings.toString());
+        assertTrue(warnings.get(0).contains("niord.smtp.password is blank"), warnings.get(0));
+    }
+
+    @Test
+    void aLoginOverTls_orNoLoginAtAll_isNotWarnedAbout() {
+        MailConfig withTls = config("relay.example.com", 465);
+        withTls.username = "niord-relay";
+        withTls.password = "it-not-a-real-password";
+        withTls.tls = "SSL";
+
+        assertEquals(List.of(), withTls.configurationWarnings());
+        assertEquals(List.of(), config("localhost", 1025).configurationWarnings(),
+                "a local relay without a login and without TLS is the default, and no fault");
     }
 
     @Test
