@@ -143,9 +143,11 @@ export class AuthService {
     if (!token) return undefined;
     try {
       return this.keycloak.isTokenExpired(TOKEN_REFRESH_LEEWAY_SECONDS) ? undefined : token;
-    } catch {
-      // isTokenExpired throws when the adapter holds no parsed token.
-      return undefined;
+    } catch (error) {
+      // isTokenExpired throws 'Not authenticated' when the adapter holds no parsed token; any
+      // other failure is a fault and is not taken for that.
+      if (error instanceof Error && error.message === 'Not authenticated') return undefined;
+      throw error;
     }
   }
 

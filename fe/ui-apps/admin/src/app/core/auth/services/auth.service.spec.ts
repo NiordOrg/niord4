@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthService } from './auth.service';
 import { KEYCLOAK } from './keycloak.token';
+import { createTestKeycloak } from './test-keycloak';
 
 interface FakeKeycloak {
   token: string | undefined;
@@ -224,6 +225,36 @@ describe('AuthService', () => {
         }),
       });
       expect(configure(throwing).currentFreshToken()).toBeUndefined();
+    });
+
+    it('does not take any other failure of the adapter for a missing token', () => {
+      const broken = makeKeycloakStub({
+        token: 'tkn',
+        isTokenExpired: vi.fn(() => {
+          throw new TypeError('keycloak.isTokenExpired is not a function');
+        }),
+      });
+      expect(() => configure(broken).currentFreshToken()).toThrow(TypeError);
+    });
+
+    it('judges the end-to-end stub token by its bundle', () => {
+      const jwt = (payload: object) => `h.${btoa(JSON.stringify(payload))}.s`;
+      const bundle = (expiresIn: number) => ({
+        accessToken: jwt({ sub: 'sub-1' }),
+        refreshToken: 'r',
+        idToken: jwt({ sub: 'sub-1' }),
+        expiresIn,
+        refreshExpiresIn: 1800,
+        obtainedAtMs: Date.now(),
+      });
+      const fresh = createTestKeycloak(bundle(300));
+      TestBed.configureTestingModule({ providers: [{ provide: KEYCLOAK, useValue: fresh }] });
+      expect(TestBed.inject(AuthService).currentFreshToken()).toBe(fresh.token);
+      TestBed.resetTestingModule();
+      // Within the 60 s leeway: a background read is not sent with it.
+      const ending = createTestKeycloak(bundle(30));
+      TestBed.configureTestingModule({ providers: [{ provide: KEYCLOAK, useValue: ending }] });
+      expect(TestBed.inject(AuthService).currentFreshToken()).toBeUndefined();
     });
   });
 
