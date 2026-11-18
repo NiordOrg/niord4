@@ -291,6 +291,22 @@ public class MailingListMessageListenerTest {
         assertFalse(listener.warnIfStuck(), "no row runs any more");
     }
 
+    /**
+     * Once the context closes, the drain takes no further row: a row taken then would wait out its lease after the
+     * stop rather than be taken by the next start's pass.
+     */
+    @Test
+    public void afterTheContextClosesTheDrainTakesNoFurtherRow() {
+        mailingListService.triggers = triggers(1);
+        outbox.due.add(new Claim(13, "uid-13", Status.PUBLISHED));
+
+        listener.onStop();
+
+        assertEquals(0, listener.drainOutbox());
+        assertEquals(1, outbox.due.size(), "the row is left for the next start");
+        assertTrue(executionService.attemptedTriggerIds.isEmpty());
+    }
+
     /** The per-minute sweep takes the rows no prompt came for, such as a row committed while the broker was down */
     @Test
     public void theSweepDrainsTheRowsTheTopicDidNotPromptFor() {

@@ -80,8 +80,9 @@ public class MailingListStatusChangeOutbox {
     /**
      * How long a taken row stays out of every other node's reach ({@link #claimNextDue}): the time the triggers of
      * one status change may take, many times over (each trigger renders its template and queues its mails in one
-     * transaction). It is also how long a row whose run failed, or whose node stopped, waits before it is tried
-     * again. Package-private so the ITs can shorten it.
+     * transaction). It is also how long a row whose node stopped while running it waits before it is tried again; a
+     * row whose run failed and was recorded ({@link #failed}) is tried again sooner. Package-private so the ITs can
+     * shorten it.
      */
     Duration claimLease = Duration.ofMinutes(10);
 
@@ -112,8 +113,8 @@ public class MailingListStatusChangeOutbox {
      * Takes the oldest due row, if any, in a short transaction of its own, before any trigger runs. The row is read
      * {@code FOR UPDATE SKIP LOCKED}, so a node taking a row at the same moment takes another one instead of waiting,
      * and its {@code "dueAt"} is moved to the end of the {@link #claimLease lease}, so no other node sees it as due
-     * while its triggers run. {@link #complete} deletes it afterwards; a row whose run fails or never ends is due
-     * again when the lease runs out.
+     * while its triggers run. {@link #complete} deletes it afterwards; a row whose run never ends (its node stopped) is
+     * due again when the lease runs out, and a row whose run failed sooner ({@link #failed}).
      * <p>
      * A row whose status is not a {@link Status} (a status renamed or removed since the row was written, or a row
      * written by hand) cannot be run. It keeps the lease, its {@code "lastError"} says why, it is logged as an ERROR,
@@ -181,14 +182,20 @@ public class MailingListStatusChangeOutbox {
 
     /**
      * Records why the row's triggers could not be run (the triggers could not be looked up, the database was down).
-     * The row keeps its {@code "dueAt"} at the end of the lease it was taken with, and is tried again then.
+     * Nothing runs the row any more, so it does not wait out the lease it was taken with: it is due again after as
+     * many minutes as it has been taken (at most the ten of the lease), and the next sweep takes it then.
      *
      * @param id the id of the row taken
      * @param error what failed
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void failed(long id, String error) {
-        recordError(id, error);
+        em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" SET \"lastError\" = :error, "
+                        + "\"dueAt\" = now() + make_interval(mins => LEAST(attempts, :maxMinutes)) WHERE id = :id")
+                .setParameter("error", error)
+                .setParameter("maxMinutes", (int) Math.max(1, claimLease.toMinutes()))
+                .setParameter("id", id)
+                .executeUpdate();
     }
 
     /** Writes the row's last error, in the caller's transaction */

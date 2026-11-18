@@ -547,6 +547,40 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     /**
+     * A row whose run failed and was recorded ({@code failed}: the triggers could not be looked up) does not wait out
+     * the ten-minute lease it was taken with, since nothing runs it any more: it keeps its error and is due again
+     * after as many minutes as it was taken. Would fail if the record left the row's due time at the lease's end.
+     */
+    @Test
+    void aRowWhoseRunFailedIsDueAgainWithinMinutes() {
+        String uid = UUID.randomUUID().toString();
+        outboxUids.add(uid);
+        ReentrantLock drains = drainLock();
+        drains.lock();
+        try {
+            listener.drainOutbox();
+            Tx.requiringNew().run(() -> outbox.enqueue(uid, Status.DRAFT));
+            long id = Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
+                            "SELECT id FROM public.\"MailingListStatusChange\" WHERE \"messageUid\" = :uid")
+                    .setParameter("uid", uid).getSingleResult()).longValue());
+            assertTrue(claimOwn(id).isPresent(), "the row is taken");
+
+            outbox.failed(id, "IT: the triggers could not be looked up");
+
+            Object[] row = Tx.requiringNew().call(() -> (Object[]) em.createNativeQuery(
+                            "SELECT \"lastError\", \"dueAt\" > now() + interval '30 seconds', "
+                                    + "\"dueAt\" <= now() + interval '1 minute' "
+                                    + "FROM public.\"MailingListStatusChange\" WHERE id = :id")
+                    .setParameter("id", id).getSingleResult());
+            assertEquals("IT: the triggers could not be looked up", row[0], "the row keeps its error");
+            assertEquals(Boolean.TRUE, row[1], "it is not due at once");
+            assertEquals(Boolean.TRUE, row[2], "but a minute after its first take, not at the lease's end");
+        } finally {
+            drains.unlock();
+        }
+    }
+
+    /**
      * A row whose status is no {@link Status} (renamed or removed since it was written, or written by hand) used to
      * throw at the take and roll back its lease: as the oldest due row it was taken first by every later drain, and
      * no status change after it was mailed again. Now the take skips it, leased, with its error, and takes the next

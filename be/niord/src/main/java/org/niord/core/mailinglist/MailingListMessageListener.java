@@ -52,10 +52,11 @@ import jakarta.jms.ConnectionFactory;
  * mailed. One drain runs at a time on a node; nodes sharing a database take different rows (see
  * {@link MailingListStatusChangeOutbox#claimNextDue}).
  * <p>
- * The order holds while no row fails. A row whose triggers could not be looked up waits for its lease to end, and the
- * next passes take the rows after it meanwhile: a later status change of the same message (CANCELLED after PUBLISHED)
- * may then be mailed before it. Such a row is tried again when its lease runs out, with an ERROR each time; its
- * {@code attempts} and {@code "lastError"} show how long it has failed. A row taken more than
+ * The order holds while no row fails. A row whose triggers could not be looked up waits a few minutes (one more for
+ * each time it was taken, at most its lease), and the next passes take the rows after it meanwhile: a later status
+ * change of the same message (CANCELLED after PUBLISHED) may then be mailed before it. A row whose node stopped while
+ * running it waits out its lease. Such a row is tried again with an ERROR each time; its {@code attempts} and
+ * {@code "lastError"} show how long it has failed. Once the context closes, the drain takes no further row. A row taken more than
  * {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS} times (its run failed, hung or stopped the server each time) is
  * given up: each of its status's triggers leaves a "Not sent" ERROR record in the Mail Queue, and the row is deleted,
  * so the mails its run made before the fault are not made again and again.
@@ -183,7 +184,7 @@ public class MailingListMessageListener implements Runnable {
      * Takes the due rows of the status-change outbox one at a time, oldest first, runs the status-change triggers of
      * each ({@link #checkStatusChangeMailingListExecution}, where a failing trigger leaves an ERROR record in the Mail
      * Queue, an {@link Error} included) and deletes it. A row whose triggers cannot even be looked up (the database is
-     * down) keeps its error and is tried again when it comes due, and the pass stops there. A row whose triggers ran
+     * down) keeps its error and is tried again within minutes, and the pass stops there. A row whose triggers ran
      * but whose delete fails (the database lost for a moment) is taken again when its lease runs out, and its
      * triggers' mails are made again. A row taken too often is given up ({@link #giveUp}). One drain runs at a time on
      * this node.
@@ -194,7 +195,13 @@ public class MailingListMessageListener implements Runnable {
         drainLock.lock();
         try {
             int done = 0;
-            for (Optional<Claim> next = outbox.claimNextDue(); next.isPresent(); next = outbox.claimNextDue()) {
+            while (!scheduler.isShutdown()) {
+                // Once the context closes no further row is taken: a row taken now would wait out its lease after the
+                // stop, rather than be taken by the next start's pass
+                Optional<Claim> next = outbox.claimNextDue();
+                if (next.isEmpty()) {
+                    break;
+                }
                 Claim claim = next.get();
                 running = new Running(claim, System.currentTimeMillis());
                 boolean givenUp = claim.attempts() > MailingListStatusChangeOutbox.MAX_ATTEMPTS;
