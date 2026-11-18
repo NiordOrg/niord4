@@ -407,12 +407,20 @@ mailhog:
 # =============================================================================
 # "" = this release's MailHog (<fullname>-smtp on mailhog.smtpPort). An app-only release
 # names the infra release's MailHog, e.g. "staging-infra-niord-smtp" + 11025; production
-# names the real relay (phase-0 H9 — the credential seam is a follow-up). Host AND port
+# names the real relay at go-live and sets requireRelay (phase-0 H9; the credential seam is a
+# follow-up); before go-live it may keep MailHog. Host AND port
 # are required whenever mailhog.enabled is false in a release that renders the app
 # (the render fails otherwise).
 smtp:
   host: ""
   port: ""
+  # true = this environment's mail must reach people (production from go-live on). The render
+  # then refuses MailHog in this release and a smtp.host that names a MailHog Service of this
+  # chart (<fullname>-smtp), so warnings, NAVTEX and mailing-list mail cannot end in the test
+  # mailbox without an error. false (the default) = anything goes: local runs, test-<name>
+  # environments, the stagings, and production on throwaway copies before go-live, which keeps
+  # MailHog until the switch to the relay at go-live itself.
+  requireRelay: false
 
 # =============================================================================
 #  S-124

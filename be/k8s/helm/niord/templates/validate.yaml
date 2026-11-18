@@ -204,3 +204,23 @@ and leaves the pod restarting.
 {{- fail (printf "info.teaserFrameAncestors is %q: it is a CSP frame-ancestors source list — *, 'self', 'none' or origins such as https://www.example.org, separated by spaces, not commas — and not empty; the container refuses to start with any other value" (toString .Values.info.teaserFrameAncestors)) }}
 {{- end }}
 {{- end }}
+{{- /*
+smtp.requireRelay (values.yaml): the environment's mail must reach people. MailHog accepts every
+mail and delivers none, without an error the app could see, so where the values say the mail must
+reach people the release renders no MailHog and the app's smtp.host names no MailHog Service of this
+chart (<fullname>-smtp, a name without a dot, e.g. staging-infra-niord-smtp). An empty smtp.host or
+smtp.port with MailHog off already fails in niord.smtp.host/port (_helpers.tpl). The value is a
+boolean or unset (an older release's values: false); a string such as "false" would read as true,
+so a string fails.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.smtp.requireRelay) (kindIs "bool" .Values.smtp.requireRelay)) }}
+{{- fail (printf "smtp.requireRelay is %q: it is true or false" (toString .Values.smtp.requireRelay)) }}
+{{- end }}
+{{- if .Values.smtp.requireRelay }}
+{{- if .Values.mailhog.enabled }}
+{{- fail "smtp.requireRelay is true and mailhog.enabled is true: an environment whose mail must reach people renders no MailHog. Set mailhog.enabled false and name the mail relay in smtp.host and smtp.port" }}
+{{- end }}
+{{- if and .Values.app.enabled (regexMatch "^[^.]*-smtp$" (toString .Values.smtp.host)) }}
+{{- fail (printf "smtp.requireRelay is true and smtp.host is %q, the name of a MailHog Service of this chart (<fullname>-smtp): name the mail relay" (toString .Values.smtp.host)) }}
+{{- end }}
+{{- end }}
