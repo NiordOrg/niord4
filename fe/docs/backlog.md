@@ -542,14 +542,6 @@ Background: [`map-portrayal.md`](map-portrayal.md).
   country switches the cache on in its settings file. The public site gets no cache: its `/wms/` location is
   anonymous and stays dormant (_The `/wms/` proxy would not work as written_ and _Three `proxy_cache_valid`
   directives do nothing_, under the public site's image above).
-- **_Edit as text_: an answer for the older text can end the wait and be saved.** The dialog parses with
-  `debounceTime(500)` then `switchMap`
-  (`ui-apps/admin/src/app/shared/components/geometry-editor/edit-as-text-dialog/edit-as-text-dialog.ts` 158-179), so
-  a parse already in flight is not dropped by a newer keystroke until the pause after it ends. Its answer, landing
-  in that pause, sets the working geometry and clears the pending flag, and _Save_ then commits the older text's
-  positions. A `switchMap` over `timer(500)` and then the parse, as the geometry import dialog has since
-  2026-11-16, closes it. Met by the error hunt's phase 2 fix stage (2026-11-16, cluster P1-13), read in the code;
-  Low.
 - **Geometry import: a text parse in flight when the dialog closes can fill it again after a reopen.** In a
   dialog with no area source (it opens on _Text_), `reset()`
   (`ui-apps/admin/src/app/shared/components/geometry-editor/geometry-import-dialog/geometry-import-dialog.ts`
