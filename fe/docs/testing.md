@@ -437,8 +437,8 @@ Also unautomated today, and worth knowing before you assume a gate exists:
   `npm run a11y:info -- --base <url> --out <dir>` (`scripts/info-a11y-scan.mjs`): axe-core, a dev
   dependency, over every page and dialog of a running site at 1280 and 320 px in each language the
   switcher offers, the WCAG 2.1 A and AA rules and the best-practice ones apart, written to a JSON
-  and a Markdown report that hold no page content. It exits 1 while a rule fails, so it can become
-  a gate, but no workflow runs it; the audit record it served is
+  and a Markdown report that hold no page content. It exits 1 while a rule fails (3 when a page
+  could not be opened at all), so it can become a gate, but no workflow runs it; the audit record it served is
   [the public site's audit](../../docs/accessibility-audit-public-site.md). The public site's layout
   check below asserts reflow and visible focus around its two bars, and nothing else.
 - The administration app's accessibility check is two specs of the end-to-end suite, by hand before

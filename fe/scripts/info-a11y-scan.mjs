@@ -36,7 +36,8 @@
  * real one. Neither is meant to be committed; an audit record copies the verdicts.
  *
  * Exit codes: 0 when no rule fails, 1 when one does (each is in the reports), 2 for a usage or
- * setup error.
+ * setup error, 3 when a state could not be opened (the run goes on, and the reports name it under
+ * "Could not be opened"; a rule that failed elsewhere is in them as well).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -429,6 +430,7 @@ if (invokedDirectly) {
 
   const scans = [];
   const skipped = [];
+  const errored = [];
   try {
     for (const size of WIDTHS) {
       const context = await browser.newContext({ viewport: size });
@@ -470,8 +472,15 @@ if (invokedDirectly) {
                 `${result.violations.length} failing, ${result.incomplete.length} undecided`,
             );
           }
+        } catch (error) {
+          // A state that could not be opened (a page that did not load, a dialog that never
+          // came, a language switch that timed out) is named and the run goes on, so the reports
+          // of the other states are still written. Its first line only, the message id cut out.
+          let reason = String(error?.message ?? error).split('\n')[0];
+          if (messageId) reason = reason.split(messageId).join('<id>');
+          errored.push(`${state.name} at ${size.width} px: ${reason}`);
         } finally {
-          if (state.answer) await page.unroute(isListRead);
+          if (state.answer) await page.unroute(isListRead).catch(() => {});
         }
       }
       await context.close();
@@ -489,6 +498,7 @@ if (invokedDirectly) {
     Widths: WIDTHS.map((s) => `${s.width} × ${s.height}`).join(', '),
   };
   if (skipped.length) meta['Not scanned'] = skipped.join('; ');
+  if (errored.length) meta['Could not be opened'] = errored.join('; ');
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(
     path.join(out, 'a11y-scan.json'),
@@ -496,6 +506,7 @@ if (invokedDirectly) {
   );
   fs.writeFileSync(path.join(out, 'a11y-scan.md'), renderMarkdown(groupScans(scans), meta));
   for (const reason of skipped) console.log(`skip  ${reason}`);
+  for (const reason of errored) console.error(`ERROR ${reason}`);
   console.log(`reports in ${out}`);
-  process.exit(anyViolation(scans) ? 1 : 0);
+  process.exit(errored.length ? 3 : anyViolation(scans) ? 1 : 0);
 }
