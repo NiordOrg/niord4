@@ -478,22 +478,39 @@ public class MailingListExecutionService extends BaseService {
         subject = expandSubject(trigger, message, language, languages, subject);
         mail.setSubject(subject);
 
-        // Get all recipients matching the given language
+        // Get the recipients of this language's mail: those who prefer it, and on the default-language mail those
+        // whose language the trigger lacks or who have none
         List<IMailable> recipients = new ArrayList<>();
         recipients.addAll(trigger.getMailingList().getUsers().stream()
-                .filter(r -> (r.getLanguage() == null && isDefaultLanguage) ||
-                            languages.size() == 1 ||
-                            language.equalsIgnoreCase(r.getLanguage()))
+                .filter(r -> receives(r.getLanguage(), language, languages, isDefaultLanguage))
                 .collect(Collectors.toList()));
         recipients.addAll(trigger.getMailingList().getContacts().stream()
-                .filter(r -> (r.getLanguage() == null && isDefaultLanguage) ||
-                        languages.size() == 1 ||
-                        language.equalsIgnoreCase(r.getLanguage()))
+                .filter(r -> receives(r.getLanguage(), language, languages, isDefaultLanguage))
                 .collect(Collectors.toList()));
 
         recipients.forEach(r -> mail.addRecipient(new ScheduledMailRecipient(TO, r.computeInternetAddress())));
 
         return mail;
+    }
+
+    /**
+     * Whether a recipient with the given preferred language receives the mail in the given language: the mail in its
+     * own language when the trigger has one; else, as when it has no preferred language, the default-language mail.
+     * With one trigger language, everyone receives that one.
+     *
+     * @param recipientLanguage the recipient's preferred language, or null
+     * @param language the language of the mail
+     * @param languages the languages of the trigger
+     * @param isDefaultLanguage whether the mail is the trigger's default-language mail
+     */
+    private static boolean receives(String recipientLanguage, String language, List<String> languages,
+                                    boolean isDefaultLanguage) {
+        if (languages.size() == 1) {
+            return true;
+        }
+        boolean triggerHasIt = recipientLanguage != null
+                && languages.stream().anyMatch(l -> l.equalsIgnoreCase(recipientLanguage));
+        return triggerHasIt ? language.equalsIgnoreCase(recipientLanguage) : isDefaultLanguage;
     }
 
     /**

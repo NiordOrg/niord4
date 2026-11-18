@@ -639,6 +639,106 @@ class MailingListExecutionServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
+    // Two or more trigger languages: who receives which mail
+    // ------------------------------------------------------------------------------------------- //
+
+    /** Persists a contact with the given preferred language (null for none) on the list; returns its address. */
+    private String addContactRecipient(MailingList ml, String name, String email, String language) {
+        Contact contact = new Contact();
+        contact.setName(name);
+        contact.setEmail(email);
+        contact.setLanguage(language);
+        em.persist(contact);
+        ml.getContacts().add(contact);
+        em.flush();
+        return contact.computeInternetAddress();
+    }
+
+    /** The mail each address received, failing when an address received more than one */
+    private static java.util.Map<String, ScheduledMail> mailByAddress(List<ScheduledMail> mails) {
+        java.util.Map<String, ScheduledMail> byAddress = new java.util.HashMap<>();
+        for (ScheduledMail mail : mails) {
+            assertEquals(1, mail.getRecipients().size(), "the split mail carries one recipient");
+            String address = mail.getRecipients().get(0).getAddress();
+            assertNull(byAddress.put(address, mail), "each recipient receives one mail: " + address);
+        }
+        return byAddress;
+    }
+
+    /**
+     * Three contacts on the list: one whose preferred language ("fr") the trigger lacks, one who prefers one of the
+     * trigger's languages ("da", written "DA" to pin that the match ignores case) and one without a language. Returns
+     * the three addresses, in that order.
+     */
+    private String[] persistContactsInThreeLanguages(MailingList ml) {
+        long n = System.nanoTime();
+        return new String[] {
+                addContactRecipient(ml, "French", "fr-" + n + "@example.com", "fr"),
+                addContactRecipient(ml, "Danish", "da-" + n + "@example.com", "DA"),
+                addContactRecipient(ml, "Nolang", "none-" + n + "@example.com", null) };
+    }
+
+    /** The mails of a trigger with subjects in English and Danish, for the contacts above */
+    private static void assertTheDefaultLanguageMailReachesTheRecipientWhoseLanguageTheTriggerLacks(
+            List<ScheduledMail> mails, String[] addresses) throws java.io.IOException {
+        assertEquals(3, mails.size(), "each of the three contacts receives one mail");
+        java.util.Map<String, ScheduledMail> byAddress = mailByAddress(mails);
+        ScheduledMail french = byAddress.get(addresses[0]);
+        ScheduledMail danish = byAddress.get(addresses[1]);
+        ScheduledMail none = byAddress.get(addresses[2]);
+        assertNotNull(french, "the contact whose language the trigger lacks receives a mail");
+        assertEquals("EN subj", french.getSubject(), "the trigger's default-language mail");
+        assertTrue(french.getHtmlContents().contains("lang=en"), french.getHtmlContents());
+        assertNotNull(danish, "the contact who prefers Danish receives a mail");
+        assertEquals("DA subj", danish.getSubject(), "the mail in its own language");
+        assertTrue(danish.getHtmlContents().contains("lang=da"), danish.getHtmlContents());
+        assertNotNull(none, "the contact without a language receives a mail");
+        assertEquals("EN subj", none.getSubject(), "the trigger's default-language mail");
+    }
+
+    /**
+     * With two trigger languages, a recipient whose preferred language the trigger lacks receives the trigger's
+     * default-language mail, as a recipient without a language does. FAILS on the pre-fix code, which mailed the
+     * French contact nothing.
+     */
+    @Test
+    @Transactional
+    void statusChangeTriggerSendsTheDefaultLanguageMailToARecipientWhoseLanguageTheTriggerLacks() throws Exception {
+        MailingList ml = persistActiveMailingList();
+        String[] addresses = persistContactsInThreeLanguages(ml);
+        MailingListTrigger trigger = persistTrigger(ml, TriggerType.STATUS_CHANGE);
+        trigger.createDesc("en").setSubject("EN subj");
+        trigger.createDesc("da").setSubject("DA subj");
+        addItTemplate(trigger);
+        Message message = createRenderableMessage("Status title " + System.nanoTime());
+
+        List<ScheduledMail> mails = executionService.executeStatusChangeTrigger(trigger, message, false);
+
+        assertTheDefaultLanguageMailReachesTheRecipientWhoseLanguageTheTriggerLacks(mails, addresses);
+    }
+
+    /**
+     * The scheduled path picks its recipients the same way. FAILS on the pre-fix code, which mailed the French
+     * contact nothing.
+     */
+    @Test
+    @Transactional
+    void scheduledTriggerSendsTheDefaultLanguageMailToARecipientWhoseLanguageTheTriggerLacks() throws Exception {
+        MailingList ml = persistActiveMailingList();
+        String[] addresses = persistContactsInThreeLanguages(ml);
+        MailingListTrigger trigger = persistTrigger(ml, TriggerType.SCHEDULED);
+        trigger.createDesc("en").setSubject("EN subj");
+        trigger.createDesc("da").setSubject("DA subj");
+        addItTemplate(trigger);
+        trigger.setMessageQuery("messageSeries=__none__&status=PUBLISHED");
+        em.flush();
+
+        List<ScheduledMail> mails = executionService.executeScheduledTrigger(trigger, false);
+
+        assertTheDefaultLanguageMailReachesTheRecipientWhoseLanguageTheTriggerLacks(mails, addresses);
+    }
+
+    // ------------------------------------------------------------------------------------------- //
     // Id-based overloads (REQUIRES_NEW) - only the invalid-id path is reachable under @Transactional
     // ------------------------------------------------------------------------------------------- //
 

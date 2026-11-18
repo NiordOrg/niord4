@@ -1801,25 +1801,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low. Fix: take the contact off every list's `contacts` before the `remove` (a query for the lists
   that hold it, or a delete from the join table), with an IT that deletes a contact who is on a list.
 
-## MAIL5. With two or more trigger languages, a recipient whose preferred language is not among them gets no mail
-
-- **Location:** `niord/src/main/java/org/niord/core/mailinglist/MailingListExecutionService.java`
-  `createMailTemplate` (351-386). A trigger makes one mail per language of its descriptions (`languages`, 130-132
-  and 234-236) and addresses each to the users and contacts whose language equals it, to those without a language
-  when it is the default-language mail, and to everyone only when the trigger has one language (372-381).
-- **Description:** a user or contact whose preferred language is set but is not one of the trigger's languages
-  matches none of the mails when the trigger has two or more, and receives nothing; no log line says so. With one
-  language ticked, the same recipient receives that one. For example, in a deployment with three languages, a
-  trigger with subjects in two of them never mails a recipient who prefers the third [read in the code; not run].
-- **Why it looks wrong:** a recipient without a preferred language falls back to the default-language mail, while
-  one with an unticked language is dropped silently; an administrator who unticks a language removes recipients
-  without being told. The checker noted that it may be intended; the owner's call.
-- **Exposed by:** the user guides' check (2026-11-11, the checker of the administrators' manual). The manual
-  (`guides/admin-manual/08-MailingLists.adoc`, _Mailing List Triggers_, the Mail Subject row, and
-  `guides/admin-manual/07-Users.adoc`, Preferred Language) describes it as it is; change it with the fix.
-- **Severity:** Low. Fix: treat a recipient whose language the trigger lacks like one without a language, so that
-  the default-language mail reaches it.
-
 ## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
 
 - **Location:** `niord/src/main/java/org/niord/core/keycloak/KeycloakIntegrationService.java` `createKeycloakDomain`
