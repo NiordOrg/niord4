@@ -27,7 +27,9 @@ zips and docker export tars, and refuses a docker save tar).
   the four scripts `templates/mailinglist/fetch-firing-exercises.js` and `audio-broadcast.ftl` (named by the
   mailing lists) and `templates/tmpl/dgps.ftl` and `dgps.js` (named by the category Radio navigation/DGPS) are
   copied unchanged from `SIFA-DK/niord-dk`'s bootstrap, `be/bootstrap/`,
-  as Danish sample content. One exception: since the country split's P7,
+  as Danish sample content. `tmpl/dgps.ftl` differs by one guard: it writes the Danish subject and details only
+  when `da` is a model language, because the sample runs in English by default (see Languages below) and a field
+  the template cannot fill in fails the whole run. One more exception: since the country split's P7,
   the `Audio` entry of `archive/promulgation-types.json` restates the base product's `Audio` (English, priority 50)
   with its `niord-nw` link, as its `NAVTEX` and `Twitter` entries restate theirs. Within the bootstrap run a value
   this archive gives replaces the base product's (the owner's ruling of 2026-10-24), and a changed base row is what

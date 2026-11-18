@@ -2054,14 +2054,17 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 <#if params.dgps_station?? && params.dgps_station.key??>
     <#assign key=params.dgps_station.key>
 
+<#if languages?seq_contains(''da'')>
 <field-template field="part.getDesc(''da'').subject" format="text">
     DGPS <@renderStatus format="normal" lang="da"/>
 </field-template>
+</#if>
 
 <field-template field="part.getDesc(''en'').subject" format="text">
     DGPS <@renderStatus format="normal" lang="en"/>
 </field-template>
 
+<#if languages?seq_contains(''da'')>
 <field-template field="part.getDesc(''da'').details" format="html">
     <#setting locale=''da''>
     <@renderStationName format="long" lang="da"/> DGPS-station
@@ -2072,6 +2075,7 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
         <@renderDateIntervals dateIntervals=part.eventDates lang="da"/>
     </#if>.
 </field-template>
+</#if>
 
 <field-template field="part.getDesc(''en'').details" format="html">
     <#setting locale=''en''>
