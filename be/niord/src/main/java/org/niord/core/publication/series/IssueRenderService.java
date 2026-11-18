@@ -337,7 +337,10 @@ public class IssueRenderService {
     private void renderTo(RenderRequest request, OutputStream out) {
         FmReport report;
         try {
-            report = fmReportService.getReport(request.reportId());
+            // Strict on purpose: the report is the document's layout, and a fallback would
+            // publish a wrong document. getReport's fallback to the standard report belongs
+            // to the message print only.
+            report = fmReportService.findByReportId(request.reportId());
         } catch (Exception e) {
             throw new RenderFailedException("no such report: " + request.reportId(), e);
         }

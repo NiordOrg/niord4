@@ -763,7 +763,7 @@ The 80 files of `be/niord/bootstrap/templates/` (verified against the code on 20
 | `messages/message-list-pdf.ftl` | the code | the built-in reports: the bootstrap's `reports.json` names it, and it is among the 11 because the built-in reports are required |
 | `messages/message-support.ftl` | the code | included by `message-list-pdf.ftl:1` and `message-mail.ftl:1` (and by data templates) |
 | `messages/message-list-pdf-footer.ftl` | the code | included by `message-support.ftl:49` |
-| `messages/{nm-report,nm-tp-report,nm-annex-report,nm-almanac-report,nm-accumulated-report,fa-list}-pdf.ftl` (6) | data rows | `FmReport.templatePath` rows for five of them; `nm-accumulated` has no row in the base data: only `LegacyTemplateRulings.java:403` names it, as the report id `LegacyImportService.java:2360` writes into a series, and `FmReportService.getReport` renders that series with the standard report (RENDER3) |
+| `messages/{nm-report,nm-tp-report,nm-annex-report,nm-almanac-report,nm-accumulated-report,fa-list}-pdf.ftl` (6) | data rows | `FmReport.templatePath` rows for five of them; `nm-accumulated` has no row in the base data: only `LegacyTemplateRulings.java:403` names it, as the report id `LegacyImportService.java:2360` writes into a series, and a release of that series fails (no such report) on a deployment without that report row |
 | `messages/{nm-report,nm-almanac-report,nm-accumulated-report,fa-list}-pdf-intro.ftl` (4) | data rows; **placeholders**, holding the one-line comment of §6.4 | included by their reports (`nm-report-pdf.ftl:125`, `nm-almanac-report-pdf.ftl:43`, `nm-accumulated-report-pdf.ftl:214`, `fa-list-pdf.ftl:48`) |
 | `mailinglist/{active-navwarns,cancel-navtex,cancel-navwarn,cancel-safetynet,publish-navtex,publish-navwarn,publish-safetynet}.ftl`, `publish-safetynet.js` (8) | data rows | `MailingListTrigger.scriptResourcePaths` rows on deployments |
 | `mailinglist/publish-navwarn-common.ftl`, `safetynet-intro.ftl` (2) | data rows; `safetynet-intro.ftl` is a **placeholder** too | included by `publish-navwarn.ftl:2`, `publish-safetynet.ftl:26`, `cancel-safetynet.ftl:4` |
@@ -804,7 +804,8 @@ Templates include one another across the two groups: data templates `<#include "
 - **Reports are data too**, the built-ins `standard`, `draft` and `public` included: they come with the
   bootstrap (§7.1) and are edited on the Print reports page like any other. `FmReportService`'s
   `getStandardReport`, `getDraftReport` and `getPublicReport` are
-  plain lookups by id (`getReport` falls back to the standard report). A deployment
+  plain lookups by id (`getReport` falls back to the standard report, for a message print only; a
+  publication issue's render looks its report up strictly and fails on a missing one). A deployment
   without one gets a clear error, a 404 (`NiordWebException`) naming the id and the bootstrap, and the
   missing-path report lists it. `GET /rest/message-reports/detail-reports` lists only the built-in reports that
   exist, so the administration app opens on a database that has not been bootstrapped yet.

@@ -1379,15 +1379,6 @@ was changed in production code.
   named above still catches every exception, `TwitterPromulgationService.getSettings` included (PROM7). One change
   that narrows every such lookup to `NoResultException` would close this entry.
 
-## RENDER3. A report id that does not exist renders the STANDARD report instead of failing
-
-- **Location:** `org/niord/core/report/FmReportService.getReport` (falls back to `getStandardReport()` when
-  `findByReportId` returns null), called from `org/niord/core/publication/series/IssueRenderService.renderTo`.
-- **Why it looks wrong:** `renderTo` guards with `if (report == null) throw new RenderFailedException("no such report: …")`,
-  which can never fire: a publication whose `reportId` is misspelled, or whose report row has been deleted, silently
-  publishes a generic message list in place of its own document — a released PDF that is wrong rather than absent. The
-  "no such report" path is reachable only through the test stub today.
-
 ## RENDER4. `PublicationIssueDesc.fileSize`, `fileHash` and `fileGeneratedAt` are never written
 
 - **Location:** `org/niord/core/publication/series/PublicationIssueDesc.java` (the three fields and their setters); no
