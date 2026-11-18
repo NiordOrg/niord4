@@ -387,6 +387,36 @@ describe('MessagesStore', () => {
     expect(query.getAll('messageSeries')).toEqual(['dma-nw', 'dma-nm']);
   });
 
+  // The report endpoint has no active-now parameter, so the sheet is the list before the chip
+  // narrows it; the series it names must be that list's too, or a series with no row in force
+  // drops out of the sheet without a word.
+  it('prints the list before active-now narrows it', async () => {
+    setUp();
+    await load([
+      { ...LATER, messageSeries: { seriesId: 'dma-nw' } },
+      { id: 'undated', mainType: 'NM', areas: [BELT], messageSeries: { seriesId: 'dma-nm' } },
+    ]);
+
+    store.toggleActiveNow();
+    await settle();
+    expect(store.messages().map((message) => message.id)).toEqual(['undated']);
+    expect(store.canPrintList()).toBe(true);
+    const query = new URLSearchParams(store.printPdfUrl().split('?')[1]);
+    expect(query.getAll('messageSeries')).toEqual(['dma-nw', 'dma-nm']);
+  });
+
+  it('keeps Print offered when nothing is in force', async () => {
+    setUp();
+    await load([{ ...LATER, messageSeries: { seriesId: 'dma-nw' } }]);
+
+    store.toggleActiveNow();
+    await settle();
+    expect(store.messages()).toEqual([]);
+    expect(store.canPrintList()).toBe(true);
+    const query = new URLSearchParams(store.printPdfUrl().split('?')[1]);
+    expect(query.getAll('messageSeries')).toEqual(['dma-nw']);
+  });
+
   it('prints the ticked sub-areas instead of the root, never both', async () => {
     setUp();
     await load();

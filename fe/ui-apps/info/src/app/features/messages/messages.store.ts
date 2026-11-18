@@ -368,13 +368,16 @@ export class MessagesStore {
   }
 
   /**
-   * The message series the rows on screen were numbered in. The report endpoint applies no
+   * The message series the listed rows were numbered in. The report endpoint applies no
    * restriction of its own to an anonymous caller, so this is what keeps the sheet to the
    * messages this site publishes.
+   *
+   * Taken from the list before active-now narrows it, as the sheet is: a series whose rows are
+   * all out of force stays on the sheet, and Print stays offered when nothing is in force.
    */
   private readonly printedSeriesIds = computed<string[]>(() => [
     ...new Set(
-      this.messages()
+      filterByAreaIds(this.ordered(), this.selectedSubAreaIds())
         .map((message) => message.messageSeries?.seriesId)
         .filter((seriesId): seriesId is string => Boolean(seriesId)),
     ),
