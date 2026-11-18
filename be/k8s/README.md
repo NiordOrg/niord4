@@ -480,11 +480,13 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   database restored from another system carries that system's address. Locally the setting
   keeps the base product's `http://localhost:8888`, which the pod itself answers, so the mails'
   styling and images work and only their links name a port the browser does not use.
-- **Pinned settings (`app.settings`)** — any text setting of the Settings page can be pinned
+- **Pinned settings (`app.settings`)** — any setting of the Settings page can be pinned
   this way: the chart renders each key as an environment variable of that name, which the app
   reads before the stored row, so the pinned value wins and the Settings page still shows (and
   edits) the stored row without saying so. Typical keys besides `baseUri`: `mode`,
-  `mailValidRecipients`, `mailSender`. An empty value is not rendered. The render refuses a key
+  `mailValidRecipients`, `mailSender`. A value is a text, a number or `true`/`false`, and a whole
+  number renders as an integer (`1000000`, not `1e+06`); anything else fails the render. An empty
+  value is not rendered. The render refuses a key
   that names a password, secret or token, a key that does not start with a lower-case letter,
   `authServerUrl` (the chart sets it) and a key also set in `secom.settings`.
 - **Map images and their tiles** — the backend draws a message's map image itself, on
