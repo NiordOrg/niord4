@@ -242,7 +242,8 @@ export class MessageMapComponent {
   }
 
   openMessageDialog(messageId: string): void {
-    // The list the dialog steps through is the chart's own, followed rather than copied.
+    // The list the dialog steps through is the list the chart was given, followed rather than
+    // copied: cancelled messages included, as they stay findable there though not drawn.
     const messageIds = computed(() => this.messages()?.map((msg) => msg.id) ?? [messageId]);
     void openInfoDialog(
       this.injector,
