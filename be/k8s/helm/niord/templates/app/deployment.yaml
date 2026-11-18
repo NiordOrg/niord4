@@ -179,6 +179,18 @@ spec:
             # via the standard Spring properties in the app ConfigMap.
             - name: authServerUrl
               value: {{ include "niord.keycloak.internalUrl" . | quote }}
+            {{- /*
+            The settings this environment pins (values.yaml, app.settings): the env-var NAME is the
+            setting key verbatim, which SettingsService reads before the stored row. Empty values
+            are skipped, so the row or the default applies; false is a value. validate.yaml checks
+            the keys, and that the value is a map.
+            */}}
+            {{- range $key, $value := (kindIs "map" .Values.app.settings | ternary .Values.app.settings dict) }}
+            {{- if and (not (kindIs "invalid" $value)) (ne (toString $value) "") }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.secom.enabled }}
             # The PKCS12 store passwords, from keys of the SECOM secrets themselves (created
             # outside Helm; the renewal job's merge PATCH leaves these keys alone). Spring binds

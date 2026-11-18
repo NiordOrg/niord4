@@ -463,7 +463,19 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   then missing from the mail or PDF. Every template mail (a message mail, a comment mail, a
   mailing list's delivery) also fetches its stylesheet, `<baseUri>/css/templates/mail.css`, from
   the backend pod: when the pod cannot fetch it, the mail goes out without its styling and the
-  log has a WARN "Mail sent without the stylesheet …".
+  log has a WARN "Mail sent without the stylesheet …". The chart does not derive it from
+  `externalBaseUri`: a cluster environment pins it in its values, `app.settings.baseUri`, normally
+  the value of `externalBaseUri`, and the pod must be able to fetch from that address. A
+  database restored from another system carries that system's address. Locally the setting
+  keeps the base product's `http://localhost:8888`, which the pod itself answers, so the mails'
+  styling and images work and only their links name a port the browser does not use.
+- **Pinned settings (`app.settings`)** — any text setting of the Settings page can be pinned
+  this way: the chart renders each key as an environment variable of that name, which the app
+  reads before the stored row, so the pinned value wins and the Settings page still shows (and
+  edits) the stored row without saying so. Typical keys besides `baseUri`: `mode`,
+  `mailValidRecipients`, `mailSender`. An empty value is not rendered. The render refuses a key
+  that names a password, secret or token, a key that does not start with a lower-case letter,
+  `authServerUrl` (the chart sets it) and a key also set in `secom.settings`.
 - **Map images and their tiles** — the backend draws a message's map image itself, on
   OpenStreetMap tiles it fetches from the host in the `osmUrl` setting (by default
   `https://tile.openstreetmap.org`), so the app pod needs egress to that host over https. Where
@@ -522,6 +534,7 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
 | `app.persistence` / `postgres.persistence` | `enabled: true` | PVCs for NIORD_HOME and the DB. The repository files (attachments, publication files, the archive) are rows of the DB; NIORD_HOME is a cache (thumbnails and map images under `cache/`, the map tile cache of at most 200 MB, the AtoN tiles, the Lucene index) and the batch jobs' files, and nothing on it is backed up. |
 | `app.javaOpts` | `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC` | Handed to the JVM as `JAVA_TOOL_OPTIONS`. Add the `-Dhttps.proxyHost`/`-Dhttps.proxyPort`/`-Dhttp.nonProxyHosts` flags when the tile host is reached through a proxy. |
 | `app.resources.limits.memory` | `2Gi` | Heap is `MaxRAMPercentage=70`. |
+| `app.settings` | `{}` | Settings of the Settings page this environment pins, as environment variables named like the key (`baseUri`, `mode`, `mailValidRecipients`, `mailSender`); a pinned value wins over the stored row. An empty value is not rendered. Never a secret: the render refuses a key that names a password, secret or token. See "Pinned settings" above. |
 | `app.oidc.allowedClients` | `""` | The Keycloak clients whose tokens the API accepts (the token's `azp` claim); any other client's token is answered 401. `""` = the application default, `niord-web` and the base client `niord-client-master`. A value replaces the default, so it names `niord-web` too, e.g. `niord-web,niord-client-master,<script-client>` for a script with a client of its own. Rendered as `niord.oidc.allowed-clients`. |
 | `s124.enabled` | unset | Whether the deployment does S-124, rendered as `niord.s124.enabled` only when set. Unset = the image decides: a country image and the library default `true`, the generic `niord-app-en` `false`. `true` or `false` overrides the image; anything else fails the render, and so does `secom.enabled` with `s124.enabled` `false`. See [S-124 on or off](#s-124-on-or-off). |
 | `s124.producerCode` | `""` | The deployment's IHO S-62 producer code, rendered as `niord.s124.producer-code` only when set. `""` = the image's own code (the Danish and Greenland images carry theirs). With S-124 on, a deployment without one cannot generate S-124, and SECOM refuses to start. |

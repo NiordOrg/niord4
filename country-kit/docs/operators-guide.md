@@ -494,9 +494,11 @@ enters data.
 show a TEST ribbon, the public site included. A production deployment adds `-Dmode=production` to
 its chart value `app.javaOpts`, which the chart passes to the backend as `JAVA_TOOL_OPTIONS`; keep
 the options the value already holds, such as `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, the chart's
-default. The chart has no value of its own for the mode. The backend reads a system property or
-environment variable named like a setting ahead of the stored row, so no database edit is needed,
-and a deployment whose values forgot it shows the ribbon instead of passing as production.
+default. The chart's `app.settings` does the same without touching `app.javaOpts`:
+`app.settings.mode: production` reaches the backend as an environment variable named `mode`. The
+backend reads a system property or environment variable named like a setting ahead of the stored
+row, so no database edit is needed, and a deployment whose values forgot it shows the ribbon
+instead of passing as production.
 
 ## The server's clock
 

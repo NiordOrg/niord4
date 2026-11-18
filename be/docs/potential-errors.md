@@ -811,7 +811,11 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   at the first start).
 - **Description:** nothing maps `externalBaseUri` onto `baseUri` (no env var, no `-DbaseUri`), and `adminAppUrl`
   is empty in the chart, so the message links in mails and tweets (`<adminAppUrl or baseUri>/messages?messageId=`)
-  name `http://localhost:8888`, not the chart's public `http://localhost:18888`.
+  name `http://localhost:8888`, not the chart's public `http://localhost:18888`. A cluster environment pins the
+  setting in its values (`app.settings.baseUri`, rendered as an environment variable named `baseUri`, which the
+  app reads before the stored row); the chart's default, `app.settings: {}`, pins nothing, so the local release
+  keeps the stored row. Mapping `externalBaseUri` onto `baseUri` by itself would break the local mails' styling
+  and images, which the pod fetches from `baseUri` and cannot fetch from the host's `localhost:18888`.
 - **Why it looks wrong:** a link a recipient clicks should name the public origin. The backend's own HTTP fetches
   of `/css/templates` and `/img` through `baseUri` work only because the pod itself listens on 8888.
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
@@ -878,9 +882,9 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   `64:ff9b::/96`, 6to4 `2002::/16`), unless the `niordIntegrationAllowPrivateHosts` setting is on.
 - **Operating note:** two Niord servers on the same private network or k8s cluster need
   `niordIntegrationAllowPrivateHosts=true`. The default is off, and a blocked fetch surfaces only as a
-  swallowed `log.error` on the hourly schedule. Set it from the sysadmin Settings page or a JVM system
-  property — the Helm chart has **no** generic env passthrough (`k8s/helm/niord/templates/app/deployment.yaml`
-  only loops over `.Values.secom.settings`), so there is no env-var route today.
+  swallowed `log.error` on the hourly schedule. Set it from the sysadmin Settings page, a JVM system
+  property, or the chart's `app.settings.niordIntegrationAllowPrivateHosts` (rendered as an environment
+  variable of that name by `k8s/helm/niord/templates/app/deployment.yaml`).
 - **Residual:** a public host that itself proxies inward; an https→http downgrade on a redirect
   (`DefaultRedirectStrategy` permits it); `NiordIntegrationRestService.createNiordIntegration` logs the raw
   URL at INFO *before* the service validates, so a rejected `http://user:pw@host` still reaches the

@@ -147,6 +147,17 @@ app:
   # "niord-web,niord-client-master,<script-client>". Rendered as niord.oidc.allowed-clients.
   oidc:
     allowedClients: ""
+  # Settings of the sysadmin Settings page that this environment pins outside the database.
+  # Each key is the EXACT setting key and reaches the app as an environment variable of that
+  # name; the app reads a system property, then such a variable, before the stored row. An
+  # empty value is not rendered, so the row (or the default) applies. A pinned setting wins
+  # over the Settings page, which still shows and edits the stored row. Typical keys: baseUri
+  # (the canonical public URL, normally externalBaseUri's value; a database restored from
+  # another system carries that system's address), mode, mailValidRecipients, mailSender.
+  # Text settings only, never a password or token (those reach the app from a Secret): the
+  # render refuses a key that names a password, secret or token. A setting the app reads at
+  # start-up takes effect at the next start. {} = nothing pinned.
+  settings: {}
   # NIORD_HOME — the app's volume, a cache: the repository files (attachments, publication files,
   # the archive) are rows of the database, and the volume holds what is made again on a miss
   # (cache/, the thumbnails and map images; tile-cache/, the map tile cache, which a nightly
