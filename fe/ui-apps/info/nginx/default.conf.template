@@ -76,9 +76,9 @@ map $args $niord_message_pdf_query_ok {
 
 # ---------------------------------------------------------------------------------------------
 # The two locations that take a message id — one message from the public API, and its PDF — are
-# the only ones that forward the request line as it arrived (see the locations), so the raw line
-# is held to the shape this site writes: the id as encodeURIComponent spells it, as one path
-# segment, then `.pdf` for the PDF. Each location's own match reads nginx's normalised URI, in
+# two of the three that forward the request line as it arrived (see the locations; the third, a
+# repository file, has its own map below), so the raw line is held to the shape this site writes:
+# the id as encodeURIComponent spells it, as one path segment, then `.pdf` for the PDF. Each location's own match reads nginx's normalised URI, in
 # which `//`, an encoded `%2e` and a `..;` have already been folded away or decoded; the backend
 # would see them all verbatim.
 #
@@ -99,6 +99,31 @@ map $request_uri $niord_public_message_path_ok {
     default 0;
     "~*^[^?]*(?:%(?:2e|5c|25|3b|00)|%2f%2f|\.\.)" 0;
     "~^/rest/public/v1/message/(?:[A-Za-z0-9._~!*'()-]|%[0-9A-Fa-f]{2})+(?:\?|$)" 1;
+}
+
+# ---------------------------------------------------------------------------------------------
+# A repository file is the third location that forwards the request line as it arrived: a file
+# name may hold a `;`, which every link to it writes as `%3B`, and a location that names a URI
+# would decode it and send a raw `;`, which the backend refuses (a path parameter to it). So the
+# raw line is held here to the paths the backend's own firewall serves for a repository file:
+#
+#   - `/rest/repo/file/`, spelt so, then one or more non-empty segments of RFC 3986 path
+#     characters — letters, digits, `-._~`, `!$&'()*+,=:@` and any `%XX` escape, `%25` and `%3B`
+#     included — and nothing else: no raw `;`, backslash, space or letter outside ASCII (a
+#     browser sends those escaped), no empty segment, so no doubled or trailing slash;
+#   - an encoded dot, slash or backslash, a NUL and any of them encoded twice (`%252F`) are refused
+#     wherever they stand, as the backend refuses them on this path;
+#   - a `.` or `..` segment is refused, and a name that merely holds two dots (`Rapport..pdf`) is
+#     not.
+#
+# Only the path is checked, as on the public API: the query is passed on, and a ticket in it is
+# refused by the location.
+# ---------------------------------------------------------------------------------------------
+map $request_uri $niord_repo_file_path_ok {
+    default 0;
+    "~*^[^?]*%(?:25)?(?:2e|2f|5c|00)" 0;
+    "~^[^?]*/\.\.?(?:[/?]|$)" 0;
+    "~^/rest/repo/file/(?:[A-Za-z0-9._~!$&'()*+,=:@-]|%[0-9A-Fa-f]{2})+(?:/(?:[A-Za-z0-9._~!$&'()*+,=:@-]|%[0-9A-Fa-f]{2})+)*(?:\?|$)" 1;
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -276,14 +301,21 @@ server {
     # A file an editor uploaded is not this application, so it does not carry the application's
     # policy: it gets the sandbox of the map above, and the three headers that apply to any
     # response (those of niord-common-headers.conf, written out here).
+    #
+    # The proxy_pass names no URI, so the request line is passed on as it arrived and a file name's
+    # `%3B` reaches the backend as written; which is why the raw line is held to the shape of a
+    # repository path, by the map at the top, before anything is passed on.
     location ^~ /rest/repo/file/ {
         limit_except GET HEAD { deny all; }
+        if ($niord_repo_file_path_ok = 0) {
+            return 403;
+        }
         if ($niord_query_has_ticket) {
             return 403;
         }
         include /etc/nginx/niord-proxy.conf;
         proxy_read_timeout 10s;
-        proxy_pass ${NIORD_SERVER_URL}/rest/repo/file/;
+        proxy_pass ${NIORD_SERVER_URL};
         # Caches nothing, like the one on /rest/public/v1/.
         proxy_cache_valid 200 3m;
         add_header Content-Security-Policy $niord_repo_file_csp always;

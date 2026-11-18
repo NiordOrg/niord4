@@ -718,6 +718,51 @@ async function run(port, stubPort) {
     );
   }
 
+  // A repository file's name may hold a `;`, which every link to it writes as `%3B`: the location
+  // passes the request line on as it arrived, so the backend gets the escape and not a raw `;`,
+  // which it refuses. Every escape a file name can need passes as written, and so do the RFC 3986
+  // path characters a link keeps raw. The headers of the location stay: the sandbox for every
+  // type but a PDF, one nosniff, the referrer policy.
+  const repoFileNames = [
+    ['GET', '/rest/repo/file/2026/a%3Bb.png', 'sandbox', 'an encoded semicolon'],
+    ['GET', '/rest/repo/file/2026/a%3bb.pdf', undefined, 'the same in lower case, a PDF'],
+    ['HEAD', '/rest/repo/file/2026/a%3Bb.png', 'sandbox', 'HEAD of the same'],
+    ['GET', '/rest/repo/file/2026/100%25%20cover.html', 'sandbox', 'an encoded percent, a space'],
+    [
+      'GET',
+      '/rest/repo/file/2026/d%C3%A6kning%20%C3%B8%20%C3%A5.svg',
+      'sandbox',
+      'Danish letters as UTF-8 escapes',
+    ],
+    ['GET', '/rest/repo/file/2026/a%253Bb.png', 'sandbox', 'an encoded percent before 3B'],
+    ['GET', '/rest/repo/file/2026/Rapport..pdf', undefined, 'two dots inside a name'],
+    [
+      'GET',
+      "/rest/repo/file/2026/a:b@c!$&'()*+,=~.png",
+      'sandbox',
+      'the path characters a link keeps raw',
+    ],
+    ['GET', '/rest/repo/file/2026/a.png?v=2', 'sandbox', 'a query, which is not held'],
+  ];
+  for (const [method, url, expected, why] of repoFileNames) {
+    const before = seen.length;
+    const response = await request(port, method, url);
+    const policies = headerLines(response, 'content-security-policy');
+    check(
+      `${method} ${url} is proxied as written, with ${expected ? `Content-Security-Policy: ${expected}` : 'no policy'}`,
+      response.status === 200 &&
+        seen.length === before + 1 &&
+        lastSeen()?.method === method &&
+        lastSeen()?.url === url &&
+        (expected ? policies.length === 1 && policies[0] === expected : policies.length === 0) &&
+        hasOneNosniff(response) &&
+        response.headers['referrer-policy'] === 'strict-origin-when-cross-origin',
+      `${why}; got ${response.status}, stub saw ${seen.length - before} request(s), ` +
+        `the last ${lastSeen()?.method} ${lastSeen()?.url}, ` +
+        `content-security-policy: ${JSON.stringify(policies)}`,
+    );
+  }
+
   const head = await request(port, 'HEAD', '/rest/settings/web');
   check(
     'HEAD /rest/settings/web is proxied',
@@ -910,6 +955,55 @@ async function run(port, stubPort) {
       `GET ${url} is refused and never reaches the backend`,
       response.status >= 400 && response.status < 500 && seen.length === before,
       `${why}; got ${response.status}, stub saw ${seen.length - before} request(s)`,
+    );
+  }
+
+  // ---- the raw request line of a repository file -----------------------------------------------
+  // Passed on as it arrived too, so it is held to the paths the backend's firewall serves for a
+  // repository file: what that firewall refuses, and every spelling nginx would fold into another
+  // path, is a 403 here. A NUL and a broken escape nginx refuses itself, with 400, before any
+  // location is chosen.
+  const refusedRepoLines = [
+    ['/rest/repo/file/2026/a;b.png', 403, 'a raw semicolon, a path parameter to the backend'],
+    ['/rest/repo/file/2026/..;/a.png', 403, 'a `..;` segment'],
+    ['/rest/repo/file/2026/../a.png', 403, 'a `..` segment'],
+    ['/rest/repo/file/2026/./a.png', 403, 'a `.` segment'],
+    ['/rest/repo/file/2026/..', 403, 'a `..` segment at the end'],
+    ['/rest/repo/file/2026/%2e%2e/a.png', 403, 'an encoded `..` segment'],
+    ['/rest/repo/file/2026/.%2E/a.png', 403, 'a half-encoded `..` segment'],
+    ['/rest/repo/file/2026/a%2Eb.png', 403, 'an encoded dot inside a name'],
+    ['/rest/repo/file/2026/a%2Fb.png', 403, 'an encoded slash'],
+    ['/rest/repo/file/2026/a%2fb.png', 403, 'an encoded slash in lower case'],
+    ['/rest/repo/file/2026/a%252Fb.png', 403, 'a doubly encoded slash'],
+    ['/rest/repo/file/2026/a%252eb.png', 403, 'a doubly encoded dot'],
+    ['/rest/repo/file/2026/a%5Cb.png', 403, 'an encoded backslash'],
+    ['/rest/repo/file/2026/a%255Cb.png', 403, 'a doubly encoded backslash'],
+    ['/rest/repo/file/2026/a\\b.png', 403, 'a raw backslash'],
+    ['/rest/repo/file/2026/a%2500b.png', 403, 'a doubly encoded NUL'],
+    ['/rest/repo/file/2026/a%00b.png', 400, 'a NUL'],
+    ['/rest/repo/file/2026/a%%20b.png', 400, 'a percent that begins no escape'],
+    ['/rest/repo/file/2026//a.png', 403, 'a doubled slash nginx merges'],
+    ['/rest/repo//file/2026/a.png', 403, 'a doubled slash before the file path'],
+    ['/rest/repo/file/2026/', 403, 'a folder, an empty name'],
+    ['/rest/repo/%66ile/2026/a.png', 403, 'an encoded letter nginx decodes into the path'],
+    [
+      '/rest/public/v1/%2e%2e/%2e%2e/repo/file/2026/a.png',
+      403,
+      'a line nginx normalises into the repository path',
+    ],
+    ['/rest/repo/file/2026/a^b.png', 403, 'a character outside RFC 3986, kept raw by a browser'],
+    ['/rest/repo/file/2026/a[1].png', 403, 'brackets, kept raw by a browser'],
+    ['/rest/repo/file/2026/æ.png', 403, 'a raw letter outside ASCII'],
+    ['/rest/repo/file/2026/a%3Bb.png?ticket=abc', 403, 'a ticket beside an encoded semicolon'],
+  ];
+  for (const [url, expected, why] of refusedRepoLines) {
+    const before = seen.length;
+    const response = await request(port, 'GET', url);
+    check(
+      `GET ${url} is refused with ${expected} and never reaches the backend`,
+      response.status === expected && seen.length === before,
+      `${why}; got ${response.status}, stub saw ${seen.length - before} request(s)` +
+        (seen.length === before ? '' : `, the last ${lastSeen()?.url}`),
     );
   }
 
@@ -1327,6 +1421,7 @@ async function run(port, stubPort) {
     'GET /rest/message-reports/message/Local%20Warning-120-26.pdf?lang=da',
     'GET /rest/message-reports/message/Lokal%C3%86-7-26.pdf?lang=da',
     ...messageIdUrls.map(([url]) => `GET ${url}`),
+    ...repoFileNames.map(([method, url]) => `${method} ${url}`),
     'HEAD /rest/settings/web',
     ...acceptedRequests,
     ...hstsProxied,
