@@ -7,7 +7,11 @@ import { Confirm } from '../../../../shared/components/confirm/confirm';
 import { Icon } from '../../../../shared/icons/icon';
 import { ConfirmService } from '../../../../shared/services/confirm.service';
 import { StatusClassPipe } from '../../../../shared/pipes/status-class.pipe';
-import type { Message, MessageStatus } from '../../../messages/models/message.model';
+import {
+  isSystemMessage,
+  type Message,
+  type MessageStatus,
+} from '../../../messages/models/message.model';
 import { EditorFacade } from '../../services/editor-facade';
 import { MessageStatusService } from '../../services/message-status.service';
 import { CancelConfirmDialog } from '../cancel-confirm-dialog/cancel-confirm-dialog';
@@ -19,7 +23,9 @@ import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
  * Buttons are gated on status (the second of the two enforcement layers — the service re-checks)
  * and `isEditor`, and disabled while the editor holds unsaved changes (`hasUnsavedChanges`: an
  * edit not undone, or a message never saved) and while a status change runs (the status service's
- * `busy`), so a second confirm cannot send it again. Copy has no status check, only `isEditor`.
+ * `busy`), so a second confirm cannot send it again. Copy has no status check, only `isEditor`,
+ * and is not offered on a message Niord made by itself (a cancellation warning), which is no
+ * starting point for an editorial message.
  * Verify/Delete use the shared confirm; Publish/Cancel open the custom checkbox dialogs.
  */
 @Component({
@@ -99,15 +105,17 @@ import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
               <span>{{ 'editor.status.cancelAction' | transloco }}</span>
             </button>
           }
-          <button
-            type="button"
-            class="btn-secondary w-full justify-center"
-            [disabled]="actionsDisabled()"
-            (click)="statusService.copy()"
-          >
-            <app-icon name="lucideCopy" />
-            <span>{{ 'editor.status.copyAction' | transloco }}</span>
-          </button>
+          @if (!systemMessage()) {
+            <button
+              type="button"
+              class="btn-secondary w-full justify-center"
+              [disabled]="actionsDisabled()"
+              (click)="statusService.copy()"
+            >
+              <app-icon name="lucideCopy" />
+              <span>{{ 'editor.status.copyAction' | transloco }}</span>
+            </button>
+          }
         </div>
       }
     </div>
@@ -121,6 +129,7 @@ import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
     <app-cancel-confirm-dialog
       [(visible)]="cancelVisible"
       [mainType]="facade.message()?.mainType ?? ''"
+      [autoCancellationWarning]="facade.message()?.autoCancellationWarning === true"
       (confirmed)="statusService.cancel($event)"
     />
   `,
@@ -136,6 +145,9 @@ export class StatusActionPanel {
 
   protected readonly status = computed<MessageStatus | undefined>(
     () => this.facade.message()?.status,
+  );
+  protected readonly systemMessage = computed<boolean>(() =>
+    isSystemMessage(this.facade.message()),
   );
   /** Every action waits while the editor holds unsaved changes or a status change runs. */
   protected readonly actionsDisabled = computed<boolean>(

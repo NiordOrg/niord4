@@ -10,6 +10,7 @@ import { LanguageService } from '../../../core/main-shell/services/language.serv
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { shiftDaysInZone } from '../../../shared/utils/zoned-date';
 import {
+  isSystemMessage,
   type BasePromulgation,
   type DateInterval,
   type MainType,
@@ -228,16 +229,22 @@ export class EditorFacade implements OnDestroy {
   readonly isEditor = this.auth.hasRole('editor');
   readonly isAdmin = this.auth.hasRole('admin');
 
-  // A message is editable while DRAFT or VERIFIED, or always for an admin.
+  // A message is editable while DRAFT or VERIFIED, or always for an admin — unless Niord made it by
+  // itself (a cancellation warning), which nobody edits: the backend refuses its save.
   readonly editable = computed<boolean>(() => {
-    const status = this._message()?.status;
+    const message = this._message();
+    if (isSystemMessage(message)) {
+      return false;
+    }
+    const status = message?.status;
     return status === 'DRAFT' || status === 'VERIFIED' || this.isAdmin();
   });
 
   // The single "may mutate now" gate: an editor (not a plain user) acting on an editable message.
   // Every form-field disable, the part add/remove/move controls, and the Save affordance key off
   // this so they cannot diverge — a non-admin editor on a PUBLISHED/CANCELLED message is read-only,
-  // while the admin override rides through `editable()`.
+  // while the admin override rides through `editable()`; a cancellation warning is read-only for
+  // everyone. Status actions are gated on the status, not on this.
   readonly editableNow = computed<boolean>(() => this.editable() && this.isEditor());
 
   // Candidate message series for the dropdown: the current session domain's series, narrowed to

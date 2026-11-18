@@ -351,14 +351,6 @@ Background: [`country-deployments.md`](country-deployments.md).
 
 Background: [`features/messages.md`](features/messages.md).
 
-- **Cancellation warnings cannot be listed.** Cancelling a published NW warning in an auto-numbered series makes
-  the backend issue a cancellation warning: a separate message of `kind=CANCELLATION`, published at once with no
-  end date, which stays in force until an editor retires it. The messages search sends no `kind` parameter and
-  every query-driven search defaults to `kind=WARNING`, so no list in the application shows one; each is
-  reachable by its id alone. Until the application can list them, they stay in the S-124 in-force datasets.
-  Needed: a kind switch in the message list, a banner in the editor on a `kind=CANCELLATION` message, and the
-  announcement in the cancel dialog that cancelling will issue one (`SystemMessageVo.autoCancellationWarning`).
-  The backend design is in [`s124-cancellation-plan.md`](../../be/docs/s124-cancellation-plan.md).
 - **The tag dialog offers changes the backend refuses.** Unlock, edit, delete, and adding or removing
   messages are offered on a PUBLIC tag that belongs to another domain; the backend refuses each of them from
   any domain but the tag's own with 403, and the user sees a generic error. Hiding or disabling them needs the

@@ -35,6 +35,16 @@
         </span>
       </div>
     }
+    @if (showCancellationWarnings()) {
+      <button
+        type="button"
+        [class]="'chip ' + (cancellationWarnings() ? 'is-active' : '')"
+        [attr.aria-pressed]="cancellationWarnings()"
+        (click)="onCancellationWarningsToggle()"
+      >
+        {{ 'messages.filter.type.cancellationWarnings' | transloco }}
+      </button>
+    }
     @if (showNmTypes()) {
       <div class="flex items-center gap-1.5 flex-wrap">
         @for (type of visibleNmTypes(); track type) {

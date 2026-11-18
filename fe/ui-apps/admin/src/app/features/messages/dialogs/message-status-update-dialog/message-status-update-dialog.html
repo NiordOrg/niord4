@@ -110,6 +110,12 @@
           </tbody>
         </table>
       </div>
+
+      @if (cancelsNwWarning()) {
+        <p class="text-sm" role="note" data-testid="cancellation-warning-note">
+          {{ 'messages.statusUpdate.cancellationWarningNote' | transloco }}
+        </p>
+      }
     </div>
   }
 

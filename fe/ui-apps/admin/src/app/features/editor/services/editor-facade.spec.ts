@@ -177,6 +177,26 @@ describe('EditorFacade', () => {
       isAdmin.set(true);
       expect(facade.editable()).toBe(true);
     });
+
+    it('is false for a cancellation warning, an admin and every status included', () => {
+      const { facade, isAdmin } = setup({ admin: true });
+      facade.applyLoaded({ id: 'm-3', status: 'PUBLISHED', mainType: 'NW', kind: 'CANCELLATION' });
+      expect(facade.editable()).toBe(false);
+      expect(facade.editableNow()).toBe(false);
+      facade.applyLoaded({ id: 'm-3', status: 'DRAFT', kind: 'CANCELLATION' });
+      expect(facade.editable()).toBe(false);
+      isAdmin.set(false);
+      expect(facade.editableNow()).toBe(false);
+    });
+
+    it('treats a message of kind WARNING as before', () => {
+      const { facade, isAdmin } = setup();
+      facade.applyLoaded({ id: 'm-4', status: 'PUBLISHED', kind: 'WARNING' });
+      expect(facade.editable()).toBe(false);
+      isAdmin.set(true);
+      expect(facade.editable()).toBe(true);
+      expect(facade.editableNow()).toBe(true);
+    });
   });
 
   describe('dirty + userTouched latches', () => {

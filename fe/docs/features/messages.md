@@ -86,6 +86,7 @@ the URL: what a shared link carries, and what a saved filter stores verbatim.
 | `domain`                                                  | scalar           | `domainId`; unresolvable ids are held and retried           |
 | `query`                                                   | scalar           | free text                                                   |
 | `mainType`, `type`                                        | scalar, repeated | `NW`/`NM`; one `type` per checked message type              |
+| `kind`                                                    | scalar           | `CANCELLATION` only (the Type filter's chip); never with NM |
 | `status`                                                  | repeated         | masked outbound in public search (below)                    |
 | `tag`, `publication`, `promulgationType`                  | repeated         | opaque ids                                                  |
 | `username`, `userType`                                    | scalar           | `CREATED_BY` / `UPDATED_BY` / `LAST_UPDATED_BY`             |
@@ -164,6 +165,12 @@ appears only when some series supports that type, and the area / category / seri
 to that domain. With no domain resolved at all, everything is permissive. The domain also supplies the
 default sort — its `messageSortOrder`, falling back to `AREA ASC` when the domain configures none or an
 unparseable value — which is why `sortBy`/`sortOrder` are omitted from the URL when they match it.
+
+The Type filter also offers a _Cancellation warnings_ chip beside the NW types: it lists the
+cancellation warnings Niord published when warnings were cancelled (`kind=CANCELLATION`), one kind at
+a time, since the backend lists warnings when no `kind` is sent. Notices to Mariners have none, so a
+switch to NM, or to _All_ where the NW types are hidden, turns the chip off; while it is on, the chip
+shows whatever the main type, so it can always be turned off again.
 
 ## Named filters (saved searches)
 
@@ -501,7 +508,9 @@ whose list data already shows such a reason (no title; a Publish with a publish-
 ahead; the list carries no channels), but still sends it; after the 409 it marks the rows the backend
 named with the backend's reasons, toasts how many were refused
 (`messages.statusUpdate.toast.rowsRefused`) and stays open with the choices kept. Changing a marked
-row's target drops the backend's mark.
+row's target drops the backend's mark. When a row of an NW message is set to Cancelled, the dialog
+notes that cancelling a navigational warning in a series that numbers its messages itself publishes a
+cancellation warning; a list row carries neither the kind nor the numbering, so the note states the rule.
 
 **Compare** (exactly two selected, no login required) opens a two-message surface: two id pickers
 (deleted messages selectable) feeding two independent loads, rendered side by side through the same

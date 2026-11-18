@@ -254,6 +254,10 @@ to Mariners _Preliminary_, _Temporary_, _Permanent_ and _Misc_. The filter offer
 domain's message series use. In a domain with both Navigational Warnings and Notices to Mariners, it
 also has the choices _All_, _NW_ and _NM_.
 
+Beside the types of Navigational Warnings, _Cancellation warnings_ lists the cancellation warnings
+Niord published when warnings were cancelled (<<cancellation-warning>>) instead of the warnings.
+Click it again to list the warnings.
+
 [#status-filter]
 ==== Status Filter
 

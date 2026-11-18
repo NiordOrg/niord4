@@ -101,12 +101,33 @@ describe('messages-filter-params serializer', () => {
       params = patch(params, 'type', {
         mainType: 'NW',
         types: ['LOCAL_WARNING', 'COASTAL_WARNING'],
+        cancellationWarnings: false,
       });
       params = withEnabled(params, { type: true });
       const result = toQuery(params, ctxOut());
       expect(result).toContain('mainType=NW');
       expect(result).toContain('type=LOCAL_WARNING');
       expect(result).toContain('type=COASTAL_WARNING');
+      expect(result).not.toContain('kind=');
+    });
+
+    it('asks for the cancellation warnings with kind=CANCELLATION, only while the Type filter is on', () => {
+      let params = defaultParams();
+      params = patch(params, 'type', { mainType: 'NW', types: [], cancellationWarnings: true });
+      expect(toQuery(params, ctxOut())).toBe('');
+
+      params = withEnabled(params, { type: true });
+      expect(toQuery(params, ctxOut())).toBe('kind=CANCELLATION&mainType=NW');
+
+      params = patch(params, 'type', { mainType: '', types: [], cancellationWarnings: true });
+      expect(toQuery(params, ctxOut())).toBe('kind=CANCELLATION');
+    });
+
+    it('never asks for the cancellation warnings of Notices to Mariners, which have none', () => {
+      let params = defaultParams();
+      params = patch(params, 'type', { mainType: 'NM', types: [], cancellationWarnings: true });
+      params = withEnabled(params, { type: true });
+      expect(toQuery(params, ctxOut())).toBe('mainType=NM');
     });
 
     it('emits status values', () => {
@@ -404,6 +425,30 @@ describe('messages-filter-params serializer', () => {
       expect(result.params.enabled.type).toBe(true);
     });
 
+    it('reads kind=CANCELLATION as the Cancellation warnings choice of the Type filter', () => {
+      const result = fromQuery('kind=CANCELLATION&mainType=NW', defaultParams(), ctxIn());
+      expect(result.params.type).toEqual({
+        mainType: 'NW',
+        types: [],
+        cancellationWarnings: true,
+      });
+      expect(result.params.enabled.type).toBe(true);
+
+      const alone = fromQuery('kind=CANCELLATION', defaultParams(), ctxIn());
+      expect(alone.params.type.cancellationWarnings).toBe(true);
+      expect(alone.params.enabled.type).toBe(true);
+    });
+
+    it('ignores any other kind, and the cancellation warnings with mainType=NM', () => {
+      for (const query of ['kind=WARNING', 'kind=BULLETIN', 'kind=cancellation', 'kind=']) {
+        const result = fromQuery(query, defaultParams(), ctxIn());
+        expect(result.params.type.cancellationWarnings, query).toBe(false);
+        expect(result.params.enabled.type, query).toBe(false);
+      }
+      const nm = fromQuery('kind=CANCELLATION&mainType=NM', defaultParams(), ctxIn());
+      expect(nm.params.type).toEqual({ mainType: 'NM', types: [], cancellationWarnings: false });
+    });
+
     it('discards unknown type values', () => {
       const result = fromQuery('type=BOGUS&type=PERMANENT_NOTICE', defaultParams(), ctxIn());
       expect(result.params.type.types).toEqual(['PERMANENT_NOTICE']);
@@ -524,6 +569,7 @@ describe('messages-filter-params serializer', () => {
       params = patch(params, 'type', {
         mainType: 'NW',
         types: ['LOCAL_WARNING'],
+        cancellationWarnings: true,
       });
       params = patch(params, 'status', { statuses: ['PUBLISHED'] });
       params = patch(params, 'tag', {
@@ -575,6 +621,7 @@ describe('messages-filter-params serializer', () => {
       expect(reparsed.params.text.query).toBe('navigation');
       expect(reparsed.params.type.mainType).toBe('NW');
       expect(reparsed.params.type.types).toEqual(['LOCAL_WARNING']);
+      expect(reparsed.params.type.cancellationWarnings).toBe(true);
       expect(reparsed.params.status.statuses).toEqual(['PUBLISHED']);
       expect(reparsed.params.tag.tags.map((t) => t.tagId)).toEqual(['tag-1']);
       expect(reparsed.params.comments.value).toBe('ANY');

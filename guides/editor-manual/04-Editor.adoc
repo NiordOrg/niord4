@@ -930,10 +930,12 @@ once publishes a _cancellation warning_ in the same series:
   _(cancelled)_ reference to the cancelled warning.
 * It has no publish-to date, so it stays in force until it is cancelled in turn.
 
-You cannot turn this off, the dialog does not mention it, and the cancellation warning cannot be
-changed afterwards. Cancelling a cancellation warning publishes no further warning, nor does a
-message cancelled with *Also cancel the referenced messages* (<<publish-message>>). The Messages
-page does not list cancellation warnings.
+You cannot turn this off. The dialog says when one will be published, and the cancellation warning
+cannot be changed afterwards: the editor shows it with a note that says so, and offers no _Copy_.
+Cancelling a cancellation warning publishes no further warning, nor does a message cancelled with
+*Also cancel the referenced messages* (<<publish-message>>). To find cancellation warnings, pick
+_Cancellation warnings_ in the Type filter of the Messages page (<<type-filter>>); cancel one there
+or in the editor to retire it.
 
 [#delete-message]
 ==== Deleting a Message

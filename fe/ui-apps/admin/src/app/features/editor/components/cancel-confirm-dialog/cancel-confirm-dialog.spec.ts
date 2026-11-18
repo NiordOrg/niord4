@@ -13,6 +13,7 @@ import { CancelConfirmDialog } from './cancel-confirm-dialog';
     <app-cancel-confirm-dialog
       [(visible)]="visible"
       [mainType]="mainType()"
+      [autoCancellationWarning]="autoCancellationWarning()"
       (confirmed)="confirmed.set($event)"
     />
   `,
@@ -20,10 +21,11 @@ import { CancelConfirmDialog } from './cancel-confirm-dialog';
 class Host {
   readonly visible = signal(false);
   readonly mainType = signal('');
+  readonly autoCancellationWarning = signal(false);
   readonly confirmed = signal<boolean | undefined>(undefined);
 }
 
-async function setup(mainType: string) {
+async function setup(mainType: string, autoCancellationWarning = false) {
   TestBed.configureTestingModule({
     providers: [provideTestTransloco(), provideNiordIcons()],
   });
@@ -31,6 +33,7 @@ async function setup(mainType: string) {
 
   const fixture = TestBed.createComponent(Host);
   fixture.componentInstance.mainType.set(mainType);
+  fixture.componentInstance.autoCancellationWarning.set(autoCancellationWarning);
   fixture.autoDetectChanges();
   await fixture.whenStable();
   return fixture;
@@ -38,6 +41,7 @@ async function setup(mainType: string) {
 
 const q = (sel: string) => document.querySelector(sel);
 const checkbox = () => q('#create-cancellation') as HTMLInputElement | null;
+const autoNote = () => q('[data-testid="auto-cancellation-warning"]');
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.replaceChildren());
@@ -97,6 +101,35 @@ describe('CancelConfirmDialog', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.confirmed()).toBe(false);
+  });
+
+  it('says that a cancellation warning will be published when cancelling publishes one', async () => {
+    const fixture = await setup('NW', true);
+    fixture.componentInstance.visible.set(true);
+    await fixture.whenStable();
+
+    expect(autoNote()).not.toBeNull();
+    expect(autoNote()!.getAttribute('role')).toBe('note');
+    expect(autoNote()!.textContent).toContain('cancelDialog.autoCancellationWarning');
+    expect(checkbox()).toBeNull();
+  });
+
+  it('says nothing of a cancellation warning when cancelling publishes none', async () => {
+    const fixture = await setup('NW', false);
+    fixture.componentInstance.visible.set(true);
+    await fixture.whenStable();
+
+    expect(q('.dialog-panel')).not.toBeNull();
+    expect(autoNote()).toBeNull();
+  });
+
+  it('keeps the NM create-cancellation checkbox beside no note', async () => {
+    const fixture = await setup('NM', false);
+    fixture.componentInstance.visible.set(true);
+    await fixture.whenStable();
+
+    expect(checkbox()).not.toBeNull();
+    expect(autoNote()).toBeNull();
   });
 
   it('resets the create-cancellation checkbox each time the dialog reopens (NM)', async () => {

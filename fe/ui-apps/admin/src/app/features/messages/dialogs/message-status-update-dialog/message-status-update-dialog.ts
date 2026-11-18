@@ -117,6 +117,16 @@ export class MessageStatusUpdateDialog {
   protected readonly hasTargets = computed(() => this.targets().size > 0);
 
   /**
+   * An NW row set to Cancelled: cancelling a warning in a series that numbers its messages itself
+   * makes Niord publish a cancellation warning for it. A list row carries neither the message's kind
+   * nor its series' numbering, so the note states the rule rather than a promise about each row.
+   */
+  protected readonly cancelsNwWarning = computed(() => {
+    const targets = this.targets();
+    return this.rows().some((row) => row.mainType === 'NW' && targets.get(row.id) === 'CANCELLED');
+  });
+
+  /**
    * The backend's answer in its last gate 409, per row sent: its reasons, or none for a row it let
    * pass. A row's entry is dropped when its target changes, so the list data's guess shows again.
    */

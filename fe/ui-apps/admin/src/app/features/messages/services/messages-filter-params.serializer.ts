@@ -108,6 +108,11 @@ export function toQuery(params: MessagesFilterParams, ctx: SerializerContext): s
     for (const type of params.type.types) {
       out.push(['type', type]);
     }
+    // Warnings are the backend's default kind, so only the other kind is written; Notices to
+    // Mariners have no cancellation warnings.
+    if (params.type.cancellationWarnings && params.type.mainType !== 'NM') {
+      out.push(['kind', 'CANCELLATION']);
+    }
   }
 
   // Status — apply public-mask
@@ -328,10 +333,14 @@ export function fromQuery(
     KNOWN_MESSAGE_TYPES.has(v as MessageType),
   );
   const isMainTypeKnown = mainType !== null && KNOWN_MAIN_TYPES.has(mainType as MainType);
-  if (isMainTypeKnown || typeValues.length > 0) {
+  // Any other kind is ignored, like an unknown status; Notices to Mariners have no cancellation
+  // warnings, so the kind is dropped with `mainType=NM`.
+  const cancellationWarnings = params.get('kind') === 'CANCELLATION' && mainType !== 'NM';
+  if (isMainTypeKnown || typeValues.length > 0 || cancellationWarnings) {
     slices.type = {
       mainType: isMainTypeKnown ? (mainType as MainType) : '',
       types: Array.from(new Set<MessageType>(typeValues)),
+      cancellationWarnings,
     };
     enabled.type = true;
   }

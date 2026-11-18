@@ -256,6 +256,48 @@ describe('MessageStatusUpdateDialog — the Change all statuses control', () => 
   });
 });
 
+describe('MessageStatusUpdateDialog — the cancellation-warning note', () => {
+  const note = (fixture: ReturnType<typeof setup>['fixture']) =>
+    (fixture.nativeElement as HTMLElement).ownerDocument.querySelector(
+      '[data-testid="cancellation-warning-note"]',
+    );
+
+  it('says that cancelling a navigational warning publishes a cancellation warning', async () => {
+    const { fixture, comp, access } = setup();
+    comp.open([
+      titled('a', 'PUBLISHED', { mainType: 'NW' }),
+      titled('b', 'PUBLISHED', { mainType: 'NW' }),
+    ]);
+    TestBed.tick();
+    await fixture.whenStable();
+    expect(note(fixture)).toBeNull();
+
+    access.setTarget('a', 'CANCELLED');
+    TestBed.tick();
+    await fixture.whenStable();
+    expect(note(fixture)).not.toBeNull();
+    expect(note(fixture)!.getAttribute('role')).toBe('note');
+
+    access.setTarget('a', null);
+    TestBed.tick();
+    await fixture.whenStable();
+    expect(note(fixture)).toBeNull();
+  });
+
+  it('says nothing for a Notice to Mariners set to Cancelled, or a warning set to Expired', async () => {
+    const { fixture, comp, access } = setup();
+    comp.open([
+      titled('a', 'PUBLISHED', { mainType: 'NM' }),
+      titled('b', 'PUBLISHED', { mainType: 'NW' }),
+    ]);
+    access.setTarget('a', 'CANCELLED');
+    access.setTarget('b', 'EXPIRED');
+    TestBed.tick();
+    await fixture.whenStable();
+    expect(note(fixture)).toBeNull();
+  });
+});
+
 describe('MessageStatusUpdateDialog — save', () => {
   it('builds updates keyed on UUID id and drops invalid transitions', () => {
     const { comp, access, updateStatuses, confirmNeutral } = setup();

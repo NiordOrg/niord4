@@ -167,6 +167,11 @@ export interface TextSliceValue {
 export interface TypeSliceValue {
   readonly mainType: '' | MainType;
   readonly types: readonly MessageType[];
+  /**
+   * List the cancellation warnings instead of the warnings. A search lists one kind at a time, and
+   * only Navigational Warnings have cancellation warnings.
+   */
+  readonly cancellationWarnings: boolean;
 }
 
 export interface StatusSliceValue {
@@ -321,7 +326,7 @@ export function emptySliceValues(): {
     domain: { domain: undefined },
     messageSeries: { messageSeries: [] },
     text: { query: '' },
-    type: { mainType: '', types: [] },
+    type: { mainType: '', types: [], cancellationWarnings: false },
     status: { statuses: [] },
     tag: { tags: [] },
     publication: { publications: [] },

@@ -3568,6 +3568,7 @@
         "newStatus": "New status"
       },
       "noChange": "No change",
+      "cancellationWarningNote": "Cancelling a navigational warning in a series that numbers its messages itself also publishes a cancellation warning for it. Cancelling a cancellation warning publishes nothing more.",
       "reason": {
         "noTitle": "No title",
         "mandatoryOff": "Mandatory channel off: {{types}}",
@@ -3759,7 +3760,8 @@
           "all": "All",
           "nw": "NW",
           "nm": "NM"
-        }
+        },
+        "cancellationWarnings": "Cancellation warnings"
       },
       "status": {
         "label": "Status"
@@ -3898,6 +3900,9 @@
     }
   },
   "editor": {
+    "cancellationWarning": {
+      "banner": "This is a cancellation warning, published by Niord when the warning it references was cancelled. It cannot be edited. Cancel it to retire it."
+    },
     "header": {
       "untitled": "Untitled message",
       "unsaved": "Unsaved changes",
@@ -4110,7 +4115,8 @@
       "cancelDialog": {
         "header": "Cancel message",
         "prose": "Please confirm cancellation of this message.",
-        "createLabel": "Create cancellation message"
+        "createLabel": "Create cancellation message",
+        "autoCancellationWarning": "Cancelling this warning also publishes a cancellation warning for it at once. It takes the next number in the series and stays in force until it is cancelled."
       },
       "field": {
         "type": "Type",

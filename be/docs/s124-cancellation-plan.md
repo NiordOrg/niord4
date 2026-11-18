@@ -155,8 +155,8 @@ Auto-creation is not configurable; clients cannot enable *or disable* it:
   cancel dialog can announce "a cancellation warning will be issued automatically"
   (backed by the pure `MessageService.willIssueCancellationWarning` — the same predicate
   that gates minting, so the note can never disagree with the behaviour). The editor
-  cannot opt out. The administration app does not read the field yet
-  ([`fe/docs/backlog.md`](../../fe/docs/backlog.md#messages), Messages).
+  cannot opt out. The administration app's cancel dialog shows the note when the field is
+  true, and its bulk status dialog states the rule when an NW row is set to Cancelled.
 - Sysadmin: nothing to configure — the series editor carries no cancellation-warning
   toggle.
 
@@ -292,9 +292,11 @@ predicate, so the WARNING default is skipped there (a cancellation warning must 
 in the reference tree of the message it cancels); an explicit `kind` still applies. A
 client lists one kind at a time — no `kind` for warnings, `kind=CANCELLATION` for
 cancellation warnings — so per-row badging is pointless; an editor view instead shows a
-read-only banner when the message's `kind` (on `SystemMessageVo`) is `CANCELLATION`. The
-administration app has neither the kind switch nor the banner yet
-([`fe/docs/backlog.md`](../../fe/docs/backlog.md#messages), Messages).
+read-only banner when the message's `kind` (on `SystemMessageVo`) is `CANCELLATION`. In the
+administration app the Type filter's _Cancellation warnings_ chip sends `kind=CANCELLATION`,
+and the editor shows a read-only banner on such a message and offers no edit and no Copy;
+a copy made elsewhere (the list's row menu) comes back from `copy-message-template` as a
+`WARNING`, since a copy is always an ordinary editorial message.
 
 ## Design decisions
 

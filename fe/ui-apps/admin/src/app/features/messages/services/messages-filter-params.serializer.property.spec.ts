@@ -128,6 +128,8 @@ function filter(
     slices.type = {
       mainType,
       types: mainType === '' || rng.next() < 0.5 ? rng.some(MESSAGE_TYPES) : [],
+      // Notices to Mariners have no cancellation warnings: the panel never sets the choice there.
+      cancellationWarnings: mainType !== 'NM' && rng.next() < 0.3,
     };
   }
   if (on('status')) slices.status = { statuses: rng.some(MESSAGE_STATUSES) };
@@ -253,7 +255,9 @@ function searched(params: MessagesFilterParams): unknown {
   return {
     domain: e.domain ? params.domain.domain?.domainId : undefined,
     text: e.text ? params.text.query : undefined,
-    type: e.type ? [params.type.mainType, [...params.type.types]] : undefined,
+    type: e.type
+      ? [params.type.mainType, [...params.type.types], params.type.cancellationWarnings]
+      : undefined,
     status: e.status ? [...params.status.statuses] : undefined,
     tag: e.tag ? params.tag.tags.map((t) => t.tagId) : undefined,
     publication: e.publication
@@ -309,6 +313,7 @@ describe('the Messages filter address, properties over generated filters', () =>
       'query',
       'mainType',
       'type',
+      'kind',
       'status',
       'tag',
       'comments',
@@ -331,6 +336,9 @@ describe('the Messages filter address, properties over generated filters', () =>
       ...MESSAGE_STATUSES,
       ...MESSAGE_TYPES,
       'NW',
+      'NM',
+      'WARNING',
+      'CANCELLATION',
       'xx',
       '',
       '-1',
@@ -359,6 +367,11 @@ describe('the Messages filter address, properties over generated filters', () =>
         query,
       ).toBe(true);
       expect(KNOWN_COMMENTS_VALUES.has(params.comments.value), query).toBe(true);
+      // The cancellation warnings are read from kind=CANCELLATION alone, and never with NM.
+      if (params.type.cancellationWarnings) {
+        expect(new URLSearchParams(query).get('kind'), query).toBe('CANCELLATION');
+        expect(params.type.mainType, query).not.toBe('NM');
+      }
       expect(KNOWN_DATE_TYPES.has(params.date.dateType), query).toBe(true);
       expect(KNOWN_SORT_BY_VALUES.has(params.sortBy), query).toBe(true);
       expect(KNOWN_SORT_ORDERS.has(params.sortOrder), query).toBe(true);

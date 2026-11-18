@@ -1,7 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
+
+import { provideNiordIcons } from '../../shared/icons/niord-icons';
+import { provideTestTransloco } from '../../shared/testing/transloco-testing';
+import type { Message } from '../messages/models/message.model';
 
 import { MessageComparisonDialog } from '../messages/dialogs/message-comparison-dialog/message-comparison-dialog';
 import { MessageCopyDialog } from '../messages/dialogs/message-copy-dialog/message-copy-dialog';
@@ -27,15 +31,21 @@ class StubCopyDialog {}
 @Component({ selector: 'app-message-print-dialog', template: '' })
 class StubPrintDialog {}
 
-function setup(opts?: { unsaved?: boolean; commentDraft?: boolean }) {
+function setup(opts?: { unsaved?: boolean; commentDraft?: boolean; message?: Message }) {
   const resetWorkingState = vi.fn();
   const clearComposeDraft = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      provideTestTransloco(),
+      provideNiordIcons(),
       {
         provide: EditorFacade,
-        useValue: { hasUnsavedChanges: () => opts?.unsaved ?? false, resetWorkingState },
+        useValue: {
+          hasUnsavedChanges: () => opts?.unsaved ?? false,
+          resetWorkingState,
+          message: signal<Message | undefined>(opts?.message),
+        },
       },
       {
         provide: EditorCommentsStore,
@@ -90,6 +100,29 @@ describe('EditorShell', () => {
     expect(host.querySelector('app-message-details-dialog')).not.toBeNull();
     expect(host.querySelector('app-message-comparison-dialog')).not.toBeNull();
     expect(host.querySelector('app-message-copy-dialog')).not.toBeNull();
+  });
+
+  it('says over every tab that a cancellation warning cannot be edited', () => {
+    const { fixture } = setup({
+      message: { id: 'm-1', status: 'PUBLISHED', mainType: 'NW', kind: 'CANCELLATION' },
+    });
+    const host = fixture.nativeElement as HTMLElement;
+    const banner = host.querySelector('[data-testid="cancellation-warning-banner"]');
+    expect(banner).not.toBeNull();
+    expect(banner!.getAttribute('role')).toBe('note');
+    expect(banner!.textContent).toContain('editor.cancellationWarning.banner');
+    fixture.destroy();
+  });
+
+  it.each<[string, Message | undefined]>([
+    ['a warning', { id: 'm-1', status: 'PUBLISHED', kind: 'WARNING' }],
+    ['a message without a kind', { id: 'm-2', status: 'DRAFT' }],
+    ['no message yet', undefined],
+  ])('shows no such note for %s', (_label, message) => {
+    const { fixture } = setup({ message });
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[data-testid="cancellation-warning-banner"]')).toBeNull();
+    fixture.destroy();
   });
 
   it('drops the working state when the shell goes away', () => {

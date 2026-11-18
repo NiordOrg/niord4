@@ -482,6 +482,22 @@ class MessageCancellationWarningITTest extends ITTest {
                 .body("autoCancellationWarning", is(false));
     }
 
+    @Test
+    void copyOfACancellationWarningIsAnOrdinaryDraftWarning() {
+        // A copy is the start of a new editorial message, which the editor saves as a WARNING;
+        // a copy that kept the CANCELLATION kind could never be saved
+        String uid = createCommittedPublished("IT cancellation-warning copy");
+        restCancel(uid);
+        String cancellationUid = cancellationWarningUidsFor(uid).get(0);
+
+        given().auth().oauth2(accessToken())
+                .header("NiordDomain", "niord-nw")
+                .when().get("/rest/messages/copy-message-template/" + cancellationUid)
+                .then().statusCode(200)
+                .body("kind", is("WARNING"))
+                .body("status", is("DRAFT"));
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // Terminal rule - cancelling a cancellation warning itself (driven through cancelMessage)
     // ------------------------------------------------------------------------------------------- //

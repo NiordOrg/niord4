@@ -44,6 +44,15 @@ export {
 } from '../../../shared/models/message-status.model';
 import type { MessageStatus } from '../../../shared/models/message-status.model';
 
+/**
+ * What a message is (the backend's `MessageKind`): an ordinary editorial `WARNING`, a
+ * `CANCELLATION` warning Niord publishes by itself when a warning is cancelled, or a `BULLETIN`
+ * (reserved; never made). Only a `WARNING` can be edited; the others take status changes only.
+ */
+export const MESSAGE_KINDS = ['WARNING', 'CANCELLATION', 'BULLETIN'] as const;
+
+export type MessageKind = (typeof MESSAGE_KINDS)[number];
+
 export const PUBLISHED_MESSAGE_STATUSES: ReadonlySet<MessageStatus> = new Set([
   'PUBLISHED',
   'EXPIRED',
@@ -246,4 +255,18 @@ export interface Message {
   readonly editorFields?: Record<string, boolean>;
   readonly autoTitle?: boolean;
   readonly unackComments?: number;
+  // The message's kind. A list row does not carry it; a message without one is a WARNING.
+  readonly kind?: MessageKind;
+  // Cancelling this message makes Niord publish a cancellation warning for it at once.
+  readonly autoCancellationWarning?: boolean;
+}
+
+/** A message Niord made by itself (not a WARNING): it takes status changes but no edits. */
+export function isSystemMessage(message: Message | undefined): boolean {
+  return message?.kind !== undefined && message.kind !== 'WARNING';
+}
+
+/** A cancellation warning, which Niord published when the warning it references was cancelled. */
+export function isCancellationWarning(message: Message | undefined): boolean {
+  return message?.kind === 'CANCELLATION';
 }

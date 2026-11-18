@@ -482,7 +482,9 @@ public class MessageRestService  {
         // Compute the default set of editor fields to display for the message
         computeEditorFields(editMessage);
 
-        // Reset various fields
+        // Reset various fields. A copy is always an ordinary editorial message, also the copy of a
+        // cancellation warning, which could otherwise never be saved
+        editMessage.setKind(MessageKind.WARNING);
         editMessage.setShortId(null);
         editMessage.setStatus(DRAFT);
         editMessage.setCreated(null);

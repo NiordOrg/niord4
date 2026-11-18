@@ -106,7 +106,10 @@ for every guarded route of the application, not only the editor's.
   deep link or a message-row link; see [shell and auth](./shell-and-auth.md) → _Areas and who may
   enter them_ before widening either.
 - A message is **editable** while `DRAFT` or `VERIFIED`, or always for an `admin` (admins may edit
-  `PUBLISHED` and `CANCELLED` messages).
+  `PUBLISHED` and `CANCELLED` messages) — except a message Niord made by itself (`kind` present and
+  not `WARNING`, `isSystemMessage`), which nobody edits: the backend refuses its save. A cancellation
+  warning shows a read-only banner above every tab and offers no Copy; its status actions stay, so
+  it can be cancelled.
 - `EditorFacade.editableNow() = editable() && isEditor()` is the single "may mutate now" gate. Every
   form-control `disabled` rule, every part control and the Save button key off it, so they cannot
   diverge; the facade's structural mutators refuse when it is false, so a broken UI cannot write
