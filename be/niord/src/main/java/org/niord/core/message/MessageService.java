@@ -66,6 +66,7 @@ import org.niord.core.geojson.Feature;
 import org.niord.core.geojson.FeatureCollection;
 import org.niord.core.geojson.FeatureService;
 import org.niord.core.geojson.JtsConverter;
+import org.niord.core.mailinglist.MailingListStatusChangeOutbox;
 import org.niord.core.message.MessageSearchParams.DateType;
 import org.niord.core.message.MessageSearchParams.UserType;
 import org.niord.core.message.vo.SystemMessageVo;
@@ -186,6 +187,9 @@ public class MessageService extends BaseService {
 
     @Inject
     NiordApp app;
+
+    @Inject
+    MailingListStatusChangeOutbox mailingListStatusChangeOutbox;
 
     /***************************************/
     /** Message Look-up                   **/
@@ -738,10 +742,18 @@ public class MessageService extends BaseService {
      * let the event overtake the commit, so listeners could read a stale or absent row; the
      * previous workaround for that was a fixed 10s sleep in the mailing-list listener. As a
      * side benefit, the event is no longer sent at all if the transaction rolls back.
+     * <p>
+     * The topic is not stored, so a restart, a broker error or a listener subscribing again can
+     * lose the event. The mailing lists' duty is therefore recorded first, in this transaction: a
+     * row of {@link MailingListStatusChangeOutbox}, which commits or rolls back with the status
+     * change, and whose failure fails it. For the mailing lists the broadcast is only the prompt to
+     * take that row at once; their listener also takes it once a minute and at start.
      * @param message the message
      * @param prevStatus the previous status
      */
     private void sendStatusUpdate(Message message, Status prevStatus) {
+        mailingListStatusChangeOutbox.enqueue(message.getUid(), message.getStatus());
+
         // Snapshot the body while the entity is still attached...
         Map<String, Object> body = new HashMap<>();
         body.put("ID", message.getId());
@@ -768,7 +780,7 @@ public class MessageService extends BaseService {
         try (JMSContext jmsContext = connectionFactory.createContext(Session.AUTO_ACKNOWLEDGE)){
             jmsContext.createProducer().send(jmsContext.createTopic(messageStatusTopic), body);
         } catch (Exception e) {
-            log.error("Failed sending JMS: " + e, e);
+            log.error("Failed sending JMS (the mailing lists' mails are still made from their outbox): " + e, e);
         }
     }
 

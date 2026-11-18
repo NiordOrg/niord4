@@ -161,6 +161,12 @@ niord:
   #   auto-publish-cron: 7 * * * * ?
   #   auto-expire-cron: 28 * * * * ?
   #   firing-exercise-cron: 50 21 */1 * * ?
+  # The mailing lists' outbox of status changes (MailingListMessageListener.sweep): once a minute, at second 23,
+  # before the mail sender's run, the rows the JMS status topic did not prompt for are mailed. "-" switches the
+  # sweep off, which the integration-test suite does (its tests drain the outbox themselves); the prompt and the
+  # pass at start still run.
+  # mailinglist:
+  #   status-change-sweep-cron: 23 * * * * ?
   # S-124 (org.niord.s124): the deployment's IHO S-62 producer code. REQUIRED to generate any
   # S-124 dataset - it is the agencyResponsibleForProduction (S-124 clause 4.3.3) and part of
   # the datasetFileIdentifier of every dataset, and names the SECOM exchange-set files - and

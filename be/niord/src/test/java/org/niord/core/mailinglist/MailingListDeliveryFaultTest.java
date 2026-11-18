@@ -34,15 +34,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Fault injection on two steps of the status-change mail path that used to fail silently, as unit tests. Both steps
- * are MAILLIST2's (be/docs/potential-errors.md), run on 2026-11-12: a trigger's message
- * filter that throws, and the listener's poll loop when the broker connection fails. Both are regression tests of the
- * fix now.
+ * Fault injection on two steps of the status-change mail path that used to fail silently, as unit tests, both found
+ * by the error hunt of 2026-11-12: a trigger's message filter that throws, and the listener's poll loop when the
+ * broker connection fails. Both are regression tests of the fix now.
  */
 class MailingListDeliveryFaultTest {
 
     /**
-     * MAILLIST2 (ii). A trigger filter that throws for a message ({@code msg.getAreas().get(0)} on a message with no
+     * A trigger filter that throws for a message ({@code msg.getAreas().get(0)} on a message with no
      * area, an {@code IndexOutOfBoundsException} inside the script) used to read as "no match", with nothing logged:
      * the subscribers got no mail and the administrator who wrote the filter was never told it failed. Now
      * {@code matches} throws {@link IllegalArgumentException} naming the filter, the message and the cause, which the
@@ -112,16 +111,17 @@ class MailingListDeliveryFaultTest {
     }
 
     /**
-     * MAILLIST2 (iii). The listener's poll loop used to have no catch, and {@code onStart} submits it to an executor
+     * The listener's poll loop used to have no catch, and {@code onStart} submits it to an executor
      * and discards the {@code Future}: when {@code receive()} threw (the broker connection lost, the consumer closed
      * under it), the loop ended with nothing logged, and no later status change was received until the application
-     * restarted. Now the loop ({@link org.niord.core.util.JmsTopicLoop}) logs one ERROR and subscribes again.
+     * restarted. Now the loop ({@link org.niord.core.util.JmsTopicLoop}) logs one ERROR and subscribes again. The
+     * outbox pass {@code onStart} runs first finds no row here, and logs nothing.
      */
     @Test
     void theListenerLoopSubscribesAgainAfterTheBrokerConnectionFails() throws Exception {
         AtomicInteger receives = new AtomicInteger();
         MailingListMessageListener listener = new MailingListMessageListener(null, null,
-                JmsFaults.consumerThatFailsOnFirstReceive(receives));
+                new MailingListMessageListenerTest.RecordingOutbox(), JmsFaults.consumerThatFailsOnFirstReceive(receives));
         listener.reconnectDelayMillis = 10;
         ListAppender<ILoggingEvent> log = JmsFaults.captureLog(MailingListMessageListener.class);
         try {

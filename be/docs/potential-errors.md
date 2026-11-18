@@ -704,11 +704,16 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** code inspection during the port comparison.
 - **Severity:** Medium — reliability; silent loss of an outbound promulgation on any transient failure.
 - **Related:** PROM10. X refuses the endpoint the post goes to, so today every attempt fails the same way, and a
-  retry alone would not get a tweet out. MAILLIST2 (the error hunt of 2026-11-12) is the step before this one:
-  the status-change event that starts a tweet rides the same fire-and-forget topic as the mails, and
-  `TwitterMessageListener.run` (79-88) ends its loop silently on a broker failure, so no later publication is
-  tweeted until a restart (`TwitterMessageListenerFaultTest#theListenerLoopEndsSilentlyWhenTheBrokerConnectionFails_documentsBug`).
-  MAILLIST2's catch-and-restart covers that listener; it does not record or retry a refused tweet, which stays here.
+  retry alone would not get a tweet out. The step before the post is lost the same silent way: the status-change
+  event that starts a tweet rides the JMS status topic, which is not stored (the embedded broker's
+  `persistent: false`) and whose subscription is not durable, so a status change committed just before a restart,
+  one whose broadcast meets a broker error ("Failed sending JMS" is only logged) and one broadcast while
+  `TwitterMessageListener` subscribes again after a broker failure is never tweeted, with no record. The error
+  hunt's fix stage of 2026-11-13 made the listener's loop log the failure and subscribe again (`JmsTopicLoop`,
+  `TwitterMessageListenerFaultTest`) instead of ending; the mailing lists have kept their status changes in an
+  outbox since (`MailingListStatusChangeOutbox`), and SECOM has its reconciliation sweep. A tweet has neither: the
+  outbox row this entry recommends would cover the lost event too, if it is written in the status change's own
+  transaction, as the mailing lists' is.
 
 ## PROM10 — Tweets go to X's v1.1 `statuses/update`, which X refuses for its Free and Basic apps
 
@@ -1901,7 +1906,7 @@ The fix stage of 2026-11-13 fixed every entry of the hunt that is no longer list
 test, most of them the entry's `_documentsBug` pin turned round, and git history keeps the entries it removed. The
 entries still listed are of three kinds: those the fix stage left on purpose, each saying why and what is
 recommended, for the owner to decide (MAILLIST1, SERIES7, SCRIPT10, LUCENE-5, API3, SETTINGS-7, MSG6); the part of
-an entry the fix stage fixed only in part (MAILLIST2, DOMAIN2); and, under a line of their own at the end
+an entry the fix stage fixed only in part (DOMAIN2); and, under a line of their own at the end
 of the section, the faults the fix stage met on its way and did not fix. Paths are under `niord/src/main/java/`
 unless they say otherwise.
 
@@ -1962,29 +1967,6 @@ unless they say otherwise.
   needs a choice the entry leaves open (what 0 decimals prints, and how a refusal is shown when the directive
   turns its exceptions into an empty output and a warning in the log); recommended to decide with the next template
   that wants another precision.
-
-## MAILLIST2. Status-change mails ride a fire-and-forget topic, and a status change lost on the way leaves no record
-
-- **Location:** `MessageService.broadcastStatusUpdate` (a failed send logged only, "Failed sending JMS"); the
-  embedded Artemis, `persistent: false` (`config/niord-core-defaults.yml` 87); the three listeners' non-durable
-  subscriptions, opened at `ApplicationReadyEvent` and reopened by `org/niord/core/util/JmsTopicLoop.java`.
-- **Description:** status changes committed just before a restart, or before the non-durable subscriptions open at
-  `ApplicationReadyEvent`, are lost, and so are those broadcast while a listener waits to subscribe again after a
-  broker error. With the broker unreachable at publish, the warning is PUBLISHED and its mail is never made. The
-  rest of the entry was fixed on 2026-11-13 (the error hunt's fix stage): a failing status-change trigger leaves an
-  ERROR row in the Mail Queue (`MailingListExecutionService.recordStatusChangeTriggerFailure`), a trigger filter
-  that throws is an error (a read or call on null still reads as no match), and the three listener loops log one
-  ERROR and subscribe again (`JmsTopicLoop`).
-- **Why it looks wrong:** the message shows PUBLISHED or CANCELLED while the subscribers' mails (and a country's
-  coast-radio mail) were never made, and the Mail Queue cannot show the gap.
-- **Exposed by:** the error hunt of 2026-11-12, track C, read in the delivery path, then reproduced by track CT:
-  `MailingListDeliveryFaultITTest#aStatusChangeThatCannotReachTheBrokerIsLostWithoutARecord_documentsBug`. The loss
-  across a restart was not testable there. The tweet's side is PROM5; the reconnecting loop keeps
-  `TwitterMessageListener` alive, and the dropped `TwitterException` is still PROM5's.
-- **Severity:** Medium — rare (a restart, or a broker error, at the moment of a status change), but a lost mail is
-  silent. Fix: a durable outbox per status change, as SECOM has.
-- **Left by the fix stage (2026-11-13):** the outbox is a new table and a change of the delivery's semantics, which
-  the plan left to the owner; recommended as its own piece of work, modelled on SECOM's outbox.
 
 ## LUCENE-5. One message that throws stalls the free-text index for every later message
 

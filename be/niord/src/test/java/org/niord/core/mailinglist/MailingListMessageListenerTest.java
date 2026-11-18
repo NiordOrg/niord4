@@ -17,46 +17,52 @@ package org.niord.core.mailinglist;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.niord.core.mailinglist.MailingListStatusChangeOutbox.Claim;
 import org.niord.model.message.Status;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Framework-neutral unit tests for the dispatch logic of the message-status topic flow handled by
- * {@link MailingListMessageListener#checkStatusChangeMailingListExecution(String, Status)} — the method
- * the listener's JMS consumer loop invokes for every received status update.
+ * Framework-neutral unit tests for the dispatch logic of the status-change mails: the drain of the mailing lists'
+ * outbox ({@link MailingListMessageListener#drainOutbox()}, run on the JMS topic's prompt, by the sweep and at start)
+ * and {@link MailingListMessageListener#checkStatusChangeMailingListExecution(String, Status)}, which it runs for each
+ * outbox row.
  *
- * <p>They pin the contract: the listener looks up the status-change triggers for the broadcast status,
- * executes each of them for the broadcast message UID, and — crucially — keeps going when an individual
- * trigger execution fails (the per-trigger error is logged and recorded in the Mail Queue, so one bad trigger cannot
- * block the rest).
+ * <p>They pin the contract: every due row is taken in the outbox's order, its triggers are run and the row is
+ * deleted; a row whose triggers cannot be looked up keeps its error and is left for the next pass; the listener looks
+ * up the status-change triggers for the row's status, executes each of them for the row's message UID, and keeps going
+ * when an individual trigger execution fails (the per-trigger error is logged and recorded in the Mail Queue, so one
+ * bad trigger cannot block the rest), and the row is then deleted all the same.
  *
- * <p>No broker, database or Quarkus container is involved: the listener is exercised as a plain object
- * with hand-written recording {@link MailingListService} / {@link MailingListExecutionService} doubles
- * (the project uses no mocking framework). The surrounding {@code onMessage(...)} method and the live
- * consumer loop are out of scope here (see docs/untestable-code.md); the real broker delivery is covered
- * by {@code MessageStatusTopicITTest} / {@code MessageStatusPublishITTest}.
+ * <p>No broker or database is involved: the listener is exercised as a plain object with hand-written recording
+ * {@link MailingListService} / {@link MailingListExecutionService} / {@link MailingListStatusChangeOutbox} doubles.
+ * The live consumer loop is out of scope here (see docs/untestable-code.md); the real broker delivery is covered by
+ * {@code MessageStatusTopicITTest} / {@code MessageStatusPublishITTest}, and the outbox on the database by
+ * {@code MailingListDeliveryFaultITTest}.
  */
 public class MailingListMessageListenerTest {
 
     private RecordingMailingListService mailingListService;
     private RecordingMailingListExecutionService executionService;
+    private RecordingOutbox outbox;
     private MailingListMessageListener listener;
 
     @BeforeEach
     public void setUp() {
         mailingListService = new RecordingMailingListService();
         executionService = new RecordingMailingListExecutionService();
-        // PORT: the listener's collaborators are now `private final` and wired via a package-private
-        // constructor (constructor injection). We pass the recording doubles as the matching arguments
-        // and `null` for the ConnectionFactory the test never set (the old @Inject field was simply
-        // null, and the JMS consumer loop that uses it is out of scope here — see class javadoc).
-        listener = new MailingListMessageListener(mailingListService, executionService, null);
+        outbox = new RecordingOutbox();
+        // The listener's collaborators are wired via a package-private constructor. We pass the recording doubles
+        // and `null` for the ConnectionFactory, which only the JMS consumer loop uses (out of scope here).
+        listener = new MailingListMessageListener(mailingListService, executionService, outbox, null);
         // PORT: the listener's `log` is now `private static final` (Spring port) and can no longer
         // be replaced with a test logger. The per-trigger error is swallowed and only logged, so the
         // logger has no observable effect on the dispatch contract under test; we let the real logger
@@ -102,7 +108,7 @@ public class MailingListMessageListenerTest {
         assertEquals(Arrays.asList(1, 3), executionService.executedTriggerIds,
                 "trigger 2 failed, so only 1 and 3 completed");
         assertEquals(List.of("2:uid-3:simulated trigger failure for 2"), executionService.recordedFailures,
-                "the failure of trigger 2 is recorded with its message and cause (MAILLIST2)");
+                "the failure of trigger 2 is recorded in the Mail Queue with its message and cause");
     }
 
     @Test
@@ -118,6 +124,81 @@ public class MailingListMessageListenerTest {
     }
 
     // --------------------------------------------------------------------------------------------- //
+    // The outbox drain
+    // --------------------------------------------------------------------------------------------- //
+
+    /**
+     * The JMS topic's message is a prompt only: what is mailed comes from the outbox. Every due row is taken in the
+     * outbox's order, its triggers run for its message and status, and the row is deleted; the topic's message itself
+     * is not read (here it is null).
+     */
+    @Test
+    public void aJmsPromptDrainsEveryDueStatusChangeInIdOrder() {
+        mailingListService.triggers = triggers(10, 20);
+        outbox.due.add(new Claim(1, "uid-a", Status.PUBLISHED));
+        outbox.due.add(new Claim(2, "uid-b", Status.CANCELLED));
+
+        listener.onMessage(null);
+
+        assertEquals(List.of(Status.PUBLISHED, Status.CANCELLED), mailingListService.queriedStatuses,
+                "each row's triggers are looked up for its own status, in the outbox's order");
+        assertEquals(List.of("uid-a", "uid-a", "uid-b", "uid-b"), executionService.executedUids,
+                "each row's triggers run for its own message, in the outbox's order");
+        assertEquals(List.of(1L, 2L), outbox.completed, "each row is deleted once its triggers have run");
+        assertTrue(outbox.due.isEmpty(), "and the drain took every due row");
+        assertTrue(outbox.failures.isEmpty(), "with nothing failed: " + outbox.failures);
+    }
+
+    /**
+     * A row whose triggers cannot be looked up (the database is down) is not deleted: it keeps its error, is tried
+     * again when the lease taken with it runs out, and the pass stops, leaving the later rows for the next one.
+     */
+    @Test
+    public void aStatusChangeWhoseTriggerLookupFailsIsLeftForTheNextPass() {
+        mailingListService.failLookup = true;
+        outbox.due.add(new Claim(1, "uid-a", Status.PUBLISHED));
+        outbox.due.add(new Claim(2, "uid-b", Status.PUBLISHED));
+
+        assertEquals(0, listener.drainOutbox(), "no row's triggers were run");
+
+        assertEquals(1, outbox.failures.size(), "the failure is recorded on the row: " + outbox.failures);
+        assertTrue(outbox.failures.get(0).startsWith("1:") && outbox.failures.get(0).contains("simulated lookup failure"),
+                "on the row taken, with the cause: " + outbox.failures);
+        assertTrue(outbox.completed.isEmpty(), "the row is not deleted, so it is tried again");
+        assertEquals(1, outbox.due.size(), "and the pass stopped: the next row is left for the next pass");
+    }
+
+    /**
+     * A trigger that fails is recorded in the Mail Queue (its own ERROR record), and the row is deleted all the same:
+     * the record is the trigger's outcome, and taking the row again would repeat the mails of the triggers that worked.
+     */
+    @Test
+    public void aTriggerFailureStillCompletesTheStatusChange() {
+        mailingListService.triggers = triggers(1, 2);
+        executionService.failForTriggerId = 2;
+        outbox.due.add(new Claim(7, "uid-7", Status.PUBLISHED));
+
+        assertEquals(1, listener.drainOutbox());
+
+        assertEquals(List.of(1), executionService.executedTriggerIds);
+        assertEquals(1, executionService.recordedFailures.size(), "trigger 2's failure is recorded in the Mail Queue");
+        assertEquals(List.of(7L), outbox.completed, "and the row is deleted");
+        assertTrue(outbox.failures.isEmpty(), "the row itself did not fail: " + outbox.failures);
+    }
+
+    /** The per-minute sweep takes the rows no prompt came for, such as a row committed while the broker was down */
+    @Test
+    public void theSweepDrainsTheRowsTheTopicDidNotPromptFor() {
+        mailingListService.triggers = triggers(5);
+        outbox.due.add(new Claim(3, "uid-3", Status.CANCELLED));
+
+        listener.sweep();
+
+        assertEquals(List.of("uid-3"), executionService.executedUids);
+        assertEquals(List.of(3L), outbox.completed);
+    }
+
+    // --------------------------------------------------------------------------------------------- //
 
     private static List<MailingListTrigger> triggers(Integer... ids) {
         List<MailingListTrigger> list = new ArrayList<>();
@@ -129,10 +210,12 @@ public class MailingListMessageListenerTest {
         return list;
     }
 
-    /** Returns a preset trigger list and records the status it was queried with. */
+    /** Returns a preset trigger list and records the status it was queried with; can fail the lookup. */
     private static final class RecordingMailingListService extends MailingListService {
         List<MailingListTrigger> triggers = new ArrayList<>();
         Status queriedStatus;
+        final List<Status> queriedStatuses = new ArrayList<>();
+        boolean failLookup;
 
         // PORT: MailingListService now has only a constructor-injection constructor
         // (UserService, ContactService); the test never used those collaborators, so we
@@ -143,8 +226,39 @@ public class MailingListMessageListenerTest {
 
         @Override
         public List<MailingListTrigger> findStatusChangeTriggers(Status status) {
+            if (failLookup) {
+                throw new IllegalStateException("simulated lookup failure");
+            }
             this.queriedStatus = status;
+            this.queriedStatuses.add(status);
             return triggers;
+        }
+    }
+
+    /** An outbox of preset due rows, taken in order, which records the rows deleted and the failures recorded. */
+    static final class RecordingOutbox extends MailingListStatusChangeOutbox {
+        final Deque<Claim> due = new ArrayDeque<>();
+        final List<Long> completed = new ArrayList<>();
+        final List<String> failures = new ArrayList<>();
+
+        @Override
+        public void enqueue(String messageUid, Status status) {
+            throw new UnsupportedOperationException("the listener never writes a row");
+        }
+
+        @Override
+        public Optional<Claim> claimNextDue() {
+            return Optional.ofNullable(due.poll());
+        }
+
+        @Override
+        public void complete(long id) {
+            completed.add(id);
+        }
+
+        @Override
+        public void failed(long id, String error) {
+            failures.add(id + ":" + error);
         }
     }
 

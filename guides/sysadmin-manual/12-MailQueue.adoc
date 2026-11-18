@@ -41,6 +41,11 @@ starts "Not sent: mailing list", and names the list and either the message (a st
 (a scheduled trigger); its last error says why it failed. A scheduled trigger is tried again within the hour, and
 leaves at most one such mail a day while it keeps failing.
 
+Niord notes every status change of a message in its database, together with the change, until the mails of the
+status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts
+just after the change: at once when the server is up again, or within a minute. In rare cases, when the server stops
+while it is putting a status change's mails in the queue, some of them are put in twice.
+
 The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>):
 
 * `ALL` sends every mail.

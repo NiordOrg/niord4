@@ -34,7 +34,9 @@ import java.util.function.Consumer;
  * later status change was received until the application restarted.
  * <p>
  * The subscription is not durable: status changes broadcast while the listener is subscribing again are not
- * received (the topic is fire-and-forget; see MAILLIST2 in be/docs/potential-errors.md).
+ * received. The mailing lists do not depend on them (their outbox, {@code MailingListStatusChangeOutbox}, drained
+ * once a minute too), SECOM has its reconciliation sweep, and a tweet's status change is lost (PROM5 in
+ * be/docs/potential-errors.md).
  */
 public final class JmsTopicLoop {
 

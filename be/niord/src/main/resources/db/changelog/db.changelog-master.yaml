@@ -38,3 +38,6 @@ databaseChangeLog:
   - include:
       file: changes/V011__message_filter_parameters_text.sql
       relativeToChangelogFile: true
+  - include:
+      file: changes/V012__mailing_list_status_change.sql
+      relativeToChangelogFile: true

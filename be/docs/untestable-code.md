@@ -275,19 +275,24 @@ Behaviour that was deliberately left out of the service/REST `*ITTest`s added fo
   (`onMessage`).
 - **Why the *live async path* is hard to test:** `MailingListMessageListener` subscribes from
   `ApplicationReadyEvent` on a single-threaded executor and blocks in `consumer.receive()`; each received
-  message dispatches on that background thread. (The former unconditional `Thread.sleep(10000)` XA-workaround
+  message prompts a drain of the mailing lists' status-change outbox on that background thread. (The former unconditional `Thread.sleep(10000)` XA-workaround
   hack is **gone** — the broadcast is now deferred to after commit, see potential-errors.md JMS3.) Asserting
   the *end-to-end* live path — publish → background thread wakes → `executeStatusChangeTrigger` side effects —
   is still non-deterministic without an Awaitility poll, and the trigger side effects need a fully seeded
   mailing-list + trigger + recipients + Freemarker template. `TwitterMessageListener` is now wired the same
   self-subscribing way (JMS1 fixed), so it too receives broadcasts, but the same async-timing + seeding
   obstacles apply.
-- **What IS tested instead:** the *decode + dispatch logic* of both listeners is unit-tested directly and
-  framework-neutrally — `MailingListMessageListenerTest` calls `checkStatusChangeMailingListExecution(...)` with
-  recording service doubles (each trigger executed once for the message UID; a failing trigger does not abort
-  the rest), and `TwitterMessageListenerTest` calls `onMessage(...)` with a `FakeMapMessage` (only `PUBLISHED`
+- **What IS tested instead:** the *dispatch logic* of both listeners is unit-tested directly and
+  framework-neutrally — `MailingListMessageListenerTest` drains a recording outbox through `onMessage(...)`,
+  `drainOutbox()` and `sweep()`, and calls `checkStatusChangeMailingListExecution(...)` with recording service
+  doubles (every due outbox row taken in order and deleted after its triggers; a row whose triggers cannot be looked
+  up kept for the next pass; each trigger executed once for the message UID; a failing trigger does not abort the
+  rest), and `TwitterMessageListenerTest` calls `onMessage(...)` with a `FakeMapMessage` (only `PUBLISHED`
   promulgates; the UID is forwarded; malformed/non-`MapMessage` payloads are swallowed). The broker delivery
-  these methods consume is exercised separately (`MessageStatusTopicITTest`, `MessageStatusPublishITTest`).
+  these methods consume is exercised separately (`MessageStatusTopicITTest`, `MessageStatusPublishITTest`), and
+  the mailing lists' outbox on the database (`MailingListStatusChangeOutbox`: the row written with the status
+  change, mailed by a drain when the broker was down, gone with a rolled-back status change, held by its lease) by
+  `MailingListDeliveryFaultITTest`, whose status-change cases also run the live path end to end with Awaitility.
 - **What would make the live path testable:** publishing after commit is now done (JMS3), so a test could
   await the real delivery deterministically with Awaitility once the mailing-list + trigger + recipients +
   Freemarker seed is in place; migrating the ad-hoc consumer loops to Spring `@JmsListener` would remove the

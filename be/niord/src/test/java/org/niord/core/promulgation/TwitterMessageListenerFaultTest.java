@@ -28,9 +28,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * MAILLIST2 (iii) on the tweet's side: {@code TwitterMessageListener.run} had the same uncaught poll loop as the
- * mailing-list listener, submitted with its {@code Future} discarded. Written on 2026-11-12; a regression test of
- * the fix now. A tweet that X refuses is still lost (PROM5).
+ * The broker failure of the error hunt of 2026-11-12 on the tweet's side: {@code TwitterMessageListener.run} had the
+ * same uncaught poll loop as the mailing-list listener, submitted with its {@code Future} discarded. Written on
+ * 2026-11-12; a regression test of the fix now. A tweet that X refuses, or whose status change the topic lost, is
+ * still lost (PROM5).
  */
 class TwitterMessageListenerFaultTest {
 

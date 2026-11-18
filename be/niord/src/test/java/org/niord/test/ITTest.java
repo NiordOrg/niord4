@@ -71,7 +71,11 @@ import java.util.stream.Stream;
         "niord.schedule.auto-expire-cron=-",
         // The hourly firing-exercise run takes every active schedule in the database, and the firing tests
         // commit theirs; the tests call FiringExerciseService.updateFiringExercises(ids) themselves.
-        "niord.schedule.firing-exercise-cron=-"
+        "niord.schedule.firing-exercise-cron=-",
+        // The mailing lists' status-change outbox is one table for every application context of the run, and each
+        // context's sweep would take any context's rows, out of the order and the timing a test expects. Each context
+        // still drains it on its own JMS prompt and at start; the tests call drainOutbox() themselves.
+        "niord.mailinglist.status-change-sweep-cron=-"
 })
 public abstract class ITTest {
 

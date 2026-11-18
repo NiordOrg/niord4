@@ -233,10 +233,16 @@ tasks are never registered with the scheduler at all:
 @TestPropertySource(properties = {
         "niord.schedule.auto-publish-cron=-",
         "niord.schedule.auto-expire-cron=-",
-        "niord.schedule.firing-exercise-cron=-"
+        "niord.schedule.firing-exercise-cron=-",
+        "niord.mailinglist.status-change-sweep-cron=-"
 })
 public abstract class ITTest { … }
 ```
+
+The fourth line is of another kind: the mailing lists' status-change outbox sweep changes no message, but it takes
+the outbox rows of every application context of the run at once (`docs/test-infrastructure.md`, several
+application contexts). A context still drains the outbox on its own JMS prompt and at its start, and a test that
+needs a drain calls `MailingListMessageListener.drainOutbox()`.
 
 It lives on the base class rather than in an `application.yml` because that file is module-local — the
 niord-base one is excluded from the test-jar — while a country repository's ITs, and the country build group's ITs

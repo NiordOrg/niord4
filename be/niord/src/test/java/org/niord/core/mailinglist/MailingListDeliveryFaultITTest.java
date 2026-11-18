@@ -62,7 +62,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,13 +78,16 @@ import static org.mockito.Mockito.when;
 /**
  * Fault injection on the mailing-list delivery path: what is made, recorded or sent when a step between a status
  * change (or a schedule) and the subscribers' mail fails: a status-change trigger whose template or filter fails, the
- * broker that cannot be reached (MAILLIST2 in be/docs/potential-errors.md), a scheduled trigger whose reschedule
- * or run fails, and a scheduled trigger whose search fails, which fails the trigger rather than mail an empty list.
+ * broker that cannot be reached (the status change is kept in the mailing lists' outbox and mailed from there), a
+ * rolled-back status change, the outbox's lease, a scheduled trigger whose reschedule or run fails, and a scheduled
+ * trigger whose search fails, which fails the trigger rather than mail an empty list.
  *
  * <p>The status-change cases publish a committed message and let the real listener ({@code MailingListMessageListener}
- * on the embedded broker) execute the committed triggers; each trigger's message filter names the test's own message,
- * so a publication elsewhere in the run makes no mail. The scheduled cases run the real per-minute scheduler. The
- * mailing lists, contacts and messages are removed afterwards.
+ * on the embedded broker, prompted by the status topic) drain the outbox and execute the committed triggers, or drain
+ * it themselves, as the start and the per-minute sweep do (the sweep is switched off in the suite, see
+ * {@code ITTest}); each trigger's message filter names the test's own message, so a publication elsewhere in the run
+ * makes no mail. The scheduled cases run the real per-minute scheduler. The mailing lists, contacts, messages and
+ * outbox rows are removed afterwards.
  */
 class MailingListDeliveryFaultITTest extends ITTest {
 
@@ -105,9 +111,17 @@ class MailingListDeliveryFaultITTest extends ITTest {
     @Autowired
     ScriptResourceService resourceService;
 
+    @Autowired
+    MailingListMessageListener listener;
+
+    @Autowired
+    MailingListStatusChangeOutbox outbox;
+
     @PersistenceContext
     EntityManager em;
 
+    /** The UIDs whose outbox rows are removed afterwards: the test's messages', and the made-up ones */
+    private final List<String> outboxUids = new ArrayList<>();
     private final List<Integer> mailingListIds = new ArrayList<>();
     private final List<Integer> contactIds = new ArrayList<>();
     private final List<String> messageUids = new ArrayList<>();
@@ -121,6 +135,15 @@ class MailingListDeliveryFaultITTest extends ITTest {
 
     @AfterEach
     void cleanup() {
+        // First, so no drain runs the triggers of a message removed below
+        List<String> rowUids = new ArrayList<>(messageUids);
+        rowUids.addAll(outboxUids);
+        for (String uid : rowUids) {
+            bestEffort(() -> em.createNativeQuery(
+                            "DELETE FROM public.\"MailingListStatusChange\" WHERE \"messageUid\" = :uid")
+                    .setParameter("uid", uid).executeUpdate());
+        }
+        outboxUids.clear();
         for (Integer id : mailingListIds) {
             bestEffort(() -> {
                 MailingList ml = em.find(MailingList.class, id);
@@ -298,6 +321,14 @@ class MailingListDeliveryFaultITTest extends ITTest {
                 .setParameter("s", subject).getSingleResult());
     }
 
+    /** The statuses of the outbox rows of the given message, in the order they were written */
+    private List<String> outboxRows(String uid) {
+        return Tx.requiringNew().call(() -> em.createNativeQuery(
+                        "SELECT status FROM public.\"MailingListStatusChange\" WHERE \"messageUid\" = :uid ORDER BY id",
+                        String.class)
+                .setParameter("uid", uid).getResultList());
+    }
+
     /** The subject prefix of the failure records of the test list {@code IT-MLFAULT-<n>} */
     private static String errorRecordPrefix(String n) {
         return "Not sent: mailing list IT-MLFAULT-" + n + ",";
@@ -318,11 +349,11 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // MAILLIST2: a status-change trigger whose template fails
+    // A status-change trigger whose template fails
     // ------------------------------------------------------------------------------------------- //
 
     /**
-     * MAILLIST2 (i). Two status-change triggers on one list fire for the same publication: one whose template does not
+     * Two status-change triggers on one list fire for the same publication: one whose template does not
      * exist, one with a working template. The working one's mail is queued (the listener did process the event). The
      * failing one used to be logged at ERROR and leave nothing, so the Mail Queue page could not show that a
      * subscriber's mail was due. Now it leaves one {@code ScheduledMail} in status ERROR, never sent, that names the
@@ -331,10 +362,10 @@ class MailingListDeliveryFaultITTest extends ITTest {
     @Test
     void aStatusChangeTriggerWhoseTemplateFailsLeavesAnErrorRecordInTheMailQueue() {
         String n = Long.toString(System.nanoTime(), 36);
-        String uid = committedDraft("IT maillist2 " + n);
+        String uid = committedDraft("IT status template " + n);
         Integer list = committedListWithOneContact(n);
-        String failingSubject = "IT-MAILLIST2-FAIL-" + n;
-        String workingSubject = "IT-MAILLIST2-OK-" + n;
+        String failingSubject = "IT-STATUS-TEMPLATE-FAIL-" + n;
+        String workingSubject = "IT-STATUS-TEMPLATE-OK-" + n;
         addStatusChangeTrigger(list, failingSubject, "templates/mailinglist/it-no-such-template-" + n + ".ftl", uid);
         addStatusChangeTrigger(list, workingSubject, IT_TEMPLATE, uid);
 
@@ -359,16 +390,16 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     /**
-     * MAILLIST2 (ii) end to end. A status-change trigger whose message filter throws for the published warning (a
+     * A filter that throws, end to end. A status-change trigger whose message filter throws for the published warning (a
      * Java exception from a method the filter calls) used to read as "no match" with nothing logged. Now the trigger
      * fails with the filter named, and its failure is recorded in the Mail Queue in status ERROR.
      */
     @Test
     void aStatusChangeTriggerWhoseFilterThrowsLeavesAnErrorRecord() {
         String n = Long.toString(System.nanoTime(), 36);
-        String uid = committedDraft("IT maillist2 filter " + n);
+        String uid = committedDraft("IT status filter " + n);
         Integer list = committedListWithOneContact(n);
-        String subject = "IT-MAILLIST2-FILTER-" + n;
+        String subject = "IT-STATUS-FILTER-" + n;
         String filter = "msg.getUid() == '" + uid + "' && msg.getAreas().get(0).getId() > 0";
         addFilteredStatusChangeTrigger(list, subject, IT_TEMPLATE, filter, Status.PUBLISHED);
 
@@ -388,20 +419,25 @@ class MailingListDeliveryFaultITTest extends ITTest {
     // The broker down at publish
     // ------------------------------------------------------------------------------------------- //
 
+    /** The listener's drain lock: held by a test, no drain of this context takes a row (the test's own drains do) */
+    private ReentrantLock drainLock() {
+        Object target = AopTestUtils.getUltimateTargetObject(listener);
+        return (ReentrantLock) ReflectionTestUtils.getField(target, "drainLock");
+    }
+
     /**
-     * MAILLIST2, the broker: the status topic cannot be reached when the publication commits (here the connection
-     * factory throws {@link JMSRuntimeException}, as it does when the embedded broker is stopping or out of memory).
-     * {@code MessageService.broadcastStatusUpdate} 738-744 logs the failure after the commit; the warning is
-     * PUBLISHED, and the subscribed mailing list's mail is never made, with nothing to retry it.
+     * The broker down at publish: the status topic cannot be reached when the publication commits (here the connection
+     * factory throws {@link JMSRuntimeException}, as it does when the embedded broker is stopping or out of memory), so
+     * no listener hears of the status change, as of one committed just before a restart. The error hunt of 2026-11-12
+     * pinned what followed: the warning PUBLISHED, its subscribers' mail never made, and nothing to retry it.
      *
-     * <p>What is wrong: the publication succeeds while its delivery is lost, and no screen shows it. The right
-     * assertion: the status change is kept for a later delivery (an outbox), or a record of the failed broadcast
-     * exists; the mail is queued once the broker is back. NB: the pin counts the first warning's mail rows, so it
-     * flips for the outbox form of the fix; a fix that only records the failed broadcast must add an assertion on
-     * that record.
+     * <p>Now each status change leaves a row in the mailing lists' outbox, committed with it: here two, VERIFIED and
+     * PUBLISHED. The next drain (at start, by the per-minute sweep or on the next status change's prompt; here the
+     * test's own) makes the mail and deletes both rows, the VERIFIED one with no trigger to run, and a second drain
+     * makes no second mail. FAILS on the code before the outbox: no row is written, and no drain makes the mail.
      */
     @Test
-    void aStatusChangeThatCannotReachTheBrokerIsLostWithoutARecord_documentsBug() throws Exception {
+    void aStatusChangeThatCannotReachTheBrokerIsStillMailed() {
         String n = Long.toString(System.nanoTime(), 36);
         String uid = committedDraft("IT broker down " + n);
         Integer list = committedListWithOneContact(n);
@@ -412,28 +448,102 @@ class MailingListDeliveryFaultITTest extends ITTest {
         when(broken.createContext(anyInt())).thenThrow(new JMSRuntimeException("IT: the broker cannot be reached"));
         Object target = AopTestUtils.getUltimateTargetObject(messageService);
         Object realFactory = ReflectionTestUtils.getField(target, "connectionFactory");
-        ReflectionTestUtils.setField(target, "connectionFactory", broken);
+        ReentrantLock drains = drainLock();
+        drains.lock();
         try {
-            publish(uid);
+            ReflectionTestUtils.setField(target, "connectionFactory", broken);
+            try {
+                publish(uid);
+            } finally {
+                ReflectionTestUtils.setField(target, "connectionFactory", realFactory);
+            }
+
+            assertEquals(Status.PUBLISHED, Tx.requiringNew().call(() -> messageQueryService.findByUid(uid).getStatus()),
+                    "the publication itself succeeded");
+            assertEquals(List.of("VERIFIED", "PUBLISHED"), outboxRows(uid),
+                    "both status changes are kept in the outbox, though no listener heard of them");
+            assertEquals(0, mailsWithSubject(subject), "and no mail is made yet");
+
+            assertTrue(listener.drainOutbox() >= 2, "the drain takes both rows");
+            assertEquals(1, mailsWithSubject(subject), "the next drain makes the subscribers' mail");
+            assertEquals(ScheduledMail.Status.PENDING, mailStatus(subject), "queued to be sent");
+            assertEquals(List.of(), outboxRows(uid), "and deletes both rows");
+
+            listener.drainOutbox();
+            assertEquals(1, mailsWithSubject(subject), "a second drain makes no second mail");
         } finally {
-            ReflectionTestUtils.setField(target, "connectionFactory", realFactory);
+            drains.unlock();
         }
+    }
 
-        assertEquals(Status.PUBLISHED, Tx.requiringNew().call(() -> messageQueryService.findByUid(uid).getStatus()),
-                "the publication itself succeeded");
+    /**
+     * The outbox row is written in the status change's own transaction: a publication whose transaction rolls back
+     * after the status change (here the test throws) leaves no row, and no drain mails a warning that was never
+     * published. Would fail if the row were written in a transaction of its own.
+     */
+    @Test
+    void aRolledBackStatusChangeLeavesNoOutboxRowAndNoMail() {
+        String n = Long.toString(System.nanoTime(), 36);
+        String uid = committedDraft("IT rolled back " + n);
+        Integer list = committedListWithOneContact(n);
+        String subject = "IT-ROLLED-BACK-" + n;
+        addStatusChangeTrigger(list, subject, IT_TEMPLATE, uid);
 
-        // Control, with the broker back: a second warning on the same list is published and its mail is made, so the
-        // listener is alive and the list delivers, and the first warning's missing mail is the lost event. Without
-        // it this test passed for any reason the listener made no mail at all; the single
-        // listener thread handles the events in order, so the first one's mail would exist by now.
-        String control = committedDraft("IT broker back " + n);
-        String controlSubject = "IT-BROKER-BACK-" + n;
-        addStatusChangeTrigger(list, controlSubject, IT_TEMPLATE, control);
-        publish(control);
-        Awaitility.await().atMost(Duration.ofSeconds(30)).pollInterval(Duration.ofMillis(300))
-                .until(() -> mailsWithSubject(controlSubject) == 1);
-        assertEquals(0, mailsWithSubject(subject),
-                "the subscribers' mail was never made, and nothing will make it later");
+        IllegalStateException failure = assertThrows(IllegalStateException.class, () -> Tx.requiringNew().run(() -> {
+            messageService.updateStatus(uid, Status.VERIFIED);
+            messageService.updateStatus(uid, Status.PUBLISHED);
+            throw new IllegalStateException("IT: the publication's transaction fails after the status change");
+        }));
+        assertTrue(failure.getMessage().startsWith("IT:"), failure.getMessage());
+
+        assertEquals(Status.DRAFT, Tx.requiringNew().call(() -> messageQueryService.findByUid(uid).getStatus()),
+                "the publication rolled back");
+        assertEquals(List.of(), outboxRows(uid), "and so did its outbox rows");
+        listener.drainOutbox();
+        assertEquals(0, mailsWithSubject(subject), "no drain mails a status change that was rolled back");
+    }
+
+    /**
+     * A row taken for its triggers is out of every other drain's reach until its lease ends (two backends on one
+     * database take different rows), and due again after it, when its run failed or its backend stopped. The row is
+     * made with the outbox alone, for a made-up message, so no prompt drains it; the context's own drains are held off
+     * by its drain lock, and every row due before it is taken first, so the first take is this row's.
+     */
+    @Test
+    void aClaimedStatusChangeIsNotClaimedAgainBeforeItsLeaseEnds() {
+        String uid = UUID.randomUUID().toString();
+        outboxUids.add(uid);
+        Object target = AopTestUtils.getUltimateTargetObject(outbox);
+        Duration lease = (Duration) ReflectionTestUtils.getField(target, "claimLease");
+        ReentrantLock drains = drainLock();
+        drains.lock();
+        try {
+            listener.drainOutbox();
+            Tx.requiringNew().run(() -> outbox.enqueue(uid, Status.DRAFT));
+            long id = Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
+                            "SELECT id FROM public.\"MailingListStatusChange\" WHERE \"messageUid\" = :uid")
+                    .setParameter("uid", uid).getSingleResult()).longValue());
+            ReflectionTestUtils.setField(target, "claimLease", Duration.ofSeconds(2));
+
+            Optional<MailingListStatusChangeOutbox.Claim> first = outbox.claimNextDue();
+            assertEquals(Optional.of(new MailingListStatusChangeOutbox.Claim(id, uid, Status.DRAFT)), first,
+                    "the row is taken");
+            assertTrue(outbox.claimNextDue().isEmpty(), "and not taken again while its lease runs");
+
+            Optional<MailingListStatusChangeOutbox.Claim> again = Awaitility.await().atMost(Duration.ofSeconds(15))
+                    .pollInterval(Duration.ofMillis(250))
+                    .until(outbox::claimNextDue, Optional::isPresent);
+            assertEquals(id, again.orElseThrow().id(), "it is due again once the lease ran out");
+            assertEquals(2, Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
+                            "SELECT attempts FROM public.\"MailingListStatusChange\" WHERE id = :id")
+                    .setParameter("id", id).getSingleResult()).intValue()), "taken twice");
+
+            outbox.complete(id);
+            assertEquals(List.of(), outboxRows(uid), "a completed row is deleted");
+        } finally {
+            ReflectionTestUtils.setField(target, "claimLease", lease);
+            drains.unlock();
+        }
     }
 
     // ------------------------------------------------------------------------------------------- //
@@ -444,9 +554,10 @@ class MailingListDeliveryFaultITTest extends ITTest {
      * A status-change trigger whose filter names one warning mails for that warning and for no other: a second
      * warning published after it on the same topic makes no mail. The pins above each publish only the message
      * their trigger names, so a trigger that ignored its filter and mailed every publication passed them (detector
-     * check MC, M15). The listener is one thread reading the topic in order; the last event is a sentinel warning's
-     * CANCELLED, which only the sentinel trigger (on CANCELLED) answers, so once its mail exists every publication
-     * before it has been handled.
+     * check MC, M15). The listener drains the outbox one row at a time, in the order the rows were written (the suite
+     * switches the per-minute sweep off, so only this context's drain takes them); the last row is a sentinel
+     * warning's CANCELLED, which only the sentinel trigger (on CANCELLED) answers, so once its mail exists every
+     * publication before it has been handled.
      */
     @Test
     void aStatusChangeTriggerMailsTheWarningItsFilterNamesAndNoOther() {
