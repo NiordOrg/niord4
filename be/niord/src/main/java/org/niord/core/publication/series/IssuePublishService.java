@@ -1197,7 +1197,8 @@ public class IssuePublishService extends BaseService {
         // next day in Copenhagen, so the zone decides which day a heading names --
         // and the alternative is the request's current domain, which is the
         // publishing user's desk on a manual release and nothing at all on an
-        // unattended one, where the container's zone would answer instead.
+        // unattended one, where the container's zone would answer instead. The
+        // renderer applies it to the rendering, not only as a template value.
         params.put("timeZone", series.cutoffZone().getId());
         params.put("week", PrintedNumbering.printedWeek(issue));
         params.put("weekTo", PrintedNumbering.printedWeekTo(issue));

@@ -376,6 +376,14 @@ public class IssueRenderService {
 
             if (request.reportParams() != null) {
                 builder = builder.data(request.reportParams());
+                // The zone the document is dated in: the series' (IssuePublishService puts it there).
+                // Carried as data it reached only the templates that set it themselves; applied here,
+                // every date the template prints -- the cover date and each notice's publication
+                // date -- is in that zone, whatever template row the deployment draws.
+                Object zone = request.reportParams().get(FmTemplateService.TIME_ZONE_PROPERTY);
+                if (zone != null) {
+                    builder = builder.timeZone(zone.toString());
+                }
             }
 
             builder.dictionaryNames("web", "message", "pdf")

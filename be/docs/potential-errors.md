@@ -1388,24 +1388,6 @@ was changed in production code.
   let a released document be verified against its record, or tell two generations apart without reading the archive,
   are permanently NULL.
 
-## RENDER5. A publication issue hands its template the series' zone, but only the accumulated template prints in it
-
-- **Location:** `org/niord/core/publication/series/IssuePublishService` (puts `timeZone`, the series' cut-off zone,
-  into the report params) and `IssueRenderService.renderTo`, which passes it on as template data only; the shipped
-  `nm-report-pdf.ftl`, `nm-tp-report-pdf.ftl`, `nm-almanac-report-pdf.ftl`, `nm-annex-report-pdf.ftl`,
-  `fa-list-pdf.ftl` and `message-support.ftl` never `<#setting time_zone>`.
-- **Description:** the value reaches the date-interval directives, but the cover date (`.now?string[...]`) and each
-  message's publication date (`publishDateFrom?string(...)` in `message-support.ftl`) are formatted in FreeMarker's
-  zone, which is the JVM's. The runtime image sets no zone, so a weekly issue prints UTC dates, and a notice
-  published in the first hour or two of a Copenhagen day carries the day before. `nm-accumulated-report-pdf.ftl`
-  applies the zone itself and is unaffected.
-- **Why it looks wrong:** `IssuePublishService` puts the zone there so that the document's dates follow the series'
-  desk rather than the container, and these templates are the rows each deployment keeps in its database (templates
-  are data since C4.2a), which a change to the bootstrap's files never reaches. `FmTemplateBuilder.timeZone(String)` applies a zone to the
-  rendering itself, whatever the template; the message-report endpoints use it.
-- **Exposed by:** reading the render path while dating the public site's print PDFs in the domain's zone; not by a
-  test.
-
 ## NAMING-1. A release more than two periods late names its issue for the closing weeks and drops a fully covered week
 
 - **Location:** `org/niord/core/publication/series/resolve/IssueNaming.java` (`periods = floor(days / 7.0 + 0.25)`,
