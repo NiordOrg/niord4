@@ -96,8 +96,8 @@ The old two dialogs for choosing and running message templates are gone. Choosin
 the start screen, or _Run template…_ in the _Categories_ field of an open message, opens the page
 _Execute templates_. There you pick templates in a _Select templates_ panel, which shows an example
 when you point at a template, fill in the _Base fields_ and the _Template parameters_, and watch a
-preview of the result as you type. _Execute_ replaces the whole message and opens it, unsaved, for
-editing. See
+preview of the result as you type. _Execute_ lets the templates fill in their fields again, keeps
+the rest of the message as it was on the page, and opens it, unsaved, for editing. See
 link:../editor-manual/manual.html#message-template-execution[Message Template Execution] in the
 editor manual.
 
