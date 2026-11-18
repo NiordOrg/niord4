@@ -522,12 +522,13 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   `smtp.host`, `smtp.port` (587 for STARTTLS, 465 for implicit TLS), `smtp.existingSecret` and
   `smtp.tls` (`starttls` or `ssl`). With `starttls` a relay that stops offering STARTTLS fails
   the mail instead of receiving the login in clear text. With `smtp.tls: none`, the default, a
-  login from `smtp.existingSecret` is sent in clear text, and neither the render nor the app says
-  so: leave it `none` only for a relay reached over a trusted network. The backend reads
-  `niord.smtp.username`, `.password` and `.tls` only from the base version whose mail session
-  (`MailConfig`) carries the login and TLS; an older app image ignores them and sends with no
-  login and in clear text, and nothing reports it. Set these values only with an app image of
-  that version or later.
+  login from `smtp.existingSecret` is sent in clear text; the render does not say so, and the
+  app only logs a WARN at its start ("The mail login (niord.smtp.username) is sent to the relay
+  without TLS …"): leave it `none` only for a relay reached over a trusted network. The backend
+  reads `niord.smtp.username`, `.password` and `.tls` only from the base version whose mail
+  session (`MailConfig`) carries the login and TLS; an older app image ignores them and sends
+  with no login and in clear text, and nothing reports it. Set these values only with an app
+  image of that version or later.
 - Health probes use the Spring Boot liveness/readiness groups at
   `/rest/actuator/health/{liveness,readiness}` (the actuator base-path is `/rest/actuator`).
 - **`enableServiceLinks: false`** on the app pod — otherwise Kubernetes injects legacy
