@@ -4,12 +4,13 @@ End-to-end scenarios of a duty officer's working day, through the screens, again
 product's **sample deployment**. Each scenario writes data: it makes messages, mailing lists,
 schedules and publications, so the scenarios are opt-in, and they never run in CI.
 
-| File                         | Scenario                                                                                                   |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `nw-warning.spec.ts`         | A navigational warning from a template: saved, edited, verified, published, read everywhere, cancelled.    |
-| `nm-notice.spec.ts`          | A notice to mariners with several parts, positions and attachments: saved, edited, published, read back.   |
-| `firing-schedule.spec.ts`    | The firing schedule: periods entered, the exercises generated, a period changed and the warning following. |
-| `weekly-publication.spec.ts` | A weekly publication: created, an issue published, amended, and what the public side serves.               |
+| File                         | Scenario                                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `nw-warning.spec.ts`         | A navigational warning from a template: saved, edited, verified, published, read everywhere, cancelled.     |
+| `nm-notice.spec.ts`          | A notice to mariners with several parts, positions and attachments: saved, edited, published, read back.    |
+| `firing-schedule.spec.ts`    | The firing schedule: periods entered, the exercises generated, a period changed and the warning following.  |
+| `weekly-publication.spec.ts` | A weekly publication: created, an issue published, amended, and what the public side serves.                |
+| `keyboard-publish.spec.ts`   | A warning written, saved, verified and published with the keyboard alone; its overlays scanned by axe-core. |
 
 After every step that saves, a scenario compares what the screen shows with what the admin API
 holds and, where the step is public, what the public API, the public site, the PDF and the mail
@@ -122,6 +123,9 @@ the end:
   published firing area messages and the days around the browser's today (one day before to six
   after), clears those days before it starts and when it ends, and updates the exercises, so the
   run's last warning is cancelled. Its warnings stay, cancelled, as the run's record.
+- `keyboard-publish.spec.ts` leaves its warning, titled `<marker> keyboard walk` and with the vicinity
+  `<marker> keyboard harbour`, cancelled at the end through the admin API, as the run's record. It
+  makes nothing else: the series, the area and the category are the sample's.
 - `weekly-publication.spec.ts` leaves two published notices to mariners titled with the marker
   (one dated a day back, into the released week), and a weekly series `E2E weekly <marker>`,
   retired at the end. Its first issue stays published and public, with its document at its link
@@ -134,7 +138,8 @@ what it left switched on, and the report names each with a `tidy` line: `nw-warn
 switches off every `e2e-nw-<marker>` list still on and cancels every warning still published whose
 vicinity carries a marker; `weekly-publication.spec.ts` retires every `e2e-weekly-<marker>` series
 still active; `firing-schedule.spec.ts` clears its days before it starts and switches the schedule
-off when it ends.
+off when it ends; `keyboard-publish.spec.ts` cancels every warning still published whose vicinity is
+a marker and `keyboard harbour`.
 
 `./start-local.sh --sample --reset` starts the sample afresh.
 
@@ -145,6 +150,16 @@ A product fault a scenario meets is marked where it shows with `knownFault(code,
 passes with a `known-fault` annotation in the report; once it is fixed, the test fails and asks for
 the mark to be removed. `code` names the record in `be/docs/potential-errors.md` or
 `fe/docs/backlog.md`; `pending: <title>` is a fault not yet filed.
+
+## The keyboard walk
+
+`keyboard-publish.spec.ts` is the administration app's keyboard check: after its one page load it
+presses keys only, asserts after every step which control has the focus and that the focus shows,
+and reads the published warning back through the admin API. Each overlay it opens is scanned with
+axe-core against the list of known violations, `../a11y/known-violations.json`; the route scan
+beside it, `../a11y-routes.spec.ts`, runs with `E2E_A11Y=1` on the same stack
+([testing.md](../../../../docs/testing.md)). A control the keyboard cannot reach or operate is a
+`knownFault`, and the walk then goes on the nearest way the keyboard still allows.
 
 ## Support
 

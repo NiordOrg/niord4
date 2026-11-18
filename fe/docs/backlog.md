@@ -615,6 +615,31 @@ Background: [`features/editor.md`](features/editor.md).
   `<div><!-- c --><p>x</p></div>` (pasted Word HTML can hold such comments) comes out with `undefined` in place
   of the comment. Writing a comment node as `<!--…-->`, or dropping it, closes it. Met by the error hunt's phase 2
   fix stage (2026-11-16, cluster P3-11), read in the code; Low.
+- **The date picker's calendar does not take focus when it opens** (WCAG 2.4.3). Enter on a date field opens the
+  calendar (`ui-apps/admin/src/app/shared/forms/date-picker/date-picker.ts`, `toggle`) and leaves the focus on the
+  field. The calendar is drawn in the overlay container at the end of the page, so Tab reaches its days only after
+  every other control of the form (twelve presses from the editor's _Follow-up date_). Once there, the arrow keys
+  move between the days and Enter picks one and returns the focus to the field, as it should. Moving the focus to
+  the roving day when the calendar opens closes it; the time field's popover is built the same way. Found by the
+  first accessibility pass of the administration app (the keyboard walk, 2026-11-18).
+- **The autocomplete and select buttons that remove a value do nothing from the keyboard** (WCAG 2.1.1). A chip's
+  remove button and the clear button of the shared autocomplete, and the clear button of the shared select, are
+  focusable buttons that act on `mousedown` only (`shared/forms/autocomplete/autocomplete.html`,
+  `shared/forms/select/select.html`): Tab reaches them and Enter or Space does nothing. Backspace in an empty
+  autocomplete removes its last chip, so a value can still be removed from the keyboard, but not the one the
+  focused button names. A `click` handler beside the `mousedown` one (the `mousedown` keeps the input's focus for a
+  pointer) closes it. Found by the first accessibility pass of the administration app (the keyboard walk,
+  2026-11-18).
+- **The status flow's steps not yet reached are drawn far under 4.5:1** (WCAG 1.4.3). The editor's status flow
+  (the Draft, Verified and Published steps beside the live preview) dims the steps a message has not reached with
+  `opacity-40` and `opacity-55` over `text-fg-subtle`: 1.66:1 and 2.07:1 on the preview's background. The steps are
+  text, not inactive controls, so the exception for those does not apply. A colour that holds 4.5:1, with the
+  current step told apart by weight or a mark, closes it. Found by the first accessibility pass of the
+  administration app (the axe-core scan, 2026-11-18).
+- **The progress bar has no accessible name** (WCAG 4.1.2). The shared `app-progress-bar`
+  (`shared/components/progress-bar/progress-bar.html`) is a `role="progressbar"` with no `aria-label`; axe-core
+  flags it while a page loads (seen on the editor's new-message form). The existing `common.loading` text as its
+  name closes it. Found by the first accessibility pass of the administration app (the axe-core scan, 2026-11-18).
 
 ### Admin and sysadmin
 
@@ -757,6 +782,21 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   keeps its old status and buttons until the operator presses _Refresh_. Nothing is sent again or cancelled.
   Refreshing the outbox in both error branches, as the success branches do, closes it. Met by the check of the
   error hunt's phase 2 fix stage (2026-11-16, cluster P1-19), read in the code; Low.
+- **The publications page's New button is named for something else** (WCAG 2.5.3). The menu trigger reads "New"
+  and is named "Create a publication" (`admin.publications.new.aria`, set as its `ariaLabel` in
+  `features/admin/sections/admin/publications/publications-page.html`), so a person who speaks the label they see
+  to voice control does not reach it. Leaving out the `ariaLabel`, or a name that starts with the visible word,
+  closes it. Found by the first accessibility pass of the administration app (the axe-core scan, 2026-11-18).
+- **A mailing list's recipient count is named without the count** (WCAG 2.5.3). The button in the mailing lists'
+  table shows the number of recipients and is named "Manage recipients"
+  (`features/admin/sections/admin/mailing-lists/mailing-lists-page.html`), so the number it shows is not in its
+  name. A name that holds the number (a new text with a `count` parameter) closes it. Found by the first
+  accessibility pass of the administration app (the axe-core scan, 2026-11-18).
+- **The script resources' type badges are under 4.5:1** (WCAG 1.4.3). The `fm` badge of the script resources'
+  table draws the accent on an accent tint, 3.59:1 with the default tokens, and the `js` badge the warning colour
+  on its tint (`.is-script-fm` and `.is-script-js` in `ui-apps/admin/src/styles/components-admin.css`). A darker
+  text colour mixed off the same token closes it; a country's own accent changes the figure. Found by the first
+  accessibility pass of the administration app (the axe-core scan, 2026-11-18).
 
 ### Schedule
 
@@ -811,7 +851,9 @@ Background: [`styling-reference.md`](styling-reference.md).
   (`styles/components-core.css`). The brief tells a designer to meet 4.5:1 there too and calls the default's
   figure a known gap. Fix: a darker default (`#5f6d80` measures 5.27:1, 4.86:1 and 4.99:1 on the three) and the
   floor widened to the three backgrounds. Found by the design route of the country guides'
-  verification (2026-10-26).
+  verification (2026-10-26). The first accessibility pass of the administration app (2026-11-18) meets it on the
+  editor's "All changes saved" (4.33:1 on `--niord-bg`), the live preview's heading and an area's parent in the
+  area list (4.45:1 on the sunken fill); they are on its list of known violations.
 
 ### Quality gates and tooling
 
@@ -829,8 +871,9 @@ Background: [`testing.md`](testing.md).
   instance a `prepare` of `cd .. && husky fe/.husky`, and the hook then has to `cd fe` before `npx lint-staged`,
   since git runs hooks at the repository root. Tooling only; nothing in production depends on it.
 - No accessibility check runs in CI. The only automated check there is the Angular template accessibility lint
-  rule set. The public site has an axe-core scan as a manual tool, `npm run a11y:info` (see
-  [testing.md](testing.md)), which no workflow runs; the administration app has none.
+  rule set. Both applications have an axe-core scan as a manual tool, run by no workflow (see
+  [testing.md](testing.md)): the public site's `npm run a11y:info`, and the administration app's
+  `a11y-routes.spec.ts` and keyboard walk in the end-to-end suite, against the sample deployment.
 - The Playwright suite is excluded from CI by design — it needs a live backend and Keycloak — so nothing runs it
   on a push. It is a local, deliberate step.
 - The Playwright suite cannot pass against the local stack `start-local.sh` starts, which is why it is documented

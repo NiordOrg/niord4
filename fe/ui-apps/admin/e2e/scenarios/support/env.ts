@@ -111,7 +111,15 @@ export function describeScenario(title: string, body: () => void): void {
   });
 }
 
-async function expectSampleDeployment(request: APIRequestContext, baseURL: string): Promise<void> {
+/**
+ * Fails unless the backend behind `baseURL` holds the sample deployment in a mode other than
+ * production. The scenarios call it before they write; the accessibility scan, whose list of known
+ * violations is the sample's, before it scans.
+ */
+export async function expectSampleDeployment(
+  request: APIRequestContext,
+  baseURL: string,
+): Promise<void> {
   const notSample = `the backend at ${baseURL} does not hold the sample deployment; the scenarios write data and run only there`;
 
   const settings = await request.get('/rest/settings/web');

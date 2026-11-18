@@ -1,0 +1,80 @@
+{
+  "/editor/edit (new)": [
+    {
+      "rule": "color-contrast",
+      "target": "li:nth-child(*) > .opacity-*.gap-1\\.5.flex > .font-medium.text-fg-subtle.text-xs",
+      "record": "fe/docs/backlog.md: The status flow's steps not yet reached are drawn far under 4.5:1"
+    },
+    {
+      "rule": "color-contrast",
+      "target": ".tracking-wide > span",
+      "record": "fe/docs/backlog.md: The default --niord-fg-subtle is below AA off --niord-surface"
+    }
+  ],
+  "/editor/edit/<id>": [
+    {
+      "rule": "color-contrast",
+      "target": "li:nth-child(*) > .opacity-*.gap-1\\.5.flex > .font-medium.text-fg-subtle.text-xs",
+      "record": "fe/docs/backlog.md: The status flow's steps not yet reached are drawn far under 4.5:1"
+    },
+    {
+      "rule": "color-contrast",
+      "target": ".tracking-wide > span",
+      "record": "fe/docs/backlog.md: The default --niord-fg-subtle is below AA off --niord-surface"
+    },
+    {
+      "rule": "color-contrast",
+      "target": ".gap-1\\.5.text-fg-subtle.text-sm",
+      "record": "fe/docs/backlog.md: The default --niord-fg-subtle is below AA off --niord-surface"
+    }
+  ],
+  "/editor/status/<id>": [
+    {
+      "rule": "color-contrast",
+      "target": ".gap-1\\.5",
+      "record": "fe/docs/backlog.md: The default --niord-fg-subtle is below AA off --niord-surface"
+    }
+  ],
+  "/editor/history/<id>": [
+    {
+      "rule": "color-contrast",
+      "target": ".gap-1\\.5",
+      "record": "fe/docs/backlog.md: The default --niord-fg-subtle is below AA off --niord-surface"
+    }
+  ],
+  "/editor/comments/<id>": [
+    {
+      "rule": "color-contrast",
+      "target": ".gap-1\\.5",
+      "record": "fe/docs/backlog.md: The default --niord-fg-subtle is below AA off --niord-surface"
+    }
+  ],
+  "/admin/publications": [
+    {
+      "rule": "label-content-name-mismatch",
+      "target": ".btn-primary",
+      "record": "fe/docs/backlog.md: The publications page's New button is named for something else"
+    }
+  ],
+  "/admin/mailing-lists": [
+    {
+      "rule": "label-content-name-mismatch",
+      "target": "tr:nth-child(*) > .text-right:nth-child(5) > .link-button.is-subtle.tabular-nums",
+      "record": "fe/docs/backlog.md: A mailing list's recipient count is named without the count"
+    }
+  ],
+  "keyboard walk: the area list": [
+    {
+      "rule": "color-contrast",
+      "target": ".ml-2",
+      "record": "fe/docs/backlog.md: The default --niord-fg-subtle is below AA off --niord-surface"
+    }
+  ],
+  "/sysadmin/script-resources": [
+    {
+      "rule": "color-contrast",
+      "target": "tr:nth-child(*) > td:nth-child(1) > app-script-resource-type-badge > .is-script-*.status-badge",
+      "record": "fe/docs/backlog.md: The script resources' type badges are under 4.5:1"
+    }
+  ]
+}

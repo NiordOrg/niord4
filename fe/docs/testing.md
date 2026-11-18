@@ -305,7 +305,9 @@ duty-officer scenarios below, which run only against the sample deployment and o
 
 [`ui-apps/admin/e2e/scenarios/`](../ui-apps/admin/e2e/scenarios/) holds whole working days of a
 duty officer, through the screens: a warning from a template to its cancellation, a notice to
-mariners with parts and attachments, the firing schedule and its exercises, a weekly publication.
+mariners with parts and attachments, the firing schedule and its exercises, a weekly publication,
+and a warning written, saved, verified and published with the keyboard alone (the accessibility
+check below).
 They write data, so they are opt-in: without `E2E_SCENARIOS=1` every one of them skips by name, and
 a plain `npm run e2e` stays as harmless as before. With it, a guard refuses to write unless the run
 has one worker and the backend holds the sample deployment in a mode other than production. They
@@ -437,9 +439,33 @@ Also unautomated today, and worth knowing before you assume a gate exists:
   switcher offers, the WCAG 2.1 A and AA rules and the best-practice ones apart, written to a JSON
   and a Markdown report that hold no page content. It exits 1 while a rule fails, so it can become
   a gate, but no workflow runs it; the audit record it served is
-  [the public site's audit](../../docs/accessibility-audit-public-site.md). The administration app
-  has no scanner at all. The public site's layout check below asserts reflow and visible focus
-  around its two bars, and nothing else.
+  [the public site's audit](../../docs/accessibility-audit-public-site.md). The public site's layout
+  check below asserts reflow and visible focus around its two bars, and nothing else.
+- The administration app's accessibility check is two specs of the end-to-end suite, by hand before
+  a release like the rest of it, and only against the sample deployment:
+  - [`a11y-routes.spec.ts`](../ui-apps/admin/e2e/a11y-routes.spec.ts) runs axe-core
+    ([`a11y/axe.ts`](../ui-apps/admin/e2e/a11y/axe.ts)) over every route of the application, as an
+    anonymous reader and as the sysadmin, and over the messages' Actions menu, the Print dialog and the
+    header's domain and language menus, against the WCAG 2.1 A and AA rules, light mode and English
+    only. It is read-only, runs only with `E2E_A11Y=1` and checks that the backend holds the sample
+    first; without the switch it skips by name.
+  - The scenario [`scenarios/keyboard-publish.spec.ts`](../ui-apps/admin/e2e/scenarios/keyboard-publish.spec.ts)
+    writes, saves, verifies and publishes a warning with the keyboard alone, asserting where the focus
+    is and that it shows after every step, and scans each overlay it opens. It runs with the other
+    scenarios (`E2E_SCENARIOS=1`, one worker).
+
+  Each scan is held to [`a11y/known-violations.json`](../ui-apps/admin/e2e/a11y/known-violations.json),
+  a list of the violations already known, each with the backlog entry it is filed under: a violation
+  not on the list fails the test, and so does an entry that no longer shows, so the list shrinks with
+  each fix. A fault the keyboard walk meets is a `knownFault` of the scenario rules above. Every
+  scan's result is attached to the test as JSON (rule, impact, selectors; no markup). The first pass
+  with them is recorded in [accessibility-findings.md](../../docs/accessibility-findings.md#first-pass-administration-app).
+
+  ```bash
+  E2E_A11Y=1 E2E_BASE_URL=http://localhost:<admin port> KEYCLOAK_URL=http://localhost:8080/auth \
+  KEYCLOAK_TEST_USERNAME=sysadmin KEYCLOAK_TEST_PASSWORD=... npx playwright test a11y-routes.spec.ts
+  ```
+
 - No coverage thresholds.
 
 Five repo-level checks sit outside both suites:
