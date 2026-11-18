@@ -6,10 +6,12 @@ import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { HelpAnchor } from '../../../../core/main-shell/help/help-anchor';
 import { LocaleFormatService } from '../../../../core/main-shell/services/locale-format.service';
 import { Dialog } from '../../../../shared/components/dialog/dialog';
-import { fromMyMailVo, type MyMail, type MyMailVo } from '../../services/api/my-mails-api.service';
-
-/** The period the dialog lists, in days. */
-export const MY_MAILS_DAYS = 7;
+import {
+  MY_MAILS_DAYS,
+  fromMyMailVo,
+  type MyMail,
+  type MyMailVo,
+} from '../../services/api/my-mails-api.service';
 
 /**
  * "My mails…", opened from the messages Actions menu: the mails the signed-in user queued in the

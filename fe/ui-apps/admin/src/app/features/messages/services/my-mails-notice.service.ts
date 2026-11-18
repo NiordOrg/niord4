@@ -4,7 +4,7 @@ import { Subscription, finalize } from 'rxjs';
 import { AuthFacade } from '../../../core/auth/facades/auth.facade';
 import { BackgroundReadSkipped } from '../../../core/interceptors/background-read';
 import { NotificationService } from '../../../core/notifications/notification.service';
-import { MyMailsApiService, type MyMail } from './api/my-mails-api.service';
+import { MY_MAILS_DAYS, MyMailsApiService, type MyMail } from './api/my-mails-api.service';
 
 /** How often the user's own mails are looked at, at most. */
 export const MY_MAILS_NOTICE_INTERVAL_MS = 5 * 60 * 1000;
@@ -15,16 +15,21 @@ export const MY_MAILS_NOTICE_INTERVAL_MS = 5 * 60 * 1000;
  */
 export const MY_MAILS_NOTICE_CHECK_MS = 30 * 1000;
 
-/** The period each look covers, in days. */
-const NOTICE_DAYS = 1;
+/** Where the ids of the failed mails already announced are kept, across page loads. */
+export const MY_MAILS_ANNOUNCED_STORAGE_KEY = 'niord.myMails.announced';
+
+/** The most ids kept: the newest, as mail ids grow. Far more than fail in the period looked at. */
+const ANNOUNCED_IDS_KEPT = 100;
 
 /**
  * Tells the signed-in user when a mail they sent could not be sent after its last retry. The
  * messages and editor shells attach it while they are mounted; it looks at the user's mails of the
- * last day at most every five minutes, and only while one of the shells is mounted and the tab is
- * shown (deliberately no background-tab looks, as `BatchStatusService`). It raises one warning that
- * stays until it is closed, counting the failed mails it has not yet announced in this page load,
- * and keeps only the ids it announced, never the mails.
+ * last 7 days, the period the My mails dialog lists, at most every five minutes, and only while one
+ * of the shells is mounted and the tab is shown (deliberately no background-tab looks, as
+ * `BatchStatusService`). It raises one warning that stays until it is closed, counting the failed
+ * mails it has not yet announced. It keeps only the ids it announced, never the mails, in the
+ * browser's storage, so a failure is announced once and not again at every page load; without
+ * that storage it announces once per page load.
  *
  * Every look is a background read (`BACKGROUND_READ`): it never refreshes the session's token and
  * never ends the session, so an idle tab still ends its session at the realm's idle timeout, and a
@@ -39,7 +44,7 @@ export class MyMailsNoticeService {
   private readonly notifications = inject(NotificationService);
   private readonly document = inject(DOCUMENT);
 
-  private readonly announced = new Set<number>();
+  private readonly announced = new Set<number>(readAnnounced());
   /** The shells mounted now. */
   private attached = 0;
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -112,7 +117,7 @@ export class MyMailsNoticeService {
     }
     this.inFlight = true;
     this.request = this.api
-      .mine(NOTICE_DAYS, { background: true })
+      .mine(MY_MAILS_DAYS, { background: true })
       .pipe(finalize(() => (this.inFlight = false)))
       .subscribe({
         next: (mails) => {
@@ -136,6 +141,7 @@ export class MyMailsNoticeService {
       return;
     }
     failed.forEach((id) => this.announced.add(id));
+    writeAnnounced(this.announced);
     this.notifications.notify({
       severity: 'warn',
       summaryKey: 'messages.myMails.failedNotice',
@@ -143,5 +149,26 @@ export class MyMailsNoticeService {
       detailKey: 'messages.myMails.failedNoticeDetail',
       life: 0,
     });
+  }
+}
+
+function readAnnounced(): number[] {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(MY_MAILS_ANNOUNCED_STORAGE_KEY) ?? '[]',
+    );
+    return Array.isArray(parsed) ? parsed.filter((id): id is number => typeof id === 'number') : [];
+  } catch {
+    // Storage may be blocked, or hold something else: announce once per page load then.
+    return [];
+  }
+}
+
+function writeAnnounced(ids: ReadonlySet<number>): void {
+  const newest = [...ids].sort((a, b) => b - a).slice(0, ANNOUNCED_IDS_KEPT);
+  try {
+    localStorage.setItem(MY_MAILS_ANNOUNCED_STORAGE_KEY, JSON.stringify(newest));
+  } catch {
+    // Storage may be blocked or full: the ids then last for this page load.
   }
 }

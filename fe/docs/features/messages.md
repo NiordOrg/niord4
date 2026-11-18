@@ -503,10 +503,11 @@ tried), _Retrying_ (pending after a failed attempt) or _Not sent_ (`ERROR`, afte
 last two with the mail server's last error. The backend matches the mails on the sender address it
 recorded when the mail was queued; the mailing lists' mails carry none and are listed for nobody.
 `MyMailsNoticeService`, attached by the messages and editor shells while they are mounted, looks at
-the user's mails of the last day at most every five minutes, only while a shell is mounted and the
-tab is shown, and raises one warning that stays until it is closed for the mails that ended in
-`ERROR` and were not yet announced in this page load; it keeps only their ids, and a look that fails
-is silent. Each look is a background read (`BACKGROUND_READ` in `core/interceptors/`): the
+the user's mails of the last 7 days (the dialog's period) at most every five minutes, only while a
+shell is mounted and the tab is shown, and raises one warning that stays until it is closed for the
+mails that ended in `ERROR` and were not yet announced; it keeps only their ids, the newest 100 in
+`localStorage` (`niord.myMails.announced`), so a failure is announced once and not at every page
+load (once per page load where the storage is blocked), and a look that fails is silent. Each look is a background read (`BACKGROUND_READ` in `core/interceptors/`): the
 interceptor sends it only with a token that needs no refresh, never refreshes the token for it and
 never drops the session to guest on its failure, so an idle tab still ends its session at the
 realm's idle timeout; a look the token is too old for is tried again every 30 seconds until the

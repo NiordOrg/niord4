@@ -5,6 +5,9 @@ import { Observable, map } from 'rxjs';
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { BACKGROUND_READ } from '../../../../core/interceptors/background-read';
 
+/** The period the My mails dialog lists, and the failed-mail notice looks at, in days. */
+export const MY_MAILS_DAYS = 7;
+
 export type MyMailStatus = 'PENDING' | 'SENT' | 'ERROR';
 
 export interface MyMailRecipient {

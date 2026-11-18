@@ -15,6 +15,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
 import { provideFakeAuthFacade } from '../../../shared/testing/fake-auth';
 import { MyMailsApiService, type MyMail } from './api/my-mails-api.service';
 import {
+  MY_MAILS_ANNOUNCED_STORAGE_KEY,
   MY_MAILS_NOTICE_CHECK_MS,
   MY_MAILS_NOTICE_INTERVAL_MS,
   MyMailsNoticeService,
@@ -64,19 +65,21 @@ describe('MyMailsNoticeService', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    localStorage.removeItem(MY_MAILS_ANNOUNCED_STORAGE_KEY);
   });
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.useRealTimers();
+    localStorage.removeItem(MY_MAILS_ANNOUNCED_STORAGE_KEY);
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
   });
 
-  it('looks at once at the last day, as a background read, and raises one sticky warning', () => {
+  it('looks at once at the last 7 days, as a background read, and raises one sticky warning', () => {
     const { service, mine, notify } = setup([
       of([mail(1, 'ERROR'), mail(2, 'SENT'), mail(3, 'PENDING'), mail(4, 'ERROR')]),
     ]);
     service.start(shellRef().ref);
-    expect(mine).toHaveBeenCalledExactlyOnceWith(1, { background: true });
+    expect(mine).toHaveBeenCalledExactlyOnceWith(7, { background: true });
     expect(notify).toHaveBeenCalledExactlyOnceWith({
       severity: 'warn',
       summaryKey: 'messages.myMails.failedNotice',
@@ -93,6 +96,26 @@ describe('MyMailsNoticeService', () => {
     expect(mine).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(MY_MAILS_NOTICE_CHECK_MS);
     expect(mine).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not announce a failure again after the page is loaded again', () => {
+    const first = setup([of([mail(1, 'ERROR')])]);
+    first.service.start(shellRef().ref);
+    expect(first.notify).toHaveBeenCalledTimes(1);
+    TestBed.resetTestingModule();
+
+    const second = setup([of([mail(1, 'ERROR'), mail(2, 'ERROR')])]);
+    second.service.start(shellRef().ref);
+    expect(second.notify).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ summaryParams: { count: 1 } }),
+    );
+  });
+
+  it('announces once per page load when the storage holds no list of ids', () => {
+    localStorage.setItem(MY_MAILS_ANNOUNCED_STORAGE_KEY, 'not json');
+    const { service, notify } = setup([of([mail(1, 'ERROR')])]);
+    service.start(shellRef().ref);
     expect(notify).toHaveBeenCalledTimes(1);
   });
 
