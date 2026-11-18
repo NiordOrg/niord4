@@ -14,7 +14,9 @@
  * the backend learns nothing about the request that the client wrote itself, no upstream may set
  * a cookie on this origin, a missing asset is a 404 rather than the application rendered inside a
  * dialog, every response carries the site's security headers, a legal document or branding file
- * a country supplies is sandboxed instead, with the same nosniff and referrer policy, a missing
+ * a country supplies is sandboxed instead, with the same nosniff and referrer policy, a response
+ * over https behind a TLS front carries this host's Strict-Transport-Security once, and the
+ * backend's own never passes, a missing
  * build file is never cached, redirects stay on the reader's scheme, every text file is served
  * pre-compressed, an https backend or chart server is verified, a configured chart server is sent
  * no credential either, and a backend address or frame-ancestors value of the wrong shape stops
@@ -277,6 +279,9 @@ const stub = http.createServer((req, res) => {
     'set-cookie': 'stub=1; Path=/',
     // The backend's web security sends this on every response, and the container sends its own.
     'x-content-type-options': 'nosniff',
+    // Spring Security's own, on a request it holds for secure; the container sends its own, for
+    // its host alone, and must hide this one.
+    'strict-transport-security': 'max-age=1; includeSubDomains',
   });
   res.end(body);
 });
@@ -1245,6 +1250,71 @@ async function run(port, stubPort) {
     `got ${wms.status}, ${wms.body.length} bytes, stub saw ${seen.length - wmsBefore} request(s)`,
   );
 
+  // ---- Strict-Transport-Security ---------------------------------------------------------------
+  // Sent where a TLS front reports https, once and with this host's value, by every kind of
+  // location: the ones that include the security headers, the sandboxed ones that include the
+  // common headers, the repository files that write theirs out, the returns and the proxied
+  // ones. The stub sends a copy of its own on every response, as the backend does, which must not
+  // pass. Over plain HTTP, or with a scheme that is neither, there is none.
+  const HTTPS = { 'x-forwarded-proto': 'https' };
+  const HSTS = 'max-age=31536000';
+  const hstsProxied = [];
+  const hstsRequest = async (path, headers) => {
+    const response = await request(port, 'GET', path, headers);
+    if (/^\/rest\/(public\/v1|repo\/file)\//.test(path) && !path.includes('ticket=')) {
+      hstsProxied.push(`GET ${path}`);
+    }
+    return response;
+  };
+  const hstsPaths = [
+    ['the root', '/'],
+    ['the application shell', '/index.html'],
+    ['a router path', '/messages/map'],
+    ['the teaser', '/teaser'],
+    ['an unhashed asset', `/assets/i18n/${options.language}.json`],
+    ['a branding file (sandboxed)', '/assets/branding/favicon.png'],
+    ['a missing asset (404)', '/assets/legal/does-not-exist.xx.html'],
+    ['a missing build file (404)', '/main-ZZZZZZZZ.js'],
+    ['a redirect (301)', '/teaser.html'],
+    ['a path that does not exist on this host (404)', '/rest/messages/search'],
+    ['Keycloak (404)', '/auth/realms/niord'],
+    ['the empty sea chart', '/wms/cells?x=1'],
+    ['the proxied public API', '/rest/public/v1/messages?lang=da'],
+    ['a proxied repository file (its headers written out)', '/rest/repo/file/2026/a.png'],
+    [
+      'a ticket refused in the repository-file location (403)',
+      '/rest/repo/file/2026/a.png?ticket=abc',
+    ],
+  ];
+  if (script) hstsPaths.push(['a hashed chunk', script.startsWith('/') ? script : `/${script}`]);
+  if (!options.noLegalDoc) {
+    hstsPaths.push(['a legal document (sandboxed)', `/assets/legal/${options.legalDoc}`]);
+  }
+  for (const [what, path] of hstsPaths) {
+    const response = await hstsRequest(path, HTTPS);
+    const lines = headerLines(response, 'strict-transport-security');
+    check(
+      `over https, ${what} carries one Strict-Transport-Security, ${HSTS}`,
+      lines.length === 1 && lines[0] === HSTS,
+      `GET ${path}: ${response.status}, strict-transport-security: ${JSON.stringify(lines)}`,
+    );
+  }
+  for (const [what, path, headers] of [
+    ['the root, with no X-Forwarded-Proto', '/', {}],
+    ['the root, over http', '/', { 'x-forwarded-proto': 'http' }],
+    ['the root, with a scheme that is neither', '/', { 'x-forwarded-proto': 'gopher' }],
+    ['the proxied public API, over http', '/rest/public/v1/messages?lang=en', {}],
+    ['a proxied repository file, over http', '/rest/repo/file/2026/a.png', {}],
+  ]) {
+    const response = await hstsRequest(path, headers);
+    const lines = headerLines(response, 'strict-transport-security');
+    check(
+      `${what} carries no Strict-Transport-Security, the backend's included`,
+      response.status === 200 && lines.length === 0,
+      `GET ${path}: ${response.status}, strict-transport-security: ${JSON.stringify(lines)}`,
+    );
+  }
+
   // ---- and nothing else ever reached the backend -----------------------------------------------
   const expected = [
     'GET /rest/public/v1/messages?lang=da',
@@ -1259,6 +1329,7 @@ async function run(port, stubPort) {
     ...messageIdUrls.map(([url]) => `GET ${url}`),
     'HEAD /rest/settings/web',
     ...acceptedRequests,
+    ...hstsProxied,
   ];
   const actual = seen.map((entry) => `${entry.method} ${entry.url}`);
   check(

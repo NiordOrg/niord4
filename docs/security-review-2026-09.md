@@ -451,6 +451,11 @@ still name the WMS over plain http (N-20).
    production's relay needs them is still the host's answer.
 4. The read of the running realms and of the stagings' settings, from the jump server (F-X70, F-X72,
    the realm pattern, N-20), and of the administration host's `Strict-Transport-Security` (F-X96).
+   The public site's half of F-X96, done on 2026-11-18: its container sends
+   `Strict-Transport-Security: max-age=31536000` (this host alone) on every response where a TLS
+   front reports https, and hides the backend's copy. The administration host's header is the
+   backend's own, Spring Security's default on a request it holds for secure; `WebAppITTest` pins
+   that rule, and the read on the stagings is still open.
 5. F-X157's check into the SECOM cutover runbook, and the countries' default WMS address on https
    (N-20).
 6. Someone who watches Keycloak's and nginx's releases: both pins move by hand (F-X114, F-X116).

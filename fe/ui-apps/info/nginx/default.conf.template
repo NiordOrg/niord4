@@ -122,6 +122,16 @@ map $http_x_forwarded_proto $niord_forwarded_proto {
     https https;
 }
 
+# Strict-Transport-Security (niord-common-headers.conf), sent only where the reader came over
+# https: a TLS front says so in X-Forwarded-Proto. Over plain HTTP the value is empty and nginx
+# sends no header, and a browser ignores the header over http anyway. One year, this host alone:
+# no includeSubDomains, because the site's host may share its parent domain with hosts this
+# deployment does not control, and no preload.
+map $niord_forwarded_proto $niord_strict_transport_security {
+    default "";
+    https "max-age=31536000";
+}
+
 # ---------------------------------------------------------------------------------------------
 # Who may put this site in a frame. The teaser exists to be embedded in other sites' pages, so
 # it takes the deployment's NIORD_TEASER_FRAME_ANCESTORS (the image default `*` keeps every
@@ -204,10 +214,13 @@ server {
     etag on;
 
     # An upstream is never allowed to set a cookie on this origin. Nor does its own nosniff pass:
-    # every response carries this server's, and a second copy would make the header a list.
+    # every response carries this server's, and a second copy would make the header a list. The
+    # same for Strict-Transport-Security: the backend's own (with includeSubDomains) never
+    # passes, so the header is sent once, with this host's value.
     # nginx gives a location these only while it sets no proxy_hide_header of its own.
     proxy_hide_header Set-Cookie;
     proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header Strict-Transport-Security;
 
     # -----------------------------------------------------------------------------------------
     # The Niord backend, six allow-listed paths. `^~` so no regex location below can steal them.
@@ -261,8 +274,8 @@ server {
     # DELETE on the backend, which is why the method allow-list is not optional.
     #
     # A file an editor uploaded is not this application, so it does not carry the application's
-    # policy: it gets the sandbox of the map above, and the two headers that apply to any
-    # response.
+    # policy: it gets the sandbox of the map above, and the three headers that apply to any
+    # response (those of niord-common-headers.conf, written out here).
     location ^~ /rest/repo/file/ {
         limit_except GET HEAD { deny all; }
         if ($niord_query_has_ticket) {
@@ -276,6 +289,7 @@ server {
         add_header Content-Security-Policy $niord_repo_file_csp always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security $niord_strict_transport_security always;
     }
 
     # The two PDFs the backend renders for this site: the filtered list the print button opens,

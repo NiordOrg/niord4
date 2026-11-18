@@ -68,8 +68,9 @@ COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/niord-proxy.conf /etc/nginx/niord-proxy.conf
 # The same for the security headers, which the server block and several locations include.
 COPY nginx/niord-security-headers.conf /etc/nginx/niord-security-headers.conf
-# The two headers every response carries whatever its policy, which the security headers and the
-# sandboxed locations include.
+# The headers every response carries whatever its policy (nosniff, the referrer policy and, behind
+# a TLS front, Strict-Transport-Security), which the security headers and the sandboxed locations
+# include.
 COPY nginx/niord-common-headers.conf /etc/nginx/niord-common-headers.conf
 COPY browser/ /usr/share/nginx/html/
 

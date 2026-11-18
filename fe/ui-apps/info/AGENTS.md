@@ -370,7 +370,10 @@ Content-Security-Policy that allows the site's own script files and no inline sc
 `nosniff` and `strict-origin-when-cross-origin` referrer policy of
 `nginx/niord-common-headers.conf`, which it includes — and every location that sets a header of its
 own includes that file again, because nginx drops a server's `add_header` in such a location. The
-backend's own `nosniff` is hidden, so the header is never sent twice. So neither `index.html` nor
+backend's own `nosniff` is hidden, so the header is never sent twice. Behind a TLS front that
+reports https in `X-Forwarded-Proto`, every response also carries
+`Strict-Transport-Security: max-age=31536000` (this host only, from the same file), and an
+upstream's copy is hidden; over plain HTTP it carries none. So neither `index.html` nor
 the teaser frame document carries an inline script; what has to run before the router starts goes
 at the top of `main.ts`, where it must not be able to throw. The policy takes images over https
 and never over plain http, and the container itself serves plain HTTP behind a TLS front, so every
