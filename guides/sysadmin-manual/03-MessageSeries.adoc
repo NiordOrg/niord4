@@ -153,6 +153,6 @@ The pencil is disabled while the drawer has changes that are not saved: save the
 === Deleting a Message Series
 
 Click the bin of a row (*Delete Message Series*) and confirm with *Yes*. A series that is still in
-use, by messages, by a domain or by a firing schedule, cannot be deleted: Niord answers "Error
-deleting message series". Take a series out of use by removing it from its domains instead (see
+use, by messages, by a domain or by a firing schedule, cannot be deleted: Niord answers "The
+message series was not deleted" and names what still uses it. Take a series out of use by removing it from its domains instead (see
 <<domains,Domains>>).

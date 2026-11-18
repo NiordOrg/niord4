@@ -743,13 +743,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   key on each render. It breaks the translation-ownership rule (the component that renders a text translates it),
   as the drawer header and the comment e-mail placeholder did before they were fixed on 2026-11-11/12; passing the
   key closes it. Found by the user guides' check (2026-11-12, its map of the frontend).
-- **A refused delete of an area, a category or a message series shows no reason.** Since 2026-11-13 the backend
-  refuses to delete one that is in use with a 409 whose detail names the uses (messages, domains, firing periods,
-  NAVTEX transmitters, firing schedules, S-124 configurations), and deletes a sub-area or sub-category that is not.
-  The three pages' delete-error toasts show only their generic text. Showing the 409's detail closes it; the
-  administrators' manual (`guides/admin-manual/04-Areas.adoc`, the delete paragraph) and the system administrators'
-  manual (`guides/sysadmin-manual/03-MessageSeries.adoc`, the delete paragraph) can then name the reason. Found by
-  the error hunt's fix stage (2026-11-13, cluster B3).
 - **A refused delete of a parameter type shows no reason.** Sysadmin > Parameter types shows only the generic
   "Error deleting parameter type" toast (`param-types-page.ts`) when a delete fails. Since 2026-11-13 the backend
   refuses to delete a type that a template or a composite type uses, with a 409 whose detail names the categories

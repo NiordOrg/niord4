@@ -1,8 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import type { Observable } from 'rxjs';
 
 import { NotificationService } from '../../../core/notifications/notification.service';
+import { problemDetail } from '../../../shared/api/problem-detail';
 import type { EntityTreeMove } from '../../../shared/components/entity-tree/entity-tree';
 import type { HierarchicalEntity } from '../../../shared/components/entity-tree/hierarchical-entity.model';
 import { ConfirmService } from '../../../shared/services/confirm.service';
@@ -107,7 +109,13 @@ export abstract class HierarchicalAdminPage<
             this.clearSelection();
             this.refresh();
           },
-          error: () => this.notifications.error(`${this.keyPrefix}.toast.deleteError`),
+          error: (error: unknown) =>
+            this.notifyFailure(
+              error,
+              409,
+              `${this.keyPrefix}.toast.deleteRefused`,
+              `${this.keyPrefix}.toast.deleteError`,
+            ),
         });
       },
     });
@@ -132,10 +140,37 @@ export abstract class HierarchicalAdminPage<
             this.clearSelection();
             this.refresh();
           },
-          error: () => this.notifications.error(`${this.keyPrefix}.toast.moveError`),
+          error: (error: unknown) =>
+            this.notifyFailure(
+              error,
+              400,
+              `${this.keyPrefix}.toast.moveRefused`,
+              `${this.keyPrefix}.toast.moveError`,
+            ),
         });
       },
     });
+  }
+
+  /**
+   * A refusal the server explains (the given status with a problem detail, such as what still uses
+   * the node) shows that reason; any other failure shows the plain error.
+   */
+  protected notifyFailure(
+    error: unknown,
+    refusedStatus: number,
+    refusedKey: string,
+    plainKey: string,
+  ): void {
+    const detail =
+      error instanceof HttpErrorResponse && error.status === refusedStatus
+        ? problemDetail(error)
+        : undefined;
+    if (detail === undefined) {
+      this.notifications.error(plainKey);
+    } else {
+      this.notifications.error(refusedKey, { detail });
+    }
   }
 
   protected onEditorSaved(): void {

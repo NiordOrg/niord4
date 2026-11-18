@@ -1,9 +1,11 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
 import { LocaleFormatService } from '../../../../../core/main-shell/services/locale-format.service';
 import { NotificationService } from '../../../../../core/notifications/notification.service';
+import { problemDetail } from '../../../../../shared/api/problem-detail';
 import { Confirm } from '../../../../../shared/components/confirm/confirm';
 import { EmptyState } from '../../../../../shared/components/empty-state/empty-state';
 import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
@@ -148,7 +150,18 @@ export class SeriesPage {
             this.notifications.success('admin.series.toast.deleted');
             this.facade.refresh();
           },
-          error: () => this.notifications.error('admin.series.toast.deleteError'),
+          error: (error: unknown) => {
+            // A 409 names what still uses the series: say which.
+            const detail =
+              error instanceof HttpErrorResponse && error.status === 409
+                ? problemDetail(error)
+                : undefined;
+            if (detail === undefined) {
+              this.notifications.error('admin.series.toast.deleteError');
+            } else {
+              this.notifications.error('admin.series.toast.deleteRefused', { detail });
+            }
+          },
         });
       },
     });

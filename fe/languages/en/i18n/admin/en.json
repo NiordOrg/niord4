@@ -350,7 +350,9 @@
         "loadError": "Error loading area",
         "deleted": "Area deleted",
         "deleteError": "Error deleting area",
+        "deleteRefused": "The area was not deleted: {{detail}}",
         "moveError": "Error moving area",
+        "moveRefused": "The area was not moved: {{detail}}",
         "reindexed": "Sort order updated",
         "reindexError": "Error updating sort order"
       },
@@ -441,7 +443,9 @@
         "loadError": "Error loading category",
         "deleted": "Category deleted",
         "deleteError": "Error deleting category",
+        "deleteRefused": "The category was not deleted: {{detail}}",
         "moveError": "Error moving category",
+        "moveRefused": "The category was not moved: {{detail}}",
         "reindexed": "Sort order updated",
         "reindexError": "Error updating sort order",
         "testError": "Error executing the template",
@@ -819,7 +823,8 @@
         "saved": "Message series saved",
         "saveError": "Error saving message series",
         "deleted": "Message series deleted",
-        "deleteError": "Error deleting message series"
+        "deleteError": "Error deleting message series",
+        "deleteRefused": "The message series was not deleted: {{detail}}"
       },
       "loadError": "Failed to load message series",
       "retry": "Retry",

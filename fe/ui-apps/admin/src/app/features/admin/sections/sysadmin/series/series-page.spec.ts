@@ -205,6 +205,43 @@ describe('SeriesPage', () => {
     httpTesting.expectOne(LIST_URL).flush([]);
   });
 
+  it('a delete the server refuses with a reason shows that reason and keeps the list', async () => {
+    const { page, httpTesting, confirmService } = await setup([NW_YEARLY]);
+    page.deleteSeries(NW_YEARLY);
+    confirmService.active()?.accept();
+
+    const detail = 'The message series is in use: 3 messages. Take it out of use first.';
+    httpTesting
+      .expectOne('/rest/message-series/series/dma-nw')
+      .flush(
+        { type: 'about:blank', title: 'Conflict', status: 409, detail },
+        { status: 409, statusText: 'Conflict' },
+      );
+    expect(TestBed.inject(NotificationService).error).toHaveBeenCalledExactlyOnceWith(
+      'admin.series.toast.deleteRefused',
+      { detail },
+    );
+    // No refetch: the afterEach verify fails on an unexpected list request.
+    await settle();
+  });
+
+  it('any other failed delete shows the plain error', async () => {
+    const { page, httpTesting, confirmService } = await setup([NW_YEARLY]);
+    page.deleteSeries(NW_YEARLY);
+    confirmService.active()?.accept();
+
+    httpTesting
+      .expectOne('/rest/message-series/series/dma-nw')
+      .flush(
+        { type: 'about:blank', title: 'Internal Server Error', status: 500, detail: 'Boom' },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
+    expect(TestBed.inject(NotificationService).error).toHaveBeenCalledExactlyOnceWith(
+      'admin.series.toast.deleteError',
+    );
+    await settle();
+  });
+
   it('New seeds the default values in add mode', async () => {
     const { page } = await setup([]);
     page.addSeries();
