@@ -803,13 +803,6 @@ Background: [`features/schedule.md`](features/schedule.md).
   returns to today.
 - Cancelling the inline period editor discards unsaved rows with no prompt.
 - Pressing Add appends an empty row but leaves keyboard focus where it was.
-- **The schedule map's Layers card covers the zoom buttons and the attribution.** The Firing Area Schedule page
-  places its layer switcher at the map's bottom right (`absolute right-2 bottom-2 z-10`,
-  `ui-apps/admin/src/app/features/schedule/schedule-view.html` 172-175), where the administration app also puts
-  the zoom buttons (`app-ol-map .ol-zoom`, bottom right, `ui-apps/admin/src/styles.css` 139-144) and OpenLayers
-  its attribution, so the card lies over both and they cannot be reached. The other maps with a card of their own
-  (the message details, the editor's positions preview) put it at the bottom left; doing the same here closes it.
-  Found by the user guides' picture review (2026-11-12, `editor-manual/FiringAreaSchedule.png`, kept as it is).
 - **A firing period's time fields have no visible label and cut their placeholder.** The From and To fields of a
   period are named by their aria-labels only
   (`ui-apps/admin/src/app/features/schedule/components/time-schedule-editor/time-schedule-editor.html` 5-17), and

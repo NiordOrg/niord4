@@ -213,7 +213,8 @@ worth knowing:
 
 - Base layers are **OSM plus the configured WMS only**; OpenSeaMap is explicitly switched off
   (`[openSeaMap]="false"`), unlike the messages map.
-- The layer switcher sits bottom-right; the areas layer appears in it.
+- The layer switcher sits bottom-left, clear of the zoom buttons and the map's credit line at the bottom right;
+  the areas layer appears in it.
 - `[fitExtent]="true"` — the view fits the returned areas on every result instead of persisting a
   view.
 - Hovering a table row sets `hoveredAreaId`, which draws a hover halo on that area's polygon
