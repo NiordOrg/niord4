@@ -1003,7 +1003,9 @@ _Acknowledged_ or is still _Unacknowledged_. Below a comment:
 To write a comment, use _Add comment_ at the bottom. To send it by e-mail as well, add up to 20
 recipients under *E-mail notification*; as you type, matching users are suggested. The button then
 says *Send comment* instead of *Post comment*, and each recipient gets an e-mail with the comment
-and the message. When you edit a comment, the buttons are *Save* and *Save and Send*.
+and the message. When you edit a comment, the buttons are *Save* and *Save and Send*. Whether
+the e-mail was sent is shown under _My mails..._ in the Actions menu of the Messages page (see
+<<my-mails-action>>).
 
 You can find messages with comments, or with comments not yet acknowledged, with the Comments
 filter of the Messages page (see <<messages,Messages>>).

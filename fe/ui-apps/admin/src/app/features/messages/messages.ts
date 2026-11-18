@@ -12,6 +12,7 @@ import { SortAreaDialog } from './dialogs/sort-area-dialog/sort-area-dialog';
 import { MessagesTabMenu } from './messages-tab-menu/messages-tab-menu';
 import { MessagesFilterUrlSync } from './services/messages-filter-url-sync.service';
 import { MessagesShellFacade } from './services/messages-shell.facade';
+import { MyMailsNoticeService } from './services/my-mails-notice.service';
 
 @Component({
   selector: 'app-messages',
@@ -35,5 +36,7 @@ export class Messages {
   constructor() {
     // Force instantiation so URL ↔ filter facade subscriptions register at shell mount.
     inject(MessagesFilterUrlSync);
+    // Tells the user of a mail they sent that could not be sent (once per page load).
+    inject(MyMailsNoticeService).start();
   }
 }

@@ -1351,6 +1351,30 @@
       "reviewed": true
     },
     {
+      "key": "GET /rest/scheduled-mails/mine",
+      "handler": "ScheduledMailRestService.mine",
+      "alsoAt": [],
+      "kind": "read",
+      "guard": "RolesAllowed(USER)",
+      "codeCheck": "none-found",
+      "codeCheckEvidence": [
+        "currentUser() in ScheduledMailRestService.mine",
+        "not followed: DataFilter, GzipUtils, ScheduledMailRecipient, User"
+      ],
+      "params": ["days"],
+      "rules": [],
+      "realmRole": null,
+      "answers": {},
+      "case": "DeliverySweepGroup#myScheduledMails",
+      "coveredBy": null,
+      "expect": null,
+      "emptyByDesign": "the caller's own mails, matched on the sender address the mail service records; the fixture's mail carries a sender no identity has, so it is in no answer. The case checks each answer is a list without it; ScheduledMailRestServiceITTest holds that a user's own mails are in that user's answer and not in another's",
+      "expectedLog": [],
+      "knownFault": [],
+      "exempt": null,
+      "reviewed": true
+    },
+    {
       "key": "GET /rest/scheduled-mails/scheduled-mail/{scheduledMailId}",
       "handler": "ScheduledMailRestService.getScheduledMail",
       "alsoAt": [],

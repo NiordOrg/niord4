@@ -495,6 +495,19 @@ the dialog open while the mail is posted and closes it only when the backend has
 a failure the dialog stays open with what was typed, and the toast names the backend's reason when
 it gives one (an address that is no mail address).
 
+**My mails** (`MyMailsDialog`, for a user with the `user` role in the session domain) lists the mails
+the user queued in the last 7 days, from this dialog or with a comment, newest first, read from
+`GET /rest/scheduled-mails/mine` each time it opens: the creation time in the domain's zone, the
+subject, the recipients and the status as the sender reads it — _Sent_, _Waiting_ (pending, not yet
+tried), _Retrying_ (pending after a failed attempt) or _Not sent_ (`ERROR`, after the last retry), the
+last two with the mail server's last error. The backend matches the mails on the sender address it
+recorded when the mail was queued; the mailing lists' mails carry none and are listed for nobody.
+`MyMailsNoticeService`, started by the messages and editor shells, looks at the user's mails of the
+last day at once and every five minutes and raises one warning that stays until it is closed for the
+mails that ended in `ERROR` and were not yet announced in this page load; it keeps only their ids, and
+a look that fails is silent. With the `mailValidRecipients` setting at `LOG` the backend only logs a
+mail and still marks it sent, so the dialog then says _Sent_ for a mail that left nothing.
+
 **Export** produces a ZIP: ticket, plus either the filter string or `tag=<temporaryTagId>` for the
 selection path.
 

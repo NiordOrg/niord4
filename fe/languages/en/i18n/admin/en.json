@@ -3520,6 +3520,27 @@
       "error": "Error sending e-mail",
       "refused": "Error sending e-mail: {{detail}}"
     },
+    "myMails": {
+      "header": "My mails of the last {{days}} days",
+      "empty": "You have sent no mail in the last {{days}} days.",
+      "loadError": "Could not load your mails. Please try again.",
+      "column": {
+        "created": "Created",
+        "subject": "Subject",
+        "to": "To",
+        "status": "Status"
+      },
+      "status": {
+        "sent": "Sent",
+        "waiting": "Waiting",
+        "retrying": "Retrying",
+        "error": "Not sent"
+      },
+      "lastError": "Last error: {{error}}",
+      "close": "Close",
+      "failedNotice": "{{count}} of your mails could not be sent",
+      "failedNoticeDetail": "See Actions > My mails... in Messages, and reach the recipients another way."
+    },
     "export": {
       "errorTempTag": "Failed to prepare the selection for export."
     },
@@ -4458,6 +4479,7 @@
   "menu.action.import": "Import...",
   "menu.action.mail": "E-mail selection...",
   "menu.action.message.compare": "Compare two messages",
+  "menu.action.my_mails": "My mails...",
   "menu.action.print": "Print...",
   "menu.action.print.selection": "Print selection...",
   "menu.action.report": "Report...",

@@ -9,6 +9,7 @@ import { MessageComparisonDialog } from '../messages/dialogs/message-comparison-
 import { MessageCopyDialog } from '../messages/dialogs/message-copy-dialog/message-copy-dialog';
 import { MessagePrintDialog } from '../messages/dialogs/message-print-dialog/message-print-dialog';
 import { MessageDetailsDialog } from '../messages/message-details-dialog/message-details-dialog';
+import { MyMailsNoticeService } from '../messages/services/my-mails-notice.service';
 import { EditorActionMenu } from './components/editor-action-menu/editor-action-menu';
 import { EditorCommentsStore } from './services/editor-comments.store';
 import { EditorFacade } from './services/editor-facade';
@@ -79,6 +80,12 @@ export class EditorShell implements OnDestroy {
   protected readonly cancellationWarning = computed(() =>
     isCancellationWarning(this.facade.message()),
   );
+
+  constructor() {
+    // A comment's mail is sent from here: an editor who never opens the messages area is told
+    // of a mail that could not be sent, too.
+    inject(MyMailsNoticeService).start();
+  }
 
   protected onBeforeUnload(event: BeforeUnloadEvent): void {
     if (this.facade.hasUnsavedChanges() || this.commentsStore.hasComposeDraft()) {

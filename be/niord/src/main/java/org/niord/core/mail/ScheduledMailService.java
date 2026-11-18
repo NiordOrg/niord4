@@ -186,6 +186,30 @@ public class ScheduledMailService extends BaseService {
     }
 
     /**
+     * Returns the mails queued with the given sender since the given date, newest first.
+     * <p>
+     * The sender is the address the mail service recorded when the mail was queued
+     * ({@code IMailable.computeInternetAddress()} of the user who sent it), matched exactly. A blank sender matches
+     * nothing, so a user without a name and an e-mail address never sees the mails that carry no sender (the
+     * mailing lists' mails).
+     *
+     * @param sender the sender address to match
+     * @param since the earliest creation date to include
+     * @param max the maximum number of mails to return
+     * @return the mails queued by the sender since the date
+     */
+    public List<ScheduledMail> findBySender(String sender, Date since, int max) {
+        if (StringUtils.isBlank(sender)) {
+            return List.of();
+        }
+        return em.createNamedQuery("ScheduledMail.findBySender", ScheduledMail.class)
+                .setParameter("sender", sender)
+                .setParameter("since", since)
+                .setMaxResults(max)
+                .getResultList();
+    }
+
+    /**
      * Returns the pending scheduled mails
      * @return the pending scheduled mails
      */

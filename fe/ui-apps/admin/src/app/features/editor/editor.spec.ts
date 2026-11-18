@@ -11,6 +11,7 @@ import { MessageComparisonDialog } from '../messages/dialogs/message-comparison-
 import { MessageCopyDialog } from '../messages/dialogs/message-copy-dialog/message-copy-dialog';
 import { MessagePrintDialog } from '../messages/dialogs/message-print-dialog/message-print-dialog';
 import { MessageDetailsDialog } from '../messages/message-details-dialog/message-details-dialog';
+import { MyMailsNoticeService } from '../messages/services/my-mails-notice.service';
 import { EditorActionMenu } from './components/editor-action-menu/editor-action-menu';
 import { EditorShell } from './editor';
 import { EditorCommentsStore } from './services/editor-comments.store';
@@ -34,6 +35,7 @@ class StubPrintDialog {}
 function setup(opts?: { unsaved?: boolean; commentDraft?: boolean; message?: Message }) {
   const resetWorkingState = vi.fn();
   const clearComposeDraft = vi.fn();
+  const startMailNotice = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -51,6 +53,7 @@ function setup(opts?: { unsaved?: boolean; commentDraft?: boolean; message?: Mes
         provide: EditorCommentsStore,
         useValue: { hasComposeDraft: () => opts?.commentDraft ?? false, clearComposeDraft },
       },
+      { provide: MyMailsNoticeService, useValue: { start: startMailNotice } },
     ],
   });
   TestBed.overrideComponent(EditorShell, {
@@ -75,7 +78,7 @@ function setup(opts?: { unsaved?: boolean; commentDraft?: boolean; message?: Mes
   });
   const fixture = TestBed.createComponent(EditorShell);
   fixture.detectChanges();
-  return { fixture, resetWorkingState, clearComposeDraft };
+  return { fixture, resetWorkingState, clearComposeDraft, startMailNotice };
 }
 
 /** A reload or tab close: the browser asks only when the handler prevents the default. */
@@ -122,6 +125,12 @@ describe('EditorShell', () => {
     const { fixture } = setup({ message });
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('[data-testid="cancellation-warning-banner"]')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('starts the notice of a mail that could not be sent, as a comment mail is sent from here', () => {
+    const { fixture, startMailNotice } = setup();
+    expect(startMailNotice).toHaveBeenCalledTimes(1);
     fixture.destroy();
   });
 

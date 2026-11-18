@@ -402,13 +402,6 @@ Background: [`features/messages.md`](features/messages.md).
   _Access denied._ and sent to the home page. Showing the link to system administrators only, or a job status
   the dialog shows itself, closes it. The editor manual (`guides/editor-manual/03-Messages.adoc`, _Import Action_)
   describes it as it is; change it with the fix. Found by the user guides' check (2026-11-11), read in the code.
-- **The sender of a message mail is never told whether it was sent.** The backend only queues the mail (a pending
-  `ScheduledMail`, `MessageMailService.java`), and the toast has said so since 2026-11-13. A mail that fails ends
-  as _Error_ on the sysadmin's Mail Queue only, after its retries, and with `mailValidRecipients` at its shipped
-  default `LOG` (`MailService.java`) nothing is sent at all. A way for the sender to see the mail's status, and a
-  notice when it ends in _Error_, close it; both need a backend feature, as the Mail Queue is sysadmin-only and
-  nothing records the sender to notify. Found by the error hunt (2026-11-12, track C, a reading of the delivery
-  path); Medium.
 - **Two lookups send `geometry=false` to handlers that do not read it.** `charts-api.service.ts` 42-61 and
   `areas-api.service.ts` 56-67 (`features/messages/services/api/`) send `geometry`, but `ChartRestService`'s
   `searchCharts` (83-90) and `/charts/search/{ids}` read no such parameter and map with `DataFilter.ALL`, and

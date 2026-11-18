@@ -144,6 +144,10 @@
           "endpoints": ["POST /rest/tags/temp-tag", "POST /rest/message-mail/send"],
           "shownTo": ["domainEditor", "editor", "admin", "sysadmin"]
         },
+        "menu.action.my_mails": {
+          "endpoints": ["GET /rest/scheduled-mails/mine"],
+          "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
+        },
         "menu.action.tag.add_selection": {
           "endpoints": ["GET /rest/tags/search", "PUT /rest/tags/tag/{tagId}/add-messages"],
           "shownTo": ["user", "domainEditor", "editor", "admin", "adminElsewhere", "sysadmin"]
@@ -408,6 +412,7 @@
     "ui-apps/admin/src/app/features/messages/services/message-export.service.ts": "Asks the export ticket (role user with the domain role, else none): extracted with the call; rendered as the export items here.",
     "ui-apps/admin/src/app/features/messages/services/messages-filter-params.serializer.ts": "Serialises the filter's signed-in-only fields; no item.",
     "ui-apps/admin/src/app/features/messages/services/messages-filter.facade.ts": "Narrows the filter for a signed-in user (statuses beyond PUBLISHED); GET /rest/messages/search reads them (params *).",
+    "ui-apps/admin/src/app/features/messages/services/my-mails-notice.service.ts": "Looks at the user's own mails (GET /rest/scheduled-mails/mine, RolesAllowed(USER)) only with the domain user role; no item: it raises a warning, the same read as menu.action.my_mails rendered here.",
     "ui-apps/admin/src/app/features/messages/services/named-filters.facade.ts": "Loads the saved filters for a signed-in user: see messages-filter-dropdown.ts.",
     "ui-apps/admin/src/app/features/schedule/schedule.routes.ts": "Names the area's rolesRequired in a comment; the schedule area is rendered as MenuService's menu.schedule.",
     "ui-apps/admin/src/app/shared/components/ol-map/wms-layer-visibility.ts": "Shows a protected WMS layer to a signed-in user: the /wms proxy, outside the endpoint table.",
