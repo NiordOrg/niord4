@@ -432,7 +432,7 @@
     "steps": "Set the viewport to 390x844; open /messages/map; click Minimize in the Additional Messages panel; click Notices to Mariners in the filter bar to switch it off, and wait until the map draws warnings only (showWarningsOnly); move the map to lon 11.3, lat 55.6, zoom 6.9",
     "crop": "viewport",
     "needsData": "published warnings with geometries",
-    "note": "Phone width. Warnings only, the owner's choice of 2026-11-13 (the earlier picture, both kinds, was crowded). Every published warning of the copy has a position, so the Additional Messages panel is not shown with warnings only; the text describes the panel (full width, lying over the + zoom button even minimized, fe/docs/backlog.md) in words and says the picture has no panel. The firing-exercise warnings' areas in Kattegat are among the outlines; which show follows the schedule and the real day."
+    "note": "Phone width. Warnings only, the owner's choice of 2026-11-13 (the earlier picture, both kinds, was crowded). Every published warning of the copy has a position, so the Additional Messages panel is not shown with warnings only; the text describes the panel (along the top of the map beside the zoom buttons, which stay free, and clear of the credits) in words and says the picture has no panel. The firing-exercise warnings' areas in Kattegat are among the outlines; which show follows the schedule and the real day."
   },
   {
     "manual": "public-site",
