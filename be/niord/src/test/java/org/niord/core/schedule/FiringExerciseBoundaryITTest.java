@@ -379,4 +379,45 @@ class FiringExerciseBoundaryITTest extends ITTest {
         assertEquals(List.of(aheadFrom, aheadTo), Arrays.asList(exercise.eventDates().get(0)), "the period ahead");
         assertEquals(aheadTo, exercise.publishDateTo());
     }
+
+    /**
+     * A period that ends exactly at the window's start (today's midnight in the JVM's zone), stored the right way
+     * round or backwards, has no time in the window and is left out; it used to be kept, and printed in a warning
+     * reissued that day. Built in the JVM's zone, whose midnight starts the window.
+     */
+    @Test
+    void aPeriodThatEndsExactlyAtTheWindowStartIsLeftOut() {
+        ZoneId jvm = ZoneId.systemDefault();
+        LocalTime now = LocalTime.now(jvm);
+        assumeTrue(now.isAfter(LocalTime.of(0, 0, 10)) && now.isBefore(LocalTime.of(23, 59, 30)),
+                "not in the first seconds after midnight, nor in the last seconds before it");
+        FiringDomains d = fixtures.firingDomains(NumberSequenceType.NONE, jvm.getId());
+        LocalDate today = LocalDate.now(jvm);
+        String n = DeliveryFixtures.uniq();
+        Date aheadFrom = at(today.plusDays(3).atTime(9, 0), jvm);
+        Date aheadTo = at(today.plusDays(3).atTime(15, 0), jvm);
+
+        // Stored the right way round, from yesterday 22:00 to today 00:00
+        Area forward = areaWithTemplate(d, "IT-FEB ends at window start, forward " + n);
+        fixtures.firingPeriod(forward, at(today.minusDays(1).atTime(22, 0), jvm), at(today.atStartOfDay(), jvm));
+        fixtures.firingPeriod(forward, aheadFrom, aheadTo);
+
+        // Stored backwards, "09:00 - 00:00" of yesterday, read as ending today 00:00
+        Area backward = areaWithTemplate(d, "IT-FEB ends at window start, backward " + n);
+        fixtures.storedFiringPeriod(backward, at(today.minusDays(1).atTime(9, 0), jvm),
+                at(today.minusDays(1).atStartOfDay(), jvm));
+        fixtures.firingPeriod(backward, aheadFrom, aheadTo);
+
+        Integer schedule = fixtures.firingSchedule(d, 30, true);
+
+        service.updateFiringExercises(Set.of(schedule));
+
+        for (Area area : List.of(forward, backward)) {
+            FiringExercise exercise = publishedExercise(d, area);
+            assertEquals(1, exercise.eventDates().size(), area.getId() + ": only the period ahead: "
+                    + exercise.eventDates().stream().map(Arrays::asList).toList());
+            assertEquals(List.of(aheadFrom, aheadTo), Arrays.asList(exercise.eventDates().get(0)), "the period ahead");
+            assertEquals(aheadTo, exercise.publishDateTo());
+        }
+    }
 }

@@ -2418,33 +2418,6 @@ code by the developer or the checker of the cluster named; most were not run.
   script).
 - **Severity:** Low, tooling only. Fix: `grep -a` on the three calls, so the log is read as text whatever it holds.
 
-## FIRING5. The hourly firing run keeps a period that ended exactly at the start of its window
-
-- **Location:** `org/niord/core/schedule/FiringExerciseService.java` `runPeriods` (`if (to.before(windowStart))`),
-  with the window's start from `updateFiringExercises(Set)` (`TimeUtils.resetTime(new Date())`).
-- **Description:** the run's window starts at today's midnight in the JVM's zone (UTC on the servers) and reaches
-  the schedule's days ahead; the periods are read from one day before it. A period is kept when its end (for a row
-  stored with its end at or before its start, that end read one day later in the target zone) is at or after the
-  window's start, so one that ends exactly at it is kept although none of it lies in the window. A correctly
-  stored period is treated the same: the query (`fp.toDate >= :fromDate`) reads it and the same check keeps it. In
-  the Copenhagen zone the boundary is 01:00 in winter and 02:00 in summer, so a firing "until 01:00" is listed in
-  the area's warning for the whole of the next UTC day, while one ending a minute earlier drops out at the first
-  run after midnight. A warning that already listed it (it was ahead the day before) is not reissued for it. It is
-  visible when the area's set of periods changes on that day: the run then publishes a new warning whose time
-  part starts with yesterday's firing, for example "12 November 2026, hours 07:00 - 13 November 2026, hours 01:00."
-  in a warning issued at 13:21 Copenhagen time on 13 November. The first run of a build that reads the backward rows is such a
-  change for every area that has one ending at the boundary.
-- **Why it looks wrong:** a period that has no time in the window is announced as part of a warning published
-  after it ended; a mariner reads a fresh warning for a firing that is over.
-- **Exposed by:** the live check of the error hunt's fix stage, 2026-11-13 (a stored backward row of a firing area,
-  07:00 to 01:00 Copenhagen time of 12 November, put into a warning reissued by the run of 13 November 12:21 UTC;
-  read in the code after).
-- **Severity:** Low — only a period ending exactly at the boundary, and the next day's first run drops it. Fix:
-  keep a period only when its end is after the window's start (`!to.after(windowStart)` leaves it out), for
-  backward and forward rows alike, with a test beside
-  `FiringExerciseBoundaryITTest#aPeriodThatEndedBeforeTheWindowIsLeftOut` of both shapes ending exactly at the
-  window's start (today's midnight in the JVM's zone).
-
 ## DB5. Description lists come back in no defined order
 
 - **Location:** every `@OneToMany` `descs` list of `org.niord.core` (Area, Category, TemplateParam, DictionaryEntry,
