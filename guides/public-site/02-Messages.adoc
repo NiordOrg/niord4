@@ -192,7 +192,8 @@ browser, where you can print it or save it.
 * _Print_ in the filter bar makes a document of the list you are looking at: the kinds of message
   you chose, and the areas you chose when the filter bar has area buttons. While you browse a
   publication, it prints that publication's messages. _Show Active Now_ makes no difference to it.
-  The button is greyed out while the list is loading, and when the list is empty.
+  The button is greyed out while the list is loading, and when there are no messages of the
+  kinds and areas you chose.
 * The printer button at the bottom of a message's window makes a document of that one message.
 
 .The printed list
