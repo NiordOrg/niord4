@@ -43,8 +43,9 @@ import java.util.Optional;
  * Delivery is at least once: a node stopped after some of a row's triggers made their mails, and before the row was
  * deleted, makes those mails again when the row's lease runs out; so does a failure to delete the row after its
  * triggers ran ({@link #complete}, the database lost for a moment). A duplicate mail is rare and far safer for a
- * navigational warning than a lost one. A row that keeps failing has no limit on its attempts: it is tried again at
- * the end of every lease.
+ * navigational warning than a lost one. A row is run at most {@link #MAX_ATTEMPTS} times: a row whose run keeps
+ * failing, hangs or stops the server is then given up, with a record in the Mail Queue, so its mails are not made
+ * again and again. A row whose status is not a {@link Status} has no such bound (its triggers never run).
  * <p>
  * Native SQL only, like {@code DefaultsLedger}: the table has no entity, and its identity id draws on no shared
  * sequence. It depends on nothing in {@code org.niord.core.message}, so {@code MessageService} uses it without a cycle.
@@ -52,9 +53,24 @@ import java.util.Optional;
 @Service
 public class MailingListStatusChangeOutbox {
 
-    /** A row taken for its triggers: its id, and the message and status of the status change */
-    public record Claim(long id, String messageUid, Status status) {
+    /**
+     * A row taken for its triggers: its id, the message and status of the status change, and how many times the row
+     * has been taken, this time included
+     */
+    public record Claim(long id, String messageUid, Status status, int attempts) {
+
+        /** A row taken for the first time */
+        public Claim(long id, String messageUid, Status status) {
+            this(id, messageUid, status, 1);
+        }
     }
+
+    /**
+     * How many times a row's triggers are run at most. A row taken more often than this (its run failed every time,
+     * hung, or stopped the server) is given up: {@code MailingListMessageListener} records it in the Mail Queue and
+     * deletes it, without running its triggers again.
+     */
+    public static final int MAX_ATTEMPTS = 5;
 
     private static final Logger log = LoggerFactory.getLogger(MailingListStatusChangeOutbox.class);
 
@@ -109,7 +125,7 @@ public class MailingListStatusChangeOutbox {
     public Optional<Claim> claimNextDue() {
         while (true) {
             @SuppressWarnings("unchecked")
-            List<Object[]> rows = em.createNativeQuery("SELECT id, \"messageUid\", status "
+            List<Object[]> rows = em.createNativeQuery("SELECT id, \"messageUid\", status, attempts "
                             + "FROM public.\"MailingListStatusChange\" WHERE \"dueAt\" <= now() "
                             + "ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED")
                     .getResultList();
@@ -120,6 +136,7 @@ public class MailingListStatusChangeOutbox {
             long id = ((Number) row[0]).longValue();
             String messageUid = (String) row[1];
             String status = (String) row[2];
+            int attempts = ((Number) row[3]).intValue() + 1;
             // The lease first: a row whose status cannot be read is then no longer due, and the next pass of this
             // loop takes the row after it
             em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" "
@@ -130,7 +147,7 @@ public class MailingListStatusChangeOutbox {
                     .executeUpdate();
             Optional<Status> known = knownStatus(status);
             if (known.isPresent()) {
-                return Optional.of(new Claim(id, messageUid, known.get()));
+                return Optional.of(new Claim(id, messageUid, known.get(), attempts));
             }
             String error = "Unknown message status '" + status + "'";
             log.error("Skipped the status-change outbox row {} of message {}: {}; tried again when its lease runs out",

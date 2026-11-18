@@ -47,7 +47,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * deleted; a row whose triggers cannot be looked up keeps its error and is left for the next pass; the listener looks
  * up the status-change triggers for the row's status, executes each of them for the row's message UID, and keeps going
  * when an individual trigger execution fails (the per-trigger error is logged and recorded in the Mail Queue, so one
- * bad trigger cannot block the rest), and the row is then deleted all the same.
+ * bad trigger cannot block the rest, an {@link Error} included), and the row is then deleted all the same; a row taken
+ * more often than the outbox's bound is given up with a record per trigger; the sweep warns while one row holds the
+ * drain.
  *
  * <p>No broker or database is involved: the listener is exercised as a plain object with hand-written recording
  * {@link MailingListService} / {@link MailingListExecutionService} / {@link MailingListStatusChangeOutbox} doubles.
@@ -193,6 +195,102 @@ public class MailingListMessageListenerTest {
         assertTrue(outbox.failures.isEmpty(), "the row itself did not fail: " + outbox.failures);
     }
 
+    /**
+     * A trigger that throws an {@link Error} (a template whose macro recurses without end) is that trigger's failure:
+     * it is recorded in the Mail Queue and the row is deleted. Would fail if the Error passed the per-trigger catch:
+     * the row would then keep its lease with no error, and every lease would make the other triggers' mails again.
+     */
+    @Test
+    public void aTriggerThrowingAnErrorIsRecordedAndTheRowStillCompleted() {
+        mailingListService.triggers = triggers(1, 2, 3);
+        executionService.errorForTriggerId = 2;
+        outbox.due.add(new Claim(8, "uid-8", Status.PUBLISHED));
+
+        assertEquals(1, listener.drainOutbox());
+
+        assertEquals(List.of(1, 3), executionService.executedTriggerIds, "the triggers after it still run");
+        assertEquals(List.of("2:uid-8:java.lang.StackOverflowError: simulated error for 2"),
+                executionService.recordedFailures, "the Error is recorded in the Mail Queue");
+        assertEquals(List.of(8L), outbox.completed, "and the row is deleted");
+        assertTrue(outbox.failures.isEmpty(), "the row itself did not fail: " + outbox.failures);
+    }
+
+    /** An {@link Error} outside the triggers (at their lookup) is the row's failure: its error is written on the row */
+    @Test
+    public void aRowWhoseRunThrowsAnErrorKeepsItsError() {
+        mailingListService.lookupError = true;
+        outbox.due.add(new Claim(4, "uid-4", Status.PUBLISHED));
+
+        assertEquals(0, listener.drainOutbox());
+
+        assertEquals(List.of("4:java.lang.OutOfMemoryError: simulated lookup error"), outbox.failures,
+                "the Error is written on the row");
+        assertTrue(outbox.completed.isEmpty(), "and the row is kept");
+    }
+
+    /**
+     * A row taken more often than the bound is given up: its triggers are not run again (each run made the mails of
+     * the triggers before the faulty one again), each leaves a "Not sent" record, and the row is deleted.
+     */
+    @Test
+    public void aStatusChangeTakenTooOftenIsGivenUpWithARecordForEachTrigger() {
+        mailingListService.triggers = triggers(1, 2);
+        outbox.due.add(new Claim(9, "uid-9", Status.PUBLISHED, MailingListStatusChangeOutbox.MAX_ATTEMPTS + 1));
+        outbox.due.add(new Claim(10, "uid-10", Status.PUBLISHED, MailingListStatusChangeOutbox.MAX_ATTEMPTS));
+
+        assertEquals(1, listener.drainOutbox(), "only the row within the bound counts as run");
+
+        assertEquals(List.of(1, 2), executionService.executedTriggerIds, "the given-up row runs no trigger");
+        assertEquals(List.of("uid-10", "uid-10"), executionService.executedUids, "the row at the bound still runs");
+        assertEquals(2, executionService.recordedFailures.size(), "one record per trigger of the given-up row");
+        for (String record : executionService.recordedFailures) {
+            assertTrue(record.contains(":uid-9:Given up after " + MailingListStatusChangeOutbox.MAX_ATTEMPTS
+                    + " attempts"), record);
+        }
+        assertEquals(List.of(9L, 10L), outbox.completed, "both rows are deleted");
+    }
+
+    /** A given-up row whose triggers cannot be looked up is kept, so its records are made on a later pass */
+    @Test
+    public void aGivenUpRowWhoseTriggersCannotBeLookedUpIsKept() {
+        mailingListService.failLookup = true;
+        outbox.due.add(new Claim(11, "uid-11", Status.PUBLISHED, MailingListStatusChangeOutbox.MAX_ATTEMPTS + 1));
+
+        assertEquals(0, listener.drainOutbox());
+
+        assertEquals(1, outbox.failures.size(), "the failure is written on the row: " + outbox.failures);
+        assertTrue(outbox.completed.isEmpty(), "and the row is kept");
+        assertTrue(executionService.recordedFailures.isEmpty());
+    }
+
+    /**
+     * A trigger that hangs holds the drain lock, so the sweep cannot take a row; it warns instead, naming the row.
+     * Would fail if the sweep returned silently, or the warning outlived the row.
+     */
+    @Test
+    public void theSweepWarnsWhileOneRowHoldsTheDrain() throws Exception {
+        mailingListService.triggers = triggers(1);
+        executionService.entered = new CountDownLatch(1);
+        executionService.release = new CountDownLatch(1);
+        outbox.due.add(new Claim(12, "uid-12", Status.PUBLISHED));
+        listener.stuckAfterMillis = 0;
+        assertFalse(listener.warnIfStuck(), "no row runs yet");
+
+        Thread drain = new Thread(listener::drainOutbox, "test-drain");
+        drain.start();
+        try {
+            assertTrue(executionService.entered.await(10, TimeUnit.SECONDS), "the trigger runs");
+            assertTrue(listener.warnIfStuck(), "the running row is reported");
+            assertTimeoutPreemptively(Duration.ofSeconds(2), listener::sweep, "the sweep does not wait for it");
+        } finally {
+            executionService.release.countDown();
+            drain.join(10_000);
+        }
+        assertFalse(drain.isAlive(), "the drain ended");
+        assertEquals(List.of(12L), outbox.completed);
+        assertFalse(listener.warnIfStuck(), "no row runs any more");
+    }
+
     /** The per-minute sweep takes the rows no prompt came for, such as a row committed while the broker was down */
     @Test
     public void theSweepDrainsTheRowsTheTopicDidNotPromptFor() {
@@ -262,6 +360,7 @@ public class MailingListMessageListenerTest {
         Status queriedStatus;
         final List<Status> queriedStatuses = new ArrayList<>();
         boolean failLookup;
+        boolean lookupError;
 
         // PORT: MailingListService now has only a constructor-injection constructor
         // (UserService, ContactService); the test never used those collaborators, so we
@@ -274,6 +373,9 @@ public class MailingListMessageListenerTest {
         public List<MailingListTrigger> findStatusChangeTriggers(Status status) {
             if (failLookup) {
                 throw new IllegalStateException("simulated lookup failure");
+            }
+            if (lookupError) {
+                throw new OutOfMemoryError("simulated lookup error");
             }
             this.queriedStatus = status;
             this.queriedStatuses.add(status);
@@ -316,9 +418,13 @@ public class MailingListMessageListenerTest {
         final List<Integer> attemptedTriggerIds = new ArrayList<>();
         final List<Integer> executedTriggerIds = new ArrayList<>();
         final List<String> executedUids = new ArrayList<>();
-        final List<String> recordedFailures = new ArrayList<>();
+        final List<String> recordedFailures = new CopyOnWriteArrayList<>();
         Integer failForTriggerId;
+        Integer errorForTriggerId;
         boolean failRecording;
+        /** When set, each execution counts it down and waits for {@link #release} */
+        CountDownLatch entered;
+        CountDownLatch release;
 
         // PORT: MailingListExecutionService now has only a constructor-injection constructor
         // (NiordApp, MessageSearchService, MessageQueryService, FmTemplateService, JsResourceService,
@@ -331,8 +437,15 @@ public class MailingListMessageListenerTest {
         @Override
         public void executeStatusChangeTrigger(Integer triggerId, String messageUid) throws Exception {
             attemptedTriggerIds.add(triggerId);
+            if (entered != null) {
+                entered.countDown();
+                release.await(10, TimeUnit.SECONDS);
+            }
             if (failForTriggerId != null && failForTriggerId.equals(triggerId)) {
                 throw new Exception("simulated trigger failure for " + triggerId);
+            }
+            if (errorForTriggerId != null && errorForTriggerId.equals(triggerId)) {
+                throw new StackOverflowError("simulated error for " + triggerId);
             }
             executedTriggerIds.add(triggerId);
             executedUids.add(messageUid);

@@ -18,6 +18,7 @@ package org.niord.core.mailinglist;
 
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -53,8 +54,11 @@ import jakarta.jms.ConnectionFactory;
  * <p>
  * The order holds while no row fails. A row whose triggers could not be looked up waits for its lease to end, and the
  * next passes take the rows after it meanwhile: a later status change of the same message (CANCELLED after PUBLISHED)
- * may then be mailed before it. Such a row is tried again every lease, with an ERROR each time, until it succeeds or
- * an administrator deletes it; its {@code attempts} and {@code "lastError"} show how long it has failed.
+ * may then be mailed before it. Such a row is tried again when its lease runs out, with an ERROR each time; its
+ * {@code attempts} and {@code "lastError"} show how long it has failed. A row taken more than
+ * {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS} times (its run failed, hung or stopped the server each time) is
+ * given up: each of its status's triggers leaves a "Not sent" ERROR record in the Mail Queue, and the row is deleted,
+ * so the mails its run made before the fault are not made again and again.
  * <p>
  * The topic is polled on a single-thread executor, started when the application is ready and stopped when the context
  * closes ({@link JmsTopicLoop}).
@@ -75,6 +79,16 @@ public class MailingListMessageListener implements Runnable {
 
     /** One drain at a time on this node, so its status changes are handled in the order they were written */
     private final ReentrantLock drainLock = new ReentrantLock();
+
+    /** A row the running drain has taken, and since when */
+    private record Running(Claim claim, long since) {
+    }
+
+    /** The row the drain of this node is running now, if any */
+    private volatile Running running;
+
+    /** How long one row may run before the sweep warns that it holds the drain (tests set it low) */
+    long stuckAfterMillis = Duration.ofMinutes(2).toMillis();
 
     MailingListMessageListener(MailingListService mailingListService, MailingListExecutionService mailingListExecutionService,
                                MailingListStatusChangeOutbox outbox, ConnectionFactory connectionFactory) {
@@ -137,11 +151,13 @@ public class MailingListMessageListener implements Runnable {
     /**
      * Once a minute (second 23, before the mail sender's run at second 24 and clear of the scheduled triggers' run
      * at second 37): takes the rows the topic did not prompt for, and the rows whose lease ran out. When a drain is
-     * already running on this node it returns at once: that drain takes every due row.
+     * already running on this node it returns at once: that drain takes every due row. It warns when that drain has
+     * run one row for a long time ({@link #warnIfStuck}).
      */
     @Scheduled(cron = "${niord.mailinglist.status-change-sweep-cron:23 * * * * ?}")
     void sweep() {
         if (!drainLock.tryLock()) {
+            warnIfStuck();
             return;
         }
         try {
@@ -166,10 +182,11 @@ public class MailingListMessageListener implements Runnable {
     /**
      * Takes the due rows of the status-change outbox one at a time, oldest first, runs the status-change triggers of
      * each ({@link #checkStatusChangeMailingListExecution}, where a failing trigger leaves an ERROR record in the Mail
-     * Queue) and deletes it. A row whose triggers cannot even be looked up (the database is down) keeps its error and is
-     * tried again when its lease runs out, and the pass stops there. A row whose triggers ran but whose delete fails
-     * (the database lost for a moment) is taken again when its lease runs out, and its triggers' mails are made again.
-     * One drain runs at a time on this node.
+     * Queue, an {@link Error} included) and deletes it. A row whose triggers cannot even be looked up (the database is
+     * down) keeps its error and is tried again when it comes due, and the pass stops there. A row whose triggers ran
+     * but whose delete fails (the database lost for a moment) is taken again when its lease runs out, and its
+     * triggers' mails are made again. A row taken too often is given up ({@link #giveUp}). One drain runs at a time on
+     * this node.
      *
      * @return the number of status changes whose triggers were run
      */
@@ -179,27 +196,81 @@ public class MailingListMessageListener implements Runnable {
             int done = 0;
             for (Optional<Claim> next = outbox.claimNextDue(); next.isPresent(); next = outbox.claimNextDue()) {
                 Claim claim = next.get();
+                running = new Running(claim, System.currentTimeMillis());
+                boolean givenUp = claim.attempts() > MailingListStatusChangeOutbox.MAX_ATTEMPTS;
                 try {
-                    checkStatusChangeMailingListExecution(claim.messageUid(), claim.status());
-                } catch (Exception e) {
+                    if (givenUp) {
+                        giveUp(claim);
+                    } else {
+                        checkStatusChangeMailingListExecution(claim.messageUid(), claim.status());
+                    }
+                } catch (Throwable e) {
+                    // Throwable: an Error (a template that recurses without end) must not leave the row without its
+                    // error, to be taken again with no trace
                     log.error("Failed running the status-change triggers of message " + claim.messageUid() + " in status "
-                            + claim.status() + "; tried again when its outbox row's lease runs out", e);
+                            + claim.status() + "; tried again when its outbox row comes due", e);
                     try {
                         outbox.failed(claim.id(), e.toString());
-                    } catch (Exception recordFailure) {
+                    } catch (Throwable recordFailure) {
                         // The lease taken with the row makes it due again all the same
                         log.error("Failed recording the failure in the status-change outbox row " + claim.id(),
                                 recordFailure);
                     }
                     return done;
+                } finally {
+                    running = null;
                 }
                 outbox.complete(claim.id());
-                done++;
+                if (!givenUp) {
+                    done++;
+                }
             }
             return done;
         } finally {
             drainLock.unlock();
         }
+    }
+
+    /**
+     * Gives up a row taken more than {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS} times: its run failed every
+     * time, hung, or stopped the server, and every run made the mails of the triggers before the faulty one again.
+     * Its triggers are not run again: each leaves its "Not sent" ERROR record in the Mail Queue, as a failing trigger
+     * does, and the row is then deleted. A failure to look up the triggers propagates, so the row is kept and the
+     * record is made on a later pass.
+     */
+    private void giveUp(Claim claim) {
+        String cause = "Given up after " + (claim.attempts() - 1) + " attempts to make the mails of the status change to "
+                + claim.status() + " (each failed, hung or stopped the server; see the server log)";
+        log.error("Gave up the status-change outbox row " + claim.id() + " of message " + claim.messageUid()
+                + " in status " + claim.status() + ": " + cause + "; its triggers are recorded as not sent");
+        List<Integer> triggerIds = mailingListService.findStatusChangeTriggers(claim.status()).stream()
+                .map(BaseEntity::getId)
+                .collect(Collectors.toList());
+        for (Integer triggerId : triggerIds) {
+            recordTriggerFailure(triggerId, claim.messageUid(), new Exception(cause));
+        }
+    }
+
+    /**
+     * Once a minute, while a drain holds this node's lock: a WARN when the drain has run one row for longer than
+     * {@link #stuckAfterMillis} (a trigger that hangs holds back every status-change mail of this node)
+     *
+     * @return whether it warned
+     */
+    boolean warnIfStuck() {
+        Running current = running;
+        if (current == null) {
+            return false;
+        }
+        long millis = System.currentTimeMillis() - current.since();
+        if (millis < stuckAfterMillis) {
+            return false;
+        }
+        Claim claim = current.claim();
+        log.warn("The status-change outbox row {} of message {} in status {} has run for {} s; no other status-change "
+                        + "mail is made on this node until it ends", claim.id(), claim.messageUid(), claim.status(),
+                millis / 1000);
+        return true;
     }
 
     /**
@@ -225,16 +296,13 @@ public class MailingListMessageListener implements Runnable {
             try {
                 // NB: This function requires a new transaction
                 mailingListExecutionService.executeStatusChangeTrigger(triggerId, messageUid);
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // Throwable: a template or script can throw an Error (a StackOverflowError from a macro that
+                // recurses without end); it is this trigger's failure, not the status change's
                 log.error("Error executing status-change mailing-list trigger " + triggerId
                         + " for message " + messageUid, e);
-                // Leave a record in the Mail Queue, so the mail that was due does not vanish without a trace
-                try {
-                    mailingListExecutionService.recordStatusChangeTriggerFailure(triggerId, messageUid, e);
-                } catch (Exception recordFailure) {
-                    log.error("Failed recording the failure of status-change mailing-list trigger " + triggerId
-                            + " for message " + messageUid, recordFailure);
-                }
+                recordTriggerFailure(triggerId, messageUid,
+                        e instanceof Exception exception ? exception : new Exception(e.toString(), e));
             }
         }
         log.debug(String.format("Executed %d status change triggers for %s in status %s in %d ms",
@@ -242,6 +310,16 @@ public class MailingListMessageListener implements Runnable {
                 messageUid,
                 status,
                 System.currentTimeMillis() - t0));
+    }
+
+    /** Leaves a record in the Mail Queue, so the mail that was due does not vanish without a trace */
+    private void recordTriggerFailure(Integer triggerId, String messageUid, Exception cause) {
+        try {
+            mailingListExecutionService.recordStatusChangeTriggerFailure(triggerId, messageUid, cause);
+        } catch (Throwable recordFailure) {
+            log.error("Failed recording the failure of status-change mailing-list trigger " + triggerId
+                    + " for message " + messageUid, recordFailure);
+        }
     }
 
 }
