@@ -49,7 +49,7 @@ import static org.niord.web.sweep.SystemSweepFixture.scriptResourceId;
  * {@code org.niord.secom.SecomEndpointSweepITTest}.
  *
  * <p>The fixture ({@link SystemSweepFixture}): a published S-124 message and a draft, a batch instance (a harmless
- * script), a contact on no mailing list (CONTACT1 is never met), a script resource with two history entries and a
+ * script), a contact on no mailing list, a script resource with two history entries and a
  * local user. The batch cases are {@link SystemSweepBatch}, the user directory and Keycloak cases
  * {@link SystemSweepKeycloak}.
  *

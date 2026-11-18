@@ -1701,8 +1701,8 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Why it looks wrong:** a type's transmitters, areas and settings are its own configuration, not records that
   refer to it from outside, and the sysadmin gets no reason and, for Twitter, no way out. A type that messages were
   promulgated with is a different case: keeping it for their history is right, and the refusal should say so.
-  CONTACT1 is the same kind of refusal for another entity. An area, category or message series in use is refused
-  with a 409 that names its uses since 2026-11-13; that refusal is the model for this one.
+  A contact on mailing lists is taken off them when it is deleted. An area, category or message series in use is
+  refused with a 409 that names its uses since 2026-11-13; that refusal is the model for this one.
 - **Exposed by:** the user guides' screenshot rig (2026-11-11). The system administrators' manual
   (`guides/sysadmin-manual/05-PromulgationTypes.adoc`, _Deleting a Promulgation Type_) describes the refusals as
   they are; change it with the fix.
@@ -1780,26 +1780,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   a deployment receives by a release import (`docs/code-data-config-plan.md`), so a fix ships as one. The error
   hunt's fix of 2026-11-13 to line 53 of `nm-almanac-report-pdf.ftl` ships that template in the release folder
   `be/niord/bootstrap/releases/2026-11-12-error-hunt-templates/` and leaves line 35, this entry's, as it was.
-
-## CONTACT1. A contact who is on a mailing list cannot be deleted, and the page gives no reason
-
-- **Location:** `niord/src/main/java/org/niord/core/user/ContactService.java` `deleteContact` (199-206, a plain
-  `remove` of the contact); the join table `MailingList_Contact`, whose foreign key `contacts_id` to `Contact` has no
-  `ON DELETE` (`db/changelog/changes/V001__baseline_schema.sql` 3662-3663, no later changeset touches it; its
-  `confdeltype` is `a`, no action, in `niord_guides`). The link is mapped on the list's side only
-  (`MailingList.contacts`, `MailingList.java` 68-69); `Contact` has no mapping back.
-- **Description:** Admin > Users & Contacts > Contacts > delete removes the contact's row and nothing else. For a
-  contact who is still a recipient of a list, the database refuses the delete, and the page shows the toast
-  "Contact operation failed" (`deleteError`, `fe/languages/en/i18n/admin/en.json` 1914) with no reason; the contact
-  can be deleted only after it has been taken off every list on its _Mailing lists_ tab [read in the code and the
-  schema; no delete was tried on the rig].
-- **Why it looks wrong:** a contact's list memberships belong to the contact, not to a record that refers to it from
-  outside, and the administrator is not told what blocks the delete. The same family as PROM8; an area, category
-  or message series in use is refused with a 409 that names its uses since 2026-11-13.
-- **Exposed by:** the user guides' check (2026-11-11, the checker of the administrators' manual). The manual
-  (`guides/admin-manual/07-Users.adoc`, _Deleting a Contact_) describes the refusal as it is; change it with the fix.
-- **Severity:** Low. Fix: take the contact off every list's `contacts` before the `remove` (a query for the lists
-  that hold it, or a delete from the join table), with an IT that deletes a contact who is on a list.
 
 ## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
 

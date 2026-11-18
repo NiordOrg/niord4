@@ -188,10 +188,8 @@ image::ContactMailingListsPanel.png[The Mailing lists tab of the Edit Contact dr
 [#deleting-a-contact]
 ==== Deleting a Contact
 
-A contact that is a recipient of a mailing list cannot be deleted: Niord says _Contact operation
-failed_ and keeps it. First take the contact off every list on its *Mailing lists* tab
-(<<managing-contact-mailing-lists>>). Then click the bin, *Delete contact*, on the contact's row,
-and confirm with _Delete contact?_.
+Click the bin, *Delete contact*, on the contact's row, and confirm with _Delete contact?_. A
+contact that is a recipient of mailing lists is taken off them with it.
 
 [#importing-and-exporting-contacts]
 === Importing and Exporting Contacts
