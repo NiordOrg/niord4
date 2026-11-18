@@ -16,6 +16,7 @@
 package org.niord.core.mail;
 
 import jakarta.mail.MessagingException;
+import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import org.junit.jupiter.api.Test;
@@ -30,8 +31,11 @@ import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The mail session every mail is sent through ({@link MailConfig}): it bounds each exchange with the SMTP server, so
@@ -70,6 +74,75 @@ class MailConfigTest {
         assertEquals("30000", props.getProperty("mail.smtp.connectiontimeout"));
         assertEquals("60000", props.getProperty("mail.smtp.timeout"));
         assertEquals("60000", props.getProperty("mail.smtp.writetimeout"));
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // The login and TLS, for a relay that asks for them
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    void withoutALoginTheSessionAsksForNone() {
+        Session session = config("localhost", 1025).createMailSession();
+        Properties props = session.getProperties();
+
+        assertNull(props.get("mail.smtp.auth"));
+        assertNull(props.get("mail.smtp.user"));
+        assertNull(props.get("mail.smtp.starttls.enable"));
+        assertNull(props.get("mail.smtp.ssl.enable"));
+        assertNull(session.requestPasswordAuthentication(null, 1025, "smtp", null, null),
+                "the session has no authenticator");
+    }
+
+    @Test
+    void aLoginTurnsAuthenticationOnAndTheAuthenticatorAnswersWithIt() {
+        MailConfig config = config("relay.example.com", 587);
+        config.username = "niord-relay";
+        config.password = "it-not-a-real-password";
+
+        Session session = config.createMailSession();
+        Properties props = session.getProperties();
+
+        assertEquals("true", props.getProperty("mail.smtp.auth"));
+        assertEquals("niord-relay", props.getProperty("mail.smtp.user"));
+        PasswordAuthentication login = session.requestPasswordAuthentication(null, 587, "smtp", null, "niord-relay");
+        assertNotNull(login, "the session answers the relay's request for a login");
+        assertEquals("niord-relay", login.getUserName());
+        assertEquals("it-not-a-real-password", login.getPassword());
+    }
+
+    @Test
+    void starttlsIsRequiredNotOptional() {
+        MailConfig config = config("relay.example.com", 587);
+        config.tls = "STARTTLS";
+
+        Properties props = config.sessionProperties();
+
+        assertEquals("true", props.getProperty("mail.smtp.starttls.enable"));
+        assertEquals("true", props.getProperty("mail.smtp.starttls.required"),
+                "a relay that stops offering STARTTLS fails the send instead of getting the mail in clear text");
+        assertEquals("true", props.getProperty("mail.smtp.ssl.checkserveridentity"));
+        assertNull(props.get("mail.smtp.ssl.enable"));
+    }
+
+    @Test
+    void sslEnablesImplicitTls() {
+        MailConfig config = config("relay.example.com", 465);
+        config.tls = "ssl";
+
+        Properties props = config.sessionProperties();
+
+        assertEquals("true", props.getProperty("mail.smtp.ssl.enable"));
+        assertEquals("true", props.getProperty("mail.smtp.ssl.checkserveridentity"));
+        assertNull(props.get("mail.smtp.starttls.enable"));
+    }
+
+    @Test
+    void anUnknownTlsModeStopsTheStart() {
+        MailConfig config = config("relay.example.com", 587);
+        config.tls = "yes";
+
+        IllegalStateException e = assertThrows(IllegalStateException.class, config::createMailSession);
+        assertTrue(e.getMessage().contains("none, starttls or ssl"), e.getMessage());
     }
 
     /**
