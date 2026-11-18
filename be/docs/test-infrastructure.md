@@ -87,8 +87,9 @@ context; the suite has several at once, and they share what a deployment never s
   JMS prompt and once at its start. The per-minute sweep would take them from every live context at once, out of
   the order a test expects, so the suite switches it off (`niord.mailinglist.status-change-sweep-cron=-` on
   `ITTest`, and in the classes that repeat its properties). A test that asserts a row before it is mailed holds the
-  listener's drain lock, and a test that removes a message removes its rows first, so no later drain runs the
-  triggers of a message that is gone (`MailingListDeliveryFaultITTest`).
+  listener's drain lock. The suite does not clean the table: a test that defines status-change triggers removes
+  its messages' outbox rows before the messages (as `MailingListDeliveryFaultITTest` does), so no later drain runs
+  a trigger for a message that is gone and leaves an ERROR mail that a later class may count.
 
 The class order differs between machines: Failsafe's default `runOrder` is `filesystem`, which is alphabetical on
 NTFS (Windows) and directory-hash order on Linux (CI). A class that passes after one set of classes can fail after
