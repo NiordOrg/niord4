@@ -659,6 +659,11 @@ shared execute route has no consume-ordering coupling:
 - `TemplateExecutionSeedStore` carries the seed **into** the execution view, plus the return URL.
 - `TemplateMessageStore` carries the finished result **out**, into the `/editor/edit` route.
 
+The editor lays a result from `TemplateMessageStore` over a fresh server blank but keeps the result's
+own id: a never-saved message or copy has a repository path, and attachment and image paths, made
+from that id, and the create request refuses an attachment outside the folder of the id it sends.
+Only the Start screen's blank seed, whose id is empty, takes the server blank's id.
+
 ### The execution view
 
 A full page under the editor shell, not a dialog. Left column: a Templates card (chosen templates as

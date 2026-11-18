@@ -418,13 +418,16 @@ export class EditorFacade implements OnDestroy {
       next: (base) =>
         this.acceptLoad(token, () =>
           base
-            ? // The server template carries the freshly-minted message UUID. Keep it: the seed
-              // template (from the Start screen) only ever sets `id: ''` to satisfy the required
-              // Message.id type, and letting that blank win would POST an empty id — the backend
-              // then persists a broken uid/repo-path instead of the server-assigned one.
-              this.applyLoaded(template ? { ...base, ...template, id: base.id } : base, {
-                dirty: true,
-              })
+            ? // The Start screen's seed carries `id: ''` only to satisfy the required Message.id
+              // type; letting that blank win would POST an empty id, so it takes the server
+              // template's freshly-minted UUID. A template that has an id of its own (the result of
+              // Run template > Execute, or a draft re-seeded by its Cancel) keeps it: its repoPath
+              // and the attachment and image paths are derived from that id, and the create POST
+              // refuses an attachment outside the folder of the id it sends.
+              this.applyLoaded(
+                template ? { ...base, ...template, id: template.id || base.id } : base,
+                { dirty: true },
+              )
             : this.failLoad('editor.load.error.create'),
         ),
       error: () => this.acceptLoad(token, () => this.failLoad('editor.load.error.create')),
