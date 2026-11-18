@@ -817,27 +817,6 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
   cluster.
 
-## WEB12. `GET /rest/version/build-version` answers the literal `${timestamp}`: `version.properties` is never filtered
-
-- **Location:** `niord/src/main/resources/version.properties` (`niord.version = ${timestamp}`), read by
-  `niord/src/main/java/org/niord/core/NiordApp.java` `getBuildVersion()` and served by `VersionRestService`.
-- **Description:** nothing in the build filters `version.properties`. `niord/pom.xml` filters only
-  `org/niord/core/niord-base.properties`, the Spring Boot parent would filter only `application*` files, and
-  both use the `@..@` delimiter, not `${..}`; no `timestamp` property is defined either. Every build therefore
-  ships the placeholder, and every deployment answers `${timestamp}`. The administration app prints that value
-  as the backend build on its update banner. `VersionRestServiceITTest` asserts a non-blank body other than
-  `undefined`, which the placeholder passes, and its Javadoc calls the resource Maven-filtered.
-- **Why it looks wrong:** a build stamp that reads the same on every build tells nobody which build runs.
-  Reading the version the build does write (`NiordBaseVersion`, from `niord-base.properties`), or filtering
-  the file with the parent's delimiter and a property the build defines, would fix it; either changes what the
-  update banner shows, so it is left to a change of its own.
-- **Exposed by:** the User-Agent of the backend's map tile requests, which needed the library's version and
-  reads it through `NiordBaseVersion` instead. Met again by the user guides' screenshot rig (2026-11-11): the
-  editor manual (`guides/editor-manual/02-Home.adoc`, _When Niord Is Updated_) tells users to give the banner's
-  _Server Version_ when they report a problem, and `UpdateBanner.png` leaves the version notes out. (The banner's
-  empty _Web Version_ on the rig is the rig's unhashed local build, `main.js`, which the bundle-name pattern of
-  `build-version.service.ts` does not match; a production build's `main-<hash>.js` does.)
-
 # Potential errors — REST-controller security audit
 
 Open findings from a security audit of every `@RestController`. **No production code was changed** by the
