@@ -263,10 +263,12 @@ npm run bundle:info      # first-visit transfer against bundle-baseline.json —
 npm run separation:info  # nothing of the administration app reached the build — run after build:info
 npm run layout:info      # the layout in Chromium, against the last build: every menu control on top, no
                          # pinned bars at 400 % zoom, focus never under a bar, whole field names, 40 px
-                         # filter chips, forced colours, link styles, printed link addresses, scroll
-                         # regions that follow their content; every page under the image's CSP over
-                         # plain HTTP, map tiles included — run after build:info (a manual check on the
-                         # base build; the Example country job runs it in CI)
+                         # filter chips (a browsed issue's too), forced colours, link styles, printed
+                         # link addresses, scroll regions that follow their content, the chart's
+                         # controls clear of the panel of messages without a position; every page
+                         # under the image's CSP over plain HTTP, map tiles included — run after
+                         # build:info (a manual check on the base build; the Example country job
+                         # runs it in CI)
 npm run a11y:info -- --base <url> --out <dir>   # axe-core over every page and dialog of a running
                          # site (WCAG 2.1 A and AA, best practice apart), at 1280 and 320 px in each
                          # language; reports without page content; a manual audit tool, in no CI job
@@ -400,7 +402,8 @@ The live defects you will meet before you have changed anything are in
   `npm run layout:info` and `npm run test:container:info` by hand on the base build when a change
   can reach them.
 - `npm run layout:info` after `npm run build:info` whenever a change can move the menu bar, the
-  filter bar or what sits under them, or reshape a message card — their templates, `src/styles/`,
+  filter bar or what sits under them, reshape a message card, or move the map view's panel of
+  messages without a position over the chart's controls — their templates, `src/styles/`,
   the shared `styles/`, a translation that grows a label, a language or an area added to a
   country. The layout is only visible in a browser, so this is the one check that sees it.
 - **A first visit lands on `/messages/details`**: the root and every unknown path redirect there,

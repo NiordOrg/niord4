@@ -487,11 +487,13 @@ Five repo-level checks sit outside both suites:
   see: every menu control on top at four widths in each of the build's languages, no bar pinned
   at 400 % zoom, focus never landing under a bar, nothing scrolling sideways at 320 px, the focused
   skip link drawn above a test site's corner ribbon, every field name of a message card whole in
-  each language (the bundle's longest among them), a 40 px filter chip on a phone, a pressed chip
-  told apart in a forced-colours theme, a link in a message drawn as one at rest, on a printed
-  page a link's address in its own line and only where a reader can type it, and a message part
-  that becomes a named tab stop when a language switch widens its table and stops being one when
-  the switch back narrows it. Every page carries the Content-Security-Policy of the image's nginx
+  each language (the bundle's longest among them), a 40 px filter chip on a phone, on the current
+  list and while an issue is browsed, a pressed chip told apart in a forced-colours theme, a link
+  in a message drawn as one at rest, on a printed page a link's address in its own line and only
+  where a reader can type it, a message part that becomes a named tab stop when a language switch
+  widens its table and stops being one when the switch back narrows it, and the map view's zoom
+  buttons, layer switcher and credit links left uncovered by the panel of messages without a
+  position at four sizes. Every page carries the Content-Security-Policy of the image's nginx
   configuration and is served over plain HTTP, as the container serves it: the teaser and the map
   view must ask for their base-map tiles within that policy, and no page may break it. Frontend
   CI's Example country job runs it on the example's build on pull requests; on the base build it
