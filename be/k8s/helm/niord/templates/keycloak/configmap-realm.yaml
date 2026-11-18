@@ -7,10 +7,11 @@ metadata:
     {{- include "niord.componentLabels" (list . "keycloak") | nindent 4 }}
 data:
   # Imported on start-up via `--import-realm`, unless Keycloak already holds the realm. The
-  # `niord` realm: the niord-web client, the per-domain bearer-only clients, the Sysadmin
-  # group and the test users (sysadmin/sysadmin, ...). In dev mode the test realm as it is,
-  # with the niord-web-admin client and redirect URIs "*"; in production mode without that
-  # client, with niord-web limited to externalBaseUri (niord.keycloak.realmJson).
+  # `niord` realm: the niord-web client, the per-domain bearer-only clients and the Sysadmin
+  # group. In dev mode the test realm as it is, with the test users (sysadmin/sysadmin, ...),
+  # the niord-web-admin client and redirect URIs "*"; in production mode without users (unless
+  # keycloak.testUsers), without that client, with niord-web limited to externalBaseUri
+  # (niord.keycloak.realmJson).
   niord-realm.json: |-
 {{ include "niord.keycloak.realmJson" . | indent 4 }}
 {{- end }}

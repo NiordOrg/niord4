@@ -102,6 +102,14 @@ the app validate tokens of a realm that does not exist and the readiness probe w
 {{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "dev") (ne (toString .Values.keycloak.realm) "niord") }}
 {{- fail (printf "keycloak.realm is %q: dev mode imports the test realm, which is named niord; another name needs keycloak.mode production" (toString .Values.keycloak.realm)) }}
 {{- end }}
+{{- /*
+keycloak.testUsers (values.yaml) keeps the test users in a production-mode realm. It is a boolean or
+unset (an older release's values: no users, the safe side): a string such as "no" would read as true
+and give the realm users whose passwords are public.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.keycloak.testUsers) (kindIs "bool" .Values.keycloak.testUsers)) }}
+{{- fail (printf "keycloak.testUsers is %q: it is true or false" (toString .Values.keycloak.testUsers)) }}
+{{- end }}
 {{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "production") (not .Values.keycloak.existingSecret) }}
 {{- fail "keycloak.mode production needs keycloak.existingSecret: the bootstrap admin comes from the environment's Secret, never from keycloak.adminUser/adminPassword" }}
 {{- end }}

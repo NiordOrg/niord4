@@ -428,6 +428,8 @@ still name the WMS over plain http (N-20).
    was tried the same way and needed nothing. SECREV-4 is closed; the stagings run the script
    without the fix until they take a base version that carries it.
 2. A chart value that renders the production realm without the test users (F-X92).
+   Done on 2026-11-18: `keycloak.testUsers`, default false, renders the production realm without
+   users; a realm already made keeps its users until they are removed by hand.
 3. The guards (F-X76, F-X92): the chart refuses production mode with a default database credential,
    and the deploy repository's validator refuses a staging or production environment that renders dev
    mode or a default credential of the chart.

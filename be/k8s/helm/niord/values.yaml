@@ -301,7 +301,7 @@ keycloak:
   #               The local bundle and the test environments.
   #   production  `start`, keeping its data in `database` on this release's Postgres (or
   #               postgres.host), with the realm the chart derives from the test realm:
-  #               the same users, but no niord-web-admin client (unused, and its service
+  #               no user (keycloak.testUsers), no niord-web-admin client (unused, and its service
   #               account could manage the realm) and no client secret (Keycloak
   #               generates new ones). niord-web accepts only redirects to
   #               externalBaseUri, requires PKCE (S256) and has no password grant. The
@@ -346,6 +346,13 @@ keycloak:
   # and production mode's rendered realm carries this name. One Keycloak per environment keeps
   # the default; a deployment on the shared Keycloak has a realm of its own (niord-dk, niord-gl).
   realm: niord
+  # production mode: whether the rendered realm keeps the test realm's four users (sysadmin/sysadmin,
+  # testuser/test, testeditor/test, testadmin/test), whose passwords are in this public repository and
+  # one of whom is a Niord sysadmin who may manage the realm's users and clients. false = the realm
+  # has no user: the first administrator is made in the admin console and put in the group Sysadmin
+  # (README, "Keycloak in production mode"). true is for a staging with no real data on a closed
+  # network only, never for production. Dev mode ignores it and always imports the test users.
+  testUsers: false
   # The bootstrap admin Keycloak creates on first start. existingSecret names a Secret with the
   # keys `username` and `password`; "" = the chart renders one from adminUser/adminPassword,
   # the local default, which production mode refuses.

@@ -141,7 +141,8 @@ http://{{ include "niord.keycloak.host" . }}:{{ .Values.keycloak.service.port }}
 
 {{/*
 The realm Keycloak imports (keycloak.mode, values.yaml). dev: files/niord-realm.json as it is.
-production: the same realm, users included, without the niord-web-admin client and its service
+production: the same realm without its users (unless keycloak.testUsers, which keeps the four test
+users: their passwords are in this public repository), without the niord-web-admin client and its service
 account (unused: the app's admin calls carry the signed-in user's own token) and without any
 client secret (the file's are masked placeholders, so Keycloak generates new ones), and with
 niord-web accepting only redirects to externalBaseUri, from its origin, with PKCE, and no
@@ -180,9 +181,11 @@ password grant (which asks for neither a redirect nor PKCE).
 {{- end -}}
 {{- $_ := set $realm "clients" $clients -}}
 {{- $users := list -}}
+{{- if .Values.keycloak.testUsers -}}
 {{- range $realm.users -}}
 {{- if ne (default "" .serviceAccountClientId) "niord-web-admin" -}}
 {{- $users = append $users . -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- $_ := set $realm "users" $users -}}
