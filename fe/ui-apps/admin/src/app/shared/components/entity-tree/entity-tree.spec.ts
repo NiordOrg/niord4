@@ -213,3 +213,105 @@ describe('EntityTree', () => {
     expect(nodes(fixture.componentInstance)[0].styleClass).toBe('');
   });
 });
+
+describe('EntityTree search over a rendered nested tree', () => {
+  /** Anchorland › { Kattegat › Læsø, Skagerrak }, Sweden › Göteborg. */
+  function sample(extraUnderKattegat: HierarchicalEntity[] = []): HierarchicalEntity[] {
+    return [
+      mk(1, 'Anchorland', true, [
+        mk(2, 'Kattegat', true, [mk(3, 'Læsø'), ...extraUnderKattegat]),
+        mk(4, 'Skagerrak'),
+      ]),
+      mk(5, 'Sweden', true, [mk(6, 'Göteborg')]),
+    ];
+  }
+
+  async function render(entities: HierarchicalEntity[]) {
+    TestBed.configureTestingModule({
+      providers: [provideTestTransloco(), provideNiordIcons()],
+    });
+    const fixture = TestBed.createComponent(EntityTree);
+    fixture.componentRef.setInput('entities', entities);
+    fixture.componentRef.setInput('autoExpand', true);
+    await settle(fixture);
+    return fixture;
+  }
+
+  async function settle(fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function search(fixture: Awaited<ReturnType<typeof render>>, query: string) {
+    const input = fixture.nativeElement.querySelector('.tree-filter-input') as HTMLInputElement;
+    input.value = query;
+    input.dispatchEvent(new Event('input'));
+    await settle(fixture);
+  }
+
+  /** Every rendered label: collapsed rows stay in the DOM, so this is the honest count. */
+  function labels(fixture: Awaited<ReturnType<typeof render>>): string[] {
+    return [...(fixture.nativeElement as HTMLElement).querySelectorAll('.tree-row-label')].map(
+      (label) => label.textContent ?? '',
+    );
+  }
+
+  const ALL = ['Anchorland', 'Kattegat', 'Læsø', 'Skagerrak', 'Sweden', 'Göteborg'];
+
+  it('renders every row without a search', async () => {
+    const fixture = await render(sample());
+    expect(labels(fixture)).toEqual(ALL);
+  });
+
+  it('leaves only the path to a nested match', async () => {
+    const fixture = await render(sample());
+    await search(fixture, 'Læsø');
+    expect(labels(fixture)).toEqual(['Anchorland', 'Kattegat', 'Læsø']);
+  });
+
+  it('brings every row back when the search is cleared', async () => {
+    const fixture = await render(sample());
+    await search(fixture, 'Kattegat');
+    await search(fixture, '');
+    expect(labels(fixture)).toEqual(ALL);
+  });
+
+  it('brings every row back after a root left and returned pruned', async () => {
+    const fixture = await render(sample());
+    await search(fixture, 'Göteborg');
+    expect(labels(fixture)).toEqual(['Sweden', 'Göteborg']);
+    await search(fixture, 'Læsø');
+    expect(labels(fixture)).toEqual(['Anchorland', 'Kattegat', 'Læsø']);
+    await search(fixture, '');
+    expect(labels(fixture)).toEqual(ALL);
+  });
+
+  it('emits the entity of a nested match clicked after a search', async () => {
+    const fixture = await render(sample());
+    const emitted = vi.fn();
+    fixture.componentInstance.entitySelected.subscribe(emitted);
+    await search(fixture, 'Læsø');
+    const row = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.tree-row-main')].find(
+      (button) => button.textContent?.trim() === 'Læsø',
+    ) as HTMLButtonElement;
+    row.click();
+    expect(emitted).toHaveBeenCalledTimes(1);
+    expect(emitted.mock.calls[0][0].id).toBe(3);
+  });
+
+  it('renders a child added below the top level when the entities are replaced', async () => {
+    const fixture = await render(sample());
+    fixture.componentRef.setInput('entities', sample([mk(7, 'Anholt')]));
+    await settle(fixture);
+    expect(labels(fixture)).toEqual([
+      'Anchorland',
+      'Kattegat',
+      'Læsø',
+      'Anholt',
+      'Skagerrak',
+      'Sweden',
+      'Göteborg',
+    ]);
+  });
+});

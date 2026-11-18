@@ -1,12 +1,17 @@
 import { Component, computed, effect, input, output, signal, viewChild } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CdkTree, CdkTreeModule } from '@angular/cdk/tree';
 import { TranslocoPipe, translateSignal } from '@jsverse/transloco';
+import { BehaviorSubject, type Observable, distinctUntilChanged, map, tap } from 'rxjs';
 
 import { Icon } from '../../icons/icon';
 import type { HierarchicalEntity } from '../entity-tree/hierarchical-entity.model';
 import { type EntityTreeNode, toTreeNodes } from '../entity-tree/to-tree-nodes';
-import { filterTree, seedExpandKeys, setEquals } from '../entity-tree/tree-filter';
+import { childrenByKey, filterTree, seedExpandKeys, setEquals } from '../entity-tree/tree-filter';
 import { PickerPopover } from '../picker-popover/picker-popover';
+
+/** One stable empty list for a leaf, so a leaf's children never look changed. */
+const NO_CHILDREN: never[] = [];
 
 /**
  * Anchored hierarchical multi-select popover — the Area/Category filter-chip
@@ -62,6 +67,20 @@ export class TreePicker<
     () => filterTree(this.nodes(), this.filterText()).nodes,
   );
 
+  /**
+   * CDK's nested rows read their children once, when a row is created, and a row whose key stays
+   * keeps them: a search (a pruned copy of an ancestor under the same key) or new entities would
+   * never reach the rows below the top level. So each row's children are served from an index of
+   * the visible tree, keyed by node key, and that index is published before CDK receives the new
+   * roots, because CDK walks the children of the roots as soon as it gets them.
+   */
+  private readonly visibleChildren = new BehaviorSubject<ReadonlyMap<string, EntityTreeNode<T>[]>>(
+    new Map(),
+  );
+  protected readonly visibleRoots$ = toObservable(this.visibleRoots).pipe(
+    tap((roots) => this.visibleChildren.next(childrenByKey(roots))),
+  );
+
   private readonly expansionKeys = computed<ReadonlySet<string>>(
     () => {
       const nodes = this.nodes();
@@ -89,7 +108,11 @@ export class TreePicker<
 
   protected readonly selectedCount = computed(() => this.selection().length);
 
-  protected readonly childrenOf = (node: EntityTreeNode<T>): EntityTreeNode<T>[] => node.children;
+  protected readonly childrenOf = (node: EntityTreeNode<T>): Observable<EntityTreeNode<T>[]> =>
+    this.visibleChildren.pipe(
+      map((index) => index.get(node.key) ?? NO_CHILDREN),
+      distinctUntilChanged(),
+    );
   protected readonly trackByKey = (_index: number, node: EntityTreeNode<T>): string => node.key;
   protected readonly keyOf = (node: EntityTreeNode<T>): string => node.key;
 

@@ -138,6 +138,40 @@ describe('TreePicker', () => {
     expect(host.emitted?.map((e) => e.id)).toEqual([2]);
   });
 
+  it('leaves only the path to a nested match in the open panel, and all rows when cleared', async () => {
+    const { fixture } = setup([
+      area(1, 'Anchorland', [area(2, 'Kattegat', [area(3, 'Læsø')]), area(4, 'Skagerrak')]),
+      area(5, 'Sweden', [area(6, 'Göteborg')]),
+    ]);
+    const picker = fixture.debugElement.query(By.directive(TreePicker))
+      .componentInstance as TreePicker;
+    picker.open(fixture.nativeElement);
+    const settle = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    const search = async (query: string) => {
+      const input = document.querySelector<HTMLInputElement>('.picker-panel .tree-filter-input')!;
+      input.value = query;
+      input.dispatchEvent(new Event('input'));
+      await settle();
+    };
+    const labels = () =>
+      [...document.querySelectorAll<HTMLElement>('.picker-panel .tree-row-label')].map(
+        (label) => label.textContent,
+      );
+    await settle();
+    const all = ['Anchorland', 'Kattegat', 'Læsø', 'Skagerrak', 'Sweden', 'Göteborg'];
+    expect(labels()).toEqual(all);
+
+    await search('Læsø');
+    expect(labels()).toEqual(['Anchorland', 'Kattegat', 'Læsø']);
+
+    await search('');
+    expect(labels()).toEqual(all);
+  });
+
   it('clear emits an empty selection', () => {
     const { host, p } = setup([area(1, 'Anchorland')], [1]);
     p.clear();

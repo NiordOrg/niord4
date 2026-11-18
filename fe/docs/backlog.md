@@ -707,17 +707,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   periods (`series-detail.html` 337-383). The comment there means to keep a lone _Upcoming_ row out; a _Missing_
   row is a finding and could be shown. _New issue_ under _Current issue_ still opens the first period. Found by
   the user guides' pictures (2026-11-12).
-- **The entity tree's search prunes only its top level.** `filterTree`
-  (`ui-apps/admin/src/app/shared/components/entity-tree/tree-filter.ts`) prunes at every depth, but the CDK nested
-  tree renders a pruned node under the same `trackBy` key as before and keeps its cached child rows
-  (`entity-tree.ts` 104-106 and 124-138, whose comment names the same caching for the selection): searching
-  "Bornholm" in the geometry import's _From Area_ tab drops the other countries but leaves every row under Denmark
-  and The Baltic Sea, and a click on a nested row then did nothing. Every `app-entity-tree` may be affected (the
-  areas and categories pages, the user editor, the template selection). Seen by the user guides' picture
-  review and measured by its fixer (2026-11-12); the finishing round an hour earlier saw the tree pruned, so the
-  conditions are not settled, and the cause is inferred from the code. A spec that filters an expanded nested tree
-  and counts the rendered rows would settle it. `fe/guides-shots/editor-manual-positions.shots.ts` leaves the
-  search empty for `PositionEditorImportGeometry.png` until it is fixed.
 - **Category _Test…_ runs the template without parameters.** The editor's _Test…_ sends the example message's id
   and the category, no template parameters
   (`ui-apps/admin/src/app/features/admin/services/api/categories-admin-api.service.ts` 101-106), and the backend
