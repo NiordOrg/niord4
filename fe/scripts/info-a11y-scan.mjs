@@ -289,10 +289,11 @@ async function openSecondTab(page) {
 
 /**
  * Follows the Downloads page's first Browse link to the messages of that publication, whose filter
- * bar names it; the reason when the page offers none.
+ * bar names it; the reason when the page offers none. The list renders each link twice, one copy
+ * hidden at each width, so the visible one is taken.
  */
 async function openBrowsedPublication(page) {
-  const link = page.locator('a[href*="publicationId="]').first();
+  const link = page.locator('app-publication-list a[href*="publicationId="]:visible').first();
   if ((await link.count()) === 0) return 'the Downloads page offers no Browse link';
   await link.click();
   await page.waitForURL(/[?&]publicationId=/, { timeout: 15000 });
