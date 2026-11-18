@@ -79,7 +79,9 @@ filter menu skips it. Do not document an AtoN field to users.
 ## Filter ↔ URL contract
 
 `messages-filter-params.serializer.ts` is the single source of the URL contract. The filter state _is_
-the URL: what a shared link carries, and what a saved filter stores verbatim.
+the URL: what a shared link carries, and what a saved filter stores verbatim. The table is that form,
+which the backend search, saved filters, print and export use; the address differs in two keys
+(`MessagesFilterUrlSync`): `messageId` appears as `refMessageId` and `domain` as `searchDomain`.
 
 | Parameter                                                 | Shape            | Notes                                                       |
 | --------------------------------------------------------- | ---------------- | ----------------------------------------------------------- |
@@ -131,6 +133,15 @@ deep-link key. `MessagesFilterUrlSync` resolves this by renaming the filter to *
 the URL (restoring `messageId` only for the backend request) and skipping `MESSAGE_ID_QUERY_PARAM` in
 both sync directions — inbound so opening the dialog does not refetch the list with a one-message
 filter and wipe the scroll position, outbound so a filter change does not close the open dialog.
+
+### The `domain` collision
+
+`domain` is also the session-domain deep link, which the application reads once when it starts
+(`DomainService.bootstrap`, see [shell and auth](./shell-and-auth.md)). Were the Domain filter written
+as `domain`, opening a bookmark of a filtered list would make the filtered domain the current one. The
+URL sync therefore writes the filter as **`searchDomain`** and reads it back as `domain`; an inbound
+`domain` is the deep link, already used at start-up, and never reaches the filter. A `domain` on a
+Messages address leaves at the first filter change, since the sync replaces the query.
 
 The URL sync writes with `replaceUrl: true` after a 200 ms debounce and canonicalises its own output
 to recognise and skip the echo of its own navigation.

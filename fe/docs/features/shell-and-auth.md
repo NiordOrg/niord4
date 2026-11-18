@@ -101,7 +101,8 @@ rather than guess — see [coding-standards.md](../coding-standards.md) → _Dat
 
 Bootstrap picks the initial session domain in strict order (`DomainService.bootstrap`):
 
-1. a `?domain=<id>` query parameter on the first load that matches a known domain;
+1. a `?domain=<id>` query parameter on the first load that matches a known domain (the Messages
+   Domain filter is `searchDomain` on the address, so it never selects the session domain);
 2. the id persisted in `localStorage`;
 3. the first domain in the catalogue.
 
@@ -323,7 +324,7 @@ without it, a raw key could end up baked into the tab title with nothing to fix 
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `/messages?messageId={id}`   | Opens the [message details dialog](./messages.md#message-details-dialog) over the messages list.                                |
 | `/#/message/{id}`            | Forwarded to `/messages?messageId={id}` by `ui-apps/admin/src/app/core/guards/legacy-hash-redirect.guard.ts` on the home route. |
-| `?domain={id}` on first load | Wins over the persisted session domain (only on the initial load).                                                              |
+| `?domain={id}` on first load | Wins over the persisted session domain (only on the initial load). The Messages Domain filter is `?searchDomain=`, not this.    |
 | Any unknown path             | Redirected to home by the `**` route.                                                                                           |
 
 Both message forms are share and bookmark URLs that stay in circulation. The message links the

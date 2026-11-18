@@ -380,14 +380,6 @@ Background: [`features/messages.md`](features/messages.md).
 - The table view keeps its date-column choice in the un-namespaced browser-storage key `dateColumnType`, while
   the rest of the application's keys carry the `niord.` prefix.
 - There are no skeleton placeholders anywhere; lists signal loading with the thin progress strip only.
-- **A bookmark with the Domain filter switches the current domain.** The Domain filter writes `domain=<id>` into
-  the address (`features/messages/services/messages-filter-params.serializer.ts` 93-96), and at start-up the
-  application reads the same parameter as a link to the current domain (`app.config.ts` 134-146,
-  `core/domain/services/domain.service.ts` `resolveInitialSessionDomain`). Opening a bookmarked or shared Messages
-  address with a Domain filter therefore makes the filtered domain the current one, with its roles and menus, where
-  the filter only meant to search it. A filter parameter of its own name closes it. The editor manual
-  (`guides/editor-manual/03-Messages.adoc`, _Domain Filter_ and the page's introduction) describes it as it is;
-  change it with the fix. Found by the user guides' check (2026-11-11), read in the code.
 - **The Report... dialog's result frame leaves an empty band.** The result of a mailing-list report sits in a box
   24rem high (`h-96`, `features/messages/dialogs/mailing-list-reports-dialog/mailing-list-reports-dialog.html` 75)
   around `app-sandboxed-html`, whose frame is fixed at 18rem (`h-72`,

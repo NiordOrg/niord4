@@ -26,8 +26,7 @@ _Selection_, and at its right the _Filter_ menu and the _Actions_ menu. The pane
 you use appear above the list.
 
 The address of the page in the browser holds your filter. You can bookmark it, or copy it and send
-it to someone, and switching between the views keeps the filter. A bookmark with the _Domain_ filter
-set also changes your current domain; see <<domain-filter>>.
+it to someone, and switching between the views keeps the filter.
 
 [#view-modes]
 === View Modes
@@ -193,11 +192,9 @@ existing Navigational Warning.
 When you search another domain, only its public messages are found: those that are _Published_,
 _Cancelled_ or _Expired_.
 
-Like every filter, the _Domain_ filter is kept in the address of the page, as `domain=` followed by
-the id of the domain. Niord also reads that part of an address when it starts, to choose the
-current domain (see <<domain-selection>>). So when you open a bookmark or a link that has the
-_Domain_ filter set, the filtered domain becomes your current domain, and the filter then searches
-your own domain.
+Like every filter, the _Domain_ filter is kept in the address of the page, as `searchDomain=`
+followed by the id of the domain, so a bookmark or a link with the filter set searches that domain
+and leaves your current domain as it is.
 
 [#message-series-filter]
 ==== Message Series Filter

@@ -305,7 +305,8 @@ and supplies the clock, the map defaults and the message-series set on the clien
 **The initial session domain** is chosen by `DomainService.bootstrap` — a `?domain=` deep link, then
 the persisted id, then the first catalogue entry; the order and how it degrades are in
 [features/shell-and-auth.md](./features/shell-and-auth.md) → _Session domain_. The deep-link id is
-parsed out of `Location.path()` through the router before any navigation happens.
+parsed out of `Location.path()` through the router before any navigation happens. The Messages
+Domain filter travels as `searchDomain` on the address, so it never selects the session domain.
 
 **Every request to the backend carries `NiordDomain: <sessionDomainId>`** when a session domain
 exists — including anonymous requests. This is the multi-tenancy channel.
