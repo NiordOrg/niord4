@@ -65,7 +65,8 @@ While you browse a publication, the filter bar changes:
 
 A publication may hold messages that have since been cancelled or have run out. A cancelled message
 is marked _Cancelled_ beside its number, and one that has run out _Expired_, except a permanent
-notice, which has no mark (see <<reading-a-message>>).
+notice, which has no mark (see <<reading-a-message>>). The map does not draw a cancelled message,
+so it is listed in _Details_ and _List_ only; an expired one is drawn (see <<map-view>>).
 
 _Details_, _List_ and _Map_ in the menu bar keep the publication, so you can see its messages in
 each of the three views. _Downloads_ leaves it; to see the publication again, click _Browse_ there
