@@ -19,6 +19,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.hibernate.query.NativeQuery;
 import org.niord.model.message.Status;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +53,8 @@ public class MailingListStatusChangeOutbox {
     /** A row taken for its triggers: its id, and the message and status of the status change */
     public record Claim(long id, String messageUid, Status status) {
     }
+
+    private static final Logger log = LoggerFactory.getLogger(MailingListStatusChangeOutbox.class);
 
     /** The table, as Hibernate's query space */
     static final String TABLE = "MailingListStatusChange";
@@ -92,28 +96,55 @@ public class MailingListStatusChangeOutbox {
      * and its {@code "dueAt"} is moved to the end of the {@link #claimLease lease}, so no other node sees it as due
      * while its triggers run. {@link #complete} deletes it afterwards; a row whose run fails or never ends is due
      * again when the lease runs out.
+     * <p>
+     * A row whose status is not a {@link Status} (a status renamed or removed since the row was written, or a row
+     * written by hand) cannot be run. It keeps the lease, its {@code "lastError"} says why, it is logged as an ERROR,
+     * and the next due row is taken instead, so it never holds back the status changes after it.
      *
      * @return the row taken, or nothing when no row is due
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Optional<Claim> claimNextDue() {
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = em.createNativeQuery("SELECT id, \"messageUid\", status "
-                        + "FROM public.\"MailingListStatusChange\" WHERE \"dueAt\" <= now() "
-                        + "ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED")
-                .getResultList();
-        if (rows.isEmpty()) {
-            return Optional.empty();
+        while (true) {
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = em.createNativeQuery("SELECT id, \"messageUid\", status "
+                            + "FROM public.\"MailingListStatusChange\" WHERE \"dueAt\" <= now() "
+                            + "ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED")
+                    .getResultList();
+            if (rows.isEmpty()) {
+                return Optional.empty();
+            }
+            Object[] row = rows.get(0);
+            long id = ((Number) row[0]).longValue();
+            String messageUid = (String) row[1];
+            String status = (String) row[2];
+            // The lease first: a row whose status cannot be read is then no longer due, and the next pass of this
+            // loop takes the row after it
+            em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" "
+                            + "SET \"dueAt\" = now() + make_interval(secs => :seconds), attempts = attempts + 1 "
+                            + "WHERE id = :id")
+                    .setParameter("seconds", claimLease.toMillis() / 1000.0)
+                    .setParameter("id", id)
+                    .executeUpdate();
+            Optional<Status> known = knownStatus(status);
+            if (known.isPresent()) {
+                return Optional.of(new Claim(id, messageUid, known.get()));
+            }
+            String error = "Unknown message status '" + status + "'";
+            log.error("Skipped the status-change outbox row {} of message {}: {}; tried again when its lease runs out",
+                    id, messageUid, error);
+            recordError(id, error);
         }
-        Object[] row = rows.get(0);
-        long id = ((Number) row[0]).longValue();
-        em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" "
-                        + "SET \"dueAt\" = now() + make_interval(secs => :seconds), attempts = attempts + 1 "
-                        + "WHERE id = :id")
-                .setParameter("seconds", claimLease.toMillis() / 1000.0)
-                .setParameter("id", id)
-                .executeUpdate();
-        return Optional.of(new Claim(id, (String) row[1], Status.valueOf((String) row[2])));
+    }
+
+    /** The status of the given name, or nothing when no status has it */
+    private static Optional<Status> knownStatus(String name) {
+        for (Status status : Status.values()) {
+            if (status.name().equals(name)) {
+                return Optional.of(status);
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -138,6 +169,11 @@ public class MailingListStatusChangeOutbox {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void failed(long id, String error) {
+        recordError(id, error);
+    }
+
+    /** Writes the row's last error, in the caller's transaction */
+    private void recordError(long id, String error) {
         em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" SET \"lastError\" = :error WHERE id = :id")
                 .setParameter("error", error)
                 .setParameter("id", id)

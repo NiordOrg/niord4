@@ -547,6 +547,45 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     /**
+     * A row whose status is no {@link Status} (renamed or removed since it was written, or written by hand) used to
+     * throw at the take and roll back its lease: as the oldest due row it was taken first by every later drain, and
+     * no status change after it was mailed again. Now the take skips it, leased, with its error, and takes the next
+     * row.
+     */
+    @Test
+    void anOutboxRowWithAnUnknownStatusDoesNotHoldBackTheRowsAfterIt() {
+        String badUid = UUID.randomUUID().toString();
+        String goodUid = UUID.randomUUID().toString();
+        outboxUids.add(badUid);
+        outboxUids.add(goodUid);
+        ReentrantLock drains = drainLock();
+        drains.lock();
+        try {
+            listener.drainOutbox();
+            Tx.requiringNew().run(() -> em.createNativeQuery("INSERT INTO public.\"MailingListStatusChange\" "
+                            + "(\"messageUid\", status, created, \"dueAt\") VALUES (:uid, 'IT_NO_SUCH_STATUS', now(), now())")
+                    .setParameter("uid", badUid).executeUpdate());
+            Tx.requiringNew().run(() -> outbox.enqueue(goodUid, Status.PUBLISHED));
+            long goodId = Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
+                            "SELECT id FROM public.\"MailingListStatusChange\" WHERE \"messageUid\" = :uid")
+                    .setParameter("uid", goodUid).getSingleResult()).longValue());
+
+            assertEquals(Optional.of(new MailingListStatusChangeOutbox.Claim(goodId, goodUid, Status.PUBLISHED)),
+                    claimOwn(goodId), "the row after the unknown status is taken");
+            Object[] bad = Tx.requiringNew().call(() -> (Object[]) em.createNativeQuery(
+                            "SELECT attempts, \"lastError\", \"dueAt\" > now() FROM public.\"MailingListStatusChange\" "
+                                    + "WHERE \"messageUid\" = :uid")
+                    .setParameter("uid", badUid).getSingleResult());
+            assertEquals(1, ((Number) bad[0]).intValue(), "the unknown status's row was taken once");
+            assertEquals("Unknown message status 'IT_NO_SUCH_STATUS'", bad[1], "it keeps the reason");
+            assertEquals(Boolean.TRUE, bad[2], "and its lease, so the next take does not meet it again");
+            outbox.complete(goodId);
+        } finally {
+            drains.unlock();
+        }
+    }
+
+    /**
      * Takes due rows until the given one comes back, or none is due. The table is shared by every context of the run:
      * a row another class left leased (a failed trigger lookup) may come due during a test, and as the older row it
      * is taken first. Taken here, it is due again when this take's lease ends, for a later drain to run.
