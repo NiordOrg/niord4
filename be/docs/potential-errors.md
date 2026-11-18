@@ -878,9 +878,15 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   `64:ff9b::/96`, 6to4 `2002::/16`), unless the `niordIntegrationAllowPrivateHosts` setting is on.
 - **Operating note:** two Niord servers on the same private network or k8s cluster need
   `niordIntegrationAllowPrivateHosts=true`. The default is off, and a blocked fetch surfaces only as a
-  swallowed `log.error` on the hourly schedule. Set it from the sysadmin Settings page or a JVM system
-  property — the Helm chart has **no** generic env passthrough (`k8s/helm/niord/templates/app/deployment.yaml`
-  only loops over `.Values.secom.settings`), so there is no env-var route today.
+  swallowed `log.error` on the hourly schedule. The field is injected once, at bean creation, so every route
+  needs a restart. Two routes work today: the sysadmin Settings page (the stored row), or a JVM system
+  property named like the key, which `SettingsService.overrideOf` reads before the database. The chart hands
+  `app.javaOpts` to the JVM as `JAVA_TOOL_OPTIONS` (`k8s/helm/niord/templates/app/deployment.yaml`), so
+  `-DniordIntegrationAllowPrivateHosts=true` appended to an environment's `app.javaOpts` sets it from that
+  environment's values, and it survives a restore of another environment's database. What is missing is the
+  environment-variable route: the code reads an environment variable of the key's name too, but the chart
+  sets such variables only for `authServerUrl` and, with SECOM on, the keys of `.Values.secom.settings`; it
+  has no generic place for a setting (the same gap as WEB11's `baseUri`).
 - **Residual:** a public host that itself proxies inward; an https→http downgrade on a redirect
   (`DefaultRedirectStrategy` permits it); `NiordIntegrationRestService.createNiordIntegration` logs the raw
   URL at INFO *before* the service validates, so a rejected `http://user:pw@host` still reaches the
