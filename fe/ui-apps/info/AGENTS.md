@@ -337,9 +337,9 @@ a repository file: `/rest/repo/file/` spelt so, then non-empty segments of RFC 3
 (letters, digits, `-._~`, `!$&'()*+,=:@`) and `%XX` escapes, `%25` and `%3B` among them. Any other
 raw character (a `;`, a backslash, brackets, `^`, a letter outside ASCII), an empty segment (a
 doubled or trailing slash), a `.` or `..` segment, and an encoded dot, slash, backslash or NUL or any
-of them encoded twice (`%252F`) is a 403; a name that merely holds two dots (`Rapport..pdf`) is not. Its query is passed on
-unchecked but for the ticket, and its headers are its own: the sandbox for every type but a PDF,
-nosniff and the referrer policy.
+of them encoded twice (`%252F`) is a 403; a name that merely holds two dots (`Rapport..pdf`) is
+not. Its query is passed on unchecked but for the ticket, and its headers are its own: the sandbox
+for every type but a PDF, nosniff and the referrer policy.
 
 The container runs as the unprivileged user `nginx`, uid and gid 101, never as root, and listens on
 port 8080. It writes under `/tmp` alone — the server block the entrypoint renders (`/etc/nginx/http.d`

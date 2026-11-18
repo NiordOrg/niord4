@@ -78,9 +78,9 @@ map $args $niord_message_pdf_query_ok {
 # The two locations that take a message id — one message from the public API, and its PDF — are
 # two of the three that forward the request line as it arrived (see the locations; the third, a
 # repository file, has its own map below), so the raw line is held to the shape this site writes:
-# the id as encodeURIComponent spells it, as one path segment, then `.pdf` for the PDF. Each location's own match reads nginx's normalised URI, in
-# which `//`, an encoded `%2e` and a `..;` have already been folded away or decoded; the backend
-# would see them all verbatim.
+# the id as encodeURIComponent spells it, as one path segment, then `.pdf` for the PDF. Each
+# location's own match reads nginx's normalised URI, in which `//`, an encoded `%2e` and a `..;`
+# have already been folded away or decoded; the backend would see them all verbatim.
 #
 # A short id may hold a slash (`B/1 2026`), which encodeURIComponent writes as `%2F`, and the
 # backend reads `%2F` on these two paths, and on no other, as part of the id. So an encoded slash

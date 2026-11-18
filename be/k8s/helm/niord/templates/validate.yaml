@@ -29,9 +29,9 @@ password for a user that was never created, would stop the app at its next start
 {{- /*
 The superuser's Secret is this release's Postgres' own, and an environment that names it names the
 app's too: the chart's default user and password are for local runs. One Secret under both names,
-or the app's alone (below), would make the app the superuser again without saying so. Without Secrets the two default users
-must differ for the same reason. The database's name reaches the init container's psql, so where
-that container runs it is a plain name, as postgres.databases are.
+or the app's alone (below), would make the app the superuser again without saying so. Without
+Secrets the two default users must differ for the same reason. The database's name reaches the
+init container's psql, so where that container runs it is a plain name, as postgres.databases are.
 */ -}}
 {{- $pgAdmin := .Values.postgres.admin }}
 {{- if and $pgAdmin.existingSecret (not .Values.postgres.enabled) }}

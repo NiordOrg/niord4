@@ -248,11 +248,11 @@ the test realm and `admin`/`admin`.
 
 - **`start` instead of `start-dev`**, on the database `keycloak.database` (`keycloak`) of the
   release's Postgres, connecting as a database user of its own, `keycloak.db` (as the user of
-  `postgres.existingSecret` on a database of someone else's: "The database users", below). An init container
-  creates the database when it is missing. Keycloak serves plain HTTP behind the proxy and takes
-  the browser's scheme and address from its `X-Forwarded-*` headers. It runs one replica with a
-  local cache. `start` builds Keycloak for these options on every start, some seconds before
-  it listens.
+  `postgres.existingSecret` on a database of someone else's: "The database users", below). An
+  init container creates the database when it is missing. Keycloak serves plain HTTP behind the
+  proxy and takes the browser's scheme and address from its `X-Forwarded-*` headers. It runs one
+  replica with a local cache. `start` builds Keycloak for these options on every start, some
+  seconds before it listens.
 - **The bootstrap admin comes from `keycloak.existingSecret`**: the render fails without it.
   Keycloak creates that admin in the realm `master` on the first start only. It stays the master
   realm's admin; the admin console calls it *temporary* in a banner. Replacing it is optional, and
@@ -357,7 +357,8 @@ What follows from `externalKeycloakUrl` being on another origin (`niord.keycloak
   ```bash
   helm template realm helm/niord --set keycloak.mode=production --set keycloak.existingSecret=unused \
     --set postgres.existingSecret=unused --set postgres.admin.existingSecret=unused-admin \
-    --set keycloak.db.existingSecret=unused-kc --set keycloak.realm=niord-dk --set externalBaseUri=https://niord-dk-staging.example \
+    --set keycloak.db.existingSecret=unused-kc --set keycloak.realm=niord-dk \
+    --set externalBaseUri=https://niord-dk-staging.example \
     --set externalKeycloakUrl=https://login.example/auth --show-only templates/keycloak/configmap-realm.yaml
   ```
 

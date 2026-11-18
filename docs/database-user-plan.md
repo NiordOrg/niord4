@@ -105,9 +105,9 @@ Postgres in devops-shared, so this is for an environment with a Keycloak of its 
 
 **The chart refuses** the superuser's Secret without the application's, one Secret under both
 names, the application's Secret alone in a release that renders the application and its own
-Postgres (since 2026-11-18), the superuser's Secret in a release that renders no Postgres, a production-mode Keycloak
-without its own Secret where the others come from Secrets, and values from before these keys
-(`helm upgrade --reuse-values`).
+Postgres (since 2026-11-18), the superuser's Secret in a release that renders no Postgres, a
+production-mode Keycloak without its own Secret where the others come from Secrets, and values
+from before these keys (`helm upgrade --reuse-values`).
 
 ## 4. The first changeset
 
