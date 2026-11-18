@@ -339,6 +339,11 @@
         "message": "Move '{{name}}' to {{target}}?",
         "root": "the root"
       },
+      "confirmReindexMessages": {
+        "header": "Re-index published messages?",
+        "message": "Every published message of the current domain gets its place in its area again from the area's message sorting. The order editors have set by hand is replaced in every area and cannot be restored.",
+        "accept": "Re-index"
+      },
       "toast": {
         "saved": "Area saved",
         "saveError": "Error saving area",

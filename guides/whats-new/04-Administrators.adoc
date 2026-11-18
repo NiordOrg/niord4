@@ -59,7 +59,8 @@ tree. _Re-index published messages_ recomputes the order of every published mess
 domain within its area. It overwrites any order editors have set by hand, in every area: a message in an
 area that sorts its messages by position is placed by its position, and every other message,
 including one that has no position, is reset to the same neutral value, so the order among those
-messages is lost. See link:../admin-manual/manual.html#areas[Areas] in the administrator manual.
+messages is lost; Niord asks first. See link:../admin-manual/manual.html#areas[Areas] in the
+administrator manual.
 
 [#administrators-firing-area-messages]
 ==== Generating the firing area messages

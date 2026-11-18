@@ -665,8 +665,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   "view batch job" link.
 - Areas registers no param segment, so an area cannot be linked to — only publications and batch jobs have the
   trailing-param route.
-- Choosing a geometric message-sorting strategy for an area, or running "Re-index published messages", silently
-  replaces an editor's hand-made drag order. Nothing warns.
 - The mailing-list list filters in the browser over the whole download. The API service's optional `name=`
   parameter has no caller (the client filter is broader: id, name and description).
 - The Keycloak console deep link is assembled as `{url}/admin/master/console/#/{realm}/clients` and has never been

@@ -184,7 +184,8 @@ image::AreasActionMenu.png[The Area actions menu, 167]
 * *Re-index published messages* computes again where each published message of the current domain
   belongs in its area, from the message sorting of its area. Use it after you have changed the
   _Message sorting_ of an area. It overwrites the order that editors have set by hand with the Sort
-  Area action, in every area of the domain.
+  Area action, in every area of the domain. Niord asks first, because the hand-made order cannot be
+  restored: *Re-index* goes on, *No* leaves the order as it is.
 * *Generate firing area messages…* is shown only in a domain that has a firing schedule; see
   <<areas-firing-areas>>.
 
