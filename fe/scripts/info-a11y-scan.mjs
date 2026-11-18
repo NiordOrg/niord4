@@ -16,13 +16,14 @@
  * rewrites an argument that starts with a slash into a Windows path, so there a --route needs
  * MSYS_NO_PATHCONV=1 in front of the command, and --out then a Windows path (C:/…).
  *
- * Each state — a route, a dialog or a tab opened on one, the list empty and the list failed — is opened at
- * 1280 and at 320 px wide, in each language the menu's switcher offers (the page's own language when
- * it offers none), and scanned once the page has settled, with the rules axe-core tags for WCAG 2.0
- * and 2.1 at levels A and AA and its best-practice rules beside them. A best-practice rule is kept
- * apart: the missing level-one heading and the landmark rules are tagged so, and are no WCAG
- * failure by themselves. Both `violations` (a rule that fails) and `incomplete` (a rule axe could
- * not decide, contrast over an image most often: a person decides it) are kept.
+ * Each state — a route, a dialog or a tab opened on one, a publication browsed, the list empty and
+ * the list failed — is opened at 1280 and at 320 px wide, in each language the menu's switcher
+ * offers (the page's own language when it offers none), and scanned once the page has settled,
+ * with the rules axe-core tags for WCAG 2.0 and 2.1 at levels A and AA and its best-practice rules
+ * beside them. A best-practice rule is kept apart: the missing level-one heading and the landmark
+ * rules are tagged so, and are no WCAG failure by themselves. Both `violations` (a rule that fails)
+ * and `incomplete` (a rule axe could not decide, contrast over an image most often: a person decides
+ * it) are kept.
  *
  * axe-core's source is handed to the page through the DevTools protocol, which the page's
  * Content-Security-Policy does not hold, so the scan runs as well against the container as against
@@ -223,6 +224,12 @@ const STATES = [
     path: () => '/publications',
     prepare: openSecondTab,
   },
+  {
+    // Opened from the Downloads page, as a reader opens it: the publication's id is data.
+    name: '/messages/details, a publication browsed',
+    path: () => '/publications',
+    prepare: openBrowsedPublication,
+  },
   { name: '/teaser', path: () => '/teaser' },
   {
     name: '/messages/details, the first footer document open',
@@ -275,6 +282,19 @@ async function openSecondTab(page) {
   await page.waitForFunction(
     () => document.querySelectorAll('[role="tab"]')[1]?.getAttribute('aria-selected') === 'true',
   );
+  await settle(page);
+  return null;
+}
+
+/**
+ * Follows the Downloads page's first Browse link to the messages of that publication, whose filter
+ * bar names it; the reason when the page offers none.
+ */
+async function openBrowsedPublication(page) {
+  const link = page.locator('a[href*="publicationId="]').first();
+  if ((await link.count()) === 0) return 'the Downloads page offers no Browse link';
+  await link.click();
+  await page.waitForURL(/[?&]publicationId=/, { timeout: 15000 });
   await settle(page);
   return null;
 }
