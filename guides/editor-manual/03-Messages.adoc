@@ -504,7 +504,7 @@ recipients and its status:
 * _Sent_: the mail has been handed to the mail server.
 * _Waiting_: the mail is queued and will be sent within a minute or two.
 * _Retrying_: an attempt failed, and Niord tries again, at longer and longer intervals, for about
-  an hour and a half. The last error is shown below the status.
+  an hour and twenty minutes. The last error is shown below the status.
 * _Not sent_: the last attempt failed too, and Niord gives up. The last error is shown below the
   status; reach the recipients another way.
 
