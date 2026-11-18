@@ -611,8 +611,9 @@ section:
 The same file's SECAUD-12 now carries F-X64 as accepted; SECAUD-15, MASSASSIGN-2, MASSASSIGN-3 and
 RENDER6 are removed, because the sweep closed them; and U6, SECAUD-9, LUCENE-2, TMPL6, PORT-5 and REPO3
 now describe the code as the sweep left it. Since then LUCENE-2 was fixed and removed from that file,
-and the open RENDER6 there now (the message-list PDF's labels and time stamp) is a later, unrelated entry
-under the reused code.
+and in November 2026 TMPL6 and REPO3 were too (what is still open of REPO3, a file name with a
+semicolon on the public site, is REPO6 there now); and the open RENDER6 there now (the message-list
+PDF's labels and time stamp) is a later, unrelated entry under the reused code.
 
 New items in [`fe/docs/backlog.md`](../fe/docs/backlog.md):
 

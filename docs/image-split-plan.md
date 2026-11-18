@@ -432,8 +432,8 @@ Image names stay `niord/<module>-be`.
    - it starts, and Liquibase reports no duplicate change log;
    - the first log line after the banner names the built version and the thin jar
      (`Starting NiordDkApplication v<version> ... (/app/app.jar ...)`). The app's own
-     version endpoint answers `${timestamp}` before and after
-     (`be/docs/potential-errors.md`, WEB12);
+     version endpoint answered `${timestamp}` before and after (since the build-version
+     fix of November 2026 it answers the niord-base version);
    - the administration app loads at `/` and a login works;
    - a message list loads and one message opens;
    - a PDF report renders with its map image (FreeMarker templates, the portrayal
