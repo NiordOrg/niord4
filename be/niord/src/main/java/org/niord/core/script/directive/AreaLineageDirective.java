@@ -30,6 +30,8 @@ import org.niord.core.message.MessageService;
 import org.niord.core.message.vo.SystemMessageVo;
 import org.niord.core.util.CdiUtils;
 import org.niord.core.util.TextUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
@@ -51,6 +53,8 @@ public class AreaLineageDirective implements TemplateDirectiveModel {
     private static final String PARAM_MESSAGE   = "message";
     private static final String PARAM_LANG      = "lang";
     private static final String PARAM_FORMAT    = "format";
+
+    private static final Logger log = LoggerFactory.getLogger(AreaLineageDirective.class);
 
     /**
      * {@inheritDoc}
@@ -96,7 +100,12 @@ public class AreaLineageDirective implements TemplateDirectiveModel {
             env.getOut().write(areaLineage);
 
         } catch (Exception e) {
-            // Prefer robustness over correctness
+            // Prefer robustness over correctness, but say so: an area that cannot be resolved otherwise leaves the
+            // area heading of a warning blank without a trace
+            Object wrapped = (msgParam instanceof BeanModel beanModel) ? beanModel.getWrappedObject() : null;
+            String messageId = (wrapped instanceof SystemMessageVo message) ? message.getId() : null;
+            log.warn("Area lineage of message {} not printed in template {}: {}", messageId,
+                    LightCharacterDirective.templateName(env), LightCharacterDirective.reason(e));
         }
     }
 

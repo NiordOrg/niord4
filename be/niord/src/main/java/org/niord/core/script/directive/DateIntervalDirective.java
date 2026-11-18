@@ -31,6 +31,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.niord.core.util.NavWarnDateFormatter;
 import org.niord.core.util.NavWarnDateFormatter.Format;
 import org.niord.model.message.DateIntervalVo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Date;
@@ -54,6 +56,8 @@ public class DateIntervalDirective implements TemplateDirectiveModel {
     private static final String PARAM_FORMAT            = "format";
     private static final String PARAM_TIME_ZONE         = "tz";
     private static final String PARAM_CAP_FIRST         = "capFirst";
+
+    private static final Logger log = LoggerFactory.getLogger(DateIntervalDirective.class);
 
     /**
      * {@inheritDoc}
@@ -157,7 +161,24 @@ public class DateIntervalDirective implements TemplateDirectiveModel {
             env.getOut().write(result);
 
         } catch (Exception e) {
-            // Prefer robustness over correctness
+            // Prefer robustness over correctness, but say so: a date text edited on the Dictionaries page (a day
+            // suffix list that is too short) otherwise leaves the date of a warning blank without a trace
+            log.warn("{} not printed in template {}: {}", describe(date, dateInterval, dateIntervals),
+                    LightCharacterDirective.templateName(env), LightCharacterDirective.reason(e));
         }
+    }
+
+    /** What the directive was asked to print, for the log line: the dates only, never a text */
+    private static String describe(Date date, DateIntervalVo dateInterval, List<DateIntervalVo> dateIntervals) {
+        if (date != null) {
+            return "Date " + date.toInstant();
+        } else if (dateInterval != null) {
+            return "Date interval " + instant(dateInterval.getFromDate()) + " - " + instant(dateInterval.getToDate());
+        }
+        return "List of " + dateIntervals.size() + " date intervals";
+    }
+
+    private static Object instant(Date date) {
+        return (date == null) ? "(none)" : date.toInstant();
     }
 }

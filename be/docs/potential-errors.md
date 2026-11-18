@@ -520,28 +520,6 @@ suffixed `_documentsBug` / `_documentsBehavior` where practical._
 
 ---
 
-# Potential errors — `core.script` package (rendering & scripting)
-
-## SCRIPT5. Directives swallow all exceptions silently ("Prefer robustness over correctness")
-
-- **Location:** most directives — `LatLonDirective`, `DateIntervalDirective`, `FromToDateDirective`,
-  `NavtexDateFormatDirective`, `AreaLineageDirective`, `HtmlToTextDirective`, `TextToHtmlDirective` — each
-  wraps its body emission in `try { ... } catch (Exception e) { /* Prefer robustness over correctness */ }` with
-  **no logging**. (`CallSignDirective` and `LightCharacterDirective` log their fallback at WARN since wave 3b's
-  TMPL19 repair: a missing aton template was otherwise seen nowhere; `AtonDirectiveMissingTemplateITTest`.)
-- **Description:** any failure during formatting (bad data, an unresolvable bean, a malformed light
-  character, etc.) results in **empty (or partial) output with no diagnostic**. For example
-  `NavtexDateFormatDirective` with a null date emits the empty string; `AreaLineageDirective` emits nothing
-  when it cannot resolve the area service.
-- **Why it looks wrong:** silent failure makes template/data errors invisible — a report can render with
-  blank fields and no trace in the logs. A `log.debug`/`log.warn` would preserve robustness while keeping
-  failures discoverable.
-- **Exposed by:** the directive unit tests (e.g. `NavtexDateFormatDirectiveTest` null-date → "",
-  `AreaLineageDirectiveTest` unresolvable-bean → "").
-- **Severity:** Low/Medium — operational observability gap, by design but easy to mitigate.
-
----
-
 # AtoN subsystem (`core/aton`, `web/aton`)
 
 Found while covering `org.niord.core.aton.*`, `org.niord.web.aton.AtonIconRenderer` and the AtoN
@@ -574,7 +552,7 @@ service/REST integration tests. Tests pinning the current (incorrect) behaviour 
 - **Exposed by:** `FieldTemplateProcessorTest.parseContentTextWhitespacePaddedNewlinesCollapseAndJoin_documentsQuirk`
   (vs. `...PreservesSingleNewlineBetweenLines`).
 - **Severity:** Low — formatting quirk in generated plain-text fields (e.g. NAVTEX/subject text). Related
-  to the "prefer robustness over correctness" clean-up philosophy noted in SCRIPT5.
+  to the "prefer robustness over correctness" clean-up philosophy of the template helpers.
 
 ## TMPL6. Template field-template assignment silently swallows failures (robustness over correctness)
 
@@ -585,7 +563,7 @@ service/REST integration tests. Tests pinning the current (incorrect) behaviour 
   (e.g. `part.getDesc('da').subject` where the part has no `da` description, or a missing promulgation),
   the Nashorn assignment throws `TypeError`/`ScriptException`, which is caught and logged at ERROR but
   otherwise ignored — the field is silently left unset and template execution "succeeds". This is the
-  same swallow-and-continue philosophy recorded in SCRIPT5 for the Freemarker directives; it makes
+  same swallow-and-continue philosophy as the Freemarker directives' fallbacks; it makes
   authoring errors in templates hard to notice.
 - **Exposed by:** `TemplateExecutionServiceITTest.executeScriptResources_fieldTemplateForMissingDescIsSwallowed`.
   Seen live in the error hunt's wave 3 (2026-11-12): a DK category's field template writing
@@ -1997,7 +1975,8 @@ unless they say otherwise.
   the format for any count, or refuse an unsupported one loudly.
 - **Left by the fix stage (2026-11-13):** latent, as no template or dialog asks for another precision, and a fix
   needs a choice the entry leaves open (what 0 decimals prints, and how a refusal is shown when the directive
-  swallows its exceptions, SCRIPT5); recommended to decide with the next template that wants another precision.
+  turns its exceptions into an empty output and a warning in the log); recommended to decide with the next template
+  that wants another precision.
 
 ## MAILLIST2. Status-change mails ride a fire-and-forget topic, and a status change lost on the way leaves no record
 

@@ -44,8 +44,9 @@ import static org.niord.core.script.directive.DirectiveTestSupport.render;
  * {@code decimals} override, lat-only / lon-only emission (separator suppression), a custom
  * separator, southern/western-hemisphere sign handling, and the required-parameter contract where a
  * missing {@code lat} AND {@code lon} throws a {@link TemplateException} before the directive's
- * robustness try/catch. The audio format follows the render's own bundle, so an edit or deletion of the
- * position words reaches the next render (SCRIPT11).
+ * robustness try/catch (which prints nothing and logs a warning, {@link DirectiveFallbackLogTest}). The audio
+ * format follows the render's own bundle, so an edit or deletion of the position words reaches the next render
+ * (SCRIPT11).
  * <p>
  * The degree sign {@code °} and the literal double-quote seconds marker match the format constants used
  * by {@link org.niord.core.util.PositionFormatter}. All assertions use the ENGLISH locale.

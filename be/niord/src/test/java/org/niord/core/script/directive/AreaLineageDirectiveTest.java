@@ -43,7 +43,8 @@ import static org.niord.core.script.directive.DirectiveTestSupport.render;
  *         <em>before</em> the directive's internal try/catch.</li>
  *     <li>A {@code message} IS supplied but no CDI container exists, so
  *         {@code CdiUtils.getBean(...)} throws and the directive's "prefer robustness over
- *         correctness" catch swallows it, emitting NOTHING (an empty string).</li>
+ *         correctness" catch emits NOTHING (an empty string) and logs a warning
+ *         ({@link DirectiveFallbackLogTest}).</li>
  * </ol>
  */
 public class AreaLineageDirectiveTest {
@@ -61,7 +62,7 @@ public class AreaLineageDirectiveTest {
         }
     }
 
-    // With a message but no CDI container, CdiUtils.getBean throws and the robustness catch swallows it, emitting an empty string.
+    // With a message but no CDI container, CdiUtils.getBean throws and the robustness catch emits an empty string (and a warning).
     @Test
     public void messageWithoutCdiContainerEmitsEmptyString() throws Exception {
         Map<String, Object> data = data();

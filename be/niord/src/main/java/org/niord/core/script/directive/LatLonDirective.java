@@ -24,6 +24,8 @@ import freemarker.template.TemplateException;
 import freemarker.template.TemplateModel;
 import freemarker.template.TemplateModelException;
 import org.niord.core.util.PositionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
@@ -55,6 +57,8 @@ public class LatLonDirective implements TemplateDirectiveModel {
     private static final String PARAM_DECIMALS          = "decimals";
     private static final String PARAM_SEPARATOR         = "separator";
     private static final String PARAM_FORMAT            = "format";
+
+    private static final Logger log = LoggerFactory.getLogger(LatLonDirective.class);
 
     /**
      * {@inheritDoc}
@@ -118,7 +122,11 @@ public class LatLonDirective implements TemplateDirectiveModel {
                 env.getOut().write(PositionUtils.formatLon(env.getLocale(), format, lon));
             }
         } catch (Exception e) {
-            // Prefer robustness over correctness
+            // Prefer robustness over correctness, but say so: a position word deleted on the Dictionaries page
+            // otherwise leaves an audio position blank without a trace
+            log.warn("Position lat={} lon={} (format \"{}\") not printed in template {}: {}", latModel, lonModel,
+                    formatModel == null ? "dec" : formatModel.getAsString(),
+                    LightCharacterDirective.templateName(env), LightCharacterDirective.reason(e));
         }
     }
 

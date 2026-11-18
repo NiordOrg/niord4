@@ -32,8 +32,8 @@ import static org.niord.core.script.directive.DirectiveTestSupport.utc;
  * {@link org.niord.core.util.TimeUtils#formatNavtexDate(Date)}, which uses the pattern
  * {@code "ddHHmm 'UTC' MMM yy"} in {@link java.util.Locale#US} and the UTC time zone. The month is
  * rendered as the {@code Locale.US} short name and is NOT uppercased (e.g. {@code "Apr"}). When no
- * (or a null) date is supplied, the underlying formatter NPEs internally and both the formatter and
- * the directive swallow the exception ("Prefer robustness over correctness"), emitting an empty string.
+ * (or a null) date is supplied, the underlying formatter NPEs internally and swallows that itself
+ * (a deliberate "no date"), so the directive emits an empty string without reaching its own catch.
  * <p>
  * These tests run through a real Freemarker {@link freemarker.template.Configuration} via
  * {@link DirectiveTestSupport} only, so they are independent of Quarkus and survive a Spring migration.
@@ -67,7 +67,7 @@ public class NavtexDateFormatDirectiveTest {
         Assertions.assertEquals("050000 UTC Jan 19", render("<@d date=date/>", data));
     }
 
-    // Without a date parameter the directive swallows the internal NPE and emits an empty string.
+    // Without a date parameter the formatter swallows its internal NPE and the directive emits an empty string.
     @Test
     public void emitsEmptyStringWhenNoDateParameterGiven() throws Exception {
         Map<String, Object> data = data();
