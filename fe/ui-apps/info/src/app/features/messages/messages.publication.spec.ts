@@ -57,7 +57,14 @@ describe('browsing a publication as a message list', () => {
     httpTesting = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpTesting.verify());
+  /** A page a test put into the document, taken out again after it. */
+  let attached: HTMLElement | undefined;
+
+  afterEach(() => {
+    attached?.remove();
+    attached = undefined;
+    httpTesting.verify();
+  });
 
   /** The page on a browsed publication, its three reads answered. */
   async function openBrowsed(url = BROWSE_URL, publication: object = NTM_38) {
@@ -168,7 +175,11 @@ describe('browsing a publication as a message list', () => {
   it('returns the same view to the current list when the publication is closed', async () => {
     const harness = await openBrowsed(`/messages/table?publicationId=${PUBLICATION_ID}`);
     const router = TestBed.inject(Router);
+    // Focus moves only between elements in the document.
+    attached = harness.fixture.nativeElement as HTMLElement;
+    document.body.appendChild(attached);
 
+    closeButton(harness)!.focus();
     closeButton(harness)!.click();
     // The navigation resolves on a later turn than the click; waiting for the page to be stable
     // would wait for the list read below, which nothing answers until it is flushed.
@@ -186,5 +197,11 @@ describe('browsing a publication as a message list', () => {
     harness.detectChanges();
     expect(closeButton(harness)).toBeNull();
     expect(chipLabels(harness)).toContain('Navigational Warnings');
+    // The control that was pressed is gone; focus is on the bar's first chip, not the page.
+    await vi.waitFor(() =>
+      expect((document.activeElement as HTMLElement | null)?.textContent?.trim()).toBe(
+        'Navigational Warnings',
+      ),
+    );
   });
 });
