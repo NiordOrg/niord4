@@ -506,7 +506,10 @@ The backend runs in UTC. Times stored without a
 zone are written and read in the server's zone, so a server on a zone with summer time would shift
 them by an hour in the autumn hour that happens twice. The domains' time zones (step 2) format what
 the administration app and the backend's documents show; the public site uses the zone its build
-names (step 2). The chart and the images set UTC; that is verified at the deploy step.
+names (step 2). The image and the chart set `TZ=UTC` on the backend's pod, outside
+`app.javaOpts`, so a value that replaces `app.javaOpts` keeps it; do not add `-Duser.timezone`
+there. At the deploy step, check it in the running pod: `kubectl exec <pod> -- printenv TZ` prints
+`UTC`.
 
 ## Cut-over from an existing deployment
 

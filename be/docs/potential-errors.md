@@ -1594,18 +1594,20 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `niord/scripts/regen-test-seed-postgres.sh:178-180`, `-Duser.timezone=UTC`); Surefire and Failsafe do not.
 - **Why it looks wrong:** a stored instant that moves by an hour once a year is a wrong value, not only a test
   artefact: whatever the ITs check (publish stamps, publication windows, a tag's expiry, a mail's due time) is
-  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: neither
-  `k8s/docker/Dockerfile` (`eclipse-temurin:25-jre`, no `TZ`) nor the chart (`k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`, `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, passed as `JAVA_TOOL_OPTIONS` by
-  `templates/app/deployment.yaml:89-90`) sets `TZ` or `-Duser.timezone`, so a pod runs in the base image's zone,
-  UTC unless a deployment sets one [inferred from the base image; not read in a running pod]. In UTC there is no
-  repeated hour; a developer's or a test server's JVM in a zone with summer time has one each year.
+  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: the image
+  (`k8s/docker/Dockerfile`, `ENV TZ=UTC`) and the chart (`k8s/helm/niord/templates/app/deployment.yaml`, a fixed
+  `TZ: UTC` entry in the app container's environment, outside `app.javaOpts`, so a values file that replaces
+  that value keeps it) pin the pod's JVM to UTC; only an explicit `-Duser.timezone` in `app.javaOpts` would
+  override it, which the chart's README and the operators' guide say not to add. In UTC there is no repeated
+  hour; a developer's or a test server's JVM in a zone with summer time has one each year, and so has an
+  integration-test run.
 - **Exposed by:** the first `./verify-local` of the country split's P7-bs, which ran at 02:04 local on
   2026-10-25, in the repeated hour.
 - **Decided (the owner, 2026-10-25):** the JVM runs in UTC; the chart and the images set it at the deploy step
   (e.g. `TZ`/`-Duser.timezone=UTC` in `k8s/docker/Dockerfile` and `k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9); the entry stays
-  open until that is built.
+  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9). Built in the
+  image and the chart on 2026-11-18 (`TZ=UTC`, not in `app.javaOpts`); the entry stays open for the tests' zone,
+  which Surefire and Failsafe still do not pin.
 
 ## LUCENE-3. A message index of an older Lucene format in the index folder stops the start-up
 

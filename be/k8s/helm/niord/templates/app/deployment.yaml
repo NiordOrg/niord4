@@ -157,6 +157,11 @@ spec:
               value: "optional:file:/config/"
             - name: NIORD_HOME
               value: "/niord-home"
+            # The JVM runs in UTC: times are stored without a zone and read in the JVM's zone, and
+            # the data is in UTC. Not a value, so a values file that replaces app.javaOpts keeps
+            # it; an explicit -Duser.timezone in app.javaOpts would still win, so none is set.
+            - name: TZ
+              value: "UTC"
             - name: JAVA_TOOL_OPTIONS
               value: {{ .Values.app.javaOpts | quote }}
             # The app's database user, from postgres.existingSecret (or the chart's local default).

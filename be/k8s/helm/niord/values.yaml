@@ -137,7 +137,8 @@ app:
   # container memory limit. The backend fetches OpenStreetMap tiles for the message map
   # images (the osmUrl setting's host, tile.openstreetmap.org by default): where the pod
   # reaches the internet through a proxy, add -Dhttps.proxyHost=<host> -Dhttps.proxyPort=<port>
-  # and -Dhttp.nonProxyHosts=<in-cluster hosts>.
+  # and -Dhttp.nonProxyHosts=<in-cluster hosts>. The pod runs in UTC (the image and the chart
+  # set TZ, outside this value); do not add -Duser.timezone.
   javaOpts: "-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC"
   logLevel: "INFO"
   # The Keycloak clients whose access tokens the API accepts: a token's azp claim (the client it
