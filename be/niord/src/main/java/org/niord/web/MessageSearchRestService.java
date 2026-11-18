@@ -287,9 +287,10 @@ public class MessageSearchRestService {
             params.adjustDateInterval(currentDomain.timeZone());
         }
 
-        // Perform the search
+        // Perform the search. The search that lets a failure through: an empty answer here must mean zero messages,
+        // in the editors' list, the print, the export and the message mail alike
         long t0 = System.currentTimeMillis();
-        PagedSearchResultVo<Message> searchResult = messageSearchService.search(params);
+        PagedSearchResultVo<Message> searchResult = messageSearchService.searchOrFail(params);
 
         // Record a textual description of the search
         String description = params.toString();

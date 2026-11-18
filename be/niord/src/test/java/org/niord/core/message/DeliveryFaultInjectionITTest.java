@@ -775,7 +775,7 @@ class DeliveryFaultInjectionITTest extends ITTest {
      * skipped for this run: both live exercises stay PUBLISHED, nothing is cancelled or broadcast, and the run throws
      * nothing.
      *
-     * <p>Before the fix the search answered its failure with an empty page (PORT-2), which read as "no template":
+     * <p>Before the fix the search answered its failure with an empty page, which read as "no template":
      * every current exercise was cancelled, and the cancellations broadcast to the mailing lists and SECOM, while the
      * periods were still scheduled.
      */

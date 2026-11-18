@@ -1188,24 +1188,6 @@ was changed in production code.
   `LiquibaseBootstrapITTest` now sets the system property in its static bootstrap. **Exposed by:** the first
   CI run of the merged publications port.
 
-## PORT-2. `MessageSearchService.search()` turns every failure into an empty result
-
-- **Location:** `niord/src/main/java/org/niord/core/message/MessageSearchService.java` (`search`: the
-  `TransitionRefusedException` rethrow, then the catch that logs the rest at ERROR and answers an empty result),
-  and its REST caller `niord/src/main/java/org/niord/web/MessageSearchRestService.java` 292, which serves the
-  editors' list (`GET /rest/messages/search`), the export, the message mail (`MessageMailRestService` 145) and the
-  print (`MessageReportRestService` 374, also the public site's anonymous list PDF).
-- **Description:** every exception except `TransitionRefusedException` is logged and converted to an
-  empty `PagedSearchResultVo`, a free-text query the Lucene parser cannot read included.
-- **Why it looks wrong:** those REST callers cannot tell a failed search from a genuine answer of zero messages:
-  an editor is told a warning does not exist, a mariner gets an empty PDF. The public API, the mailing-list mails
-  and report, the Niord integration, a publication entering recording, the area sort recompute and the firing run
-  search through `MessageSearchService.searchOrFail`, which lets a failure through; the free-text branch no longer
-  swallows an index failure itself.
-- **Exposed by:** reproduced by the error hunt of 2026-11-12 (tracks C and CT):
-  `DeliveryFaultRestITTest#anUnbalancedQuoteInTheEditorsSearchAnswersNoMessagesInsteadOfInvalidQuery_documentsBug`
-  (the query `nw "` answers 200 with total 0).
-
 ## PORT-3. Release endpoint dereferences `stampedAt` without a null guard, after the irreversible half
 
 - **Location:** `niord/src/main/java/org/niord/web/publication/PublicationIssueRestService.java`,

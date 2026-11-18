@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.queryparser.classic.ParseException;
 import org.locationtech.jts.geom.Geometry;
 import org.niord.core.NiordApp;
 import org.niord.core.area.Area;
@@ -176,7 +177,9 @@ public class MessageSearchService extends BaseService {
      * A failed search is logged and answered with an empty result, which a caller cannot tell from a real answer of
      * zero messages. It remains for screens and scripts that only show what they find. A caller that answers the
      * public, mails people or acts on "nothing found", by cancelling or creating messages, uses
-     * {@link #searchOrFail(MessageSearchParams)} instead.
+     * {@link #searchOrFail(MessageSearchParams)} instead. Two failures are thrown here too: an unresolvable
+     * publication id ({@link TransitionRefusedException}) and a free-text query the index cannot parse
+     * ({@link InvalidFreeTextQueryException}).
      *
      * @param params the search parameters
      * @return the search result
@@ -186,7 +189,7 @@ public class MessageSearchService extends BaseService {
         try {
             return searchOrFail(params);
 
-        } catch (TransitionRefusedException e) {
+        } catch (TransitionRefusedException | InvalidFreeTextQueryException e) {
             // Never swallowed.
             //
             // The catch below turns any failure into an empty result, which a
@@ -194,6 +197,8 @@ public class MessageSearchService extends BaseService {
             // unresolvable publication= id is exactly the failure this is meant
             // to make visible, so swallowing it here would replace "returns
             // everything" with "returns nothing", quietly, and call it fixed.
+            // An unreadable free-text query is the caller's error and must reach
+            // the caller in the same way.
             throw e;
 
         } catch (Exception e) {
@@ -328,11 +333,17 @@ public class MessageSearchService extends BaseService {
             Set<Long> matches = new LinkedHashSet<>();
             // A literal query (a caller without an identity) reaches Lucene as plain words. The
             // PostgreSQL backend needs no flag: websearch_to_tsquery has no wildcard syntax.
-            for (String language : app.getLanguages(param.getLanguage())) {
-                matches.addAll(disableLucene
-                        ? messagePostgresIndex.searchIndex(param.getQuery(), language, Integer.MAX_VALUE)
-                        : messageLuceneIndex.searchIndex(param.getQuery(), language, Integer.MAX_VALUE,
-                                param.isLiteralQuery()));
+            try {
+                for (String language : app.getLanguages(param.getLanguage())) {
+                    matches.addAll(disableLucene
+                            ? messagePostgresIndex.searchIndex(param.getQuery(), language, Integer.MAX_VALUE)
+                            : messageLuceneIndex.searchIndex(param.getQuery(), language, Integer.MAX_VALUE,
+                                    param.isLiteralQuery()));
+                }
+            } catch (ParseException e) {
+                // A query the parser cannot read is the caller's error, answered 400
+                log.debug("Unreadable free-text query " + param.getQuery() + ": " + e.getMessage());
+                throw new InvalidFreeTextQueryException(e);
             }
             List<Long> ids = new ArrayList<>(matches);
             // Need to convert them to int as per message.id type

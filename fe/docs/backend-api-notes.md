@@ -193,6 +193,10 @@ The workhorse read, and the one that lies most quietly.
 - **`maxSize` has a ceiling of 1000** on every search built from request parameters (`messages/search`,
   and the report, mail and export searches before they set their own size): a larger value is cut to
   1000 and a value below 1 is raised to 1, silently. Ask for more than 1000 and you get 1000.
+- **A search that cannot run is an error, never an empty page.** A signed-in caller's free-text
+  `query=` the index cannot parse (an unbalanced quote, say) answers **400**; a search that fails (an
+  unreadable index, a database fault) answers **5xx**. The same holds for the print, the export and the
+  message mail, which search the same way.
 - **Callers without an identity get plain-word free text.** For a request with no token and no ticket,
   `query=` is matched as literal words (no wildcards, regular expressions, phrases or `AND`/`OR`/`NOT`)
   and cut to 256 characters, and `username`, `userType` and `comments` are ignored. A ticketed request
