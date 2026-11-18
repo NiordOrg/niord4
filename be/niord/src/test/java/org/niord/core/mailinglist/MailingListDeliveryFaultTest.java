@@ -18,9 +18,11 @@ package org.niord.core.mailinglist;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.niord.core.area.Area;
 import org.niord.core.message.Message;
+import org.niord.model.message.Status;
 import org.niord.test.JmsFaults;
 
 import java.time.Duration;
@@ -36,7 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Fault injection on two steps of the status-change mail path that used to fail silently, as unit tests, both found
  * by the error hunt of 2026-11-12: a trigger's message filter that throws, and the listener's poll loop when the
- * broker connection fails. Both are regression tests of the fix now.
+ * broker connection fails. Both are regression tests of the fix now. Beside them, the outbox pass at start, which mails
+ * a status change whose topic message was lost in a restart.
  */
 class MailingListDeliveryFaultTest {
 
@@ -135,5 +138,42 @@ class MailingListDeliveryFaultTest {
         assertTrue(receives.get() >= 2, "the loop subscribed again after the failed receive: " + receives.get());
         assertEquals(1, log.list.stream().filter(e -> e.getLevel() == Level.ERROR).count(),
                 "and logged one ERROR: " + JmsFaults.warningsAndErrors(log));
+    }
+
+    /**
+     * A status change committed just before a restart was announced on the topic while no listener was subscribed: its
+     * outbox row is all that is left of it. {@code onStart} drains the outbox once before it starts the poll loop, so
+     * the row is mailed at start; with the per-minute sweep switched off ({@code -}, as in the integration suite) this
+     * pass is the only one that reaches it before the next status change. Would fail if the start's drain were left
+     * out, or submitted after the loop, which never returns and so holds the listener's single thread for ever.
+     */
+    @Test
+    void theStartDrainsTheStatusChangesCommittedBeforeIt() throws Exception {
+        MailingListMessageListenerTest.RecordingOutbox outbox = new MailingListMessageListenerTest.RecordingOutbox();
+        outbox.due.add(new MailingListStatusChangeOutbox.Claim(5, "uid-before-restart", Status.PUBLISHED));
+        MailingListService noTriggers = new MailingListService(null, null) {
+            @Override
+            public List<MailingListTrigger> findStatusChangeTriggers(Status status) {
+                return List.of();
+            }
+        };
+        AtomicInteger receives = new AtomicInteger();
+        MailingListMessageListener listener = new MailingListMessageListener(noTriggers, null, outbox,
+                JmsFaults.consumerThatFailsOnFirstReceive(receives));
+        listener.reconnectDelayMillis = 10;
+        ListAppender<ILoggingEvent> log = JmsFaults.captureLog(MailingListMessageListener.class);
+        try {
+            listener.onStart();
+            Awaitility.await().atMost(Duration.ofSeconds(10)).pollInterval(Duration.ofMillis(20))
+                    .until(() -> outbox.completed.equals(List.of(5L)));
+        } finally {
+            listener.onStop();
+            JmsFaults.stopCapture(MailingListMessageListener.class, log);
+        }
+        assertTrue(outbox.due.isEmpty(), "the row was taken");
+        assertTrue(outbox.failures.isEmpty(), "and its run did not fail: " + outbox.failures);
+        assertTrue(log.list.stream().anyMatch(e -> e.getLevel() == Level.INFO
+                        && e.getFormattedMessage().equals("Made the mailing lists' mails of 1 status change(s) at start")),
+                "the start's pass says what it did: " + log.list);
     }
 }

@@ -284,8 +284,9 @@ Behaviour that was deliberately left out of the service/REST `*ITTest`s added fo
   broadcasts, but its live path has no such test.
 - **What IS tested instead:** the *dispatch logic* of both listeners is unit-tested directly and
   framework-neutrally — `MailingListMessageListenerTest` drains a recording outbox through `onMessage(...)`,
-  `drainOutbox()` and `sweep()`, and calls `checkStatusChangeMailingListExecution(...)` with recording service
-  doubles (every due outbox row taken in order and deleted after its triggers; a row whose triggers cannot be looked
+  `drainOutbox()` and `sweep()` (which returns at once while a drain runs), `MailingListDeliveryFaultTest` through
+  `onStart()` before its poll loop, and `MailingListMessageListenerTest` calls
+  `checkStatusChangeMailingListExecution(...)` with recording service doubles (every due outbox row taken in order and deleted after its triggers; a row whose triggers cannot be looked
   up kept for the next pass; each trigger executed once for the message UID; a failing trigger does not abort the
   rest), and `TwitterMessageListenerTest` calls `onMessage(...)` with a `FakeMapMessage` (only `PUBLISHED`
   promulgates; the UID is forwarded; malformed/non-`MapMessage` payloads are swallowed). The broker delivery

@@ -20,14 +20,21 @@ import org.junit.jupiter.api.Test;
 import org.niord.core.mailinglist.MailingListStatusChangeOutbox.Claim;
 import org.niord.model.message.Status;
 
-import java.util.ArrayDeque;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -198,6 +205,45 @@ public class MailingListMessageListenerTest {
         assertEquals(List.of(3L), outbox.completed);
     }
 
+    /**
+     * The sweep returns at once while a drain runs on this node (that drain takes every due row), rather than wait for
+     * it: the scheduler's thread is shared with the other scheduled jobs. Would fail if the sweep waited for the drain
+     * lock (it would block until the drain ends) or took a row beside the running drain.
+     */
+    @Test
+    public void theSweepReturnsAtOnceWhileADrainRuns() throws Exception {
+        AtomicInteger claims = new AtomicInteger();
+        CountDownLatch drainHasClaimed = new CountDownLatch(1);
+        CountDownLatch releaseDrain = new CountDownLatch(1);
+        MailingListStatusChangeOutbox slowOutbox = new MailingListStatusChangeOutbox() {
+            @Override
+            public Optional<Claim> claimNextDue() {
+                if (claims.incrementAndGet() == 1) {
+                    drainHasClaimed.countDown();
+                    try {
+                        releaseDrain.await(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                return Optional.empty();
+            }
+        };
+        MailingListMessageListener busy = new MailingListMessageListener(mailingListService, executionService,
+                slowOutbox, null);
+        Thread drain = new Thread(busy::drainOutbox, "test-drain");
+        drain.start();
+        try {
+            assertTrue(drainHasClaimed.await(10, TimeUnit.SECONDS), "the drain is running");
+            assertTimeoutPreemptively(Duration.ofSeconds(2), busy::sweep, "the sweep does not wait for the drain");
+            assertEquals(1, claims.get(), "and takes no row itself");
+        } finally {
+            releaseDrain.countDown();
+            drain.join(10_000);
+        }
+        assertFalse(drain.isAlive(), "the drain ended");
+    }
+
     // --------------------------------------------------------------------------------------------- //
 
     private static List<MailingListTrigger> triggers(Integer... ids) {
@@ -235,11 +281,14 @@ public class MailingListMessageListenerTest {
         }
     }
 
-    /** An outbox of preset due rows, taken in order, which records the rows deleted and the failures recorded. */
+    /**
+     * An outbox of preset due rows, taken in order, which records the rows deleted and the failures recorded. Safe to
+     * drain on the listener's own thread while a test reads it ({@code MailingListDeliveryFaultTest}).
+     */
     static final class RecordingOutbox extends MailingListStatusChangeOutbox {
-        final Deque<Claim> due = new ArrayDeque<>();
-        final List<Long> completed = new ArrayList<>();
-        final List<String> failures = new ArrayList<>();
+        final Deque<Claim> due = new ConcurrentLinkedDeque<>();
+        final List<Long> completed = new CopyOnWriteArrayList<>();
+        final List<String> failures = new CopyOnWriteArrayList<>();
 
         @Override
         public void enqueue(String messageUid, Status status) {
