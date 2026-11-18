@@ -117,4 +117,38 @@ describe('MessageService', () => {
       expect(parsed?.publishDateFrom).toBeUndefined();
     });
   });
+
+  // A part's event dates are what active-now judges a message by; the API declares their ends
+  // strings as well.
+  describe('eventDates', () => {
+    it('reads both ends as numbers, whether sent as numbers or as strings of digits', () => {
+      const parsed = service.parseOne({
+        id: '1',
+        mainType: 'NW',
+        parts: [
+          {
+            type: 'DETAILS',
+            eventDates: [{ allDay: true, fromDate: '1743674834000', toDate: 1743761234000 }],
+          },
+        ],
+      });
+      expect(parsed?.parts?.[0].eventDates).toEqual([
+        { allDay: true, fromDate: 1743674834000, toDate: 1743761234000 },
+      ]);
+    });
+
+    it('drops an interval left with neither end', () => {
+      const parsed = service.parseOne({
+        id: '1',
+        mainType: 'NW',
+        parts: [
+          {
+            type: 'DETAILS',
+            eventDates: [{ allDay: false }, { fromDate: 'whenever' }, { toDate: 1743761234000 }],
+          },
+        ],
+      });
+      expect(parsed?.parts?.[0].eventDates).toEqual([{ toDate: 1743761234000 }]);
+    });
+  });
 });

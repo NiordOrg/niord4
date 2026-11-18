@@ -128,12 +128,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   out brands every language, so it asks for every language's file (the in-tree configurations and the kit's
   generated one always set it). The administration app renders a
   message language it ships no flag for as its code.
-- **The filter bar's "active now" chip changes nothing.** The list read sends `active=true`, and
-  `/rest/public/v1/messages` declares no `active` parameter, so the backend drops it: against a live
-  backend the same filter returned 211 messages with the chip on and 211 with it off. The chip
-  presses, looks pressed and narrows nothing. Either the public API grows the parameter, or the
-  narrowing is done where the list is rendered — every message carries the dates it would be judged
-  by. Carried over from the site as it arrived, and the reason the printed sheet does not map it.
 - **A publication being browsed is not named on the page.** Browse on a message report opens
   `/messages/details?publicationId=<id>`, which lists that publication's messages and leaves the main-type,
   active-now and root-area chips out of the filter bar — but nothing on the page says which publication it is,

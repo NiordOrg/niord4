@@ -91,6 +91,21 @@ export function filterByAreaIds(
   });
 }
 
+/**
+ * Whether a message is in force at the given instant: some interval of some part contains it,
+ * both ends included and an open end reaching as far as it likes. A message that carries no
+ * event dates at all counts as in force, because a warning the data cannot judge is never hidden.
+ */
+export function isActiveAt(msg: Message, instantMs: number): boolean {
+  const intervals = (msg.parts ?? []).flatMap((part) => part.eventDates ?? []);
+  if (intervals.length === 0) return true;
+  return intervals.some(
+    (interval) =>
+      (interval.fromDate === undefined || interval.fromDate <= instantMs) &&
+      (interval.toDate === undefined || instantMs <= interval.toDate),
+  );
+}
+
 /** Every geometry a message carries, across all of its parts. */
 export function featuresForMessage(msg: Message | undefined): readonly GeoJsonFeature[] {
   const features: GeoJsonFeature[] = [];

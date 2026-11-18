@@ -1,15 +1,26 @@
 import { Injectable, inject } from '@angular/core';
 import { NIORD_INFO_CONFIG } from '../../niord-info.config';
-import { Message } from '../models/message.model';
+import { DateInterval, Message, MessagePart } from '../models/message.model';
 import { normalizeAttachmentPath, normalizeRepoUrlsInHtml, repoHosts } from './repo-url';
 
 /**
- * The wire shape of a message. It differs from the model in one field: the API declares
- * `publishDateFrom` a string and sends epoch milliseconds. Everything else arrives in the
- * model's own shape, so there is one pair here rather than one per interface.
+ * The wire shape of a message. It differs from the model in its dates: the API declares
+ * `publishDateFrom` and the ends of a part's event intervals strings, and sends epoch
+ * milliseconds. Everything else arrives in the model's own shape, so the pairs are kept here
+ * rather than beside each interface.
  */
-interface MessageVo extends Omit<Message, 'publishDateFrom'> {
+interface MessageVo extends Omit<Message, 'publishDateFrom' | 'parts'> {
   readonly publishDateFrom?: string | number;
+  readonly parts?: readonly MessagePartVo[];
+}
+
+interface MessagePartVo extends Omit<MessagePart, 'eventDates'> {
+  readonly eventDates?: readonly DateIntervalVo[];
+}
+
+interface DateIntervalVo extends Omit<DateInterval, 'fromDate' | 'toDate'> {
+  readonly fromDate?: string | number;
+  readonly toDate?: string | number;
 }
 
 /**
@@ -50,6 +61,13 @@ export class MessageService {
       })),
       parts: msg.parts?.map((part) => ({
         ...part,
+        eventDates: part.eventDates
+          ?.map((interval) => ({
+            ...interval,
+            fromDate: toEpochMillis(interval.fromDate),
+            toDate: toEpochMillis(interval.toDate),
+          }))
+          .filter((interval) => interval.fromDate !== undefined || interval.toDate !== undefined),
         descs: part.descs?.map((desc) => ({
           ...desc,
           details: normalizeRepoUrlsInHtml(desc.details, this.repoHosts),
@@ -64,7 +82,7 @@ export class MessageService {
 }
 
 /**
- * The publication instant as a number. The API declares the field a string and the backend
+ * An instant as a number. The API declares these fields strings and the backend
  * sends epoch milliseconds; a string of digits is that same number, and a date the browser can
  * read is accepted too. Anything else is dropped rather than rendered as an invalid date.
  */

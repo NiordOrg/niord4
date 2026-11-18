@@ -2,11 +2,6 @@
   "note": "Query parameters a frontend call sends that its handler does not read, for the endpoint-role guard (scripts/endpoint-roles.test.mjs), each with where it is recorded: a backlog entry of fe/docs/backlog.md (named by a phrase of it), or design: and why the parameter is sent on purpose. An entry no call needs fails the guard.",
   "entries": [
     {
-      "endpoint": "GET /rest/public/v1/messages",
-      "param": "active",
-      "ref": "backlog: The filter bar's \"active now\" chip changes nothing"
-    },
-    {
       "endpoint": "GET /rest/areas/search/{areaIds}",
       "param": "geometry",
       "ref": "backlog: Two lookups send `geometry=false` to handlers that do not read it"

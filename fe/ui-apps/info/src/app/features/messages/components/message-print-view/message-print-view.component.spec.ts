@@ -22,7 +22,7 @@ describe('MessagePrintViewComponent', () => {
   let fixture: ComponentFixture<MessagePrintViewComponent>;
   let component: MessagePrintViewComponent;
   let httpTesting: HttpTestingController;
-  let translocoSpy: Record<string, ReturnType<typeof vi.fn> | typeof EMPTY>;
+  let translocoSpy: Record<string, ReturnType<typeof vi.fn> | typeof EMPTY | object>;
 
   const BUNDLE: Record<string, string> = {
     PRINT_DATE_FORMAT: "d MMMM yyyy 'at' HH:mm",
@@ -49,6 +49,9 @@ describe('MessagePrintViewComponent', () => {
       setAvailableLangs: vi.fn(),
       selectTranslation: vi.fn(() => of({})),
       events$: EMPTY,
+      // What the pipe a printed part's heading goes through reads; nothing here changes language.
+      config: {},
+      langChanges$: EMPTY,
     };
 
     TestBed.configureTestingModule({
@@ -162,13 +165,31 @@ describe('MessagePrintViewComponent', () => {
     await settle();
   });
 
-  it('should include active param in URL', async () => {
+  // The public API has no active filter, so an address that asks for one is narrowed here, at
+  // the instant the sheet is stamped with.
+  it('narrows a list opened with ?active=true to what is in force', async () => {
     setup({ active: 'true', mainType: 'NW' });
     await settle();
     const request = expectList();
-    expect(request.request.urlWithParams).toContain('active=true');
-    request.flush([]);
+    expect(request.request.params.has('active')).toBe(false);
+    request.flush([
+      // Starts on 1 January 2100.
+      { id: 'later', mainType: 'NW', parts: [{ eventDates: [{ fromDate: 4102444800000 }] }] },
+      { id: 'undated', mainType: 'NW' },
+    ]);
     await settle();
+    expect(component.messages().map((message) => message.id)).toEqual(['undated']);
+  });
+
+  it('prints a publication whole, even when the address asks for what is in force', async () => {
+    setup({ active: 'true', publication: 'pub-1' });
+    await settle();
+    expectList().flush([
+      { id: 'later', mainType: 'NW', parts: [{ eventDates: [{ fromDate: 4102444800000 }] }] },
+      { id: 'undated', mainType: 'NW' },
+    ]);
+    await settle();
+    expect(component.messages()).toHaveLength(2);
   });
 
   it('groups a printed list by area and narrows it to the sub-areas it was opened with', async () => {

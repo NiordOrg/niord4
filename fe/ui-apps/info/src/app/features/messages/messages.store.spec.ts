@@ -18,6 +18,14 @@ const MESSAGES: Message[] = [
   { id: 'msg-2', mainType: 'NM', areas: [BELT], messageSeries: { seriesId: 'dma-nm' } },
 ];
 
+/** A message whose only event interval starts on 1 January 2100: not in force today. */
+const LATER: Message = {
+  id: 'later',
+  mainType: 'NW',
+  areas: [SOUND],
+  parts: [{ type: 'DETAILS', eventDates: [{ fromDate: 4102444800000 }] }],
+};
+
 describe('MessagesStore', () => {
   let store: MessagesStore;
   let httpTesting: HttpTestingController;
@@ -104,12 +112,29 @@ describe('MessagesStore', () => {
     narrowed.flush([]);
     await settle();
 
+    // The public API has no active filter: the chip narrows what is on screen and reads nothing.
     store.toggleActiveNow();
     await settle();
-    const active = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages'));
-    expect(active.request.urlWithParams).toContain('active=true');
-    active.flush([]);
+    httpTesting.verify();
+  });
+
+  it('narrows the list on screen to what is in force now, without a read', async () => {
+    setUp();
+    await load([LATER, { id: 'undated', mainType: 'NM', areas: [BELT] }]);
+    expect(store.messages()).toHaveLength(2);
+
+    store.toggleActiveNow();
     await settle();
+    httpTesting.verify();
+    expect(store.activeNow()).toBe(true);
+    expect(store.messages().map((message) => message.id)).toEqual(['undated']);
+    // The sub-areas offered are the ones that still have rows.
+    expect(store.subAreas().map((area) => area.id)).toEqual([22]);
+
+    store.toggleActiveNow();
+    await settle();
+    httpTesting.verify();
+    expect(store.messages().map((message) => message.id)).toEqual(['later', 'undated']);
   });
 
   it('reads nothing when a sub-area is ticked, and narrows the list on the spot', async () => {
@@ -134,7 +159,7 @@ describe('MessagesStore', () => {
     await settle();
     expect(store.subAreaSelection().size).toBe(1);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
     await settle();
@@ -146,7 +171,7 @@ describe('MessagesStore', () => {
     await load();
     expect(store.messages()).toHaveLength(2);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     const inFlight = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages'));
     expect(store.messages()).toHaveLength(2);
@@ -161,7 +186,7 @@ describe('MessagesStore', () => {
     await load();
     expect(store.failed()).toBe(false);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     httpTesting
       .expectOne((r) => r.url.includes('/rest/public/v1/messages'))
@@ -170,7 +195,7 @@ describe('MessagesStore', () => {
     expect(store.failed()).toBe(true);
 
     // An area with nothing to report empties the list without saying anything went wrong.
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: true });
     await settle();
     httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush([]);
     await settle();
@@ -194,7 +219,7 @@ describe('MessagesStore', () => {
     expect(store.loading()).toBe(false);
     expect(store.messages()).toEqual([]);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     expect(store.loading()).toBe(true);
     httpTesting
@@ -409,7 +434,9 @@ describe('MessagesStore', () => {
     it('does not read again when a chip the bar leaves out would have changed', async () => {
       await setUpOnPublication();
       await settle();
-      httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
+      httpTesting
+        .expectOne((r) => r.url.includes('/rest/public/v1/messages'))
+        .flush([...MESSAGES, LATER]);
       answerTheRootArea();
       await settle();
 
@@ -417,6 +444,8 @@ describe('MessagesStore', () => {
       store.setMainTypes({ NW: true, NM: false });
       await settle();
       httpTesting.verify();
+      // Nor is a publication narrowed to what is in force: it is the list it was published with.
+      expect(store.messages()).toHaveLength(3);
     });
 
     it('prints the publication in place of the main types and the root area', async () => {
