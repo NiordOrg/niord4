@@ -21,6 +21,7 @@ import org.niord.core.mail.ScheduledMailRecipient.RecipientType;
 import org.niord.core.mail.vo.ScheduledMailVo;
 import org.niord.model.DataFilter;
 
+import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 
 import java.util.Arrays;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -307,6 +309,24 @@ public class ScheduledMailTest {
         assertEquals(1, result.getReplyTo().size());
         assertTrue(result.getReplyTo().get(0) instanceof InternetAddress);
         assertEquals(sender, ((InternetAddress) result.getReplyTo().get(0)).getAddress());
+    }
+
+    /**
+     * toMail: the sender of a user without an e-mail address is the bare name, and a name of two words is refused as
+     * the mail's Reply-To, so the mail cannot be made at all (be/docs/potential-errors.md, MAIL14). Pins the
+     * behaviour; a fix that leaves such a mail without a Reply-To flips it.
+     */
+    @Test
+    public void toMailWithABareTwoWordSenderIsRefused_documentsBug() throws Exception {
+        ScheduledMail mail = new ScheduledMail();
+        mail.setSubject("Subject-" + System.nanoTime());
+        mail.setSender("Test Editor");
+        mail.setHtmlContents("<html><body><p>Hi</p></body></html>");
+        mail.addRecipient(new ScheduledMailRecipient(RecipientType.TO, "to@example.com"));
+        assertEquals(ScheduledMail.Status.PENDING, mail.getStatus());
+
+        assertThrows(AddressException.class,
+                () -> mail.toMail("http://localhost/", HtmlMail.StyleHandling.INLINE_STYLES, false));
     }
 
     /**

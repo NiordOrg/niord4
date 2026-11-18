@@ -302,8 +302,8 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
 - **Why it looks wrong:** the Reply-To is a convenience; a sender without an address should give the mail no Reply-To,
   not stop it.
 - **Exposed by:** the sender's own list of mails (`GET /rest/scheduled-mails/mine`, the admin app's _My mails..._),
-  which matches mails on that sender value and now shows such a user the failure; checked by parsing the value with
-  `InternetAddress` (2026-11-18).
+  which matches mails on that sender value and now shows such a user the failure (2026-11-18); pinned by
+  `ScheduledMailTest.toMailWithABareTwoWordSenderIsRefused_documentsBug`.
 - **Severity:** Low: a Keycloak user without an e-mail address is rare among staff who send mail. Fix: set the
   Reply-To only when the sender holds an address (or parse it leniently and skip it on a refusal).
 
