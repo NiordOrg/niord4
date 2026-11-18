@@ -5,9 +5,9 @@ import { expectSampleDeployment } from './scenarios/support/env';
 import { keepOffline } from './scenarios/support/offline';
 
 /*
- * The administration app's accessibility scan: axe-core over every route and the most used
- * overlays, against the WCAG 2.1 A and AA rules, each page held to the known list in
- * a11y/known-violations.json (a11y/axe.ts says how).
+ * The administration app's accessibility scan: axe-core over the routes (those left out are named
+ * in docs/testing.md) and the most used overlays, against the WCAG 2.1 A and AA rules, each page
+ * held to the known list in a11y/known-violations.json (a11y/axe.ts says how).
  *
  * Read-only: pages are opened and left, dialogs and menus opened and closed, nothing is saved. The
  * known list is the sample deployment's, so the spec runs only with E2E_A11Y=1 and only against the
