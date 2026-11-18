@@ -29,7 +29,10 @@ const ANNOUNCED_IDS_KEPT = 100;
  * `BatchStatusService`). It raises one warning that stays until it is closed, counting the failed
  * mails it has not yet announced. It keeps only the ids it announced, never the mails, in the
  * browser's storage, so a failure is announced once and not again at every page load; without
- * that storage it announces once per page load.
+ * that storage it announces once per page load. The stored ids are read again before each
+ * announcement, so a failure another tab has announced is not announced here too. They are stored
+ * when the warning is raised, not when it is closed: a page loaded again before the warning was
+ * read does not raise it again, and the mail is then found under My mails.
  *
  * Every look is a background read (`BACKGROUND_READ`): it never refreshes the session's token and
  * never ends the session, so an idle tab still ends its session at the realm's idle timeout, and a
@@ -134,6 +137,8 @@ export class MyMailsNoticeService {
   }
 
   private announce(mails: readonly MyMail[]): void {
+    // Another tab may have announced some since this one read the list.
+    readAnnounced().forEach((id) => this.announced.add(id));
     const failed = mails
       .filter((mail) => mail.status === 'ERROR' && !this.announced.has(mail.id))
       .map((mail) => mail.id);

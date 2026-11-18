@@ -112,6 +112,19 @@ describe('MyMailsNoticeService', () => {
     );
   });
 
+  it('does not announce a failure another tab announced after this one was loaded', () => {
+    const { service, notify } = setup([of([mail(1, 'ERROR'), mail(2, 'ERROR')])]);
+    // The other tab announces mail 1 after this tab's service read the stored ids.
+    localStorage.setItem(MY_MAILS_ANNOUNCED_STORAGE_KEY, JSON.stringify([1]));
+    service.start(shellRef().ref);
+    expect(notify).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ summaryParams: { count: 1 } }),
+    );
+    expect(JSON.parse(localStorage.getItem(MY_MAILS_ANNOUNCED_STORAGE_KEY) ?? '[]')).toEqual([
+      2, 1,
+    ]);
+  });
+
   it('announces once per page load when the storage holds no list of ids', () => {
     localStorage.setItem(MY_MAILS_ANNOUNCED_STORAGE_KEY, 'not json');
     const { service, notify } = setup([of([mail(1, 'ERROR')])]);
