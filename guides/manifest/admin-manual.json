@@ -763,7 +763,7 @@
   {
     "manual": "admin-manual", "chapterFile": "05-Publications.adoc", "line": 825, "file": "PublicSitePublicationBrowse.png",
     "caption": "Browsing an Issue on the Public Site", "inline": false,
-    "shows": "The public site's Details view filtered to one issue (after 'Browse'): the bar naming the issue by its title, with Download and the close button (X), then Print and the one area chip (The Waters South of Zealand), and the issue's one message, NM-820-26",
+    "shows": "The public site's Details view filtered to one issue (after 'Browse'): the bar naming the issue by its title, with Download and the close button (X), then Print and the issue's one area chip, and the issue's one message",
     "kind": "page", "disposition": "retake", "app": "info",
     "route": "/messages/details?publicationId=<id>", "role": "anonymous",
     "steps": "Downloads page: click 'Browse' on the first 'NtM Week …' row",

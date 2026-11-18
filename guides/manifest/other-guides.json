@@ -378,7 +378,7 @@
     "steps": "Open /publications; wait for the table of the tab (the page has no busy state); click Browse on 'Firing Practice Areas at Sea 2026' (else the first Browse of the tab); the address becomes /messages/details?publicationId=<id>",
     "crop": "viewport",
     "needsData": "a publication public now whose messages fall in two or more areas (Firing Practice Areas at Sea 2026: 32 messages in 5 areas, one cancelled)",
-    "note": "To be taken again: the filter bar now names the publication while it is browsed, with its document and a close button, in place of the main-type and active-now chips (message-filter.component.ts browsingPublication). The only state in the base build where area chips appear. The week 38 issue, the first Browse of the tab, has one message in one area. The picture shows the top of the list and no status mark: the publication's one cancelled message, last area but one down the list (The North Sea), carries the number FA/2025 2026, which does not follow its series (its published successor is FA/15 2026), so the picture does not scroll to it; the text describes the marks in words."
+    "note": "To be taken again: the filter bar now names the publication while it is browsed, with its document and a close button, in place of the main-type and active-now chips (message-filter.component.ts browsingPublication). The only state in the base build where area chips appear. The first Browse of the tab, a weekly issue, has one message in one area. The picture shows the top of the list and no status mark: the publication's one cancelled message, further down the list, is not scrolled to; the text describes the marks in words."
   },
   {
     "manual": "public-site",
