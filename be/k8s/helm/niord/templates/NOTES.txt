@@ -49,7 +49,9 @@ host's localhost by OrbStack):
 
 The app image serves the administration app at the root of this origin, next to the REST
 API and Keycloak (an image built with --no-web serves none);
-{{- if or (ne (toString .Values.keycloak.mode) "production") .Values.keycloak.testUsers }} seeded realm users
+{{- if not .Values.keycloak.enabled }} its users are those of the realm
+"{{ .Values.keycloak.realm }}" on a Keycloak this release does not render, whose own database keeps them.
+{{- else if or (ne (toString .Values.keycloak.mode) "production") .Values.keycloak.testUsers }} seeded realm users
 (e.g. sysadmin / sysadmin) sign in through it.
 {{- else }} the realm has no user
 in production mode: make the first one in the admin console and put it in the group Sysadmin.
