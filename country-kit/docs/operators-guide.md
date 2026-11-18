@@ -399,7 +399,12 @@ declares are listed: a row of an earlier version that no code declares stays in 
 unlisted. A password value is never shown. **Import...** and **Export...** take a settings file.
 
 Check at least the addresses (`baseUri`, `adminAppUrl`, `authServerUrl`), the mail sender
-(`mailSender`), and `documentationUrl`, which the Help links open. The language keys are in
+(`mailSender`), who mail really goes to (`mailValidRecipients`: `LOG`, the shipped value, only logs a
+mail; `ALL` sends it to its recipients, and a list of addresses sends it only to those, any other
+recipient replaced by the first), the deployment ribbon (`mode`: anything but `production` shows a
+ribbon in both applications; the shipped settings file says `test`), and `documentationUrl`, which
+the Help links open. A copy of production's data carries production's values of these two, so give
+each environment its own at the server's start (below). The language keys are in
 [A new language in a running deployment](#a-new-language-in-a-running-deployment).
 
 A value can also be given to the server at its start, as a system property or an environment
