@@ -139,9 +139,9 @@ The templates write the message as a whole, from the facts on the page:
 
 When you run templates on an open message, the templates write their fields again, and the rest of
 the message is kept as it was on the page, your unsaved changes included. If the message has changes
-you have not saved, Niord asks first (_Replace message?_, "Executing the templates writes again the
-fields they fill in, and your unsaved changes to those fields are lost. Continue?"): *Replace* goes
-on, *Cancel* goes back to the page. When the templates cannot run,
+you have not saved, Niord asks first (_Replace message?_, "The templates fill in their fields again,
+and your unsaved changes to those fields are replaced. Continue?"): *Replace* goes on, *Cancel* goes
+back to the page. When the templates cannot run,
 Niord says "Could not execute the template." and the page stays as it was.
 
 *Cancel* at the top of the page goes back to where you came from, the start screen or the message,
