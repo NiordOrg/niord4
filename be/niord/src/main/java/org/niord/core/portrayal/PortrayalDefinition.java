@@ -61,7 +61,7 @@ public class PortrayalDefinition {
      * to the backend's drawing code changes the images it makes from an unchanged definition, so that the images
      * made before are made again.
      */
-    public static final int RENDERER_REVISION = 1;
+    public static final int RENDERER_REVISION = 2;
 
     /** The class path folder of the definition and its symbols */
     static final String FOLDER = "portrayal/";

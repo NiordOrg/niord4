@@ -435,6 +435,15 @@
         "y": 121,
         "width": 44,
         "height": 27
+      },
+      {
+        "pass": "Image",
+        "op": "icon",
+        "symbol": "nw-point",
+        "x": 61,
+        "y": 73,
+        "width": 32,
+        "height": 32
       }
     ],
     "approximate": [

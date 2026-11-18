@@ -517,12 +517,6 @@ Background: [`map-portrayal.md`](map-portrayal.md).
 - The administration app's own animations ignore a reader's reduced-motion setting: the 300 ms fit of the
   message-list layer, the geometry editor's zoom-to-extent and the drawer's slide. The map kit's own zooms and
   pans honour it; these three are started by the application and would read the same media query.
-- **Points inside a geometry collection draw no symbol.** A geometry collection — the geometry editor's merge
-  makes one from a mixed selection — is drawn with the pen on its lines and outlines and one tag at the centre
-  of its extent; its points get no point symbol, on the maps and, mirroring them, in the backend's map images.
-  Whether they should is a decision nobody has taken. It changes `map-styles.ts` and the backend's
-  `MapImagePlanner` together, with the golden fixture of the case
-  ([map-portrayal.md](map-portrayal.md), _Server-made map images_).
 - **The administration app takes the tile addresses unchecked.** It applies the `osmUrl` and `openSeaMapUrl`
   web settings to every map as they are, a blank value aside (`ui-apps/admin/src/app/core/config/web-settings.ts`):
   a template that is not https, or lacks one of the `{z}`, `{x}` and `{y}` placeholders, reaches the tile layers
