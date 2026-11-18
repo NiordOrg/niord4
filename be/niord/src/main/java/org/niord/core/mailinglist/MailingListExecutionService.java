@@ -66,6 +66,9 @@ public class MailingListExecutionService extends BaseService {
     /** How long a failed scheduled trigger waits at most before it is tried again **/
     static final long FAILED_TRIGGER_RETRY_MILLIS = 60L * 60L * 1000L;
 
+    /** A scheduled trigger that keeps failing leaves at most one record in the Mail Queue in this interval **/
+    static final long FAILED_TRIGGER_RECORD_INTERVAL_MILLIS = 24L * 60L * 60L * 1000L;
+
     private final NiordApp app;
 
     private final MessageSearchService messageSearchService;
@@ -146,22 +149,77 @@ public class MailingListExecutionService extends BaseService {
                 : messageUid;
         String error = describeFailure(cause);
 
+        saveFailureRecord(mailingList,
+                "Not sent: mailing list " + mailingList.getMailingListId() + ", message " + messageName,
+                "<p>The status-change trigger " + trigger.getId() + " of the mailing list "
+                        + HtmlUtils.htmlEscape(mailingList.getMailingListId()) + " failed for the message "
+                        + HtmlUtils.htmlEscape(String.valueOf(messageName))
+                        + (message != null && !Objects.equals(messageName, messageUid)
+                                ? " (" + HtmlUtils.htmlEscape(messageUid) + ")" : "")
+                        + ", so its mail was not made and is not sent.</p>",
+                error);
+    }
+
+    /**
+     * Records that a scheduled trigger's run failed, as one mail in the Mail Queue in status ERROR, as
+     * {@link #recordStatusChangeTriggerFailure} does for a status-change trigger: never sent, with the recipients of
+     * the trigger's mailing list, a subject naming the list and the trigger, a short note and the cause as its last
+     * error. A trigger that keeps failing is tried again every hour ({@link #postponeFailedScheduledTrigger}), but
+     * leaves at most one record in {@link #FAILED_TRIGGER_RECORD_INTERVAL_MILLIS}.
+     *
+     * @param triggerId the ID of the scheduled trigger whose run failed
+     * @param cause the failure
+     * @return whether a record was made
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean recordScheduledTriggerFailure(Integer triggerId, Exception cause) throws IOException {
+
+        MailingListTrigger trigger = triggerId == null ? null : getByPrimaryKey(MailingListTrigger.class, triggerId);
+        if (trigger == null || trigger.getType() != TriggerType.SCHEDULED || trigger.getMailingList() == null) {
+            log.warn("No failure record for scheduled trigger " + triggerId + ": the trigger or its list is gone");
+            return false;
+        }
+        MailingList mailingList = trigger.getMailingList();
+
+        String subject = StringUtils.abbreviate(
+                "Not sent: mailing list " + mailingList.getMailingListId() + ", scheduled trigger " + trigger.getId(),
+                255);
+        long recent = em.createQuery("select count(m) from ScheduledMail m where m.subject = :s "
+                        + "and m.status = :st and m.created > :since", Long.class)
+                .setParameter("s", subject)
+                .setParameter("st", ScheduledMail.Status.ERROR)
+                .setParameter("since", new Date(System.currentTimeMillis() - FAILED_TRIGGER_RECORD_INTERVAL_MILLIS))
+                .getSingleResult();
+        if (recent > 0) {
+            log.debug("Scheduled trigger " + triggerId + " already has a failure record in the Mail Queue");
+            return false;
+        }
+
+        saveFailureRecord(mailingList, subject,
+                "<p>The scheduled trigger " + trigger.getId() + " of the mailing list "
+                        + HtmlUtils.htmlEscape(mailingList.getMailingListId())
+                        + " failed, so its mail was not made and is not sent. It is tried again within the hour;"
+                        + " while it keeps failing, this record is made at most once a day.</p>",
+                describeFailure(cause));
+        return true;
+    }
+
+    /**
+     * Saves the record of a failed trigger: a mail in status ERROR, never sent, to the recipients of the list, with
+     * the given subject, the note (HTML) followed by the cause, and the cause as its last error
+     */
+    private void saveFailureRecord(MailingList mailingList, String subject, String noteHtml, String error)
+            throws IOException {
         ScheduledMail mail = new ScheduledMail();
         mail.setStatus(ScheduledMail.Status.ERROR);
-        mail.setSubject(StringUtils.abbreviate(
-                "Not sent: mailing list " + mailingList.getMailingListId() + ", message " + messageName, 255));
+        mail.setSubject(StringUtils.abbreviate(subject, 255));
         mail.setLastError(StringUtils.abbreviate(error, 255));
         List<IMailable> recipients = new ArrayList<>();
         recipients.addAll(mailingList.getUsers());
         recipients.addAll(mailingList.getContacts());
         recipients.forEach(r -> mail.addRecipient(new ScheduledMailRecipient(TO, r.computeInternetAddress())));
         mail.setHtmlContents("<html><body>"
-                + "<p>The status-change trigger " + trigger.getId() + " of the mailing list "
-                + HtmlUtils.htmlEscape(mailingList.getMailingListId()) + " failed for the message "
-                + HtmlUtils.htmlEscape(String.valueOf(messageName))
-                + (message != null && !Objects.equals(messageName, messageUid)
-                        ? " (" + HtmlUtils.htmlEscape(messageUid) + ")" : "")
-                + ", so its mail was not made and is not sent.</p>"
+                + noteHtml
                 + "<p>Cause: " + HtmlUtils.htmlEscape(error) + "</p>"
                 + "</body></html>");
         saveEntity(mail);
@@ -278,7 +336,8 @@ public class MailingListExecutionService extends BaseService {
      * Postpones a scheduled trigger whose run failed, so it is not run again every minute: its next execution
      * becomes the earlier of its next regular time and one hour from now, or one hour from now when the regular time
      * cannot be computed (an invalid stored time). A failure that clears within the hour still sends the mail, late;
-     * a lasting one is tried once an hour.
+     * a lasting one is tried once an hour. The scheduler also records the failure in the Mail Queue
+     * ({@link #recordScheduledTriggerFailure}).
      *
      * @param triggerId the ID of the scheduled mailing list trigger that failed
      * @return the next execution set, or null when there is no such scheduled trigger

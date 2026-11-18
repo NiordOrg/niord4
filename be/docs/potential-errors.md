@@ -1481,8 +1481,8 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   track): on two local copies of `niord_test` (`niord_d`, `niord_guides`) the audio-broadcast list's
   firing-exercise trigger 1949666 fails with `messageService.search is not a function`, so the list's scheduled
   mail is never made, and `GET /rest/mailing-lists/execute-report/1949666.html` answers 500 on the same script;
-  `niord_test` holds the same trigger and due time. MAILLIST6 is the consequence there: the failed run is never
-  rescheduled and is retried every minute. MAILLIST6's fix stops the retry, not this row; the test environment's
+  `niord_test` holds the same trigger and due time. There the failed run is now retried every hour and leaves a
+  mail in status Error in the Mail Queue once a day, which does not mend the row; the test environment's
   row is replaced only by a sysadmin's release import with the overwrite ticked, on a human's say-so. Open.
 
 ## TZ1. Time-dependent ITs fail by exactly one hour when they run in the hour the clocks go back
@@ -1887,7 +1887,7 @@ The fix stage of 2026-11-13 fixed every entry of the hunt that is no longer list
 test, most of them the entry's `_documentsBug` pin turned round, and git history keeps the entries it removed. The
 entries still listed are of three kinds: those the fix stage left on purpose, each saying why and what is
 recommended, for the owner to decide (MAILLIST1, SERIES7, SCRIPT10, LUCENE-5, API3, SETTINGS-7, MSG6); the part of
-an entry the fix stage fixed only in part (MAILLIST2, DOMAIN2, MAILLIST6); and, under a line of their own at the end
+an entry the fix stage fixed only in part (MAILLIST2, DOMAIN2); and, under a line of their own at the end
 of the section, the faults the fix stage met on its way and did not fix. Paths are under `niord/src/main/java/`
 unless they say otherwise.
 
@@ -2102,31 +2102,6 @@ new (F1, F2), every endpoint called once per role (D1, D2a, D2b) and the three b
   do, so the fix stage recorded them in the imports' logs rather than refusing them, and left this part to the
   owner; recommended: the same, a log line or a warning in the answer naming each reference left out, not a
   refusal.
-
-## MAILLIST6. A scheduled mailing-list trigger whose run fails is recorded only in the log
-
-- **Location:** `org/niord/core/mailinglist/MailingListSchedulerService.java` `checkExecuteScheduledTriggers` (the
-  catch that postpones a failed trigger); `MailingListTrigger.java` (no column for a last failure, and no value
-  object carries `nextScheduledExecution`); the Mailing lists page of the admin app.
-- **Description:** since the error hunt's fix stage of 2026-11-13, a scheduled trigger whose run fails is no longer
-  run again every minute: it is postponed to the earlier of its next regular time and one hour later, and one ERROR
-  line with the cause says when it is tried again. Nothing outside the log records the failure: the trigger has no
-  column for its last failure, and the Mailing lists page cannot show it, or the due time. The case seen is the
-  audio-broadcast list's firing-exercise trigger, which fails on SCRIPT8's stale `fetch-firing-exercises.js` row
-  (`messageService.search is not a function`).
-- **Why it looks wrong:** the list's recipients silently stop getting a scheduled mail, and a sysadmin has no sign
-  of it in the admin app.
-- **Exposed by:** the error hunt of 2026-11-12, wave 3, the soak track, the three backends' logs read after the
-  wave: on the copies of `niord_test` the log had "Failed executing scheduled mailing list trigger 1949666" every
-  minute, each preceded by the script error, and `ScheduledMail` held no mail from it. The retry every minute is
-  guarded since 2026-11-13 by `MailingListDeliveryFaultITTest` and `MailingListSchedulerServiceITTest`; no test
-  pins the missing record.
-- **Severity:** Low — no mariner sees anything, but a list's recipients silently stop getting a scheduled mail.
-  Fix: keep the last failure (time and cause) on the trigger, and show it with the due time on the Mailing lists
-  page.
-- **Left by the fix stage (2026-11-13):** the record needs a column and a change of the page, which the plan left
-  to the owner; recommended as a follow-up together with INT4's failure record, which asks for the same kind of
-  column and page.
 
 **Found by the fix stage.** The entries from here on are faults the error hunt's fix stage of 2026-11-13 met while
 it fixed the entries above, and did not fix because they were outside the fault it was fixing. Each was read in the

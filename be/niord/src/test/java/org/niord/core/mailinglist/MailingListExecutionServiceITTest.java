@@ -885,6 +885,12 @@ class MailingListExecutionServiceITTest extends ITTest {
         assertNull(executionService.postponeFailedScheduledTrigger(Integer.MAX_VALUE));
     }
 
+    @Test
+    @Transactional
+    void recordScheduledTriggerFailureByUnknownIdAnswersFalse() throws Exception {
+        assertFalse(executionService.recordScheduledTriggerFailure(Integer.MAX_VALUE, new IllegalStateException("IT")));
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // getMailingListReports(lang)
     // ------------------------------------------------------------------------------------------- //

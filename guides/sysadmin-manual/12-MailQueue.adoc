@@ -36,6 +36,11 @@ fails too, the mail becomes _Error_, and Niord does not try again.
 So check the queue now and then for mails with the status _Error_, and put right what caused them, such as a
 mistyped address of a user or a contact.
 
+A mailing-list trigger that fails also leaves a mail with the status _Error_, which is never sent. Its subject
+starts "Not sent: mailing list", and names the list and either the message (a status change trigger) or the trigger
+(a scheduled trigger); its last error says why it failed. A scheduled trigger is tried again within the hour, and
+leaves at most one such mail a day while it keeps failing.
+
 The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>):
 
 * `ALL` sends every mail.

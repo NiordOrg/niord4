@@ -32,7 +32,8 @@ import java.util.stream.Collectors;
  * to better control transaction handling.<br>
  * With this model, if one mailing list execution fails, it will not roll back a single transaction
  * for all mailing lists. A trigger whose run fails is postponed by at most an hour, rather than run again every
- * minute.
+ * minute, and its failure is recorded in the Mail Queue as a mail in status Error, at most once a day while it keeps
+ * failing.
  */
 // PORT: was @jakarta.ejb.Stateless; now a Spring @Component (singleton).
 @Service
@@ -75,6 +76,14 @@ public class MailingListSchedulerService extends BaseService {
                     // error) is in the exception rather than in this message.
                     log.error("Scheduled mailing list trigger " + triggerId + " failed; it is tried again "
                             + postponeFailedTrigger(triggerId), e);
+                    // Leave a record in the Mail Queue, so the mail that was due does not vanish without a trace.
+                    // After the postponement, so a failure to record cannot bring back the every-minute retry.
+                    try {
+                        mailingListExecutionService.recordScheduledTriggerFailure(triggerId, e);
+                    } catch (Exception recordFailure) {
+                        log.error("Failed recording the failure of scheduled mailing list trigger " + triggerId,
+                                recordFailure);
+                    }
                 }
             }
             log.debug(String.format("Executed %d scheduled mailing list triggers in %d ms",

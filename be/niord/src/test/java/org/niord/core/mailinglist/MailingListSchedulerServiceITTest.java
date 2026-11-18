@@ -43,7 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * is advanced from the past into the future after the scheduler runs (the trigger has no recipients/template, so
  * {@code executeScheduledTrigger} produces no mail and never throws, and the new time commits). Conversely a trigger
  * on an <em>inactive</em> mailing list is skipped, so its due time is unchanged. A trigger whose run fails is
- * postponed by at most an hour: {@code MailingListDeliveryFaultITTest} (MAILLIST3, MAILLIST6).
+ * postponed by at most an hour, and recorded in the Mail Queue: {@code MailingListDeliveryFaultITTest} (MAILLIST3,
+ * MAILLIST6).
  *
  * <p>The package-private scheduled method is reachable from this same-package test. Only the cron firing
  * <em>time</em> itself is not asserted (the Quarkus scheduler is not driven). All seeded mailing lists are

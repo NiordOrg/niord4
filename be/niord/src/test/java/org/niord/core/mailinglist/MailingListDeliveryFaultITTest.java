@@ -647,6 +647,10 @@ class MailingListDeliveryFaultITTest extends ITTest {
         assertTrue(causesOf(firstRun.get(0)).contains("Invalid scheduled execution time format 08:30:00"),
                 "the line carries the cause: " + causesOf(firstRun.get(0)));
         assertAboutAnHourAfter(beforeRun, afterRun, nextExecutionOf(triggerId));
+        List<String[]> records = errorRecords(n);
+        assertEquals(1, records.size(), "the failure is recorded in the Mail Queue");
+        assertTrue(records.get(0)[2].contains("Invalid scheduled execution time format 08:30:00"),
+                "the record's last error is the cause: " + records.get(0)[2]);
 
         List<ILoggingEvent> secondRun = schedulerRunErrorsAbout(triggerId);
         assertEquals(0, mailsWithSubject(subject), "the next run mails nobody either");
@@ -679,11 +683,59 @@ class MailingListDeliveryFaultITTest extends ITTest {
                 "the line carries the cause: " + causesOf(firstRun.get(0)));
         Date next = nextExecutionOf(triggerId);
         assertAboutAnHourAfter(beforeRun, afterRun, next);
+        assertTheFailureIsRecordedOnce(n, triggerId);
 
         List<ILoggingEvent> secondRun = schedulerRunErrorsAbout(triggerId);
         assertTrue(secondRun.isEmpty(), "the postponed trigger is not run again in the same minute: " + secondRun);
         assertEquals(0, mailsWithSubject(subject));
         assertEquals(next, nextExecutionOf(triggerId), "and its next execution is unchanged");
+        assertEquals(1, errorRecords(n).size(), "and it leaves no second record");
+    }
+
+    /**
+     * The scheduled trigger whose template is missing has left one record in the Mail Queue: in status ERROR, so it
+     * is never sent, its subject naming the list and the trigger, the template error as its last error and the
+     * list's recipient. FAILS on the pre-fix code, which recorded the failure in the log only.
+     */
+    private void assertTheFailureIsRecordedOnce(String n, Integer triggerId) {
+        List<String[]> records = errorRecords(n);
+        assertEquals(1, records.size(), "one record of the failed run: " + records.size());
+        String[] record = records.get(0);
+        assertEquals("Not sent: mailing list IT-MLFAULT-" + n + ", scheduled trigger " + triggerId, record[0],
+                "the subject names the list and the trigger");
+        assertEquals("ERROR", record[1], "in status ERROR, so it is never sent");
+        assertTrue(record[2].contains("it-no-such-template-" + n), "the last error names the template error: " + record[2]);
+        assertEquals("it-fault-" + n + "@example.com", record[3].replaceAll(".*<(.*)>.*", "$1"),
+                "and it holds the list's recipient: " + record[3]);
+    }
+
+    /**
+     * A scheduled trigger that keeps failing is tried again every hour, but is recorded in the Mail Queue at most once
+     * a day: a second failed run, the trigger forced due again, leaves no second record.
+     */
+    @Test
+    void aScheduledTriggerThatKeepsFailingIsRecordedOnceADay() throws InterruptedException {
+        awayFromTheRealSchedulersRun();
+        String n = Long.toString(System.nanoTime(), 36);
+        Integer list = committedListWithOneContact(n);
+        String subject = "IT-MAILLIST6-AGAIN-" + n;
+        String inThreeHours = ZonedDateTime.now(ZoneOffset.UTC).plusHours(3)
+                .format(DateTimeFormatter.ofPattern("HH:mm"));
+        String missingTemplate = "templates/mailinglist/it-no-such-template-" + n + ".ftl";
+        Integer triggerId = committedDueScheduledTrigger(list, subject, inThreeHours, missingTemplate, null);
+
+        assertEquals(1, schedulerRunErrorsAbout(triggerId).size(), "the first run fails");
+        assertTheFailureIsRecordedOnce(n, triggerId);
+
+        // Due again, as an hour later
+        Tx.requiringNew().run(() -> em.createQuery(
+                        "update MailingListTrigger t set t.nextScheduledExecution = :past where t.id = :id")
+                .setParameter("past", new Date(System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000L))
+                .setParameter("id", triggerId)
+                .executeUpdate());
+        List<ILoggingEvent> secondRun = schedulerRunErrorsAbout(triggerId);
+        assertEquals(1, secondRun.size(), "the trigger due again fails again: " + secondRun);
+        assertEquals(1, errorRecords(n).size(), "but leaves no second record within the day");
     }
 
     /**
@@ -710,5 +762,6 @@ class MailingListDeliveryFaultITTest extends ITTest {
 
         schedulerService.checkExecuteScheduledTriggers();
         assertEquals(1, mailsWithSubject(subject), "a second run in the same minute makes no second mail");
+        assertTrue(errorRecords(n).isEmpty(), "a run that succeeds leaves no failure record");
     }
 }
