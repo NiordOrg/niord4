@@ -180,7 +180,7 @@ describe('MessageDetailsViewComponent', () => {
     expect(dialogSpy.open).not.toHaveBeenCalled();
   });
 
-  it('says a read failed, where a list with nothing in it says nothing', () => {
+  it('says a read failed, and nothing alarming for a list with nothing in it', () => {
     const { fixture, store } = setUp({});
     // The live region is there before the failure, so the failure is announced when it lands.
     const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')!;
@@ -189,6 +189,21 @@ describe('MessageDetailsViewComponent', () => {
     store.failed.set(true);
     fixture.detectChanges();
     expect(alert.textContent!.trim()).toBe('Failed to load messages');
+  });
+
+  // A blank page under the filter bar cannot be told from one that did not work.
+  it('says in words that a list arrived with nothing in it', () => {
+    const { fixture, store } = setUp({});
+    // The live region is there before the words, so they are announced when they land.
+    const status = (fixture.nativeElement as HTMLElement).querySelector('[role="status"]')!;
+    expect(status.textContent!.trim()).toBe('');
+
+    store.messages.set([]);
+    store.empty.set(true);
+    fixture.detectChanges();
+    expect(status.textContent!.trim()).toBe('No messages to show');
+    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')!;
+    expect(alert.textContent!.trim()).toBe('');
   });
 
   // On a slow link the first read takes seconds, and an empty page reads as "no warnings here".

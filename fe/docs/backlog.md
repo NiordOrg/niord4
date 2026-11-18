@@ -136,13 +136,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   filter bar with a download link and a control that left it. Doing the same means reading
   `/public/v1/publication/{id}`, a label for the leaving control that no bundle has yet, and menu links that keep
   `publicationId` while it is set.
-- **A list that comes back empty shows nothing.** The details view renders the failure line, the spinner and
-  one card per message (`ui-apps/info/src/app/features/messages/components/message-details-view/message-details-view.component.ts`
-  16-47) and has no branch for a list that arrived empty, so Browse on a released issue that holds no message
-  (`/messages/details?publicationId=<id>`) shows only the Print bar and the footer: no heading and no sentence
-  saying the issue lists no notices, which a reader can take for a page that failed. The same holds for a filter
-  that matches nothing. A line for the empty list (and, with the entry above, the publication's name) closes it;
-  it needs wording the site owner has not been asked for. Found by the error hunt's live check (2026-11-13).
 - The filter bar is a row of toggles with no name of its own. Each button carries its visible label and its
   `aria-pressed`, which meets AA, but a `role="group"` with an `aria-label` would tell a screen-reader user what
   the row of toggles is for. It needs a word that exists in no bundle, so it waits for the site owner to write one
@@ -212,8 +205,8 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   messages". Either the frozen v1 API answers 400 for an area id that resolves to no area, as it does for a
   publication, so the existing failure line shows; or the teaser and the print sheet get a line for an empty list.
   The first changes what an outside consumer with a stale area id gets, and the second needs a text, so the owner
-  decides first. The hunt proposes keeping the API as it is and giving both views the empty-list line that _A list
-  that comes back empty shows nothing_ above needs anyway, worded by the owner. Found by the error hunt's phase 2
+  decides first. The hunt proposes keeping the API as it is and giving both views the line the details and table
+  views now show for an empty list (`MSGS_NONE`, "No messages to show"). Found by the error hunt's phase 2
   (2026-11-15), seen in a browser on a local rig; Low. Left by the owner on 2026-11-15: no new public-site text
   and no API change.
 

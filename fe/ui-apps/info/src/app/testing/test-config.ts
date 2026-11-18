@@ -142,6 +142,7 @@ export interface FakeMessagesStoreSeed {
   rootArea?: Area;
   failed?: boolean;
   loading?: boolean;
+  empty?: boolean;
   canPrintList?: boolean;
   publicationId?: string;
 }
@@ -164,6 +165,7 @@ export function fakeMessagesStore(seed?: FakeMessagesStoreSeed) {
     activeNow: signal(false),
     failed: signal(seed?.failed ?? false),
     loading: signal(seed?.loading ?? false),
+    empty: signal(seed?.empty ?? false),
     canPrintList: signal(seed?.canPrintList ?? true),
     publicationId: signal<string | undefined>(seed?.publicationId),
     selectRootArea: vi.fn(),

@@ -43,6 +43,7 @@
   "MINIMIZE": "Minimize",
   "MORE_MSGS": " and {{messageNo}} more messages",
   "MSGS_LOAD_FAILED": "Failed to load messages",
+  "MSGS_NONE": "No messages to show",
   "MSG_LOAD_FAILED": "Failed to load message",
   "MSG_NOT_FOUND": "Message {{messageId}} is not available",
   "NO_POS_MSGS": "Additional Messages",

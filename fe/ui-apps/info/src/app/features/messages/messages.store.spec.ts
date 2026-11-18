@@ -185,6 +185,7 @@ describe('MessagesStore', () => {
     setUp();
     await load();
     expect(store.failed()).toBe(false);
+    expect(store.empty()).toBe(false);
 
     store.setMainTypes({ NW: true, NM: false });
     await settle();
@@ -193,6 +194,8 @@ describe('MessagesStore', () => {
       .flush('no', { status: 500, statusText: 'Server Error' });
     await settle();
     expect(store.failed()).toBe(true);
+    // A failure is not a list with nothing in it, and the views must not say both.
+    expect(store.empty()).toBe(false);
 
     // An area with nothing to report empties the list without saying anything went wrong.
     store.setMainTypes({ NW: true, NM: true });
@@ -201,6 +204,7 @@ describe('MessagesStore', () => {
     await settle();
     expect(store.failed()).toBe(false);
     expect(store.messages()).toEqual([]);
+    expect(store.empty()).toBe(true);
   });
 
   // On a slow link the first visit is seconds of nothing; the views need to tell that apart
@@ -208,6 +212,7 @@ describe('MessagesStore', () => {
   it('is loading from the first moment until the list has arrived, and not after', async () => {
     setUp();
     expect(store.loading()).toBe(true);
+    expect(store.empty()).toBe(false);
     await settle();
     // The root area is on its way, then the list that waits for it.
     expect(store.loading()).toBe(true);
@@ -218,10 +223,13 @@ describe('MessagesStore', () => {
     await settle();
     expect(store.loading()).toBe(false);
     expect(store.messages()).toEqual([]);
+    expect(store.empty()).toBe(true);
 
     store.setMainTypes({ NW: true, NM: false });
     await settle();
     expect(store.loading()).toBe(true);
+    // A read on its way says nothing about the list it will bring.
+    expect(store.empty()).toBe(false);
     httpTesting
       .expectOne((r) => r.url.includes('/rest/public/v1/messages'))
       .flush('no', { status: 500, statusText: 'Server Error' });
@@ -229,6 +237,7 @@ describe('MessagesStore', () => {
     // A failed read is not a read on its way.
     expect(store.loading()).toBe(false);
     expect(store.failed()).toBe(true);
+    expect(store.empty()).toBe(false);
   });
 
   // A build may name two root areas; the backend of one country may stop carrying the

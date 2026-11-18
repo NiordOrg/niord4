@@ -263,6 +263,21 @@ export class MessagesStore {
     filterByAreaIds(this.inForce(), this.selectedSubAreaIds()),
   );
 
+  /**
+   * The read answered and there is nothing to show. The views say so in words, because a blank
+   * page under the filter bar cannot be told from a page that did not work. Only a read settled
+   * on the current filter counts: while the next one is on its way the previous rows stay up,
+   * and a failure is a line of its own.
+   */
+  readonly empty = computed(() => {
+    const status = this.listResource.status();
+    return (
+      (status === 'resolved' || status === 'local') &&
+      !this.failed() &&
+      this.messages().length === 0
+    );
+  });
+
   /** The navigation list the details dialog steps through. */
   readonly messageIds = computed<string[]>(() => this.messages().map((message) => message.id));
 
