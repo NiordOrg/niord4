@@ -48,15 +48,10 @@ list: tap a template to see its example, then *Use this template*, or *Back to t
 
 You can also run templates on a message you are editing. Open the *Categories* row of the message
 (see <<categories-editor-field,Categories>>) and click *Run template…*; it is there when the domain
-uses templates and you can edit the message. When the message has been saved before, the _Execute
-templates_ page opens with the message as it is, including your unsaved changes, and with the
+uses templates and you can edit the message. The _Execute templates_ page opens with the message as
+it is, including your unsaved changes, whether it has been saved before or not, and with the
 templates among its categories already chosen. When it has none, the template selection opens
 first (<<template-selection-dialog>>).
-
-A new message that has never been saved is different: the page starts from a blank message of the
-same type, and only the templates among its categories come along. The title, areas, positions and
-other fields you have filled in are not on the page, and *Execute* replaces them with the result.
-To run templates on what you have filled in, save the message first.
 
 [#template-execution-dialog]
 === The Execute Templates Page
@@ -142,10 +137,11 @@ The templates write the message as a whole, from the facts on the page:
 * a title Niord generates is made again from the areas and the subjects, and when the message has
   a single part, that part's subject is hidden in the message text.
 
-When you run templates on an open message, the result replaces the whole message, not only the
-fields the page shows. If the message has changes you have not saved, Niord asks first (_Replace
-message?_, "Executing this template replaces the whole message and discards your unsaved changes.
-Continue?"): *Replace* goes on, *Cancel* goes back to the page. When the templates cannot run,
+When you run templates on an open message, the templates write their fields again, and the rest of
+the message is kept as it was on the page, your unsaved changes included. If the message has changes
+you have not saved, Niord asks first (_Replace message?_, "Executing the templates writes again the
+fields they fill in, and your unsaved changes to those fields are lost. Continue?"): *Replace* goes
+on, *Cancel* goes back to the page. When the templates cannot run,
 Niord says "Could not execute the template." and the page stays as it was.
 
 *Cancel* at the top of the page goes back to where you came from, the start screen or the message,

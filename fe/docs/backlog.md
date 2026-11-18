@@ -606,18 +606,6 @@ Background: [`features/editor.md`](features/editor.md).
   apart, and a screen reader hears the same name twice. "Cancel message" on the red button and "Close" on the other
   close it. `04-Editor.adoc` (_Cancelling a Message_) says so as it is. Found by the user guides' writers
   (2026-11-11).
-- **_Run template…_ on a message never saved starts from a blank one.** The Categories row seeds the execution
-  page with the working copy, unsaved changes included
-  (`features/editor/components/fields/categories-field-row/categories-field-row.ts` 97-105), but the page replaces
-  any seed without a `created` time by a fresh server blank of the same main type
-  (`features/editor/views/template-execution-view/template-execution-view.ts` 171-184), meant for the blank-card
-  and template-search flows. A new message whose title, areas and positions were filled in before _Run template…_
-  therefore loses them: they are not on the page, and _Execute_ replaces the message with the result. The confirm
-  before _Execute_ warns that unsaved changes are discarded, but for a message saved before they are in fact kept.
-  Swapping in the blank only when the seed is an untouched new message (or merging the blank's defaults under the
-  seed's fields) closes it. The editor manual (`guides/editor-manual/06-TemplateExecution.adoc`, _Running a
-  Template on an Open Message_) describes it as it is; change it with the fix. Found by the user guides' check
-  (2026-11-11), read in the code.
 - **The History tab cannot tell apart two versions with the same number.** The revision table tracks its rows by
   `version` and the selection compares versions
   (`features/editor/components/revision-table/revision-table.ts` 29 and 58-60,

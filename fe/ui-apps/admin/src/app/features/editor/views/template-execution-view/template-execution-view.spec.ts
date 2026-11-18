@@ -69,6 +69,8 @@ function setup(options: {
   unsaved?: boolean;
   /** Render the real template, its child components left as unknown, inert elements. */
   render?: boolean;
+  /** What the server answers for a fresh blank message (none by default). */
+  serverBlank?: Message;
 }) {
   const execute = vi.fn(() => of(options.executeResult ?? ({ id: '', mainType: 'NW' } as Message)));
   const templatesApi = { parameterTypes: () => of([]), execute };
@@ -81,7 +83,7 @@ function setup(options: {
   const getFeatures = vi.fn(() => []);
   const geometryService = { getFeatures };
   const messagesApi = {
-    newMessageTemplate: vi.fn(() => of(null)),
+    newMessageTemplate: vi.fn(() => of(options.serverBlank ?? null)),
     adjustEditableMessage: vi.fn(() => of({ id: '', promulgations: [] } as Message)),
   };
   const navigate = vi.fn();
@@ -147,6 +149,7 @@ function setup(options: {
 const createSeed: TemplateExecutionSeed = {
   message: { id: '', mainType: 'NW', categories: [] },
   returnUrl: '/editor',
+  blank: true,
 };
 
 describe('TemplateExecutionView', () => {
@@ -166,6 +169,7 @@ describe('TemplateExecutionView', () => {
           categories: [{ id: 5 } as SystemCategory],
         },
         returnUrl: '/editor/edit/m',
+        blank: false,
       },
       hydrated: [tmpl(5, 'Light')],
     });
@@ -180,6 +184,7 @@ describe('TemplateExecutionView', () => {
       seed: {
         message: { id: '', mainType: 'NW', categories: [{ id: 5 } as SystemCategory] },
         returnUrl: '/editor',
+        blank: true,
       },
       hydrated: [tmpl(5, 'Light')],
     });
@@ -187,6 +192,79 @@ describe('TemplateExecutionView', () => {
     expect(handle.drawerOpen()).toBe(false);
     // The blank pick still starts from a proper server blank (promulgations, series defaults).
     expect(messagesApi.newMessageTemplate).toHaveBeenCalledWith('NW');
+  });
+
+  describe('a working copy never saved is kept as it is', () => {
+    // A server blank that differs from the seed in every field the tests read.
+    const serverBlank: Message = { id: 'blank', mainType: 'NW', descs: [] };
+
+    function spyConfirm(fixture: ReturnType<typeof setup>['fixture']) {
+      const confirm = fixture.debugElement.injector.get(ConfirmService);
+      return vi.spyOn(confirm, 'confirmNeutral').mockImplementation(() => undefined);
+    }
+
+    it('a new message keeps what was filled in, on the page and in the Execute payload', () => {
+      const { fixture, handle, messagesApi, execute } = setup({
+        seed: {
+          message: {
+            id: 'uuid-1',
+            mainType: 'NW',
+            categories: [{ id: 5 } as SystemCategory],
+            areas: [{ id: 7 }],
+            descs: [{ lang: 'en', title: 'Typed' }],
+          },
+          returnUrl: '/editor/edit',
+          blank: false,
+        },
+        hydrated: [tmpl(5, 'Light')],
+        unsaved: true,
+        serverBlank,
+      });
+      expect(messagesApi.newMessageTemplate).not.toHaveBeenCalled();
+      expect(handle.messageCopy().id).toBe('uuid-1');
+      expect(handle.messageCopy().areas).toEqual([{ id: 7 }]);
+      expect(handle.messageCopy().descs?.[0]?.title).toBe('Typed');
+
+      const confirmNeutral = spyConfirm(fixture);
+      handle.execute();
+      confirmNeutral.mock.calls[0][0].accept();
+
+      const payload = (execute.mock.calls as unknown as [Message][])[0][0];
+      expect(payload.id).toBe('uuid-1');
+      expect(payload.areas).toEqual([{ id: 7 }]);
+      expect(payload.descs?.[0]?.title).toBe('Typed');
+    });
+
+    it('a copy of a message is not replaced by a blank', () => {
+      const geometry = {
+        type: 'FeatureCollection' as const,
+        features: [
+          {
+            type: 'Feature' as const,
+            properties: {},
+            geometry: { type: 'Point' as const, coordinates: [10, 56] },
+          },
+        ],
+      };
+      const { handle, messagesApi } = setup({
+        seed: {
+          message: {
+            id: 'uuid-2',
+            mainType: 'NW',
+            categories: [{ id: 5 } as SystemCategory],
+            parts: [{ type: 'DETAILS', geometry }],
+          },
+          returnUrl: '/editor/edit',
+          blank: false,
+        },
+        hydrated: [tmpl(5, 'Light')],
+        serverBlank,
+      });
+
+      expect(messagesApi.newMessageTemplate).not.toHaveBeenCalled();
+      expect(handle.messageCopy().id).toBe('uuid-2');
+      expect(handle.messageCopy().parts?.[0]?.geometry).toEqual(geometry);
+    });
   });
 
   it('a drawer confirm reconciles values by category id (keep chosen, append new, drop unchecked)', () => {
@@ -230,6 +308,7 @@ describe('TemplateExecutionView', () => {
       seed: {
         message: { id: '', mainType: 'NW', categories: [{ id: 5 } as SystemCategory] },
         returnUrl: '/editor',
+        blank: true,
       },
       hydrated: [tmpl(5, 'Light')],
       executeResult: { id: '', mainType: 'NW', descs: [{ lang: 'en', title: 'X' }] },
@@ -252,6 +331,7 @@ describe('TemplateExecutionView', () => {
           categories: [{ id: 5 } as SystemCategory],
         },
         returnUrl: '/editor/edit/m',
+        blank: false,
       },
       hydrated: [tmpl(5, 'Light')],
       executeResult: { id: 'm', created: 't', mainType: 'NW' },
@@ -274,6 +354,7 @@ describe('TemplateExecutionView', () => {
           categories: [{ id: 5 } as SystemCategory],
         },
         returnUrl: '/editor/edit/m',
+        blank: false,
       },
       hydrated: [tmpl(5, 'Light')],
       executeResult: { id: 'm', created: 't', mainType: 'NW' as const },
@@ -327,6 +408,7 @@ describe('TemplateExecutionView', () => {
         seed: {
           message: { id: '', mainType: 'NW', categories: [{ id: 5 } as SystemCategory] },
           returnUrl: '/editor',
+          blank: true,
         },
         hydrated: [tmpl(5, 'Light')],
         render: true,
@@ -462,6 +544,7 @@ describe('TemplateExecutionView mandatory parameters', () => {
       seed: {
         message: { id: '', mainType: 'NW', categories: [{ id: 5 } as SystemCategory] },
         returnUrl: '/editor',
+        blank: true,
       },
       hydrated: [template],
       render,

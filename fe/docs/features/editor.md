@@ -647,9 +647,11 @@ inputs validate server-side while typing and commit the backend-normalised value
 ### Entry points and the two transient stores
 
 - **Start screen → "from a template"** opens an anchored template-search popover; picking one seeds
-  the execution store and enters the execution view directly.
+  the execution store with a placeholder (`blank`: only the main type and the template) and enters
+  the execution view directly, which swaps the placeholder for a fresh server blank of that type.
 - **Categories row → "Run template…"** in an open message seeds a clone of the working message and
-  the current URL as the return target.
+  the current URL as the return target. The execution view keeps that clone as it is, saved or not
+  (a new message or a copy), unsaved changes included.
 
 Two root-provided stores carry state in opposite directions and are deliberately separate, so the
 shared execute route has no consume-ordering coupling:

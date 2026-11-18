@@ -4495,7 +4495,7 @@
   "editor.section.message_part": "Part {{n}}",
   "editor.section.misc": "Miscellaneous",
   "editor.template.confirm.replaceAccept": "Replace",
-  "editor.template.confirm.replaceBody": "Executing this template replaces the whole message and discards your unsaved changes. Continue?",
+  "editor.template.confirm.replaceBody": "Executing the templates writes again the fields they fill in, and your unsaved changes to those fields are lost. Continue?",
   "editor.template.confirm.replaceHeader": "Replace message?",
   "editor.template.error.execute": "Could not execute the template.",
   "editor.template.addDate": "Add date",

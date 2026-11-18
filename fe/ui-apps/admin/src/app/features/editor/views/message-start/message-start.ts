@@ -101,6 +101,7 @@ export class MessageStart {
     this.seedStore.set(
       { id: '', mainType: this.templateMainType(), categories: [template] },
       '/editor',
+      true,
     );
     void this.router.navigate(['/editor/execute-template']);
   }

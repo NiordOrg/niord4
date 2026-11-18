@@ -213,6 +213,7 @@ describe('MessageStart', () => {
       expect(seedStore.set).toHaveBeenCalledWith(
         { id: '', mainType: 'NW', categories: [template] },
         '/editor',
+        true, // a placeholder: the execution view starts from a server blank
       );
       expect(navigate).toHaveBeenCalledWith(['/editor/execute-template']);
     });

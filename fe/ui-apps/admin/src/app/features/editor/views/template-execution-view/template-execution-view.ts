@@ -253,10 +253,11 @@ export class TemplateExecutionView {
       .subscribe((types) => this.paramTypes.set(new Map(types.map((t) => [t.name, t]))));
 
     const ids = (seed.message.categories ?? []).map((cat) => cat.id);
-    // Create flows (blank card AND the Start screen's template-search pick — a never-saved seed,
-    // with or without categories): swap in a proper server-blank so the base fields
-    // (promulgations, series defaults) are populated for editing.
-    if (!seed.message.created && seed.message.mainType) {
+    // Only the Start screen's template pick hands over a placeholder: swap in a proper server blank
+    // so the base fields (promulgations, series defaults) are populated for editing. The editor's
+    // working copy, saved or not (a new message or a copy), is already a server-made message and
+    // stays as it is, unsaved changes included.
+    if (seed.blank && seed.message.mainType) {
       this.messagesApi
         .newMessageTemplate(seed.message.mainType)
         .pipe(takeUntilDestroyed(this.destroyRef))
