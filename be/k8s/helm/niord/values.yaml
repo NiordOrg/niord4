@@ -156,7 +156,9 @@ app:
   # (the canonical public URL, normally externalBaseUri's value; a database restored from
   # another system carries that system's address), mode, mailValidRecipients, mailSender.
   # A value is a text, a number (a whole one renders as an integer, 1000000 and not 1e+06) or
-  # true/false; anything else fails the render. Never a password or token (those reach the app
+  # true/false; anything else fails the render. A list or object setting (type json: the
+  # language lists, the editor fields, stdTemplateFields) cannot be pinned: the app takes the
+  # variable as a text and does not parse it. Never a password or token (those reach the app
   # from a Secret): the render refuses a key that names a password, secret or token. A setting
   # the app reads at start-up takes effect at the next start. {} = nothing pinned.
   settings: {}

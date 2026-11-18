@@ -481,13 +481,16 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   database restored from another system carries that system's address. Locally the setting
   keeps the base product's `http://localhost:8888`, which the pod itself answers, so the mails'
   styling and images work and only their links name a port the browser does not use.
-- **Pinned settings (`app.settings`)** — any setting of the Settings page can be pinned
-  this way: the chart renders each key as an environment variable of that name, which the app
-  reads before the stored row, so the pinned value wins and the Settings page still shows (and
-  edits) the stored row without saying so. Typical keys besides `baseUri`: `mode`,
-  `mailValidRecipients`, `mailSender`. A value is a text, a number or `true`/`false`, and a whole
-  number renders as an integer (`1000000`, not `1e+06`); anything else fails the render. An empty
-  value is not rendered. The render refuses a key
+- **Pinned settings (`app.settings`)** — a setting of the Settings page whose value is one
+  text, number or `true`/`false` can be pinned this way: the chart renders each key as an
+  environment variable of that name, which the app reads before the stored row, so the pinned
+  value wins and the Settings page still shows (and edits) the stored row without saying so. A
+  list or object setting (type `json`: `modelLanguages`, `siteLanguages`, `infoSiteLanguages`,
+  `editorFieldsBase`, `editorFieldsNw`, `editorFieldsNm`, `stdTemplateFields`) cannot be pinned:
+  the app takes the variable as a text and does not parse it. Typical keys besides `baseUri`:
+  `mode`, `mailValidRecipients`, `mailSender`. A value is a text, a number or `true`/`false`, and
+  a whole number renders as an integer (`1000000`, not `1e+06`); anything else fails the render.
+  An empty value is not rendered. The render refuses a key
   that names a password, secret or token, a key that does not start with a lower-case letter, a
   key with a dot or one starting `spring_`, `server_`, `management_`, `logging_` or `niord_`
   (Spring reads such a variable as a property and lets it outrank the chart's, and `niord.home`
