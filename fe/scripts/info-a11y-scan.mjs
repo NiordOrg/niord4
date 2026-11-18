@@ -436,12 +436,24 @@ if (invokedDirectly) {
     for (const size of WIDTHS) {
       const context = await browser.newContext({ viewport: size });
       const page = await context.newPage();
+      let lookupFailed = false;
       if (states.some((s) => s.needsMessage) && !messageId) {
-        messageId = await firstMessageId(page, base);
+        try {
+          messageId = await firstMessageId(page, base);
+        } catch (error) {
+          // The list could not be read at all (a site that does not answer, most often): the state
+          // that needs a message is named as not opened, and the other states still run, each
+          // into its own catch below, so the reports are written. No id is known yet to cut out.
+          lookupFailed = true;
+          const reason = String(error?.message ?? error).split('\n')[0];
+          for (const state of states.filter((s) => s.needsMessage)) {
+            errored.push(`${state.name} at ${size.width} px: ${reason}`);
+          }
+        }
       }
       for (const state of states) {
         if (state.needsMessage && !messageId) {
-          skipped.push(`${state.name}: the list returned no message`);
+          if (!lookupFailed) skipped.push(`${state.name}: the list returned no message`);
           continue;
         }
         if (state.answer) await page.route(isListRead, (route) => route.fulfill(state.answer));
