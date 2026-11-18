@@ -140,7 +140,7 @@ public class MailingListStatusChangeOutbox {
             int attempts = ((Number) row[3]).intValue() + 1;
             // The lease first: a row whose status cannot be read is then no longer due, and the next pass of this
             // loop takes the row after it
-            em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" "
+            write("UPDATE public.\"MailingListStatusChange\" "
                             + "SET \"dueAt\" = now() + make_interval(secs => :seconds), attempts = attempts + 1 "
                             + "WHERE id = :id")
                     .setParameter("seconds", claimLease.toMillis() / 1000.0)
@@ -175,7 +175,7 @@ public class MailingListStatusChangeOutbox {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void complete(long id) {
-        em.createNativeQuery("DELETE FROM public.\"MailingListStatusChange\" WHERE id = :id")
+        write("DELETE FROM public.\"MailingListStatusChange\" WHERE id = :id")
                 .setParameter("id", id)
                 .executeUpdate();
     }
@@ -190,7 +190,7 @@ public class MailingListStatusChangeOutbox {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void failed(long id, String error) {
-        em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" SET \"lastError\" = :error, "
+        write("UPDATE public.\"MailingListStatusChange\" SET \"lastError\" = :error, "
                         + "\"dueAt\" = now() + make_interval(mins => LEAST(attempts, :maxMinutes)) WHERE id = :id")
                 .setParameter("error", error)
                 .setParameter("maxMinutes", (int) Math.max(1, claimLease.toMinutes()))
@@ -198,9 +198,18 @@ public class MailingListStatusChangeOutbox {
                 .executeUpdate();
     }
 
+    /**
+     * A native write to the table, naming it as its query space: a native write that names no table empties the
+     * whole second-level cache when it runs (see be/docs/message-read-benchmark.md)
+     */
+    @SuppressWarnings("rawtypes")
+    private NativeQuery write(String sql) {
+        return em.createNativeQuery(sql).unwrap(NativeQuery.class).addSynchronizedQuerySpace(TABLE);
+    }
+
     /** Writes the row's last error, in the caller's transaction */
     private void recordError(long id, String error) {
-        em.createNativeQuery("UPDATE public.\"MailingListStatusChange\" SET \"lastError\" = :error WHERE id = :id")
+        write("UPDATE public.\"MailingListStatusChange\" SET \"lastError\" = :error WHERE id = :id")
                 .setParameter("error", error)
                 .setParameter("id", id)
                 .executeUpdate();

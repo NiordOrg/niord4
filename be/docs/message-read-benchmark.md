@@ -113,13 +113,15 @@ In this order; steps 2 and 3 are independent of each other.
      (met since 2026-11-12: each carries the hint `HibernateHints.HINT_NATIVE_SPACES`);
    - the backend runs one replica (the chart's `replicaCount: 1`), and no write outside Hibernate touches the table
      of a cached entity. Such writes exist: `RepoStore`'s `JdbcTemplate`, the `Session.doWork` writers of
-     `SettingsService` and `DefaultsLedger`, `BootstrapMarker`'s native SQL and `LegacyImportService`'s two native
-     deletes of `PublicationSeries` collection tables. None of their tables belongs to a cached entity: `Setting`
-     carries no `@Cacheable`, `PublicationSeries` neither, and `RepoFile`, `BootstrapState` and `DefaultsLedger`
-     have no entity. `Setting`, `RepoFile`, `BootstrapState` and `DefaultsLedger` stay uncached. A native write
-     that declares no table empties the cache when it runs, as `MessagePostgresIndex`'s did; `BootstrapMarker`'s
-     run at start-up and during a bootstrap and `LegacyImportService`'s in the legacy import, so they cost a cold
-     cache then, not stale reads.
+     `SettingsService` and `DefaultsLedger`, `BootstrapMarker`'s native SQL, `LegacyImportService`'s two native
+     deletes of `PublicationSeries` collection tables and `MailingListStatusChangeOutbox`'s native SQL (a row
+     written, taken and deleted with every status change). None of their tables belongs to a cached entity:
+     `Setting` carries no `@Cacheable`, `PublicationSeries` neither, and `RepoFile`, `BootstrapState`,
+     `DefaultsLedger` and `MailingListStatusChange` have no entity. `Setting`, `RepoFile`, `BootstrapState` and
+     `DefaultsLedger` stay uncached. A native write that declares no table empties the cache when it runs, as
+     `MessagePostgresIndex`'s did; the outbox's writes declare their table, while `BootstrapMarker`'s run at
+     start-up and during a bootstrap and `LegacyImportService`'s in the legacy import, so they cost a cold cache
+     then, not stale reads.
 
    With `hibernate-jcache` on the class path Hibernate switches the cache on by itself, so the core defaults state
    the settings rather than leave them to that.
