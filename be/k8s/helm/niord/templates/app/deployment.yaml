@@ -176,6 +176,20 @@ spec:
                 secretKeyRef:
                   name: {{ include "niord.postgres.secretName" . }}
                   key: password
+            {{- with .Values.smtp.existingSecret }}
+            # The mail relay's login, from smtp.existingSecret. Spring binds them to
+            # niord.smtp.username / .password; nothing is rendered into the ConfigMap.
+            - name: NIORD_SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: username
+            - name: NIORD_SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: password
+            {{- end }}
             # The Keycloak URL the backend's own admin calls use (domain clients, users, groups):
             # the in-cluster Service. SettingsService checks System.getenv(<setting key>) before
             # the database, also while @Setting fields are injected, so the env-var NAME is the

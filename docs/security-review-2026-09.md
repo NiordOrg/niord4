@@ -445,6 +445,10 @@ still name the WMS over plain http (N-20).
    there. The deploy repository's validator is still open.
    MailHog in production (F-X116), done in the chart on 2026-11-18: the value `smtp.requireRelay`
    refuses MailHog and a MailHog Service as the relay; production's values set it at go-live.
+   The outbound mail's login (F-X76), the chart's half done on 2026-11-18: `smtp.existingSecret`
+   names a Secret with the relay's user name and password, passed to the application from that
+   Secret, and `smtp.tls` names STARTTLS or implicit TLS; both are inert when unset. Whether
+   production's relay needs them is still the host's answer.
 4. The read of the running realms and of the stagings' settings, from the jump server (F-X70, F-X72,
    the realm pattern, N-20), and of the administration host's `Strict-Transport-Security` (F-X96).
 5. F-X157's check into the SECOM cutover runbook, and the countries' default WMS address on https

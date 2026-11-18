@@ -235,6 +235,28 @@ so a string fails.
 {{- end }}
 {{- end }}
 {{- /*
+smtp.tls and smtp.existingSecret (values.yaml): TLS to the mail relay and its login. The backend
+reads niord.smtp.tls as none, starttls or ssl in any case, so the chart does too; a value missing
+from an older release's values is none. Both are for a relay: this release's MailHog (smtp.host
+empty) asks for no login and offers no TLS, so with it either value would point at the wrong server
+and, for TLS, fail every mail.
+*/ -}}
+{{- $smtpTls := lower (toString (.Values.smtp.tls | default "none")) }}
+{{- if not (has $smtpTls (list "none" "starttls" "ssl")) }}
+{{- fail (printf "smtp.tls is %q: it is none, starttls (usually port 587) or ssl (usually port 465)" (toString .Values.smtp.tls)) }}
+{{- end }}
+{{- if not (or (kindIs "invalid" .Values.smtp.existingSecret) (kindIs "string" .Values.smtp.existingSecret)) }}
+{{- fail (printf "smtp.existingSecret is %q: it is the name of a Secret with the keys username and password, or empty" (toString .Values.smtp.existingSecret)) }}
+{{- end }}
+{{- if and .Values.app.enabled .Values.mailhog.enabled (not .Values.smtp.host) }}
+{{- if .Values.smtp.existingSecret }}
+{{- fail "smtp.existingSecret is set and the app sends to this release's MailHog (smtp.host empty), which asks for no login: name the mail relay in smtp.host and smtp.port, or leave smtp.existingSecret empty" }}
+{{- end }}
+{{- if ne $smtpTls "none" }}
+{{- fail (printf "smtp.tls is %q and the app sends to this release's MailHog (smtp.host empty), which offers no TLS: name the mail relay in smtp.host and smtp.port, or leave smtp.tls none" $smtpTls) }}
+{{- end }}
+{{- end }}
+{{- /*
 app.settings (values.yaml): settings this environment pins, each rendered as an environment variable
 named like the setting key. A setting key starts with a lower-case letter, so no key can take the
 name of a variable the chart sets itself (SPRING_*, NIORD_*, JAVA_TOOL_OPTIONS). authServerUrl is

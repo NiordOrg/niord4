@@ -420,13 +420,26 @@ mailhog:
 # =============================================================================
 # "" = this release's MailHog (<fullname>-smtp on mailhog.smtpPort). An app-only release
 # names the infra release's MailHog, e.g. "staging-infra-niord-smtp" + 11025; production
-# names the real relay at go-live and sets requireRelay (phase-0 H9; the credential seam is a
-# follow-up); before go-live it may keep MailHog. Host AND port
+# names the real relay at go-live and sets requireRelay (phase-0 H9), with its login and TLS
+# below when the relay asks for them; before go-live it may keep MailHog. Host AND port
 # are required whenever mailhog.enabled is false in a release that renders the app
 # (the render fails otherwise).
 smtp:
   host: ""
   port: ""
+  # A Secret with the keys `username` and `password`: the login the relay asks for, passed to
+  # the app as NIORD_SMTP_USERNAME / NIORD_SMTP_PASSWORD (niord.smtp.username / .password). In a
+  # cluster environment a SealedSecret next to the values, as the database users are. A changed
+  # Secret takes effect at the app pod's next start. "" = no login. Needs smtp.host: this
+  # release's MailHog asks for none.
+  existingSecret: ""
+  # TLS to the relay, rendered as niord.smtp.tls when it is not none:
+  #   none      plain SMTP, as MailHog wants (the default)
+  #   starttls  STARTTLS required before the login and the mail, usually port 587
+  #   ssl       implicit TLS, usually port 465
+  # The relay's certificate is checked against the JVM's trust store; a relay with a private CA
+  # needs -Djavax.net.ssl.trustStore in app.javaOpts. Anything else fails the render.
+  tls: none
   # true = this environment's mail must reach people (production from go-live on). The render
   # then refuses MailHog in this release and a smtp.host that names a MailHog Service of this
   # chart (<fullname>-smtp), so warnings, NAVTEX and mailing-list mail cannot end in the test
