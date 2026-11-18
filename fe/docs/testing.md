@@ -431,9 +431,15 @@ before shipping anything that touches a journey it covers.
 
 Also unautomated today, and worth knowing before you assume a gate exists:
 
-- No accessibility scanner anywhere — no axe, pa11y or Lighthouse dependency and no CI step. The
-  public site's layout check below asserts reflow and visible focus around its two bars, and
-  nothing else.
+- No accessibility scanner in CI. The public site has one as a manual tool,
+  `npm run a11y:info -- --base <url> --out <dir>` (`scripts/info-a11y-scan.mjs`): axe-core, a dev
+  dependency, over every page and dialog of a running site at 1280 and 320 px in each language the
+  switcher offers, the WCAG 2.1 A and AA rules and the best-practice ones apart, written to a JSON
+  and a Markdown report that hold no page content. It exits 1 while a rule fails, so it can become
+  a gate, but no workflow runs it; the audit record it served is
+  [the public site's audit](../../docs/accessibility-audit-public-site.md). The administration app
+  has no scanner at all. The public site's layout check below asserts reflow and visible focus
+  around its two bars, and nothing else.
 - No coverage thresholds.
 
 Five repo-level checks sit outside both suites:

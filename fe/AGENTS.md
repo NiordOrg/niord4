@@ -177,6 +177,9 @@ npm run bundle:info      # first-visit transfer against ui-apps/info/bundle-base
 npm run separation:info  # every first-party module of the build belongs to the public site
 npm run layout:info      # the bars, the message cards and the filter chips of the last build, in Chromium;
                          # a manual check on the base build (the Example country job runs it in CI)
+npm run a11y:info -- --base <url> --out <dir>   # axe-core over every page and dialog of a running site,
+                         # WCAG 2.1 A and AA and best practice, at 1280 and 320 px in each language;
+                         # a manual audit tool, in no CI job (docs/testing.md)
 npm run verify:info      # paths:check → contents:check → format:check → lint:info → test:info → build:info
                          # → urls:check → separation:info → bundle:info
 npm run image:info -- --tag niord-info   # the base build's image, packaged from the last build:info (manual)

@@ -781,8 +781,12 @@ module.exports = defineConfig([
     },
   },
   {
-    // The callbacks these two pass to Playwright's page.evaluate run in Chromium, not in Node.
-    files: ['scripts/info-container-test.mjs', 'scripts/info-layout-check.mjs'],
+    // The callbacks these three pass to Playwright's page.evaluate run in Chromium, not in Node.
+    files: [
+      'scripts/info-a11y-scan.mjs',
+      'scripts/info-container-test.mjs',
+      'scripts/info-layout-check.mjs',
+    ],
     languageOptions: {
       globals: {
         ...NODE_GLOBALS,

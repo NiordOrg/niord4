@@ -267,6 +267,9 @@ npm run layout:info      # the layout in Chromium, against the last build: every
                          # regions that follow their content; every page under the image's CSP over
                          # plain HTTP, map tiles included — run after build:info (a manual check on the
                          # base build; the Example country job runs it in CI)
+npm run a11y:info -- --base <url> --out <dir>   # axe-core over every page and dialog of a running
+                         # site (WCAG 2.1 A and AA, best practice apart), at 1280 and 320 px in each
+                         # language; reports without page content; a manual audit tool, in no CI job
 npm run verify:info      # paths:check → contents:check → format:check → lint:info → test:info → build:info
                          # → urls:check → separation:info → bundle:info
 npm run contents:check -- --project niord-info   # what each configuration ships, from angular.json, no build

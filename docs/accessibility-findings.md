@@ -1,6 +1,10 @@
 # Accessibility: legal scope, current state and recommendations
 
-Investigated 2026-09-19. This is an analysis. No code was changed, and no page has been audited yet.
+Investigated 2026-09-19. This is an analysis. No code was changed. The public site's base build was
+audited on 2026-11-18 (recommendation A, for the public site): the record is
+[accessibility-audit-public-site.md](accessibility-audit-public-site.md), and each country's build
+and the screen-reader pass are still to be done there. The administration app has not been audited
+yet.
 
 This is not legal advice. The reading of the scope below should be confirmed in writing with
 Digitaliseringsstyrelsen before it is relied on.
@@ -17,7 +21,8 @@ Digitaliseringsstyrelsen before it is relied on.
 - The frontend was moved off PrimeNG onto Angular's headless building blocks. Focus handling, menus,
   trees and tabs still come tested from Angular. The select, autocomplete and date picker are now
   hand-written, declare the right roles, and have never been verified with assistive technology.
-- There is no automated accessibility check anywhere in the repository or in CI.
+- There is no automated accessibility check in CI. The public site has a manual axe-core scan
+  (since 2026-11-18).
 - An accessibility statement in the agency's WAS-Tool is required.
 
 ## 1. Legal scope
@@ -160,9 +165,12 @@ named, because a button's name replaces its content; the value is now the button
 
 ### What does not exist
 
-- No automated runtime accessibility check. `fe/docs/testing.md` states there is no axe, pa11y or
-  Lighthouse dependency and no CI step.
-- No record of a manual audit against WCAG 2.1.
+- No automated runtime accessibility check in CI. Since 2026-11-18 the public site has a manual
+  axe-core scan, `npm run a11y:info` in `fe/` (`fe/docs/testing.md`); no workflow runs it, and the
+  administration app has none.
+- No record of a manual audit of the administration app against WCAG 2.1. The public site's base
+  build has one since 2026-11-18:
+  [accessibility-audit-public-site.md](accessibility-audit-public-site.md).
 - No way but a drag to reorder a message's references in the editor (`references-field-editor.ts`): no
   keyboard way and no single-pointer way (WCAG 2.1.1, 2.5.7). The attachments' grip has arrow keys since
   2026-11-13, but no single-pointer way either. Seen by the error hunt's fix stage (2026-11-13).

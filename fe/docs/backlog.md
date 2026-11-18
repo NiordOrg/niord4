@@ -189,6 +189,26 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   views now show for an empty list (`MSGS_NONE`, "No messages to show"). Found by the error hunt's phase 2
   (2026-11-15), seen in a browser on a local rig; Low. Left by the owner on 2026-11-15: no new public-site text
   and no API change.
+- **The map credit's link is told from its line by a shade of grey alone** (WCAG 1.4.1). OpenLayers' own
+  stylesheet (`ol/ol.css`, imported by `ui-apps/info/src/styles.css`) draws the attribution's text in `#333` and
+  its link to the licence in `#666`, with no underline: 2.2:1 between the two, where a link that is told apart by
+  colour alone needs 3:1 and a second cue on focus and hover. It is on every chart of the site — the map view, the
+  map in a message's dialog and the teaser (whose credit line is its own markup, drawn with the same classes). An
+  underline on `.ol-attribution a`, in a stylesheet both applications load because the map kit draws the same
+  credit in the administration app, closes it. Found by the public site's audit
+  ([accessibility-audit-public-site.md](../../docs/accessibility-audit-public-site.md), 2026-11-18).
+- **The teaser's banner can fall just under 4.5:1** (WCAG 1.4.3). Its white 18 px text (normal weight, so not
+  large text) stands on the chrome colour at 60 % opacity over the chart (`features/teaser/teaser.component.ts`,
+  `bg-chrome/60`). With the default tokens that is 4.89:1 over the chart's land and 5.98:1 over its sea, and
+  4.44:1 where the tile under the banner is white. axe-core cannot measure text over an image and leaves it to a
+  person. A fill of 70 % (6.23:1 over white with the default tokens) closes it; a country's own header colour
+  changes every figure, so each country's build is measured again. Found by the public site's audit (2026-11-18).
+- **Closing a message's dialog opened by its own address leaves focus nowhere** (WCAG 2.4.3).
+  `/messages/details/message/<id>` opens the message in a dialog over the list; Escape closes it and moves the address to `/messages/details`, but there is no control the dialog was opened from, so focus
+  falls to the page's body and the next Tab starts again at the skip link. A dialog opened from the list returns
+  focus to its row, as it should. Moving focus to the main content (`#main-content`, which takes focus already for
+  the skip link) when the dialog closes without an opener closes it. Found by the public site's audit
+  (2026-11-18).
 
 ### The public site's image, configuration and gates
 
@@ -808,8 +828,9 @@ Background: [`testing.md`](testing.md).
   `fe/`. Found in KM-2 (2026-11-01). The fix runs husky from the root (it refuses a folder named with `..`), for
   instance a `prepare` of `cd .. && husky fe/.husky`, and the hook then has to `cd fe` before `npx lint-staged`,
   since git runs hooks at the repository root. Tooling only; nothing in production depends on it.
-- No accessibility tooling at all: neither axe nor Lighthouse is installed or wired into CI. The only automated
-  check is the Angular template accessibility lint rule set.
+- No accessibility check runs in CI. The only automated check there is the Angular template accessibility lint
+  rule set. The public site has an axe-core scan as a manual tool, `npm run a11y:info` (see
+  [testing.md](testing.md)), which no workflow runs; the administration app has none.
 - The Playwright suite is excluded from CI by design — it needs a live backend and Keycloak — so nothing runs it
   on a push. It is a local, deliberate step.
 - The Playwright suite cannot pass against the local stack `start-local.sh` starts, which is why it is documented
