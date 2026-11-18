@@ -48,10 +48,12 @@ import java.util.Set;
  * TWO HALVES, and they are different KINDS of answer rather than two queries.
  *
  * A published issue froze its membership at publication, so its answer is a fact:
- * read the member rows. An OPEN issue has no member rows at all -- they are
- * written at publish and nowhere else -- so its answer has to be resolved now,
- * and it is a PREDICTION: what this issue would contain if it closed at this
- * moment. Those must not be presented as the same thing, which is why every row
+ * read the member rows. An OPEN issue's member rows are no such fact: the
+ * publications import copies the old system's member list onto issues that are
+ * still open, and the publish re-resolves the issue and rewrites them. So the
+ * rows are read only of an issue that is frozen by its status, as the issue's
+ * member list reads them, and an open issue's answer is resolved now: a
+ * PREDICTION, what this issue would contain if it closed at this moment. Those must not be presented as the same thing, which is why every row
  * carries which one it is.
  *
  * The prediction is the point of the feature. "It is in EfS week 29 (open)" is
@@ -138,7 +140,9 @@ public class MessageIssueLookup extends BaseService {
         Set<Integer> seen = new LinkedHashSet<>();
 
         for (PublicationIssue issue : frozenIssues(messageUid)) {
-            if (issue.getId() != null && seen.add(issue.getId())) {
+            // Only a frozen issue's rows are a record; an open issue's are asked
+            // below like those of every other open issue.
+            if (issue.getId() != null && IssueResolutionService.isFrozen(issue) && seen.add(issue.getId())) {
                 out.add(new MessageIssue(issue, Membership.FROZEN));
             }
         }
@@ -240,7 +244,9 @@ public class MessageIssueLookup extends BaseService {
     }
 
     /**
-     * Issues that recorded this message at publication.
+     * Issues that hold a member row for this message: the ones that recorded it
+     * at publication, and open issues whose rows an import copied from the old
+     * system, which the caller leaves to the open-issue resolution.
      *
      * The series is fetch-joined because every caller reads it, and this list is
      * not short: an IN_FORCE_AT_CUTOFF series re-lists every message still in

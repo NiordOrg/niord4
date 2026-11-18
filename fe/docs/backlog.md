@@ -632,15 +632,6 @@ Background: [`features/editor.md`](features/editor.md).
   seed's fields) closes it. The editor manual (`guides/editor-manual/06-TemplateExecution.adoc`, _Running a
   Template on an Open Message_) describes it as it is; change it with the fix. Found by the user guides' check
   (2026-11-11), read in the code.
-- **An open issue with a frozen member list is labelled _Published_ in the Publications panel.** The panel calls
-  every row whose membership is `FROZEN` published unless the issue is `RETIRED`
-  (`features/editor/components/message-issues-panel/message-issues-panel.ts` 166-178), and the backend reports
-  as frozen every issue that has `IssueMember` rows, whatever its status (`MessageIssueLookup.frozenIssues`,
-  `be/.../publication/series/MessageIssueLookup.java` 151-158). Issues the publications import brought in open with
-  their members recorded are such issues: `niord_test` has three (511 "Active P&T Week 36 - 2026", 1019 and 1035,
-  never released), and a message in one shows _Published_ with no date and no document. Reading the issue's status
-  (`PUBLISHED` for _Published_, `OPEN` as pending) closes it. Found by the user guides' picture review (2026-11-12,
-  `editor-manual/MessagePublicationsPanel.png`, now taken on another message); the issue numbers read by SQL.
 - **The History tab cannot tell apart two versions with the same number.** The revision table tracks its rows by
   `version` and the selection compares versions
   (`features/editor/components/revision-table/revision-table.ts` 29 and 58-60,
