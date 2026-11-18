@@ -817,6 +817,35 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
   cluster.
 
+## LUCENE-7. For minutes after each start, a free-text search answers from a half-filled index without an error
+
+- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java`: `init()` deletes the index when
+  `messageIndexDeleteOnStartup` is on (the default), the start-up pass follows five seconds later and then one pass a
+  minute, each of at most `LUCENE_MAX_INDEX_COUNT` (5,000) messages; `allMessagesIndexed()` is read by nothing.
+  `niord/src/main/java/org/niord/core/message/MessageSearchService.java`, the free-text branch of
+  `searchPagedMessageIds` and `searchOrFail`.
+- **Description:** the delete at start commits an empty index that can be read. Until the passes have indexed every
+  message again, which on a large database takes several minutes, a free-text search opens the reader without an
+  error and answers with the hits among the messages indexed so far, possibly none. `searchOrFail` cannot tell that
+  answer from a real one, and its callers pass it on as one: a scheduled mailing-list mail or report whose stored
+  query holds a `query=` term (`MailingListExecutionService` 428 and 491) is sent listing too few or no warnings, its
+  trigger moves on to its next time, and nothing is logged or recorded; the editors' list, print, export and
+  message mail (`MessageSearchRestService` 293) and the public API (`AbstractApiService` 223) answer a short list for
+  a text query. A trigger in this window is therefore not postponed, as one is when the index cannot be read at all.
+  The PostgreSQL backend (`disableLucene`) keeps its table across a start and is not affected.
+- **Why it looks wrong:** a search that cannot answer yet reads as a real answer, and a mail sent minutes after a
+  deploy can leave warnings out without a word.
+- **Exposed by:** `MessageLuceneIndexStartWindowTest#aSearchRightAfterAStartAnswersFromTheEmptiedIndexWithoutAnError_documentsBug`
+  (a message indexed before a restart is not found right after it, and the search does not fail); the window was
+  already there before searches started failing on an unreadable index (2026-11-18).
+- **Severity:** Medium — the window is short, but a scheduled mail in it is silently incomplete. Fix, for the owner to
+  weigh: in the Lucene branch, fail the search with an "index being rebuilt" error while `allMessagesIndexed()` is
+  false, so that a trigger is postponed and the editor sees an error; weighed against LUCENE-5, since a pass that
+  stalls would then fail every text search until it is cured. With `messageIndexDeleteOnStartup` off the index is
+  kept across a start, and only the messages changed since its last pass are missing until the first pass (not
+  checked by a test). Until then, a check of a scheduled mail after a restart is run once the index is complete,
+  not after the first pass.
+
 # Potential errors — REST-controller security audit
 
 Open findings from a security audit of every `@RestController`. **No production code was changed** by the

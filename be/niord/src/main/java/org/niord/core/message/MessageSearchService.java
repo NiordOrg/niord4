@@ -209,7 +209,10 @@ public class MessageSearchService extends BaseService {
 
     /**
      * The message search of {@link #search(MessageSearchParams)}, which lets a failure through instead of answering
-     * it with an empty result: an empty result is then a real answer of zero messages.
+     * it with an empty result: an empty result is then the index's answer, not a failure. One window is not covered:
+     * after a start the Lucene index is emptied and filled again, 5,000 messages a pass, one pass a minute, and until
+     * {@link MessageLuceneIndex#allMessagesIndexed()} a free-text search answers from the messages indexed so far,
+     * without an error (be/docs/potential-errors.md, LUCENE-7).
      * <p>
      * Used by the public API, the editors' search with its print, export and message mail, the scheduled
      * mailing-list mail and the mailing-list report, the Niord integration's look-up of its own copies, a
