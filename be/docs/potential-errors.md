@@ -288,7 +288,7 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   `inlineStylesRemovesStyleBlock`).
 - **Severity:** Low — design asymmetry, may surprise callers.
 
-## MAIL8. Every mail of a user without an e-mail address and with a name of two words ends in _Error_
+## MAIL14. Every mail of a user without an e-mail address and with a name of two words ends in _Error_
 
 - **Location:** `niord/src/main/java/org/niord/core/mail/IMailable.java` (`computeInternetAddress`),
   `niord/src/main/java/org/niord/core/message/MessageMailService.java` (records it as the mail's sender) and
