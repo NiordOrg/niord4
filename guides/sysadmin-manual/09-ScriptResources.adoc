@@ -249,10 +249,11 @@ attribute says whether to replace the field or append to it. The "format" attrib
 "text", for example, the content is tidied into a single line of text.
 
 A field the template cannot fill in makes the whole run fail: a description in a language the message part does not
-have, a promulgation the message does not carry, or a "field" that is not a plain path of names. The other fields
-are still tried first, the editor's template dialog or *Generate* shows an error, and the server log names each
-field that failed ("Error applying field template" or "Skipping field template"). Guard a field that may be missing
-with an `<#if>`, as the shipped templates do for the promulgations.
+have, a promulgation the message does not carry, or a "field" that is not a property path like the ones above (names,
+and calls with a quoted argument such as `getDesc('en')`). The other fields are still tried first, the editor's
+template dialog or *Generate* shows an error, and the server log names each field that failed ("Error applying field
+template" or "Skipping field template"). Guard a field that may be missing with an `<#if>`, as the shipped templates
+do for the promulgations.
 
 Most script resources are run for one language. The templates of a message template must handle every language
 of the message themselves, and change the language they write in with:
