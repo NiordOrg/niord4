@@ -133,6 +133,19 @@ and give the realm users whose passwords are public.
 {{- fail "keycloak.mode production needs keycloak.existingSecret: the bootstrap admin comes from the environment's Secret, never from keycloak.adminUser/adminPassword" }}
 {{- end }}
 {{- /*
+Production mode is for staging and production, whose database credentials are Secrets of the
+environment's: the chart's default users and passwords are printed in this repository (F-X76).
+A release in production mode that would render the app's database Secret from postgres.username/
+password fails instead. That one check covers the others: with postgres.existingSecret named, the
+superuser's Secret is rendered only where postgres.admin.existingSecret is named too
+(niord.postgres.separateAdmin), and Keycloak's database Secret is refused above where the
+superuser's is named. The test is the mode and not keycloak.enabled: an app-only release on a shared
+Keycloak that sets production mode is held to it as well.
+*/ -}}
+{{- if and (eq (toString .Values.keycloak.mode) "production") (or .Values.app.enabled .Values.postgres.enabled) (not .Values.postgres.existingSecret) }}
+{{- fail "keycloak.mode production needs postgres.existingSecret: a staging or production release takes its database users from the environment's Secrets, never from postgres.username/password, postgres.admin or keycloak.db (README, \"The database users\")" }}
+{{- end }}
+{{- /*
 keycloak.database goes into the init container's SQL and Keycloak's JDBC URL, so it is a plain
 name, as postgres.databases are. It is never the app's database: Keycloak would put its tables,
 and its own Liquibase bookkeeping, into the app's schema.

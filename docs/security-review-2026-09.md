@@ -436,6 +436,9 @@ still name the WMS over plain http (N-20).
    The chart's half for dev mode, done on 2026-11-18: dev mode with `externalBaseUri` or
    `externalKeycloakUrl` off `localhost`, `127.0.0.1` and `[::1]` fails the render unless
    `keycloak.devModeOffLocalhost` is true.
+   The chart's half for the database credentials, done on 2026-11-18: production mode without
+   `postgres.existingSecret` fails the render, so no Secret is made from the chart's default users
+   there. The deploy repository's validator is still open.
 4. The read of the running realms and of the stagings' settings, from the jump server (F-X70, F-X72,
    the realm pattern, N-20), and of the administration host's `Strict-Transport-Security` (F-X96).
 5. F-X157's check into the SECOM cutover runbook, and the countries' default WMS address on https

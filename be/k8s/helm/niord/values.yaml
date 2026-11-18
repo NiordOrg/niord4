@@ -243,7 +243,7 @@ postgres:
   # The user the app connects as: the owner of `database`, and not a superuser. existingSecret
   # names a Secret with the keys `username` and `password` — in a cluster environment a
   # SealedSecret next to the values. "" = the chart renders one from username/password below,
-  # the local default.
+  # the local default. Required in keycloak.mode production, where the render fails without it.
   #   A release that renders Postgres creates this user: an init container of the app pod, which
   #   connects as the superuser below, makes the user when it is missing, sets its password to
   #   the Secret's on every start, and sees to it that `database` and the tables in it belong to
@@ -308,7 +308,8 @@ keycloak:
   #               externalBaseUri, requires PKCE (S256) and has no password grant. The
   #               realm also turns on
   #               brute-force protection and requires https from outside the private
-  #               networks. The bootstrap admin must come from keycloak.existingSecret.
+  #               networks. The bootstrap admin must come from keycloak.existingSecret,
+  #               and the database users from postgres.existingSecret.
   #               Staging and production.
   # Keycloak imports a realm only when its database does not hold it yet: in production the
   # realm is imported on the first start only, and from then on the database is its record.
