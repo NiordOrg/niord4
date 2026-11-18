@@ -1927,6 +1927,30 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low today; Medium once the ADMIN fallback is removed. Fix: create `publication-curate` (not part of
   the composite ladder) with the other four roles, before the fallback goes.
 
+## KEYCLOAK3. The integration tests sign in against Keycloak 22.0.5, a version no environment runs
+
+- **Location:** `niord/src/test/java/org/niord/test/NiordTestContainers.java` `KEYCLOAK_IMAGE` (57,
+  `quay.io/keycloak/keycloak:22.0.5`), whose comment (51) says the images are pinned to the versions of
+  `docker-compose.yml`, and `docs/test-infrastructure.md` (211), whose table heading says the same; against
+  `docker-compose.yml` (51) and `k8s/helm/niord/values.yaml` (`keycloak.image.tag`, 343), both `26.8.2`. The
+  integration tests' realm, `niord/src/test/resources/keycloak/niord-realm.json`, was exported from 22.0.5
+  (`keycloakVersion`, 3851).
+- **Description:** every integration test that signs in gets its token from a 22.0.5 server and validates it
+  against that server's keys: the token requests (`KeycloakTestTokens`, `JwtAuthorizedPartyITTest`), the
+  resource server's `issuer-uri` (`ITTest` and the classes that set their own), and the endpoint sweep's cells that
+  point the backend's admin calls at the container (`web/sweep/SystemSweepKeycloak.java`, `realm`). The local run
+  and the chart run 26.8.2, and the stagings' shared Keycloak is pinned to the same version
+  (F-X114 in the repository root's `docs/security-review-2026-09.md`).
+- **Why it looks wrong:** the suite proves the login integration against a server that no environment runs, four
+  major versions behind. A change between them in the tokens, the realm import or the Admin API is met only by
+  hand: 26.8.2's Admin API accepts only a token with the client scope `kc-admin-api` (`k8s/README.md` 268-274),
+  which a 22.0.5 server never asks for, so no test can tell whether the realm files carry it.
+- **Exposed by:** the preparation of a Keycloak bump checklist, 2026-11-18 (read in the code and the pins; not
+  run).
+- **Severity:** Low, tests only; it narrows what a green CI says about sign-in. Fix, the smallest step: set
+  `KEYCLOAK_IMAGE` to the chart's pin (and the table row with it), run the integration suite
+  (`be/test-it`), and see what fails; then keep the two pins together, as the comment already claims.
+
 ## TESTQ6. Five REST ITs accept a 500 as a refusal, and the one IT that reloads two of each list skips on CI
 
 - **Location:** `niord/src/test/java/org/niord/web/DomainRestServiceITTest.java` 249 and 314,
