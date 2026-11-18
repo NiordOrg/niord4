@@ -6,14 +6,18 @@ import { SandboxedHtml } from '../../../../../shared/components/sandboxed-html/s
 import {
   ScheduledMail,
   ScheduledMailRecipient,
+  ScheduledMailStatus,
 } from '../../../services/api/scheduled-mails-api.service';
 import { MAIL_PREVIEW_CSS } from './mail-preview.css';
 
 /**
  * Read-only mail details: recipient rows render only for non-empty types, the
- * error row only when a send error exists, and the Sent row keeps its label
- * even while PENDING/empty. The HTML body renders in the sandboxed-iframe
- * primitive — full document fidelity, scripts inert.
+ * error row only when a send error exists. The date row shows the mail's send
+ * date, the time it is or was due, labelled by status: Due while pending (after
+ * a failed attempt, the next attempt), Sent once sent, Last attempt once it
+ * failed for good; it is left out when the value is empty. The HTML body
+ * renders in the sandboxed-iframe primitive — full document fidelity, scripts
+ * inert.
  */
 @Component({
   selector: 'app-mail-details-dialog',
@@ -25,7 +29,8 @@ export class MailDetailsDialog {
   readonly mail = input.required<ScheduledMail | undefined>();
   /** Pre-formatted by the page so the dialog stays locale-agnostic. */
   readonly createdLabel = input<string>('');
-  readonly sentLabel = input<string>('');
+  /** The pre-formatted send date: the time the mail is, or was, due to be sent. */
+  readonly sendDateLabel = input<string>('');
   readonly closed = output<void>();
 
   /** Inline stylesheet for the sandboxed preview (linked mail CSS can't load). */
@@ -39,6 +44,20 @@ export class MailDetailsDialog {
   protected readonly statusKey = computed(
     () => `admin.mails.status.${this.mail()?.status.toLowerCase() ?? 'pending'}`,
   );
+
+  /** The label of the send date, which means "due at" whatever the status. */
+  protected readonly sendDateKey = computed(() => {
+    const status = this.mail()?.status as ScheduledMailStatus | undefined;
+    switch (status) {
+      case 'SENT':
+        return 'admin.mails.details.sent';
+      case 'ERROR':
+        return 'admin.mails.details.lastAttempt';
+      case 'PENDING':
+      case undefined:
+        return 'admin.mails.details.due';
+    }
+  });
 
   private recipientsOf(type: ScheduledMailRecipient['recipientType']): string {
     return (this.mail()?.recipients ?? [])

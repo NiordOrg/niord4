@@ -669,15 +669,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   message with this category) closes it. The system administrators' manual
   (`guides/sysadmin-manual/10-Categories.adoc`, the _Test…_ paragraphs) describes it as it is; change it with the
   fix. Found by the user guides' check (2026-11-11, `CategoryTemplateResult.png`).
-- **The mail details' _Sent_ row shows when a mail is due, also for a mail not yet sent.** The row prints the
-  mail's `sendDate` (`ui-apps/admin/src/app/features/admin/sections/sysadmin/mails/mails-page.html` 166), which is
-  the time the mail becomes due: set to the creation time when it is queued and moved on after each failed attempt
-  (`be/.../core/mail/ScheduledMail.java` 85-87, 119-120 and 180). A _Pending_ mail therefore shows a _Sent_ time,
-  and a failed one the time of its next attempt; the template's comment (`mail-details-dialog.html` 51) expects
-  the value to be empty while pending. Labelling the row _Send date_, or showing it as _Sent_ only for a sent
-  mail, closes it. The system administrators' manual (`guides/sysadmin-manual/12-MailQueue.adoc`, _Mail Details_)
-  says the dialog shows when the mail was sent. Found by the user guides' picture review (2026-11-12); read in the
-  code (the picture's own time was the rig's).
 - **The Batch Jobs card reads "1 executions".** `admin.batch.executionsCount` is `{{count}} executions` with no
   singular (`languages/en/i18n/admin/en.json` 1658, used in `batch-page.html` 31), as the issue history's "1
   entries" above. Found by the user guides' picture review (2026-11-12).

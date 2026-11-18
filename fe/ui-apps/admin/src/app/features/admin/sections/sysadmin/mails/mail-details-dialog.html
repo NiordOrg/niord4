@@ -48,13 +48,14 @@
           </th>
           <td class="py-1">{{ createdLabel() }}</td>
         </tr>
-        <!-- The Sent row deliberately keeps its label even while PENDING (empty value). -->
-        <tr>
-          <th class="py-1 pr-3 text-left font-medium text-fg-muted">
-            {{ 'admin.mails.details.sent' | transloco }}
-          </th>
-          <td class="py-1">{{ sentLabel() }}</td>
-        </tr>
+        @if (sendDateLabel()) {
+          <tr>
+            <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+              {{ sendDateKey() | transloco }}
+            </th>
+            <td class="py-1">{{ sendDateLabel() }}</td>
+          </tr>
+        }
         @if (m.lastError) {
           <tr>
             <th class="py-1 pr-3 text-left font-medium text-fg-muted">

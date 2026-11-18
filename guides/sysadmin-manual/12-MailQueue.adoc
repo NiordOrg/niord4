@@ -90,7 +90,9 @@ others it has) and its subject.
 === Mail Details
 
 Click the *Open mail details* button (the envelope) at the end of a row to see the whole mail: its sender and
-recipients, when it was put in the queue and when it was sent, the last error and the number of attempts when
-sending failed, its subject and its content.
+recipients, when it was put in the queue and, by its status, when it is due to be sent (_Due_, for a pending
+mail; after a failed attempt, the time of the next one), when it was sent (_Sent_) or when the last attempt was
+made (_Last attempt_, for a mail with the status _Error_), the last error and the number of attempts when sending
+failed, its subject and its content.
 
 image::MailQueueDetails.png[Mail Details Dialog, 400]
