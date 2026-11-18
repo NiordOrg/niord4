@@ -53,6 +53,10 @@ image::PublicSiteBrowsePublication.png[Browsing a publication, 800]
 
 While you browse a publication, the filter bar changes:
 
+* It names the publication by its title, with a book in front of it. _Download_ beside the title
+  opens the publication's document in a new tab, as it does on the _Downloads_ page.
+* The close button (X) after them leaves the publication: the same view shows the site's current
+  messages again.
 * The buttons _Navigational Warnings_, _Notices to Mariners_ and _Show Active Now_ are not there: the
   list is the publication's, whatever you had chosen before.
 * _Print_ prints the publication's messages (see <<printing>>).
@@ -63,6 +67,6 @@ A publication may hold messages that have since been cancelled or have run out. 
 is marked _Cancelled_ beside its number, and one that has run out _Expired_, except a permanent
 notice, which has no mark (see <<reading-a-message>>).
 
-Nothing on the page names the publication you are browsing, so keep track of which one you opened.
-The _List_ and _Map_ buttons of the menu bar, and _Details_ as well, take you back to the site's
-current messages; to see the publication again, click _Browse_ on the _Downloads_ page once more.
+_Details_, _List_ and _Map_ in the menu bar keep the publication, so you can see its messages in
+each of the three views. _Downloads_ leaves it; to see the publication again, click _Browse_ there
+once more.
