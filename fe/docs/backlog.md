@@ -301,6 +301,24 @@ Background: [`angular-conventions.md`](angular-conventions.md), [`ui-apps/info/A
   the rich-text engine when a description row first opens, the code editor, a `@defer` block — that fails after a
   deploy leaves its own surface empty (the landing map shows its `@error` retry) and raises no banner until a
   navigation fails the same way or the tab next comes back into view.
+- **The shared select's and autocomplete's clear buttons and the autocomplete's chip-remove buttons do nothing
+  from the keyboard, and every chip-remove button has the same name.** All three are real `<button>`s in the tab
+  order, but they act on `(mousedown)` only: the chip's remove button
+  (`ui-apps/admin/src/app/shared/forms/autocomplete/autocomplete.html` 12-18, handler `autocomplete.ts` 284-287),
+  the autocomplete's clear button (`autocomplete.html` 54-59, `autocomplete.ts` 289-292) and the select's clear
+  button (`ui-apps/admin/src/app/shared/forms/select/select.html` 46-51, `select.ts` 295-299). Enter and Space
+  fire a `click`, not a `mousedown`, so a keyboard user tabs onto a button that does nothing, and a screen reader
+  that activates by a click does the same. Backspace in an empty autocomplete removes the last chip
+  (`autocomplete.ts` 269-272), so only the last one can be removed from the keyboard, and the select has no key that clears it
+  (`select.ts` 231-280).
+  Every chip's remove button is named by `removeLabel` alone (`autocomplete.html` 16; the callers pass
+  `common.remove`), so a screen-reader user hears "Remove" once per chip without which. The specs hold only the
+  mouse path (`autocomplete.spec.ts` 141-150 and `select.spec.ts` 122-129 dispatch `mousedown`). The date picker's
+  clear button already acts on `(click)` (`shared/forms/date-picker/date-picker.html` 29). Fix: keep
+  `(mousedown)` for `preventDefault()` alone (so the input keeps focus) and run the action on `(click)`, put focus
+  back on the input or trigger after a chip or the value is removed, name each chip's button with the item's label
+  as well, and add a spec that activates each button with a `click`. Found while preparing the screen-reader
+  protocol (2026-11-18).
 
 ### Country deployments and translation
 
