@@ -678,15 +678,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
 - A published compilation whose sources have moved since its release shows **no banner**. The issue records
   the source issues it covered, so comparing that record against today's published set is cheap; what to do
   about a difference (amend to refresh) is the decision, and it is sequenced after the first annual is out.
-- **The SafetyNET area dialog's position tooltips contradict themselves.** _Center_ and _SW Corner_ say
-  "Positive for N and W, negative for S and W" (`fe/languages/en/i18n/admin/en.json` 1008 and 1013,
-  `centerTooltip` and `swCornerTooltip`). The fields are free "Lat Lon" text in whole degrees, checked only against
-  `^-?\d+\s+-?\d+$` (`sections/sysadmin/promulgation/safetynet-areas-plugin.ts` 30, 164, 168), and Niord copies them
-  unchanged into the SafetyNET mail (`be/niord/bootstrap/templates/mailinglist/publish-safetynet.ftl` 70, 84), so
-  the code cannot tell which sign the receiving SafetyNET service reads as east. The second "W" is probably meant
-  as "E" (positive north and east is the usual rule), but the right wording is the receiving service's rule and needs
-  confirming before the text changes. The system administrators' manual (`05-PromulgationTypes.adoc`, _SafetyNET_)
-  states only what the field takes. Found by the user guides' check (2026-11-11).
 - **The series criteria editor lists message types by their codes.** The _Message type_ criterion's boxes read
   `LOCAL_WARNING`, `TEMPORARY_NOTICE` and the like: its options carry the code as their label and no
   `labelKey` (`sections/admin/publications/series-criteria-editor.ts` 387-392), while the _Main type_ options

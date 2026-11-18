@@ -138,7 +138,8 @@ type: its SafetyNET distribution areas, with *Active*, *Name*, *Type* (the shape
 shape cannot be changed afterwards:
 
 * _Circular_: a *Center*, written "Lat Lon": the latitude and the longitude in whole degrees,
-  separated by a space, each of which may start with a minus sign. Add a *Radius* in nautical miles,
+  separated by a space, each of which may start with a minus sign: a minus sign for south or west,
+  none for north or east. Add a *Radius* in nautical miles,
   a whole number.
 * _Rectangular_: the *SW Corner*, written "Lat Lon" in the same way, and the *Northings* and
   *Eastings*, the extent north and east in whole degrees.
