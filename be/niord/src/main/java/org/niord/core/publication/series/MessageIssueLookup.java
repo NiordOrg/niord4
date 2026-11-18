@@ -53,8 +53,9 @@ import java.util.Set;
  * still open, and the publish re-resolves the issue and rewrites them. So the
  * rows are read only of an issue that is frozen by its status, as the issue's
  * member list reads them, and an open issue's answer is resolved now: a
- * PREDICTION, what this issue would contain if it closed at this moment. Those must not be presented as the same thing, which is why every row
- * carries which one it is.
+ * PREDICTION, what this issue would contain if it closed at this moment. Those
+ * must not be presented as the same thing, which is why every row carries which
+ * one it is.
  *
  * The prediction is the point of the feature. "It is in EfS week 29 (open)" is
  * the sentence an editor needs before deciding whether to amend a message, and it
