@@ -325,9 +325,9 @@ niord.postgres.secretName is the user the app connects as.
 Whether the superuser of this release's Postgres has a Secret of its own (values.yaml,
 postgres.admin), apart from the app's. True for a release that renders Postgres and either names
 the superuser's Secret or names no Secret at all (the local default, two rendered Secrets). Not
-true for a release that names only postgres.existingSecret: until November 2026 that one Secret was the
-superuser's and the app's, and such an environment keeps running that way until its values name
-both. Renders "true" or nothing, for use in an if.
+true for a release that names only postgres.existingSecret: that one Secret is then the superuser's,
+which validate.yaml allows only in a release without the app (an infra release), since an app in
+it would connect as the superuser. Renders "true" or nothing, for use in an if.
 */}}
 {{- define "niord.postgres.separateAdmin" -}}
 {{- $admin := .Values.postgres.admin | default dict -}}

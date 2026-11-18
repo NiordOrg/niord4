@@ -271,10 +271,10 @@ postgres:
   # existingSecret is a Secret with the keys `username` and `password`, like the app's; "" = the
   # chart renders one from username/password here, the local default. An environment that names
   # it names the app's too (postgres.existingSecret), and the two are different users.
-  #   One Secret for both, as every release had until November 2026: postgres.existingSecret set and
-  #   admin.existingSecret left "" keeps the app connecting as the superuser, with no init
-  #   container, so an environment changes when its values do. It moves to a user of its own by
-  #   sealing a second Secret and naming both (README, "The database users").
+  #   One Secret for both is refused: the same Secret under both names, or postgres.existingSecret
+  #   named without admin.existingSecret in a release that renders the app and this Postgres, fails
+  #   the render, because the app would connect as the superuser. Values from before November 2026
+  #   that name one Secret move by sealing a second one and naming both (README, "The database users").
   admin:
     existingSecret: ""
     username: niord
@@ -340,8 +340,9 @@ keycloak:
   # made and kept by the init container as the app's is (postgres.existingSecret). existingSecret
   # is a Secret with the keys `username` and `password`; "" = the chart renders one from
   # username/password here, the local default, which an environment that names
-  # postgres.admin.existingSecret may not use. Where the app still shares the superuser's
-  # Secret (postgres.admin, above), Keycloak connects as that superuser too, as before.
+  # postgres.admin.existingSecret may not use. Where this release does not make the users (a
+  # database of someone else's, or an infra release that names only postgres.existingSecret),
+  # Keycloak connects as the user of postgres.existingSecret.
   db:
     existingSecret: ""
     username: keycloak

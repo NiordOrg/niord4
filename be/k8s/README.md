@@ -248,8 +248,7 @@ the test realm and `admin`/`admin`.
 
 - **`start` instead of `start-dev`**, on the database `keycloak.database` (`keycloak`) of the
   release's Postgres, connecting as a database user of its own, `keycloak.db` (as the user of
-  `postgres.existingSecret` where the release has one Postgres account or a database of someone
-  else's: "The database users", below). An init container
+  `postgres.existingSecret` on a database of someone else's: "The database users", below). An init container
   creates the database when it is missing. Keycloak serves plain HTTP behind the proxy and takes
   the browser's scheme and address from its `X-Forwarded-*` headers. It runs one replica with a
   local cache. `start` builds Keycloak for these options on every start, some seconds before
@@ -350,7 +349,8 @@ What follows from `externalKeycloakUrl` being on another origin (`niord.keycloak
 
   ```bash
   helm template realm helm/niord --set keycloak.mode=production --set keycloak.existingSecret=unused \
-    --set postgres.existingSecret=unused --set keycloak.realm=niord-dk --set externalBaseUri=https://niord-dk-staging.example \
+    --set postgres.existingSecret=unused --set postgres.admin.existingSecret=unused-admin \
+    --set keycloak.db.existingSecret=unused-kc --set keycloak.realm=niord-dk --set externalBaseUri=https://niord-dk-staging.example \
     --set externalKeycloakUrl=https://login.example/auth --show-only templates/keycloak/configmap-realm.yaml
   ```
 
@@ -406,13 +406,15 @@ container's environment and nowhere else in the pod.
 kubectl -n niord logs deploy/niord-app -c database-user       # what it made or handed over; empty when there was nothing to do
 ```
 
-**One account for both, as before 2026-11.** A release that names `postgres.existingSecret` and
-leaves `postgres.admin.existingSecret` empty keeps running as every release did: that one Secret
-is the superuser's and the app's (and Keycloak's), and no init container is added. The chart
-renders the same objects for such values as it did before, so an environment changes when its
-values do, not when it takes a new chart version.
+**One account for both is refused.** A release that renders the app and its own Postgres and names
+`postgres.existingSecret` without `postgres.admin.existingSecret` fails the render: that one
+Secret would be the superuser's and the app's (and Keycloak's), and the app would connect as the
+superuser of its database server. Until November 2026 every release ran that way. A release
+without the app (an infra release) and a release on a database of someone else's are not
+concerned.
 
-**Moving such an environment to a user of its own** is one new Secret and two lines of values:
+**Values from before November 2026 that name one Secret** now fail the render; moving them is one
+new Secret and two lines of values:
 
 ```yaml
 postgres:
@@ -425,8 +427,9 @@ The Postgres pod keeps its Secret and is not restarted. The app pod is replaced,
 container creates the user and hands over the database, and the app starts as the new user. An
 environment with its own Keycloak in production mode names a third Secret,
 `keycloak.db.existingSecret`, in the same change; the render fails without it. The chart refuses
-values that name the superuser's Secret without the app's, the same Secret twice, or the
-superuser's Secret in a release that renders no Postgres. It also refuses `keycloak.mode:
+values that name the superuser's Secret without the app's, the app's without the superuser's in a
+release that renders the app and its own Postgres, the same Secret twice, or the superuser's
+Secret in a release that renders no Postgres. It also refuses `keycloak.mode:
 production` without `postgres.existingSecret`, so a staging or production release never runs on
 the chart's default users.
 
@@ -522,8 +525,8 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
 | `info.teaserFrameAncestors` | `*` | The pages allowed to embed the teaser (`NIORD_TEASER_FRAME_ANCESTORS`, a CSP `frame-ancestors` source list). |
 | `postgres.host`, `keycloak.host`, `smtp.host` / `smtp.port` | `""` | Where the app finds a dependency another release renders. Services are named `<fullname>-db`, `-keycloak` and `-smtp`, where `<fullname>` is the release name plus `-niord` unless it already contains "niord" (release `staging-infra` → `staging-infra-niord-db`, `staging-infra-niord-keycloak`, `staging-infra-niord-smtp`). Empty = this release's own Service; required once the component is disabled in a release that still needs it — the app, or the proxy for Keycloak (the render fails otherwise; for MailHog both `smtp.host` and `smtp.port`). |
 | `smtp.requireRelay` | `false` | `true` = this environment's mail must reach people: the render refuses `mailhog.enabled` and a `smtp.host` named `<fullname>-smtp`. Production sets it at go-live, when it switches from MailHog to the relay; before that, and everywhere else, `false`. Anything but `true` or `false` fails the render. |
-| `postgres.existingSecret` | `""` | A Secret with the keys `username` and `password`: the user the app connects as, the owner of its database and no superuser ("The database users"). `""` = the chart renders one from `postgres.username`/`postgres.password` (`niord_app`), the local default; required in `keycloak.mode: production`. Named alone, in a release that renders Postgres, it is the superuser's and the app's in one, as before 2026-11. No credential is rendered into a ConfigMap or a pod spec either way. |
-| `postgres.admin.existingSecret` | `""` | A Secret with the keys `username` and `password`: the superuser of the Postgres this release renders, which the app pod's `database-user` init container, the databases Job and Keycloak's init container connect as. `""` = the chart renders one from `postgres.admin.username`/`postgres.admin.password` (`niord`), the local default, unless `postgres.existingSecret` is named: then that Secret is the superuser's too. |
+| `postgres.existingSecret` | `""` | A Secret with the keys `username` and `password`: the user the app connects as, the owner of its database and no superuser ("The database users"). `""` = the chart renders one from `postgres.username`/`postgres.password` (`niord_app`), the local default; required in `keycloak.mode: production`. Named alone in a release that renders the app and its own Postgres, the render fails: name `postgres.admin.existingSecret` too. No credential is rendered into a ConfigMap or a pod spec either way. |
+| `postgres.admin.existingSecret` | `""` | A Secret with the keys `username` and `password`: the superuser of the Postgres this release renders, which the app pod's `database-user` init container, the databases Job and Keycloak's init container connect as. `""` = the chart renders one from `postgres.admin.username`/`postgres.admin.password` (`niord`), the local default. |
 | `keycloak.db.existingSecret` | `""` | Production mode: a Secret with the keys `username` and `password`, the user Keycloak connects to `keycloak.database` as. `""` = the chart renders one from `keycloak.db.username`/`keycloak.db.password`, the local default; required where `postgres.admin.existingSecret` is named. |
 | `keycloak.existingSecret` | `""` | A Secret with the keys `username` and `password` for the Keycloak bootstrap admin. `""` = the chart renders one from `keycloak.adminUser`/`keycloak.adminPassword`, which production mode refuses. |
 | `keycloak.mode` | `dev` | `dev`: `start-dev`, data kept in the container (gone on a restart), the test realm. `production`: `start` on `keycloak.database`, the test realm without its users and without `niord-web-admin`, and with `niord-web` limited to `externalBaseUri` — see [Keycloak in production mode](#keycloak-in-production-mode). |

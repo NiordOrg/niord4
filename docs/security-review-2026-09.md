@@ -427,6 +427,10 @@ still name the WMS over plain http (N-20).
    object. The databases Job, which also connects to the application's database as the superuser,
    was tried the same way and needed nothing. SECREV-4 is closed; the stagings run the script
    without the fix until they take a base version that carries it.
+   The one-account form refused in the chart on 2026-11-18 (F-X100): a release that renders the
+   application and its own Postgres and names `postgres.existingSecret` without
+   `postgres.admin.existingSecret` fails the render, so values in the parked production shape can no
+   longer start the application as the superuser. F-X100 stays deferred until production exists.
 2. A chart value that renders the production realm without the test users (F-X92).
    Done on 2026-11-18: `keycloak.testUsers`, default false, renders the production realm without
    users; a realm already made keeps its users until they are removed by hand.

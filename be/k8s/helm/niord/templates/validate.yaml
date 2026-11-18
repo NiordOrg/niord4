@@ -28,8 +28,8 @@ password for a user that was never created, would stop the app at its next start
 {{- end }}
 {{- /*
 The superuser's Secret is this release's Postgres' own, and an environment that names it names the
-app's too: the chart's default user and password are for local runs. One Secret under both names
-would make the app the superuser again without saying so. Without Secrets the two default users
+app's too: the chart's default user and password are for local runs. One Secret under both names,
+or the app's alone (below), would make the app the superuser again without saying so. Without Secrets the two default users
 must differ for the same reason. The database's name reaches the init container's psql, so where
 that container runs it is a plain name, as postgres.databases are.
 */ -}}
@@ -41,7 +41,17 @@ that container runs it is a plain name, as postgres.databases are.
 {{- fail "postgres.admin.existingSecret needs postgres.existingSecret: an environment that names the superuser's Secret names the app's user too, never the chart's default user and password" }}
 {{- end }}
 {{- if and $pgAdmin.existingSecret (eq (toString $pgAdmin.existingSecret) (toString .Values.postgres.existingSecret)) }}
-{{- fail (printf "postgres.admin.existingSecret and postgres.existingSecret both name %q: the app's user is another user than the superuser, in a Secret of its own. To keep one account for both, leave postgres.admin.existingSecret empty" (toString $pgAdmin.existingSecret)) }}
+{{- fail (printf "postgres.admin.existingSecret and postgres.existingSecret both name %q: the app's user is another user than the superuser, in a Secret of its own" (toString $pgAdmin.existingSecret)) }}
+{{- end }}
+{{- /*
+The app's Secret alone, in a release that renders the app and its own Postgres, made that one
+Secret the superuser's and the app's: the app connected as the superuser of its database server
+(F-X100). Every environment has moved to a user of its own, so the form is refused. A release on a
+database of someone else's (postgres.host, or postgres.enabled false) is given its user and is not
+concerned, and neither is a release without the app (an infra release).
+*/ -}}
+{{- if and .Values.app.enabled .Values.postgres.enabled (not .Values.postgres.host) .Values.postgres.existingSecret (not $pgAdmin.existingSecret) }}
+{{- fail "postgres.existingSecret is named without postgres.admin.existingSecret: one Secret for both would make the app connect as the superuser of this release's Postgres. Seal a second Secret for the superuser and name it in postgres.admin.existingSecret (README, \"The database users\")" }}
 {{- end }}
 {{- if and (include "niord.postgres.separateAdmin" .) (not $pgAdmin.existingSecret) (eq (toString .Values.postgres.username) (toString $pgAdmin.username)) }}
 {{- fail (printf "postgres.username and postgres.admin.username are both %q: the app's user (postgres.username) is another user than the superuser (postgres.admin.username)" (toString .Values.postgres.username)) }}
