@@ -331,7 +331,14 @@ keycloak:
   service:
     port: 80
   realm: niord-dk                     # this deployment's realm on it
+  mode: production                    # a staging or production release: see below
 ```
+
+With `keycloak.enabled: false` the mode renders no Keycloak and triggers no Keycloak check. A
+staging or production release sets it all the same: it holds the release to the database-Secret
+guard ("The database users", below), which refuses `keycloak.mode: production` without
+`postgres.existingSecret`. A release left in `dev` mode on a shared Keycloak is held to neither
+guard, since the dev-mode guard concerns a Keycloak of the release's own.
 
 What follows from `externalKeycloakUrl` being on another origin (`niord.keycloak.external`):
 
@@ -430,8 +437,9 @@ environment with its own Keycloak in production mode names a third Secret,
 values that name the superuser's Secret without the app's, the app's without the superuser's in a
 release that renders the app and its own Postgres, the same Secret twice, or the superuser's
 Secret in a release that renders no Postgres. It also refuses `keycloak.mode:
-production` without `postgres.existingSecret`, so a staging or production release never runs on
-the chart's default users.
+production` without `postgres.existingSecret`, so a release in production mode never runs on the
+chart's default users; a staging or production release on a shared Keycloak sets that mode too
+("A shared Keycloak outside the release", above).
 
 **A database of someone else's** (`postgres.enabled: false` and `postgres.host`: another release's
 Postgres, or a hosted database) comes with the user: `postgres.existingSecret` names it, and
