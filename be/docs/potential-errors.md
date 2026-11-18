@@ -1503,21 +1503,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9); the entry stays
   open until that is built.
 
-## LUCENE-3. A message index of an older Lucene format in the index folder stops the start-up
-
-- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java:158-180` (`init`: the start-up's
-  `deleteIndex()` at 174, which catches only `IOException`, 175) and `:416-429` (`deleteIndex` opens an
-  `IndexWriter` over the existing folder and calls `deleteAll()` instead of removing the folder's files).
-- **Description:** when the index folder holds an index written by an older Lucene version, opening the writer
-  throws `IllegalArgumentException: Could not load codec 'Lucene95'` (seen with the legacy backend's Lucene 9.5
-  index under Lucene 9.12). It is not an `IOException`, so it is not caught, and the application stops with
-  "Application run failed". Nothing in the folder is deleted.
-- **Why it looks wrong:** deleting the index on start-up is meant to start from an empty one whatever the folder
-  holds; an unreadable old index is exactly that case. Removing the folder's files, or catching the failure and
-  then removing them, would let the start-up rebuild the index.
-- **Exposed by:** P7h's §5 dry run of the country split (2026-10-25), where `niord.home` resolved to the
-  workstation's `~/.niord`, which held an index of the legacy backend.
-
 ## BATCH5. Sysadmin > Batch Jobs forgets every execution at a restart, and the bootstrap's job logs with it
 
 - **Location:** the JBeret SE environment's job repository (`niord/src/main/java/org/niord/core/conf/BatchConfig.java`

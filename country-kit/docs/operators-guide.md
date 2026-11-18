@@ -525,8 +525,8 @@ version needs and the old database never had is missing until you import it.
   a developer's own changes only when a person says so.
 - **A stale script row** copied from an older deployment stays as it is until a sysadmin imports the
   release file that carries the current one and ticks its overwrite.
-- **The message index** (a known fault, not yet fixed): an index of an older format in the home folder's
-  `message-index` folder stops the start. The remedy, the installer emptying that folder before the
-  first start, is not verified.
+- **The message index**: an index the backend cannot read in the home folder's `message-index` folder (one of
+  an older Lucene format, or a damaged one) is removed at the start, with a WARN that names the folder, and
+  rebuilt from the database.
 
 Every part on a real volume is verified at the deploy step.

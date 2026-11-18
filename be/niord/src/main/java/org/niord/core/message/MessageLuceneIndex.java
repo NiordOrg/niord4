@@ -38,6 +38,7 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -185,7 +186,8 @@ public class MessageLuceneIndex extends BaseService {
             lock.lock();
             try {
                 deleteIndex();
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
+                // A search index never stops the application from starting
                 log.error("Failed re-creating the index on startup", e);
             } finally {
                 lock.unlock();
@@ -390,12 +392,37 @@ public class MessageLuceneIndex extends BaseService {
         // Add new documents to an existing index:
         iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
 
+        Directory dir = FSDirectory.open(indexFolder);
         try {
-            Directory dir = FSDirectory.open(indexFolder);
             return new IndexWriter(dir, iwc);
-        } catch (IOException ex) {
+        } catch (IOException | RuntimeException ex) {
+            // Closed, so that the folder's files can be removed (on Windows too) by a caller that recovers
+            dir.close();
             log.error("Failed to create message Lucene Index in folder " + indexFolder, ex);
             throw ex;
+        }
+    }
+
+    /**
+     * Opens a writer on the index folder for {@link #deleteIndex()}. An index this Lucene version cannot open
+     * (written by another version, whose codec it does not know, or damaged) is exactly what deleting the index
+     * should cure: its files are removed and an empty index is opened instead. The index is a cache, rebuilt from
+     * the database. The caller holds the folder's {@link #writerLock(Path) writer lock}, so no other writer of this
+     * JVM is open on the folder.
+     */
+    private IndexWriter openWriterDiscardingUnreadable() throws IOException {
+        try {
+            return getNewWriter();
+        } catch (IOException | IllegalArgumentException e) {
+            log.warn("The message index in {} cannot be opened ({}); removing its files, the index is rebuilt from "
+                    + "the database", indexFolder, e.toString());
+            closeReader();
+            try (Stream<Path> files = Files.list(indexFolder)) {
+                for (Path file : files.filter(Files::isRegularFile).toList()) {
+                    Files.deleteIfExists(file);
+                }
+            }
+            return getNewWriter();
         }
     }
 
@@ -487,7 +514,7 @@ public class MessageLuceneIndex extends BaseService {
         // Delete the index
         IndexWriter writer = null;
         try {
-            writer = getNewWriter();
+            writer = openWriterDiscardingUnreadable();
             writer.deleteAll();
             writer.setLiveCommitData(new HashMap<String, String>().entrySet());
             writer.commit();
