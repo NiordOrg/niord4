@@ -1,8 +1,8 @@
 # Message reads: Niord 4 against the previous Niord
 
 **Status:** 2026-11-05. niord-base's core defaults batch lazy loads 256 owners a query (16 before). niord-dk's and
-niord-gl's local profiles still set 16, which wins over the core defaults, so their local runs stay at 16 and only
-their deployments have 256 until the copies go. The check on the test data (section 4, step 1) needs no decision,
+niord-gl's local profiles no longer set their own value (since 2026-11-06), so both countries' local runs and
+deployments take 256 from the core defaults. The check on the test data (section 4, step 1) needs no decision,
 only the data; steps 2 to 4 wait for the owner's go. The owner ruled on 2026-11-02 that the gap is closed before
 production go-live ([backlog](../../fe/docs/backlog.md), _Before production go-live_).
 **Scope:** the message reads of both web applications: the administration app's list (`GET /rest/messages/search`,
@@ -41,7 +41,7 @@ objects walk each message's associations.
 | | Previous Niord | Niord 4 |
 | --- | --- | --- |
 | Stack | Quarkus 3.7.2, Hibernate ORM 6.4.3, MySQL | Spring Boot 4.0.7, Hibernate ORM 7.2, PostgreSQL 18 |
-| Batch fetch size | 16, Quarkus's default | 256 in `niord-core-defaults.yml` since 2026-11-05 (16 before); 16 in the local runs of niord-dk and niord-gl, whose local profiles still set it |
+| Batch fetch size | 16, Quarkus's default | 256 in `niord-core-defaults.yml` since 2026-11-05 (16 before) |
 | Second-level cache | on for the 18 `@Cacheable` entities: Quarkus's default, built on Caffeine, 10,000 entries a region, no expiry | off: no cache provider is configured, so `@Cacheable` does nothing |
 | Cached collections | none: no collection carries `@Cache` | none |
 | Bytecode enhancement | always: Quarkus enhances the entities at build time | none |
@@ -84,12 +84,14 @@ millisecond: the times are that machine's, the statement counts are not.
 
 In this order; steps 2 and 3 are independent of each other.
 
-1. **The check on the test data**: time the same requests on a country stack with the test data, at 16 and at
-   256. niord-dk's and niord-gl's local profiles set 16, which wins over the core defaults, and their launcher
-   passes no argument through to the backend. Delete the line from `be/src/main/resources/application-local.yml`,
-   or start the stack with `SPRING_APPLICATION_JSON='{"spring.jpa.properties.hibernate.default_batch_fetch_size":256}'`
-   in the environment: the backend's JVM inherits it, and it wins over the profile. A `-D` on Maven's command line
-   never reaches that JVM. If the time is in the statements, it falls with their count.
+1. **The check on the test data**: time the same requests on a country stack with the test data, at 256 and at
+   16. A country's local run takes 256 from the core defaults, and its launcher passes no argument through to the
+   backend. For the run at 16, start the stack with
+   `SPRING_APPLICATION_JSON='{"spring.jpa.properties.hibernate.default_batch_fetch_size":16}'` in the environment:
+   the backend's JVM inherits it, and it wins over the core defaults. A `-D` on Maven's command line never reaches
+   that JVM. If the time is in the statements, it falls with their count. Production-size data arrives with the
+   first regular restore of the previous Niord's production database (the go-live rehearsal); the requests are
+   timed there too.
 2. **The benchmark**, built on `be/scripts/bench-map-images.mjs` (its harness, credentials and result files; its
    case 6 and R5 already time one message and the list search) rather than a second script beside it: the reads of
    the scope as cases, each timed (median and p95), with Niord 4's statements per request recorded, in its two
