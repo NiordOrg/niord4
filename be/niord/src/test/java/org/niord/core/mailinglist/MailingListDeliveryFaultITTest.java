@@ -525,14 +525,14 @@ class MailingListDeliveryFaultITTest extends ITTest {
                     .setParameter("uid", uid).getSingleResult()).longValue());
             ReflectionTestUtils.setField(target, "claimLease", Duration.ofSeconds(2));
 
-            Optional<MailingListStatusChangeOutbox.Claim> first = outbox.claimNextDue();
+            Optional<MailingListStatusChangeOutbox.Claim> first = claimOwn(id);
             assertEquals(Optional.of(new MailingListStatusChangeOutbox.Claim(id, uid, Status.DRAFT)), first,
                     "the row is taken");
-            assertTrue(outbox.claimNextDue().isEmpty(), "and not taken again while its lease runs");
+            assertTrue(claimOwn(id).isEmpty(), "and not taken again while its lease runs");
 
             Optional<MailingListStatusChangeOutbox.Claim> again = Awaitility.await().atMost(Duration.ofSeconds(15))
                     .pollInterval(Duration.ofMillis(250))
-                    .until(outbox::claimNextDue, Optional::isPresent);
+                    .until(() -> claimOwn(id), Optional::isPresent);
             assertEquals(id, again.orElseThrow().id(), "it is due again once the lease ran out");
             assertEquals(2, Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
                             "SELECT attempts FROM public.\"MailingListStatusChange\" WHERE id = :id")
@@ -546,6 +546,19 @@ class MailingListDeliveryFaultITTest extends ITTest {
         }
     }
 
+    /**
+     * Takes due rows until the given one comes back, or none is due. The table is shared by every context of the run:
+     * a row another class left leased (a failed trigger lookup) may come due during a test, and as the older row it
+     * is taken first. Taken here, it is due again when this take's lease ends, for a later drain to run.
+     */
+    private Optional<MailingListStatusChangeOutbox.Claim> claimOwn(long id) {
+        while (true) {
+            Optional<MailingListStatusChangeOutbox.Claim> claim = outbox.claimNextDue();
+            if (claim.isEmpty() || claim.get().id() == id) {
+                return claim;
+            }
+        }
+    }
     // ------------------------------------------------------------------------------------------- //
     // A status-change trigger's message filter
     // ------------------------------------------------------------------------------------------- //
