@@ -175,9 +175,9 @@ public class MessageSearchService extends BaseService {
      * Main message search function.
      * <p>
      * A failed search is logged and answered with an empty result, which a caller cannot tell from a real answer of
-     * zero messages. It remains for screens and scripts that only show what they find. A caller that answers the
-     * public, mails people or acts on "nothing found", by cancelling or creating messages, uses
-     * {@link #searchOrFail(MessageSearchParams)} instead. Two failures are thrown here too: an unresolvable
+     * zero messages. It remains for the publish and expire sweeps and for scripts, which show or act on what they
+     * find. A caller that answers the public, mails people or acts on "nothing found", by cancelling or creating
+     * messages, uses {@link #searchOrFail(MessageSearchParams)} instead. Two failures are thrown here too: an unresolvable
      * publication id ({@link TransitionRefusedException}) and a free-text query the index cannot parse
      * ({@link InvalidFreeTextQueryException}).
      *
@@ -211,10 +211,11 @@ public class MessageSearchService extends BaseService {
      * The message search of {@link #search(MessageSearchParams)}, which lets a failure through instead of answering
      * it with an empty result: an empty result is then a real answer of zero messages.
      * <p>
-     * Used by the public API, the scheduled mailing-list mail and the mailing-list report, the Niord integration's
-     * look-up of its own copies, a publication entering recording, the recompute of the area sort order and the
-     * hourly firing-exercise run (which cancels the current exercises when it finds no template): each of them would
-     * act on, or hand on, an empty answer as if nothing had been found.
+     * Used by the public API, the editors' search with its print, export and message mail, the scheduled
+     * mailing-list mail and the mailing-list report, the Niord integration's look-up of its own copies, a
+     * publication entering recording, the recompute of the area sort order and the hourly firing-exercise run (which
+     * cancels the current exercises when it finds no template): each of them would act on, or hand on, an empty
+     * answer as if nothing had been found.
      *
      * @param params the search parameters
      * @return the search result
