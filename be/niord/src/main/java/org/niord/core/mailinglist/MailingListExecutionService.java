@@ -424,7 +424,8 @@ public class MailingListExecutionService extends BaseService {
         // Perform the message search
         MessageSearchParams params = MessageSearchParams.instantiate(null, trigger.getMessageQuery());
         params.maxSize(Integer.MAX_VALUE);
-        PagedSearchResultVo<Message> messageResult = messageSearchService.search(params);
+        // A failed search fails the trigger, which the scheduler logs and postpones, rather than mail an empty list
+        PagedSearchResultVo<Message> messageResult = messageSearchService.searchOrFail(params);
 
         // Create mails language by language
         for (String language : languages) {
@@ -487,7 +488,7 @@ public class MailingListExecutionService extends BaseService {
         // Perform the message search
         MessageSearchParams params = MessageSearchParams.instantiate(null, trigger.getMessageQuery());
         params.maxSize(Integer.MAX_VALUE);
-        PagedSearchResultVo<Message> messageResult = messageSearchService.search(params);
+        PagedSearchResultVo<Message> messageResult = messageSearchService.searchOrFail(params);
 
         // Make sure that the language is defined for the trigger
         lang = app.getLanguage(lang);

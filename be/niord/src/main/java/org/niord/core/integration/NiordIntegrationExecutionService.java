@@ -230,17 +230,18 @@ public class NiordIntegrationExecutionService extends BaseService {
     /**
      * Fetches published messages from this Niord server for the given message series.
      * The messages should also have a defined legacyId to partake in the process.
+     * A failed look-up stops the run rather than read as "no own copies", which would import every warning again.
      *
      * @param seriesId the messages series
      * @return published messages from this Niord server for the given message series
      */
-    List<Message> fetchOwnMessages(String seriesId) {
+    List<Message> fetchOwnMessages(String seriesId) throws Exception {
         MessageSearchParams params = new MessageSearchParams()
                 .seriesIds(Collections.singleton(seriesId))
                 .statuses(Status.PUBLISHED);
         params.maxSize(10000);
 
-        return messageSearchService.search(params)
+        return messageSearchService.searchOrFail(params)
                 .getData().stream()
                 .filter(m -> StringUtils.isNotBlank(m.getLegacyId()))
                 .collect(Collectors.toList());

@@ -504,10 +504,11 @@ public class PublicationService extends BaseService {
 
     /**
      * When a publication enters the RECORDING status, check if any of the currently published messages
-     * should be assigned to the associated message tag.
+     * should be assigned to the associated message tag. A failed search fails the status change rather than leave the
+     * publication recording with none of the published messages in its tag.
       * @param publication the publication
      */
-    private void startRecordingPublication(Publication publication) {
+    private void startRecordingPublication(Publication publication) throws Exception {
 
         // Sanity checks
         if (publication.getStatus() != RECORDING || publication.getMessageTag() == null ||
@@ -523,7 +524,7 @@ public class PublicationService extends BaseService {
         MessageSearchParams params = new MessageSearchParams()
                 .seriesIds(seriesIds)
                 .statuses(PUBLISHED);
-        List<Message> messages = messageSearchService.search(params).getData();
+        List<Message> messages = messageSearchService.searchOrFail(params).getData();
 
         // For each message, check if it should be included in the associated message tag
         messages.forEach(m -> checkMessageForRecordingPublication(publication, m, PHASE_START_RECORDING));

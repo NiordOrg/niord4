@@ -970,7 +970,7 @@ public class MessageRestService  {
     @PutMapping("/recompute-area-sort-order")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @RolesAllowed(Roles.ADMIN)
-    public void reindexPublishedMessageAreaSorting() {
+    public void reindexPublishedMessageAreaSorting() throws Exception {
 
         // Search for published message in the curretn domain
         Domain domain = domainService.currentDomain();
@@ -986,9 +986,10 @@ public class MessageRestService  {
         params.statuses(Collections.singleton(Status.PUBLISHED))
                 .seriesIds(messageSeries);
 
-        // Perform the search and update the area sort order of the messages
+        // Perform the search and update the area sort order of the messages. A failed search is an error, not a
+        // "done" over no messages
         long t0 = System.currentTimeMillis();
-        PagedSearchResultVo<Message> searchResult = messageSearchService.search(params);
+        PagedSearchResultVo<Message> searchResult = messageSearchService.searchOrFail(params);
         searchResult.getData().forEach(m -> messageService.computeMessageAreaSortingOrder(m));
 
         log.debug(String.format("Updates area sort order for  %d messages in %d ms",

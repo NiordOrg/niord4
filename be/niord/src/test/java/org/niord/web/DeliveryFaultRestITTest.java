@@ -360,9 +360,8 @@ class DeliveryFaultRestITTest extends ITTest {
      */
     @Test
     void aSelfIntersectingWktPolygonIsAppliedAsGivenWithoutAServerError() {
-        // The search swallows its own failures into an empty answer (PORT-2), and an empty answer also leaves
-        // NW-001-26 out, so the status and the body alone cannot tell "applied" from "failed and swallowed". The log
-        // of the search says which: nothing at WARN or above.
+        // The public API's search lets its failures through, so a failed search would answer a 5xx here, not this
+        // 200. The log of the search is checked as well: nothing at WARN or above.
         var log = org.niord.test.JmsFaults.captureLog(org.niord.core.message.MessageSearchService.class);
         try {
             given().queryParam("messageSeries", "dma-nw").queryParam("lang", "en")

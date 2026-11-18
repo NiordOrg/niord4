@@ -1190,22 +1190,21 @@ was changed in production code.
 
 ## PORT-2. `MessageSearchService.search()` turns every failure into an empty result
 
-- **Location:** `niord/src/main/java/org/niord/core/message/MessageSearchService.java` (`search`, 178-213: the
-  `TransitionRefusedException` rethrow at 198, the catch that swallows the rest at 208-210; the free-text branch
-  322-325, which logs WARN without the exception and goes on with an empty id list).
+- **Location:** `niord/src/main/java/org/niord/core/message/MessageSearchService.java` (`search`: the
+  `TransitionRefusedException` rethrow, then the catch that logs the rest at ERROR and answers an empty result),
+  and its REST caller `niord/src/main/java/org/niord/web/MessageSearchRestService.java` 292, which serves the
+  editors' list (`GET /rest/messages/search`), the export, the message mail (`MessageMailRestService` 145) and the
+  print (`MessageReportRestService` 374, also the public site's anonymous list PDF).
 - **Description:** every exception except `TransitionRefusedException` is logged and converted to an
-  empty `PagedSearchResultVo`; a failed free-text lookup substitutes an empty id list.
-- **Why it looks wrong:** publications membership resolution now rides on this method, and a caller
-  cannot distinguish a failed resolution from a genuine zero-member answer. Pre-existing; the port
-  only rescues the one exception it needs. Other callers take the same empty answer for "no messages": the
-  scheduled and status-change mailing-list mails (`MailingListExecutionService` 257 and 320) and the public API
-  (`AbstractApiService` 222). The hourly firing run no longer rests on it: since 2026-11-13 it searches through
-  `MessageSearchService.searchOrFail`, which lets a failure propagate; the other callers still take `search`.
+  empty `PagedSearchResultVo`, a free-text query the Lucene parser cannot read included.
+- **Why it looks wrong:** those REST callers cannot tell a failed search from a genuine answer of zero messages:
+  an editor is told a warning does not exist, a mariner gets an empty PDF. The public API, the mailing-list mails
+  and report, the Niord integration, a publication entering recording, the area sort recompute and the firing run
+  search through `MessageSearchService.searchOrFail`, which lets a failure through; the free-text branch no longer
+  swallows an index failure itself.
 - **Exposed by:** reproduced by the error hunt of 2026-11-12 (tracks C and CT):
   `DeliveryFaultRestITTest#anUnbalancedQuoteInTheEditorsSearchAnswersNoMessagesInsteadOfInvalidQuery_documentsBug`
-  (the query `nw "` answers 200 with total 0, and only a WARN without the exception is logged) and
-  `MailingListDeliveryFaultITTest#aScheduledTriggerWithAFreeTextQueryMailsAnEmptyListWhenTheIndexIsDown_documentsBug`
-  (a scheduled trigger with `query=nw` still makes its mail, with count 0, while the index is unreadable).
+  (the query `nw "` answers 200 with total 0).
 
 ## PORT-3. Release endpoint dereferences `stampedAt` without a null guard, after the irreversible half
 

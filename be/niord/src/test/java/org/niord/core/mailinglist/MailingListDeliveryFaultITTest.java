@@ -66,6 +66,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -75,8 +76,7 @@ import static org.mockito.Mockito.when;
  * Fault injection on the mailing-list delivery path: what is made, recorded or sent when a step between a status
  * change (or a schedule) and the subscribers' mail fails: a status-change trigger whose template or filter fails, the
  * broker that cannot be reached (MAILLIST2 in be/docs/potential-errors.md), a scheduled trigger whose reschedule
- * or run fails, and the mailing-list callers of the search that turns its failures into an empty answer (PORT-2
- * there).
+ * or run fails, and a scheduled trigger whose search fails, which fails the trigger rather than mail an empty list.
  *
  * <p>The status-change cases publish a committed message and let the real listener ({@code MailingListMessageListener}
  * on the embedded broker) execute the committed triggers; each trigger's message filter names the test's own message,
@@ -472,22 +472,19 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // PORT-2: the free-text index down under a scheduled trigger
+    // The free-text index down under a scheduled trigger
     // ------------------------------------------------------------------------------------------- //
 
     /**
-     * PORT-2, the scheduled trigger. A scheduled trigger whose query has a free-text term ({@code query=nw}) mails the
-     * matching published warnings. With the free-text index unreadable (here its folder is an empty one, so opening
-     * the reader throws {@code IndexNotFoundException}, an {@code IOException}), {@code MessageSearchService} 322-325
-     * logs a WARN without the exception and searches with no ids: the trigger still renders and returns one mail per
-     * recipient, now listing no warning ({@code count=0}), and the scheduler would queue it to external recipients.
-     *
-     * <p>What is wrong: subscribers receive a list that says there are no warnings. The right assertion: the trigger
-     * fails (an exception, so the scheduler logs it and retries), and no mail is made.
+     * A scheduled trigger whose query has a free-text term ({@code query=nw}) mails the matching published warnings.
+     * With the free-text index unreadable (here its folder is an empty one, so opening the reader throws
+     * {@code IndexNotFoundException}, an {@code IOException}), the search fails and so does the trigger: the
+     * scheduler logs it and postpones it, and no mail is made. A mail listing no warning would tell the subscribers
+     * that there are none.
      */
     @Test
     @Transactional
-    void aScheduledTriggerWithAFreeTextQueryMailsAnEmptyListWhenTheIndexIsDown_documentsBug() throws Exception {
+    void aScheduledTriggerWithAFreeTextQueryFailsWhenTheIndexIsDown() throws Exception {
         String n = Long.toString(System.nanoTime(), 36);
         MailingList ml = new MailingList();
         ml.setMailingListId("IT-MLINDEX-" + n);
@@ -530,17 +527,13 @@ class MailingListDeliveryFaultITTest extends ITTest {
         Path emptyFolder = Files.createTempDirectory("niord-it-index-down");
         ReflectionTestUtils.setField(index, "indexFolder", emptyFolder);
         ReflectionTestUtils.setField(index, "reader", null);
-        List<ScheduledMail> down;
         try {
-            down = executionService.executeScheduledTrigger(trigger, false);
+            assertThrows(Exception.class, () -> executionService.executeScheduledTrigger(trigger, false),
+                    "the trigger fails rather than make a mail that lists no warning");
         } finally {
             ReflectionTestUtils.setField(index, "indexFolder", sharedFolder);
             ReflectionTestUtils.setField(index, "reader", sharedReader);
         }
-
-        assertEquals(1, down.size(), "the trigger does not fail: it still makes its mail");
-        assertTrue(down.get(0).getHtmlContents().contains("count=0"),
-                "and the mail lists no warning: " + down.get(0).getHtmlContents());
     }
 
     // ------------------------------------------------------------------------------------------- //
