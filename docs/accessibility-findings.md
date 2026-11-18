@@ -297,7 +297,7 @@ language menus; the Schedule page; the editor's Start screen; the admin overview
 sections; the sysadmin overview and its thirteen other sections; the series list, the calendar, the
 category list, the _Edit as text_ dialog and the two confirmations.
 
-**Findings**, each an entry of `fe/docs/backlog.md` (one was there before):
+**Findings**, each an entry of `fe/docs/backlog.md` (two were there before):
 
 - The default `--niord-fg-subtle` is below AA off `--niord-surface` (known since 2026-10-26): "All
   changes saved", 4.33:1; the live preview's heading and an area's parent on the active option,
@@ -311,7 +311,8 @@ category list, the _Edit as text_ dialog and the two confirmations.
 - The date picker's calendar does not take focus when it opens: Tab reaches its days only after the
   rest of the form (keyboard walk).
 - The autocomplete and select buttons that remove a value do nothing from the keyboard (keyboard
-  walk); Backspace in an empty autocomplete removes the last value.
+  walk; the entry was there already, from the preparation of the screen-reader pass); Backspace in
+  an empty autocomplete removes the last value.
 
 **Seen, and not counted as failures.** The select and the autocomplete show focus by turning their
 1-pixel border to the primary colour, and nothing else: enough for 2.4.7 in WCAG 2.1, short of the

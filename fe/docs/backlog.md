@@ -296,9 +296,9 @@ Background: [`angular-conventions.md`](angular-conventions.md), [`ui-apps/info/A
   the rich-text engine when a description row first opens, the code editor, a `@defer` block — that fails after a
   deploy leaves its own surface empty (the landing map shows its `@error` retry) and raises no banner until a
   navigation fails the same way or the tab next comes back into view.
-- **The shared select's and autocomplete's clear buttons and the autocomplete's chip-remove buttons do nothing
-  from the keyboard, and every chip-remove button has the same name.** All three are real `<button>`s in the tab
-  order, but they act on `(mousedown)` only: the chip's remove button
+- **The autocomplete and select buttons that remove a value do nothing from the keyboard** (WCAG 2.1.1), and
+  every chip-remove button has the same name. The shared select's and autocomplete's clear buttons and the
+  autocomplete's chip-remove buttons are real `<button>`s in the tab order, but they act on `(mousedown)` only: the chip's remove button
   (`ui-apps/admin/src/app/shared/forms/autocomplete/autocomplete.html` 12-18, handler `autocomplete.ts` 284-287),
   the autocomplete's clear button (`autocomplete.html` 54-59, `autocomplete.ts` 289-292) and the select's clear
   button (`ui-apps/admin/src/app/shared/forms/select/select.html` 46-51, `select.ts` 295-299). Enter and Space
@@ -313,7 +313,8 @@ Background: [`angular-conventions.md`](angular-conventions.md), [`ui-apps/info/A
   `(mousedown)` for `preventDefault()` alone (so the input keeps focus) and run the action on `(click)`, put focus
   back on the input or trigger after a chip or the value is removed, name each chip's button with the item's label
   as well, and add a spec that activates each button with a `click`. Found while preparing the screen-reader
-  protocol (2026-11-18).
+  protocol (2026-11-18), and met again by the first accessibility pass of the administration app (the keyboard
+  walk, 2026-11-18), which records it as a known fault under this entry's title.
 
 ### Country deployments and translation
 
@@ -622,14 +623,6 @@ Background: [`features/editor.md`](features/editor.md).
   move between the days and Enter picks one and returns the focus to the field, as it should. Moving the focus to
   the roving day when the calendar opens closes it; the time field's popover is built the same way. Found by the
   first accessibility pass of the administration app (the keyboard walk, 2026-11-18).
-- **The autocomplete and select buttons that remove a value do nothing from the keyboard** (WCAG 2.1.1). A chip's
-  remove button and the clear button of the shared autocomplete, and the clear button of the shared select, are
-  focusable buttons that act on `mousedown` only (`shared/forms/autocomplete/autocomplete.html`,
-  `shared/forms/select/select.html`): Tab reaches them and Enter or Space does nothing. Backspace in an empty
-  autocomplete removes its last chip, so a value can still be removed from the keyboard, but not the one the
-  focused button names. A `click` handler beside the `mousedown` one (the `mousedown` keeps the input's focus for a
-  pointer) closes it. Found by the first accessibility pass of the administration app (the keyboard walk,
-  2026-11-18).
 - **The status flow's steps not yet reached are drawn far under 4.5:1** (WCAG 1.4.3). The editor's status flow
   (the Draft, Verified and Published steps beside the live preview) dims the steps a message has not reached with
   `opacity-40` and `opacity-55` over `text-fg-subtle`: 1.66:1 and 2.07:1 on the preview's background. The steps are
