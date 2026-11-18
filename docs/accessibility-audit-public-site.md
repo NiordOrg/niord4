@@ -10,7 +10,8 @@ accessibility statement is made per site, after an evaluation of that site, and 
 the base build: each country's build has its own footer, legal documents, statement link, colours,
 languages and area filter. Until each country's build has been run through the steps under
 [What remains](#what-remains), this record backs no statement. A page changed after this date is
-looked at again before a statement is dated.
+looked at again before a statement is dated; the pages the same change altered after the scan are
+named under [Changed after the audit, in the same change](#changed-after-the-audit-in-the-same-change).
 
 ## How the evaluation was done
 
@@ -54,6 +55,27 @@ a message's dialog opened from the list, the Downloads page's second tab, and th
 empty and failed (the list read answered with an empty list and with an error). The base build's footer has no document, so the
 footer-document state was not scanned. "Rule" is an axe-core rule; a rule that axe-core could not
 decide is under "needs a person". No WCAG rule failed on any page; what failed is best practice.
+
+### Changed after the audit, in the same change
+
+The scan and the walks ran on `main` at `3481b0b`. The change that brought this record also brought
+fixes to the public site, made before the record was written and not scanned or walked in their
+new form. Each of these is to be scanned and walked again, on the base build, before a statement is
+dated:
+
+- **The details and table views with an empty list.** They now say "No messages to show" in a
+  `role="status"` region, where they said nothing (see [the list empty](#the-list-empty-the-list-failed)).
+- **The filter bar while a publication is browsed.** It now names the publication by its title, with
+  a _Download_ link to its document and a close button that returns the same view to the current
+  messages, and the menu's _Details_, _List_ and _Map_ keep the publication. That state was not
+  scanned or walked at all; the scan has a state for it since (`a publication browsed`, reached
+  from the Downloads page's first _Browse_ link), not yet run.
+- **The map view.** The panel of messages without a position now starts clear of the zoom buttons
+  and ends above the credits at every width (see [`/messages/map`](#messagesmap)); and a chart of a
+  browsed publication leaves its cancelled messages off the chart and out of that panel, while the
+  details and table views list them with their mark.
+- **The active-now chip.** Pressed, it now narrows the list to the messages in force at that moment,
+  where it changed nothing before; the chip itself, its name and its pressed state are as audited.
 
 ### `/messages/details` (the landing page)
 
@@ -107,8 +129,10 @@ decide is under "needs a person". No WCAG rule failed on any page; what failed i
   text is the map exemption's question, still open in
   [accessibility-findings.md](accessibility-findings.md) section 1.
 - **Reflow.** The chart fills the view at every width, and at 400 % the bars scroll away. The panel
-  of messages without a position covering the zoom buttons on a phone (backlog) did not show with
-  the sample's messages; the entry stays.
+  of messages without a position, which could cover the zoom buttons on a phone, did not show with
+  the sample's messages. The same change has since moved it: it starts clear of the zoom buttons
+  and ends above the credits, which the map-controls assertion of `npm run layout:info` holds at
+  four sizes. Not yet scanned or walked in that form.
 - **Judged.** The credit link: fail, 1.4.1.
 
 ### `/messages/print` (the print sheet)
@@ -147,9 +171,10 @@ decide is under "needs a person". No WCAG rule failed on any page; what failed i
 
 - **Scan.** WCAG: nothing. Best practice as on the landing page.
 - **Status messages.** A failed read is written into a `role="alert"` region that is on the page
-  before the failure: pass (4.1.3). An empty list says nothing at all, which a reader can take for
-  a page that failed: the backlog's _A list that comes back empty shows nothing_. It is no WCAG
-  failure by itself, since no message is shown at all, but it is the same gap for a screen reader.
+  before the failure: pass (4.1.3). An empty list said nothing at all when scanned, which a reader
+  could take for a page that failed. The same change has since closed that gap: the details and
+  table views now say "No messages to show" in a `role="status"` region. Not yet scanned in that
+  form.
 
 ### The footer's documents
 
@@ -218,7 +243,7 @@ Pass, fail, not applicable, or needs a person, for the base build. A fail names 
 | 3.3.4 Error prevention (legal, financial, data) | AA | N/A | |
 | 4.1.1 Parsing | A | Pass | |
 | 4.1.2 Name, role, value | A | Pass | Pressed state on the chips and the language buttons, tab roles, a modal dialog with a name; to be confirmed by the screen-reader pass |
-| 4.1.3 Status messages | AA | Pass | A failed read in an alert region, a read on its way marked busy; an empty list says nothing (backlog) |
+| 4.1.3 Status messages | AA | Pass | A failed read in an alert region, a read on its way marked busy; an empty list said nothing when scanned, and now says so in a status region (not yet scanned in that form) |
 
 Four fails in the base build: 1.4.1, 1.4.3, 2.4.3, 2.4.7, and the PDFs. Three of them were found
 here and are new entries of the backlog; 2.4.7 was there already.
@@ -267,4 +292,5 @@ its tokens and its own files. Nothing in a country repository is changed by it. 
   again, with long titles, attachments and real PDFs, and whether every position and area on the
   chart is also given as text (the map exemption).
 - **After the fixes**: every page a fix touches, scanned and walked again, on the base build and
-  on each country's build once its bump carries it, before a statement is dated.
+  on each country's build once its bump carries it, before a statement is dated. The first are
+  those under [Changed after the audit, in the same change](#changed-after-the-audit-in-the-same-change).
