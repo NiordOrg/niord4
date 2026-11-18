@@ -298,7 +298,8 @@ keycloak:
   #   dev         `start-dev`, keeping its data inside the container, so it starts afresh
   #               on every restart, with the TEST realm (files/niord-realm.json): the
   #               test users (sysadmin/sysadmin, testuser/test ...) and any redirect URI.
-  #               The local bundle and the test environments.
+  #               The local bundle and the test environments (a cluster test environment
+  #               also sets devModeOffLocalhost).
   #   production  `start`, keeping its data in `database` on this release's Postgres (or
   #               postgres.host), with the realm the chart derives from the test realm:
   #               no user (keycloak.testUsers), no niord-web-admin client (unused, and its service
@@ -314,6 +315,11 @@ keycloak:
   # A later chart or externalBaseUri change does not reach it, and a password changed in the
   # admin console stays changed (README, "Keycloak in production mode").
   mode: dev
+  # dev mode away from this workstation. Dev mode is refused when externalBaseUri or
+  # externalKeycloakUrl names a host other than localhost, 127.0.0.1 or [::1], unless this is
+  # true: a forgotten `mode: production` must not give a cluster the test realm and admin/admin.
+  # A test-<name> environment sets it; staging and production never do.
+  devModeOffLocalhost: false
   # production: the database Keycloak keeps its data in. An init container creates it
   # when it is missing.
   database: keycloak

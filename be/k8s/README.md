@@ -240,7 +240,11 @@ holds 8080.
 ## Keycloak in production mode
 
 `keycloak.mode: production` is for staging and production. The local bundle and the test
-environments keep `dev`, with the test realm and its test users.
+environments keep `dev`, with the test realm and its test users. The render refuses dev mode when
+`externalBaseUri` or `externalKeycloakUrl` is not on `localhost`, `127.0.0.1` or `[::1]`, unless
+`keycloak.devModeOffLocalhost` is true, which a `test-<name>` environment sets and staging and
+production never do: a values file that forgets `keycloak.mode` fails instead of giving a cluster
+the test realm and `admin`/`admin`.
 
 - **`start` instead of `start-dev`**, on the database `keycloak.database` (`keycloak`) of the
   release's Postgres, connecting as a database user of its own, `keycloak.db` (as the user of
@@ -496,6 +500,7 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
 | `keycloak.db.existingSecret` | `""` | Production mode: a Secret with the keys `username` and `password`, the user Keycloak connects to `keycloak.database` as. `""` = the chart renders one from `keycloak.db.username`/`keycloak.db.password`, the local default; required where `postgres.admin.existingSecret` is named. |
 | `keycloak.existingSecret` | `""` | A Secret with the keys `username` and `password` for the Keycloak bootstrap admin. `""` = the chart renders one from `keycloak.adminUser`/`keycloak.adminPassword`, which production mode refuses. |
 | `keycloak.mode` | `dev` | `dev`: `start-dev`, data kept in the container (gone on a restart), the test realm. `production`: `start` on `keycloak.database`, the test realm without its users and without `niord-web-admin`, and with `niord-web` limited to `externalBaseUri` — see [Keycloak in production mode](#keycloak-in-production-mode). |
+| `keycloak.devModeOffLocalhost` | `false` | Dev mode with an `externalBaseUri` or `externalKeycloakUrl` that is not on `localhost`, `127.0.0.1` or `[::1]` fails the render unless this is `true`. A cluster test environment sets it; staging and production run `production` or a shared Keycloak. |
 | `keycloak.testUsers` | `false` | Production mode only: `true` keeps the test realm's four users, with the passwords in this repository, in the rendered realm; never for production. Dev mode always imports them. Anything but `true` or `false` fails the render. |
 | `keycloak.database` | `keycloak` | Production mode: the database on this release's Postgres (or `postgres.host`) that Keycloak keeps its data in, created by an init container when missing. |
 | `postgres.databases` | `[]` | Further databases this release's Postgres holds, next to `postgres.database`. An infra release serving several app releases lists one per app (`[niord_dk, niord_gl]`), and each app release names its own in `postgres.database`. A post-install/post-upgrade Job creates any that is missing (from `template_postgis`, owned by the superuser, `postgres.admin`) and never drops one. An app release on such a database needs it handed to its user ("A database of someone else's", above). |

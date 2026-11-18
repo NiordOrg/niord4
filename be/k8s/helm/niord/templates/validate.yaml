@@ -103,6 +103,25 @@ the app validate tokens of a realm that does not exist and the readiness probe w
 {{- fail (printf "keycloak.realm is %q: dev mode imports the test realm, which is named niord; another name needs keycloak.mode production" (toString .Values.keycloak.realm)) }}
 {{- end }}
 {{- /*
+Dev mode (the test realm with its users and any redirect, the niord-web-admin client, admin/admin)
+is for a Keycloak the browser reaches on this workstation. Elsewhere it is refused unless the
+environment says so (keycloak.devModeOffLocalhost): staging and production run production mode or a
+shared Keycloak, and a values file that forgets keycloak.mode must not fall back to dev. A value
+missing from an older release's values is nil, so the guard applies; a string such as "false" would
+read as true and switch the guard off, so it fails.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.keycloak.devModeOffLocalhost) (kindIs "bool" .Values.keycloak.devModeOffLocalhost)) }}
+{{- fail (printf "keycloak.devModeOffLocalhost is %q: it is true or false" (toString .Values.keycloak.devModeOffLocalhost)) }}
+{{- end }}
+{{- if and .Values.keycloak.enabled (eq (toString .Values.keycloak.mode) "dev") (not .Values.keycloak.devModeOffLocalhost) }}
+{{- range $name := list "externalBaseUri" "externalKeycloakUrl" }}
+{{- $host := regexReplaceAll ":[0-9]+$" (lower (index (urlParse (toString (index $.Values $name))) "host")) "" }}
+{{- if not (has $host (list "localhost" "127.0.0.1" "[::1]")) }}
+{{- fail (printf "keycloak.mode is dev with %s on %q: dev mode gives Keycloak the test realm, its users and admin/admin, and is for this workstation only. Staging and production set keycloak.mode production with keycloak.existingSecret; a test environment that wants dev mode sets keycloak.devModeOffLocalhost true" $name $host) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- /*
 keycloak.testUsers (values.yaml) keeps the test users in a production-mode realm. It is a boolean or
 unset (an older release's values: no users, the safe side): a string such as "no" would read as true
 and give the realm users whose passwords are public.
