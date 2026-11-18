@@ -166,9 +166,15 @@ export class MessageMapComponent {
   /** One message on its own map: the details map inside the dialog. */
   protected readonly detailsMap = computed(() => this.message() !== undefined);
 
+  /**
+   * What the chart draws. A chart of a list draws what may be in force: a cancelled message stays
+   * findable in the list views but is never drawn, so a mariner does not read it as a warning in
+   * force, and it is not listed beside the chart either. The map of one message draws that
+   * message whatever its status, because the reader opened it.
+   */
   protected readonly allMessages = computed<readonly Message[]>(() => {
     const list = this.messages();
-    if (list) return list;
+    if (list) return list.filter((message) => message.status !== 'CANCELLED');
     const single = this.message();
     return single ? [single] : [];
   });

@@ -374,7 +374,8 @@ Three things on the map are not S-124 concepts and are kept on purpose:
   except tag spacing, which is resolution-multiplied precisely so the on-screen result does _not_
   change with zoom.
 - **Cancelled warnings must not draw on the map**, while staying discoverable in a list. That is a
-  filtering rule, not a portrayal one — see [features/messages.md](features/messages.md).
+  filtering rule, not a portrayal one: the public site's chart leaves cancelled messages out of a
+  list it draws (`MessageMapComponent`), and the map of one message draws it whatever its status.
 
 ## OpenLayers techniques you need to know before editing
 

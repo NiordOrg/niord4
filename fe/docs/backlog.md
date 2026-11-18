@@ -162,12 +162,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - **The map view's panel of messages without a position is translucent.** Over the map its background lets
   the terrain and the place names show through behind the titles, and a title that wraps continues under the
   id chip rather than in line with the title's first line. An opaque background and a hanging indent close it.
-- **Cancelled messages are drawn on the map like the live ones.** The map view draws every message of the list
-  (`shared/components/message-features-layer/message-features-layer.ts` 155-163, no status check), and the list of
-  a publication being browsed holds its cancelled messages: the card says _Cancelled_, the map draws the same
-  symbol as for a message in force. [`map-portrayal.md`](map-portrayal.md) says cancelled warnings must not be
-  drawn on the map and stay findable in a list. Leaving `CANCELLED` messages out of the layer closes it. Found by
-  the user guides' writers (2026-11-11), read in the code; not seen in a picture.
 - **The map tooltip's id badge breaks at its hyphens.** Each row of the map's hover tooltip is a flex row of the id
   badge and the title inside a box at most `max-w-xs` wide
   (`ui-apps/info/src/app/features/messages/components/map-layers/message-map-tooltip.ts` 37-49). The badge may
