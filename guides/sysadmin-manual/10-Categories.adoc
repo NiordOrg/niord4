@@ -204,8 +204,8 @@ tree.
 Select the category and click *Delete* above the tree, and confirm. The category is deleted with all its
 sub-categories. Niord does not delete a category, or one of its sub-categories, that a message of any status has
 now, or that a domain names among its categories: it says "The category was not deleted", names the messages and
-the domains that use it, and nothing is deleted. Make
-such a category inactive instead, or remove it from the messages and the domains first.
+the domains that use it, and nothing is deleted. Make such a category inactive instead, or remove it from the
+messages and the domains first.
 
 [#importing-and-exporting-categories]
 === Importing and Exporting Categories
