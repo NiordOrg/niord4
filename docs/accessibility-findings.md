@@ -4,8 +4,8 @@ Investigated 2026-09-19. This is an analysis. No code was changed. The public si
 audited on 2026-11-18 (recommendation A, for the public site): the record is
 [accessibility-audit-public-site.md](accessibility-audit-public-site.md), and each country's build
 and the screen-reader pass are still to be done there. A first automated pass of the administration
-app was made on 2026-11-18: an axe-core scan of every route and a keyboard walk that publishes a
-warning, against the sample deployment
+app was made on 2026-11-18: an axe-core scan of every route but three and a keyboard walk that
+publishes a warning, against the sample deployment
 ([First pass, administration app](#first-pass-administration-app)); its full page-by-page report is
 still to be done.
 
@@ -258,7 +258,10 @@ criterion are still to be done.
 - Not scanned, or scanned in an empty state: the Schedule page shows its empty state (no firing
   schedule) until the firing-schedule scenario has run on the sample, which it had not; a
   publication series page, because the sample has no series until the weekly-publication scenario
-  has made one.
+  has made one. Not scanned at all: the _Execute templates_ page (`/editor/execute-template`, the
+  first page of a warning made from a template), a copy's edit form (`/editor/copy/:id`), a one-off
+  publication series page (`/admin/publications/one-off/:seriesId`), and the editors and dialogs
+  that open inside the admin and sysadmin sections, whose pages are scanned without them.
 - The keyboard walk, `fe/ui-apps/admin/e2e/scenarios/keyboard-publish.spec.ts`: as an editor, from
   the Start screen to a published warning with the keyboard alone (Tab, Shift+Tab, Enter, Space,
   the arrow keys, Escape, typing). It sets the type, the series (the hand-written select), a typed

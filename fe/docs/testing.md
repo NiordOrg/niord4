@@ -444,9 +444,10 @@ Also unautomated today, and worth knowing before you assume a gate exists:
 - The administration app's accessibility check is two specs of the end-to-end suite, by hand before
   a release like the rest of it, and only against the sample deployment:
   - [`a11y-routes.spec.ts`](../ui-apps/admin/e2e/a11y-routes.spec.ts) runs axe-core
-    ([`a11y/axe.ts`](../ui-apps/admin/e2e/a11y/axe.ts)) over every route of the application, as an
+    ([`a11y/axe.ts`](../ui-apps/admin/e2e/a11y/axe.ts)) over every route of the application but
+    `/editor/execute-template`, `/editor/copy/:id` and `/admin/publications/one-off/:seriesId`, as an
     anonymous reader and as the sysadmin, and over the messages' Actions menu, the Print dialog and the
-    header's domain and language menus, against the WCAG 2.1 A and AA rules, light mode and English
+    header's domain and language menus, but not the admin sections' editors and dialogs, against the WCAG 2.1 A and AA rules, light mode and English
     only. It is read-only, runs only with `E2E_A11Y=1` and checks that the backend holds the sample
     first; without the switch it skips by name.
   - The scenario [`scenarios/keyboard-publish.spec.ts`](../ui-apps/admin/e2e/scenarios/keyboard-publish.spec.ts)

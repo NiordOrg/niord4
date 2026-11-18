@@ -164,8 +164,9 @@ E2E_CSP=1 E2E_BASE_URL=<backend> KEYCLOAK_URL=http://localhost:8080/auth npx pla
 E2E_SCENARIOS=1 ... npx playwright test ui-apps/admin/e2e/scenarios --workers=1   # the duty-officer scenarios: they WRITE
                          # data, so only against the sample deployment, by hand before a release, never in CI
                          # (the variables, the stack and the restart command: ui-apps/admin/e2e/scenarios/README.md)
-E2E_A11Y=1 ... npx playwright test a11y-routes.spec.ts   # axe-core over every route against the WCAG 2.1 A
-                         # and AA rules, held to e2e/a11y/known-violations.json; read-only, only against the
+E2E_A11Y=1 ... npx playwright test a11y-routes.spec.ts   # axe-core over the routes (three left out:
+                         # docs/testing.md) against the WCAG 2.1 A and AA rules, held to
+                         # e2e/a11y/known-violations.json; read-only, only against the
                          # sample deployment, by hand, never in CI (docs/testing.md; the keyboard walk is a scenario)
 ```
 
