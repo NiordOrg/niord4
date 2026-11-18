@@ -363,8 +363,9 @@ function s124Styles(feature: Feature, bundle: StyleBundle, resolution: number): 
     case 'Polygon':
     case 'MultiPolygon':
     default:
-      // Polygon (and any other / GeometryCollection): dashed outline, NO fill, + a
-      // single centred NW tag. (S-124: surfaces are not filled.)
+      // Polygon (and any other type): dashed outline, NO fill, + a single centred NW
+      // tag; a GeometryCollection also gets the point symbol, below. (S-124: surfaces
+      // are not filled.)
       out.push(bundle.dashedStroke);
       out.push(
         new Style({
