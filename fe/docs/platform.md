@@ -258,6 +258,13 @@ A failed refresh, or a 401 from the backend, calls `sessionExpired()`: the sessi
 **locally** and `authFallback` becomes `'expired'` — never a logout, per the rule above. Signals
 coalesce equal values, so a burst of 401s settling here is harmless.
 
+The one exception is a background read: a request whose `HttpContext` sets `BACKGROUND_READ`
+(`core/interceptors/background-read.ts`), a read the application makes on its own, such as the look
+for failed mails. It goes out with the current token only while that token is outside the 60 s
+leeway (`AuthService.currentFreshToken()`); otherwise it is refused in the browser with
+`BackgroundReadSkipped`. It never refreshes the token, and a 401 on it does not call
+`sessionExpired()`, so only an act of the user keeps a session alive or ends it.
+
 ### Interceptor scoping
 
 Both interceptors gate on `isNiordBackendRequest(url)`, which matches the URL against `apiBaseUrl`

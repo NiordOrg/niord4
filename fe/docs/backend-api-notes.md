@@ -33,10 +33,10 @@ Resolve every such href and every copied link through `ApiUrlResolver.absoluteAp
 Two interceptors decorate requests whose URL falls inside `apiBaseUrl` or the WMS URL
 (`ui-apps/admin/src/app/core/interceptors/`):
 
-| Interceptor              | Adds                      | Notes                                                                                                  |
-| ------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `authTokenInterceptor`   | `Authorization: Bearer …` | Only when authenticated; refreshes first. A 401 drops the session to guest locally — never a redirect. |
-| `niordDomainInterceptor` | `NiordDomain: <domainId>` | Only when a session domain is set.                                                                     |
+| Interceptor              | Adds                      | Notes                                                                                                                                                                                                                                        |
+| ------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authTokenInterceptor`   | `Authorization: Bearer …` | Only when authenticated; refreshes first. A 401 drops the session to guest locally — never a redirect. A background read neither refreshes nor drops the session ([platform.md → Token refresh and 401](platform.md#token-refresh-and-401)). |
+| `niordDomainInterceptor` | `NiordDomain: <domainId>` | Only when a session domain is set.                                                                                                                                                                                                           |
 
 Which URLs count as the backend, and why the match is `urlMatchesPrefix` rather than `startsWith`,
 is in [platform.md](platform.md) → _Interceptor scoping_.

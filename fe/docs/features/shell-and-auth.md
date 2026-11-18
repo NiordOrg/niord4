@@ -165,11 +165,11 @@ inline, so the Content-Security-Policy can stay at `script-src 'self'`.
 
 ### Degraded authentication — the rules that must not regress
 
-| Situation                                       | Behaviour                                                                                                                                                      |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keycloak.init()` fails or exceeds the 8 s cap  | Continue as an anonymous guest, `authFallback = 'unreachable'`, log to console. A late-settling init is left unawaited so it cannot clobber the guest session. |
-| Token refresh fails, or the backend answers 401 | `sessionExpired()` — drop to anonymous **locally**, `authFallback = 'expired'`.                                                                                |
-| Either of the above                             | **Never** `window.location.reload()` and **never** `keycloak.logout()`.                                                                                        |
+| Situation                                       | Behaviour                                                                                                                                                                                |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keycloak.init()` fails or exceeds the 8 s cap  | Continue as an anonymous guest, `authFallback = 'unreachable'`, log to console. A late-settling init is left unawaited so it cannot clobber the guest session.                           |
+| Token refresh fails, or the backend answers 401 | `sessionExpired()` — drop to anonymous **locally**, `authFallback = 'expired'`. Not for a background read ([platform.md → Token refresh and 401](../platform.md#token-refresh-and-401)). |
+| Either of the above                             | **Never** `window.location.reload()` and **never** `keycloak.logout()`.                                                                                                                  |
 
 Both redirect-based recoveries loop: reloading against a slow or unstable identity provider produces
 blank reload cycles (the third-party-cookie probe alone can block ~10 s), and a full logout redirect
@@ -186,7 +186,9 @@ no banner.
 
 Before every request to the Niord backend, `authTokenInterceptor` refreshes the access token if it
 would expire within 60 s, then attaches `Authorization: Bearer`. Anonymous sessions and non-Niord
-URLs short-circuit before any of that.
+URLs short-circuit before any of that. A background read is the exception: it is never refreshed
+for and never ends the session
+([platform.md → Token refresh and 401](../platform.md#token-refresh-and-401)).
 
 Role checks read an immutable **session snapshot** (`identity`, `realmRoles`, `resourceRoles`) rather
 than the live token, so the snapshot is re-captured after every successful refresh — otherwise a
