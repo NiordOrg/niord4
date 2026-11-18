@@ -1539,6 +1539,24 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   mail in status Error in the Mail Queue once a day, which does not mend the row; the test environment's
   row is replaced only by a sysadmin's release import with the overwrite ticked, on a human's say-so. Open.
 
+## SCRIPT11. A failed search in the firing-exercise script mails the list an empty schedule
+
+- **Location:** `niord/sample/archive/templates/mailinglist/fetch-firing-exercises.js:38`
+  (`messageService.search(searchParams)`), and the `templates/mailinglist/fetch-firing-exercises.js` rows of the
+  deployments, which hold their own copies; `niord/src/main/java/org/niord/core/message/MessageSearchService.java`
+  `search` (logs a failure and answers an empty result) beside `searchOrFail` (throws it).
+- **Description:** the script calls the lenient `search()`. When that search fails (a database error, say,
+  after the trigger's own `searchOrFail` succeeded), the script puts an empty `firingExercises` list into the mail
+  and `audio-broadcast.ftl` prints the heading for tomorrow's firing exercises with no exercise under it. The mail
+  is sent and the trigger is not postponed [read in the code; not run].
+- **Why it looks wrong:** a failure reaches the list's readers as "no firing exercises tomorrow", which they
+  cannot tell from a real empty schedule.
+- **Exposed by:** a review of 2026-11-18, which named the script in the javadoc of `MessageSearchService.search`.
+- **Severity:** Low — it needs a search that fails between the trigger's and the script's. Fix: call
+  `searchOrFail` in the script, so that a failed search fails the trigger and the scheduler postpones it. The
+  sample's file changes with its sample and test seed regenerated; a deployment's row changes by its own release
+  import.
+
 ## TZ1. Time-dependent ITs fail by exactly one hour when they run in the hour the clocks go back
 
 - **Location:** the timestamp columns of `niord/src/main/resources/db/changelog/changes/V001__baseline_schema.sql`,
