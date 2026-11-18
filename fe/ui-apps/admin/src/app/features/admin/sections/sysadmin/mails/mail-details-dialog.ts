@@ -15,7 +15,9 @@ import { MAIL_PREVIEW_CSS } from './mail-preview.css';
  * error row only when a send error exists. The date row shows the mail's send
  * date, the time it is or was due, labelled by status: Due while pending (after
  * a failed attempt, the next attempt), Sent once sent, Last attempt once it
- * failed for good; it is left out when the value is empty. The HTML body
+ * failed for good; it is left out when the value is empty, and for a mail in
+ * Error that was never attempted (a mailing-list trigger's failure record, made
+ * in Error with 0 attempts, whose send date is only its creation time). The HTML body
  * renders in the sandboxed-iframe primitive — full document fidelity, scripts
  * inert.
  */
@@ -45,14 +47,18 @@ export class MailDetailsDialog {
     () => `admin.mails.status.${this.mail()?.status.toLowerCase() ?? 'pending'}`,
   );
 
-  /** The label of the send date, which means "due at" whatever the status. */
+  /**
+   * The label of the send date, which means "due at" whatever the status; undefined when the row
+   * is left out: a mail in Error with no attempt is a failure record, which no one tried to send.
+   */
   protected readonly sendDateKey = computed(() => {
-    const status = this.mail()?.status as ScheduledMailStatus | undefined;
+    const mail = this.mail();
+    const status = mail?.status as ScheduledMailStatus | undefined;
     switch (status) {
       case 'SENT':
         return 'admin.mails.details.sent';
       case 'ERROR':
-        return 'admin.mails.details.lastAttempt';
+        return (mail?.attempts ?? 0) > 0 ? 'admin.mails.details.lastAttempt' : undefined;
       case 'PENDING':
       case undefined:
         return 'admin.mails.details.due';

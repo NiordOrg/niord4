@@ -87,6 +87,20 @@ describe('MailDetailsDialog', () => {
     expect(text).toContain('2026-06-11 10:00');
   });
 
+  it('leaves the date row out for a failure record, a mail in Error never attempted', async () => {
+    const { doc } = await setup({
+      ...baseMail,
+      status: 'ERROR',
+      attempts: 0,
+      lastError: 'No template',
+    });
+    const text = doc.body.textContent ?? '';
+    expect(text).not.toContain('admin.mails.details.lastAttempt');
+    expect(text).not.toContain('admin.mails.details.due');
+    expect(text).not.toContain('2026-06-11 10:00');
+    expect(text).toContain('No template');
+  });
+
   it('leaves the date row out when the mail has no send date', async () => {
     const { doc } = await setup(baseMail, '');
     const text = doc.body.textContent ?? '';
