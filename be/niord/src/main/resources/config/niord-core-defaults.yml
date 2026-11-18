@@ -119,6 +119,14 @@ niord:
   smtp:
     host: localhost
     port: 1025
+    # The time, in milliseconds, a connect, one read and one write to the SMTP server may each take. Without
+    # them a server that accepts the connection and then goes silent holds the mail queue for good. A
+    # deployment can set its own (NIORD_SMTP_CONNECTION_TIMEOUT_MS, NIORD_SMTP_TIMEOUT_MS,
+    # NIORD_SMTP_WRITE_TIMEOUT_MS); the -ms suffix keeps Kubernetes' service-link variables
+    # (NIORD_SMTP_PORT=tcp://...) from ever binding onto them.
+    connection-timeout-ms: 30000
+    timeout-ms: 60000
+    write-timeout-ms: 60000
   # The message-report PDFs (/rest/message-reports/report.pdf and /message/{id}.pdf) made at once for
   # anonymous callers, the public site's readers among them; a further anonymous request is answered
   # 503 until one of them is done. Signed-in and ticketed callers (the administration application,

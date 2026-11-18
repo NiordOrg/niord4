@@ -288,27 +288,6 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   `inlineStylesRemovesStyleBlock`).
 - **Severity:** Low — design asymmetry, may surprise callers.
 
-## MAIL7. An SMTP server that accepts and then stalls stops the mail queue for good, holding a scheduler thread and a database connection
-
-- **Location:** `niord/src/main/java/org/niord/core/mail/MailConfig.java` (`createMailSession` sets only
-  `mail.smtp.host` and `mail.smtp.port`), `MailService.sendScheduledMail` (sends inside its transaction, with the
-  mail's row locked `FOR UPDATE`) and `ScheduledMailService.sendPendingMails` (`@Scheduled`, without a transaction
-  of its own since 2026-11-16, waits in `invokeAll` with no time limit).
-- **Description:** Jakarta Mail's `mail.smtp.connectiontimeout`, `mail.smtp.timeout` and `mail.smtp.writetimeout`
-  default to no limit, and the session sets none. An SMTP server that accepts the connection and then stops
-  answering keeps `Transport.send` waiting for good. The sending task then holds its mail's row lock and a database
-  connection, and `sendPendingMails` waits in `invokeAll` on one of the scheduler's four threads
-  (`spring.task.scheduling.pool.size` in `niord-core-defaults.yml`). A cron job is not started again while its last
-  run is running, so no mail of the node is sent until it restarts, and nothing is logged; the other scheduled jobs
-  go on on the other three threads [read in the code; not run].
-- **Why it looks wrong:** the SECOM outbound client bounds every exchange by a deadline for exactly this reason
-  (F-X152 in the September 2026 security review, `SecomOutboundClient.requestTimeout`); the mail path has no such
-  bound. Its claim itself is sound: a second replica's sender waits on the row lock and then sees the mail SENT.
-- **Exposed by:** reading `ScheduledMailService` for the SECOM outbox claim (SECREV-2, 2026-11-12), whose design
-  document said the outbox claimed its rows the way the mail queue does.
-- **Severity:** Medium: rare (a relay that stalls rather than refuses), but when it happens every mail of the node
-  stops without an error. Fix: set the three timeouts on the session, and give `invokeAll` a time limit.
-
 ## REPOFILTER1 — `RepositoryServletFilter` catches a RESTEasy exception the MVC stack never throws
 
 - **Location:** `niord/src/main/java/org/niord/core/repo/RepositoryServletFilter.java:64-66` —
