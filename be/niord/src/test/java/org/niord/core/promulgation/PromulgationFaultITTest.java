@@ -270,6 +270,68 @@ class PromulgationFaultITTest extends ITTest {
     }
 
     /**
+     * Two messages tick a shared transmitter, and the first also ticks one of its own. Removing the first message's
+     * NAVTEX promulgation (the save after a type change that drops it), sending the second's without its id, and
+     * deleting the second message each remove only the promulgation's join rows: both transmitters stay, and the
+     * second message keeps its selection. With a remove cascade to the transmitters, the first save failed on the
+     * join table's foreign key (the shared one) or deleted the station (the other one), and the second failed with a
+     * transient-instance error.
+     */
+    @Test
+    void removingANavtexPromulgationKeepsTheTransmittersItTicked() {
+        String n = Long.toString(System.nanoTime(), 36);
+        String keep = "IT-TX-Keep-" + n;
+        String only = "IT-TX-Only-" + n;
+        createTransmitter(keep);
+        createTransmitter(only);
+
+        String uidA = Tx.requiringNew().call(() ->
+                messageService.createMessage(navtexMessage(null, null, n, List.of(keep, only))).getUid());
+        messageUids.add(uidA);
+        String uidB = Tx.requiringNew().call(() ->
+                messageService.createMessage(navtexMessage(null, null, n, List.of(keep))).getUid());
+        messageUids.add(uidB);
+        assertEquals(List.of(keep, only), storedTransmitters(uidA), "precondition: A ticks both");
+        Status statusA = Tx.requiringNew().call(() -> messageQueryService.findByUid(uidA).getStatus());
+        Status statusB = Tx.requiringNew().call(() -> messageQueryService.findByUid(uidB).getStatus());
+
+        // The save after a type change that dropped the NAVTEX promulgation: the update carries none
+        Message withoutNavtex = navtexMessage(uidA, statusA, n, List.of());
+        withoutNavtex.getPromulgations().clear();
+        Tx.requiringNew().run(() -> messageService.updateMessage(withoutNavtex));
+        assertNull(Tx.requiringNew().call(() -> messageQueryService.findByUid(uidA)
+                .promulgation(NavtexMessagePromulgation.class, NAVTEX)), "A's NAVTEX promulgation is removed");
+        assertTransmittersExist(keep, only);
+        assertEquals(List.of(keep), storedTransmitters(uidB), "B still ticks the shared transmitter");
+
+        // A NAVTEX promulgation sent without its id replaces the stored one
+        Message withoutId = navtexMessage(uidB, statusB, n, List.of(keep));
+        withoutId.promulgation(NavtexMessagePromulgation.class, NAVTEX).setId(null);
+        Tx.requiringNew().run(() -> messageService.updateMessage(withoutId));
+        assertEquals(List.of(keep), storedTransmitters(uidB), "B's new promulgation ticks the shared transmitter");
+        assertTransmittersExist(keep, only);
+
+        // A message removed outright, as the clean-up of a test does
+        Tx.requiringNew().run(() -> {
+            Message msg = messageQueryService.findByUid(uidB);
+            em.createNamedQuery("MessageHistory.findByMessageId", MessageHistory.class)
+                    .setParameter("messageId", msg.getId())
+                    .getResultList()
+                    .forEach(em::remove);
+            em.remove(msg);
+        });
+        messageUids.remove(uidB);
+        assertTransmittersExist(keep, only);
+    }
+
+    private void assertTransmittersExist(String... names) {
+        for (String name : names) {
+            assertNotNull(Tx.requiringNew().call(() -> navtexPromulgationService.findTransmitterByName(NAVTEX, name)),
+                    "the transmitter " + name + " still exists");
+        }
+    }
+
+    /**
      * A transmitter whose name differs from an existing one of the type only in case is refused with an
      * {@code IllegalStateException} (409), so no new twins are made. Where twins already exist, a name that matches
      * neither exactly is ambiguous and refused the same way, instead of being read as "no such transmitter".

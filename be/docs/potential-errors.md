@@ -2141,24 +2141,6 @@ new (F1, F2), every endpoint called once per role (D1, D2a, D2b) and the three b
 it fixed the entries above, and did not fix because they were outside the fault it was fixing. Each was read in the
 code by the developer or the checker of the cluster named; most were not run.
 
-## PROM17. Removing a NAVTEX promulgation removes the transmitters it selects
-
-- **Location:** `org/niord/core/promulgation/NavtexMessagePromulgation.java`, the field `transmitters`
-  (`@ManyToMany(cascade = CascadeType.REMOVE)`).
-- **Description:** a cascade REMOVE on a many-to-many to reference data removes the `NavtexTransmitter` rows a
-  promulgation selects whenever the promulgation is removed. Seen: `MessageService.updateMessage` with a NAVTEX
-  promulgation that carries no id, for a message that already has one, orphan-removes the stored promulgation,
-  cascades the removal to its transmitters, and the flush fails with `TransientPropertyValueException`
-  ("Persistent instance of NavtexMessagePromulgation references an unsaved transient instance of
-  NavtexTransmitter"). The same cascade would delete transmitters, or fail on the join table's foreign key,
-  wherever a NAVTEX promulgation is removed: a message deleted with `em.remove`, or a strict load that drops a
-  promulgation of an inactive type before a save [read in the code; only the first was run].
-- **Why it looks wrong:** a message's promulgation does not own the station list; removing one must never remove a
-  transmitter that every other message selects too.
-- **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster A15 (seen in its tests, before and after its fix).
-- **Severity:** Low today (the editor sends the stored promulgation's id), High if a path that removes a NAVTEX
-  promulgation is reached. Fix: no cascade on a many-to-many to reference data.
-
 ## PROM18. A NAVTEX transmitter or SafetyNET area write for a name or type that does not exist answers 500
 
 - **Location:** `org/niord/core/promulgation/NavtexPromulgationService.java` `updateTransmitter` and
