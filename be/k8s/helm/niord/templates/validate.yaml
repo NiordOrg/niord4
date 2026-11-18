@@ -260,17 +260,25 @@ and, for TLS, fail every mail.
 {{- /*
 app.settings (values.yaml): settings this environment pins, each rendered as an environment variable
 named like the setting key. A setting key starts with a lower-case letter, so no key can take the
-name of a variable the chart sets itself (SPRING_*, NIORD_*, JAVA_TOOL_OPTIONS). authServerUrl is
-the chart's own (the in-cluster Keycloak), a key also set in secom.settings would render two
-variables of one name, and a password, secret or token reaches the app from a Secret, never from
-values, which an environment keeps in its repository.
+name of a variable the chart sets itself (SPRING_*, NIORD_*, JAVA_TOOL_OPTIONS). It has no dot: a
+dotted variable name is also a Spring property name, which Spring looks up before the upper-case
+variable, so spring.datasource.username would outrank the Secret's and server.port the ConfigMap's;
+and the one dotted setting, niord.home, is the chart's (NIORD_HOME, the app's volume). For the same
+reason no key starts with the first part of a Spring property the app is configured by, then an
+underscore (spring_datasource_url reads as spring.datasource.url). authServerUrl is the chart's own
+(the in-cluster Keycloak), a key also set in secom.settings would render two variables of one name,
+and a password, secret or token reaches the app from a Secret, never from values, which an
+environment keeps in its repository.
 */ -}}
 {{- if not (or (kindIs "invalid" .Values.app.settings) (kindIs "map" .Values.app.settings)) }}
 {{- fail "app.settings is not a map: it maps setting keys to their values, e.g. baseUri: https://niord.example.org" }}
 {{- end }}
 {{- range $key, $value := (.Values.app.settings | default dict) }}
-{{- if not (regexMatch "^[a-z][A-Za-z0-9._-]*$" $key) }}
-{{- fail (printf "app.settings.%s is not a setting key: a key of the Settings page starts with a lower-case letter, followed by letters, digits, '.', '_' or '-'" $key) }}
+{{- if not (regexMatch "^[a-z][A-Za-z0-9_-]*$" $key) }}
+{{- fail (printf "app.settings.%s is not a setting key that can be pinned: it starts with a lower-case letter, followed by letters, digits, '_' or '-'. A dotted name is a Spring property, which the chart's ConfigMap and Secrets set, and niord.home is the chart's (NIORD_HOME)" $key) }}
+{{- end }}
+{{- if regexMatch "^(spring|server|management|logging|niord)_" $key }}
+{{- fail (printf "app.settings.%s reads as a Spring property (an underscore stands for a dot), which the chart's ConfigMap and Secrets set: it is not a setting of the Settings page" $key) }}
 {{- end }}
 {{- if regexMatch "(?i)password|secret|token" $key }}
 {{- fail (printf "app.settings.%s looks like a secret: a secret reaches the app from a Secret, never from values" $key) }}

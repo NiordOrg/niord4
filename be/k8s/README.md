@@ -487,8 +487,11 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   `mailValidRecipients`, `mailSender`. A value is a text, a number or `true`/`false`, and a whole
   number renders as an integer (`1000000`, not `1e+06`); anything else fails the render. An empty
   value is not rendered. The render refuses a key
-  that names a password, secret or token, a key that does not start with a lower-case letter,
-  `authServerUrl` (the chart sets it) and a key also set in `secom.settings`.
+  that names a password, secret or token, a key that does not start with a lower-case letter, a
+  key with a dot or one starting `spring_`, `server_`, `management_`, `logging_` or `niord_`
+  (Spring reads such a variable as a property and lets it outrank the chart's, and `niord.home`
+  is the chart's `NIORD_HOME`), `authServerUrl` (the chart sets it) and a key also set in
+  `secom.settings`.
 - **Map images and their tiles** — the backend draws a message's map image itself, on
   OpenStreetMap tiles it fetches from the host in the `osmUrl` setting (by default
   `https://tile.openstreetmap.org`), so the app pod needs egress to that host over https. Where
