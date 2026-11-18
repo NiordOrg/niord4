@@ -662,7 +662,8 @@ files beside it, `legal/`). The check fails a key the schema does not name or wh
 differ, a required key or file missing, a UI language of the application without its
 `branding/<lang>.json` once any of them has one (or the schema requires a key: then every UI
 language needs it), a key set without the key the schema says it `requires` (the footer's logo, `main.footer.links.center.imageSrc`, without its `imageAlt`; its link, `url`, without
-its `ariaLabel`), a footer label (`footer.disclaimer`, `footer.cookies`) set without its dialog's
+its `ariaLabel`; the accessibility statement's label, `footer.accessibility`, without its address,
+`footer.accessibilityLink`, and the reverse), a footer label (`footer.disclaimer`, `footer.cookies`) set without its dialog's
 title or with its document shipped in no branding language, markup that differs from the country's English branding (or
 its default language's where `en` is not a UI language) — an `href` may differ only in its path, on
 the same `https:` host — and any file that is not data: images are PNG, WebP or ICO by their bytes, or

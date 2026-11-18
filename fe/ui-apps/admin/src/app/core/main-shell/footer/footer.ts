@@ -6,7 +6,8 @@ import { LanguageService } from '../services/language.service';
 import { LEGAL_DOCUMENTS, LegalDocument, LegalDocumentDialog } from './legal-document-dialog';
 
 /**
- * The country's footer: the authority's copyright link, its logo and its legal documents. Every
+ * The country's footer: the authority's copyright link, its logo, its legal documents and the link
+ * to the administration app's accessibility statement. Every
  * item is the country's branding and shows only when the branding of the active language sets
  * it; a build without branding (the base product's own) renders no footer row at all.
  *
@@ -33,8 +34,12 @@ export class Footer {
   protected readonly documents = computed(() =>
     LEGAL_DOCUMENTS.filter((id) => this.isBranded(`footer.${id}`)),
   );
+  /** The statement link shows only with both its label and its address branded. */
+  protected readonly accessibility = computed(
+    () => this.isBranded('footer.accessibility') && this.isBranded('footer.accessibilityLink'),
+  );
   protected readonly shown = computed(
-    () => this.copyright() || this.logo() || this.documents().length > 0,
+    () => this.copyright() || this.logo() || this.accessibility() || this.documents().length > 0,
   );
 
   /** The legal document whose dialog is open or was last open. */

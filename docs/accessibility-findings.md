@@ -114,6 +114,10 @@ A covered website needs its own accessibility statement, the tilgængelighedserk
 agency's WAS-Tool. A self-evaluation is an accepted basis, so an external audit is not mandatory. The
 statement must describe how the evaluation was done.
 
+Each application has a place to link its own statement: the public site from `accessibilityStatement`
+in its country configuration, the administration app's footer from the branding keys
+`footer.accessibility` and `footer.accessibilityLink`. Both stay empty until a country sets them.
+
 ## 2. Current state of the frontend
 
 ### Foundation

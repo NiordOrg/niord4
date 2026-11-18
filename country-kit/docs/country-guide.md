@@ -265,6 +265,12 @@ the copyright line, and beside it each item whose label your branding sets:
 With no label set, it shows the copyright line only. A footer of your own is only for more than this
 ([Your own footer](country-guide-in-depth.md#your-own-footer)).
 
+The administration app's footer links the administration app's own accessibility statement when
+`fe/admin/assets/branding/<lang>.json` sets both `footer.accessibility`, the link's label, and
+`footer.accessibilityLink`, the statement's https: address. It is a statement of its own, not the
+public site's, and its address needs no entry in `fe/build-urls-allowed.json`: a branding value is
+not part of the built code that check reads.
+
 ### Logos and icons
 
 The branding schema requires the public site's `fe/info/assets/branding/favicon.png` (32×32 px) and
@@ -422,7 +428,8 @@ no task: review, merge, deploy. See
 - [ ] `info.config.ts` names your backend's public hosts in `backendHosts`
       (`.niord/base/ui-apps/info/src/app/niord-info.config.ts` has the fields), and each public host
       has an accessibility statement, its address in `accessibilityStatement` and in
-      `fe/build-urls-allowed.json`, scoped to `info`.
+      `fe/build-urls-allowed.json`, scoped to `info`; and the administration app's own statement,
+      when it has one, in `footer.accessibilityLink` of `fe/admin/assets/branding/<lang>.json`.
 - [ ] Every domain that owns a message series has its real time zone, not UTC by accident, and the
       public site's `timeZone` is your readers' zone
       ([The public site's time zone](country-guide-in-depth.md#the-public-sites-time-zone)).

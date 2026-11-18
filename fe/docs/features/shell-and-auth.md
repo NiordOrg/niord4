@@ -237,8 +237,10 @@ burger, because it is the one piece of chrome that says which data set is being 
 ## Footer
 
 The footer is the country's branding and nothing else: a copyright link (`footer.copyright`,
-`footer.link`), a centre logo (`main.footer.links.center.*`, its image path included) and one button
-per legal document (`footer.disclaimer`, `footer.cookies`), each shown only when the country's
+`footer.link`), a centre logo (`main.footer.links.center.*`, its image path included), a link to the
+administration app's own accessibility statement (`footer.accessibility`, `footer.accessibilityLink`,
+shown only with both set) and one button per legal document (`footer.disclaimer`, `footer.cookies`),
+each shown only when the country's
 branding file `assets/branding/<lang>.json` sets its key. `BrandingService` records which keys the
 branding layer set; the footer reads that, not the merged translation, because the backend's web
 dictionary carries footer keys of its own that reach every build as Dictionary overrides. With

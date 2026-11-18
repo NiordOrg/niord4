@@ -226,6 +226,16 @@ describe('branding', () => {
       (files) =>
         rewrite(files, 'branding/en.json', (b) => ({
           ...b,
+          'footer.accessibility': 'Accessibility statement',
+          'footer.accessibilityLink': 'http://statement.example/',
+        })),
+      'footer.accessibilityLink is not an https: URL',
+    );
+    assertRejected(
+      ADMIN,
+      (files) =>
+        rewrite(files, 'branding/en.json', (b) => ({
+          ...b,
           'main.footer.links.center.imageSrc': 'assets/img/niord.png',
         })),
       'names assets/img/niord.png, which is not a brandable file it ships',
@@ -345,6 +355,34 @@ describe('branding', () => {
       rewrite(files, 'branding/en.json', named);
       rewrite(files, 'branding/zz.json', named);
     });
+    assert.deepEqual(errors, []);
+  });
+
+  it('rejects the accessibility statement’s label without its address, and the reverse', () => {
+    assertRejected(
+      ADMIN,
+      (files) =>
+        rewrite(files, 'branding/en.json', (b) => ({
+          ...b,
+          'footer.accessibility': 'Accessibility statement',
+        })),
+      'branding/en.json sets footer.accessibility and not footer.accessibilityLink, which it requires',
+    );
+    assertRejected(
+      ADMIN,
+      (files) =>
+        rewrite(files, 'branding/en.json', (b) => ({
+          ...b,
+          'footer.accessibilityLink': 'https://statement.example/',
+        })),
+      'branding/en.json sets footer.accessibilityLink and not footer.accessibility, which it requires',
+    );
+    const stated = (b) => ({
+      ...b,
+      'footer.accessibility': 'Accessibility statement',
+      'footer.accessibilityLink': 'https://statement.example/',
+    });
+    const { errors } = checkOf(ADMIN, (files) => rewrite(files, 'branding/en.json', stated));
     assert.deepEqual(errors, []);
   });
 
