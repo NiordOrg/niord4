@@ -1,4 +1,4 @@
-import { Component, computed, inject, type OnDestroy } from '@angular/core';
+import { Component, DestroyRef, computed, inject, type OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -83,8 +83,8 @@ export class EditorShell implements OnDestroy {
 
   constructor() {
     // A comment's mail is sent from here: an editor who never opens the messages area is told
-    // of a mail that could not be sent, too.
-    inject(MyMailsNoticeService).start();
+    // of a mail that could not be sent, too, while the editor is open.
+    inject(MyMailsNoticeService).start(inject(DestroyRef));
   }
 
   protected onBeforeUnload(event: BeforeUnloadEvent): void {

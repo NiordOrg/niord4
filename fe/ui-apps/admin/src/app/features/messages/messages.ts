@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { MessagesFilterPanel } from './components/messages-filter-panel/messages-filter-panel';
@@ -36,7 +36,8 @@ export class Messages {
   constructor() {
     // Force instantiation so URL ↔ filter facade subscriptions register at shell mount.
     inject(MessagesFilterUrlSync);
-    // Tells the user of a mail they sent that could not be sent (once per page load).
-    inject(MyMailsNoticeService).start();
+    // Tells the user of a mail they sent that could not be sent (once per page load), while the
+    // area is open.
+    inject(MyMailsNoticeService).start(inject(DestroyRef));
   }
 }

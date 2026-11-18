@@ -4,6 +4,7 @@ import { catchError, from, switchMap, throwError } from 'rxjs';
 
 import { AuthService } from '../auth/services/auth.service';
 import { isNiordBackendRequest } from './backend-prefixes';
+import { BACKGROUND_READ, BackgroundReadSkipped } from './background-read';
 
 export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   if (!isNiordBackendRequest(req.url)) {
@@ -13,6 +14,15 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   if (!auth.isAuthenticated()) {
     return next(req);
+  }
+
+  // A read the application makes on its own goes with the token as it is, or not at all: it
+  // neither refreshes the token nor ends the session (see BACKGROUND_READ).
+  if (req.context.get(BACKGROUND_READ)) {
+    const token = auth.currentFreshToken();
+    return token
+      ? next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }))
+      : throwError(() => new BackgroundReadSkipped());
   }
 
   // ensureFreshToken() handles its own refresh-failure fallback internally; here we

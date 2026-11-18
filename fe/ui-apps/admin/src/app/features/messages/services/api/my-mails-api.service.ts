@@ -1,8 +1,9 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
+import { BACKGROUND_READ } from '../../../../core/interceptors/background-read';
 
 export type MyMailStatus = 'PENDING' | 'SENT' | 'ERROR';
 
@@ -49,10 +50,17 @@ export class MyMailsApiService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
 
-  mine(days: number): Observable<readonly MyMail[]> {
+  /**
+   * `background`: the read is made by the application on its own (the failed-mail notice), so it
+   * neither refreshes the session's token nor ends the session (see `BACKGROUND_READ`).
+   */
+  mine(days: number, options: { background?: boolean } = {}): Observable<readonly MyMail[]> {
     const params = new HttpParams().set('days', days);
+    const context = new HttpContext().set(BACKGROUND_READ, options.background ?? false);
     return this.http
-      .get<readonly MyMailVo[] | null>(`${this.apiBaseUrl}/scheduled-mails/mine`, { params })
+      .get<
+        readonly MyMailVo[] | null
+      >(`${this.apiBaseUrl}/scheduled-mails/mine`, { params, context })
       .pipe(map((list) => (list ?? []).map(fromMyMailVo)));
   }
 }

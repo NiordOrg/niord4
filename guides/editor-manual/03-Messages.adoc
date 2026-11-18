@@ -509,7 +509,9 @@ recipients and its status:
   status; reach the recipients another way.
 
 While you work in Messages or in the editor, Niord looks at your mails every five minutes and shows a
-warning, which stays until you close it, when one of them could not be sent.
+warning, which stays until you close it, when one of them could not be sent. It does not look while
+the browser tab is hidden or while you are elsewhere in Niord, and looking does not keep you signed
+in.
 
 [#add-selection-to-tag-action]
 ==== Add Selection to Tag Action

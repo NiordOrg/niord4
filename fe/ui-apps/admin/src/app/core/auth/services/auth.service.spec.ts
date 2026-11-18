@@ -14,6 +14,7 @@ interface FakeKeycloak {
   logout: ReturnType<typeof vi.fn>;
   accountManagement: ReturnType<typeof vi.fn>;
   updateToken: ReturnType<typeof vi.fn>;
+  isTokenExpired: ReturnType<typeof vi.fn>;
 }
 
 function makeKeycloakStub(overrides: Partial<FakeKeycloak> = {}): FakeKeycloak {
@@ -28,6 +29,7 @@ function makeKeycloakStub(overrides: Partial<FakeKeycloak> = {}): FakeKeycloak {
     logout: vi.fn().mockResolvedValue(undefined),
     accountManagement: vi.fn().mockResolvedValue(undefined),
     updateToken: vi.fn().mockResolvedValue(true),
+    isTokenExpired: vi.fn(() => false),
     ...overrides,
   };
 }
@@ -192,6 +194,36 @@ describe('AuthService', () => {
       expect(keycloak.logout).not.toHaveBeenCalled();
       expect(auth.isAuthenticated()).toBe(false);
       expect(auth.authFallback()).toBe('expired');
+    });
+  });
+
+  describe('currentFreshToken', () => {
+    it('gives the token while it stays valid for the leeway, without refreshing it', () => {
+      const keycloak = makeKeycloakStub({ token: 'tkn' });
+      const auth = configure(keycloak);
+      expect(auth.currentFreshToken()).toBe('tkn');
+      expect(keycloak.isTokenExpired).toHaveBeenCalledWith(60);
+      expect(keycloak.updateToken).not.toHaveBeenCalled();
+    });
+
+    it('gives nothing, and leaves the session alone, when the token would need a refresh', () => {
+      const keycloak = makeKeycloakStub({ token: 'tkn', isTokenExpired: vi.fn(() => true) });
+      const auth = configure(keycloak);
+      expect(auth.currentFreshToken()).toBeUndefined();
+      expect(keycloak.updateToken).not.toHaveBeenCalled();
+      expect(auth.authFallback()).toBeUndefined();
+    });
+
+    it('gives nothing without a token, or when the adapter cannot judge it', () => {
+      expect(configure(makeKeycloakStub()).currentFreshToken()).toBeUndefined();
+      TestBed.resetTestingModule();
+      const throwing = makeKeycloakStub({
+        token: 'tkn',
+        isTokenExpired: vi.fn(() => {
+          throw new Error('Not authenticated');
+        }),
+      });
+      expect(configure(throwing).currentFreshToken()).toBeUndefined();
     });
   });
 

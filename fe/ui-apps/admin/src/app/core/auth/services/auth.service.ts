@@ -134,6 +134,22 @@ export class AuthService {
   }
 
   /**
+   * The current token while it stays valid for the refresh leeway, without refreshing it, or
+   * undefined. For a read the application makes on its own (see `BACKGROUND_READ`): only an act of
+   * the user may refresh the token, so an idle session still ends at the realm's idle timeout.
+   */
+  currentFreshToken(): string | undefined {
+    const token = this.keycloak.token;
+    if (!token) return undefined;
+    try {
+      return this.keycloak.isTokenExpired(TOKEN_REFRESH_LEEWAY_SECONDS) ? undefined : token;
+    } catch {
+      // isTokenExpired throws when the adapter holds no parsed token.
+      return undefined;
+    }
+  }
+
+  /**
    * Whether the token carries the realm role. No Niord role check reads it: the backend grants
    * nothing from realm roles, so `AuthFacade` decides on client roles alone.
    */

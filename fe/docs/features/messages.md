@@ -502,10 +502,15 @@ subject, the recipients and the status as the sender reads it — _Sent_, _Waiti
 tried), _Retrying_ (pending after a failed attempt) or _Not sent_ (`ERROR`, after the last retry), the
 last two with the mail server's last error. The backend matches the mails on the sender address it
 recorded when the mail was queued; the mailing lists' mails carry none and are listed for nobody.
-`MyMailsNoticeService`, started by the messages and editor shells, looks at the user's mails of the
-last day at once and every five minutes and raises one warning that stays until it is closed for the
-mails that ended in `ERROR` and were not yet announced in this page load; it keeps only their ids, and
-a look that fails is silent. With the `mailValidRecipients` setting at `LOG` the backend only logs a
+`MyMailsNoticeService`, attached by the messages and editor shells while they are mounted, looks at
+the user's mails of the last day at most every five minutes, only while a shell is mounted and the
+tab is shown, and raises one warning that stays until it is closed for the mails that ended in
+`ERROR` and were not yet announced in this page load; it keeps only their ids, and a look that fails
+is silent. Each look is a background read (`BACKGROUND_READ` in `core/interceptors/`): the
+interceptor sends it only with a token that needs no refresh, never refreshes the token for it and
+never drops the session to guest on its failure, so an idle tab still ends its session at the
+realm's idle timeout; a look the token is too old for is tried again every 30 seconds until the
+user's own work has refreshed the token. With the `mailValidRecipients` setting at `LOG` the backend only logs a
 mail and still marks it sent, so the dialog then says _Sent_ for a mail that left nothing.
 
 **Export** produces a ZIP: ticket, plus either the filter string or `tag=<temporaryTagId>` for the
