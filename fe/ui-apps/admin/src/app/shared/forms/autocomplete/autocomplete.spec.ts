@@ -138,6 +138,24 @@ describe('Autocomplete (app-autocomplete primitive)', () => {
     expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([1]);
   });
 
+  it('Backspace in the empty box removes the last chip, the keyboard way to remove a value', async () => {
+    const fixture = setup();
+    fixture.componentInstance.value.set([A, B]);
+    await fixture.whenStable();
+    const el = input(fixture.nativeElement);
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([1]);
+    expect(fixture.nativeElement.querySelectorAll('.ac-chip').length).toBe(1);
+
+    // With text in the box, Backspace edits the text and leaves the chips alone.
+    await type(fixture.nativeElement, 'b');
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([1]);
+  });
+
   it('the clear affordance emits (clear)', async () => {
     const fixture = setup();
     fixture.componentInstance.value.set([A]);

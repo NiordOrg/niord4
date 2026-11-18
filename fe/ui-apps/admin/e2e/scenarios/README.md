@@ -110,8 +110,8 @@ the end:
 
 - `nw-warning.spec.ts` leaves a contact `e2e-<marker>@example.org` and a mailing list
   `e2e-nw-<marker>`, switched off at the end; its warning, cancelled, and the cancellation warning
-  the backend published for it, which stays in force (no screen can list it yet); their mails in
-  MailHog.
+  the backend published for it, which stays in force (the messages list shows it with the Type
+  filter's _Cancellation warnings_ chip); their mails in MailHog.
 - `nm-notice.spec.ts` leaves its notice, published, with its attachments in the repository. It
   makes nothing else: the notices it refers to, the areas, the category and the charts are the
   sample's, and its files are made in memory.
@@ -124,8 +124,10 @@ the end:
   after), clears those days before it starts and when it ends, and updates the exercises, so the
   run's last warning is cancelled. Its warnings stay, cancelled, as the run's record.
 - `keyboard-publish.spec.ts` leaves its warning, titled `<marker> keyboard walk` and with the vicinity
-  `<marker> keyboard harbour`, cancelled at the end through the admin API, as the run's record. It
-  makes nothing else: the series, the area and the category are the sample's.
+  `<marker> keyboard harbour`, cancelled at the end through the admin API, as the run's record, and
+  the cancellation warning the backend publishes for it in the sample's auto-numbered NW series,
+  which stays in force, as `nw-warning.spec.ts`'s does; so does the one for each earlier walk's
+  warning its set-up cancels. The series, the area and the category are the sample's.
 - `weekly-publication.spec.ts` leaves two published notices to mariners titled with the marker
   (one dated a day back, into the released week), and a weekly series `E2E weekly <marker>`,
   retired at the end. Its first issue stays published and public, with its document at its link

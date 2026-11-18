@@ -25,7 +25,8 @@ import { newRunMarker, RUN_MARKER } from './support/run-id';
  *
  * The warning's vicinity carries the run's marker, and the end cancels it; a crashed run's warning
  * is cancelled by the next run of nw-warning.spec.ts, whose set-up cancels every warning in force
- * whose vicinity carries a marker.
+ * whose vicinity carries a marker. Each cancellation goes through the backend's cancel, which
+ * publishes a cancellation warning in the auto-numbered NW series; that one stays in force.
  */
 
 // The slice of Node's globals the file needs: the e2e tsconfig loads no Node types.
@@ -237,7 +238,7 @@ describeScenario('a navigational warning written and published from the keyboard
     if (!messageId) return;
     const baseURL = String(testInfo.project.use.baseURL ?? '');
     // The walk's warning is cancelled, so it does not stay in force on the sample; it stays as the
-    // run's record.
+    // run's record. The cancellation warning the backend publishes for it does stay in force.
     await asTestUser(playwright, baseURL, 'sysadmin', DOMAIN, async (request) => {
       const path = `/rest/messages/message/${messageId}`;
       const message = (await (await request.get(path)).json()) as MessageVo;
@@ -393,7 +394,8 @@ describeScenario('a navigational warning written and published from the keyboard
           timeout: 2_000,
         });
       });
-      // Backspace in the empty input is the keyboard's way to remove the last chip: the area stays.
+      // The remove button did nothing, so the area is still there. (Backspace in the empty box, the
+      // keyboard's way left to remove the last chip, is proved by the autocomplete's unit spec.)
       await tabTo(page, 'combobox', /^select areas$/i, { max: 2 });
       await expect(field).toContainText(/baltic/i);
 
