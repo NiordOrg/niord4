@@ -63,6 +63,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
 import org.niord.core.NiordApp;
 import org.niord.core.service.BaseService;
 import org.niord.core.settings.annotation.Setting;
@@ -387,6 +388,20 @@ public class MessageLuceneIndex extends BaseService {
      * Creates and returns a Lucene writer
      */
     private IndexWriter getNewWriter() throws IOException {
+        try {
+            return openWriter();
+        } catch (IOException | RuntimeException ex) {
+            log.error("Failed to create message Lucene Index in folder " + indexFolder, ex);
+            throw ex;
+        }
+    }
+
+    /**
+     * Opens a writer on the index folder, and logs nothing: when it fails, the folder's directory is closed, so
+     * that the folder's files can be removed (on Windows too) by a caller that recovers. A failure to close it is
+     * added to the exception as a suppressed one, so that it does not hide why the writer could not be opened.
+     */
+    private IndexWriter openWriter() throws IOException {
 
         IndexWriterConfig iwc = new IndexWriterConfig(getAnalyzer());
         // Add new documents to an existing index:
@@ -396,9 +411,11 @@ public class MessageLuceneIndex extends BaseService {
         try {
             return new IndexWriter(dir, iwc);
         } catch (IOException | RuntimeException ex) {
-            // Closed, so that the folder's files can be removed (on Windows too) by a caller that recovers
-            dir.close();
-            log.error("Failed to create message Lucene Index in folder " + indexFolder, ex);
+            try {
+                dir.close();
+            } catch (IOException closeFailure) {
+                ex.addSuppressed(closeFailure);
+            }
             throw ex;
         }
     }
@@ -406,13 +423,17 @@ public class MessageLuceneIndex extends BaseService {
     /**
      * Opens a writer on the index folder for {@link #deleteIndex()}. An index this Lucene version cannot open
      * (written by another version, whose codec it does not know, or damaged) is exactly what deleting the index
-     * should cure: its files are removed and an empty index is opened instead. The index is a cache, rebuilt from
-     * the database. The caller holds the folder's {@link #writerLock(Path) writer lock}, so no other writer of this
-     * JVM is open on the folder.
+     * should cure: its files are removed, with one WARN that names the folder, and an empty index is opened instead.
+     * The index is a cache, rebuilt from the database. The caller holds the folder's {@link #writerLock(Path) writer
+     * lock}, so no other writer of this JVM is open on the folder; a writer of another process (two backends on one
+     * Niord home) holds the folder's own lock, and its index is in use, not unreadable: that failure is passed on,
+     * and nothing is removed.
      */
     private IndexWriter openWriterDiscardingUnreadable() throws IOException {
         try {
-            return getNewWriter();
+            return openWriter();
+        } catch (LockObtainFailedException e) {
+            throw e;
         } catch (IOException | IllegalArgumentException e) {
             log.warn("The message index in {} cannot be opened ({}); removing its files, the index is rebuilt from "
                     + "the database", indexFolder, e.toString());

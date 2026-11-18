@@ -23,6 +23,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -119,6 +120,31 @@ class MessageLuceneIndexUnreadableIndexTest {
         try (FSDirectory directory = FSDirectory.open(folder);
              DirectoryReader reader = DirectoryReader.open(directory)) {
             assertEquals(0, reader.numDocs(), "the folder now holds an empty index of this version");
+        }
+    }
+
+    /**
+     * A folder whose lock another writer holds (as a second backend on the same Niord home would) holds an index in
+     * use, not an unreadable one: the recreate fails on the lock and removes nothing.
+     */
+    @Test
+    void anIndexAnotherWriterHoldsIsLeftAsItIs() throws Exception {
+        Path folder = tmp.resolve("message-index");
+        try (FSDirectory directory = FSDirectory.open(folder);
+             IndexWriter other = new IndexWriter(directory, new IndexWriterConfig())) {
+            Document doc = new Document();
+            doc.add(new StringField("id", "1", Field.Store.YES));
+            other.addDocument(doc);
+            other.commit();
+
+            MessageLuceneIndex index = index(folder, message(14, "zzlocked"));
+
+            assertThrows(LockObtainFailedException.class, index::recreateIndex);
+        }
+
+        try (FSDirectory directory = FSDirectory.open(folder);
+             DirectoryReader reader = DirectoryReader.open(directory)) {
+            assertEquals(1, reader.numDocs(), "the other writer's index is still there");
         }
     }
 
