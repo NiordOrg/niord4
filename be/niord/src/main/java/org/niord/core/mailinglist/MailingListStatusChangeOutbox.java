@@ -41,8 +41,10 @@ import java.util.Optional;
  * when the topic prompts it, once a minute and once at start.
  * <p>
  * Delivery is at least once: a node stopped after some of a row's triggers made their mails, and before the row was
- * deleted, makes those mails again when the row's lease runs out. A duplicate mail is rare (a node stopped in the
- * middle of a status change's triggers) and far safer for a navigational warning than a lost one.
+ * deleted, makes those mails again when the row's lease runs out; so does a failure to delete the row after its
+ * triggers ran ({@link #complete}, the database lost for a moment). A duplicate mail is rare and far safer for a
+ * navigational warning than a lost one. A row that keeps failing has no limit on its attempts: it is tried again at
+ * the end of every lease.
  * <p>
  * Native SQL only, like {@code DefaultsLedger}: the table has no entity, and its identity id draws on no shared
  * sequence. It depends on nothing in {@code org.niord.core.message}, so {@code MessageService} uses it without a cycle.

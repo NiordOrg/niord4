@@ -51,6 +51,11 @@ import jakarta.jms.ConnectionFactory;
  * mailed. One drain runs at a time on a node; nodes sharing a database take different rows (see
  * {@link MailingListStatusChangeOutbox#claimNextDue}).
  * <p>
+ * The order holds while no row fails. A row whose triggers could not be looked up waits for its lease to end, and the
+ * next passes take the rows after it meanwhile: a later status change of the same message (CANCELLED after PUBLISHED)
+ * may then be mailed before it. Such a row is tried again every lease, with an ERROR each time, until it succeeds or
+ * an administrator deletes it; its {@code attempts} and {@code "lastError"} show how long it has failed.
+ * <p>
  * The topic is polled on a single-thread executor, started when the application is ready and stopped when the context
  * closes ({@link JmsTopicLoop}).
  */
@@ -162,7 +167,9 @@ public class MailingListMessageListener implements Runnable {
      * Takes the due rows of the status-change outbox one at a time, oldest first, runs the status-change triggers of
      * each ({@link #checkStatusChangeMailingListExecution}, where a failing trigger leaves an ERROR record in the Mail
      * Queue) and deletes it. A row whose triggers cannot even be looked up (the database is down) keeps its error and is
-     * tried again when its lease runs out, and the pass stops there. One drain runs at a time on this node.
+     * tried again when its lease runs out, and the pass stops there. A row whose triggers ran but whose delete fails
+     * (the database lost for a moment) is taken again when its lease runs out, and its triggers' mails are made again.
+     * One drain runs at a time on this node.
      *
      * @return the number of status changes whose triggers were run
      */
