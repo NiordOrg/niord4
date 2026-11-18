@@ -385,6 +385,26 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   run through the image.
 - **Severity:** Low — a file name with `;` is rare; to be weighed by the count at the first restore.
 
+## REPO7 — With vips, the thumbnail of an image whose name holds `%s` is written under another name
+
+- **Location:** `niord/src/main/java/org/niord/core/repo/ThumbnailService.java`, `createThumbnailUsingVips` (the
+  thumbnail's path handed to `vipsthumbnail` as `-o`), with the cached thumbnail's name from
+  `RepoCache.thumbnailName` (`<name>_thumb_<size>_<hash>.<ext>`, the upload's own name kept).
+- **Description:** `vipsthumbnail` reads its `-o` argument as a format, in which `%s` (and `%<n>s`) stands for the
+  input file's base name. The thumbnail's name keeps the upload's name, so for an image named, say, `50%sale.png`
+  the format names another file: the input is the spooled copy of the row, under a temporary name, so vips writes
+  `50<spool name>ale_thumb_64_<hash>.png` into the cache folder. `Files.setLastModifiedTime(thumbFile)` then fails,
+  the request falls back to the file type's icon, and the stray file stays. Since the request firewall accepts
+  `%25` on `/rest/repo/thumb/**`, such a name can be asked for, also anonymously for a published message's image.
+- **Why it looks wrong:** the thumbnail is never served, and every request for it leaves one more file on the
+  cache volume.
+- **Exposed by:** reading the vips path while the firewall was opened for names holding `%`, 2026-11-18; not run.
+  It applies only where the `vipsPath` setting is set: it is unset by default, and no image installs libvips.
+- **Severity:** Low — vips is off unless a deployment turns it on, and such a name is rare. Fix, once the vips
+  behaviour is checked on a machine with libvips: let vips write to a neutral temporary name in the cache folder
+  (`Files.createTempFile(folder, "thumb-", "." + ext)`) and move that to the thumbnail's name, or draw a name
+  holding `%` with the Java path.
+
 ## INT4 — `NiordIntegrationExecutionService.processNiordIntegration` still swallows a failed re-import and shares one transaction per target series
 
 - **Location:** `niord/src/main/java/org/niord/core/integration/NiordIntegrationExecutionService.java`,
