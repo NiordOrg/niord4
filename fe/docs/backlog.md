@@ -135,12 +135,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - No route has an `<h1>`. The headings start at `<h4>` — the area and category headings the site has always
   shown — so a screen reader finds no page title in the document. Giving each route one means either a new visible
   heading or a visually hidden one, and both need wording the site owner has not been asked for.
-- **The map view's panel of messages without a position covers the chart's own controls on a phone.**
-  Below 640 px the panel spans the full width of the chart from its top edge, so it lies over the zoom
-  buttons in the top-left corner, and on a chart not much taller than the panel it reaches the attribution
-  links at the bottom as well. All of them stay in the tab order, so a keyboard user's focus lands on the
-  zoom-out button and on the attribution links out of sight. Starting the panel clear of the zoom buttons —
-  as the line that reports a failed load already does — and ending it above the attribution closes it.
 - The print route (`/messages/print`) and the teaser render outside the site's layout, so neither has a main
   landmark and a screen reader's jump to the main content finds nothing there. Wrapping each view's content in
   `<main>` closes it.
