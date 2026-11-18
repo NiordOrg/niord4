@@ -128,14 +128,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   out brands every language, so it asks for every language's file (the in-tree configurations and the kit's
   generated one always set it). The administration app renders a
   message language it ships no flag for as its code.
-- **A publication being browsed is not named on the page.** Browse on a message report opens
-  `/messages/details?publicationId=<id>`, which lists that publication's messages and leaves the main-type,
-  active-now and root-area chips out of the filter bar — but nothing on the page says which publication it is,
-  and the menu's Details, Table and Map links carry no query, so each of them returns to the current list rather
-  than showing the publication in another view. The site this one replaced showed the publication's title in the
-  filter bar with a download link and a control that left it. Doing the same means reading
-  `/public/v1/publication/{id}`, a label for the leaving control that no bundle has yet, and menu links that keep
-  `publicationId` while it is set.
 - The filter bar is a row of toggles with no name of its own. Each button carries its visible label and its
   `aria-pressed`, which meets AA, but a `role="group"` with an `aria-label` would tell a screen-reader user what
   the row of toggles is for. It needs a word that exists in no bundle, so it waits for the site owner to write one

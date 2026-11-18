@@ -8,7 +8,10 @@ import { AppConfigService } from '../../core/services/app-config.service';
 import { LanguageService } from '../../core/services/language.service';
 import { MessageService } from '../../core/services/message.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { PublicationService } from '../../core/services/publication.service';
 import { Area, Message } from '../../core/models/message.model';
+import { Publication } from '../../core/models/publication.model';
+import { sortPublicationDescs } from '../../core/models/publication.util';
 import {
   computeAreaHeadings,
   filterByAreaIds,
@@ -50,13 +53,15 @@ export class MessagesStore {
   private readonly appConfig = inject(AppConfigService);
   private readonly language = inject(LanguageService).language;
   private readonly preferences = inject(PreferencesService);
+  private readonly publications = inject(PublicationService);
 
   // ---- the publication being browsed ------------------------------------------------------
 
   /**
    * The publication the reader is browsing: `?publicationId=`, the address the Browse link on the
-   * publications page opens. Followed on the route rather than read once, so the menu's link to
-   * the plain list, which carries no query, brings the current list back on the same page.
+   * publications page opens. Followed on the route rather than read once: the menu's links keep
+   * the publication from view to view, and the filter bar's close control, which takes the query
+   * away, brings the current list back on the same page.
    *
    * A publication is a scope of its own — the messages it was published with — so while one is
    * named the read asks for it and for nothing the filter bar chooses: no main type, no root
@@ -69,6 +74,31 @@ export class MessagesStore {
       map((params) => params.get('publicationId') || undefined),
     ),
     { requireSync: true },
+  );
+
+  /**
+   * The publication itself, for the filter bar to name it and offer its document. Idle while
+   * none is browsed. It is not part of `failed` or `loading`: the messages are the page, so a
+   * title that does not arrive is left out and the list and the way out of it stay.
+   */
+  private readonly publicationResource = httpResource<Publication>(
+    () => {
+      const publicationId = this.publicationId();
+      return publicationId
+        ? {
+            url: `/rest/public/v1/publication/${encodeURIComponent(publicationId)}`,
+            params: { lang: this.language(), externalize: 'false' },
+          }
+        : undefined;
+    },
+    { parse: (raw) => this.publications.parseOne(raw) },
+  );
+
+  /** The publication being browsed, its texts ordered so the active language comes first. */
+  readonly publication = computed<Publication | undefined>(() =>
+    this.publicationId() && this.publicationResource.hasValue()
+      ? sortPublicationDescs(this.publicationResource.value(), this.language())
+      : undefined,
   );
 
   // ---- the filter ------------------------------------------------------------------------

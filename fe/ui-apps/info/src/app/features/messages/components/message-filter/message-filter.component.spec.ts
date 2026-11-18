@@ -24,10 +24,10 @@ describe('MessageFilterComponent', () => {
     fixture.detectChanges();
   });
 
-  /** The labels of the chips the bar renders, in order. */
+  /** The names of the chips the bar renders, in order: an icon-only chip's is its label. */
   function chipLabels(): string[] {
-    return [...(fixture.nativeElement as HTMLElement).querySelectorAll('button.chip')].map((chip) =>
-      chip.textContent!.trim(),
+    return [...(fixture.nativeElement as HTMLElement).querySelectorAll('button.chip')].map(
+      (chip) => chip.getAttribute('aria-label') ?? chip.textContent!.trim(),
     );
   }
 
@@ -94,12 +94,70 @@ describe('MessageFilterComponent', () => {
   });
 
   // A publication is read as the list it was published with: the main types, active-now and the
-  // root area would change nothing on screen, so they are not offered at all.
-  it('offers only printing and the sub-areas while a publication is browsed', () => {
+  // root area would change nothing on screen, so they are not offered at all. Until the
+  // publication itself has been read there is no title to show, and the way out is there anyway.
+  it('offers only the way out, printing and the sub-areas while a publication is browsed', () => {
     showCountryWithOneSubArea();
     fixture.componentRef.setInput('browsingPublication', true);
     fixture.detectChanges();
-    expect(chipLabels()).toEqual(['Print', 'The Sound']);
+    expect(chipLabels()).toEqual(['Close', 'Print', 'The Sound']);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('#browsed-publication-title')).toBeNull();
+    expect(host.querySelector('a')).toBeNull();
+  });
+
+  it('names the publication being browsed, in its own language, with its document', () => {
+    fixture.componentRef.setInput('browsingPublication', true);
+    fixture.componentRef.setInput('publication', {
+      publicationId: 'p-1',
+      descs: [{ lang: 'da', title: 'EfS uge 38 2026', link: '/rest/repo/file/publications/x.pdf' }],
+    });
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const title = host.querySelector('#browsed-publication-title')!;
+    expect(title.textContent!.trim()).toBe('EfS uge 38 2026');
+    // The page is English and the title Danish, so the title says which language it is in.
+    expect(title.querySelector('[lang]')!.getAttribute('lang')).toBe('da');
+    const download = host.querySelector('a')!;
+    expect(download.getAttribute('href')).toBe('/rest/repo/file/publications/x.pdf');
+    expect(download.textContent!.trim()).toBe('Download');
+    expect(download.getAttribute('rel')).toBe('noopener');
+  });
+
+  it('leaves the publication with a close control named Close and described by the title', () => {
+    fixture.componentRef.setInput('browsingPublication', true);
+    fixture.componentRef.setInput('publication', {
+      publicationId: 'p-1',
+      descs: [{ lang: 'en', title: 'NtM 38 2026' }],
+    });
+    fixture.detectChanges();
+    const spy = vi.fn();
+    component.leavePublication.subscribe(spy);
+
+    const close = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      'button[aria-label="Close"]',
+    )!;
+    expect(close.getAttribute('aria-describedby')).toBe('browsed-publication-title');
+    close.click();
+    expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('offers no way out of a publication while none is browsed', () => {
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('button[aria-label="Close"]'),
+    ).toBeNull();
+  });
+
+  // The control a reader leaves a publication with is gone once the current list is drawn.
+  it('puts focus on the first chip of the bar when asked', () => {
+    document.body.appendChild(fixture.nativeElement as HTMLElement);
+    try {
+      component.focusFirstChip();
+      expect(document.activeElement).toBe(chip('Navigational Warnings'));
+    } finally {
+      (fixture.nativeElement as HTMLElement).remove();
+    }
   });
 
   it('draws no empty area row for a publication whose messages fall in no sub-area', () => {

@@ -35,7 +35,10 @@
  *   6. At 320, 640 and 1280 px, in every language the build offers, every field name of a message
  *      card shows whole — none cut to an ellipsis, none wider than its box — and the longest
  *      field name the language's bundle has is among them.
- *   7. At 390 px every chip of the filter bar is at least 40 px tall.
+ *   7. At 390 px every chip of the filter bar is at least 40 px tall, on the current list and
+ *      while an issue is browsed, when the bar names the issue in place of the main types; and
+ *      at 320 px, in every language the build offers, the browsed issue's page does not scroll
+ *      sideways.
  *   8. In a forced-colours theme each pressed filter chip looks unlike every unpressed one.
  *   9. On the card that carries every field, a link in the message text and an attachment's file
  *      name are underlined and coloured apart from the text around them, and a publication
@@ -394,6 +397,11 @@ export function answerRest(url) {
     return json(MESSAGES.filter((m) => !areaId || String(m.areas[0].parent.id) === areaId));
   }
   if (url.pathname === '/rest/public/v1/publications') return json(PUBLICATIONS);
+  const publication = /^\/rest\/public\/v1\/publication\/(.+)$/.exec(url.pathname);
+  if (publication) {
+    const found = PUBLICATIONS.find((p) => p.publicationId === decodeURIComponent(publication[1]));
+    if (found) return json(found);
+  }
   return json({ error: `${url.pathname} is not in the layout check's fixture` }, 404);
 }
 
@@ -457,6 +465,8 @@ function menuLabel(lang) {
 // ---------------------------------------------------------------------------------------------
 
 const MENU_CONTROLS = 'app-main-menu nav a, app-main-menu nav button';
+/** The address Browse opens on the fixture's issue. */
+const BROWSED = `/messages/details?publicationId=${PUBLICATIONS[0].publicationId}`;
 const FLAGS = 'app-main-menu nav button';
 
 /** Two frames: a resize observer's measurement and the layout that reads it have both landed. */
@@ -1192,6 +1202,20 @@ if (invokedDirectly) {
     await page.setViewportSize({ width: 390, height: 900 });
     await open(page, '/messages/details');
     record('filter chips at 390 px', await smallFilterChips(page));
+
+    //    While an issue is browsed the bar names it, with its document and a close control in
+    //    place of the main types: still 40 px chips on a phone, and nothing wider than 320 px,
+    //    in every language — its title is the widest thing the bar holds.
+    await page.setViewportSize({ width: 390, height: 900 });
+    await open(page, BROWSED);
+    record('filter chips at 390 px, browsing an issue', await smallFilterChips(page));
+    await page.setViewportSize({ width: 320, height: 800 });
+    await open(page, BROWSED);
+    const browsedFlags = await page.locator(FLAGS).count();
+    for (let index = 0; index < browsedFlags; index++) {
+      const lang = await switchLanguage(page, index);
+      record(`browsing an issue at 320 px, ${lang}`, await sidewaysScroll(page));
+    }
 
     // 8. A pressed filter chip still looks pressed in a forced-colours theme.
     await page.setViewportSize({ width: 1280, height: 900 });

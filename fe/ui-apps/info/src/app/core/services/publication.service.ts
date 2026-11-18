@@ -19,4 +19,9 @@ export class PublicationService {
       })),
     }));
   }
+
+  /** One publication as it came off the wire, its repository links treated as the list's are. */
+  parseOne(raw: unknown): Publication {
+    return this.parse([raw])[0];
+  }
 }

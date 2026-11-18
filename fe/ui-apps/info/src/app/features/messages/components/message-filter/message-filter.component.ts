@@ -1,13 +1,15 @@
 import { Component, ElementRef, input, output, viewChild } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Area } from '../../../../core/models/message.model';
+import { Publication } from '../../../../core/models/publication.model';
 import { MessageAreaNameComponent } from '../message-detail-card/message-area-name.component';
 import { Icon } from '../../../../shared/icons/icon';
+import { ContentLang } from '../../../../shared/directives/content-lang';
 import { publishHeight } from '../../../../shared/utils/publish-height';
 
 @Component({
   selector: 'app-message-filter',
-  imports: [TranslocoPipe, MessageAreaNameComponent, Icon],
+  imports: [TranslocoPipe, MessageAreaNameComponent, Icon, ContentLang],
   // The host draws no box of its own, so the bar is pinned against the whole message view it
   // filters and leaves with the end of it.
   host: { class: 'contents' },
@@ -17,7 +19,7 @@ import { publishHeight } from '../../../../shared/utils/publish-height';
         <div class="mx-auto flex flex-wrap items-center justify-center gap-1 py-1">
           <!-- A publication is browsed as the list it was published with, so the chips that
                choose the current list's scope are left out while one is: pressed, they would
-               change nothing on screen. -->
+               change nothing on screen. The publication is named in their place. -->
           <!-- The list is always of one main type or both: the chip that is left on cannot be
                turned off, and says so to a screen reader while it stays pressed to the eye; the
                pointer says it to a reader who can see it. -->
@@ -57,6 +59,47 @@ import { publishHeight } from '../../../../shared/utils/publish-height';
             >
               {{ 'ACTIVE_NOW' | transloco }}
             </button>
+
+            <span
+              aria-hidden="true"
+              class="mx-5 my-1 self-stretch border-l border-dotted border-surface-400"
+            ></span>
+          } @else {
+            <!-- The publication being browsed is named, with its document and a way back to the
+                 current list. Its title is data, in the language it was written in; a title that
+                 did not arrive is left out, and the way back stays. -->
+            <span class="inline-flex flex-wrap items-center justify-center gap-2">
+              @if (publication()?.descs?.[0]; as desc) {
+                @if (desc.title) {
+                  <span id="browsed-publication-title" class="font-semibold">
+                    <app-icon name="lucideBook" class="mr-1 align-middle" />
+                    <span [appContentLang]="desc.lang">{{ desc.title }}</span>
+                  </span>
+                }
+                @if (desc.link) {
+                  <a
+                    class="link-button is-subtle"
+                    [href]="desc.link"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <app-icon name="lucideDownload" class="mr-1 align-middle" />
+                    {{ 'OPEN_PUBLICATION' | transloco }}
+                  </a>
+                }
+              }
+              <button
+                type="button"
+                class="chip px-2.5 text-xs"
+                [attr.aria-label]="'BTN_CLOSE' | transloco"
+                [attr.aria-describedby]="
+                  publication()?.descs?.[0]?.title ? 'browsed-publication-title' : null
+                "
+                (click)="leavePublication.emit()"
+              >
+                <app-icon name="lucideX" />
+              </button>
+            </span>
 
             <span
               aria-hidden="true"
@@ -147,20 +190,33 @@ export class MessageFilterComponent {
   canPrint = input(true);
   /**
    * Whether the list is one publication's messages. The main types, active-now and the root
-   * area are not offered then; printing and the sub-areas the publication's messages fall in are.
+   * area are not offered then; the publication's name, its document, the way back to the current
+   * list, printing and the sub-areas the publication's messages fall in are.
    */
   browsingPublication = input(false);
+  /** The publication being browsed, once it has been read; its first text is the reader's. */
+  publication = input<Publication | undefined>(undefined);
 
   rootAreaChange = output<Area>();
   mainTypesChange = output<{ NW: boolean; NM: boolean }>();
   activeNowChange = output<void>();
   subAreaToggle = output<Area>();
   printRequested = output<void>();
+  /** The reader closes the publication and asks for the current list again. */
+  leavePublication = output<void>();
 
   toggleMainType(type: 'NW' | 'NM'): void {
     if (this.isLastOn(type)) return;
     const current = this.mainTypes();
     this.mainTypesChange.emit({ ...current, [type]: !current[type] });
+  }
+
+  /**
+   * Puts focus on the first chip of the bar. The control a reader leaves a publication with is
+   * gone once the current list is shown, and focus would otherwise fall back to the page.
+   */
+  focusFirstChip(): void {
+    this.bars().nativeElement.querySelector<HTMLButtonElement>('button.chip')?.focus();
   }
 
   /** Whether this is the one main type the list is still of, which cannot be turned off. */

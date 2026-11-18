@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpRequest, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter, Routes } from '@angular/router';
+import { provideRouter, Router, Routes } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { messagesRoutes } from './messages.routes';
@@ -24,6 +24,15 @@ const WEEK_38: Message[] = [
 
 const isMessagesRead = (request: HttpRequest<unknown>) =>
   request.url === '/rest/public/v1/messages';
+const isPublicationRead = (request: HttpRequest<unknown>) =>
+  request.url === `/rest/public/v1/publication/${PUBLICATION_ID}`;
+
+/** The issue the Browse link opened, as the public API answers for it. */
+const NTM_38 = {
+  publicationId: PUBLICATION_ID,
+  type: 'MESSAGE_REPORT',
+  descs: [{ lang: 'en', title: 'NtM 38 2026', link: '/rest/repo/file/publications/x.pdf' }],
+};
 
 /**
  * Browsing one publication, driven through the router: the address the publications page links
@@ -50,6 +59,25 @@ describe('browsing a publication as a message list', () => {
 
   afterEach(() => httpTesting.verify());
 
+  /** The page on a browsed publication, its three reads answered. */
+  async function openBrowsed(url = BROWSE_URL, publication: object = NTM_38) {
+    const harness = await RouterTestingHarness.create(url);
+    await settle();
+    httpTesting.match(isMessagesRead).forEach((request) => request.flush(WEEK_38));
+    httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/area/')).flush(ANCHORLAND);
+    httpTesting.expectOne(isPublicationRead).flush(publication);
+    await settle();
+    harness.detectChanges();
+    return harness;
+  }
+
+  /** The control that leaves the publication, by its accessible name. */
+  function closeButton(harness: RouterTestingHarness): HTMLButtonElement | null {
+    return harness.routeNativeElement!.querySelector<HTMLButtonElement>(
+      'button[aria-label="Close"]',
+    );
+  }
+
   /** The chips the filter bar shows, by label. */
   function chipLabels(harness: RouterTestingHarness): string[] {
     return [...harness.routeNativeElement!.querySelectorAll('button.chip')].map((chip) =>
@@ -70,6 +98,7 @@ describe('browsing a publication as a message list', () => {
     expect(params.has('areaId')).toBe(false);
     reads[0].flush(WEEK_38);
     httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/area/')).flush(ANCHORLAND);
+    httpTesting.expectOne(isPublicationRead).flush(NTM_38);
     await settle();
     harness.detectChanges();
 
@@ -80,14 +109,10 @@ describe('browsing a publication as a message list', () => {
   });
 
   it('is the current list again once the address no longer names the publication', async () => {
-    const harness = await RouterTestingHarness.create(BROWSE_URL);
-    await settle();
-    httpTesting.match(isMessagesRead).forEach((request) => request.flush(WEEK_38));
-    httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/area/')).flush(ANCHORLAND);
-    await settle();
+    const harness = await openBrowsed();
     const store = harness.routeDebugElement!.injector.get(MessagesStore);
 
-    // The menu's Details link: the same page, with no query.
+    // An address that no longer names the publication: the same page, with no query.
     await harness.navigateByUrl('/messages/details');
     await settle();
     harness.detectChanges();
@@ -100,6 +125,66 @@ describe('browsing a publication as a message list', () => {
     expect(reads[0].request.params.getAll('mainType')).toEqual(['NW', 'NM']);
     reads[0].flush([]);
     await settle();
+    expect(chipLabels(harness)).toContain('Navigational Warnings');
+  });
+
+  it('names the publication it browses, with its document', async () => {
+    const harness = await openBrowsed();
+    const bar = harness.routeNativeElement!.querySelector('.filter-bar')!;
+
+    expect(bar.querySelector('#browsed-publication-title')!.textContent!.trim()).toBe(
+      'NtM 38 2026',
+    );
+    const download = [...bar.querySelectorAll('a')].find(
+      (link) => link.textContent!.trim() === 'Download',
+    );
+    expect(download?.getAttribute('href')).toBe('/rest/repo/file/publications/x.pdf');
+    expect(closeButton(harness)?.getAttribute('aria-describedby')).toBe(
+      'browsed-publication-title',
+    );
+  });
+
+  // The two reads resolve the id alike, so one failing alone is a passing failure or a
+  // publication withdrawn between them: the list and the way out of it stay.
+  it('lists the messages and offers the way out when the publication itself is not read', async () => {
+    const harness = await RouterTestingHarness.create(BROWSE_URL);
+    await settle();
+    httpTesting.match(isMessagesRead).forEach((request) => request.flush(WEEK_38));
+    httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/area/')).flush(ANCHORLAND);
+    httpTesting
+      .expectOne(isPublicationRead)
+      .flush('no', { status: 500, statusText: 'Server Error' });
+    await settle();
+    harness.detectChanges();
+
+    const store = harness.routeDebugElement!.injector.get(MessagesStore);
+    expect(store.failed()).toBe(false);
+    expect(store.messages().map((message) => message.id)).toEqual(['msg-1']);
+    expect(harness.routeNativeElement!.querySelector('#browsed-publication-title')).toBeNull();
+    expect(closeButton(harness)).not.toBeNull();
+    expect(closeButton(harness)!.hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('returns the same view to the current list when the publication is closed', async () => {
+    const harness = await openBrowsed(`/messages/table?publicationId=${PUBLICATION_ID}`);
+    const router = TestBed.inject(Router);
+
+    closeButton(harness)!.click();
+    // The navigation resolves on a later turn than the click; waiting for the page to be stable
+    // would wait for the list read below, which nothing answers until it is flushed.
+    await vi.waitFor(() => expect(router.url).toBe('/messages/table'));
+    await settle();
+    expect(router.url).toBe('/messages/table');
+
+    const reads = httpTesting.match(isMessagesRead);
+    expect(reads).toHaveLength(1);
+    expect(reads[0].request.params.has('publication')).toBe(false);
+    expect(reads[0].request.params.get('areaId')).toBe('453');
+    expect(reads[0].request.params.getAll('mainType')).toEqual(['NW', 'NM']);
+    reads[0].flush(WEEK_38);
+    await settle();
+    harness.detectChanges();
+    expect(closeButton(harness)).toBeNull();
     expect(chipLabels(harness)).toContain('Navigational Warnings');
   });
 });

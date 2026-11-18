@@ -1,5 +1,5 @@
-import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { afterNextRender, Component, inject, Injector, viewChild } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
 import { MessageFilterComponent } from './components/message-filter/message-filter.component';
 import { MessagesStore } from './messages.store';
 import { restoreScrollWhenSettled } from '../../shared/utils/restore-scroll';
@@ -25,22 +25,43 @@ import { restoreScrollWhenSettled } from '../../shared/utils/restore-scroll';
       [activeNow]="store.activeNow()"
       [canPrint]="store.canPrintList()"
       [browsingPublication]="store.publicationId() !== undefined"
+      [publication]="store.publication()"
       (rootAreaChange)="store.selectRootArea($event)"
       (mainTypesChange)="store.setMainTypes($event)"
       (activeNowChange)="store.toggleActiveNow()"
       (subAreaToggle)="store.toggleSubArea($event)"
       (printRequested)="print()"
+      (leavePublication)="leavePublication()"
     />
     <router-outlet />
   `,
 })
 export class MessagesComponent {
   protected readonly store = inject(MessagesStore);
+  private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly filter = viewChild.required(MessageFilterComponent);
 
   constructor() {
     // The list is read afresh whenever the reader comes back to it, so the place Back returns
     // them to exists only once it has arrived.
     restoreScrollWhenSettled(() => !this.store.loading());
+  }
+
+  /**
+   * Leaves the publication being browsed for the current list, in the view the reader is in.
+   * The store follows the address, so taking the query away is all it takes. The control that
+   * was pressed is gone afterwards, so focus moves to the first chip of the bar once the current
+   * list's chips are drawn, rather than falling back to the page.
+   */
+  protected leavePublication(): void {
+    void this.router
+      .navigate([], { queryParams: { publicationId: null }, queryParamsHandling: 'merge' })
+      .then((navigated) => {
+        if (navigated) {
+          afterNextRender(() => this.filter().focusFirstChip(), { injector: this.injector });
+        }
+      });
   }
 
   /**

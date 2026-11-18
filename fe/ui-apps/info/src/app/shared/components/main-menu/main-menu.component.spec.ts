@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { Component, NO_ERRORS_SCHEMA } from '@angular/core';
+import { provideRouter, Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { MainMenuComponent } from './main-menu.component';
 import { AppConfigService } from '../../../core/services/app-config.service';
@@ -215,5 +215,54 @@ describe('MainMenuComponent — a language the build ships no flag for', () => {
       { name: 'Dansk', flag: null, lang: 'da' },
       { name: 'de', flag: null, lang: 'de' },
     ]);
+  });
+});
+
+// A publication browsed in one view is browsed in the next: the three message views keep it, so
+// a change of view does not drop the reader back on the current list. Only that one parameter
+// is carried, and never to the Downloads page.
+describe('MainMenuComponent — while a publication is browsed', () => {
+  @Component({ template: '' })
+  class Page {}
+
+  async function menuAt(url: string) {
+    await TestBed.configureTestingModule({
+      imports: [MainMenuComponent, getTranslocoTestingModule()],
+      providers: [provideTestNiordConfig(), provideRouter([{ path: '**', component: Page }])],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(MainMenuComponent);
+    await TestBed.inject(Router).navigateByUrl(url);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const links = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('nav a'),
+    ) as HTMLAnchorElement[];
+    return links.map((link) => ({
+      href: link.getAttribute('href'),
+      current: link.getAttribute('aria-current'),
+    }));
+  }
+
+  it('keeps the publication on the three message views and not on Downloads', async () => {
+    expect(await menuAt('/messages/details?publicationId=p-1&lang=da')).toEqual([
+      { href: '/messages/details?publicationId=p-1', current: 'page' },
+      { href: '/messages/table?publicationId=p-1', current: null },
+      { href: '/messages/map?publicationId=p-1', current: null },
+      { href: '/publications', current: null },
+    ]);
+  });
+
+  it('carries no query while no publication is browsed', async () => {
+    expect((await menuAt('/messages/table')).map((link) => link.href)).toEqual(
+      MENU.map(([path]) => path),
+    );
+  });
+
+  it('carries no query from a page that is not a message view', async () => {
+    expect((await menuAt('/publications?publicationId=p-1')).map((link) => link.href)).toEqual(
+      MENU.map(([path]) => path),
+    );
   });
 });

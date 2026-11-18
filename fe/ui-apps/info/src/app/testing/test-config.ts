@@ -4,6 +4,7 @@ import { TranslocoTestingModule } from '@jsverse/transloco';
 import { EMPTY, of } from 'rxjs';
 import { NiordInfoConfig, NIORD_INFO_CONFIG } from '../niord-info.config';
 import { Area, Message } from '../core/models/message.model';
+import { Publication } from '../core/models/publication.model';
 import enTranslations from '../../../../../languages/en/i18n/info/en.json';
 
 /**
@@ -145,6 +146,7 @@ export interface FakeMessagesStoreSeed {
   empty?: boolean;
   canPrintList?: boolean;
   publicationId?: string;
+  publication?: Publication;
 }
 
 /**
@@ -168,6 +170,7 @@ export function fakeMessagesStore(seed?: FakeMessagesStoreSeed) {
     empty: signal(seed?.empty ?? false),
     canPrintList: signal(seed?.canPrintList ?? true),
     publicationId: signal<string | undefined>(seed?.publicationId),
+    publication: signal<Publication | undefined>(seed?.publication),
     selectRootArea: vi.fn(),
     setMainTypes: vi.fn(),
     toggleActiveNow: vi.fn(),

@@ -120,4 +120,18 @@ describe("info-layout-check's fixture", () => {
     assert.equal(messages.status, 200);
     assert.doesNotMatch(messages.body, COUNTRY_NAMES);
   });
+
+  // The browse page reads the issue itself to name it in the filter bar.
+  it('answers the issue Browse opens, and refuses one it does not hold', async () => {
+    const { answerRest } = await import('./info-layout-check.mjs');
+    const issue = answerRest(
+      new URL('http://niord-info.layout-check/rest/public/v1/publication/layout-check-efs'),
+    );
+    assert.equal(issue.status, 200);
+    assert.equal(JSON.parse(issue.body).publicationId, 'layout-check-efs');
+    const unknown = answerRest(
+      new URL('http://niord-info.layout-check/rest/public/v1/publication/elsewhere'),
+    );
+    assert.equal(unknown.status, 404);
+  });
 });

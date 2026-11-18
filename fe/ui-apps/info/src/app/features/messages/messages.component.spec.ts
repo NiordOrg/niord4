@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { provideRouter, Router } from '@angular/router';
 import { MessagesComponent } from './messages.component';
 import { MessagesStore } from './messages.store';
 import { MessageFilterComponent } from './components/message-filter/message-filter.component';
@@ -19,7 +20,7 @@ describe('MessagesComponent', () => {
     store = fakeMessagesStore(seed);
     await TestBed.configureTestingModule({
       imports: [MessagesComponent, getTranslocoTestingModule()],
-      providers: [{ provide: MessagesStore, useValue: store }],
+      providers: [provideRouter([]), { provide: MessagesStore, useValue: store }],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
     // The component provides the real store itself, which would win over the one above. Only
@@ -61,6 +62,29 @@ describe('MessagesComponent', () => {
     store.publicationId.set('6f1c2a8e-3b4d-4e5f-9a0b-1c2d3e4f5a6b');
     fixture.detectChanges();
     expect(filter.browsingPublication()).toBe(true);
+  });
+
+  it('hands the filter bar the publication being browsed', async () => {
+    const { fixture, filter } = await setUp();
+    expect(filter.publication()).toBeUndefined();
+
+    const publication = { publicationId: 'p-1', descs: [{ lang: 'en', title: 'NtM 38 2026' }] };
+    store.publication.set(publication);
+    fixture.detectChanges();
+    expect(filter.publication()).toBe(publication);
+  });
+
+  // The store follows the address, so leaving is taking the publication out of it, in the view
+  // the reader is in.
+  it('leaves the publication by taking it out of the address, keeping the rest', async () => {
+    const { filter } = await setUp({ publicationId: 'p-1' });
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    filter.leavePublication.emit();
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParams: { publicationId: null },
+      queryParamsHandling: 'merge',
+    });
   });
 
   it('opens the backend PDF of the list the store describes, in a tab with no opener', async () => {

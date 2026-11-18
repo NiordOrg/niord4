@@ -74,6 +74,9 @@ describe('MessagesStore', () => {
     expect(store.areaRoots()).toHaveLength(1);
     expect(store.rootArea()?.id).toBe(453);
     expect(store.messages()).toHaveLength(2);
+    // No publication is named, so none is read.
+    expect(httpTesting.match((r) => r.url.includes('/rest/public/v1/publication/'))).toEqual([]);
+    expect(store.publication()).toBeUndefined();
 
     // The root-area specs are a build-time constant, so nothing can key a second read off them.
     await settle();
@@ -419,6 +422,13 @@ describe('MessagesStore', () => {
       httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/area/')).flush(ANCHORLAND);
     }
 
+    /** The read of the publication itself, which names it in the filter bar. */
+    function answerThePublication(body: object = { publicationId: PUBLICATION_ID }) {
+      const read = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/publication/'));
+      read.flush(body);
+      return read;
+    }
+
     it('reads the publication and nothing the filter bar chooses', async () => {
       // A reader whose last filter was warnings only must still see a notices publication.
       localStorage.setItem('niord-info.NM', 'false');
@@ -435,8 +445,52 @@ describe('MessagesStore', () => {
       expect(list.request.params.has('active')).toBe(false);
       list.flush(MESSAGES);
       answerTheRootArea();
+      answerThePublication();
       await settle();
 
+      expect(store.messages()).toHaveLength(2);
+    });
+
+    it('reads the publication itself, and names it with the page language first', async () => {
+      await setUpOnPublication();
+      await settle();
+      httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
+      answerTheRootArea();
+      const read = answerThePublication({
+        publicationId: PUBLICATION_ID,
+        type: 'MESSAGE_REPORT',
+        descs: [
+          { lang: 'da', title: 'EfS uge 38 2026' },
+          { lang: 'en', title: 'NtM week 38 2026', link: '/rest/repo/file/publications/x.pdf' },
+        ],
+      });
+      expect(read.request.url).toBe(`/rest/public/v1/publication/${PUBLICATION_ID}`);
+      expect(read.request.params.get('lang')).toBe('en');
+      expect(read.request.params.get('externalize')).toBe('false');
+      await settle();
+
+      expect(store.publication()?.descs?.[0]).toEqual({
+        lang: 'en',
+        title: 'NtM week 38 2026',
+        link: '/rest/repo/file/publications/x.pdf',
+      });
+    });
+
+    // The two reads resolve the id alike, so one refused alone is a passing failure or a
+    // publication withdrawn between them; the list is the page, and stays.
+    it('lists the messages when the read of the publication itself fails', async () => {
+      await setUpOnPublication();
+      await settle();
+      httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
+      answerTheRootArea();
+      httpTesting
+        .expectOne((r) => r.url.includes('/rest/public/v1/publication/'))
+        .flush('no', { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(store.publication()).toBeUndefined();
+      expect(store.failed()).toBe(false);
+      expect(store.loading()).toBe(false);
       expect(store.messages()).toHaveLength(2);
     });
 
@@ -447,6 +501,7 @@ describe('MessagesStore', () => {
         .expectOne((r) => r.url.includes('/rest/public/v1/messages'))
         .flush([...MESSAGES, LATER]);
       answerTheRootArea();
+      answerThePublication();
       await settle();
 
       store.toggleActiveNow();
@@ -462,6 +517,7 @@ describe('MessagesStore', () => {
       await settle();
       httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
       answerTheRootArea();
+      answerThePublication();
       await settle();
 
       const query = new URLSearchParams(store.printPdfUrl().split('?')[1]);
@@ -484,11 +540,14 @@ describe('MessagesStore', () => {
       await settle();
       httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush([]);
       answerTheRootArea();
+      answerThePublication();
       await settle();
+      expect(store.publication()).toBeDefined();
 
       await TestBed.inject(Router).navigateByUrl('/');
       await settle();
       expect(store.publicationId()).toBeUndefined();
+      expect(store.publication()).toBeUndefined();
       const current = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages'));
       expect(current.request.params.has('publication')).toBe(false);
       expect(current.request.params.get('areaId')).toBe('453');
