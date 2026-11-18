@@ -242,7 +242,7 @@ export class MessagesStore {
    *
    * "This moment" is the moment the chip was pressed or the list last changed: nothing ticks the
    * clock, so a page left open with the chip pressed keeps a message whose interval has since
-   * ended until the next read or press.
+   * ended, and leaves out one whose interval has since begun, until the next read or press.
    */
   private readonly inForce = computed<Message[]>(() =>
     this.activeNowOnly() && !this.publicationId()
