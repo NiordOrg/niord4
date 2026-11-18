@@ -38,8 +38,84 @@ class EncodedSlashConfigTest {
     /** A request as Tomcat passes it on: the raw URI, and the servlet path with only %2F kept encoded */
     private static MockHttpServletRequest request(String method, String rawUri) {
         MockHttpServletRequest request = new MockHttpServletRequest(method, rawUri);
-        request.setServletPath(rawUri.replace("%20", " ").replace("%25", "%"));
+        request.setServletPath(rawUri.replace("%20", " ").replace("%3B", ";").replace("%C3%A6", "æ")
+                .replace("%25", "%"));
         return request;
+    }
+
+    @Test
+    void anEncodedPercentOrSemicolonIsAcceptedOnARepositoryFile() {
+        for (String method : new String[] {"GET", "HEAD"}) {
+            for (String uri : new String[] {
+                    "/rest/repo/file/temp/x/100%25%20d%C3%A6kning.pdf",
+                    "/rest/repo/file/temp/x/a%3Bb.pdf",
+                    "/rest/repo/thumb/temp/x/100%25.png"}) {
+                assertDoesNotThrow(() -> firewall.getFirewalledRequest(request(method, uri)), method + " " + uri);
+            }
+        }
+        assertDoesNotThrow(() -> firewall.getFirewalledRequest(request("DELETE", "/rest/repo/file/temp/x/a%25b.txt")));
+    }
+
+    @Test
+    void anEncodedPercentOrSemicolonIsRefusedOnARepositoryFileForAnotherMethod() {
+        for (String method : new String[] {"POST", "PUT", "PATCH", "OPTIONS"}) {
+            assertThrows(RequestRejectedException.class,
+                    () -> firewall.getFirewalledRequest(request(method, "/rest/repo/file/temp/x/a%25b.txt")), method);
+        }
+        assertThrows(RequestRejectedException.class,
+                () -> firewall.getFirewalledRequest(request("DELETE", "/rest/repo/thumb/temp/x/a%25b.png")),
+                "a thumbnail is never deleted");
+    }
+
+    @Test
+    void everythingElseTheStrictFirewallRefusesIsStillRefusedOnARepositoryFile() {
+        for (String uri : new String[] {
+                "/rest/repo/file/temp/x/a;b.pdf",
+                "/rest/repo/file/temp/x/a%25;b.pdf",
+                "/rest/repo/file/temp/x/a%2Fb.pdf",
+                "/rest/repo/file/temp/x/%2E%2E/a.pdf",
+                "/rest/repo/file/temp/x/a%5Cb.pdf",
+                "/rest/repo/file/temp/x/a%2F%2Fb.pdf",
+                "/rest/repo/file/temp/x/a%252Fb.pdf",
+                "/rest/repo/file/temp/x/a%255Cb.pdf",
+                "/rest/repo/file/temp/x/a%252Eb.pdf",
+                "/rest/repo/file/temp/x/a%252eb.pdf",
+                "/rest/repo/file/temp/x/a%2500b.pdf",
+                "/rest/repo/thumb/temp/x/a%252Fb.png"}) {
+            assertThrows(RequestRejectedException.class,
+                    () -> firewall.getFirewalledRequest(request("GET", uri)), uri);
+        }
+    }
+
+    @Test
+    void anEncodedPercentOrSemicolonIsRefusedEverywhereElse() {
+        for (String uri : new String[] {
+                "/rest/repo/list/temp/x%25",
+                "/rest/repo/list/temp/x%3B",
+                "/rest/repo/files/a%25b",
+                "/rest/repo/filex/a%3Bb",
+                "/rest/areas/a%25b",
+                "/rest/areas/a%3Bb",
+                "/wms/a%3Bb",
+                "/wms/a%25b"}) {
+            assertThrows(RequestRejectedException.class,
+                    () -> firewall.getFirewalledRequest(request("GET", uri)), uri);
+        }
+        assertThrows(RequestRejectedException.class,
+                () -> firewall.getFirewalledRequest(request("POST", "/rest/repo/upload-temp/temp/x%25")));
+    }
+
+    @Test
+    void theRepositoryFilePathsAreMatchedAfterTheContextPath() {
+        MockHttpServletRequest request = request("GET", "/niord/rest/repo/file/temp/x/100%25.pdf");
+        request.setContextPath("/niord");
+        request.setServletPath("/rest/repo/file/temp/x/100%.pdf");
+        assertTrue(MessageIdFirewall.isRepoFileRequest(request));
+        assertDoesNotThrow(() -> firewall.getFirewalledRequest(request));
+
+        MockHttpServletRequest outside = request("GET", "/rest/repo/file/temp/x/100%25.pdf");
+        outside.setContextPath("/niord");
+        assertFalse(MessageIdFirewall.isRepoFileRequest(outside));
     }
 
     @Test

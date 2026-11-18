@@ -339,29 +339,22 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
 - **Exposed by:** `FileTypesTest` asserts the *actual* mappings (including unknown-extension → `null`).
 - **Severity:** Low.
 
-## REPO3 — A repository file whose name holds `%`, `;` or `\` cannot be downloaded
+## REPO5 — A message PDF may leave out an image attachment whose name holds `%` or `;`
 
-- **Location:** `GET /rest/repo/file/**` (`RepositoryService.streamFile`) behind Spring Security's
-  `StrictHttpFirewall`. The one firewall the backend declares, `EncodedSlashConfig.MessageIdFirewall`
-  (`org.niord.core.conf`, since 2026-11-13), allows an encoded `/` on three message GET paths only and is strict
-  everywhere else. Uploads keep the file name as it was submitted, reduced to its bare name
-  (`WebUtils.bareFileName`). Because `\` separates folders there, an upload no longer stores a name with `\` in it;
-  `%` and `;` still reach the stored name.
-- **Description:** both frontends write a repository path into an address one encoded segment at a time
-  (`fe/shared-html/repo-path.ts`), so a `%` in a file name is sent as `%25`, a `;` as `%3B` and a `\` as `%5C`.
-  The default firewall rejects every one of these as a bypass attempt and answers 400 before any handler runs.
-  Sent unencoded they are no better: a bare `%` is an invalid escape, and a bare `;` is rejected too.
-- **Why it looks wrong:** the backend accepts the upload and lists the file, and the editor can link it, but no
-  reader or editor can open it. The frontends cannot work around it: the firewall refuses every spelling.
-- **Suggested check before fixing:** upload `100% dækning.pdf` and open it from the administration app's
-  attachment list; then either rename such a file on upload (replacing the three characters) or relax the
-  firewall — it applies to every path, not only to `/rest/repo/file/**`, so weigh what that opens elsewhere.
-  If the firewall is relaxed for this entry, add its allowances (encoded percent, semicolon and backslash, on the
-  repository path only) to `MessageIdFirewall`, which since 2026-11-13 lets a message short id hold an encoded `/`
-  on three message paths, rather than declaring a second firewall; or rename on upload instead.
-- **Severity:** Low — a file name with one of these characters is rare, and the upload itself succeeds.
-- **The same firewall elsewhere:** PUBCAT2 (a publication category or series id with `/` or `;` can still be
-  created by three imports and then never opened).
+- **Location:** `be/niord/bootstrap/templates/messages/message-support.ftl`, macro `renderAttachment`
+  (`<img src="/rest/repo/file/${att.path}">`, the path written unencoded), fetched by the PDF renderer over HTTP
+  from the backend's own origin (`org/niord/core/script/pdf/SameOriginUserAgent`). The same line is in the
+  Greenland repository's copy of the template.
+- **Description:** since the request firewall accepts `%25` and `%3B` on a repository file's path, a file whose
+  name holds `%` or `;` opens in both frontends. The template does not encode the path, so the renderer asks for
+  a raw `%` (an invalid escape) or a raw `;` (a path parameter, refused by the firewall), and the image is
+  presumably missing from the PDF. Not checked by running it.
+- **Why it looks wrong:** the attachment shows in the admin app and on the public site but not in the printed
+  message.
+- **Exposed by:** reading the template while the firewall was opened for such names, 2026-11-18; no test.
+- **Severity:** Low — an image attachment whose name holds one of these characters is rare. The template is data:
+  a fix (`?url` on each segment, or a path the code encodes) ships in a release folder and reaches a database only
+  by import.
 
 ## INT4 — `NiordIntegrationExecutionService.processNiordIntegration` still swallows a failed re-import and shares one transaction per target series
 
@@ -2649,8 +2642,9 @@ path is from the repository root.
 - **Severity:** Low. Fix: call `PathSegmentId.refusal` in `findOrCreatePublicationCategory` before it creates a
   category, and in the series import's new-series branch, and skip the row with the sentence, as the category
   import does. Could break: an import file that already holds such an id; read the stagings' and the country
-  repositories' category and series ids first (read only). REPO3 is the same firewall cause on repository file
-  names.
+  repositories' category and series ids first (read only). Repository file names, whose `%` and `;` the
+  firewall refused the same way, were given their own allowance in `EncodedSlashConfig.MessageIdFirewall`; an id
+  here is better refused where it is made.
 
 # Potential errors — met by the error hunt's phase 2 fix stage (2026-11-16)
 

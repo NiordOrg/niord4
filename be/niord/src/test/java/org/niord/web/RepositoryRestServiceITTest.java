@@ -601,6 +601,74 @@ class RepositoryRestServiceITTest extends ITTest {
         }
     }
 
+    /** The path as both frontends write it into an address: each segment encoded, the slashes kept */
+    private static String frontendSpelling(String repoPath) {
+        return java.util.Arrays.stream(repoPath.split("/"))
+                .map(org.niord.core.util.WebUtils::encodeURIComponent)
+                .collect(java.util.stream.Collectors.joining("/"));
+    }
+
+    @Test
+    void aFileWhoseNameHoldsAPercentAndASemicolon_opensByTheAddressBothFrontendsWrite() {
+        // An upload keeps a name with "%" and ";". Both frontends write them as %25 and %3B, which the request
+        // firewall accepts on a repository file's path only; the listing's path spells them the same way. The name
+        // is ASCII: the multipart header's charset is not what is under test here (the Danish letter is, below).
+        String prefix = "100% cover;v2-";
+        String name = prefix + System.nanoTime() + ".txt";
+        String stored = uploadTempFile(name, "cover".getBytes(StandardCharsets.UTF_8));
+        // The cleanup's DELETE would send a raw ";", which the firewall refuses; the store deletes it instead
+        createdRepoFilePaths.remove(stored);
+        String danish = "temp/it-repo-names-" + System.nanoTime() + "/100% dækning;" + System.nanoTime() + ".txt";
+        try {
+            org.junit.jupiter.api.Assertions.assertTrue(stored.endsWith("/" + name), stored);
+            String folder = stored.substring(0, stored.lastIndexOf('/'));
+            String address = frontendSpelling(stored);
+            org.junit.jupiter.api.Assertions.assertTrue(address.contains("/100%25%20cover%3Bv2-"), address);
+
+            String listed = given()
+                    .when().get("/rest/repo/list/" + folder)
+                    .then().statusCode(200)
+                    .body("size()", is(1))
+                    .extract().path("[0].path");
+            org.junit.jupiter.api.Assertions.assertEquals(address, listed, "the listing spells the path as the frontends do");
+
+            given().urlEncodingEnabled(false)
+                    .when().get("/rest/repo/file/" + address)
+                    .then().statusCode(200)
+                    .body(equalTo("cover"));
+            given().urlEncodingEnabled(false)
+                    .when().head("/rest/repo/file/" + address)
+                    .then().statusCode(200);
+            given().urlEncodingEnabled(false).redirects().follow(false)
+                    .when().get("/rest/repo/thumb/" + address)
+                    .then().statusCode(307)
+                    .header("Location", matchesPattern("https?://[^/]+/img/filetypes/.*"));
+
+            // A raw ";" starts a path parameter, which would cut the name: it stays refused
+            given().urlEncodingEnabled(false)
+                    .when().get("/rest/repo/file/" + address.replace("%3B", ";"))
+                    .then().statusCode(400);
+
+            // A name with a letter outside ASCII, as the old system's files may have, opens the same way
+            byte[] danishBytes = "dækning".getBytes(StandardCharsets.UTF_8);
+            store.write(danish, danishBytes, java.time.Instant.now());
+            byte[] served = given().urlEncodingEnabled(false)
+                    .when().get("/rest/repo/file/" + frontendSpelling(danish))
+                    .then().statusCode(200)
+                    .extract().asByteArray();
+            org.junit.jupiter.api.Assertions.assertArrayEquals(danishBytes, served);
+
+            // The administration app removes a temp upload by the same address
+            given().auth().oauth2(accessToken()).urlEncodingEnabled(false)
+                    .when().delete("/rest/repo/file/" + address)
+                    .then().statusCode(200);
+            assertFalse(store.exists(stored), "the delete did not remove the row");
+        } finally {
+            store.delete(stored);
+            store.delete(danish);
+        }
+    }
+
     /** Whether this platform's file paths take the name (Windows refuses "?" in one) */
     private static boolean platformFileNameTakes(String name) {
         try {
