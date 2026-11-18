@@ -72,3 +72,18 @@ lead lists an entry again and a reused one hides a new entry. Each entry says:
   version is decided, the contract comment's line names it: `, removed in <version>`.
 
 ## Unreleased
+
+**The public site's first visit carries this version's features, past a country's bundle
+baseline.** A first visit to `/messages/details` now loads what this version adds to the public
+site: the "active now" filter worked out in the browser from the event dates every message carries,
+the name of the publication being browsed with its Download and close controls, the "No messages to
+show" line, and the menu links that keep the publication from view to view. The scripts of the
+landing route grow by about 1.35 kB transfer, which in the example country is 9.3 % over its
+baseline and past the bundle report's tolerance, so check 8 of the checks on every country build
+fails `npm run build`. The base product's own baseline, `ui-apps/info/bundle-baseline.json`, and the
+example's are recorded again for the same features. No export is added or removed. Why: the growth
+is the cost of these features on the first visit, not a change of the country's.
+
+What a country must do: at this bump, once `npm run build` has built the public site, record its
+baseline again with `npm run bundle:info -- --update-baseline` in `fe/` and commit
+`info/bundle-baseline.json`; the next build then passes check 8.
