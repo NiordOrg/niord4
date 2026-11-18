@@ -236,7 +236,8 @@ so a string fails.
 {{- end }}
 {{- /*
 smtp.tls and smtp.existingSecret (values.yaml): TLS to the mail relay and its login. The backend
-reads niord.smtp.tls as none, starttls or ssl in any case, so the chart does too; a value missing
+version whose mail session carries them reads niord.smtp.tls as none, starttls or ssl in any case,
+so the chart does too (an older app image ignores both values; values.yaml); a value missing
 from an older release's values is none. Both are for a relay: this release's MailHog (smtp.host
 empty) asks for no login and offers no TLS, so with it either value would point at the wrong server
 and, for TLS, fail every mail.

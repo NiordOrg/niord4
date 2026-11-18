@@ -439,6 +439,9 @@ smtp:
   #   ssl       implicit TLS, usually port 465
   # The relay's certificate is checked against the JVM's trust store; a relay with a private CA
   # needs -Djavax.net.ssl.trustStore in app.javaOpts. Anything else fails the render.
+  # The backend reads niord.smtp.username / .password / .tls only from the base version whose
+  # mail session carries the login and TLS; an older app image ignores existingSecret and tls
+  # and sends with no login and in clear text, without an error. Set them only with that image.
   tls: none
   # true = this environment's mail must reach people (production from go-live on). The render
   # then refuses MailHog in this release and a smtp.host that names a MailHog Service of this
