@@ -432,7 +432,8 @@ smtp:
   # the app as NIORD_SMTP_USERNAME / NIORD_SMTP_PASSWORD (niord.smtp.username / .password). In a
   # cluster environment a SealedSecret next to the values, as the database users are. A changed
   # Secret takes effect at the app pod's next start. "" = no login. Needs smtp.host: this
-  # release's MailHog asks for none.
+  # release's MailHog asks for none. With tls none the login is sent in clear text: set starttls
+  # or ssl unless the relay is reached over a trusted network.
   existingSecret: ""
   # TLS to the relay, rendered as niord.smtp.tls when it is not none:
   #   none      plain SMTP, as MailHog wants (the default)
