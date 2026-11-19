@@ -299,7 +299,7 @@
         }
       ],
       "security-admin-console": [],
-      "niord-client-annex": [
+      "niord-annex": [
         {
           "id": "bfdcccdd-d0aa-4520-8f1f-dd66eff4d4a6",
           "name": "publication-curate",
@@ -316,7 +316,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-annex": [
+              "niord-annex": [
                 "admin",
                 "editor",
                 "user",
@@ -335,7 +335,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-annex": [
+              "niord-annex": [
                 "editor",
                 "user",
                 "publication-curate"
@@ -353,7 +353,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-annex": [
+              "niord-annex": [
                 "user"
               ]
             }
@@ -372,7 +372,7 @@
           "attributes": {}
         }
       ],
-      "niord-client-almanac": [
+      "niord-almanac": [
         {
           "id": "02978435-6a24-4b05-8b32-ba0615b099f6",
           "name": "publication-curate",
@@ -389,7 +389,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-almanac": [
+              "niord-almanac": [
                 "user"
               ]
             }
@@ -414,7 +414,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-almanac": [
+              "niord-almanac": [
                 "user",
                 "editor",
                 "admin",
@@ -433,7 +433,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-almanac": [
+              "niord-almanac": [
                 "user",
                 "editor",
                 "publication-curate"
@@ -509,7 +509,7 @@
           "attributes": {}
         }
       ],
-      "niord-client-nw": [
+      "niord-nw": [
         {
           "id": "0694aa5e-b78a-4189-803f-2c98a526b363",
           "name": "publication-curate",
@@ -535,7 +535,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-nw": [
+              "niord-nw": [
                 "user"
               ]
             }
@@ -551,7 +551,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-nw": [
+              "niord-nw": [
                 "user",
                 "editor",
                 "admin",
@@ -570,7 +570,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-nw": [
+              "niord-nw": [
                 "user",
                 "editor",
                 "publication-curate"
@@ -582,7 +582,7 @@
           "attributes": {}
         }
       ],
-      "niord-client-nm": [
+      "niord-nm": [
         {
           "id": "5e52dada-ee84-4db9-8598-4306942993e6",
           "name": "publication-curate",
@@ -599,7 +599,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-nm": [
+              "niord-nm": [
                 "admin",
                 "editor",
                 "user",
@@ -618,7 +618,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-nm": [
+              "niord-nm": [
                 "editor",
                 "user",
                 "publication-curate"
@@ -636,7 +636,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-nm": [
+              "niord-nm": [
                 "user"
               ]
             }
@@ -715,7 +715,7 @@
           "attributes": {}
         }
       ],
-      "niord-client-fa": [
+      "niord-fa": [
         {
           "id": "827aaded-a830-4a9d-85f5-e743273eff57",
           "name": "publication-curate",
@@ -732,7 +732,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-fa": [
+              "niord-fa": [
                 "editor",
                 "user",
                 "admin",
@@ -751,7 +751,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-fa": [
+              "niord-fa": [
                 "user"
               ]
             }
@@ -776,7 +776,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "niord-client-fa": [
+              "niord-fa": [
                 "editor",
                 "user",
                 "publication-curate"
@@ -885,29 +885,29 @@
       "attributes": {},
       "realmRoles": [],
       "clientRoles": {
-        "niord-client-nm": [
+        "niord-nm": [
           "sysadmin"
         ],
         "realm-management": [
           "manage-users",
           "manage-clients"
         ],
-        "niord-client-annex": [
+        "niord-annex": [
           "sysadmin"
         ],
-        "niord-client-almanac": [
+        "niord-almanac": [
           "sysadmin"
         ],
         "niord-web": [
           "sysadmin"
         ],
-        "niord-client-fa": [
+        "niord-fa": [
           "sysadmin"
         ],
         "niord-client-master": [
           "sysadmin"
         ],
-        "niord-client-nw": [
+        "niord-nw": [
           "sysadmin"
         ]
       },
@@ -1033,7 +1033,7 @@
       "requiredActions" : [ ],
       "realmRoles" : [ "uma_authorization", "offline_access" ],
       "clientRoles" : {
-        "niord-client-nw" : [ "user" ]
+        "niord-nw" : [ "user" ]
       },
       "groups" : [ ]
     },
@@ -1056,7 +1056,7 @@
       "realmRoles" : [ "uma_authorization", "offline_access" ],
       "clientRoles" : {
         "niord-client-master" : [ "editor" ],
-        "niord-client-nw" : [ "editor" ]
+        "niord-nw" : [ "editor" ]
       },
       "groups" : [ ]
     },
@@ -1079,7 +1079,65 @@
       "realmRoles" : [ "uma_authorization", "offline_access" ],
       "clientRoles" : {
         "niord-client-master" : [ "admin", "publication-curate" ],
-        "niord-client-nw" : [ "admin", "publication-curate" ]
+        "niord-nw" : [ "admin", "publication-curate" ]
+      },
+      "groups" : [ ]
+    },
+    {
+      "id" : "44444444-4444-4444-4444-444444444444",
+      "createdTimestamp" : 1662534213302,
+      "username" : "testcurator",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : true,
+      "credentials" : [ {
+        "type" : "password",
+        "value" : "test",
+        "temporary" : false
+      } ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "uma_authorization", "offline_access" ],
+      "clientRoles" : {
+        "niord-nw" : [ "user", "publication-curate" ]
+      },
+      "groups" : [ ]
+    },
+    {
+      "id" : "55555555-5555-5555-5555-555555555555",
+      "createdTimestamp" : 1662534213302,
+      "username" : "testdomaineditor",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : true,
+      "credentials" : [ {
+        "type" : "password",
+        "value" : "test",
+        "temporary" : false
+      } ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "uma_authorization", "offline_access" ],
+      "clientRoles" : {
+        "niord-nw" : [ "editor" ]
+      },
+      "groups" : [ ]
+    },
+    {
+      "id" : "66666666-6666-6666-6666-666666666666",
+      "createdTimestamp" : 1662534213302,
+      "username" : "testadminelsewhere",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : true,
+      "credentials" : [ {
+        "type" : "password",
+        "value" : "test",
+        "temporary" : false
+      } ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "uma_authorization", "offline_access" ],
+      "clientRoles" : {
+        "niord-nm" : [ "admin" ],
+        "niord-nw" : [ "user" ]
       },
       "groups" : [ ]
     }
@@ -1542,7 +1600,7 @@
     },
     {
       "id": "07c56267-3f4f-4a0b-8f2e-828bed74e257",
-      "clientId": "niord-client-almanac",
+      "clientId": "niord-almanac",
       "name": "NM Almanac",
       "surrogateAuthRequired": false,
       "enabled": true,
@@ -1593,7 +1651,7 @@
     },
     {
       "id": "14a9488b-a3f1-4e9d-b0cb-5a56e71e3ece",
-      "clientId": "niord-client-annex",
+      "clientId": "niord-annex",
       "name": "NM Annex",
       "surrogateAuthRequired": false,
       "enabled": true,
@@ -1644,7 +1702,7 @@
     },
     {
       "id": "5e035483-5475-44df-8af5-3e7c00a96ea3",
-      "clientId": "niord-client-fa",
+      "clientId": "niord-fa",
       "name": "Firing Areas",
       "surrogateAuthRequired": false,
       "enabled": true,
@@ -1829,7 +1887,7 @@
     },
     {
       "id": "2abbe645-f595-4c03-ab40-c48cd027de91",
-      "clientId": "niord-client-nm",
+      "clientId": "niord-nm",
       "name": "NM",
       "surrogateAuthRequired": false,
       "enabled": true,
@@ -1880,7 +1938,7 @@
     },
     {
       "id": "671d0fe6-5032-4285-9edc-e2ce55e5451d",
-      "clientId": "niord-client-nw",
+      "clientId": "niord-nw",
       "name": "NW",
       "surrogateAuthRequired": false,
       "enabled": true,

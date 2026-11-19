@@ -141,7 +141,7 @@ http://{{ include "niord.keycloak.host" . }}:{{ .Values.keycloak.service.port }}
 
 {{/*
 The realm Keycloak imports (keycloak.mode, values.yaml). dev: files/niord-realm.json as it is.
-production: the same realm without its users (unless keycloak.testUsers, which keeps the four test
+production: the same realm without its users (unless keycloak.testUsers, which keeps the test
 users: their passwords are in this public repository), without the niord-web-admin client and its service
 account (unused: the app's admin calls carry the signed-in user's own token) and without any
 client secret (the file's are masked placeholders, so Keycloak generates new ones), and with

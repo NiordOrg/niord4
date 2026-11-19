@@ -448,4 +448,5 @@ published there.
   change and would restart in a loop under the new chart; the README already says to set the tag.
   Neither is fixed here: the template has no environment made from it yet.
 - **`deploy.sh` changes a tracked file**: it copies a test realm over the chart's, and the two
-  name the domain clients differently (`be/docs/potential-errors.md`, K8S1).
+  name the domain clients differently (`be/docs/potential-errors.md`, K8S1). Closed since: the
+  two files are one realm, named after the domains, and `deploy.sh` stops on a difference.

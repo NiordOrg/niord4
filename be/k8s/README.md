@@ -43,8 +43,11 @@ Everything is fronted by an nginx reverse proxy and served on a **single origin*
 The PostgreSQL database starts **empty**: on startup the app builds the schema with Liquibase (the bare
 master changelog), and a new database holds no data, not even a domain, until it is bootstrapped once
 with `be/scripts/bootstrap.sh` (step 4 of the Quick start; `docs/code-data-config-plan.md` §7). Keycloak
-imports the `niord` realm (`niord/src/test/resources/keycloak/niord-realm.json`), exactly like the
-docker-compose setup. The chart serves the administration app at `/`, the REST API and Keycloak
+imports the `niord` realm, `helm/niord/files/niord-realm.json`, which is the integration tests' realm
+(`niord/src/test/resources/keycloak/niord-realm.json`) byte for byte: `scripts/deploy.sh` stops while
+the two differ and copies neither over the other. Its domain clients carry the domain ids of the base
+product's sample (`niord-nw`, `niord-nm`, `niord-fa`, `niord-almanac`, `niord-annex`), since the backend
+reads a domain's roles only from the client whose id is the domain's. The chart serves the administration app at `/`, the REST API and Keycloak
 from one origin: the app image carries the deployable's build of the administration app and the
 backend serves it (see [`be/README.md`](../README.md)). The realm's seeded users (e.g. **`sysadmin` /
 `sysadmin`**) sign in through it. The public site, off by default, is described in
@@ -259,8 +262,9 @@ the test realm and `admin`/`admin`.
   the Secret then no longer holds a working password.
 - **The realm** is the test realm, derived by the template helper `niord.keycloak.realmJson`. It
   keeps the clients, roles and the `Sysadmin` group, and no user. With `keycloak.testUsers: true` it
-  keeps the four test users (`sysadmin`/`sysadmin`, `testuser`/`test`, `testeditor`/`test`,
-  `testadmin`/`test`), whose passwords are in this public repository. It drops the
+  keeps the test users (`sysadmin`/`sysadmin`, and `testuser`, `testeditor`, `testadmin`,
+  `testcurator`, `testdomaineditor` and `testadminelsewhere` with the password `test`), whose
+  passwords are in this public repository. It drops the
   `niord-web-admin` client with its service account and every client secret. The app's admin calls
   carry the signed-in user's own token, so nothing uses that client. Keycloak generates new secrets
   for the confidential clients. `niord-web` accepts redirects only to `<externalBaseUri>/*`, from
@@ -293,6 +297,18 @@ the test realm and `admin`/`admin`.
   user added in the admin console (`<externalKeycloakUrl>/admin/`) stays. A later chart change, or
   a new `externalBaseUri`, does not reach it: change `niord-web`'s redirect URIs and web origins in
   the admin console.
+- **A realm imported before November 2026 names its domain clients `niord-client-nw`,
+  `niord-client-nm`, `niord-client-fa`, `niord-client-almanac` and `niord-client-annex`.** No
+  domain has those ids, so no role on them counted in any domain. The realm file now names them
+  after the domains (`niord-nw` ...). A dev-mode Keycloak imports the new file at its next start,
+  and the upgrade to this chart restarts it (the realm's checksum changes): it then has the new
+  clients and the three further test users, and the old clients are gone, as is everything made
+  in its console since its last start. A production-mode realm, and a realm made by hand on a
+  shared Keycloak, are not imported again and keep the old clients: in the admin console rename
+  each (Clients, the client, Settings, *Client ID*, Save). Its roles and every user's and group's
+  role mappings stay with it, and the next token carries them under the new id. A domain a restored
+  database holds that has no client yet gets one from the Domains page of the administration app,
+  or in the admin console.
 
 The production-mode realm holds no test user: their passwords are in this repository, which is
 public. `keycloak.testUsers: true` keeps them, for a staging with no real data on a closed network
@@ -563,7 +579,7 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
 | `keycloak.existingSecret` | `""` | A Secret with the keys `username` and `password` for the Keycloak bootstrap admin. `""` = the chart renders one from `keycloak.adminUser`/`keycloak.adminPassword`, which production mode refuses. |
 | `keycloak.mode` | `dev` | `dev`: `start-dev`, data kept in the container (gone on a restart), the test realm. `production`: `start` on `keycloak.database`, the test realm without its users and without `niord-web-admin`, and with `niord-web` limited to `externalBaseUri` — see [Keycloak in production mode](#keycloak-in-production-mode). |
 | `keycloak.devModeOffLocalhost` | `false` | Dev mode with an `externalBaseUri` or `externalKeycloakUrl` that is not on `localhost`, `127.0.0.1` or `[::1]` fails the render unless this is `true`. A cluster test environment sets it; staging and production run `production` or a shared Keycloak. |
-| `keycloak.testUsers` | `false` | Production mode only: `true` keeps the test realm's four users, with the passwords in this repository, in the rendered realm; never for production. Dev mode always imports them. Anything but `true` or `false` fails the render. |
+| `keycloak.testUsers` | `false` | Production mode only: `true` keeps the test realm's users, with the passwords in this repository, in the rendered realm; never for production. Dev mode always imports them. Anything but `true` or `false` fails the render. |
 | `keycloak.database` | `keycloak` | Production mode: the database on this release's Postgres (or `postgres.host`) that Keycloak keeps its data in, created by an init container when missing. |
 | `postgres.databases` | `[]` | Further databases this release's Postgres holds, next to `postgres.database`. An infra release serving several app releases lists one per app (`[niord_dk, niord_gl]`), and each app release names its own in `postgres.database`. A post-install/post-upgrade Job creates any that is missing (from `template_postgis`, owned by the superuser, `postgres.admin`) and never drops one. An app release on such a database needs it handed to its user ("A database of someone else's", above). |
 | `app.persistence` / `postgres.persistence` | `enabled: true` | PVCs for NIORD_HOME and the DB. The repository files (attachments, publication files, the archive) are rows of the DB; NIORD_HOME is a cache (thumbnails and map images under `cache/`, the map tile cache of at most 200 MB, the AtoN tiles, the Lucene index) and the batch jobs' files, and nothing on it is backed up. |
@@ -781,7 +797,7 @@ k8s/
 ├── helm/niord/
 │   ├── Chart.yaml
 │   ├── values.yaml
-│   ├── files/              # bundled realm JSON (synced by deploy.sh)
+│   ├── files/              # the realm JSON, equal to the integration tests' (deploy.sh checks)
 │   └── templates/
 │       ├── nginx/          # reverse proxy (single public entry point)
 │       ├── app/            # the Niord application (niord-app, or a country image)

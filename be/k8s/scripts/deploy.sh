@@ -44,16 +44,28 @@ for arg in "$@"; do
   esac
 done
 
+# The chart's realm is the integration tests' realm, byte for byte: one realm whose domain clients
+# carry the domain ids (niord-nw, niord-nm, ...), the only client a domain's roles are read from. A
+# deploy never copies one file over the other, which would leave a changed tracked file behind and
+# hide which of the two is stale: a difference stops it before anything reaches the cluster.
+TEST_REALM="${REPO_ROOT}/niord/src/test/resources/keycloak/niord-realm.json"
+CHART_REALM="${CHART_DIR}/files/niord-realm.json"
+if ! cmp -s "${TEST_REALM}" "${CHART_REALM}"; then
+  echo "ERROR: the chart's realm differs from the integration tests' realm:" >&2
+  echo "         ${CHART_REALM}" >&2
+  echo "         ${TEST_REALM}" >&2
+  echo "       They are one realm. Decide which change is right, make the two files equal and commit both;" >&2
+  echo "       this script does not copy one over the other (k8s/README.md, \"What gets deployed\")." >&2
+  exit 1
+fi
+
 command -v helm >/dev/null || { echo "ERROR: helm not installed (brew install helm)" >&2; exit 1; }
 
 CTX="$(kubectl config current-context 2>/dev/null || echo '?')"
 echo ">> kube context: ${CTX}  (expected: orbstack)"
 
-# Keep the chart's bundled realm in sync with the test resource it came from. The app builds the schema with
-# Liquibase on startup; a new database holds no data until it is bootstrapped once with
-# scripts/bootstrap.sh (k8s/README.md, Quick start).
-echo ">> Syncing realm JSON into the chart"
-cp "${REPO_ROOT}/niord/src/test/resources/keycloak/niord-realm.json"   "${CHART_DIR}/files/niord-realm.json"
+# The app builds the schema with Liquibase on startup; a new database holds no data until it is
+# bootstrapped once with scripts/bootstrap.sh (k8s/README.md, Quick start).
 
 if [[ "${SECOM_ARGS[*]}" == *"secom.enabled=true"* ]]; then
   echo ">> Creating the SECOM test secrets (committed test PKI)"

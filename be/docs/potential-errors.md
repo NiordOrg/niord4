@@ -1673,22 +1673,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   §5), `curl -s http://localhost:4200/rest/domains/all` against a local country.
 - **Severity:** Low — log noise only. Fix: skip the Keycloak states, or log at DEBUG, when no user is authenticated.
 
-## K8S1. `deploy.sh` overwrites the chart's realm with a test realm that names the domain clients differently
-
-- **Location:** `be/k8s/scripts/deploy.sh` ("Syncing realm JSON into the chart") copies
-  `niord/src/test/resources/keycloak/niord-realm.json` over `k8s/helm/niord/files/niord-realm.json` before every
-  install.
-- **Description:** the two files differ. The chart's realm names the sample domains' clients `niord-client-annex`,
-  `niord-client-almanac` and so on; the test realm names them `niord-annex`, `niord-almanac`. Every local
-  `deploy.sh` run leaves the chart's file changed in the working tree, and the local bundle then runs a realm that
-  is not the one the chart publishes, the one test environments import and production mode derives its realm from.
-- **Why it looks wrong:** the copy is meant to keep the two in step ("Keep the chart's bundled realm in sync with the
-  test resource it came from"), so one of them is stale, and a deploy should not change a tracked file.
-- **Exposed by:** the public site's local rehearsal (2026-11-10, `docs/public-site-deploy-plan.md`), whose
-  `deploy.sh` run showed the file changed.
-- **Severity:** Low — local runs and a dirty tree. Fix: decide which names are right, make the two files equal,
-  and have `deploy.sh` refuse a difference rather than copy over it.
-
 ## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
 
 - **Location:** `org.niord.web.wms.WmsProxyServlet.doGet`: `WebUtils.cache(response, CACHE_TIMEOUT)` runs before
