@@ -205,8 +205,13 @@ A deployment started on a copy of another Niord's database finds that system's p
 which of them to send:
 
 . Start the deployment with `mailValidRecipients` at `LOG`, and let the sender job run (it is switched off by
-  `-Dniord.schedule.mail-send-cron=-`): the pending mails that are due become _Held_. With the sender job switched
-  off they stay _Pending_, and all of them go out by themselves once the job runs with the setting open.
+  `-Dniord.schedule.mail-send-cron=-`): the pending mails that are due become _Held_. The sender job takes at most
+  `mailMaxPerMinute` mails a minute (10 unless it is changed), so a large queue becomes _Held_ over a while: 300
+  mails take half an hour. With the sender job switched off they stay _Pending_, and all of them go out by
+  themselves once the job runs with the setting open.
+. Before you change the setting, filter the list on _Pending_ and wait until no mail that is due is left (a mail's
+  details show when it is due). A pending mail still there when the setting is changed is sent by itself, under the
+  new setting.
 . To try it out first, set `mailValidRecipients` to a test address and send one held mail again: it arrives at the
   test address, and it becomes _Held_ again (unless the test address was its only recipient), so it is sent with the
   other held mails later.

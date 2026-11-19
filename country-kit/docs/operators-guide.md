@@ -549,7 +549,8 @@ version needs and the old database never had is missing until you import it.
 
   `mailValidRecipients` given as `LOG` at the start (step 15) keeps the mail from leaving, but the
   jobs would still change the data. With the filter at `LOG` and the mail job running, the copy's
-  due pending mails become Held, and a sysadmin chooses which to send again (the sysadmin manual's
+  due pending mails become Held, at most `mailMaxPerMinute` of them a minute, so the filter is opened
+  only when no due mail is left Pending, and a sysadmin chooses which to send again (the sysadmin manual's
   "Sending a Mail Again"); with `-Dniord.schedule.mail-send-cron=-` they stay Pending instead, and
   all go out by themselves once the job runs with the filter open. To get the choice, let the mail
   job run while the filter is `LOG`.
