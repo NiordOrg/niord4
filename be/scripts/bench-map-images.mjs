@@ -27,15 +27,16 @@
  *              is for a benchmark copy of the data only.
  *   remote     Times a deployed system with GET requests only (cases R1 to R8); it never writes there. The
  *              one other request it sends is the Keycloak token POST.
+ *   compare    Applies the pass criteria to the result files of an old and a new run.
+ *   selftest   Starts the stand-ins on free ports and checks their answers, the map-image client
+ *              against a stand-in of the endpoint's answers, and the message reads against a stand-in of
+ *              their endpoints; no backend needed.
  *
  * MESSAGE READS. Cases 6b, 6c and 6d (local) and R6, R7 and R8 (remote) time the message reads of
  * be/docs/message-read-benchmark.md: the administration app's list search as an editor sends it (NW and NM,
  * the default page of 100), its map view (1,000), and the public site's list and single message without a
  * login. They run only when --cases names them, read --searches and --message-gets as cases 6 and R5 do, and
  * need no image: a run of read cases alone (6 and R5 among them) fetches no map image and needs no stand-ins.
- *   compare    Applies the pass criteria to the result files of an old and a new run.
- *   selftest   Starts the stand-ins on free ports and checks their answers, and the map-image client
- *              against a stand-in of the endpoint's answers; no backend needed.
  *
  * USAGE (every flag: --help)
  *   node be/scripts/bench-map-images.mjs stand-ins --latency 250
