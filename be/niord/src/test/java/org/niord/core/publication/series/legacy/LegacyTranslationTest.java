@@ -462,11 +462,19 @@ public class LegacyTranslationTest {
      *
      * The containment rule is D-4's imported layout, which is the fixture the invariant-binding pass
      * waits on.
+     *
+     * The revision segment is the one the descriptor's link names, where the link
+     * is a repository link under the publication's folder: the old product raised
+     * the revision each time a publication was opened for editing, so the file is
+     * often in an older folder than the current revision, and the captured estate
+     * is full of such rows. Only a row whose link names no file there takes the
+     * current revision.
      */
     @BindsRule({"D-4"})
     @Test
     public void pathsAreVerbatimAndContainedByTheirRepoPath() {
         int checked = 0;
+        int fromAnOlderRevision = 0;
         List<String> broken = new ArrayList<>();
 
         for (Publication p : LegacyEstateFixture.publications()) {
@@ -478,18 +486,41 @@ public class LegacyTranslationTest {
                     continue;
                 }
                 checked++;
-                String expected = p.getRepoPath() + "/" + p.getRevision() + "/" + d.getFileName();
-                if (!expected.equals(d.getFilePath()) || !d.getFilePath().startsWith(issue.getRepoPath())) {
+                String current = p.getRepoPath() + "/" + p.getRevision() + "/" + d.getFileName();
+                String expected = linkedFileUnder(p.getRepoPath(), d.getLink());
+                if (expected == null) {
+                    expected = current;
+                } else if (!expected.equals(current)) {
+                    fromAnOlderRevision++;
+                }
+                if (!expected.equals(d.getFilePath()) || !d.getFilePath().startsWith(issue.getRepoPath() + "/")
+                        || !d.getFilePath().endsWith("/" + d.getFileName())) {
                     broken.add(p.getPublicationId() + " -> " + d.getFilePath());
                 }
             }
         }
 
         assertTrue(checked > 0, "no file paths were checked, so this asserted nothing");
+        assertTrue(fromAnOlderRevision > 0, "no row of the estate links a file outside its current "
+                + "revision folder, so the rule that takes the link's folder asserted nothing");
         assertTrue(broken.isEmpty(),
                 "re-deriving a flat path 404s every imported file AND every citation pointing at it; "
                         + "42 of these rows no longer have their bytes, so the path is all that is left: "
                         + broken);
+    }
+
+    /**
+     * The file a repository link names, decoded, when it lies under the folder; null otherwise. Written out here
+     * rather than read from the production code, so the test states the rule on its own.
+     */
+    private static String linkedFileUnder(String repoPath, String link) {
+        String prefix = "/rest/repo/file/";
+        if (link == null || !link.startsWith(prefix)) {
+            return null;
+        }
+        String path = java.net.URLDecoder.decode(link.substring(prefix.length()),
+                java.nio.charset.StandardCharsets.UTF_8);
+        return path.startsWith(repoPath + "/") ? path : null;
     }
 
     /**
