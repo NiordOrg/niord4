@@ -205,7 +205,7 @@ Pass, fail, not applicable, or needs a person, for the base build. A fail names 
 | 1.3.3 Sensory characteristics | A | Pass | |
 | 1.3.4 Orientation | AA | Pass | Both orientations render |
 | 1.3.5 Identify input purpose | AA | N/A | The site takes no personal data |
-| 1.4.1 Use of colour | A | **Fail** | The chart's credit link, by colour alone at 2.2:1: _The map credit's link is told from its line by a shade of grey alone_ |
+| 1.4.1 Use of colour | A | Pass (2026-11-19) | Fixed: the chart's credit links are underlined (the map view, a message's dialog and the teaser); measured in Chromium on the map view and the teaser of the base build by `npm run layout:info` |
 | 1.4.2 Audio control | A | N/A | |
 | 1.4.3 Contrast (minimum) | AA | **Fail** | The teaser's banner over a white tile, 4.44:1: _The teaser's banner can fall just under 4.5:1_. Every other text axe-core measured passes; the default subtle text colour (backlog) was not met on any page scanned, and its entry stays for the token |
 | 1.4.4 Resize text | AA | Pass | At 200 % page zoom; the browser's text-only zoom was not checked |

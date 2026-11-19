@@ -187,14 +187,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   views now show for an empty list (`MSGS_NONE`, "No messages to show"). Found by the error hunt's phase 2
   (2026-11-15), seen in a browser on a local rig; Low. Left by the owner on 2026-11-15: no new public-site text
   and no API change.
-- **The map credit's link is told from its line by a shade of grey alone** (WCAG 1.4.1). OpenLayers' own
-  stylesheet (`ol/ol.css`, imported by `ui-apps/info/src/styles.css`) draws the attribution's text in `#333` and
-  its link to the licence in `#666`, with no underline: 2.2:1 between the two, where a link that is told apart by
-  colour alone needs 3:1 and a second cue on focus and hover. It is on every chart of the site — the map view, the
-  map in a message's dialog and the teaser (whose credit line is its own markup, drawn with the same classes). An
-  underline on `.ol-attribution a`, in a stylesheet both applications load because the map kit draws the same
-  credit in the administration app, closes it. Found by the public site's audit
-  ([accessibility-audit-public-site.md](../../docs/accessibility-audit-public-site.md), 2026-11-18).
 - **The teaser's banner can fall just under 4.5:1** (WCAG 1.4.3). Its white 18 px text (normal weight, so not
   large text) stands on the chrome colour at 60 % opacity over the chart (`features/teaser/teaser.component.ts`,
   `bg-chrome/60`). With the default tokens that is 4.89:1 over the chart's land and 5.98:1 over its sea, and

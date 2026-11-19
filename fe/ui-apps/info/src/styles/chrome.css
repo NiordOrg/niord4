@@ -141,3 +141,13 @@
     }
   }
 }
+
+/* A link in a chart's credit line is underlined, as every link in running text on this site is:
+   OpenLayers draws it in a grey 2.2:1 from the line's and with no underline, so colour alone told
+   it apart (WCAG 1.4.1). OpenLayers' stylesheet is unlayered and says `text-decoration: none`,
+   so this rule is unlayered too, and wins by coming after it. It covers the credit OpenLayers
+   writes on the map view and in a message's dialog, and the teaser's own credit line, which
+   wears the same classes. */
+.ol-attribution a {
+  text-decoration: underline;
+}

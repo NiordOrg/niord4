@@ -15,7 +15,7 @@
  * depends on the width of the screen and on the language: a row of labels that fits in Danish
  * wraps in Kalaallisut. jsdom lays nothing out, so no unit test can see any of it. This script
  * opens the built artefact in Chromium, answers every /rest call from the fixture below, and
- * asserts thirteen things:
+ * asserts fourteen things:
  *
  *   1. At 320, 640, 1024 and 1920 px, in every language the build offers, every control of the
  *      menu bar — the four links and each language flag — lies inside the viewport and is the
@@ -58,6 +58,7 @@
  *      without a position covers none of the chart's own controls: the zoom buttons, the layer
  *      switcher and every link of the credits are each the topmost element at their centre. A
  *      link that wraps onto a second line is tested at the centre of each line.
+ *  14. Every link of a chart's credit line is underlined, on the map view and on the teaser.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -876,6 +877,22 @@ async function printedLinkProblems(page) {
 }
 
 /**
+ * Every link of a chart's credit line is underlined: its grey is 2.2:1 from the line's, so colour
+ * alone would tell it apart (WCAG 1.4.1). There must be one, or the check proves nothing.
+ */
+function creditLinkProblems(page) {
+  return page.evaluate(() => {
+    const links = [...document.querySelectorAll('.ol-attribution a[href]')].filter(
+      (a) => a.getClientRects().length > 0,
+    );
+    if (links.length === 0) return ['the chart shows no credit link, so the check proves nothing'];
+    return links
+      .filter((a) => !getComputedStyle(a).textDecorationLine.includes('underline'))
+      .map((a) => `the credit link "${a.textContent.trim()}" is not underlined`);
+  });
+}
+
+/**
  * The publications table fits inside its panel, and no link of it reaches past the panel's edge.
  * A table wider than its panel need not widen the page: an ancestor that clips it cuts the links
  * off instead, which the page's own width does not show.
@@ -1304,6 +1321,16 @@ if (invokedDirectly) {
         'a message part whose table changes width on a language switch',
         'the build offers no Danish and English to switch between',
       );
+
+    // 14. A chart's credit link is underlined, on the map view and on the teaser.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await open(page, '/messages/map');
+    await page.waitForSelector('.ol-attribution a[href]');
+    record('the credit links of the map view', await creditLinkProblems(page));
+    await page.goto(`${ORIGIN}/teaser`);
+    await page.waitForSelector('#teaser-banner');
+    await settle(page);
+    record('the credit link of the teaser', await creditLinkProblems(page));
 
     // 13. The panel of messages without a position leaves every control of the chart uncovered —
     //     on a phone, at 400 % zoom, where the chart is barely taller than the panel's cap, and
