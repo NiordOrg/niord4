@@ -55,10 +55,16 @@ export class EditorCommentsStore {
     { defaultValue: [] },
   );
 
-  /** A failed fetch leaves the resource erroring, where `value()` throws — degrade to empty. */
+  /**
+   * A failed fetch leaves the resource erroring, where `value()` throws — the list reads empty,
+   * and {@link loadFailed} tells the page to say so rather than show "no comments".
+   */
   readonly comments = computed<readonly MessageComment[]>(() =>
     this.resource.hasValue() ? this.resource.value() : [],
   );
+
+  /** The thread could not be read. */
+  readonly loadFailed = computed<boolean>(() => !!this.resource.error());
 
   /** Total comments on the thread — what the tab badge shows. */
   readonly count = computed<number>(() => this.comments().length);

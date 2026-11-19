@@ -258,6 +258,9 @@ function setup(
  * left outstanding. The URLs come back WITH their query strings, so the tests
  * that are about which endpoint a picker reads, and on what terms, can say so.
  */
+/** An option list whose read fails in the next drain, by a part of its URL. */
+let failingLookup: string | undefined;
+
 function drainLookups(
   httpTesting: HttpTestingController,
   domains: readonly unknown[] = [],
@@ -277,7 +280,9 @@ function drainLookups(
         r.url.includes('/message-series')),
   )) {
     urls.push(req.request.urlWithParams);
-    if (req.request.url.includes('/domains/all')) {
+    if (failingLookup && req.request.url.includes(failingLookup)) {
+      req.flush('down', { status: 503, statusText: 'Service Unavailable' });
+    } else if (req.request.url.includes('/domains/all')) {
       req.flush([...domains]);
     } else if (req.request.url.includes('/name-tokens')) {
       req.flush([...tokens]);
@@ -338,6 +343,7 @@ async function settled(fixture: ReturnType<typeof setup>['fixture']): Promise<vo
 
 describe('PublicationSeriesEditor', () => {
   afterEach(() => {
+    failingLookup = undefined;
     TestBed.inject(HttpTestingController).verify();
     document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.replaceChildren());
   });
@@ -365,6 +371,27 @@ describe('PublicationSeriesEditor', () => {
       ...document.querySelectorAll<HTMLButtonElement>('.cdk-overlay-container button'),
     ].filter((b) => b.textContent?.includes('shared.forms.formatTokenInput.insert'));
     expect(inserts.length).toBeGreaterThan(0);
+  });
+
+  it('says so above the tabs when an option list could not be read, and Retry reads it again', async () => {
+    failingLookup = '/publication-categories/all';
+    const { fixture, host, httpTesting } = setup(DOMAINS);
+    failingLookup = undefined;
+    open(fixture, host, { mode: 'edit', series: WEEKLY }, httpTesting);
+    await settled(fixture);
+    const banner = () =>
+      [...document.querySelectorAll('.cdk-overlay-container [role="alert"]')].find((node) =>
+        node.textContent?.includes('common.fetchError'),
+      );
+    expect(banner()).toBeDefined();
+
+    banner()?.querySelector('button')?.click();
+    fixture.detectChanges();
+    // Only the list that failed is read again.
+    httpTesting.expectNone((r) => r.url.includes('/name-tokens'));
+    httpTesting.expectOne((r) => r.url.includes('/publication-categories/all')).flush([]);
+    await settled(fixture);
+    expect(banner()).toBeUndefined();
   });
 
   it('fills the report picker from the endpoint a plain admin may read', () => {

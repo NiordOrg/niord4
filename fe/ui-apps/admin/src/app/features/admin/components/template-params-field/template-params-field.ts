@@ -2,6 +2,7 @@ import { Component, computed, inject, input, model, output, viewChild } from '@a
 import { httpResource } from '@angular/common/http';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 import { Icon } from '../../../../shared/icons/icon';
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { ModelLanguageSelection, type ModelText } from '../../services/model-language-selection';
@@ -30,7 +31,7 @@ export interface TemplateParamReorder {
  */
 @Component({
   selector: 'app-template-params-field',
-  imports: [Icon, TemplateParamDialog, TranslocoPipe, ModelLanguagePicker],
+  imports: [ErrorBanner, Icon, TemplateParamDialog, TranslocoPipe, ModelLanguagePicker],
   templateUrl: './template-params-field.html',
   host: { class: 'block' },
 })
@@ -48,13 +49,13 @@ export class TemplateParamsField {
   private editIndex: number | null = null;
 
   // All param types — the source for the dialog's referenced-type pool + kind labels.
-  private readonly typesResource = httpResource<readonly ParamType[]>(
+  protected readonly typesResource = httpResource<readonly ParamType[]>(
     () => `${this.apiBaseUrl}/templates/parameter-types`,
     { defaultValue: [] },
   );
 
-  // value() throws in the resource's error state, so the read is guarded by hasValue()
-  // and degrades to an empty list.
+  // value() throws in the resource's error state, so the read is guarded by hasValue(); a failed
+  // read is said above the table, with a retry, so an empty type pool is never taken for none.
   private readonly allTypes = computed<readonly ParamType[]>(() =>
     this.typesResource.hasValue() ? this.typesResource.value() : [],
   );

@@ -6,6 +6,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { Card } from '../../../../shared/components/card/card';
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 import { JsonDiffPane } from '../../../../shared/components/json-diff-pane/json-diff-pane';
 import { ProgressBar } from '../../../../shared/components/progress-bar/progress-bar';
 import { MessageAttachment } from '../../../messages/components/message-attachment/message-attachment';
@@ -27,6 +28,7 @@ import { EditorFacade } from '../../services/editor-facade';
     TranslocoPipe,
     Icon,
     Card,
+    ErrorBanner,
     EditorViewHeader,
     RevisionTable,
     JsonDiffPane,
@@ -67,7 +69,15 @@ import { EditorFacade } from '../../services/editor-facade';
         }
       </div>
     } @else if (facade.message(); as message) {
-      @if (message.created) {
+      @if (message.created && historyResource.error()) {
+        <div class="p-4">
+          <app-error-banner
+            [title]="'common.fetchError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="historyResource.reload()"
+          />
+        </div>
+      } @else if (message.created) {
         <div class="flex flex-1 flex-col overflow-auto p-4">
           <!-- Unpadded so the revision table runs edge-to-edge like the other list
                tables; the compare/attachment sections below re-add their own padding. -->
@@ -153,7 +163,7 @@ export class EditorHistoryPage {
   // the backend — a "Reload message" resolves the SAME id, so keying only on the id would keep a
   // stale revision list on screen (same convention as the comments page's resource). The request
   // is an OBJECT so each factory re-run forces the refetch (an identical URL string would not).
-  private readonly historyResource = httpResource<readonly MessageHistory[]>(
+  protected readonly historyResource = httpResource<readonly MessageHistory[]>(
     () => {
       this.facade.loadSeq();
       const id = this.historyMessageId();
@@ -163,9 +173,9 @@ export class EditorHistoryPage {
     { defaultValue: [] },
   );
 
-  // A failed fetch leaves the resource in its error state (value() throws); read via hasValue()
-  // so an outage degrades to an empty list — the template reads this unguarded, which would
-  // otherwise throw during change detection.
+  // A failed fetch leaves the resource in its error state (value() throws); read via hasValue(),
+  // since the template reads this unguarded, and the template shows the failure in the table's
+  // place rather than an empty history.
   protected readonly history = computed<readonly MessageHistory[]>(() =>
     this.historyResource.hasValue() ? this.historyResource.value() : [],
   );

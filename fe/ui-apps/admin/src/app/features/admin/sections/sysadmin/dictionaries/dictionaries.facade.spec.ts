@@ -69,6 +69,33 @@ describe('DictionariesFacade', () => {
     expect(facade.error()).toBe(true);
   });
 
+  it('a failed read of the names counts as a failed load, and refresh() reads them again', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: APP_CONFIG, useValue: { apiBaseUrl: '/rest', appName: 'Niord', helpUrls: {} } },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        DictionariesFacade,
+      ],
+    });
+    const facade = TestBed.inject(DictionariesFacade);
+    TestBed.tick();
+    const httpTesting = TestBed.inject(HttpTestingController);
+    httpTesting
+      .expectOne('/rest/dictionaries/names')
+      .flush('boom', { status: 503, statusText: 'Service Unavailable' });
+    httpTesting.expectOne('/rest/dictionaries/dictionary/web/entries').flush([]);
+    expect(facade.namesFailed()).toBe(true);
+    expect(facade.error()).toBe(true);
+
+    facade.refresh();
+    TestBed.tick();
+    httpTesting.expectOne('/rest/dictionaries/names').flush(['web', 'mail']);
+    httpTesting.expectOne('/rest/dictionaries/dictionary/web/entries').flush([]);
+    expect(facade.names()).toEqual(['web', 'mail']);
+    expect(facade.error()).toBe(false);
+  });
+
   it("falls back to the first available name when 'web' is absent from the deployment", () => {
     TestBed.configureTestingModule({
       providers: [

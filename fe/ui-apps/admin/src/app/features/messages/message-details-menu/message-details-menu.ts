@@ -86,6 +86,8 @@ export class MessageDetailsMenu {
     addToTag: translateSignal('menu.action.tag.add'),
     removeFrom: translateSignal('menu.action.tag.remove_named'),
     loading: translateSignal('common.loading'),
+    fetchError: translateSignal('common.fetchError'),
+    retry: translateSignal('common.retry'),
     buttonLabel: translateSignal('messages.detailsMenu.buttonLabel'),
   } as const;
 
@@ -188,7 +190,7 @@ export class MessageDetailsMenu {
       // only shrink (by the add-to-last-tag row), never grow with the tag count.
       // While the membership list is loading, a disabled placeholder stands in;
       // once it resolves, the parent disappears entirely if the message is in no
-      // tags.
+      // tags. A failed read says so, with a retry, rather than reading as no tags.
       const removeItems = this.removeFromTagItems();
       if (this.tagsResource.isLoading()) {
         items.push({
@@ -196,6 +198,19 @@ export class MessageDetailsMenu {
           icon: 'lucideTag',
           items: [
             { label: this.t.loading(), icon: 'lucideLoaderCircle', spin: true, disabled: true },
+          ],
+        });
+      } else if (this.tagsResource.error()) {
+        items.push({
+          label: this.t.removeFrom(),
+          icon: 'lucideTag',
+          items: [
+            { label: this.t.fetchError(), icon: 'lucideCircleX', disabled: true },
+            {
+              label: this.t.retry(),
+              icon: 'lucideRefreshCw',
+              command: () => this.tagsResource.reload(),
+            },
           ],
         });
       } else if (removeItems.length > 0) {

@@ -349,7 +349,15 @@
               'admin.publications.oneOff.subtitle' | transloco
             }}</span>
           </div>
-          @if (filteredOneOffs().length === 0) {
+          @if (oneOffsRead.failed()) {
+            <div class="p-3">
+              <app-error-banner
+                [title]="'common.fetchError' | transloco"
+                [retryLabel]="'common.retry' | transloco"
+                (retry)="oneOffsRead.retry()"
+              />
+            </div>
+          } @else if (filteredOneOffs().length === 0) {
             <div class="p-3">
               <!--
                 Named for the desk being worked at, and followed by the reason an

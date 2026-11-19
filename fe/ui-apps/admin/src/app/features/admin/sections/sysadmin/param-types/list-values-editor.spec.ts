@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { type Observable, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
@@ -37,8 +37,12 @@ interface Internals {
   moveDown: (i: number) => void;
 }
 
-function setup(names: string[] = ['template', 'other']) {
-  const getDictionaryEntries = vi.fn((name: string) => of(entriesByName[name] ?? []));
+function setup(
+  names: string[] = ['template', 'other'],
+  entries: (name: string) => Observable<DictionaryEntry[]> = (name) =>
+    of(entriesByName[name] ?? []),
+) {
+  const getDictionaryEntries = vi.fn(entries);
   const dictionaries = {
     getDictionaryNames: vi.fn(() => of(names)),
     getDictionaryEntries,
@@ -84,6 +88,23 @@ function valueCell(fixture: ComponentFixture<ListValuesEditor>, key: string): HT
 }
 
 describe('ListValuesEditor', () => {
+  it('says so when the entries could not be read, and Retry reads them again', async () => {
+    let calls = 0;
+    const { fixture, internals, getDictionaryEntries } = setup(['template'], (name) =>
+      calls++ === 0 ? throwError(() => new Error('offline')) : of(entriesByName[name] ?? []),
+    );
+    await settle(fixture);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('common.fetchError');
+    expect(internals.available()).toEqual([]);
+
+    host.querySelector<HTMLButtonElement>('[role="alert"] button')?.click();
+    await settle(fixture);
+    expect(getDictionaryEntries).toHaveBeenLastCalledWith('template');
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(internals.available().map((e) => e.key)).toEqual(['alpha', 'bravo', 'charlie']);
+  });
+
   it('changes the displayed language without emitting or modifying selected values', async () => {
     const { fixture, component, changes } = setup();
     const values: DictionaryEntry[] = [

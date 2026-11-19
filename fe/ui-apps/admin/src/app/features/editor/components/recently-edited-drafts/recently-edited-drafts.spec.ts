@@ -71,6 +71,25 @@ function titleButton(host: HTMLElement): HTMLButtonElement {
 }
 
 describe('RecentlyEditedDrafts', () => {
+  it('says so when the drafts could not be read, and Retry reads them again', async () => {
+    const { fixture } = setup();
+    TestBed.tick();
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((r) => r.url.endsWith('/messages/recently-edited-drafts'))
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    await fixture.whenStable();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('common.fetchError');
+    host.querySelector<HTMLButtonElement>('[role="alert"] button')?.click();
+    TestBed.tick();
+    http.expectOne((r) => r.url.endsWith('/messages/recently-edited-drafts')).flush(DRAFTS);
+    await fixture.whenStable();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(titleButton(host)).toBeTruthy();
+  });
+
   it('opens the details dialog seeded with the whole list on a plain click', async () => {
     const { fixture, dialog, navigate } = setup();
     await flushDrafts(fixture);

@@ -61,7 +61,7 @@ async function settle(): Promise<void> {
   await Promise.resolve();
 }
 
-async function setup(configure?: (host: Host) => void) {
+async function setup(configure?: (host: Host) => void, typesFail = false) {
   TestBed.configureTestingModule({
     providers: [
       ModelLanguageSelection,
@@ -83,13 +83,37 @@ async function setup(configure?: (host: Host) => void) {
   // The component eagerly fetches all param types via httpResource; seed it so
   // kind labels and the editable-type pool are populated.
   const httpMock = TestBed.inject(HttpTestingController);
-  httpMock.expectOne('/rest/templates/parameter-types').flush(ALL_TYPES);
+  if (typesFail) {
+    httpMock
+      .expectOne('/rest/templates/parameter-types')
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+  } else {
+    httpMock.expectOne('/rest/templates/parameter-types').flush(ALL_TYPES);
+  }
   await settle();
 
   const field = fixture.debugElement.query(By.directive(TemplateParamsField))
     .componentInstance as unknown as FieldInternals;
   return { fixture, host: fixture.componentInstance, field, httpMock };
 }
+
+describe('TemplateParamsField — failed read of the parameter types', () => {
+  it('says so above the table, and Retry reads the types again', async () => {
+    const { fixture, field, httpMock } = await setup(undefined, true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      'admin.paramTypes.loadError',
+    );
+    host.querySelector<HTMLButtonElement>('[role="alert"] button')?.click();
+    await settle();
+    httpMock.expectOne('/rest/templates/parameter-types').flush(ALL_TYPES);
+    await settle();
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(field.editableTypeNames()).toEqual(['text', 'sea-state', 'position']);
+  });
+});
 
 describe('TemplateParamsField — reorder logic', () => {
   it('inherits the model-language selection without emitting edits or changing parameters', async () => {

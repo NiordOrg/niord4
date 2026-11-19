@@ -165,4 +165,21 @@ describe('EditorActionMenu tag membership', () => {
     removeChild?.command?.({});
     expect(removeMessagesFromTag).toHaveBeenCalledWith(['ed-1'], { tagId: 't2', name: 'Other' });
   });
+
+  it('says so in "Remove from…" when the tags could not be read, with a retry', async () => {
+    const { fixture, comp, httpMock } = setup();
+    comp.onOpened();
+    fixture.detectChanges();
+    httpMock
+      .expectOne((r) => r.url === '/rest/tags/message/ed-1')
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    await Promise.resolve();
+
+    const removeParent = comp.items().find((i) => i.label === 'menu.action.tag.remove_named');
+    expect(removeParent?.items?.map((c) => c.label)).toEqual(['common.fetchError', 'common.retry']);
+    removeParent?.items?.[1].command?.({});
+    fixture.detectChanges();
+    await Promise.resolve();
+    httpMock.expectOne((r) => r.url === '/rest/tags/message/ed-1');
+  });
 });

@@ -77,6 +77,14 @@
         />
       </app-filter-panel>
     </div>
+    <!-- The area picker above is filled from this read: a failure is said, not shown as no areas. -->
+    @if (rootsResource.error()) {
+      <app-error-banner
+        [title]="'common.fetchError' | transloco"
+        [retryLabel]="'common.retry' | transloco"
+        (retry)="rootsResource.reload()"
+      />
+    }
 
     <!-- Date navigation -->
     <div class="flex items-center gap-2">

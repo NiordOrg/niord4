@@ -12,7 +12,7 @@ import {
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService, translateSignal } from '@jsverse/transloco';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { map, of } from 'rxjs';
 
 import { ApiUrlResolver } from '../../../../../core/config/absolute-api-url';
 import { DomainFacade } from '../../../../../core/domain/facades/domain.facade';
@@ -30,6 +30,7 @@ import { MenuTrigger } from '../../../../../shared/components/menu-trigger/menu-
 import type { MenuItem } from '../../../../../shared/models/menu-item.model';
 import { JsonImportDialog } from '../../../components/json-import-dialog/json-import-dialog';
 import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
+import { listRead } from '../../../../../shared/utils/list-read';
 import { ProgressBar } from '../../../../../shared/components/progress-bar/progress-bar';
 import { Icon } from '../../../../../shared/icons/icon';
 import {
@@ -99,6 +100,13 @@ function shortenAddress(address: string): string {
     return parts.join('/');
   }
   return `${parts[0]}/…/${parts[parts.length - 1]}`;
+}
+
+/** What the one-off rows are read for. */
+interface OneOffsKey {
+  readonly tick: number;
+  readonly domain: string | undefined;
+  readonly shown: boolean;
 }
 
 /**
@@ -279,7 +287,7 @@ export class PublicationsPage {
    * a one-off another domain has shared with this one is something to cite from
    * the message editor, not a row to edit here.
    */
-  protected readonly oneOffs = toSignal(
+  protected readonly oneOffsRead = listRead<OneOffPublication, OneOffsKey>(
     toObservable(
       computed(() => ({
         tick: this.refreshOneOffs(),
@@ -289,13 +297,11 @@ export class PublicationsPage {
         // nothing from here.
         shown: this.selectedSeriesId() === undefined,
       })),
-    ).pipe(
-      switchMap(({ domain, shown }) =>
-        shown ? this.oneOffApi.list(domain).pipe(catchError(() => of([]))) : of([]),
-      ),
     ),
-    { initialValue: [] },
+    // A failed read is said in the table's place, with a retry, not shown as no one-offs.
+    ({ domain, shown }) => (shown ? this.oneOffApi.list(domain) : of([])),
   );
+  protected readonly oneOffs = this.oneOffsRead.value;
 
   /** The desk being worked at, named by the section blurb and the one-off empty state. */
   protected readonly sessionDomainName = computed(() => {

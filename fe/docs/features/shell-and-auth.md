@@ -293,7 +293,8 @@ logo, welcome heading, the product name, and a Login button when anonymous.
 - The message fetch is keyed on the active language (the backend localizes each message) and asks for
   up to 1000 published messages. Beyond that count the map silently truncates — a "showing N of
   total" affordance is on the [backlog](../backlog.md).
-- A failed fetch degrades to an empty list; the welcome panel never blanks.
+- A failed fetch leaves the map without messages and says so in the welcome panel ("Error fetching
+  data", with _Retry_); the panel never blanks.
 - The map is `@defer (on idle)` so the panel and logo paint without waiting on OpenLayers. Its
   placeholder is the map's own water colour, which is exactly why the `@error` branch is mandatory:
   Angular never retries a defer block, so without it a failed chunk fetch would read as a

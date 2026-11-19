@@ -22,6 +22,7 @@ import { Subject, debounceTime } from 'rxjs';
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { DomainFacade } from '../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 import { PickerPopover } from '../../../../shared/components/picker-popover/picker-popover';
 import { AutocompleteOption } from '../../../../shared/forms/autocomplete/autocomplete-option';
 import { Icon } from '../../../../shared/icons/icon';
@@ -59,6 +60,7 @@ import {
     NgTemplateOutlet,
     TranslocoPipe,
     PickerPopover,
+    ErrorBanner,
     MessageDetailsRenderer,
     AutocompleteOption,
     Icon,
@@ -89,6 +91,12 @@ import {
           <div class="min-h-0 flex-1 overflow-y-auto">
             @if (loading()) {
               <p class="p-2 text-sm text-fg-subtle">{{ 'term.loading' | transloco }}</p>
+            } @else if (loadFailed()) {
+              <app-error-banner
+                [title]="'common.fetchError' | transloco"
+                [retryLabel]="'common.retry' | transloco"
+                (retry)="fetch()"
+              />
             } @else if (results().length === 0) {
               <p class="p-2 text-sm text-fg-subtle">
                 {{ 'editor.template.drawer.noResults' | transloco }}
@@ -165,6 +173,12 @@ import {
           </p>
         } @else if (example.isLoading()) {
           <p class="p-2 text-sm text-fg-subtle">{{ 'term.loading' | transloco }}</p>
+        } @else if (example.error()) {
+          <app-error-banner
+            [title]="'common.fetchError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="example.reload()"
+          />
         } @else if (example.hasValue()) {
           <app-message-details-renderer
             [message]="example.value()!"
@@ -209,6 +223,8 @@ export class TemplateSearchPopover {
   protected readonly searchName = signal('');
   protected readonly results = signal<readonly SystemCategory[]>([]);
   protected readonly loading = signal(false);
+  /** The template list could not be read: said so in the list's place, with a retry. */
+  protected readonly loadFailed = signal(false);
   protected readonly activeId = signal<string | undefined>(undefined);
 
   /** Too narrow for the example beside the list (Tailwind's `md`): one pane at a time. */
@@ -290,9 +306,10 @@ export class TemplateSearchPopover {
   }
 
   /** Fetch + hydrate the domain template list for the current name filter (drawer recipe). */
-  private fetch(): void {
+  protected fetch(): void {
     const seq = ++this.fetchSeq;
     this.loading.set(true);
+    this.loadFailed.set(false);
     fetchHydratedTemplates(this.categoriesApi, {
       domainId: this.domain.sessionDomain()?.domainId,
       language: this.lang(),
@@ -313,6 +330,7 @@ export class TemplateSearchPopover {
           }
           this.results.set([]);
           this.loading.set(false);
+          this.loadFailed.set(true);
         },
       });
   }

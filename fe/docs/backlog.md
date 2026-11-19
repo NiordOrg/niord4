@@ -554,17 +554,6 @@ Background: [`features/editor.md`](features/editor.md).
   apart, and a screen reader hears the same name twice. "Cancel message" on the red button and "Close" on the other
   close it. `04-Editor.adoc` (_Cancelling a Message_) says so as it is. Found by the user guides' writers
   (2026-11-11).
-- **Load errors read as empty data in several places.** Nine components declare an `httpResource` and never read
-  its error state: the home page, the editor's action menu, recently edited drafts, the template selection drawer
-  and search popover, the comments store, the History page, the message details menu and the template parameters
-  field. A failed load there shows the empty state ("no history", no comments, no drafts) as if there were nothing.
-  In Admin > Publications the series and one-off editors turn a failed load of the domains, the publication
-  categories or the reports into an empty list (`catchError(() => of([]))`, `series-editor.ts` 366, 386 and 490,
-  `one-off-editor.ts` 309, 319 and 344, `one-off-detail.ts` 131, `issue-overrides-drawer.ts` 133), as does the
-  one-off list of the Publications page (`publications-page.ts` 294); an editor then sees an empty picker and no
-  notice. The Publications panel of the editor shows how it is meant: an error banner with _Retry_. Found by the
-  user guides' check (2026-11-12, its map of the frontend); read in the code (four of the nine resources and every
-  `catchError` site re-read for this entry), no failure was provoked.
 
 - **A missed row in the Publications panel cannot be read to its week, and its date looks like a release.** A
   `MISSED` row has no link (only a frozen row is in the document), so its name is the plain span with `truncate`

@@ -4,7 +4,7 @@ import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslocoService } from '@jsverse/transloco';
-import { of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
@@ -20,6 +20,8 @@ interface DrawerHandle {
   readonly results: WritableSignal<readonly SystemCategory[]>;
   readonly checkedIds: WritableSignal<ReadonlySet<number>>;
   readonly hovered: WritableSignal<SystemCategory | undefined>;
+  readonly loadFailed: () => boolean;
+  retry(): void;
   isPerPosition(cat: SystemCategory): boolean;
   isChecked(cat: SystemCategory): boolean;
   toggle(cat: SystemCategory): void;
@@ -40,7 +42,10 @@ const templateLevel: SystemCategory = {
   templateParams: [{ paramId: 'y', type: 'text' }],
 };
 
-function setup() {
+function setup(
+  searchTemplates: () => Observable<readonly SystemCategory[]> = () => of([]),
+  getRoots: () => Observable<unknown[]> = () => of([]),
+) {
   TestBed.configureTestingModule({
     providers: [
       provideTestTransloco(),
@@ -50,9 +55,9 @@ function setup() {
       {
         provide: CategoriesApiService,
         useValue: {
-          searchTemplates: () => of([]),
+          searchTemplates,
           getTemplateDetails: () => of([]),
-          getRoots: () => of([]),
+          getRoots,
         },
       },
       { provide: DomainFacade, useValue: { sessionDomain: signal({ domainId: 'd' }) } },
@@ -100,6 +105,47 @@ describe('TemplateSelectionDrawer', () => {
     // Without lang the backend returns all languages → a partially-translated example renders mixed.
     expect(req.request.params.get('lang')).toBe('en');
     req.flush({ id: 'ex-1', descs: [] });
+  });
+
+  it('a failed read of the template list says so, and Retry reads the tree and the list again', () => {
+    let calls = 0;
+    const search = vi.fn(() =>
+      calls++ === 0 ? throwError(() => new Error('offline')) : of<readonly SystemCategory[]>([]),
+    );
+    const roots = vi.fn(() =>
+      roots.mock.calls.length === 1 ? throwError(() => new Error('offline')) : of([]),
+    );
+    const { fixture, handle } = setup(search, roots);
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+    expect(handle.loadFailed()).toBe(true);
+
+    handle.retry();
+    expect(roots).toHaveBeenCalledTimes(2);
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(handle.loadFailed()).toBe(false);
+  });
+
+  it('a failed read of the example is an error, not "no example"', async () => {
+    const { fixture, handle } = setup();
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges(); // the opening clears the hover
+    handle.hovered.set({
+      id: 3,
+      type: 'TEMPLATE',
+      messageId: 'ex-1',
+      descs: [{ lang: 'en', name: 'Ex' }],
+      templateParams: [],
+    });
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController)
+      .expectOne((r) => r.url === '/rest/messages/message/ex-1')
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('common.fetchError');
+    expect(text).not.toContain('editor.template.drawer.noExample');
   });
 
   it('passes the drawer its header as a key, which the drawer translates itself', () => {

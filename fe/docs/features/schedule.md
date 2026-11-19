@@ -70,7 +70,7 @@ search semantics.
 The picker itself is fed by a fourth request the page makes directly: an `httpResource` in
 `ScheduleView` for `GET /areas/area-roots?lang=`, read through a `hasValue()` guard because
 `value()` throws in the error state — a failed roots call therefore leaves the picker empty instead
-of blanking the page. That list is the **whole** area-root tree, not only firing areas; the server
+of blanking the page, and says so under the filter bar ("Error fetching data", with _Retry_). That list is the **whole** area-root tree, not only firing areas; the server
 intersects the ticked subtrees with the session domain's firing areas when it searches.
 
 The result is scoped server-side to the session domain's firing areas and arrives in tree-sort

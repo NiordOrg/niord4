@@ -8,13 +8,13 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { catchError, of } from 'rxjs';
 
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
 import { LocaleFormatService } from '../../../../../core/main-shell/services/locale-format.service';
 import { Drawer } from '../../../../../shared/components/drawer/drawer';
+import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
+import { fixedListRead } from '../../../../../shared/utils/list-read';
 import { Icon } from '../../../../../shared/icons/icon';
 import type { MessageReport } from '../../../../../shared/models/print/message-report.model';
 import { MessageReportsApiService } from '../../../../messages/services/api/message-reports-api.service';
@@ -85,7 +85,7 @@ interface AddedParam {
  */
 @Component({
   selector: 'app-issue-overrides-drawer',
-  imports: [LanguageFlag, Drawer, Icon, TranslocoPipe],
+  imports: [LanguageFlag, Drawer, ErrorBanner, Icon, TranslocoPipe],
   templateUrl: './issue-overrides-drawer.html',
 })
 export class IssueOverridesDrawer {
@@ -131,10 +131,10 @@ export class IssueOverridesDrawer {
    * same reason the series editor uses it: the full inventory is a sysadmin
    * read, and a plain admin would be left with an empty picker.
    */
-  protected readonly reports = toSignal(
-    this.reportsApi.listReports({ forList: true }).pipe(catchError(() => of([]))),
-    { initialValue: [] as readonly MessageReport[] },
+  protected readonly reportsRead = fixedListRead<MessageReport>(() =>
+    this.reportsApi.listReports({ forList: true }),
   );
+  protected readonly reports = this.reportsRead.value;
 
   protected readonly maxLabelLength = NUMBERING_LABEL_MAX_LENGTH;
   protected readonly maxFileNameLength = FILE_NAME_MAX_LENGTH;

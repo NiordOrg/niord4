@@ -45,6 +45,12 @@
       <div class="min-h-0 flex-1 overflow-y-auto">
         @if (loading()) {
           <p class="p-2 text-sm text-fg-subtle">{{ 'term.loading' | transloco }}</p>
+        } @else if (loadFailed()) {
+          <app-error-banner
+            [title]="'common.fetchError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="retry()"
+          />
         } @else if (results().length === 0) {
           <p class="p-2 text-sm text-fg-subtle">
             {{ 'editor.template.drawer.noResults' | transloco }}
@@ -100,6 +106,12 @@
           </p>
         } @else if (example.isLoading()) {
           <p class="p-2 text-sm text-fg-subtle">{{ 'term.loading' | transloco }}</p>
+        } @else if (example.error()) {
+          <app-error-banner
+            [title]="'common.fetchError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="example.reload()"
+          />
         } @else if (example.hasValue()) {
           <app-message-details-renderer
             [message]="example.value()!"

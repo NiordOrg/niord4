@@ -702,6 +702,36 @@ describe('SeriesCriteriaEditor', () => {
       .flush({ source: 'PROBE', total: 7, candidates: 9, sample: [], truncated: false });
   });
 
+  it('says so when an operand list could not be read, and Retry reads it again', () => {
+    const { fixture, host, httpTesting } = setupTabbed();
+    host.active.set(true);
+    fixture.detectChanges();
+    httpTesting.expectOne((r) => r.url.includes('/message-series')).flush([]);
+    httpTesting
+      .expectOne((r) => r.url.includes('/domains/all'))
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    vi.advanceTimersByTime(500);
+    httpTesting
+      .expectOne((r) => r.url.includes('/resolve-preview'))
+      .flush({ source: 'PROBE', total: 7, candidates: 9, sample: [], truncated: false });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const banner = () =>
+      [...element.querySelectorAll('[role="alert"]')].find((node) =>
+        node.textContent?.includes('common.fetchError'),
+      );
+    expect(banner()).toBeDefined();
+
+    banner()?.querySelector('button')?.click();
+    fixture.detectChanges();
+    // Only the list that failed is read again.
+    httpTesting.expectNone((r) => r.url.includes('/message-series'));
+    httpTesting.expectOne((r) => r.url.includes('/domains/all')).flush([]);
+    fixture.detectChanges();
+    expect(banner()).toBeUndefined();
+  });
+
   /**
    * Shown once is shown for good.
    *

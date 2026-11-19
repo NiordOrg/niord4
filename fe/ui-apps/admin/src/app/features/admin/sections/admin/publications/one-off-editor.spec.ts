@@ -126,7 +126,7 @@ function settled(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-async function setup(model: OneOffEditorModel) {
+async function setup(model: OneOffEditorModel, failing?: string) {
   sessionDomain.set({ domainId: 'niord-nm' } as Domain);
   discardAnswer = true;
   confirmDiscard.mockClear();
@@ -162,7 +162,11 @@ async function setup(model: OneOffEditorModel) {
     .match(() => true)
     .forEach((r) => {
       lookupUrls.push(r.request.urlWithParams);
-      r.flush([]);
+      if (failing && r.request.url.includes(failing)) {
+        r.flush('down', { status: 503, statusText: 'Service Unavailable' });
+      } else {
+        r.flush([]);
+      }
     });
   await fixture.whenStable();
 
@@ -278,6 +282,23 @@ describe('OneOffEditor', () => {
     // The overlay attaches to the document, not to the fixture, so it outlives
     // the component unless it is cleared between tests.
     document.querySelectorAll('.cdk-overlay-container').forEach((n) => n.replaceChildren());
+  });
+
+  it('says so when a picker list could not be read, and Retry reads it again', async () => {
+    const { fixture, httpTesting } = await setup({ mode: 'add' }, '/message-reports/');
+    const banner = () =>
+      [...panel().querySelectorAll('[role="alert"]')].find((node) =>
+        node.textContent?.includes('common.fetchError'),
+      );
+    expect(banner()).toBeDefined();
+
+    banner()?.querySelector('button')?.click();
+    await fixture.whenStable();
+    // Only the list that failed is read again.
+    httpTesting.expectNone((r) => r.url.includes('/name-tokens'));
+    httpTesting.expectOne((r) => r.url.includes('/message-reports/')).flush([]);
+    await fixture.whenStable();
+    expect(banner()).toBeUndefined();
   });
 
   it('fills the report picker from the endpoint a plain admin may read', async () => {

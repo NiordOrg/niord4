@@ -1142,4 +1142,45 @@ describe('the report picker', () => {
       });
     expect(urls.some((url) => url.includes('/reports'))).toBe(true);
   });
+
+  it('says so when the reports could not be read, and Retry reads them again', async () => {
+    TestBed.configureTestingModule({
+      imports: [IssueOverridesDrawer],
+      providers: [
+        provideTestTransloco(),
+        provideNiordIcons(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: DiscardConfirmService, useValue: { confirmDiscard } },
+        { provide: APP_CONFIG, useValue: { apiBaseUrl: BASE, languages: ['da', 'en'] } },
+        provideTestLanguages(),
+      ],
+    });
+    const fixture = TestBed.createComponent(IssueOverridesDrawer);
+    fixture.componentRef.setInput('issue', CLEAN);
+    fixture.componentRef.setInput('series', SERIES);
+    fixture.componentRef.setInput('open', true);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const httpTesting = TestBed.inject(HttpTestingController);
+    httpTesting
+      .match(() => true)
+      .forEach((request) =>
+        request.request.url.includes('/reports')
+          ? request.flush('down', { status: 503, statusText: 'Service Unavailable' })
+          : request.flush([]),
+      );
+    await fixture.whenStable();
+    const banner = () =>
+      [...panel().querySelectorAll('[role="alert"]')].find((node) =>
+        node.textContent?.includes('common.fetchError'),
+      );
+    expect(banner()).toBeDefined();
+
+    banner()?.querySelector('button')?.click();
+    await fixture.whenStable();
+    httpTesting.expectOne((r) => r.url.includes('/reports')).flush([]);
+    await fixture.whenStable();
+    expect(banner()).toBeUndefined();
+  });
 });

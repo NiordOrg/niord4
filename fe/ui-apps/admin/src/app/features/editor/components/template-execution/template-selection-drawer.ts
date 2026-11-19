@@ -19,6 +19,7 @@ import { DomainFacade } from '../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { Drawer } from '../../../../shared/components/drawer/drawer';
 import { EntityTree } from '../../../../shared/components/entity-tree/entity-tree';
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 import { MessageDetailsRenderer } from '../../../messages/components/message-details-renderer/message-details-renderer';
 import type { Message } from '../../../messages/models/message.model';
 import type { CategoryRef } from '../../../messages/models/messages-filter-params.model';
@@ -37,10 +38,13 @@ import { categoryName, fetchHydratedTemplates, isPerPosition } from './template-
  * All data is backend-driven: `GET /categories/category-roots` (tree), `GET
  * /categories/search?type=TEMPLATE` (list, domain-scoped), `getTemplateDetails` (hydration) and
  * `GET /messages/message/{id}` (example).
+ *
+ * A failed read of the tree or the list says so in the list pane, with a retry, rather than
+ * reading as "no templates"; a failed read of an example says so in the example pane.
  */
 @Component({
   selector: 'app-template-selection-drawer',
-  imports: [TranslocoPipe, Drawer, EntityTree, MessageDetailsRenderer],
+  imports: [TranslocoPipe, Drawer, EntityTree, ErrorBanner, MessageDetailsRenderer],
   templateUrl: './template-selection-drawer.html',
   host: { class: 'contents' },
 })
@@ -71,6 +75,8 @@ export class TemplateSelectionDrawer {
   protected readonly searchName = signal('');
   protected readonly results = signal<readonly SystemCategory[]>([]);
   protected readonly loading = signal(false);
+  /** The category tree or the template list could not be read. */
+  protected readonly loadFailed = signal(false);
   protected readonly checkedIds = signal<ReadonlySet<number>>(new Set());
 
   /** The template whose example is shown in the right pane (on hover). */
@@ -115,22 +121,40 @@ export class TemplateSelectionDrawer {
     this.hovered.set(undefined);
     this.searchName.set('');
     this.ancestorId.set(undefined);
-    if (!this.rootsLoaded) {
-      this.rootsLoaded = true;
-      this.categoriesApi
-        .getRoots({ language: this.lang() })
-        .pipe(takeUntilDestroyed(this.destroyRef))
+    this.loadRoots();
+    this.fetch();
+  }
+
+  /** Read the tree and the list again after a failed read. */
+  protected retry(): void {
+    this.loadRoots();
+    this.fetch();
+  }
+
+  private loadRoots(): void {
+    if (this.rootsLoaded) {
+      return;
+    }
+    this.rootsLoaded = true;
+    this.categoriesApi
+      .getRoots({ language: this.lang() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
         // Only parent categories (type CATEGORY) drive the ancestor filter — the TEMPLATE leaves
         // live in the checklist, not the tree.
-        .subscribe((roots) => this.roots.set(pruneToCategories(roots)));
-    }
-    this.fetch();
+        next: (roots) => this.roots.set(pruneToCategories(roots)),
+        error: () => {
+          this.rootsLoaded = false; // read again by the retry or the next open
+          this.loadFailed.set(true);
+        },
+      });
   }
 
   /** Fetch + hydrate the domain template list for the current name / ancestor filter. */
   private fetch(): void {
     const seq = ++this.fetchSeq;
     this.loading.set(true);
+    this.loadFailed.set(false);
     fetchHydratedTemplates(this.categoriesApi, {
       domainId: this.domain.sessionDomain()?.domainId,
       language: this.lang(),
@@ -152,6 +176,7 @@ export class TemplateSelectionDrawer {
           }
           this.results.set([]);
           this.loading.set(false);
+          this.loadFailed.set(true);
         },
       });
   }

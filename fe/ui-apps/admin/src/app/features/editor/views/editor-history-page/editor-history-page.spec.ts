@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { of } from 'rxjs';
@@ -78,8 +78,39 @@ function setup() {
 
   const fixture = TestBed.createComponent(EditorHistoryPage);
   fixture.detectChanges();
+  lastFixture = fixture;
   return fixture.componentInstance as unknown as HistoryHandle;
 }
+
+let lastFixture: ComponentFixture<EditorHistoryPage> | undefined;
+
+describe('EditorHistoryPage failed read of the history', () => {
+  it("says so in the table's place, and Retry reads the history again", async () => {
+    setup();
+    const fixture = lastFixture!;
+    await Promise.resolve();
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const historyUrl = '/rest/messages/message/m-1/history';
+    for (const req of http.match((r) => r.url === historyUrl)) {
+      req.flush('down', { status: 503, statusText: 'Service Unavailable' });
+    }
+    await Promise.resolve();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('common.fetchError');
+    expect(host.querySelector('app-revision-table')).toBeNull();
+
+    host.querySelector<HTMLButtonElement>('[role="alert"] button')?.click();
+    fixture.detectChanges();
+    await Promise.resolve();
+    http.expectOne((r) => r.url === historyUrl).flush([hist(1, '{}')]);
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.querySelectorAll('app-revision-table tbody tr')).toHaveLength(1);
+  });
+});
 
 describe('EditorHistoryPage ≤2-select cap', () => {
   it('selects up to two revisions and ignores a third', () => {
