@@ -43,8 +43,6 @@ const TYPED_POSITION = "55° 59.99'N 012° 29.996'E";
 /** The record of each fault the walk meets (fe/docs/backlog.md). */
 const CALENDAR_FOCUS =
   "fe/docs/backlog.md: The date picker's calendar does not take focus when it opens";
-const CHIP_REMOVE =
-  'fe/docs/backlog.md: The autocomplete and select buttons that remove a value do nothing from the keyboard';
 
 let seriesId = '';
 let messageId = '';
@@ -370,34 +368,35 @@ describeScenario('a navigational warning written and published from the keyboard
     await test.step('Areas: one picked from the autocomplete, and the vicinity typed', async () => {
       await expandRow(page, 'Areas');
       await tabTo(page, 'combobox', /^select areas$/i, { max: 6 });
-      await page.keyboard.type('Baltic');
-      await expect(
-        page
-          .getByRole('listbox', { name: /^select areas$/i })
-          .getByRole('option', { name: /baltic/i }),
-      ).toBeVisible();
-      await page.keyboard.press('ArrowDown');
-      await expect
-        .poll(() => activeOption(page), { message: 'the active option' })
-        .toMatch(/baltic/i);
-      await scanPage(page, 'keyboard walk: the area list', { include: LISTBOX });
-      await page.keyboard.press('Enter');
-      await expectFocus(page, 'combobox', /^select areas$/i);
       const field = page.locator('.ed-row.open .ed-row-editor');
-      await expect(field).toContainText(/baltic/i);
-
-      // The chip's remove button takes the focus, so Enter on it must remove the area.
-      await tabTo(page, 'button', /^remove$/i, { back: true, max: 2 });
-      await knownFault(CHIP_REMOVE, "the chip's remove button does nothing on Enter", async () => {
+      const pickBaltic = async (scan: boolean): Promise<void> => {
+        await page.keyboard.type('Baltic');
+        await expect(
+          page
+            .getByRole('listbox', { name: /^select areas$/i })
+            .getByRole('option', { name: /baltic/i }),
+        ).toBeVisible();
+        await page.keyboard.press('ArrowDown');
+        await expect
+          .poll(() => activeOption(page), { message: 'the active option' })
+          .toMatch(/baltic/i);
+        if (scan) await scanPage(page, 'keyboard walk: the area list', { include: LISTBOX });
         await page.keyboard.press('Enter');
-        await expect(field.locator('.ac-chip'), 'the chip is removed').toHaveCount(0, {
-          timeout: 2_000,
-        });
+        await expectFocus(page, 'combobox', /^select areas$/i);
+        await expect(field).toContainText(/baltic/i);
+      };
+      await pickBaltic(true);
+
+      // The chip's remove button is named after its area and removes it on Enter; the focus goes
+      // back to the box, not to the page's body.
+      await tabTo(page, 'button', /^remove\b.*baltic/i, { back: true, max: 2 });
+      await page.keyboard.press('Enter');
+      await expect(field.locator('.ac-chip'), 'the chip is removed').toHaveCount(0, {
+        timeout: 2_000,
       });
-      // The remove button did nothing, so the area is still there. (Backspace in the empty box, the
-      // keyboard's way left to remove the last chip, is proved by the autocomplete's unit spec.)
-      await tabTo(page, 'combobox', /^select areas$/i, { max: 2 });
-      await expect(field).toContainText(/baltic/i);
+      await expectFocus(page, 'combobox', /^select areas$/i);
+      // The area is picked again for the warning.
+      await pickBaltic(false);
 
       await tabTo(page, 'textbox', /^text in english$/i, { max: 6 });
       await page.keyboard.type(VICINITY);

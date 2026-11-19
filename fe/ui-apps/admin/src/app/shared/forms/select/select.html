@@ -6,6 +6,7 @@
   [class.sel-disabled]="disabled()"
 >
   <button
+    #triggerButton
     type="button"
     class="sel-trigger"
     role="combobox"
@@ -47,7 +48,8 @@
       type="button"
       class="sel-clear"
       [attr.aria-label]="clearLabel() || null"
-      (mousedown)="onClearMousedown($event)"
+      (mousedown)="keepTriggerFocus($event)"
+      (click)="onClearClick($event)"
     >
       <app-icon name="lucideCircleX" aria-hidden="true" />
     </button>

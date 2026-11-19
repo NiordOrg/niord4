@@ -6,15 +6,20 @@
   [class.ac-disabled]="disabled()"
 >
   @if (showChips()) {
-    @for (item of value(); track item) {
+    @for (item of value(); track item; let i = $index) {
       <span class="chip is-active ac-chip">
-        <span class="ac-chip-label">{{ itemLabel()(item) }}</span>
+        <span class="ac-chip-label" [id]="chipLabelId(i)">{{ itemLabel()(item) }}</span>
+        <!-- Named "<removeLabel> <the chip's label>": the button names itself first through its
+             own aria-label, then the chip's label, so each chip's button says which it removes. -->
         <button
           type="button"
           class="ac-chip-remove"
+          [id]="chipRemoveId(i)"
           [disabled]="disabled()"
           [attr.aria-label]="removeLabel() || null"
-          (mousedown)="onRemoveMousedown($event, item)"
+          [attr.aria-labelledby]="removeLabel() ? chipRemoveId(i) + ' ' + chipLabelId(i) : null"
+          (mousedown)="keepInputFocus($event)"
+          (click)="onRemoveClick($event, item)"
         >
           <app-icon name="lucideX" aria-hidden="true" />
         </button>
@@ -55,7 +60,8 @@
       type="button"
       class="ac-clear"
       [attr.aria-label]="clearLabel() || null"
-      (mousedown)="onClearMousedown($event)"
+      (mousedown)="keepInputFocus($event)"
+      (click)="onClearClick($event)"
     >
       <app-icon [name]="clearIcon()" aria-hidden="true" />
     </button>

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Autocomplete } from './autocomplete/autocomplete';
 import { EntityMultiselectField } from './entity-multiselect-field';
 import { LanguageService } from '../../core/main-shell/services/language.service';
+import { pressWithMouse } from '../testing/button-testing';
 
 interface Item {
   readonly id: number;
@@ -137,7 +138,7 @@ describe('EntityMultiselectField ↔ app-autocomplete sync', () => {
     await fixture.whenStable();
 
     const remove = fixture.nativeElement.querySelector('.ac-chip .ac-chip-remove') as HTMLElement;
-    remove.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    pressWithMouse(remove);
     await fixture.whenStable();
 
     expect(field.value().map((i) => i.id)).toEqual([2]);

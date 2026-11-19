@@ -130,6 +130,8 @@ export class Select<T = unknown> implements FormValueControl<unknown> {
   readonly selectedTpl = contentChild<TemplateRef<{ $implicit: T }>>('selectedOption');
 
   private readonly control = viewChild.required<ElementRef<HTMLElement>>('control');
+  private readonly triggerButton =
+    viewChild.required<ElementRef<HTMLButtonElement>>('triggerButton');
   private readonly optionItems = viewChildren(SelectOption);
 
   protected readonly positions = POSITIONS;
@@ -292,10 +294,22 @@ export class Select<T = unknown> implements FormValueControl<unknown> {
     this.selectOption(option);
   }
 
-  protected onClearMousedown(event: MouseEvent): void {
+  // The clear button acts on click, which is also what Enter and Space on a focused button fire.
+  // Its mousedown only keeps the focus where it is (the trigger), as the rows do; acting on
+  // mousedown would leave the keyboard with no way to press it.
+  protected keepTriggerFocus(event: MouseEvent): void {
     event.preventDefault();
+  }
+
+  protected onClearClick(event: MouseEvent): void {
+    // A clear button holding the focus was reached from the keyboard (a mouse press never focuses
+    // it, see above). It leaves the DOM with the value, which would drop the focus on the page's
+    // body, so the focus goes back to the trigger.
+    const button = event.currentTarget;
+    const hadFocus = button instanceof HTMLElement && button.ownerDocument.activeElement === button;
     this.commitValue(null);
     this.close();
+    if (hadFocus) this.triggerButton().nativeElement.focus();
   }
 
   protected onOutsideClick(event: MouseEvent): void {

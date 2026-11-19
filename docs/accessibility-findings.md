@@ -313,9 +313,11 @@ category list, the _Edit as text_ dialog and the two confirmations.
   waits for loading to end.
 - The date picker's calendar does not take focus when it opens: Tab reaches its days only after the
   rest of the form (keyboard walk).
-- The autocomplete and select buttons that remove a value do nothing from the keyboard (keyboard
-  walk; the entry was there already, from the preparation of the screen-reader pass); Backspace in
-  an empty autocomplete removes the last value.
+- The autocomplete and select buttons that remove a value did nothing from the keyboard (keyboard
+  walk; the entry was there already, from the preparation of the screen-reader pass), and every
+  chip's remove button had the same name. Fixed on 2026-11-19: the buttons act on Enter and Space,
+  the focus goes back to the input or the trigger, and each chip's button is named after its chip;
+  the walk now removes the area's chip with Enter and picks the area again.
 
 **Seen, and not counted as failures.** The select and the autocomplete show focus by turning their
 1-pixel border to the primary colour, and nothing else: enough for 2.4.7 in WCAG 2.1, short of the
