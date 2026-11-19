@@ -1327,8 +1327,8 @@ was changed in production code.
 - **Location:** `LegacyImportService.IMPORT_TIMEOUT_SECONDS` (reported in the run's log line only)
   and `PublicationTxRunner.callWithImportBudget` (`@Transactional(timeout = 1800)`, the one enforced).
 - **Why it looks wrong:** changing one silently makes the log lie about the budget. The number itself
-  was argued from MySQL's shared `hibernate_sequence`, which this schema does not have; it has never
-  been measured against PostgreSQL.
+  was argued from MySQL's shared `hibernate_sequence`, which this schema does not have. On PostgreSQL
+  the import has been timed once, on a workstation, well inside the budget, and never on a cluster.
 
 ## PORT-11. The local-dev realm grants no Niord roles on the `niord-web` client
 

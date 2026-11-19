@@ -102,15 +102,16 @@ public class LegacyImportReportVo implements IJsonSerializable {
     private int seriesWithoutCriteria;
 
     /**
-     * Series that will land with no domain, and so no timezone.
+     * Planned series that have no domain, and so no timezone.
      *
-     * A count rather than a problem: the consequence is that the series stays
-     * DRAFT and S-20 refuses to activate it with a message that says why, which
-     * is proportionate. Refusing 1,077 issues over one absent domain is not.
+     * Each of them is also a problem: the owner column is NOT NULL, so the plan
+     * refuses a series whose domain it cannot resolve (OWNER_DOMAIN_NOT_FOUND)
+     * rather than let the write fail mid-flush. A plan that may be applied
+     * therefore reads zero here.
      *
      * Zero is the finding. A silent log is indistinguishable from nothing having
-     * been checked, and this is the number that says how many publications are
-     * not yet activatable.
+     * been checked, and this is the number that says how many series the plan
+     * refused for want of an owner.
      */
     private int seriesWithoutDomain;
     private int issuesImported;

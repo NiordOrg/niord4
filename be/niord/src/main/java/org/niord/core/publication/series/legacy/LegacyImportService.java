@@ -226,18 +226,20 @@ public class LegacyImportService extends BaseService {
      * THAT PARTICULAR COST IS GONE HERE and the ceiling is kept anyway. This
      * application allocates ids from one per-entity sequence {@code <Entity>_SEQ} with
      * INCREMENT BY 50, so the allocations are neither shared nor one-per-row; no
-     * entity declares a generator of its own. Nobody has yet measured this import
-     * against PostgreSQL, so the number below is an unmeasured ceiling rather than a
-     * measured requirement.
+     * entity declares a generator of its own. On PostgreSQL the import has been
+     * timed once, on a workstation, and it finished in a small fraction of the
+     * number below; it has never been timed on a cluster. So the number is a
+     * ceiling with a wide margin, not a measured requirement.
      *
      * The alternatives to a long transaction were weighed and rejected for a reason
      * that has not changed: splitting into several transactions gives up
      * all-or-nothing, and a half-imported archive is worse than none -- the rows that
      * landed look correct and nothing marks them as partial.
      *
-     * So the operation is simply long, and the budget says so. 30 minutes is far
-     * more than the ~5 it needs, because the cost of a timeout is another import
-     * window and the cost of a generous ceiling is nothing at all.
+     * So the operation gets one transaction with a generous budget. 30 minutes is
+     * far more than the import took when it was timed, because the cost of a
+     * timeout is another import window and the cost of a generous ceiling is
+     * nothing at all.
      */
     static final int IMPORT_TIMEOUT_SECONDS = 1800;
 
@@ -578,10 +580,11 @@ public class LegacyImportService extends BaseService {
 
         plan.report().setSeriesImported(plan.series().size());
         plan.report().setIssuesImported(plan.issues().size());
-        // How many publications this import leaves unactivatable, counted rather
-        // than assumed. A series with no domain has no timezone, so S-20 will
-        // refuse it -- and the number belongs in the report an admin reads after
-        // the run, not only in a log nobody opens.
+        // How many series have no domain, counted rather than assumed. The plan
+        // already refused each of them (applyDomainRuling: the column is NOT NULL),
+        // so on a plan that may be applied this reads zero -- and the number
+        // belongs in the report an admin reads after the run, not only in a log
+        // nobody opens.
         plan.report().setSeriesWithoutDomain(
                 (int) plan.series().stream().filter(s -> s.getDomain() == null).count());
         return plan;
@@ -936,14 +939,16 @@ public class LegacyImportService extends BaseService {
     }
 
     /**
-     * Files the template-less publications: they are eight series, not thirty-nine.
+     * Files the template-less publications: they are a few series, not one each.
      *
-     * 39 rows, and they are NOT 39 series. 11 NCAGS annexes are one series, 8
-     * ice-service annexes are another, the 4 Danish List of Lights editions a
-     * third, and the 10 double-week issues belong to the weekly series they were
-     * hand-assembled out of. Only 6 are genuinely standalone. So the import
-     * creates 3 shared series and 6 one-offs, and files 10 issues onto series
-     * that already exist.
+     * The NCAGS annexes are one series, the ice-service annexes another, the
+     * Danish List of Lights editions a third, the double-week issues belong to
+     * the weekly series they were hand-assembled out of, and the earliest Firing
+     * Practice Areas annex is that series' first issue. Only the rest are
+     * genuinely standalone. So the import creates a few shared series and a
+     * one-off for each of the rest, and files the others onto series that
+     * already exist. Which row goes where is LegacyOrphanGrouping's ruling, and
+     * the counts are the estate's, not this method's.
      *
      * Keyed into the same map as the templates, under the PUBLICATION's id, so
      * planIssues has one place to look regardless of how a row got there.
@@ -1116,7 +1121,7 @@ public class LegacyImportService extends BaseService {
         return m.reset().replaceAll(java.util.regex.Matcher.quoteReplacement("${year}"));
     }
 
-    /** The six that really are one-offs, each with its own authored id. */
+    /** The ones that really are one-offs (LegacyOrphanGrouping), each with its own authored id. */
     private void planStandaloneOrphanSeries(Plan plan, List<Publication> standalone,
                                             Map<String, PublicationSeries> seriesByTemplate,
                                             Set<String> authored) {
@@ -2244,11 +2249,11 @@ public class LegacyImportService extends BaseService {
     /**
      * Writes the plan. Only ever called with a clean one.
      *
-     * BATCHED, because the unbatched version did not finish. The estate is 21
-     * series, 1,077 issues and ~10,200 member rows -- about 13,000 inserts -- and
-     * sending them one statement at a time took roughly 200 seconds on top of a
-     * 41-second plan, against the previous deployment's 240-second default
-     * transaction timeout. The import died at 240.25s having written nothing.
+     * BATCHED, because the unbatched version did not finish. The estate's member
+     * rows far outnumber its series and issues, and on the previous
+     * deployment sending every insert one statement at a time took roughly 200
+     * seconds on top of a 41-second plan, against that deployment's 240-second
+     * default transaction timeout. The import died at 240.25s having written nothing.
      * (There is no default transaction timeout in this application, so the only
      * budget in play now is the one the runner declares.)
      *
