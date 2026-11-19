@@ -68,8 +68,8 @@ services:
       # The local-development realm, derived from the test environment's realm export: its domain clients
       # (niord-nw, niord-nm, niord-fa, ...), roles and groups, without the external ADFS login and the
       # test-only clients, plus one local user per group. Deliberately NOT niord/src/test/resources/keycloak/
-      # niord-realm.json, the integration tests' realm: its domain clients carry the same ids since C4b (only the
-      # k8s chart's copy, k8s/helm/niord/files/niord-realm.json, still has niord-client-*), but it is derived from
+      # niord-realm.json, the integration tests' realm: its domain clients carry the same ids since C4b (and so does
+      # the k8s chart's realm, k8s/helm/niord/files/niord-realm.json, the same file), but it is derived from
       # the original DK bootstrap realm with the tests' own users, while this one follows the test environment's
       # roles and groups, with one local user per group and no ADFS login.
       # Mounted from one path per user, not from the checkout: every launcher (and ./run.sh) copies

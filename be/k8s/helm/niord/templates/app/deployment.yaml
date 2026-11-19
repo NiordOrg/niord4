@@ -157,6 +157,11 @@ spec:
               value: "optional:file:/config/"
             - name: NIORD_HOME
               value: "/niord-home"
+            # The JVM runs in UTC: times are stored without a zone and read in the JVM's zone, and
+            # the data is in UTC. Not a value, so a values file that replaces app.javaOpts keeps
+            # it; an explicit -Duser.timezone in app.javaOpts would still win, so none is set.
+            - name: TZ
+              value: "UTC"
             - name: JAVA_TOOL_OPTIONS
               value: {{ .Values.app.javaOpts | quote }}
             # The app's database user, from postgres.existingSecret (or the chart's local default).
@@ -171,6 +176,20 @@ spec:
                 secretKeyRef:
                   name: {{ include "niord.postgres.secretName" . }}
                   key: password
+            {{- with .Values.smtp.existingSecret }}
+            # The mail relay's login, from smtp.existingSecret. Spring binds them to
+            # niord.smtp.username / .password; nothing is rendered into the ConfigMap.
+            - name: NIORD_SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: username
+            - name: NIORD_SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: password
+            {{- end }}
             # The Keycloak URL the backend's own admin calls use (domain clients, users, groups):
             # the in-cluster Service. SettingsService checks System.getenv(<setting key>) before
             # the database, also while @Setting fields are injected, so the env-var NAME is the
@@ -179,6 +198,25 @@ spec:
             # via the standard Spring properties in the app ConfigMap.
             - name: authServerUrl
               value: {{ include "niord.keycloak.internalUrl" . | quote }}
+            {{- /*
+            The settings this environment pins (values.yaml, app.settings): the env-var NAME is the
+            setting key verbatim, which SettingsService reads before the stored row. Empty values
+            are skipped, so the row or the default applies; false is a value. A number from a
+            values file is a float64, which would print 1000000 as 1e+06, so a whole one is
+            printed as an integer, with all its digits (an int64 conversion would turn one of
+            2^63 or more into a negative number). validate.yaml checks the keys, and that the
+            value is a map.
+            */}}
+            {{- range $key, $value := (kindIs "map" .Values.app.settings | ternary .Values.app.settings dict) }}
+            {{- if and (not (kindIs "invalid" $value)) (ne (toString $value) "") }}
+            {{- $text := toString $value }}
+            {{- if and (kindIs "float64" $value) (eq (floor $value) $value) }}
+            {{- $text = printf "%.0f" $value }}
+            {{- end }}
+            - name: {{ $key }}
+              value: {{ $text | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.secom.enabled }}
             # The PKCS12 store passwords, from keys of the SECOM secrets themselves (created
             # outside Helm; the renewal job's merge PATCH leaves these keys alone). Spring binds

@@ -14,6 +14,12 @@ same namespace — see the *.host values):
 {{- end }}
 {{- if .Values.keycloak.enabled }}
   - keycloak  {{ include "niord.componentName" (list . "keycloak") }}   (realm "{{ .Values.keycloak.realm }}")
+{{- if and (eq (toString .Values.keycloak.mode) "production") .Values.keycloak.testUsers }}
+
+    WARNING: the realm keeps the test users with the passwords in the public repository
+    (keycloak.testUsers). Remove them before this environment holds real data or answers on a
+    public address.
+{{- end }}
 {{- end }}
 {{- if .Values.mailhog.enabled }}
   - smtp      {{ include "niord.componentName" (list . "smtp") }}        (MailHog)
@@ -42,8 +48,15 @@ host's localhost by OrbStack):
 {{- if .Values.app.enabled }}
 
 The app image serves the administration app at the root of this origin, next to the REST
-API and Keycloak (an image built with --no-web serves none); seeded realm users
+API and Keycloak (an image built with --no-web serves none);
+{{- if not .Values.keycloak.enabled }} its users are those of the realm
+"{{ .Values.keycloak.realm }}" on the Keycloak at {{ include "niord.keycloak.host" . }}, which this release does not render
+(an infra release's dev-mode Keycloak has the test users, e.g. sysadmin / sysadmin).
+{{- else if or (ne (toString .Values.keycloak.mode) "production") .Values.keycloak.testUsers }} seeded realm users
 (e.g. sysadmin / sysadmin) sign in through it.
+{{- else }} the realm has no user
+in production mode: make the first one in the admin console and put it in the group Sysadmin.
+{{- end }}
 {{- end }}
 {{- if (.Values.info | default dict).enabled }}
 

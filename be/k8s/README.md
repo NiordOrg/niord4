@@ -43,8 +43,11 @@ Everything is fronted by an nginx reverse proxy and served on a **single origin*
 The PostgreSQL database starts **empty**: on startup the app builds the schema with Liquibase (the bare
 master changelog), and a new database holds no data, not even a domain, until it is bootstrapped once
 with `be/scripts/bootstrap.sh` (step 4 of the Quick start; `docs/code-data-config-plan.md` §7). Keycloak
-imports the `niord` realm (`niord/src/test/resources/keycloak/niord-realm.json`), exactly like the
-docker-compose setup. The chart serves the administration app at `/`, the REST API and Keycloak
+imports the `niord` realm, `helm/niord/files/niord-realm.json`, which is the integration tests' realm
+(`niord/src/test/resources/keycloak/niord-realm.json`) byte for byte: `scripts/deploy.sh` stops while
+the two differ and copies neither over the other. Its domain clients carry the domain ids of the base
+product's sample (`niord-nw`, `niord-nm`, `niord-fa`, `niord-almanac`, `niord-annex`), since the backend
+reads a domain's roles only from the client whose id is the domain's. The chart serves the administration app at `/`, the REST API and Keycloak
 from one origin: the app image carries the deployable's build of the administration app and the
 backend serves it (see [`be/README.md`](../README.md)). The realm's seeded users (e.g. **`sysadmin` /
 `sysadmin`**) sign in through it. The public site, off by default, is described in
@@ -95,11 +98,18 @@ curl -s http://localhost:18888/rest/actuator/health
 #         one infra release serving the app releases) is recreated by the databases Job at the next
 #         sync, here at the next ./scripts/deploy.sh (helm/niord/templates/postgres/databases-job.yaml:
 #         after every install and upgrade it creates each listed database that is missing, and it
-#         never drops one; it renders only when the list is not empty). A release whose app database
-#         is postgres.database (this quick start's niord, which the Postgres image creates only on an
-#         empty volume) is not recreated by it: the operator recreates it in the db pod, as the
-#         superuser (CREATE DATABASE niord TEMPLATE template_postgis), and the app's next start
-#         hands it to the app's database user ("The database users", below);
+#         never drops one; it renders only when the list is not empty). The Job's database is the
+#         superuser's, and an app release on it (postgres.host) has no init container that hands it
+#         over: before step c the superuser hands it to the app's user (psql in the db pod: ALTER
+#         DATABASE <name> OWNER TO <the app's user>; "A database of someone else's", below). A
+#         release whose app database is postgres.database on its own Postgres (this quick start's
+#         niord) needs nothing here:
+#         the app pod's database-user init container creates a missing postgres.database from
+#         template_postgis, owned by the app's database user, before the backend starts in step c
+#         ("The database users", below). A database of someone else's (postgres.host) is recreated
+#         by whoever runs it. A database that is to hold a restored dump is the exception: create
+#         and load it before the app starts, or the init container makes an empty one first and the
+#         backend builds its schema in it;
 #      c. the backend is started again (scaled back up), and its first start writes pending;
 #      d. the same bootstrap command is run with the same archives.
 #    A queued alert mail (a SECOM certificate near expiry, or a store that fails to load) does not
@@ -240,23 +250,28 @@ holds 8080.
 ## Keycloak in production mode
 
 `keycloak.mode: production` is for staging and production. The local bundle and the test
-environments keep `dev`, with the test realm and its test users.
+environments keep `dev`, with the test realm and its test users. The render refuses dev mode when
+`externalBaseUri` or `externalKeycloakUrl` is not on `localhost`, `127.0.0.1` or `[::1]`, unless
+`keycloak.devModeOffLocalhost` is true, which a `test-<name>` environment sets and staging and
+production never do: a values file that forgets `keycloak.mode` fails instead of giving a cluster
+the test realm and `admin`/`admin`.
 
 - **`start` instead of `start-dev`**, on the database `keycloak.database` (`keycloak`) of the
   release's Postgres, connecting as a database user of its own, `keycloak.db` (as the user of
-  `postgres.existingSecret` where the release has one Postgres account or a database of someone
-  else's: "The database users", below). An init container
-  creates the database when it is missing. Keycloak serves plain HTTP behind the proxy and takes
-  the browser's scheme and address from its `X-Forwarded-*` headers. It runs one replica with a
-  local cache. `start` builds Keycloak for these options on every start, some seconds before
-  it listens.
+  `postgres.existingSecret` on a database of someone else's: "The database users", below). An
+  init container creates the database when it is missing. Keycloak serves plain HTTP behind the
+  proxy and takes the browser's scheme and address from its `X-Forwarded-*` headers. It runs one
+  replica with a local cache. `start` builds Keycloak for these options on every start, some
+  seconds before it listens.
 - **The bootstrap admin comes from `keycloak.existingSecret`**: the render fails without it.
   Keycloak creates that admin in the realm `master` on the first start only. It stays the master
   realm's admin; the admin console calls it *temporary* in a banner. Replacing it is optional, and
   the Secret then no longer holds a working password.
 - **The realm** is the test realm, derived by the template helper `niord.keycloak.realmJson`. It
-  keeps the clients, roles, the `Sysadmin` group and the test users (`sysadmin`/`sysadmin`,
-  `testuser`/`test`, `testeditor`/`test`, `testadmin`/`test`), for DK and GL alike. It drops the
+  keeps the clients, roles and the `Sysadmin` group, and no user. With `keycloak.testUsers: true` it
+  keeps the test users (`sysadmin`/`sysadmin`, and `testuser`, `testeditor`, `testadmin`,
+  `testcurator`, `testdomaineditor` and `testadminelsewhere` with the password `test`), whose
+  passwords are in this public repository. It drops the
   `niord-web-admin` client with its service account and every client secret. The app's admin calls
   carry the signed-in user's own token, so nothing uses that client. Keycloak generates new secrets
   for the confidential clients. `niord-web` accepts redirects only to `<externalBaseUri>/*`, from
@@ -265,6 +280,11 @@ environments keep `dev`, with the test realm and its test users.
   publications go-live scripts do, needs it switched on in the admin console for the run. The
   realm turns on brute-force protection and requires https for addresses outside the private
   networks (`sslRequired: external`).
+- **The first administrator** is made by hand, since the realm has no user: in the admin console
+  (`<externalKeycloakUrl>/admin/`, realm `<keycloak.realm>`), Users, Add user, Credentials, Set
+  password, then Groups, Join group, `Sysadmin`. That user then makes the others. The fresh-database
+  bootstrap above signs in as that user instead of `sysadmin`, with the password grant switched on
+  for the run as said above.
 - **`niord-web` carries the client scope `kc-admin-api`**, in both modes. From Keycloak 26.8.2 the
   Admin REST API accepts only a token with that scope and its audience, and the app's admin calls
   (a domain's client, the users, the groups) carry the signed-in user's `niord-web` token.
@@ -284,13 +304,58 @@ environments keep `dev`, with the test realm and its test users.
   user added in the admin console (`<externalKeycloakUrl>/admin/`) stays. A later chart change, or
   a new `externalBaseUri`, does not reach it: change `niord-web`'s redirect URIs and web origins in
   the admin console.
+- **A realm imported before November 2026 names its domain clients `niord-client-nw`,
+  `niord-client-nm`, `niord-client-fa`, `niord-client-almanac` and `niord-client-annex`.** No
+  domain has those ids, so no role on them counted in any domain. The realm file now names them
+  after the domains (`niord-nw` ...). A dev-mode Keycloak imports the new file at its next start,
+  and the upgrade to this chart restarts it (the realm's checksum changes): it then has the new
+  clients and the three further test users, and the old clients are gone, as is everything made
+  in its console since its last start. A production-mode realm, and a realm made by hand on a
+  shared Keycloak, are not imported again and keep the old clients: in the admin console rename
+  each (Clients, the client, Settings, *Client ID*, Save). Its roles and every user's and group's
+  role mappings stay with it, and the next token carries them under the new id. Keycloak refuses
+  the rename where a client with the domain's id exists already (made with the Domains page's
+  *Create in Keycloak*, or by hand): keep that client, give each user and group with a role on the
+  old `niord-client-*` client the same role on it (Users or Groups, the user or group, Role
+  mapping), then delete the old client. A domain a restored
+  database holds that has no client yet gets one from the Domains page of the administration app,
+  or in the admin console. The realm file holds the sample's five domain clients and no other, so
+  such a client lasts only on a production-mode realm or a shared Keycloak: a dev-mode Keycloak
+  imports the file again at every restart and loses the client with every role given on it. There,
+  give people their roles on `niord-client-master`, which count in every domain (K8S3 in
+  [`be/docs/potential-errors.md`](../docs/potential-errors.md)).
+- **A realm imported before November 2026 gives the base client `niord-client-master` no `user`
+  role, and its `editor` holds none.** A role on that client counts in every domain, but there
+  `editor`, `admin` and `sysadmin` did not make a person a user, so someone whose roles are on it
+  alone was refused the actions that ask for `user` (comments, tags, the user search and others)
+  in any domain where they hold no role of the domain's own client. The realm file now has the
+  ladder every domain client has. A dev-mode Keycloak gets it at its next start, as above. A
+  production-mode realm and a realm on a shared Keycloak keep the old one until it is added in the
+  admin console: Clients, `niord-client-master`, Roles, Create role `user`; then the role
+  `editor`, Associated roles, Assign role, the client role `user` of `niord-client-master`. The
+  next token of each person with `editor`, `admin` or `sysadmin` there carries `user`.
 
-The test users keep the passwords in this repository. By the owner's ruling of 2026-09-29 they are
-not changed, also when an environment is reachable from the Internet. The security review's go-live
-recheck covers them (F-X92 in [`docs/security-review-2026-09.md`](../../docs/security-review-2026-09.md)).
+The production-mode realm holds no test user: their passwords are in this repository, which is
+public. `keycloak.testUsers: true` keeps them, for a staging with no real data on a closed network
+and never for production; the release's notes then print a warning. A realm made before keeps its
+users, because a realm is imported once: they are removed in the admin console (F-X92 in
+[`docs/security-review-2026-09.md`](../../docs/security-review-2026-09.md)).
 
 To try it locally, create a Secret with the keys `username` and `password` for the bootstrap
-admin and upgrade with `--set keycloak.mode=production --set keycloak.existingSecret=<secret>`.
+admin and upgrade with `--set keycloak.mode=production --set keycloak.existingSecret=<secret>`
+(and `--set keycloak.testUsers=true` to sign in with the test users). Production mode also takes
+the database users from Secrets (the render fails without `postgres.existingSecret`), so a local
+trial names three that hold the local defaults:
+
+```bash
+kubectl -n niord create secret generic local-db-app   --from-literal=username=niord_app --from-literal=password=niord_app
+kubectl -n niord create secret generic local-db-admin --from-literal=username=niord     --from-literal=password=niord
+kubectl -n niord create secret generic local-kc-db    --from-literal=username=keycloak  --from-literal=password=keycloak
+# then, with the upgrade above:
+#   --set postgres.existingSecret=local-db-app --set postgres.admin.existingSecret=local-db-admin \
+#   --set keycloak.db.existingSecret=local-kc-db
+```
+
 A release that ran in dev mode moves over in place.
 
 ### A shared Keycloak outside the release
@@ -307,7 +372,14 @@ keycloak:
   service:
     port: 80
   realm: niord-dk                     # this deployment's realm on it
+  mode: production                    # a staging or production release: see below
 ```
+
+With `keycloak.enabled: false` the mode renders no Keycloak and triggers no Keycloak check. A
+staging or production release sets it all the same: it holds the release to the database-Secret
+guard ("The database users", below), which refuses `keycloak.mode: production` without
+`postgres.existingSecret`. A release left in `dev` mode on a shared Keycloak is held to neither
+guard, since the dev-mode guard concerns a Keycloak of the release's own.
 
 What follows from `externalKeycloakUrl` being on another origin (`niord.keycloak.external`):
 
@@ -325,14 +397,17 @@ What follows from `externalKeycloakUrl` being on another origin (`niord.keycloak
 
   ```bash
   helm template realm helm/niord --set keycloak.mode=production --set keycloak.existingSecret=unused \
-    --set keycloak.realm=niord-dk --set externalBaseUri=https://niord-dk-staging.example \
+    --set postgres.existingSecret=unused --set postgres.admin.existingSecret=unused-admin \
+    --set keycloak.db.existingSecret=unused-kc --set keycloak.realm=niord-dk \
+    --set externalBaseUri=https://niord-dk-staging.example \
     --set externalKeycloakUrl=https://login.example/auth --show-only templates/keycloak/configmap-realm.yaml
   ```
 
   Take `niord-realm.json` from the ConfigMap and create the realm from that file in the admin
   console. The rendered realm carries the deployment's name, redirect URIs and web origins, no ids
   (so a second country's file is accepted too), the built-in consoles' paths under the new name,
-  and the test users, as in production mode. Nothing imports it later: the shared Keycloak's
+  and no user (add `--set keycloak.testUsers=true` only for a staging with no real data). Nothing
+  imports it later: the shared Keycloak's
   database is its record.
 - **No wait for Keycloak.** The app's wait-for-keycloak init container only waits for a Keycloak
   of the release. A shared Keycloak is stopped for its upgrades, and an app pod that restarts then
@@ -380,13 +455,15 @@ container's environment and nowhere else in the pod.
 kubectl -n niord logs deploy/niord-app -c database-user       # what it made or handed over; empty when there was nothing to do
 ```
 
-**One account for both, as before 2026-11.** A release that names `postgres.existingSecret` and
-leaves `postgres.admin.existingSecret` empty keeps running as every release did: that one Secret
-is the superuser's and the app's (and Keycloak's), and no init container is added. The chart
-renders the same objects for such values as it did before, so an environment changes when its
-values do, not when it takes a new chart version.
+**One account for both is refused.** A release that renders the app and its own Postgres and names
+`postgres.existingSecret` without `postgres.admin.existingSecret` fails the render: that one
+Secret would be the superuser's and the app's (and Keycloak's), and the app would connect as the
+superuser of its database server. Until November 2026 every release ran that way. A release
+without the app (an infra release) and a release on a database of someone else's are not
+concerned.
 
-**Moving such an environment to a user of its own** is one new Secret and two lines of values:
+**Values from before November 2026 that name one Secret** now fail the render; moving them is one
+new Secret and two lines of values:
 
 ```yaml
 postgres:
@@ -399,8 +476,12 @@ The Postgres pod keeps its Secret and is not restarted. The app pod is replaced,
 container creates the user and hands over the database, and the app starts as the new user. An
 environment with its own Keycloak in production mode names a third Secret,
 `keycloak.db.existingSecret`, in the same change; the render fails without it. The chart refuses
-values that name the superuser's Secret without the app's, the same Secret twice, or the
-superuser's Secret in a release that renders no Postgres.
+values that name the superuser's Secret without the app's, the app's without the superuser's in a
+release that renders the app and its own Postgres, the same Secret twice, or the superuser's
+Secret in a release that renders no Postgres. It also refuses `keycloak.mode:
+production` without `postgres.existingSecret`, so a release in production mode never runs on the
+chart's default users; a staging or production release on a shared Keycloak sets that mode too
+("A shared Keycloak outside the release", above).
 
 **A database of someone else's** (`postgres.enabled: false` and `postgres.host`: another release's
 Postgres, or a hosted database) comes with the user: `postgres.existingSecret` names it, and
@@ -435,7 +516,35 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   then missing from the mail or PDF. Every template mail (a message mail, a comment mail, a
   mailing list's delivery) also fetches its stylesheet, `<baseUri>/css/templates/mail.css`, from
   the backend pod: when the pod cannot fetch it, the mail goes out without its styling and the
-  log has a WARN "Mail sent without the stylesheet …".
+  log has a WARN "Mail sent without the stylesheet …". The chart does not derive it from
+  `externalBaseUri`: a cluster environment pins it in its values, `app.settings.baseUri`, normally
+  the value of `externalBaseUri`, and the pod must be able to fetch from that address. A
+  database restored from another system carries that system's address. Locally the setting
+  keeps the base product's `http://localhost:8888`, which the pod itself answers, so the mails'
+  styling and images work and only their links name a port the browser does not use.
+- **Pinned settings (`app.settings`)** — a setting of the Settings page whose value is one
+  text, number or `true`/`false` can be pinned this way: the chart renders each key as an
+  environment variable of that name, which the app reads before the stored row, so the pinned
+  value wins and the Settings page still shows (and edits) the stored row without saying so. A
+  list or object setting (type `json`: `modelLanguages`, `siteLanguages`, `infoSiteLanguages`,
+  `editorFieldsBase`, `editorFieldsNw`, `editorFieldsNm`, `stdTemplateFields`) cannot be pinned:
+  the app takes the variable as a text and does not parse it. Typical keys besides `baseUri`:
+  `mode`, `mailValidRecipients`, `mailSender`. A value is a text, a number or `true`/`false`, and
+  a whole number renders as an integer (`1000000`, not `1e+06`); anything else fails the render.
+  An empty value is not rendered. The render refuses a key
+  that names a password, secret or token, a key that does not start with a lower-case letter, a
+  key with a dot or one starting `spring_`, `server_`, `management_`, `logging_` or `niord_`
+  (Spring reads such a variable as a property and lets it outrank the chart's, and `niord.home`
+  is the chart's `NIORD_HOME`), `authServerUrl` (the chart sets it) and a key also set in
+  `secom.settings`. A `-D<settingKey>=<value>` in `app.javaOpts` pins a setting too, and wins
+  over `app.settings` (the app reads a system property before an environment variable), but no
+  render checks it, and `app.javaOpts` is one string that replaces the chart's default whole: a
+  values file that sets it for a `-D` must repeat `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, or
+  the JVM sizes its heap and chooses its collector itself. `app.settings` is the supported way. A
+  setting whose value is a secret (`pdfEncryptionPassword`, `wmsPassword`) can be pinned neither
+  way: the values are no place for a secret, and the chart has no value that passes a Secret's
+  key to the app as a setting (K8S2 in [`be/docs/potential-errors.md`](../docs/potential-errors.md)),
+  so such a setting is the stored row, and a restored database brings the other system's.
 - **Map images and their tiles** — the backend draws a message's map image itself, on
   OpenStreetMap tiles it fetches from the host in the `osmUrl` setting (by default
   `https://tile.openstreetmap.org`), so the app pod needs egress to that host over https. Where
@@ -456,6 +565,19 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   `application.yml`). Sets the datasource (`niord-db`), the OAuth2 resource-server URLs and the
   mail host. The actuator probe
   groups the probes use ship in the image (`config/niord-core-defaults.yml`).
+- **The mail relay** — locally and on the stagings the app sends to MailHog, which wants no
+  login and no TLS. An environment on a relay that asks for them seals a Secret with the keys
+  `username` and `password` beside its values and sets, with `mailhog.enabled: false`:
+  `smtp.host`, `smtp.port` (587 for STARTTLS, 465 for implicit TLS), `smtp.existingSecret` and
+  `smtp.tls` (`starttls` or `ssl`). With `starttls` a relay that stops offering STARTTLS fails
+  the mail instead of receiving the login in clear text. With `smtp.tls: none`, the default, a
+  login from `smtp.existingSecret` is sent in clear text; the render does not say so, and the
+  app only logs a WARN at its start ("The mail login (niord.smtp.username) is sent to the relay
+  without TLS …"): leave it `none` only for a relay reached over a trusted network. The backend
+  reads `niord.smtp.username`, `.password` and `.tls` only from the base version whose mail
+  session (`MailConfig`) carries the login and TLS; an older app image ignores them and sends
+  with no login and in clear text, and nothing reports it. Set these values only with an app
+  image of that version or later.
 - Health probes use the Spring Boot liveness/readiness groups at
   `/rest/actuator/health/{liveness,readiness}` (the actuator base-path is `/rest/actuator`).
 - **`enableServiceLinks: false`** on the app pod — otherwise Kubernetes injects legacy
@@ -481,16 +603,22 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
 | `info.ingress.enabled`, `info.ingress.host`, `info.ingress.className` | `false`, `""`, `traefik` | An Ingress for the site's own host, a name alone, straight to its Service. On the test cluster the host is the namespace's name with `-info` appended, the one the cluster's Ingress rule allows. |
 | `info.teaserFrameAncestors` | `*` | The pages allowed to embed the teaser (`NIORD_TEASER_FRAME_ANCESTORS`, a CSP `frame-ancestors` source list). |
 | `postgres.host`, `keycloak.host`, `smtp.host` / `smtp.port` | `""` | Where the app finds a dependency another release renders. Services are named `<fullname>-db`, `-keycloak` and `-smtp`, where `<fullname>` is the release name plus `-niord` unless it already contains "niord" (release `staging-infra` → `staging-infra-niord-db`, `staging-infra-niord-keycloak`, `staging-infra-niord-smtp`). Empty = this release's own Service; required once the component is disabled in a release that still needs it — the app, or the proxy for Keycloak (the render fails otherwise; for MailHog both `smtp.host` and `smtp.port`). |
-| `postgres.existingSecret` | `""` | A Secret with the keys `username` and `password`: the user the app connects as, the owner of its database and no superuser ("The database users"). `""` = the chart renders one from `postgres.username`/`postgres.password` (`niord_app`), the local default. Named alone, in a release that renders Postgres, it is the superuser's and the app's in one, as before 2026-11. No credential is rendered into a ConfigMap or a pod spec either way. |
-| `postgres.admin.existingSecret` | `""` | A Secret with the keys `username` and `password`: the superuser of the Postgres this release renders, which the app pod's `database-user` init container, the databases Job and Keycloak's init container connect as. `""` = the chart renders one from `postgres.admin.username`/`postgres.admin.password` (`niord`), the local default, unless `postgres.existingSecret` is named: then that Secret is the superuser's too. |
+| `smtp.existingSecret` | `""` | A Secret with the keys `username` and `password`: the login the mail relay asks for, passed to the app as `NIORD_SMTP_USERNAME`/`NIORD_SMTP_PASSWORD` (`niord.smtp.username`/`.password`), never into the ConfigMap. `""` = no login. A changed Secret takes effect at the app pod's next start, as the database users' do. Needs `smtp.host`: with this release's MailHog the render fails. With `smtp.tls` `none` the login is sent in clear text: set `starttls` or `ssl` unless the relay is reached over a trusted network. Read only by an app image whose mail session carries the login (see "The mail relay"); an older one ignores it. |
+| `smtp.tls` | `none` | TLS to the mail relay, rendered as `niord.smtp.tls` when not `none`: `starttls` (required before the login and the mail, usually port 587) or `ssl` (implicit TLS, usually port 465). The relay's certificate is checked against the JVM's trust store; a relay with a private CA needs a trust store named with `-Djavax.net.ssl.trustStore` in `app.javaOpts`. Anything else, or TLS with this release's MailHog, fails the render. Read only by an app image whose mail session carries TLS (see "The mail relay"); an older one ignores it and sends in clear text. |
+| `smtp.requireRelay` | `false` | `true` = this environment's mail must reach people: the render refuses `mailhog.enabled` and a `smtp.host` named `<fullname>-smtp`. Production sets it at go-live, when it switches from MailHog to the relay; before that, and everywhere else, `false`. Anything but `true` or `false` fails the render. |
+| `postgres.existingSecret` | `""` | A Secret with the keys `username` and `password`: the user the app connects as, the owner of its database and no superuser ("The database users"). `""` = the chart renders one from `postgres.username`/`postgres.password` (`niord_app`), the local default; required in `keycloak.mode: production`. Named alone in a release that renders the app and its own Postgres, the render fails: name `postgres.admin.existingSecret` too. No credential is rendered into a ConfigMap or a pod spec either way. |
+| `postgres.admin.existingSecret` | `""` | A Secret with the keys `username` and `password`: the superuser of the Postgres this release renders, which the app pod's `database-user` init container, the databases Job and Keycloak's init container connect as. `""` = the chart renders one from `postgres.admin.username`/`postgres.admin.password` (`niord`), the local default; but where `postgres.existingSecret` is named alone, which the render allows only in a release without the app (an infra release) or whose app uses `postgres.host`, that Secret is the superuser's and none is rendered. |
 | `keycloak.db.existingSecret` | `""` | Production mode: a Secret with the keys `username` and `password`, the user Keycloak connects to `keycloak.database` as. `""` = the chart renders one from `keycloak.db.username`/`keycloak.db.password`, the local default; required where `postgres.admin.existingSecret` is named. |
 | `keycloak.existingSecret` | `""` | A Secret with the keys `username` and `password` for the Keycloak bootstrap admin. `""` = the chart renders one from `keycloak.adminUser`/`keycloak.adminPassword`, which production mode refuses. |
-| `keycloak.mode` | `dev` | `dev`: `start-dev`, data kept in the container (gone on a restart), the test realm. `production`: `start` on `keycloak.database`, the test realm without `niord-web-admin` and with `niord-web` limited to `externalBaseUri` — see [Keycloak in production mode](#keycloak-in-production-mode). |
+| `keycloak.mode` | `dev` | `dev`: `start-dev`, data kept in the container (gone on a restart), the test realm. `production`: `start` on `keycloak.database`, the test realm without its users and without `niord-web-admin`, and with `niord-web` limited to `externalBaseUri` — see [Keycloak in production mode](#keycloak-in-production-mode). |
+| `keycloak.devModeOffLocalhost` | `false` | Dev mode with an `externalBaseUri` or `externalKeycloakUrl` that is not on `localhost`, `127.0.0.1` or `[::1]` fails the render unless this is `true`. A cluster test environment sets it; staging and production run `production` or a shared Keycloak. |
+| `keycloak.testUsers` | `false` | Production mode only: `true` keeps the test realm's users, with the passwords in this repository, in the rendered realm; never for production. Dev mode always imports them. Anything but `true` or `false` fails the render. |
 | `keycloak.database` | `keycloak` | Production mode: the database on this release's Postgres (or `postgres.host`) that Keycloak keeps its data in, created by an init container when missing. |
 | `postgres.databases` | `[]` | Further databases this release's Postgres holds, next to `postgres.database`. An infra release serving several app releases lists one per app (`[niord_dk, niord_gl]`), and each app release names its own in `postgres.database`. A post-install/post-upgrade Job creates any that is missing (from `template_postgis`, owned by the superuser, `postgres.admin`) and never drops one. An app release on such a database needs it handed to its user ("A database of someone else's", above). |
 | `app.persistence` / `postgres.persistence` | `enabled: true` | PVCs for NIORD_HOME and the DB. The repository files (attachments, publication files, the archive) are rows of the DB; NIORD_HOME is a cache (thumbnails and map images under `cache/`, the map tile cache of at most 200 MB, the AtoN tiles, the Lucene index) and the batch jobs' files, and nothing on it is backed up. |
-| `app.javaOpts` | `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC` | Handed to the JVM as `JAVA_TOOL_OPTIONS`. Add the `-Dhttps.proxyHost`/`-Dhttps.proxyPort`/`-Dhttp.nonProxyHosts` flags when the tile host is reached through a proxy. |
+| `app.javaOpts` | `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC` | Handed to the JVM as `JAVA_TOOL_OPTIONS`. One string that replaces the default whole, so a value that adds a flag repeats the two above. A `-D<settingKey>=<value>` here pins a setting ahead of `app.settings` and the stored row; pin settings with `app.settings` instead (see "Pinned settings"). Add the `-Dhttps.proxyHost`/`-Dhttps.proxyPort`/`-Dhttp.nonProxyHosts` flags when the tile host is reached through a proxy. The pod's JVM runs in UTC (`TZ=UTC`, set by the image and the chart, not by this value, so a value that replaces it keeps UTC); do not add `-Duser.timezone`. |
 | `app.resources.limits.memory` | `2Gi` | Heap is `MaxRAMPercentage=70`. |
+| `app.settings` | `{}` | Settings of the Settings page this environment pins, as environment variables named like the key (`baseUri`, `mode`, `mailValidRecipients`, `mailSender`); a pinned value wins over the stored row. An empty value is not rendered. Never a secret: the render refuses a key that names a password, secret or token. See "Pinned settings" above. |
 | `app.oidc.allowedClients` | `""` | The Keycloak clients whose tokens the API accepts (the token's `azp` claim); any other client's token is answered 401. `""` = the application default, `niord-web` and the base client `niord-client-master`. A value replaces the default, so it names `niord-web` too, e.g. `niord-web,niord-client-master,<script-client>` for a script with a client of its own. Rendered as `niord.oidc.allowed-clients`. |
 | `s124.enabled` | unset | Whether the deployment does S-124, rendered as `niord.s124.enabled` only when set. Unset = the image decides: a country image and the library default `true`, the generic `niord-app-en` `false`. `true` or `false` overrides the image; anything else fails the render, and so does `secom.enabled` with `s124.enabled` `false`. See [S-124 on or off](#s-124-on-or-off). |
 | `s124.producerCode` | `""` | The deployment's IHO S-62 producer code, rendered as `niord.s124.producer-code` only when set. `""` = the image's own code (the Danish and Greenland images carry theirs). With S-124 on, a deployment without one cannot generate S-124, and SECOM refuses to start. |
@@ -702,7 +830,7 @@ k8s/
 ├── helm/niord/
 │   ├── Chart.yaml
 │   ├── values.yaml
-│   ├── files/              # bundled realm JSON (synced by deploy.sh)
+│   ├── files/              # the realm JSON, equal to the integration tests' (deploy.sh checks)
 │   └── templates/
 │       ├── nginx/          # reverse proxy (single public entry point)
 │       ├── app/            # the Niord application (niord-app, or a country image)

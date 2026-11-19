@@ -72,9 +72,9 @@ hotel's date is not known, and F-X100 is then met on the stagings without the ho
 |---|---|
 | no Secret named (a local run, a `test-<name>` environment) | two users from two rendered Secrets |
 | `postgres.existingSecret` and `postgres.admin.existingSecret` | two users from the environment's Secrets |
-| `postgres.existingSecret` alone | one account, as before: the chart renders the same objects as it did, and adds no init container |
+| `postgres.existingSecret` alone | one account, as before: the chart renders the same objects as it did, and adds no init container. **Refused since 2026-11-18** in a release that renders the application and its own Postgres (section 11); an infra release without the application and a database of someone else's are not concerned |
 
-The third case is why a new chart version changes nothing by itself. Both stagings' values were
+The third case was why a new chart version changed nothing by itself. Both stagings' values were
 rendered with the chart before and after: the objects are the same, only comments differ. An
 environment moves when its values name both Secrets.
 
@@ -104,9 +104,10 @@ of its own that owns `keycloak.database`. Both stagings use the shared Keycloak,
 Postgres in devops-shared, so this is for an environment with a Keycloak of its own.
 
 **The chart refuses** the superuser's Secret without the application's, one Secret under both
-names, the superuser's Secret in a release that renders no Postgres, a production-mode Keycloak
-without its own Secret where the others come from Secrets, and values from before these keys
-(`helm upgrade --reuse-values`).
+names, the application's Secret alone in a release that renders the application and its own
+Postgres (since 2026-11-18), the superuser's Secret in a release that renders no Postgres, a
+production-mode Keycloak without its own Secret where the others come from Secrets, and values
+from before these keys (`helm upgrade --reuse-values`).
 
 ## 4. The first changeset
 
@@ -253,3 +254,8 @@ and GL:
   the application's user owns (SECREV-4). Fixed on the owner's go: the script gives every
   session it opens the search path `pg_catalog`, and `ChartDatabaseUserScriptITTest` runs it in the
   chart's Postgres image. The stagings take it with their next base version.
+- 2026-11-18: the chart refuses the third case of section 3 where it mattered: a release that
+  renders the application and its own Postgres and names `postgres.existingSecret` without
+  `postgres.admin.existingSecret` fails the render, so values in that shape can no longer start
+  the application as the superuser without anyone noticing. Every environment had moved; the
+  README's realm render for a shared Keycloak names the two further Secrets it now needs.

@@ -422,7 +422,9 @@ original niord-dk deployment. This imports the **`niord`** realm, whose clients 
 the fixture: `niord-nw`, `niord-nm`, `niord-fa`, `niord-almanac` and `niord-annex`, the sample's domain IDs and
 the local realm's (renamed from `niord-client-*` in C4b, with every IT that names them). It is no longer a copy:
 a fresh copy of the DK realm would bring the `niord-client-*` domain clients back, which no fixture domain
-matches. The `ITTest`
+matches. The chart's realm, `k8s/helm/niord/files/niord-realm.json`, is this file byte for byte:
+`RealmFilesTest` holds the two equal and every domain client to a domain id of the base bootstrap and the
+sample, and `k8s/scripts/deploy.sh` stops on a difference. The `ITTest`
 `@DynamicPropertySource` binds the realm URL into the app as
 `spring.security.oauth2.resourceserver.jwt.issuer-uri`, so authenticated tests have a valid OIDC
 provider. The realm sets `sslRequired: none` and no fixed `frontendUrl`, so OIDC discovery resolves

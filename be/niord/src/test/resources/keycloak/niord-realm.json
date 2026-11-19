@@ -487,6 +487,21 @@
         {
           "id": "8a5fd1bb-d72d-4563-a949-600c8a539670",
           "name": "editor",
+          "composite": true,
+          "composites": {
+            "client": {
+              "niord-client-master": [
+                "user"
+              ]
+            }
+          },
+          "clientRole": true,
+          "containerId": "ca72597e-606b-44e5-a6e5-d3aa62f9bd91",
+          "attributes": {}
+        },
+        {
+          "id": "3f1c6e2a-9b4d-4c8e-a5f7-2d0b8e6c4a19",
+          "name": "user",
           "composite": false,
           "clientRole": true,
           "containerId": "ca72597e-606b-44e5-a6e5-d3aa62f9bd91",

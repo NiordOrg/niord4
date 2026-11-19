@@ -137,7 +137,12 @@ app:
   # container memory limit. The backend fetches OpenStreetMap tiles for the message map
   # images (the osmUrl setting's host, tile.openstreetmap.org by default): where the pod
   # reaches the internet through a proxy, add -Dhttps.proxyHost=<host> -Dhttps.proxyPort=<port>
-  # and -Dhttp.nonProxyHosts=<in-cluster hosts>.
+  # and -Dhttp.nonProxyHosts=<in-cluster hosts>. The pod runs in UTC (the image and the chart
+  # set TZ, outside this value); do not add -Duser.timezone. One string that replaces this
+  # default whole: a value that adds a flag repeats -XX:MaxRAMPercentage=70.0 -XX:+UseG1GC, or
+  # the JVM sizes its heap and chooses its collector itself. A -D<settingKey>=<value> here also
+  # pins a setting of the Settings page, ahead of app.settings and the stored row, unchecked by
+  # the render: pin settings with app.settings below instead (README, "Pinned settings").
   javaOpts: "-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC"
   logLevel: "INFO"
   # The Keycloak clients whose access tokens the API accepts: a token's azp claim (the client it
@@ -147,6 +152,20 @@ app:
   # "niord-web,niord-client-master,<script-client>". Rendered as niord.oidc.allowed-clients.
   oidc:
     allowedClients: ""
+  # Settings of the sysadmin Settings page that this environment pins outside the database.
+  # Each key is the EXACT setting key and reaches the app as an environment variable of that
+  # name; the app reads a system property, then such a variable, before the stored row. An
+  # empty value is not rendered, so the row (or the default) applies. A pinned setting wins
+  # over the Settings page, which still shows and edits the stored row. Typical keys: baseUri
+  # (the canonical public URL, normally externalBaseUri's value; a database restored from
+  # another system carries that system's address), mode, mailValidRecipients, mailSender.
+  # A value is a text, a number (a whole one renders as an integer, 1000000 and not 1e+06) or
+  # true/false; anything else fails the render. A list or object setting (type json: the
+  # language lists, the editor fields, stdTemplateFields) cannot be pinned: the app takes the
+  # variable as a text and does not parse it. Never a password or token (those reach the app
+  # from a Secret): the render refuses a key that names a password, secret or token. A setting
+  # the app reads at start-up takes effect at the next start. {} = nothing pinned.
+  settings: {}
   # NIORD_HOME — the app's volume, a cache: the repository files (attachments, publication files,
   # the archive) are rows of the database, and the volume holds what is made again on a miss
   # (cache/, the thumbnails and map images; tile-cache/, the map tile cache, which a nightly
@@ -243,7 +262,7 @@ postgres:
   # The user the app connects as: the owner of `database`, and not a superuser. existingSecret
   # names a Secret with the keys `username` and `password` — in a cluster environment a
   # SealedSecret next to the values. "" = the chart renders one from username/password below,
-  # the local default.
+  # the local default. Required in keycloak.mode production, where the render fails without it.
   #   A release that renders Postgres creates this user: an init container of the app pod, which
   #   connects as the superuser below, makes the user when it is missing, sets its password to
   #   the Secret's on every start, and sees to it that `database` and the tables in it belong to
@@ -259,10 +278,10 @@ postgres:
   # existingSecret is a Secret with the keys `username` and `password`, like the app's; "" = the
   # chart renders one from username/password here, the local default. An environment that names
   # it names the app's too (postgres.existingSecret), and the two are different users.
-  #   One Secret for both, as every release had until November 2026: postgres.existingSecret set and
-  #   admin.existingSecret left "" keeps the app connecting as the superuser, with no init
-  #   container, so an environment changes when its values do. It moves to a user of its own by
-  #   sealing a second Secret and naming both (README, "The database users").
+  #   One Secret for both is refused: the same Secret under both names, or postgres.existingSecret
+  #   named without admin.existingSecret in a release that renders the app and this Postgres, fails
+  #   the render, because the app would connect as the superuser. Values from before November 2026
+  #   that name one Secret move by sealing a second one and naming both (README, "The database users").
   admin:
     existingSecret: ""
     username: niord
@@ -298,22 +317,29 @@ keycloak:
   #   dev         `start-dev`, keeping its data inside the container, so it starts afresh
   #               on every restart, with the TEST realm (files/niord-realm.json): the
   #               test users (sysadmin/sysadmin, testuser/test ...) and any redirect URI.
-  #               The local bundle and the test environments.
+  #               The local bundle and the test environments (a cluster test environment
+  #               also sets devModeOffLocalhost).
   #   production  `start`, keeping its data in `database` on this release's Postgres (or
   #               postgres.host), with the realm the chart derives from the test realm:
-  #               the same users, but no niord-web-admin client (unused, and its service
+  #               no user (keycloak.testUsers), no niord-web-admin client (unused, and its service
   #               account could manage the realm) and no client secret (Keycloak
   #               generates new ones). niord-web accepts only redirects to
   #               externalBaseUri, requires PKCE (S256) and has no password grant. The
   #               realm also turns on
   #               brute-force protection and requires https from outside the private
-  #               networks. The bootstrap admin must come from keycloak.existingSecret.
+  #               networks. The bootstrap admin must come from keycloak.existingSecret,
+  #               and the database users from postgres.existingSecret.
   #               Staging and production.
   # Keycloak imports a realm only when its database does not hold it yet: in production the
   # realm is imported on the first start only, and from then on the database is its record.
   # A later chart or externalBaseUri change does not reach it, and a password changed in the
   # admin console stays changed (README, "Keycloak in production mode").
   mode: dev
+  # dev mode away from this workstation. Dev mode is refused when externalBaseUri or
+  # externalKeycloakUrl names a host other than localhost, 127.0.0.1 or [::1], unless this is
+  # true: a forgotten `mode: production` must not give a cluster the test realm and admin/admin.
+  # A test-<name> environment sets it; staging and production never do.
+  devModeOffLocalhost: false
   # production: the database Keycloak keeps its data in. An init container creates it
   # when it is missing.
   database: keycloak
@@ -321,8 +347,9 @@ keycloak:
   # made and kept by the init container as the app's is (postgres.existingSecret). existingSecret
   # is a Secret with the keys `username` and `password`; "" = the chart renders one from
   # username/password here, the local default, which an environment that names
-  # postgres.admin.existingSecret may not use. Where the app still shares the superuser's
-  # Secret (postgres.admin, above), Keycloak connects as that superuser too, as before.
+  # postgres.admin.existingSecret may not use. Where this release does not make the users (a
+  # database of someone else's, or an infra release that names only postgres.existingSecret),
+  # Keycloak connects as the user of postgres.existingSecret.
   db:
     existingSecret: ""
     username: keycloak
@@ -346,6 +373,13 @@ keycloak:
   # and production mode's rendered realm carries this name. One Keycloak per environment keeps
   # the default; a deployment on the shared Keycloak has a realm of its own (niord-dk, niord-gl).
   realm: niord
+  # production mode: whether the rendered realm keeps the test realm's users (sysadmin/sysadmin, and
+  # testuser, testeditor, testadmin, testcurator, testdomaineditor and testadminelsewhere with the
+  # password test), whose passwords are in this public repository and one of whom is a Niord sysadmin who may manage the realm's users and clients. false = the realm
+  # has no user: the first administrator is made in the admin console and put in the group Sysadmin
+  # (README, "Keycloak in production mode"). true is for a staging with no real data on a closed
+  # network only, never for production. Dev mode ignores it and always imports the test users.
+  testUsers: false
   # The bootstrap admin Keycloak creates on first start. existingSecret names a Secret with the
   # keys `username` and `password`; "" = the chart renders one from adminUser/adminPassword,
   # the local default, which production mode refuses.
@@ -393,12 +427,37 @@ mailhog:
 # =============================================================================
 # "" = this release's MailHog (<fullname>-smtp on mailhog.smtpPort). An app-only release
 # names the infra release's MailHog, e.g. "staging-infra-niord-smtp" + 11025; production
-# names the real relay (phase-0 H9 — the credential seam is a follow-up). Host AND port
+# names the real relay at go-live and sets requireRelay (phase-0 H9), with its login and TLS
+# below when the relay asks for them; before go-live it may keep MailHog. Host AND port
 # are required whenever mailhog.enabled is false in a release that renders the app
 # (the render fails otherwise).
 smtp:
   host: ""
   port: ""
+  # A Secret with the keys `username` and `password`: the login the relay asks for, passed to
+  # the app as NIORD_SMTP_USERNAME / NIORD_SMTP_PASSWORD (niord.smtp.username / .password). In a
+  # cluster environment a SealedSecret next to the values, as the database users are. A changed
+  # Secret takes effect at the app pod's next start. "" = no login. Needs smtp.host: this
+  # release's MailHog asks for none. With tls none the login is sent in clear text: set starttls
+  # or ssl unless the relay is reached over a trusted network.
+  existingSecret: ""
+  # TLS to the relay, rendered as niord.smtp.tls when it is not none:
+  #   none      plain SMTP, as MailHog wants (the default)
+  #   starttls  STARTTLS required before the login and the mail, usually port 587
+  #   ssl       implicit TLS, usually port 465
+  # The relay's certificate is checked against the JVM's trust store; a relay with a private CA
+  # needs -Djavax.net.ssl.trustStore in app.javaOpts. Anything else fails the render.
+  # The backend reads niord.smtp.username / .password / .tls only from the base version whose
+  # mail session carries the login and TLS; an older app image ignores existingSecret and tls
+  # and sends with no login and in clear text, without an error. Set them only with that image.
+  tls: none
+  # true = this environment's mail must reach people (production from go-live on). The render
+  # then refuses MailHog in this release and a smtp.host that names a MailHog Service of this
+  # chart (<fullname>-smtp), so warnings, NAVTEX and mailing-list mail cannot end in the test
+  # mailbox without an error. false (the default) = anything goes: local runs, test-<name>
+  # environments, the stagings, and production on throwaway copies before go-live, which keeps
+  # MailHog until the switch to the relay at go-live itself.
+  requireRelay: false
 
 # =============================================================================
 #  S-124

@@ -811,7 +811,11 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   at the first start).
 - **Description:** nothing maps `externalBaseUri` onto `baseUri` (no env var, no `-DbaseUri`), and `adminAppUrl`
   is empty in the chart, so the message links in mails and tweets (`<adminAppUrl or baseUri>/messages?messageId=`)
-  name `http://localhost:8888`, not the chart's public `http://localhost:18888`.
+  name `http://localhost:8888`, not the chart's public `http://localhost:18888`. A cluster environment pins the
+  setting in its values (`app.settings.baseUri`, rendered as an environment variable named `baseUri`, which the
+  app reads before the stored row); the chart's default, `app.settings: {}`, pins nothing, so the local release
+  keeps the stored row. Mapping `externalBaseUri` onto `baseUri` by itself would break the local mails' styling
+  and images, which the pod fetches from `baseUri` and cannot fetch from the host's `localhost:18888`.
 - **Why it looks wrong:** a link a recipient clicks should name the public origin. The backend's own HTTP fetches
   of `/css/templates` and `/img` through `baseUri` work only because the pod itself listens on 8888.
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
@@ -878,9 +882,9 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   `64:ff9b::/96`, 6to4 `2002::/16`), unless the `niordIntegrationAllowPrivateHosts` setting is on.
 - **Operating note:** two Niord servers on the same private network or k8s cluster need
   `niordIntegrationAllowPrivateHosts=true`. The default is off, and a blocked fetch surfaces only as a
-  swallowed `log.error` on the hourly schedule. Set it from the sysadmin Settings page or a JVM system
-  property — the Helm chart has **no** generic env passthrough (`k8s/helm/niord/templates/app/deployment.yaml`
-  only loops over `.Values.secom.settings`), so there is no env-var route today.
+  swallowed `log.error` on the hourly schedule. Set it from the sysadmin Settings page, a JVM system
+  property, or the chart's `app.settings.niordIntegrationAllowPrivateHosts` (rendered as an environment
+  variable of that name by `k8s/helm/niord/templates/app/deployment.yaml`).
 - **Residual:** a public host that itself proxies inward; an https→http downgrade on a redirect
   (`DefaultRedirectStrategy` permits it); `NiordIntegrationRestService.createNiordIntegration` logs the raw
   URL at INFO *before* the service validates, so a rejected `http://user:pw@host` still reaches the
@@ -1590,18 +1594,20 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `niord/scripts/regen-test-seed-postgres.sh:178-180`, `-Duser.timezone=UTC`); Surefire and Failsafe do not.
 - **Why it looks wrong:** a stored instant that moves by an hour once a year is a wrong value, not only a test
   artefact: whatever the ITs check (publish stamps, publication windows, a tag's expiry, a mail's due time) is
-  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: neither
-  `k8s/docker/Dockerfile` (`eclipse-temurin:25-jre`, no `TZ`) nor the chart (`k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`, `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, passed as `JAVA_TOOL_OPTIONS` by
-  `templates/app/deployment.yaml:89-90`) sets `TZ` or `-Duser.timezone`, so a pod runs in the base image's zone,
-  UTC unless a deployment sets one [inferred from the base image; not read in a running pod]. In UTC there is no
-  repeated hour; a developer's or a test server's JVM in a zone with summer time has one each year.
+  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: the image
+  (`k8s/docker/Dockerfile`, `ENV TZ=UTC`) and the chart (`k8s/helm/niord/templates/app/deployment.yaml`, a fixed
+  `TZ: UTC` entry in the app container's environment, outside `app.javaOpts`, so a values file that replaces
+  that value keeps it) pin the pod's JVM to UTC; only an explicit `-Duser.timezone` in `app.javaOpts` would
+  override it, which the chart's README and the operators' guide say not to add. In UTC there is no repeated
+  hour; a developer's or a test server's JVM in a zone with summer time has one each year, and so has an
+  integration-test run.
 - **Exposed by:** the first `./verify-local` of the country split's P7-bs, which ran at 02:04 local on
   2026-10-25, in the repeated hour.
 - **Decided (the owner, 2026-10-25):** the JVM runs in UTC; the chart and the images set it at the deploy step
   (e.g. `TZ`/`-Duser.timezone=UTC` in `k8s/docker/Dockerfile` and `k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9); the entry stays
-  open until that is built.
+  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9). Built in the
+  image and the chart on 2026-11-18 (`TZ=UTC`, not in `app.javaOpts`); the entry stays open for the tests' zone,
+  which Surefire and Failsafe still do not pin.
 
 ## LUCENE-3. A message index of an older Lucene format in the index folder stops the start-up
 
@@ -1667,21 +1673,38 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   §5), `curl -s http://localhost:4200/rest/domains/all` against a local country.
 - **Severity:** Low — log noise only. Fix: skip the Keycloak states, or log at DEBUG, when no user is authenticated.
 
-## K8S1. `deploy.sh` overwrites the chart's realm with a test realm that names the domain clients differently
+## K8S2. The chart cannot pin a setting whose value is a secret
 
-- **Location:** `be/k8s/scripts/deploy.sh` ("Syncing realm JSON into the chart") copies
-  `niord/src/test/resources/keycloak/niord-realm.json` over `k8s/helm/niord/files/niord-realm.json` before every
-  install.
-- **Description:** the two files differ. The chart's realm names the sample domains' clients `niord-client-annex`,
-  `niord-client-almanac` and so on; the test realm names them `niord-annex`, `niord-almanac`. Every local
-  `deploy.sh` run leaves the chart's file changed in the working tree, and the local bundle then runs a realm that
-  is not the one the chart publishes, the one test environments import and production mode derives its realm from.
-- **Why it looks wrong:** the copy is meant to keep the two in step ("Keep the chart's bundled realm in sync with the
-  test resource it came from"), so one of them is stale, and a deploy should not change a tracked file.
-- **Exposed by:** the public site's local rehearsal (2026-11-10, `docs/public-site-deploy-plan.md`), whose
-  `deploy.sh` run showed the file changed.
-- **Severity:** Low — local runs and a dirty tree. Fix: decide which names are right, make the two files equal,
-  and have `deploy.sh` refuse a difference rather than copy over it.
+- **Location:** `be/k8s/helm/niord/templates/app/deployment.yaml` (the app container's environment) and
+  `templates/validate.yaml` (`app.settings`).
+- **Description:** a setting is pinned per environment, over its stored row, by `app.settings` (an environment
+  variable named like the key, which `SettingsService` reads before the row) or by `-D<key>=<value>` in
+  `app.javaOpts`. Both are plain values: the render refuses an `app.settings` key that names a password, secret or
+  token, and the chart has no value that passes a key of a Secret to the app container under a setting's name.
+  The two settings of type `Password`, `pdfEncryptionPassword` and `wmsPassword`, can therefore only be the stored
+  row, and a database restored from another system brings that system's values for them.
+- **Why it looks wrong:** every other setting a restore must override can be pinned outside the database; these
+  two cannot be without writing the secret into the values.
+- **Exposed by:** a reading of the chart's pinned settings against what a restored database brings (2026-11-19).
+- **Severity:** Low — both are empty by default and are changed on the Settings page after a restore. Fix: a value
+  that maps a setting key to a Secret and its key, rendered as an environment variable from `secretKeyRef`, held to
+  the key rules of `app.settings`.
+
+## K8S3. On a dev-mode Keycloak the chart makes, a domain outside the sample's five has no lasting client
+
+- **Location:** `be/k8s/helm/niord/files/niord-realm.json` (the chart's realm) and the dev-mode Keycloak the chart
+  runs for test environments (`be/k8s/README.md`, the realm's import).
+- **Description:** the chart's realm holds a client for each of the base sample's five domains and for no other.
+  A database restored from a deployment with further domains brings domains that have no client on that realm. The
+  client can be made from the Domains page's *Create in Keycloak* or in the admin console, but a dev-mode Keycloak
+  keeps its data in the container and imports the realm file again at every restart, so the client and every role
+  given on it are gone after the next pod restart or chart upgrade that changes the realm's checksum.
+- **Why it looks wrong:** a person whose roles are on domain clients alone is refused in such a domain again after
+  each restart, and nothing in the realm or the chart keeps the client a sysadmin made.
+- **Exposed by:** a reading of the chart's realm against the domains a restored database brings (2026-11-19).
+- **Severity:** Low — test environments only (a production-mode realm, or a realm on a shared Keycloak, keeps the
+  client), and roles on the base client `niord-client-master` count in every domain. Fix: a chart value that adds
+  domain clients to the realm the chart renders, or a dev-mode Keycloak with a lasting database.
 
 ## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
 

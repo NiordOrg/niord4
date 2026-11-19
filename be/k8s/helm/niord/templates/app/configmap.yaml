@@ -50,6 +50,12 @@ data:
       smtp:
         host: {{ include "niord.smtp.host" . }}
         port: {{ include "niord.smtp.port" . }}
+        {{- $smtpTls := lower (toString (.Values.smtp.tls | default "none")) }}
+        {{- if ne $smtpTls "none" }}
+        # TLS to the relay (values.yaml smtp.tls), rendered only when it is not none. The login, if
+        # any, comes from smtp.existingSecret as NIORD_SMTP_USERNAME / _PASSWORD in the deployment.
+        tls: {{ $smtpTls | quote }}
+        {{- end }}
       {{- with (dig "oidc" "allowedClients" "" .Values.app) }}
       # The Keycloak clients whose tokens the API accepts (SecurityConfig). The application reads
       # ONE comma-separated string, so a list in the values is joined into one: rendered as a YAML

@@ -494,9 +494,11 @@ enters data.
 show a TEST ribbon, the public site included. A production deployment adds `-Dmode=production` to
 its chart value `app.javaOpts`, which the chart passes to the backend as `JAVA_TOOL_OPTIONS`; keep
 the options the value already holds, such as `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, the chart's
-default. The chart has no value of its own for the mode. The backend reads a system property or
-environment variable named like a setting ahead of the stored row, so no database edit is needed,
-and a deployment whose values forgot it shows the ribbon instead of passing as production.
+default. The chart's `app.settings` does the same without touching `app.javaOpts`:
+`app.settings.mode: production` reaches the backend as an environment variable named `mode`. The
+backend reads a system property or environment variable named like a setting ahead of the stored
+row, so no database edit is needed, and a deployment whose values forgot it shows the ribbon
+instead of passing as production.
 
 ## The server's clock
 
@@ -504,7 +506,10 @@ The backend runs in UTC. Times stored without a
 zone are written and read in the server's zone, so a server on a zone with summer time would shift
 them by an hour in the autumn hour that happens twice. The domains' time zones (step 2) format what
 the administration app and the backend's documents show; the public site uses the zone its build
-names (step 2). The chart and the images set UTC; that is verified at the deploy step.
+names (step 2). The image and the chart set `TZ=UTC` on the backend's pod, outside
+`app.javaOpts`, so a value that replaces `app.javaOpts` keeps it; do not add `-Duser.timezone`
+there. At the deploy step, check it in the running pod: `kubectl exec <pod> -- printenv TZ` prints
+`UTC`.
 
 ## Cut-over from an existing deployment
 

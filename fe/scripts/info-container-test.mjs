@@ -14,7 +14,9 @@
  * the backend learns nothing about the request that the client wrote itself, no upstream may set
  * a cookie on this origin, a missing asset is a 404 rather than the application rendered inside a
  * dialog, every response carries the site's security headers, a legal document or branding file
- * a country supplies is sandboxed instead, with the same nosniff and referrer policy, a missing
+ * a country supplies is sandboxed instead, with the same nosniff and referrer policy, a response
+ * over https behind a TLS front carries this host's Strict-Transport-Security once, and the
+ * backend's own never passes, a missing
  * build file is never cached, redirects stay on the reader's scheme, every text file is served
  * pre-compressed, an https backend or chart server is verified, a configured chart server is sent
  * no credential either, and a backend address or frame-ancestors value of the wrong shape stops
@@ -277,6 +279,9 @@ const stub = http.createServer((req, res) => {
     'set-cookie': 'stub=1; Path=/',
     // The backend's web security sends this on every response, and the container sends its own.
     'x-content-type-options': 'nosniff',
+    // Spring Security's own, on a request it holds for secure; the container sends its own, for
+    // its host alone, and must hide this one.
+    'strict-transport-security': 'max-age=1; includeSubDomains',
   });
   res.end(body);
 });
@@ -713,6 +718,51 @@ async function run(port, stubPort) {
     );
   }
 
+  // A repository file's name may hold a `;`, which every link to it writes as `%3B`: the location
+  // passes the request line on as it arrived, so the backend gets the escape and not a raw `;`,
+  // which it refuses. Every escape a file name can need passes as written, and so do the RFC 3986
+  // path characters a link keeps raw. The headers of the location stay: the sandbox for every
+  // type but a PDF, one nosniff, the referrer policy.
+  const repoFileNames = [
+    ['GET', '/rest/repo/file/2026/a%3Bb.png', 'sandbox', 'an encoded semicolon'],
+    ['GET', '/rest/repo/file/2026/a%3bb.pdf', undefined, 'the same in lower case, a PDF'],
+    ['HEAD', '/rest/repo/file/2026/a%3Bb.png', 'sandbox', 'HEAD of the same'],
+    ['GET', '/rest/repo/file/2026/100%25%20cover.html', 'sandbox', 'an encoded percent, a space'],
+    [
+      'GET',
+      '/rest/repo/file/2026/d%C3%A6kning%20%C3%B8%20%C3%A5.svg',
+      'sandbox',
+      'Danish letters as UTF-8 escapes',
+    ],
+    ['GET', '/rest/repo/file/2026/a%253Bb.png', 'sandbox', 'an encoded percent before 3B'],
+    ['GET', '/rest/repo/file/2026/Rapport..pdf', undefined, 'two dots inside a name'],
+    [
+      'GET',
+      "/rest/repo/file/2026/a:b@c!$&'()*+,=~.png",
+      'sandbox',
+      'the path characters a link keeps raw',
+    ],
+    ['GET', '/rest/repo/file/2026/a.png?v=2', 'sandbox', 'a query, which is not held'],
+  ];
+  for (const [method, url, expected, why] of repoFileNames) {
+    const before = seen.length;
+    const response = await request(port, method, url);
+    const policies = headerLines(response, 'content-security-policy');
+    check(
+      `${method} ${url} is proxied as written, with ${expected ? `Content-Security-Policy: ${expected}` : 'no policy'}`,
+      response.status === 200 &&
+        seen.length === before + 1 &&
+        lastSeen()?.method === method &&
+        lastSeen()?.url === url &&
+        (expected ? policies.length === 1 && policies[0] === expected : policies.length === 0) &&
+        hasOneNosniff(response) &&
+        response.headers['referrer-policy'] === 'strict-origin-when-cross-origin',
+      `${why}; got ${response.status}, stub saw ${seen.length - before} request(s), ` +
+        `the last ${lastSeen()?.method} ${lastSeen()?.url}, ` +
+        `content-security-policy: ${JSON.stringify(policies)}`,
+    );
+  }
+
   const head = await request(port, 'HEAD', '/rest/settings/web');
   check(
     'HEAD /rest/settings/web is proxied',
@@ -905,6 +955,55 @@ async function run(port, stubPort) {
       `GET ${url} is refused and never reaches the backend`,
       response.status >= 400 && response.status < 500 && seen.length === before,
       `${why}; got ${response.status}, stub saw ${seen.length - before} request(s)`,
+    );
+  }
+
+  // ---- the raw request line of a repository file -----------------------------------------------
+  // Passed on as it arrived too, so it is held to the paths the backend's firewall serves for a
+  // repository file: what that firewall refuses, and every spelling nginx would fold into another
+  // path, is a 403 here. A NUL and a broken escape nginx refuses itself, with 400, before any
+  // location is chosen.
+  const refusedRepoLines = [
+    ['/rest/repo/file/2026/a;b.png', 403, 'a raw semicolon, a path parameter to the backend'],
+    ['/rest/repo/file/2026/..;/a.png', 403, 'a `..;` segment'],
+    ['/rest/repo/file/2026/../a.png', 403, 'a `..` segment'],
+    ['/rest/repo/file/2026/./a.png', 403, 'a `.` segment'],
+    ['/rest/repo/file/2026/..', 403, 'a `..` segment at the end'],
+    ['/rest/repo/file/2026/%2e%2e/a.png', 403, 'an encoded `..` segment'],
+    ['/rest/repo/file/2026/.%2E/a.png', 403, 'a half-encoded `..` segment'],
+    ['/rest/repo/file/2026/a%2Eb.png', 403, 'an encoded dot inside a name'],
+    ['/rest/repo/file/2026/a%2Fb.png', 403, 'an encoded slash'],
+    ['/rest/repo/file/2026/a%2fb.png', 403, 'an encoded slash in lower case'],
+    ['/rest/repo/file/2026/a%252Fb.png', 403, 'a doubly encoded slash'],
+    ['/rest/repo/file/2026/a%252eb.png', 403, 'a doubly encoded dot'],
+    ['/rest/repo/file/2026/a%5Cb.png', 403, 'an encoded backslash'],
+    ['/rest/repo/file/2026/a%255Cb.png', 403, 'a doubly encoded backslash'],
+    ['/rest/repo/file/2026/a\\b.png', 403, 'a raw backslash'],
+    ['/rest/repo/file/2026/a%2500b.png', 403, 'a doubly encoded NUL'],
+    ['/rest/repo/file/2026/a%00b.png', 400, 'a NUL'],
+    ['/rest/repo/file/2026/a%%20b.png', 400, 'a percent that begins no escape'],
+    ['/rest/repo/file/2026//a.png', 403, 'a doubled slash nginx merges'],
+    ['/rest/repo//file/2026/a.png', 403, 'a doubled slash before the file path'],
+    ['/rest/repo/file/2026/', 403, 'a folder, an empty name'],
+    ['/rest/repo/%66ile/2026/a.png', 403, 'an encoded letter nginx decodes into the path'],
+    [
+      '/rest/public/v1/%2e%2e/%2e%2e/repo/file/2026/a.png',
+      403,
+      'a line nginx normalises into the repository path',
+    ],
+    ['/rest/repo/file/2026/a^b.png', 403, 'a character outside RFC 3986, kept raw by a browser'],
+    ['/rest/repo/file/2026/a[1].png', 403, 'brackets, kept raw by a browser'],
+    ['/rest/repo/file/2026/æ.png', 403, 'a raw letter outside ASCII'],
+    ['/rest/repo/file/2026/a%3Bb.png?ticket=abc', 403, 'a ticket beside an encoded semicolon'],
+  ];
+  for (const [url, expected, why] of refusedRepoLines) {
+    const before = seen.length;
+    const response = await request(port, 'GET', url);
+    check(
+      `GET ${url} is refused with ${expected} and never reaches the backend`,
+      response.status === expected && seen.length === before,
+      `${why}; got ${response.status}, stub saw ${seen.length - before} request(s)` +
+        (seen.length === before ? '' : `, the last ${lastSeen()?.url}`),
     );
   }
 
@@ -1245,6 +1344,71 @@ async function run(port, stubPort) {
     `got ${wms.status}, ${wms.body.length} bytes, stub saw ${seen.length - wmsBefore} request(s)`,
   );
 
+  // ---- Strict-Transport-Security ---------------------------------------------------------------
+  // Sent where a TLS front reports https, once and with this host's value, by every kind of
+  // location: the ones that include the security headers, the sandboxed ones that include the
+  // common headers, the repository files that write theirs out, the returns and the proxied
+  // ones. The stub sends a copy of its own on every response, as the backend does, which must not
+  // pass. Over plain HTTP, or with a scheme that is neither, there is none.
+  const HTTPS = { 'x-forwarded-proto': 'https' };
+  const HSTS = 'max-age=31536000';
+  const hstsProxied = [];
+  const hstsRequest = async (path, headers) => {
+    const response = await request(port, 'GET', path, headers);
+    if (/^\/rest\/(public\/v1|repo\/file)\//.test(path) && !path.includes('ticket=')) {
+      hstsProxied.push(`GET ${path}`);
+    }
+    return response;
+  };
+  const hstsPaths = [
+    ['the root', '/'],
+    ['the application shell', '/index.html'],
+    ['a router path', '/messages/map'],
+    ['the teaser', '/teaser'],
+    ['an unhashed asset', `/assets/i18n/${options.language}.json`],
+    ['a branding file (sandboxed)', '/assets/branding/favicon.png'],
+    ['a missing asset (404)', '/assets/legal/does-not-exist.xx.html'],
+    ['a missing build file (404)', '/main-ZZZZZZZZ.js'],
+    ['a redirect (301)', '/teaser.html'],
+    ['a path that does not exist on this host (404)', '/rest/messages/search'],
+    ['Keycloak (404)', '/auth/realms/niord'],
+    ['the empty sea chart', '/wms/cells?x=1'],
+    ['the proxied public API', '/rest/public/v1/messages?lang=da'],
+    ['a proxied repository file (its headers written out)', '/rest/repo/file/2026/a.png'],
+    [
+      'a ticket refused in the repository-file location (403)',
+      '/rest/repo/file/2026/a.png?ticket=abc',
+    ],
+  ];
+  if (script) hstsPaths.push(['a hashed chunk', script.startsWith('/') ? script : `/${script}`]);
+  if (!options.noLegalDoc) {
+    hstsPaths.push(['a legal document (sandboxed)', `/assets/legal/${options.legalDoc}`]);
+  }
+  for (const [what, path] of hstsPaths) {
+    const response = await hstsRequest(path, HTTPS);
+    const lines = headerLines(response, 'strict-transport-security');
+    check(
+      `over https, ${what} carries one Strict-Transport-Security, ${HSTS}`,
+      lines.length === 1 && lines[0] === HSTS,
+      `GET ${path}: ${response.status}, strict-transport-security: ${JSON.stringify(lines)}`,
+    );
+  }
+  for (const [what, path, headers] of [
+    ['the root, with no X-Forwarded-Proto', '/', {}],
+    ['the root, over http', '/', { 'x-forwarded-proto': 'http' }],
+    ['the root, with a scheme that is neither', '/', { 'x-forwarded-proto': 'gopher' }],
+    ['the proxied public API, over http', '/rest/public/v1/messages?lang=en', {}],
+    ['a proxied repository file, over http', '/rest/repo/file/2026/a.png', {}],
+  ]) {
+    const response = await hstsRequest(path, headers);
+    const lines = headerLines(response, 'strict-transport-security');
+    check(
+      `${what} carries no Strict-Transport-Security, the backend's included`,
+      response.status === 200 && lines.length === 0,
+      `GET ${path}: ${response.status}, strict-transport-security: ${JSON.stringify(lines)}`,
+    );
+  }
+
   // ---- and nothing else ever reached the backend -----------------------------------------------
   const expected = [
     'GET /rest/public/v1/messages?lang=da',
@@ -1257,8 +1421,10 @@ async function run(port, stubPort) {
     'GET /rest/message-reports/message/Local%20Warning-120-26.pdf?lang=da',
     'GET /rest/message-reports/message/Lokal%C3%86-7-26.pdf?lang=da',
     ...messageIdUrls.map(([url]) => `GET ${url}`),
+    ...repoFileNames.map(([method, url]) => `${method} ${url}`),
     'HEAD /rest/settings/web',
     ...acceptedRequests,
+    ...hstsProxied,
   ];
   const actual = seen.map((entry) => `${entry.method} ${entry.url}`);
   check(
