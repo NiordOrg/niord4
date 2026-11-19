@@ -5,8 +5,9 @@ import { Observable, map } from 'rxjs';
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 
 /**
- * A mail's state in the queue. HELD: the sender job handled it while the mail filter
- * (`mailValidRecipients`) was LOG, so nothing left the server.
+ * A mail's state in the queue. HELD: when the sender job handled it, the mail filter
+ * (`mailValidRecipients`) kept it from reaching all of its recipients: the filter was LOG, so
+ * nothing left the server, or a list that redirected a recipient to its first listed address.
  */
 export type ScheduledMailStatus = 'PENDING' | 'SENT' | 'HELD' | 'ERROR';
 

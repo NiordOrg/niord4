@@ -3554,7 +3554,7 @@
         "sent": "Sent",
         "waiting": "Waiting",
         "retrying": "Retrying",
-        "held": "Held, not sent",
+        "held": "Held, not delivered",
         "error": "Not sent"
       },
       "lastError": "Last error: {{error}}",

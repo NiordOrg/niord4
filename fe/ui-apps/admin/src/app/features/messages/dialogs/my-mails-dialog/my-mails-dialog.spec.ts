@@ -115,7 +115,7 @@ describe('MyMailsDialog', () => {
     expect(rows[3].textContent).toContain('messages.myMails.lastError');
   });
 
-  it('says a held mail was not sent, with the held pill and no error line', async () => {
+  it('says a held mail was not delivered, with the held pill and no error line', async () => {
     await openWith([mail({ id: 5, status: 'HELD', attempts: 1 })]);
     const row = document.querySelector('.dialog-panel tbody tr');
     const pill = row?.querySelector('.status-badge');

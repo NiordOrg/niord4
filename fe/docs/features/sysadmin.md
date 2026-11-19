@@ -482,9 +482,11 @@ report id and the name.
 Read-only but for one action, Send again: no create, edit, delete or cancel. Mails are produced
 elsewhere — mailing-list triggers, the messages mail action, and promulgation — and this page is
 where delivery is verified, failures diagnosed and a held or failed mail sent again. The lifecycle (`PENDING` → `SENT`, `HELD` or `ERROR`, with
-server-side retry back-off) is entirely backend-driven. A mail is `HELD` when the sender job handled
-it while the mail filter (`mailValidRecipients`) was `LOG`: nothing left the server. The status
-filter offers _Held_ between _Sent_ and _Error_, and its pill is pending's amber with a dashed
+server-side retry back-off) is entirely backend-driven. A mail is `HELD` when, as the sender job
+handled it, the mail filter (`mailValidRecipients`) kept it from reaching all of its recipients: at
+`LOG` nothing left the server; under a list of addresses a recipient not on the list was redirected
+to the first listed address (a mail is `SENT` under a list only when every recipient was on it).
+The status filter offers _Held_ between _Sent_ and _Error_, and its pill is pending's amber with a dashed
 border.
 
 - The search is **server-paged**, ordered newest-created first. Filters are recipient / sender /
