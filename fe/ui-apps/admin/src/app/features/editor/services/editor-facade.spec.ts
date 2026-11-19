@@ -177,6 +177,26 @@ describe('EditorFacade', () => {
       isAdmin.set(true);
       expect(facade.editable()).toBe(true);
     });
+
+    it('is false for a cancellation warning, an admin and every status included', () => {
+      const { facade, isAdmin } = setup({ admin: true });
+      facade.applyLoaded({ id: 'm-3', status: 'PUBLISHED', mainType: 'NW', kind: 'CANCELLATION' });
+      expect(facade.editable()).toBe(false);
+      expect(facade.editableNow()).toBe(false);
+      facade.applyLoaded({ id: 'm-3', status: 'DRAFT', kind: 'CANCELLATION' });
+      expect(facade.editable()).toBe(false);
+      isAdmin.set(false);
+      expect(facade.editableNow()).toBe(false);
+    });
+
+    it('treats a message of kind WARNING as before', () => {
+      const { facade, isAdmin } = setup();
+      facade.applyLoaded({ id: 'm-4', status: 'PUBLISHED', kind: 'WARNING' });
+      expect(facade.editable()).toBe(false);
+      isAdmin.set(true);
+      expect(facade.editable()).toBe(true);
+      expect(facade.editableNow()).toBe(true);
+    });
   });
 
   describe('dirty + userTouched latches', () => {
@@ -595,6 +615,30 @@ describe('EditorFacade', () => {
       facade.createMessage('NW', { id: '', mainType: 'NW', type: 'LOCAL_WARNING' });
       expect(facade.message()?.id).toBe('server-uuid');
       expect(facade.message()?.type).toBe('LOCAL_WARNING');
+    });
+
+    it('createMessage keeps the id of a template that has one, with its repoPath and attachments', () => {
+      const { facade, api } = setup();
+      api.newMessageTemplate.mockReturnValueOnce(
+        of({ id: 'server-uuid', mainType: 'NW', repoPath: 'messages/s/server-uuid' } as Message),
+      );
+      // An executed template result of a never-saved copy: its repoPath (sent through untyped) and
+      // the attachment paths derive from its own id, so taking the server blank's id would make the
+      // create POST refuse the attachment as lying outside the message's folder.
+      const result = {
+        id: 'uuid-1',
+        mainType: 'NW',
+        repoPath: 'messages/u/uuid-1',
+        editRepoPath: 'temp/x/uuid-1',
+        attachments: [{ fileName: 'chart.png', path: 'temp/x/uuid-1/chart.png' }],
+      } as Message;
+      facade.createMessage('NW', result);
+      expect(facade.message()).toMatchObject({
+        id: 'uuid-1',
+        repoPath: 'messages/u/uuid-1',
+        editRepoPath: 'temp/x/uuid-1',
+        attachments: [{ fileName: 'chart.png', path: 'temp/x/uuid-1/chart.png' }],
+      });
     });
 
     it('createMessage surfaces a refused create as an inline error', () => {

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { catchError, debounceTime, map, of, Subject, switchMap } from 'rxjs';
+import { catchError, map, of, Subject, switchMap, timer } from 'rxjs';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { DomainFacade } from '../../../../core/domain/facades/domain.facade';
@@ -137,8 +137,8 @@ export class EditAsTextDialog {
   private readonly initialText = signal('');
   protected readonly workingFc = signal<GeometryFeatureCollection>(EMPTY_FC);
   protected readonly parseError = signal(false);
-  // True from a keystroke until its debounced parse settles — gates Save so the (stale) debounced
-  // workingFc cannot be committed in the sub-500ms window after the textarea changed.
+  // True from a keystroke until the parse of the text on screen answers — gates Save so the
+  // previous text's workingFc cannot be committed.
   protected readonly parsePending = signal(false);
   protected readonly featureCount = computed(() => this.workingFc().features.length);
   /** True once the user has changed the text from its initial value — gates Save. */
@@ -159,15 +159,21 @@ export class EditAsTextDialog {
   constructor() {
     this.textParse$
       .pipe(
-        // Capture the open-token at TYPE time (before the debounce) so a parse queued in a
-        // previous open cannot land on a later open's freshly-initialised state.
+        // Capture the open-token at TYPE time so a parse queued in a previous open cannot land on
+        // a later open's freshly-initialised state.
         map((text) => ({ text, token: this.openToken })),
-        debounceTime(500),
+        // switchMap on the keystroke itself, the pause inside it: a newer change drops both the
+        // pause and a parse already in flight, so an answer for an older text can never end the
+        // pending state with that text's positions.
         switchMap(({ text, token }) =>
-          (text.trim().length > 0
-            ? this.geometryApi.parseGeometry(text).pipe(catchError(() => of(EMPTY_FC)))
-            : of(EMPTY_FC)
-          ).pipe(map((fc) => ({ fc, token }))),
+          timer(500).pipe(
+            switchMap(() =>
+              text.trim().length > 0
+                ? this.geometryApi.parseGeometry(text).pipe(catchError(() => of(EMPTY_FC)))
+                : of(EMPTY_FC),
+            ),
+            map((fc) => ({ fc, token })),
+          ),
         ),
         takeUntilDestroyed(),
       )

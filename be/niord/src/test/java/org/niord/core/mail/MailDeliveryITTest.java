@@ -345,6 +345,62 @@ class MailDeliveryITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
+    // The session's login and TLS (MailConfig), for a relay that asks for them
+    // ------------------------------------------------------------------------------------------- //
+
+    /** The mail session the application would build for the test's SMTP server with the given login and TLS mode */
+    private static jakarta.mail.Session sessionWith(String username, String password, String tls) {
+        MailConfig config = new MailConfig();
+        config.host = smtpHost();
+        config.port = smtpPort();
+        config.username = username;
+        config.password = password;
+        config.tls = tls;
+        return config.createMailSession();
+    }
+
+    private static jakarta.mail.internet.MimeMessage message(jakarta.mail.Session session, String subject)
+            throws MessagingException {
+        jakarta.mail.internet.MimeMessage message = new jakarta.mail.internet.MimeMessage(session);
+        message.setFrom(new InternetAddress(DEFAULT_SENDER));
+        message.setRecipient(Message.RecipientType.TO, new InternetAddress("login@niord.test"));
+        message.setSubject(subject);
+        message.setText("login wire body");
+        return message;
+    }
+
+    /**
+     * A session with a login (the session the application builds, with its authenticator) still reaches the server.
+     * Mailhog accepts any login and does not record the exchange, so this shows only that a send with the login turned
+     * on is delivered; that the right user name and password are handed over is {@code MailConfigTest}'s.
+     */
+    @Test
+    void aMailWithALoginReachesTheServer() throws Exception {
+        String subject = unique("login");
+        jakarta.mail.Session session = sessionWith("niord-relay", "it-not-a-real-password", "none");
+
+        jakarta.mail.Transport.send(message(session, subject));
+
+        MailHog.Message m = MailHog.waitForOne(subject);
+        assertNotNull(m, "the mail sent with a login must reach the SMTP server");
+        assertTrue(m.toAddresses().contains("login@niord.test"), "was " + m.toAddresses());
+    }
+
+    /**
+     * With STARTTLS required, a server that does not offer it (Mailhog does not) refuses the send: nothing goes out in
+     * clear text.
+     */
+    @Test
+    void starttlsRequiredRefusesAServerWithoutIt() throws Exception {
+        String subject = unique("starttls");
+        jakarta.mail.Session session = sessionWith("niord-relay", "it-not-a-real-password", "starttls");
+
+        assertThrows(MessagingException.class, () -> jakarta.mail.Transport.send(message(session, subject)));
+
+        assertTrue(MailHog.messagesWithSubject(subject).isEmpty(), "nothing reaches the server in clear text");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
     // sendMail(Mail) — no recipients is rejected BEFORE any SMTP traffic, even in real-send mode
     // ------------------------------------------------------------------------------------------- //
 

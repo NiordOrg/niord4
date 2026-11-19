@@ -1,10 +1,15 @@
-import { Component, inject, type OnDestroy } from '@angular/core';
+import { Component, DestroyRef, computed, inject, type OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
+
+import { Icon } from '../../shared/icons/icon';
+import { isCancellationWarning } from '../messages/models/message.model';
 
 import { MessageComparisonDialog } from '../messages/dialogs/message-comparison-dialog/message-comparison-dialog';
 import { MessageCopyDialog } from '../messages/dialogs/message-copy-dialog/message-copy-dialog';
 import { MessagePrintDialog } from '../messages/dialogs/message-print-dialog/message-print-dialog';
 import { MessageDetailsDialog } from '../messages/message-details-dialog/message-details-dialog';
+import { MyMailsNoticeService } from '../messages/services/my-mails-notice.service';
 import { EditorActionMenu } from './components/editor-action-menu/editor-action-menu';
 import { EditorCommentsStore } from './services/editor-comments.store';
 import { EditorFacade } from './services/editor-facade';
@@ -27,11 +32,16 @@ import { EditorFacade } from './services/editor-facade';
  * (seeded with the drafts list for prev/next) from inside the editor, and the print dialog that
  * the Actions menu's Print opens (`MessagePrintService.printMessage` only arms the root dialog
  * service; without a host here nothing is drawn).
+ *
+ * Over every tab, a cancellation warning carries a note that says what it is and that it cannot be
+ * edited, only cancelled.
  */
 @Component({
   selector: 'app-editor',
   imports: [
     RouterOutlet,
+    TranslocoPipe,
+    Icon,
     EditorActionMenu,
     MessageDetailsDialog,
     MessageComparisonDialog,
@@ -40,6 +50,16 @@ import { EditorFacade } from './services/editor-facade';
   ],
   template: `
     <app-editor-action-menu />
+    @if (cancellationWarning()) {
+      <div
+        class="message message-info mx-4 mt-3"
+        role="note"
+        data-testid="cancellation-warning-banner"
+      >
+        <app-icon name="lucideInfo" class="message-icon" />
+        <span>{{ 'editor.cancellationWarning.banner' | transloco }}</span>
+      </div>
+    }
     <router-outlet />
     <app-message-details-dialog />
     <app-message-comparison-dialog />
@@ -56,6 +76,16 @@ import { EditorFacade } from './services/editor-facade';
 export class EditorShell implements OnDestroy {
   private readonly facade = inject(EditorFacade);
   private readonly commentsStore = inject(EditorCommentsStore);
+
+  protected readonly cancellationWarning = computed(() =>
+    isCancellationWarning(this.facade.message()),
+  );
+
+  constructor() {
+    // A comment's mail is sent from here: an editor who never opens the messages area is told
+    // of a mail that could not be sent, too, while the editor is open.
+    inject(MyMailsNoticeService).start(inject(DestroyRef));
+  }
 
   protected onBeforeUnload(event: BeforeUnloadEvent): void {
     if (this.facade.hasUnsavedChanges() || this.commentsStore.hasComposeDraft()) {

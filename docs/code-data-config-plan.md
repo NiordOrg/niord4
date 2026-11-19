@@ -763,7 +763,7 @@ The 80 files of `be/niord/bootstrap/templates/` (verified against the code on 20
 | `messages/message-list-pdf.ftl` | the code | the built-in reports: the bootstrap's `reports.json` names it, and it is among the 11 because the built-in reports are required |
 | `messages/message-support.ftl` | the code | included by `message-list-pdf.ftl:1` and `message-mail.ftl:1` (and by data templates) |
 | `messages/message-list-pdf-footer.ftl` | the code | included by `message-support.ftl:49` |
-| `messages/{nm-report,nm-tp-report,nm-annex-report,nm-almanac-report,nm-accumulated-report,fa-list}-pdf.ftl` (6) | data rows | `FmReport.templatePath` rows for five of them; `nm-accumulated` has no row in the base data: only `LegacyTemplateRulings.java:403` names it, as the report id `LegacyImportService.java:2360` writes into a series, and `FmReportService.getReport` renders that series with the standard report (RENDER3) |
+| `messages/{nm-report,nm-tp-report,nm-annex-report,nm-almanac-report,nm-accumulated-report,fa-list}-pdf.ftl` (6) | data rows | `FmReport.templatePath` rows for five of them; `nm-accumulated` has no row in the base data: only `LegacyTemplateRulings.java:403` names it, as the report id `LegacyImportService.java:2360` writes into a series, and a release of that series fails (no such report) on a deployment without that report row |
 | `messages/{nm-report,nm-almanac-report,nm-accumulated-report,fa-list}-pdf-intro.ftl` (4) | data rows; **placeholders**, holding the one-line comment of §6.4 | included by their reports (`nm-report-pdf.ftl:125`, `nm-almanac-report-pdf.ftl:43`, `nm-accumulated-report-pdf.ftl:214`, `fa-list-pdf.ftl:48`) |
 | `mailinglist/{active-navwarns,cancel-navtex,cancel-navwarn,cancel-safetynet,publish-navtex,publish-navwarn,publish-safetynet}.ftl`, `publish-safetynet.js` (8) | data rows | `MailingListTrigger.scriptResourcePaths` rows on deployments |
 | `mailinglist/publish-navwarn-common.ftl`, `safetynet-intro.ftl` (2) | data rows; `safetynet-intro.ftl` is a **placeholder** too | included by `publish-navwarn.ftl:2`, `publish-safetynet.ftl:26`, `cancel-safetynet.ftl:4` |
@@ -804,7 +804,8 @@ Templates include one another across the two groups: data templates `<#include "
 - **Reports are data too**, the built-ins `standard`, `draft` and `public` included: they come with the
   bootstrap (§7.1) and are edited on the Print reports page like any other. `FmReportService`'s
   `getStandardReport`, `getDraftReport` and `getPublicReport` are
-  plain lookups by id (`getReport` falls back to the standard report). A deployment
+  plain lookups by id (`getReport` falls back to the standard report, for a message print only; a
+  publication issue's render looks its report up strictly and fails on a missing one). A deployment
   without one gets a clear error, a 404 (`NiordWebException`) naming the id and the bootstrap, and the
   missing-path report lists it. `GET /rest/message-reports/detail-reports` lists only the built-in reports that
   exist, so the administration app opens on a database that has not been bootstrapped yet.
@@ -981,8 +982,9 @@ Without copy-on-use, a template path that was never rendered on a running deploy
 has no row and resolves nowhere. This includes a localized variant the old jar supplied (`x_da.ftl`),
 whose absence silently falls back to `x.ftl`.
 - **The missing-path report** (`MissingPathReport`, `org.niord.core.script`). The backend lists
-  every path that data names or the code names (`RequiredTemplates`), and every built-in report id
-  (`FmReportService.BUILT_IN_REPORT_IDS`), that has no row. The report only reads. It is logged at every start
+  every path that data names or the code names (`RequiredTemplates`), and every report id that is built in
+  (`FmReportService.BUILT_IN_REPORT_IDS`) or that a publication series or issue names
+  (`PublicationSeries.reportId`, `PublicationIssue.reportId`), that has no row. The report only reads. It is logged at every start
   where the bootstrap marker reads `existing` or `applied` (a warning with one line per entry, else "no
   missing path"), after the marker's own listener, and is silent on `pending`, `in-progress` and `failed`,
   where the bootstrap brings the rows. It is logged at every such start rather than only at the first start
@@ -991,7 +993,7 @@ whose absence silently falls back to `x.ftl`.
   a list of entries: kind (`TEMPLATE` or `REPORT`), path or report id, and what names it (`code:
   RequiredTemplates`, `Category <id>`, `MailingListTrigger <id>`, `PromulgationType <id>`, `FmReport
   <reportId>`, `include in <path>`, `load in <path>`, `variant of <path>`, and for a report id `code:
-  FmReportService.BUILT_IN_REPORT_IDS`).
+  FmReportService.BUILT_IN_REPORT_IDS`, `PublicationSeries <seriesId>` or `PublicationIssue <publicId>`).
 - **What it reads.** The named paths are `RequiredTemplates.PATHS`; the `Category`, `MailingListTrigger` and
   `PromulgationType` script paths; `FmReport.templatePath`; every literal `<#include "…">` or `<#import "…">`
   in a FreeMarker row, resolved as FreeMarker resolves it (a leading `/` from the root, otherwise against the

@@ -824,9 +824,10 @@ shows the messages it holds on the public site's message pages:
 
 image::PublicSitePublicationBrowse.png[Browsing an Issue on the Public Site, 800]
 
-The page lists only the issue's messages, under their areas, and does not name the issue. While
-you browse an issue, the bar above the messages offers _Print_ and the areas its messages are in,
-but not the other filters of the message pages.
+The page lists only the issue's messages, under their areas. The bar above the messages names the
+issue, with _Download_ for its document and a close button (X) that goes back to the current list
+of messages, and offers _Print_ and the areas the issue's messages are in, but not the other filters
+of the message pages. _Details_, _List_ and _Map_ in the menu keep the issue while you browse it.
 
 In the administration application, editors see which issues a message is in, and cite published
 issues from the message editor; see

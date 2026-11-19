@@ -31,6 +31,7 @@ import org.niord.core.publication.series.SeriesCadence;
 import org.niord.core.publication.series.SeriesKind;
 import org.niord.core.publication.series.resolve.TimeRelation;
 import org.niord.core.publication.series.vo.IssueListResultVo;
+import org.niord.core.repo.RepoPaths;
 import org.niord.core.service.BaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,6 +134,7 @@ public class ImportCheckService extends BaseService {
         assertUnpublishedIssuesCarryNoStamp(imported, violations, counts);
         reportUnstampedReleasedIssues(imported, withdrawnLegacyIds(imported), violations, counts);
         countCompilationIssuesCreated(counts);
+        countLinksNamingAnotherFile(counts);
         reportMembersPublishedAfterTheirIssue(loadImportedMembers(), violations, counts);
         assertIdSpaceDoesNotCollide(violations, counts);
         assertMembershipIsUnique(violations, counts);
@@ -435,6 +437,60 @@ public class ImportCheckService extends BaseService {
                 .setParameter("compiled", TimeRelation.COMPILED_FROM_SOURCE)
                 .getSingleResult();
         counts.put(COMPILATION_ISSUES_CREATED, created.intValue());
+    }
+
+    /** The counts key for the imported descriptors whose link serves another file than their filePath names. */
+    public static final String LINK_NAMES_ANOTHER_FILE_COUNT = "importedLinksNamingAnotherFile";
+
+    /**
+     * How many imported descriptors carry a repository link that serves a file
+     * other than the one their filePath names.
+     *
+     * A COUNT AND NOT A VIOLATION. The public site serves the link, so nothing
+     * public is wrong; what is wrong is everything that reads filePath -- the
+     * repository import's closing check, the archive before a replacement, and a
+     * corrected upload, which would land where no link points. The import takes
+     * filePath from the link wherever the link names a file under the issue's own
+     * folder, so what is left here is a link somewhere else, which somebody should
+     * look at before an editor corrects that issue.
+     *
+     * Counted even when it is zero, for the reason every other count here is.
+     */
+    private void countLinksNamingAnotherFile(Map<String, Integer> counts) {
+        List<Object[]> rows = em.createQuery(
+                        "SELECT d.link, d.filePath FROM PublicationIssueDesc d "
+                                + "WHERE d.entity.legacyPublicationId IS NOT NULL AND d.link IS NOT NULL",
+                        Object[].class)
+                .getResultList();
+        int other = 0;
+        for (Object[] row : rows) {
+            if (linkNamesAnotherFile((String) row[0], (String) row[1])) {
+                other++;
+            }
+        }
+        counts.put(LINK_NAMES_ANOTHER_FILE_COUNT, other);
+    }
+
+    /**
+     * Whether a descriptor's link is a repository link that serves another file
+     * than its filePath names: no spelling of the link's path, as written or
+     * decoded ({@link RepoPaths#candidates}, the rule the import
+     * takes filePath by), is the filePath. A link that is no repository link (an
+     * external address, or none) names no stored file, and is not counted.
+     */
+    // Package-visible so the rule can be asserted on values: the import now aligns
+    // the two, so the real pass over a fresh import has little to find.
+    static boolean linkNamesAnotherFile(String link, String filePath) {
+        if (link == null || !link.startsWith(RepoPaths.FILE_URL_PREFIX)) {
+            return false;
+        }
+        String path = RepoPaths.normalize(filePath);
+        for (String linked : RepoPaths.fileLinkPaths(link)) {
+            if (path == null || !RepoPaths.candidates(linked).contains(path)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

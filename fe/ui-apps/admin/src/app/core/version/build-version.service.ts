@@ -58,7 +58,7 @@ export class BuildVersionService {
     { defaultValue: '' },
   );
 
-  /** The backend's build stamp (e.g. `04-07-2026 11:45 UTC`); `''` while loading / on error. */
+  /** The backend's build version, the niord-base version (e.g. `4.0.199`); `''` while loading / on error. */
   readonly serverBuildVersion = computed(() =>
     this.serverVersionResource.hasValue() ? this.serverVersionResource.value().trim() : '',
   );

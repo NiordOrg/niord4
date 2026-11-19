@@ -64,6 +64,16 @@ public class CurationAndFileGuardsTest {
         assertTrue(link.startsWith("/"), "repository links are relative, never absolute");
     }
 
+    /**
+     * A file name holding a percent sign or a semicolon gets a link that opens it: both are written encoded, and
+     * every other character of the path is left as it is.
+     */
+    @Test
+    public void aPercentSignAndASemicolonInTheFileNameAreEncodedInTheLink() {
+        assertEquals("/rest/repo/file/publications/a/8e/issue-id/100%25 a%3Bb.pdf",
+                IssuePublicationMapping.linkOf(desc(null, "publications/a/8e/issue-id/100% a;b.pdf")));
+    }
+
     /** An explicit link is external and returned untouched, absolute and all. */
     @BindsRule({"D-8"})
     @Test

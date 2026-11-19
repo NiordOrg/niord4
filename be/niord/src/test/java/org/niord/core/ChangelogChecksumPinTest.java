@@ -78,6 +78,8 @@ class ChangelogChecksumPinTest {
         PINNED.put("niord:009-repo-files", "9:a93f94b3c3e5fa1eb9bcfb3ea39abfda");
         PINNED.put("niord:010-message-list-index-default", "9:7afd8f89e492f46dd854d1aa52c1bba3");
         PINNED.put("niord:011-message-filter-parameters-text", "9:84ef76d49e0b274e2dd56ca63cb46c1f");
+        PINNED.put("niord:012-mailing-list-status-change", "9:1fd941c7102b24181f7060ec51a7ed91");
+        PINNED.put("niord:013-user-username-case-insensitive", "9:68383fffda166c10e98df269e234d6c0");
     }
 
     private DatabaseChangeLog master() throws Exception {

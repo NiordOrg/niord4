@@ -207,6 +207,18 @@ describe('ScheduleView', () => {
     expect(el.querySelector('.btn-secondary')).not.toBeNull();
   });
 
+  it('puts the Layers card at the bottom left, clear of the zoom buttons and the credit line', () => {
+    const { fixture } = setup(true);
+    fixture.detectChanges();
+
+    // The zoom buttons and the map's credit line sit at the bottom right of every map.
+    const switcher = (fixture.nativeElement as HTMLElement).querySelector('app-ol-layer-switcher');
+    expect(switcher).not.toBeNull();
+    expect(switcher!.classList.contains('left-2')).toBe(true);
+    expect(switcher!.classList.contains('bottom-2')).toBe(true);
+    expect(switcher!.classList.contains('right-2')).toBe(false);
+  });
+
   it('loading branch: keeps the table mounted (latched rows) with the progress overlay visible', () => {
     const { fixture, facade } = setup(true);
     facade.loading.set(true);

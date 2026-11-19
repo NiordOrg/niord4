@@ -17,13 +17,39 @@ const URL_WRITE_DEBOUNCE_MS = 200;
 // filter set.
 const NON_FILTER_QUERY_PARAMS = [MESSAGE_ID_QUERY_PARAM] as const;
 
-// The reference filter's backend API key is `messageId`, which collides with
-// the dialog's deep-link key (also `messageId`). On the URL we rename it to
-// `refMessageId` so typing in the reference filter does NOT open the dialog,
-// while the backend request (built from `facade.requestParams`) keeps the
-// `messageId` key the search endpoint expects.
-const REFERENCE_FILTER_API_KEY = 'messageId';
-const REFERENCE_FILTER_URL_KEY = 'refMessageId';
+// Two filters' backend keys mean something else on the address, so the address
+// carries them under keys of their own, while the backend request, saved filters,
+// print and export (all built from `facade.requestParams`) keep the backend keys:
+// - the reference filter's `messageId` is also the details dialog's deep-link key;
+//   on the address it is `refMessageId`, so typing in the reference filter does
+//   NOT open the dialog;
+// - the Domain filter's `domain` is also the session-domain deep link the
+//   application reads when it starts; on the address it is `searchDomain`, so a
+//   bookmark with the Domain filter searches that domain and does not make it the
+//   current one. An inbound `domain` is that deep link, already used at start-up,
+//   and never a filter.
+const URL_KEY_BY_API_KEY: Readonly<Record<string, string>> = {
+  messageId: 'refMessageId',
+  domain: 'searchDomain',
+};
+const API_KEY_BY_URL_KEY: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(URL_KEY_BY_API_KEY).map(([apiKey, urlKey]) => [urlKey, apiKey]),
+);
+
+/** The address key a filter parameter is written under. */
+export function filterUrlKey(apiKey: string): string {
+  return Object.hasOwn(URL_KEY_BY_API_KEY, apiKey) ? URL_KEY_BY_API_KEY[apiKey] : apiKey;
+}
+
+/**
+ * The filter parameter an address key is read as, or `undefined` for a key on the address
+ * that is not a filter (the dialog's `messageId`, the session-domain `domain`).
+ */
+export function filterApiKey(urlKey: string): string | undefined {
+  if ((NON_FILTER_QUERY_PARAMS as readonly string[]).includes(urlKey)) return undefined;
+  if (Object.hasOwn(URL_KEY_BY_API_KEY, urlKey)) return undefined;
+  return Object.hasOwn(API_KEY_BY_URL_KEY, urlKey) ? API_KEY_BY_URL_KEY[urlKey] : urlKey;
+}
 
 @Injectable({ providedIn: 'root' })
 export class MessagesFilterUrlSync {
@@ -48,8 +74,8 @@ export class MessagesFilterUrlSync {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((map) => {
       const search = new URLSearchParams();
       for (const key of map.keys) {
-        if ((NON_FILTER_QUERY_PARAMS as readonly string[]).includes(key)) continue;
-        const apiKey = key === REFERENCE_FILTER_URL_KEY ? REFERENCE_FILTER_API_KEY : key;
+        const apiKey = filterApiKey(key);
+        if (apiKey === undefined) continue;
         for (const value of map.getAll(key)) {
           search.append(apiKey, value);
         }
@@ -88,13 +114,8 @@ export class MessagesFilterUrlSync {
           return;
         }
         this.lastAppliedQuery = query;
+        // The filter's keys as the address carries them (see `filterUrlKey`).
         const queryParams = this.queryToParamMap(query);
-        // Rename the reference filter's API key to its distinct URL key so it
-        // doesn't collide with the dialog's `messageId` deep-link param.
-        if (REFERENCE_FILTER_API_KEY in queryParams) {
-          queryParams[REFERENCE_FILTER_URL_KEY] = queryParams[REFERENCE_FILTER_API_KEY];
-          delete queryParams[REFERENCE_FILTER_API_KEY];
-        }
         // Carry non-filter params (e.g. `messageId` from the details dialog)
         // across the 'replace' navigation so an open dialog isn't dismissed by
         // an unrelated filter change.
@@ -146,7 +167,7 @@ export class MessagesFilterUrlSync {
     const result: Record<string, string | string[]> = {};
     for (const key of new Set(Array.from(search.keys()))) {
       const values = search.getAll(key);
-      result[key] = values.length === 1 ? values[0] : values;
+      result[filterUrlKey(key)] = values.length === 1 ? values[0] : values;
     }
     return result;
   }

@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * MAILLIST2 (iii) on the SECOM side: {@code SecomMessageStatusListener.run} had the same uncaught poll loop as the
+ * The broker failure of the error hunt of 2026-11-12 on the SECOM side: {@code SecomMessageStatusListener.run} had
+ * the same uncaught poll loop as the
  * mailing-list listener, submitted with its {@code Future} discarded. Written on 2026-11-12; a regression test of
  * the fix now.
  */

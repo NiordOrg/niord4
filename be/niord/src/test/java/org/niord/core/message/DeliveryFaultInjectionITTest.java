@@ -20,18 +20,31 @@ import jakarta.jms.JMSConsumer;
 import jakarta.jms.MapMessage;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.niord.core.area.Area;
+import org.niord.core.domain.Domain;
+import org.niord.core.mailinglist.MailingListExecutionService;
+import org.niord.core.mailinglist.MailingListTrigger;
+import org.niord.core.message.vo.MessageTagVo.MessageTagType;
 import org.niord.core.message.vo.SystemMessageSeriesVo.NumberSequenceType;
 import org.niord.core.promulgation.PromulgationException;
 import org.niord.core.promulgation.PromulgationManager;
+import org.niord.core.publication.Publication;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.PublicationService;
+import org.niord.core.publication.vo.PublicationMainType;
+import org.niord.core.publication.vo.PublicationStatus;
 import org.niord.core.schedule.FiringExerciseService;
 import org.niord.core.schedule.FiringPeriod;
 import org.niord.model.message.MainType;
+import org.niord.model.message.MessageVo;
 import org.niord.model.message.Status;
 import org.niord.model.message.Type;
+import org.niord.model.publication.PublicationType;
+import org.niord.web.api.ApiWebService;
 import org.niord.test.DeliveryFixtures;
 import org.niord.test.DeliveryFixtures.FiringFixture;
 import org.niord.test.ITTest;
@@ -56,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -112,6 +126,18 @@ class DeliveryFaultInjectionITTest extends ITTest {
 
     @Autowired
     ConnectionFactory connectionFactory;
+
+    @Autowired
+    ApiWebService apiWebService;
+
+    @Autowired
+    PublicationService publicationService;
+
+    @Autowired
+    MessageTagService messageTagService;
+
+    @Autowired
+    MailingListExecutionService mailingListExecutionService;
 
     @Autowired
     ApplicationContext context;
@@ -754,7 +780,7 @@ class DeliveryFaultInjectionITTest extends ITTest {
      * skipped for this run: both live exercises stay PUBLISHED, nothing is cancelled or broadcast, and the run throws
      * nothing.
      *
-     * <p>Before the fix the search answered its failure with an empty page (PORT-2), which read as "no template":
+     * <p>Before the fix the search answered its failure with an empty page, which read as "no template":
      * every current exercise was cancelled, and the cancellations broadcast to the mailing lists and SECOM, while the
      * periods were still scheduled.
      */
@@ -848,6 +874,134 @@ class DeliveryFaultInjectionITTest extends ITTest {
         assertTrue(exercises(f1, f1.area1(), Status.PUBLISHED).isEmpty(), "schedule 1 is skipped");
         assertEquals(1, exercises(f2, f2.area1(), Status.PUBLISHED).size(), "schedule 2 issues area 1's exercise");
         assertEquals(1, exercises(f2, f2.area2(), Status.PUBLISHED).size(), "schedule 2 issues area 2's exercise");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // A failed search under the callers that would take an empty answer for "nothing found"
+    // ------------------------------------------------------------------------------------------- //
+
+    /**
+     * The public API ({@code GET /rest/public/v1/messages}, here through {@link ApiWebService}, whose search is the
+     * same) answers a failed search with the failure, which the client sees as an error. An empty list would read as
+     * "no warnings in force". The control before the failure finds the test's published warning.
+     */
+    @Test
+    void aFailedPublicSearchIsAnErrorNotAnEmptyList() throws Exception {
+        String n = uniq();
+        String series = fixtures.createYearlyNwSeries("it-api-y-" + n, "A1");
+        String uid = fixtures.published(series, "IT public search " + n, null);
+
+        List<String> found = Tx.requiringNew().call(() ->
+                apiWebService.search("en", null, Set.of(series), null, null, null, null).stream()
+                        .map(MessageVo::getId).toList());
+        assertEquals(List.of(uid), found, "control: the public search lists the published warning");
+
+        doThrow(new PersistenceException("IT: the public search failed"))
+                .when(messageSearchService)
+                .searchOrFail(argThat((MessageSearchParams p) -> p != null && p.getSeriesIds() != null
+                        && p.getSeriesIds().contains(series)));
+
+        assertThrows(PersistenceException.class, () -> Tx.requiringNew().call(() ->
+                        apiWebService.search("en", null, Set.of(series), null, null, null, null)),
+                "a failed search reaches the client as an error, not as an empty list");
+    }
+
+    /**
+     * A message-report publication entering RECORDING looks up the published warnings of its domain to fill its tag.
+     * When that search fails, the status change fails and is rolled back: the publication stays DRAFT, and the editor
+     * can try again, rather than a RECORDING publication whose tag holds none of the warnings in force.
+     */
+    @Test
+    void aPublicationWhoseRecordingSearchFailsStaysDraft() throws Exception {
+        String n = uniq();
+        String series = fixtures.createYearlyNwSeries("it-pubrec-y-" + n, "P1");
+        String domainId = fixtures.createDomain("it-pubrec-d-" + n, series);
+
+        String[] ids = Tx.requiringNew().call(() -> {
+            MessageTag tag = new MessageTag();
+            tag.checkAssignTagId();
+            tag.setName("IT recording tag " + n);
+            tag.setType(MessageTagType.PUBLIC);
+            em.persist(tag);
+            Publication p = new Publication();
+            p.setStatus(PublicationStatus.DRAFT);
+            p.setMainType(PublicationMainType.PUBLICATION);
+            p.setType(PublicationType.MESSAGE_REPORT);
+            p.setCategory(em.createQuery("select c from PublicationCategory c order by c.id", PublicationCategory.class)
+                    .setMaxResults(1).getSingleResult());
+            Domain domain = new Domain();
+            domain.setDomainId(domainId);
+            p.setDomain(domain);
+            p.setMessageTag(tag);
+            p.setMessageTagFilter("msg.status == Status.PUBLISHED");
+            return new String[] { publicationService.createPublication(p).getPublicationId(), tag.getTagId() };
+        });
+        String publicationId = ids[0];
+        try {
+            doThrow(new PersistenceException("IT: the recording search failed"))
+                    .when(messageSearchService)
+                    .searchOrFail(argThat((MessageSearchParams p) -> p != null && p.getSeriesIds() != null
+                            && p.getSeriesIds().contains(series)));
+
+            assertThrows(PersistenceException.class,
+                    () -> publicationService.updateStatus(publicationId, PublicationStatus.RECORDING),
+                    "the status change fails with the search");
+            assertEquals(PublicationStatus.DRAFT, Tx.requiringNew().call(() ->
+                            publicationService.findByPublicationId(publicationId).getStatus()),
+                    "and is rolled back: the publication is still a draft");
+        } finally {
+            Tx.requiringNew().run(() -> {
+                publicationService.deletePublication(publicationId);
+                MessageTag tag = messageTagService.findTag(ids[1]);
+                if (tag != null) {
+                    em.remove(tag);
+                }
+            });
+        }
+    }
+
+    /**
+     * The sample's firing-exercise mail. The scheduled trigger of the sample's audio-broadcast list runs
+     * {@code templates/mailinglist/fetch-firing-exercises.js}, which looks up tomorrow's firing exercises, then
+     * {@code audio-broadcast.ftl}, which lists them under a heading (both rows of the fixture). When that look-up
+     * fails, the run fails, so the scheduler postpones the trigger and no mail is made. The control before the failure
+     * renders the heading.
+     *
+     * <p>Before the fix the script called the lenient {@code MessageSearchService.search}, which answered the failure
+     * with an empty list: the mail was made with the heading and no exercise under it, which its readers could not tell
+     * from a day without firing exercises.
+     */
+    @Test
+    void theSamplesFiringExerciseMailFailsWhenItsSearchFails() throws Exception {
+        Integer triggerId = Tx.requiringNew().call(() -> em.createQuery(
+                        "select t.id from MailingListTrigger t join t.scriptResourcePaths p where p = :path",
+                        Integer.class)
+                .setParameter("path", "templates/mailinglist/fetch-firing-exercises.js")
+                .getSingleResult());
+
+        String control = renderScheduledMail(triggerId);
+        assertTrue(control.contains("Der afholdes i morgen"),
+                "control: the mail prints the heading of tomorrow's firing exercises: " + control);
+
+        doThrow(new PersistenceException("IT: the firing-exercise search failed"))
+                .when(messageSearchService)
+                .searchOrFail(argThat((MessageSearchParams p) -> p != null && p.getSeriesIds() != null
+                        && p.getSeriesIds().contains("dma-fe")));
+
+        RuntimeException failure = assertThrows(RuntimeException.class, () -> renderScheduledMail(triggerId),
+                "the run fails rather than make a mail with an empty schedule");
+        StringBuilder causes = new StringBuilder();
+        for (Throwable t = failure; t != null; t = t.getCause()) {
+            causes.append(t).append('\n');
+        }
+        assertTrue(causes.toString().contains("IT: the firing-exercise search failed"),
+                "the failure is the search's: " + causes);
+    }
+
+    /** The HTML the scripts of the given scheduled trigger make, in Danish, its one language */
+    private String renderScheduledMail(Integer triggerId) {
+        return Tx.requiringNew().call(() -> mailingListExecutionService.executeScriptResources(
+                em.find(MailingListTrigger.class, triggerId), List.of(), "da"));
     }
 
     // ------------------------------------------------------------------------------------------- //

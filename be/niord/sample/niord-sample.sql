@@ -29,7 +29,7 @@ BEGIN
         RAISE EXCEPTION 'niord-sample: the bootstrap marker of % does not read applied: the sample is loaded after the base product''s bootstrap (./start-local.sh --sample)', current_database();
     END IF;
     IF (SELECT string_agg(id, ',' ORDER BY id) FROM public.databasechangelog)
-            IS DISTINCT FROM '001-baseline-schema,002-message-search-text,003-secom,004-publication-series,005-retire-map-image-settings,006-defaults-ledger,007-bootstrap-state,008-script-resource-history-source,009-repo-files,010-message-list-index-default,011-message-filter-parameters-text' THEN
+            IS DISTINCT FROM '001-baseline-schema,002-message-search-text,003-secom,004-publication-series,005-retire-map-image-settings,006-defaults-ledger,007-bootstrap-state,008-script-resource-history-source,009-repo-files,010-message-list-index-default,011-message-filter-parameters-text,012-mailing-list-status-change,013-user-username-case-insensitive' THEN
         RAISE EXCEPTION 'niord-sample: the schema''s Liquibase changesets are not the ones the sample was made on; %', stale;
     END IF;
     IF EXISTS (SELECT 1 FROM public."Area" WHERE id >= 1000001) OR (SELECT last_value FROM public."Area_SEQ") >= 1000001 THEN
@@ -1991,7 +1991,9 @@ searchParams.seriesIds(seriesIds)
     .from(fromDate)
     .to(toDate);
 
-var searchResult = messageService.search(searchParams);
+// searchOrFail, not search: a failed search fails the trigger, which the scheduler postpones, where search would
+// answer it with an empty list and the mail would tell its readers that there are no firing exercises tomorrow
+var searchResult = messageService.searchOrFail(searchParams);
 
 var areaFilter = org.niord.model.DataFilter.get().fields(''DETAILS'').lang(language);
 
@@ -2054,14 +2056,17 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 <#if params.dgps_station?? && params.dgps_station.key??>
     <#assign key=params.dgps_station.key>
 
+<#if languages?seq_contains(''da'')>
 <field-template field="part.getDesc(''da'').subject" format="text">
     DGPS <@renderStatus format="normal" lang="da"/>
 </field-template>
+</#if>
 
 <field-template field="part.getDesc(''en'').subject" format="text">
     DGPS <@renderStatus format="normal" lang="en"/>
 </field-template>
 
+<#if languages?seq_contains(''da'')>
 <field-template field="part.getDesc(''da'').details" format="html">
     <#setting locale=''da''>
     <@renderStationName format="long" lang="da"/> DGPS-station
@@ -2072,6 +2077,7 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
         <@renderDateIntervals dateIntervals=part.eventDates lang="da"/>
     </#if>.
 </field-template>
+</#if>
 
 <field-template field="part.getDesc(''en'').details" format="html">
     <#setting locale=''en''>

@@ -25,19 +25,21 @@ import jakarta.persistence.*;
 
 /**
  * Implementation of a user entity
+ * <p>
+ * The user name is unique without regard to letter case, as every look-up below compares {@code lower(username)}:
+ * the unique index {@code user_username_lower} on {@code lower(username)} is the changeset
+ * {@code V013__user_username_case_insensitive.sql}, which JPA's {@code @Index} cannot express (it names columns
+ * only), so the mapping declares no index and no unique column.
  */
 @Entity
 @Cacheable
-@Table(indexes = {
-        @Index(name = "user_username", columnList="username", unique = true)
-})
 @NamedQueries({
         @NamedQuery(name="User.findByUsername",
                 query="SELECT u FROM User u where lower(u.username) = lower(:username)"),
         @NamedQuery(name="User.findByUsernames",
                 query="SELECT u FROM User u where lower(u.username) in (:usernames)"),
         @NamedQuery(name="User.findByEmail",
-                query="SELECT u FROM User u where lower(u.email) = lower(:email)"),
+                query="SELECT u FROM User u where lower(u.email) = lower(:email) order by u.id"),
         @NamedQuery(name="User.searchUsers",
                 query="SELECT u FROM User u where lower(u.username) like :term escape '!' " +
                       " or lower(u.email) like :term escape '!' " +
@@ -47,7 +49,7 @@ import jakarta.persistence.*;
 @SuppressWarnings("unused")
 public class User extends VersionedEntity<Integer> implements IMailable {
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String username;
 
     private String email;

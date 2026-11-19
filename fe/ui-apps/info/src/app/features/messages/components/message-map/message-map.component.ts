@@ -87,11 +87,14 @@ const MAP_COPYRIGHT = 'MAP_COPYRIGHT';
 
     <app-ol-layer-switcher title="" class="absolute bottom-2 left-2 z-10" />
 
-    <!-- The panel never reaches past the bottom of the chart: on a short screen the chart is
-         barely taller than the panel's own cap, and the footer follows directly below it. -->
+    <!-- The panel leaves every control of the chart uncovered, so none is hidden or takes focus
+         out of sight. On a phone it starts clear of the zoom buttons in the top-left corner, as
+         the line that reports a failed load does; at every width it ends far enough above the
+         bottom of the chart to leave the credits there showing, and never reaches past that
+         bottom, which a short screen would otherwise push it over. -->
     @if (showNoPosMessages() && noPos().length > 0) {
       <div
-        class="absolute right-0 top-1 z-30 max-h-[min(25rem,calc(100%-1rem))] w-full overflow-y-auto bg-surface-0/60 p-2 shadow-niord-md sm:right-2 sm:top-2 sm:w-75 lg:w-100"
+        class="absolute top-2 right-2 left-11 z-30 max-h-[min(25rem,calc(100%-4.5rem))] overflow-y-auto bg-surface-0/60 p-2 shadow-niord-md sm:left-auto sm:w-75 lg:w-100"
       >
         <div>
           <h4 class="flex items-center justify-between gap-2 font-semibold">
@@ -163,9 +166,15 @@ export class MessageMapComponent {
   /** One message on its own map: the details map inside the dialog. */
   protected readonly detailsMap = computed(() => this.message() !== undefined);
 
+  /**
+   * What the chart draws. A chart of a list draws what may be in force: a cancelled message stays
+   * findable in the list views but is never drawn, so a mariner does not read it as a warning in
+   * force, and it is not listed beside the chart either. The map of one message draws that
+   * message whatever its status, because the reader opened it.
+   */
   protected readonly allMessages = computed<readonly Message[]>(() => {
     const list = this.messages();
-    if (list) return list;
+    if (list) return list.filter((message) => message.status !== 'CANCELLED');
     const single = this.message();
     return single ? [single] : [];
   });
@@ -233,7 +242,8 @@ export class MessageMapComponent {
   }
 
   openMessageDialog(messageId: string): void {
-    // The list the dialog steps through is the chart's own, followed rather than copied.
+    // The list the dialog steps through is the list the chart was given, followed rather than
+    // copied: cancelled messages included, as they stay findable there though not drawn.
     const messageIds = computed(() => this.messages()?.map((msg) => msg.id) ?? [messageId]);
     void openInfoDialog(
       this.injector,

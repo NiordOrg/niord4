@@ -9,7 +9,12 @@ import { ConfirmService } from '../../../../shared/services/confirm.service';
 import { provideNiordIcons } from '../../../../shared/icons/niord-icons';
 import { provideTestTransloco } from '../../../../shared/testing/transloco-testing';
 import { DomainService } from '../../../../core/domain/services/domain.service';
-import type { MainType, Message, MessageStatus } from '../../../messages/models/message.model';
+import type {
+  MainType,
+  Message,
+  MessageKind,
+  MessageStatus,
+} from '../../../messages/models/message.model';
 import { EditorFacade } from '../../services/editor-facade';
 import { MessageStatusService } from '../../services/message-status.service';
 import { StatusActionPanel } from './status-action-panel';
@@ -17,6 +22,8 @@ import { StatusActionPanel } from './status-action-panel';
 interface SetupOptions {
   readonly status?: MessageStatus;
   readonly mainType?: MainType;
+  readonly kind?: MessageKind;
+  readonly autoCancellationWarning?: boolean;
   readonly publishDateFrom?: string;
   readonly isEditor?: boolean;
   /** The sticky latch: set by any edit, even one undone since. */
@@ -33,6 +40,8 @@ async function setup(opts: SetupOptions = {}) {
     id: 'm-1',
     status: opts.status ?? 'DRAFT',
     mainType: opts.mainType,
+    kind: opts.kind,
+    autoCancellationWarning: opts.autoCancellationWarning,
     publishDateFrom: opts.publishDateFrom,
   } as Message);
 
@@ -163,6 +172,12 @@ describe('StatusActionPanel — action visibility per status', () => {
       expect(findButton(fixture, 'copyAction')).toBeTruthy();
     },
   );
+
+  it('offers Cancel but no Copy on a cancellation warning, which is no start for a new message', async () => {
+    const { fixture } = await setup({ status: 'PUBLISHED', mainType: 'NW', kind: 'CANCELLATION' });
+    expect(findButton(fixture, 'cancelAction')).toBeTruthy();
+    expect(findButton(fixture, 'copyAction')).toBeFalsy();
+  });
 });
 
 describe('StatusActionPanel — editor gating and unsaved changes', () => {
@@ -291,6 +306,28 @@ describe('StatusActionPanel — dispatch to the right flow', () => {
     (q('.dialog-foot .btn-danger') as HTMLButtonElement).click();
     await fixture.whenStable();
     expect(statusService.cancel).toHaveBeenCalledWith(false);
+  });
+
+  it('Cancel tells the dialog that cancelling publishes a cancellation warning', async () => {
+    const { fixture } = await setup({
+      status: 'PUBLISHED',
+      mainType: 'NW',
+      autoCancellationWarning: true,
+    });
+    findButton(fixture, 'cancelAction')!.click();
+    await fixture.whenStable();
+
+    expect(q('.dialog-panel')).not.toBeNull();
+    expect(q('[data-testid="auto-cancellation-warning"]')).not.toBeNull();
+  });
+
+  it('Cancel of a message whose cancelling publishes nothing shows no such note', async () => {
+    const { fixture } = await setup({ status: 'PUBLISHED', mainType: 'NW' });
+    findButton(fixture, 'cancelAction')!.click();
+    await fixture.whenStable();
+
+    expect(q('.dialog-panel')).not.toBeNull();
+    expect(q('[data-testid="auto-cancellation-warning"]')).toBeNull();
   });
 
   it('Copy dispatches straight to the copy flow without a confirm', async () => {

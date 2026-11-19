@@ -91,6 +91,22 @@ class RepoFileLinksTest {
         assertEquals(Set.of(FOLDER + "/nm.pdf"), RepoPaths.candidates(FOLDER + "//./nm.pdf"), "normalised, once");
     }
 
+    /**
+     * The repository endpoint decodes a request path as a path, where a '+' stays a '+', so a link to "NtM 1+2.pdf"
+     * written as encodeURI writes it ("NtM%201+2.pdf") names that row; a form decode alone would read it as
+     * "NtM 1 2.pdf", and the import's verification would report the link as naming no row. A link written with '+'
+     * for a space still names the row with the space.
+     */
+    @Test
+    void aPlusInALinkIsAPlusInTheRowItNames() {
+        assertEquals(List.of(FOLDER + "/NtM%201+2.pdf", FOLDER + "/NtM 1+2.pdf", FOLDER + "/NtM 1 2.pdf"),
+                List.copyOf(RepoPaths.candidates(FOLDER + "/NtM%201+2.pdf")),
+                "as written, decoded as a path, decoded as a form value");
+        assertTrue(RepoPaths.candidates(FOLDER + "/NtM+1+2.pdf").contains(FOLDER + "/NtM 1 2.pdf"));
+        assertEquals(Set.of(FOLDER + "/100%"), RepoPaths.candidates(FOLDER + "/100%"),
+                "a spelling that cannot be decoded is left out; the one as written is a name");
+    }
+
     @Test
     void aReferenceThatIsNoRepositoryPathNamesNothing() {
         assertEquals(Set.of(), RepoPaths.candidates(null));

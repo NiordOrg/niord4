@@ -24,23 +24,35 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.niord.core.mail.ScheduledMail;
 import org.niord.core.mail.ScheduledMailRecipient;
+import org.niord.core.user.User;
+import org.niord.core.user.UserService;
 import org.niord.test.ITTest;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * Integration tests for {@link ScheduledMailRestService}: the HTTP contract of the two
- * {@code /rest/scheduled-mails} endpoints, both of which are {@code @RolesAllowed(SYSADMIN)}.
+ * Integration tests for {@link ScheduledMailRestService}: the HTTP contract of the
+ * {@code /rest/scheduled-mails} endpoints: the queue's search and by-id read, which are
+ * {@code @RolesAllowed(SYSADMIN)}, and the user's own mails ({@code /mine}), which is
+ * {@code @RolesAllowed(USER)}.
  *
  * <p>Security oracle: any call without a token is rejected with HTTP 401. A bare {@code sysadmin}
  * token (obtained from the Keycloak test container via the inherited {@code accessToken()} helper)
- * satisfies the {@code SYSADMIN} role with no {@code NiordDomain} header.
+ * satisfies the {@code SYSADMIN} role with no {@code NiordDomain} header; the {@code user} role of
+ * {@code /mine} comes with the {@code NiordDomain: niord-nw} header.
  *
  * <p>The wiring test ({@link #searchAndGetByIdReturnCommittedMail()}) needs COMMITTED data: an HTTP
  * request runs in the server's own transaction, which {@code @Transactional} cannot roll back, and
@@ -60,12 +72,18 @@ class ScheduledMailRestServiceITTest extends ITTest {
     @PersistenceContext
     EntityManager em;
 
-    /** ID of a committed ScheduledMail row to remove in cleanup, or null if none was created. */
-    private Integer createdMailId;
+    /** The domain whose client grants the {@code user} role the {@code /mine} read asks for. */
+    private static final String DOMAIN = "niord-nw";
+
+    @Autowired
+    UserService userService;
+
+    /** IDs of the committed ScheduledMail rows to remove in cleanup. */
+    private final List<Integer> createdMailIds = new ArrayList<>();
 
     @AfterEach
     void cleanup() {
-        if (createdMailId != null) {
+        for (Integer createdMailId : createdMailIds) {
             try {
                 final Integer id = createdMailId;
                 Tx.requiringNew().run(() -> {
@@ -82,8 +100,8 @@ class ScheduledMailRestServiceITTest extends ITTest {
             } catch (Exception ignored) {
                 // best-effort cleanup
             }
-            createdMailId = null;
         }
+        createdMailIds.clear();
     }
 
     /** A globally-unique subject token so a test asserts only on its own committed row. */
@@ -96,10 +114,20 @@ class ScheduledMailRestServiceITTest extends ITTest {
      * HTML contents, and records its id for cleanup. Returns the assigned id.
      */
     private int insertCommittedMail(String subject, String htmlContents) {
+        return insertCommittedMail(subject, htmlContents, null, null);
+    }
+
+    /**
+     * Inserts a committed PENDING ScheduledMail as above, with the given sender and, when not null, the given
+     * creation date ({@code @PrePersist} fills only a missing one). Returns the assigned id.
+     */
+    private int insertCommittedMail(String subject, String htmlContents, String sender, Date created) {
         int id = Tx.requiringNew().call(() -> {
             ScheduledMail mail = new ScheduledMail();
             mail.setSubject(subject);
             mail.setStatus(ScheduledMail.Status.PENDING);
+            mail.setSender(sender);
+            mail.setCreated(created);
             mail.setHtmlContents(htmlContents); // throws IOException — Callable allows it
             mail.addRecipient(new ScheduledMailRecipient(
                     ScheduledMailRecipient.RecipientType.TO, "recipient@example.com"));
@@ -107,8 +135,29 @@ class ScheduledMailRestServiceITTest extends ITTest {
             em.flush();
             return mail.getId();
         });
-        createdMailId = id;
+        createdMailIds.add(id);
         return id;
+    }
+
+    /** A date the given number of days before now */
+    private static Date daysAgo(int days) {
+        return new Date(System.currentTimeMillis() - days * 24L * 60 * 60 * 1000);
+    }
+
+    /**
+     * The sender address the mail service records for the given test user: its mirror row's computed address.
+     * One authenticated call first, since the first call of a user creates the row.
+     */
+    private String senderAddressOf(String role, String username) {
+        given().auth().oauth2(accessToken(role)).header("NiordDomain", DOMAIN)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200);
+        String address = Tx.requiringNew().call(() -> {
+            User user = userService.findByUsername(username);
+            return user == null ? null : user.computeInternetAddress();
+        });
+        assertNotNull(address, "the mirror row of " + username + " has a sender address");
+        return address;
     }
 
     // ------------------------------------------------------------------------------------------- //
@@ -119,6 +168,13 @@ class ScheduledMailRestServiceITTest extends ITTest {
     void searchWithoutTokenIsUnauthorized() {
         given()
                 .when().get("/rest/scheduled-mails/search")
+                .then().statusCode(401);
+    }
+
+    @Test
+    void mineWithoutTokenIsUnauthorized() {
+        given()
+                .when().get("/rest/scheduled-mails/mine")
                 .then().statusCode(401);
     }
 
@@ -249,5 +305,92 @@ class ScheduledMailRestServiceITTest extends ITTest {
                 .body("total", is(1))
                 .body("data[0].id", is(id))
                 .body("data[0].subject", is(subject));
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // The user's own mails — matched on the sender address, within the days asked for (clamped)
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    void mineReturnsTheCallersOwnMailsOfThePeriodOnly() {
+        String editor = senderAddressOf("editor", "testeditor");
+        String subject = uniqueSubject();
+        int recent = insertCommittedMail(subject + "-recent", "<html>recent</html>", editor, null);
+        int tenDaysOld = insertCommittedMail(subject + "-ten", "<html>ten</html>", editor, daysAgo(10));
+        int fortyDaysOld = insertCommittedMail(subject + "-forty", "<html>forty</html>", editor, daysAgo(40));
+        int foreign = insertCommittedMail(subject + "-foreign", "<html>foreign</html>",
+                "someone-else-" + subject + "@example.org", null);
+
+        // The default period is 7 days: the recent mail only, without its text
+        given().auth().oauth2(accessToken("editor")).header("NiordDomain", DOMAIN)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200)
+                .body("id", hasItem(recent))
+                .body("id", not(hasItem(tenDaysOld)))
+                .body("id", not(hasItem(fortyDaysOld)))
+                .body("id", not(hasItem(foreign)))
+                .body("find { it.id == " + recent + " }.subject", is(subject + "-recent"))
+                .body("find { it.id == " + recent + " }.recipients[0].address", is("recipient@example.com"))
+                .body("find { it.id == " + recent + " }.contents", nullValue())
+                .body("sender", everyItem(is(editor)));
+
+        // 30 days takes in the mail of ten days ago
+        given().auth().oauth2(accessToken("editor")).header("NiordDomain", DOMAIN)
+                .queryParam("days", 30)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200)
+                .body("id", hasItems(recent, tenDaysOld))
+                .body("id", not(hasItem(fortyDaysOld)));
+
+        // A period above 30 days is clamped to 30, one below a day to a day
+        given().auth().oauth2(accessToken("editor")).header("NiordDomain", DOMAIN)
+                .queryParam("days", 1000)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200)
+                .body("id", hasItems(recent, tenDaysOld))
+                .body("id", not(hasItem(fortyDaysOld)));
+        given().auth().oauth2(accessToken("editor")).header("NiordDomain", DOMAIN)
+                .queryParam("days", 0)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200)
+                .body("id", hasItem(recent))
+                .body("id", not(hasItem(tenDaysOld)));
+
+        // Another user sees none of them
+        given().auth().oauth2(accessToken("user")).header("NiordDomain", DOMAIN)
+                .queryParam("days", 30)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200)
+                .body("id", not(hasItem(recent)))
+                .body("id", not(hasItem(tenDaysOld)))
+                .body("id", not(hasItem(foreign)));
+    }
+
+    @Test
+    void mineShowsTheStatusAttemptsAndLastErrorOfAFailedMail() {
+        String editor = senderAddressOf("editor", "testeditor");
+        // Written as ERROR at once, so the minute sender never takes it up
+        int id = Tx.requiringNew().call(() -> {
+            ScheduledMail mail = new ScheduledMail();
+            mail.setSubject(uniqueSubject());
+            mail.setSender(editor);
+            mail.setStatus(ScheduledMail.Status.ERROR);
+            mail.setAttempts(5);
+            mail.setLastError("Connection refused");
+            mail.setHtmlContents("<html>failed</html>");
+            mail.addRecipient(new ScheduledMailRecipient(
+                    ScheduledMailRecipient.RecipientType.TO, "recipient@example.com"));
+            em.persist(mail);
+            em.flush();
+            return mail.getId();
+        });
+        createdMailIds.add(id);
+
+        given().auth().oauth2(accessToken("editor")).header("NiordDomain", DOMAIN)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200)
+                .body("find { it.id == " + id + " }.status", is("ERROR"))
+                .body("find { it.id == " + id + " }.attempts", is(5))
+                .body("find { it.id == " + id + " }.lastError", is("Connection refused"));
     }
 }

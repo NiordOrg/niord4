@@ -229,10 +229,11 @@ public class WebUtils {
 
     /**
      * Encodes a repository path for a file's link ({@code /rest/repo/file/<path>}): each character as
-     * {@link #encodeURIComponent} does, but the slash, the colon and the semicolon are kept. Unlike the javascript
+     * {@link #encodeURIComponent} does, but the slash and the colon are kept. Unlike the javascript
      * encodeURI() method, a question mark and an apostrophe in a name are encoded ({@code %3F} and {@code %27}):
      * a raw question mark would start the link's query string, and Niord's own link reader
-     * ({@link org.niord.core.repo.RepoPaths#fileLinkPaths}) ends a link at either (REPO4).
+     * ({@link org.niord.core.repo.RepoPaths#fileLinkPaths}) ends a link at either (REPO4). A semicolon is encoded
+     * too ({@code %3B}): a raw one starts a path parameter, which cuts the name, and the request firewall refuses it.
      * @param s the string to encode
      * @return the encoded string
      */
@@ -240,7 +241,6 @@ public class WebUtils {
         return encodeURIComponent(s)
                     .replaceAll("\\%3A", ":")
                     .replaceAll("\\%2F", "/")
-                    .replaceAll("\\%3B", ";")
                     .replace("'", "%27");
     }
 

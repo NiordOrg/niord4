@@ -86,36 +86,6 @@
       "reason": "the schema's $id, kept verbatim until DK's go-live, as scripts/docs-check.mjs excludes the same file"
     },
     {
-      "word": "dma.dk",
-      "path": "docs/publications/go-live/GO-LIVE-PROCESS.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
-    },
-    {
-      "word": "dma.dk",
-      "path": "docs/publications/go-live/PRODUCTION-CUTOVER-RUNBOOK.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
-    },
-    {
-      "word": "dma.dk",
-      "path": "docs/publications/go-live/scripts/lib.sh",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
-    },
-    {
-      "word": "t-dma",
-      "path": "docs/publications/go-live/GO-LIVE-PROCESS.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
-    },
-    {
-      "word": "t-dma",
-      "path": "docs/publications/go-live/PRODUCTION-CUTOVER-RUNBOOK.md",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
-    },
-    {
-      "word": "t-dma",
-      "path": "docs/publications/go-live/scripts/lib.sh",
-      "reason": "DK's go-live records, kept verbatim until DK's go-live, when the folder moves to niord-dk"
-    },
-    {
       "word": "Nuuk",
       "path": "ui-apps/info/src/app/shared/utils/zoned-date.spec.ts",
       "reason": "the day-boundary, gap and overlap cases in Greenland's zone: UTC-2 on the EU summer rule, whose spring gap ends a local day (23:00 becomes 00:00, so the resolved instant changes date); no zone outside Greenland reproduces it, and GL's deployments run in it"

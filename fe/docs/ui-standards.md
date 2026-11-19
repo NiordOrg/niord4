@@ -323,6 +323,14 @@ code.
 ## Accessibility
 
 - Every interactive element is keyboard reachable and operable.
+- **A button acts on `(click)`**, which Enter and Space on a focused button fire as well; never on
+  `(mousedown)`, which the keyboard never fires. A button beside an input that must not take its
+  focus (the autocomplete's chip-remove and clear buttons, the select's clear) binds `(mousedown)`
+  to `preventDefault()` alone. A button that leaves the DOM with what it removes hands the focus to
+  a defined element first — the input or trigger of its control — so it is not dropped on the
+  page's body; and a button repeated per item (a chip's remove) is named after its item. Rows of a
+  listbox are not buttons: they keep their mousedown pick, and the keyboard picks through
+  `aria-activedescendant`.
 - **Icon-only controls** carry `[attr.aria-label]` on the interactive element (button or anchor),
   because `<app-icon>` is `aria-hidden`.
 - **Overlays trap focus** via CDK (`cdkTrapFocus`) and restore focus to the trigger on close. The

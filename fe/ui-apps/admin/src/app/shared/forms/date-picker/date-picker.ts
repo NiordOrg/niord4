@@ -19,6 +19,8 @@ import { dayInZoneToLocalDate, pickedDayToZone } from '../../utils/zoned-date';
 import { Calendar } from './calendar';
 import { isValidDate } from './date-locale';
 
+let valueSeq = 0;
+
 /**
  * Locale-aware date field — a Signal Forms `FormValueControl<Date | null>` replacing the
  * native `<input type="date">` (whose calendar renders in the browser locale, not the app
@@ -83,6 +85,16 @@ export class DatePicker implements FormValueControl<Date | null> {
     return this.localeFormat.formatDate(value, zone ? { timeZone: zone } : { local: true });
   });
   protected readonly hasValue = computed(() => this.displayValue() !== '');
+
+  protected readonly valueId = `app-date-picker-value-${valueSeq++}`;
+  /**
+   * A field name (`ariaLabel`, or an outside `<label for>` through `inputId`) replaces the button's
+   * content as its accessible name, so the chosen date is tied to the button as its description.
+   * Without a name the content already is the name, and an empty field has no date to describe.
+   */
+  protected readonly describedBy = computed(() =>
+    this.hasValue() && (this.ariaLabel() !== '' || this.inputId() !== '') ? this.valueId : null,
+  );
 
   /** The selection as the calendar grid reads it: a browser-local Date on the zone's day. */
   protected readonly calendarValue = computed<Date | null>(() => {

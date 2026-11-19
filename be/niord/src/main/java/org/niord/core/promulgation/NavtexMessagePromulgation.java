@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 import org.niord.core.promulgation.vo.NavtexMessagePromulgationVo;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
@@ -55,7 +54,9 @@ public class NavtexMessagePromulgation
     @Enumerated(EnumType.STRING)
     NavtexPriority priority = NavtexPriority.ROUTINE;
 
-    @ManyToMany(cascade = CascadeType.REMOVE)
+    // No cascade: the transmitters are shared reference data. Removing a promulgation removes only its join rows,
+    // never a transmitter that other messages select too
+    @ManyToMany
     List<NavtexTransmitter> transmitters = new ArrayList<>();
 
     String preamble;

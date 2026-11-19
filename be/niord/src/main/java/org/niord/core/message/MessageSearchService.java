@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.queryparser.classic.ParseException;
 import org.locationtech.jts.geom.Geometry;
 import org.niord.core.NiordApp;
 import org.niord.core.area.Area;
@@ -174,8 +175,12 @@ public class MessageSearchService extends BaseService {
      * Main message search function.
      * <p>
      * A failed search is logged and answered with an empty result, which a caller cannot tell from a real answer of
-     * zero messages. A caller that acts on "nothing found", by cancelling or
-     * creating messages, uses {@link #searchOrFail(MessageSearchParams)} instead.
+     * zero messages. It remains for the publish and expire sweeps, which try again the next minute, and for the
+     * deployments' scripts. A caller that answers the public, mails people or acts on "nothing found", by cancelling
+     * or creating messages, uses {@link #searchOrFail(MessageSearchParams)} instead, and so does a script that does,
+     * such as the sample's firing-exercise mail script ({@code templates/mailinglist/fetch-firing-exercises.js}).
+     * Two failures are thrown here too: an unresolvable publication id ({@link TransitionRefusedException}) and a
+     * free-text query the index cannot parse ({@link InvalidFreeTextQueryException}).
      *
      * @param params the search parameters
      * @return the search result
@@ -185,7 +190,7 @@ public class MessageSearchService extends BaseService {
         try {
             return searchOrFail(params);
 
-        } catch (TransitionRefusedException e) {
+        } catch (TransitionRefusedException | InvalidFreeTextQueryException e) {
             // Never swallowed.
             //
             // The catch below turns any failure into an empty result, which a
@@ -193,6 +198,8 @@ public class MessageSearchService extends BaseService {
             // unresolvable publication= id is exactly the failure this is meant
             // to make visible, so swallowing it here would replace "returns
             // everything" with "returns nothing", quietly, and call it fixed.
+            // An unreadable free-text query is the caller's error and must reach
+            // the caller in the same way.
             throw e;
 
         } catch (Exception e) {
@@ -203,9 +210,17 @@ public class MessageSearchService extends BaseService {
 
     /**
      * The message search of {@link #search(MessageSearchParams)}, which lets a failure through instead of answering
-     * it with an empty result: an empty result is then a real answer of zero messages.
+     * it with an empty result: an empty result is then the index's answer, not a failure. One window is not an
+     * error: after a start the Lucene index is emptied and filled again, 5,000 messages a pass, one pass a minute, and
+     * until {@link MessageLuceneIndex#allMessagesIndexed()} a free-text search answers from the messages indexed so
+     * far. Such a result is marked ({@link PagedSearchResultVo#getIndexIncomplete()}); a caller that hands it on
+     * without the mark hands on a result that may miss messages (be/docs/potential-errors.md, LUCENE-7).
      * <p>
-     * The hourly firing-exercise run uses it, since it cancels the current exercises when it finds no template.
+     * Used by the public API, the editors' search with its print, export and message mail, the scheduled
+     * mailing-list mail and the mailing-list report, the Niord integration's look-up of its own copies, a
+     * publication entering recording, the recompute of the area sort order and the hourly firing-exercise run (which
+     * cancels the current exercises when it finds no template): each of them would act on, or hand on, an empty
+     * answer as if nothing had been found.
      *
      * @param params the search parameters
      * @return the search result
@@ -314,27 +329,38 @@ public class MessageSearchService extends BaseService {
         // combined language-group order below when no explicit sort is requested.
         List<Integer> freeTextRelevanceOrder = null;
         if (param.requiresLuceneSearch()) {
-            List<Long> ids = null;
             boolean disableLucene = Boolean.TRUE.equals(
                     settingsService.getBoolean(MessagePostgresIndex.DISABLE_LUCENE_SETTING));
+            // Relevance is grouped by language: UI language first, then the remaining model
+            // languages in app order. Each group keeps index score order; the first hit wins
+            // for duplicates. Scores from separate language queries are not globally ranked.
+            // A failure of the index is let through: answered as "no matching ids", it would
+            // read as a real answer of zero messages.
+            Set<Long> matches = new LinkedHashSet<>();
+            // After a start (or a re-index) the Lucene index is emptied and filled again, and until it holds
+            // every message a search answers from the messages indexed so far. The search still answers, and
+            // its result says so, for the editors' list to show. Read before the search and again after it:
+            // a re-index that empties the index while the languages are searched is marked too. The
+            // PostgreSQL backend keeps its table across a start.
+            boolean indexCompleteBefore = disableLucene || messageLuceneIndex.allMessagesIndexed();
+            // A literal query (a caller without an identity) reaches Lucene as plain words. The
+            // PostgreSQL backend needs no flag: websearch_to_tsquery has no wildcard syntax.
             try {
-                // Relevance is grouped by language: UI language first, then the remaining model
-                // languages in app order. Each group keeps index score order; the first hit wins
-                // for duplicates. Scores from separate language queries are not globally ranked.
-                Set<Long> matches = new LinkedHashSet<>();
-                // A literal query (a caller without an identity) reaches Lucene as plain words. The
-                // PostgreSQL backend needs no flag: websearch_to_tsquery has no wildcard syntax.
                 for (String language : app.getLanguages(param.getLanguage())) {
                     matches.addAll(disableLucene
                             ? messagePostgresIndex.searchIndex(param.getQuery(), language, Integer.MAX_VALUE)
                             : messageLuceneIndex.searchIndex(param.getQuery(), language, Integer.MAX_VALUE,
                                     param.isLiteralQuery()));
                 }
-                ids = new ArrayList<>(matches);
-            } catch (Exception e) {
-                log.warn("Error searching free-text index for query " + param.getQuery());
-                ids = Collections.emptyList();
+            } catch (ParseException e) {
+                // A query the parser cannot read is the caller's error, answered 400
+                log.debug("Unreadable free-text query " + param.getQuery() + ": " + e.getMessage());
+                throw new InvalidFreeTextQueryException(e);
             }
+            if (!disableLucene && (!indexCompleteBefore || !messageLuceneIndex.allMessagesIndexed())) {
+                result.setIndexIncomplete(true);
+            }
+            List<Long> ids = new ArrayList<>(matches);
             // Need to convert them to int as per message.id type
             List<Integer> idsInteger = ids.stream().map(l->l.intValue()).toList();
 //            log.info("Found these messages for tree text query '" + param.getQuery() + " " + idsInteger);

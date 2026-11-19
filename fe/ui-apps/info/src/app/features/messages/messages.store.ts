@@ -8,8 +8,16 @@ import { AppConfigService } from '../../core/services/app-config.service';
 import { LanguageService } from '../../core/services/language.service';
 import { MessageService } from '../../core/services/message.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { PublicationService } from '../../core/services/publication.service';
 import { Area, Message } from '../../core/models/message.model';
-import { computeAreaHeadings, filterByAreaIds, sortDescs } from '../../core/models/message.util';
+import { Publication } from '../../core/models/publication.model';
+import { sortPublicationDescs } from '../../core/models/publication.util';
+import {
+  computeAreaHeadings,
+  filterByAreaIds,
+  isActiveAt,
+  sortDescs,
+} from '../../core/models/message.util';
 import { settledValue } from '../../shared/utils/settled-value';
 import { messageListPdfUrl } from './message-pdf-url';
 
@@ -45,25 +53,52 @@ export class MessagesStore {
   private readonly appConfig = inject(AppConfigService);
   private readonly language = inject(LanguageService).language;
   private readonly preferences = inject(PreferencesService);
+  private readonly publications = inject(PublicationService);
 
   // ---- the publication being browsed ------------------------------------------------------
 
   /**
    * The publication the reader is browsing: `?publicationId=`, the address the Browse link on the
-   * publications page opens. Followed on the route rather than read once, so the menu's link to
-   * the plain list, which carries no query, brings the current list back on the same page.
+   * publications page opens. Followed on the route rather than read once: the menu's links keep
+   * the publication from view to view, and the filter bar's close control, which takes the query
+   * away, brings the current list back on the same page.
    *
    * A publication is a scope of its own — the messages it was published with — so while one is
    * named the read asks for it and for nothing the filter bar chooses: no main type, no root
-   * area, no active-now. A reader whose last filter was warnings only would otherwise open a
-   * notices publication on an empty page. The bar leaves those chips out while it is set;
-   * ticking a sub-area still narrows the rows on screen.
+   * area, and the list is not narrowed to what is in force now. A reader whose last filter was
+   * warnings only would otherwise open a notices publication on an empty page. The bar leaves
+   * those chips out while it is set; ticking a sub-area still narrows the rows on screen.
    */
   readonly publicationId: Signal<string | undefined> = toSignal(
     inject(ActivatedRoute).queryParamMap.pipe(
       map((params) => params.get('publicationId') || undefined),
     ),
     { requireSync: true },
+  );
+
+  /**
+   * The publication itself, for the filter bar to name it and offer its document. Idle while
+   * none is browsed. It is not part of `failed` or `loading`: the messages are the page, so a
+   * title that does not arrive is left out and the list and the way out of it stay.
+   */
+  private readonly publicationResource = httpResource<Publication>(
+    () => {
+      const publicationId = this.publicationId();
+      return publicationId
+        ? {
+            url: `/rest/public/v1/publication/${encodeURIComponent(publicationId)}`,
+            params: { lang: this.language(), externalize: 'false' },
+          }
+        : undefined;
+    },
+    { parse: (raw) => this.publications.parseOne(raw) },
+  );
+
+  /** The publication being browsed, its texts ordered so the active language comes first. */
+  readonly publication = computed<Publication | undefined>(() =>
+    this.publicationId() && this.publicationResource.hasValue()
+      ? sortPublicationDescs(this.publicationResource.value(), this.language())
+      : undefined,
   );
 
   // ---- the filter ------------------------------------------------------------------------
@@ -148,11 +183,13 @@ export class MessagesStore {
   // ---- the message list ---------------------------------------------------------------------
 
   /**
-   * Keyed on the language and on either the publication being browsed or the three things the
-   * filter bar's read depends on — root area, main types and active-now — and nothing else. A
-   * country build waits for its root area: until one resolves the request function returns
-   * `undefined`, the resource stays idle and no request is made. A build with no root areas has
-   * none to wait for and reads the whole data set, and a publication needs no root area at all.
+   * Keyed on the language and on either the publication being browsed or the two things the
+   * filter bar's read depends on — root area and main types — and nothing else. Active-now is
+   * not one of them: the public API has no such filter, so it narrows the rows on screen, as the
+   * sub-areas do. A country build waits for its root area: until one resolves the request
+   * function returns `undefined`, the resource stays idle and no request is made. A build with
+   * no root areas has none to wait for and reads the whole data set, and a publication needs no
+   * root area at all.
    */
   private readonly listResource = httpResource<Message[]>(
     () => {
@@ -178,7 +215,6 @@ export class MessagesStore {
         url: '/rest/public/v1/messages',
         params: {
           ...common,
-          ...(this.activeNowOnly() ? { active: 'true' } : {}),
           ...(mainType.length > 0 ? { mainType } : {}),
           ...(rootArea ? { areaId: rootArea.id } : {}),
         },
@@ -198,6 +234,21 @@ export class MessagesStore {
     const language = this.language();
     return this.settled().map((message) => sortDescs(message, language));
   });
+
+  /**
+   * The list narrowed to the messages in force at this moment while active-now is pressed,
+   * judged from the event dates every message carries (see `isActiveAt`). A publication is never
+   * narrowed: the bar leaves the chip out while one is browsed.
+   *
+   * "This moment" is the moment the chip was pressed or the list last changed: nothing ticks the
+   * clock, so a page left open with the chip pressed keeps a message whose interval has since
+   * ended, and leaves out one whose interval has since begun, until the next read or press.
+   */
+  private readonly inForce = computed<Message[]>(() =>
+    this.activeNowOnly() && !this.publicationId()
+      ? this.ordered().filter((message) => isActiveAt(message, Date.now()))
+      : this.ordered(),
+  );
 
   /**
    * A read that did not arrive. The three views say so in a line of their own: an empty page
@@ -222,7 +273,7 @@ export class MessagesStore {
   // ---- the groupings the three views render --------------------------------------------------
 
   /** Message id → the area heading printed above it. */
-  readonly areaHeadings = computed(() => computeAreaHeadings(this.ordered()));
+  readonly areaHeadings = computed(() => computeAreaHeadings(this.inForce()));
 
   /** The sub-areas the filter bar offers for the current result set. */
   readonly subAreas = computed<Area[]>(() =>
@@ -241,10 +292,25 @@ export class MessagesStore {
 
   readonly subAreaSelection: Signal<ReadonlySet<number>> = this.selectedSubAreaIds;
 
-  /** What the three views render: the fetched list narrowed by the ticked sub-areas. */
+  /** What the three views render: the list narrowed by active-now and the ticked sub-areas. */
   readonly messages = computed<readonly Message[]>(() =>
-    filterByAreaIds(this.ordered(), this.selectedSubAreaIds()),
+    filterByAreaIds(this.inForce(), this.selectedSubAreaIds()),
   );
+
+  /**
+   * The read answered and there is nothing to show. The views say so in words, because a blank
+   * page under the filter bar cannot be told from a page that did not work. Only a read settled
+   * on the current filter counts: while the next one is on its way the previous rows stay up,
+   * and a failure is a line of its own.
+   */
+  readonly empty = computed(() => {
+    const status = this.listResource.status();
+    return (
+      (status === 'resolved' || status === 'local') &&
+      !this.failed() &&
+      this.messages().length === 0
+    );
+  });
 
   /** The navigation list the details dialog steps through. */
   readonly messageIds = computed<string[]>(() => this.messages().map((message) => message.id));
@@ -281,7 +347,8 @@ export class MessagesStore {
    * The areas are the ticked sub-areas when there are any and the root area otherwise, never
    * both: the endpoint matches a message against the union of the areas it is given, so adding
    * the root back would undo every tick. Active-now is not carried — the report endpoint has no
-   * such parameter, and neither has the read that fills this list.
+   * such parameter — so a sheet asked for while it is pressed holds the messages not in force as
+   * well, erring on the side of more.
    *
    * While a publication is browsed the address names it in place of the main types and the root
    * area, as the read does; the ticked sub-areas and the series narrow it as they do any list.
@@ -305,13 +372,16 @@ export class MessagesStore {
   }
 
   /**
-   * The message series the rows on screen were numbered in. The report endpoint applies no
+   * The message series the listed rows were numbered in. The report endpoint applies no
    * restriction of its own to an anonymous caller, so this is what keeps the sheet to the
    * messages this site publishes.
+   *
+   * Taken from the list before active-now narrows it, as the sheet is: a series whose rows are
+   * all out of force stays on the sheet, and Print stays offered when nothing is in force.
    */
   private readonly printedSeriesIds = computed<string[]>(() => [
     ...new Set(
-      this.messages()
+      filterByAreaIds(this.ordered(), this.selectedSubAreaIds())
         .map((message) => message.messageSeries?.seriesId)
         .filter((seriesId): seriesId is string => Boolean(seriesId)),
     ),

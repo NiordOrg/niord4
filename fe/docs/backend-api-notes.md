@@ -33,10 +33,10 @@ Resolve every such href and every copied link through `ApiUrlResolver.absoluteAp
 Two interceptors decorate requests whose URL falls inside `apiBaseUrl` or the WMS URL
 (`ui-apps/admin/src/app/core/interceptors/`):
 
-| Interceptor              | Adds                      | Notes                                                                                                  |
-| ------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `authTokenInterceptor`   | `Authorization: Bearer …` | Only when authenticated; refreshes first. A 401 drops the session to guest locally — never a redirect. |
-| `niordDomainInterceptor` | `NiordDomain: <domainId>` | Only when a session domain is set.                                                                     |
+| Interceptor              | Adds                      | Notes                                                                                                                                                                                                                                        |
+| ------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authTokenInterceptor`   | `Authorization: Bearer …` | Only when authenticated; refreshes first. A 401 drops the session to guest locally — never a redirect. A background read neither refreshes nor drops the session ([platform.md → Token refresh and 401](platform.md#token-refresh-and-401)). |
+| `niordDomainInterceptor` | `NiordDomain: <domainId>` | Only when a session domain is set.                                                                                                                                                                                                           |
 
 Which URLs count as the backend, and why the match is `urlMatchesPrefix` rather than `startsWith`,
 is in [platform.md](platform.md) → _Interceptor scoping_.
@@ -193,6 +193,15 @@ The workhorse read, and the one that lies most quietly.
 - **`maxSize` has a ceiling of 1000** on every search built from request parameters (`messages/search`,
   and the report, mail and export searches before they set their own size): a larger value is cut to
   1000 and a value below 1 is raised to 1, silently. Ask for more than 1000 and you get 1000.
+- **A search that cannot run is an error, never an empty page.** A signed-in caller's free-text
+  `query=` the index cannot parse (an unbalanced quote, say) answers **400**; a search that fails (an
+  unreadable index, a database fault) answers **5xx**. The same holds for the print, the export and the
+  message mail, which search the same way.
+- **A free-text search right after a backend start can be short, and says so.** The backend builds its
+  text index again after each start, which takes minutes on a large database; until it is complete a
+  `query=` search answers from the messages indexed so far, and the answer carries
+  `indexIncomplete: true`. Every other answer leaves the property out. The print, the export and the
+  message mail carry no such mark.
 - **Callers without an identity get plain-word free text.** For a request with no token and no ticket,
   `query=` is matched as literal words (no wildcards, regular expressions, phrases or `AND`/`OR`/`NOT`)
   and cut to 256 characters, and `username`, `userType` and `comments` are ignored. A ticketed request

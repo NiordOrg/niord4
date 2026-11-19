@@ -167,7 +167,8 @@ nothing, a mail is not written. The _missing-path report_ lists them:
   promulgation type or a print report, or included or loaded by another template or script, that has no row in
   the database, with what names it;
 * each language variant of such a path that the base product offers and the database lacks;
-* each built-in print report (`standard`, `draft`, `public`) the deployment lacks.
+* each built-in print report (`standard`, `draft`, `public`) the deployment lacks, and each print report a
+  publication series or issue names that the deployment lacks.
 
 Niord writes the report to its log every time it starts, except on a new database whose bootstrap has not been
 applied (while it waits, runs or has failed), as a warning with one line for each entry, or "no missing path". A system administrator can read it at any time at

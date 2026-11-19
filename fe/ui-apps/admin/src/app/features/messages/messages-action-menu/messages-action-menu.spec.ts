@@ -1,6 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { describe, expect, it, vi } from 'vitest';
@@ -266,6 +266,43 @@ describe('MessagesActionMenu permission visibility', () => {
     const ls = labels(component);
     expect(ls).toContain('messages.shell.action.tagManage');
     expect(ls).toContain('menu.action.report');
+  });
+
+  it('a role in the domain offers My mails, with or without a selection, and it opens the dialog', () => {
+    const { component, fixture } = setup({
+      isLoggedIn: true,
+      isEditor: false,
+      isAdmin: false,
+      selectionSize: 0,
+    });
+    fixture.detectChanges();
+    const item = findItem(component, 'menu.action.my_mails');
+    expect(item).toBeDefined();
+    item?.command?.({ item });
+    fixture.detectChanges();
+    // The dialog reads the user's own mails as it opens.
+    TestBed.inject(HttpTestingController).expectOne('/rest/scheduled-mails/mine?days=7').flush([]);
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.replaceChildren());
+  });
+
+  it('signed in without a role in the domain, or signed out: no My mails, whose read would be refused', () => {
+    expect(
+      labels(
+        setup({
+          isLoggedIn: true,
+          isEditor: true,
+          isAdmin: false,
+          selectionSize: 1,
+          domainUserRole: false,
+        }).component,
+      ),
+    ).not.toContain('menu.action.my_mails');
+    TestBed.resetTestingModule();
+    expect(
+      labels(
+        setup({ isLoggedIn: false, isEditor: false, isAdmin: false, selectionSize: 0 }).component,
+      ),
+    ).not.toContain('menu.action.my_mails');
   });
 
   it('logged in, selection 2: Compare is enabled with a command handler', () => {

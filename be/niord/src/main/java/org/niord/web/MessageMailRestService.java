@@ -141,9 +141,11 @@ public class MessageMailRestService {
         String language = app.getLanguage(params.getLanguage());
         params.language(language).maxSize(1000).page(0);
 
-        try {
-            PagedSearchResultVo<MessageVo> result = messageSearchRestService.searchMessages(params);
+        // Outside the try below, as the print and the export search: a query the search cannot read is the caller's
+        // error (400), not a failure to send the mail
+        PagedSearchResultVo<MessageVo> result = messageSearchRestService.searchMessages(params);
 
+        try {
             // Send the e-mails
             StringBuilder str = new StringBuilder();
             for (int i = 0; i < recipients.size(); i++) {

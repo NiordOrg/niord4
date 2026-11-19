@@ -81,7 +81,7 @@ the real repo, then reviewed for completeness against the nine signed decisions 
 
 The one companion document that ships is [`API-CONTRACT.md`](API-CONTRACT.md) — the wire contract built
 on this model. The rules as an admin meets them are in [`domain-rules.md`](domain-rules.md); the
-cut-over material is under [`go-live/`](go-live/). Everything else this text cites is merged-away
+cut-over material is kept outside this repository. Everything else this text cites is merged-away
 provenance; see the preamble.
 
 ---

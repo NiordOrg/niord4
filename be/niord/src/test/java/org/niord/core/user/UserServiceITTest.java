@@ -15,6 +15,9 @@
  */
 package org.niord.core.user;
 
+import org.hibernate.JDBCException;
+import org.hibernate.Session;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.persistence.EntityManager;
@@ -22,6 +25,10 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.niord.test.ITTest;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,6 +38,7 @@ import java.util.stream.IntStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -106,6 +114,53 @@ class UserServiceITTest extends ITTest {
 
     @Test
     @Transactional
+    void aSecondUserWhoseNameDiffersOnlyByCaseIsRefused() {
+        // findByUsername expects one row for lower(username), so the database refuses a second one: the unique
+        // index on lower(username) of V013. Before it, the unique constraint was on the column itself, this pair
+        // was stored, and findByUsername then failed for both spellings.
+        persistUser("it-user-case-pair", "it-user-case-pair@example.com", "Case", "Pair", "en");
+        em.flush();
+
+        persistUser("IT-User-Case-Pair", "it-user-case-pair-2@example.com", "Case", "Pair", "en");
+        ConstraintViolationException refused = assertThrows(ConstraintViolationException.class, () -> em.flush());
+        assertEquals("23505", refused.getSQLState(), "a unique violation: " + refused.getMessage());
+        assertEquals("user_username_lower", refused.getConstraintName(), refused.getMessage());
+    }
+
+    @Test
+    @Transactional
+    void theCaseInsensitiveChangesetRefusesADatabaseThatHoldsSuchAPairAndNamesIt() throws IOException {
+        // The schema as it was before V013, in this test's transaction only (PostgreSQL's DDL rolls back with it):
+        // the unique constraint on the column, and a pair of names that differ only by case
+        em.createNativeQuery("DROP INDEX public.user_username_lower").executeUpdate();
+        em.createNativeQuery("ALTER TABLE public.\"User\" ADD CONSTRAINT user_username UNIQUE (username)")
+                .executeUpdate();
+        persistUser("it-user-old-pair", "it-user-old-pair@example.com", "Old", "Pair", "en");
+        persistUser("IT-User-Old-Pair", "it-user-old-pair-2@example.com", "Old", "Pair", "en");
+        em.flush();
+
+        String changeset;
+        try (InputStream in = getClass().getResourceAsStream(
+                "/db/changelog/changes/V013__user_username_case_insensitive.sql")) {
+            assertNotNull(in, "the changeset is on the class path");
+            changeset = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        // The file as Liquibase sends it with splitStatements:false: one text, its header lines SQL comments
+        JDBCException refused = assertThrows(JDBCException.class, () -> em.unwrap(Session.class)
+                .doWork(connection -> {
+                    try (Statement statement = connection.createStatement()) {
+                        statement.execute(changeset);
+                    }
+                }));
+        String message = refused.getSQLException().getMessage();
+        assertEquals("P0001", refused.getSQLState(), "the changeset's own refusal, not a failed index: " + message);
+        assertTrue(message.contains("IT-User-Old-Pair") && message.contains("it-user-old-pair"),
+                "it names the pair: " + message);
+        assertTrue(message.contains("give the others another username by hand"), "it says what to do: " + message);
+    }
+
+    @Test
+    @Transactional
     void findByUsernameReturnsNullForUnknownUsername() {
         assertNull(userService.findByUsername("it-user-no-such-user-xyz"),
                 "findByUsername must return null for an unknown username");
@@ -139,6 +194,21 @@ class UserServiceITTest extends ITTest {
         User found = userService.findByEmail("it-user-emailcase@example.com");
         assertNotNull(found, "findByEmail must match regardless of stored email casing");
         assertEquals("it-user-emailcase", found.getUsername());
+    }
+
+    @Test
+    @Transactional
+    void findByEmailOfAnAddressTwoUsersShareReturnsTheFirstUser() {
+        // The email column is not unique: two users may share an address, in any casing. That is
+        // still "a user has this address", answered with the user created first, never an error.
+        User first = persistUser("it-user-shared-a", "it-user-shared@example.com", "Shared", "A", "en");
+        persistUser("it-user-shared-b", "IT-User-Shared@example.com", "Shared", "B", "en");
+        em.flush();
+        em.clear();
+
+        User found = userService.findByEmail("it-user-shared@example.com");
+        assertNotNull(found, "findByEmail must find a user when two users share the address");
+        assertEquals(first.getId(), found.getId(), "of several users, the one created first is returned");
     }
 
     @Test

@@ -360,6 +360,49 @@ public class MessageIssueLookupQueryITTest extends ITTest {
         assertEquals(open.getId(), rows.get(0).issue().getId());
     }
 
+    // ------------------------------------------------- OPEN ISSUE WITH ROWS
+
+    /**
+     * An open issue can carry member rows an import copied from the old system.
+     * They are not a record of a release: the issue is answered as every open
+     * issue is, LIVE when its rule takes the message in, and never FROZEN.
+     */
+    @Test
+    @Transactional
+    public void anOpenIssueWithImportedMembersIsAnsweredLiveNotFrozen() {
+        PublicationSeries s = series();
+        PublicationIssue open = week(s, at(7 * DAY), at(14 * DAY));
+        open.setMembershipProvenance(MembershipProvenance.IMPORTED);
+        em.flush();
+        Message notice = message(Status.PUBLISHED, at(8 * DAY));
+        member(open, notice);
+
+        List<MessageIssueLookup.MessageIssue> rows = rowsOf(notice, s);
+
+        assertEquals(1, rows.size(), "" + rows);
+        assertEquals(MessageIssueLookup.Membership.LIVE, rows.get(0).membership(),
+                "an open issue's imported rows were read as a published record");
+        assertEquals(open.getId(), rows.get(0).issue().getId());
+    }
+
+    /**
+     * A recorded member of an open issue that today's rule does not take in is
+     * not reported at all: the publish would re-resolve the issue without it.
+     */
+    @Test
+    @Transactional
+    public void anOpenIssuesRecordedMemberTheRuleDoesNotTakeIsNotReported() {
+        PublicationSeries s = series();
+        PublicationIssue open = week(s, at(7 * DAY), at(14 * DAY));
+        open.setMembershipProvenance(MembershipProvenance.IMPORTED);
+        em.flush();
+        Message before = message(Status.PUBLISHED, at(-2 * DAY));
+        member(open, before);
+
+        assertTrue(rowsOf(before, s).isEmpty(),
+                "an open issue's recorded member was reported although its rule leaves it out");
+    }
+
     // -------------------------------------------------------------------- FROZEN
 
     /**

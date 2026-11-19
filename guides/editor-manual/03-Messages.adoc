@@ -26,8 +26,7 @@ _Selection_, and at its right the _Filter_ menu and the _Actions_ menu. The pane
 you use appear above the list.
 
 The address of the page in the browser holds your filter. You can bookmark it, or copy it and send
-it to someone, and switching between the views keeps the filter. A bookmark with the _Domain_ filter
-set also changes your current domain; see <<domain-filter>>.
+it to someone, and switching between the views keeps the filter.
 
 [#view-modes]
 === View Modes
@@ -193,11 +192,9 @@ existing Navigational Warning.
 When you search another domain, only its public messages are found: those that are _Published_,
 _Cancelled_ or _Expired_.
 
-Like every filter, the _Domain_ filter is kept in the address of the page, as `domain=` followed by
-the id of the domain. Niord also reads that part of an address when it starts, to choose the
-current domain (see <<domain-selection>>). So when you open a bookmark or a link that has the
-_Domain_ filter set, the filtered domain becomes your current domain, and the filter then searches
-your own domain.
+Like every filter, the _Domain_ filter is kept in the address of the page, as `searchDomain=`
+followed by the id of the domain, so a bookmark or a link with the filter set searches that domain
+and leaves your current domain as it is.
 
 [#message-series-filter]
 ==== Message Series Filter
@@ -241,6 +238,12 @@ A system administrator can switch the text search to the database's own search (
 _disableLucene_). The text filter then finds the messages that contain all the words you type, also
 in other forms of the words (_harbour_ finds _harbours_), and a `*` is not understood.
 
+For some minutes after the server has been restarted, or after a system administrator has rebuilt
+the text search index, the text filter searches an index that is still being built, and messages may
+be missing from the result. The list then shows a warning above the
+result, until the index is complete. A print, an export or a mail of the list made in those minutes
+does not say so.
+
 [#type-filter]
 ==== Type Filter
 
@@ -253,6 +256,10 @@ For Navigational Warnings the types are _Local_, _Coastal_, _Sub-area_ and _Nava
 to Mariners _Preliminary_, _Temporary_, _Permanent_ and _Misc_. The filter offers only the types the
 domain's message series use. In a domain with both Navigational Warnings and Notices to Mariners, it
 also has the choices _All_, _NW_ and _NM_.
+
+Beside the types of Navigational Warnings, _Cancellation warnings_ lists the cancellation warnings
+Niord published when warnings were cancelled (<<cancellation-warning>>) instead of the warnings.
+Click it again to list the warnings.
 
 [#status-filter]
 ==== Status Filter
@@ -489,8 +496,28 @@ selected messages_ asks for:
 
 Click _Send Mail_ to mail the details of the selected messages. This can be useful when, for
 example, you follow up on the work a Notice to Mariners describes. Niord queues the mail and sends
-it shortly after, as the message on the screen says; a mail that cannot be delivered is listed for
-the system administrators in the Mail Queue.
+it shortly after, as the message on the screen says. _My mails..._ in the same menu shows whether it
+was sent (see <<my-mails-action>>), and Niord warns you when a mail of yours could not be sent after
+its retries.
+
+[#my-mails-action]
+==== My Mails Action
+
+_My mails..._ lists the mails you have sent in the last 7 days, with _E-mail selection..._ or with a
+comment (see <<comments-editor-page>>), newest first: when each was created, its subject, its
+recipients and its status:
+
+* _Sent_: the mail has been handed to the mail server.
+* _Waiting_: the mail is queued and will be sent within a minute or two.
+* _Retrying_: an attempt failed, and Niord tries again, at longer and longer intervals, for about
+  an hour and twenty minutes. The last error is shown below the status.
+* _Not sent_: the last attempt failed too, and Niord gives up. The last error is shown below the
+  status; reach the recipients another way.
+
+While you work in Messages or in the editor, Niord looks at your mails every five minutes and shows a
+warning, which stays until you close it, when one of them could not be sent. It does not look while
+the browser tab is hidden or while you are elsewhere in Niord, and looking does not keep you signed
+in.
 
 [#add-selection-to-tag-action]
 ==== Add Selection to Tag Action

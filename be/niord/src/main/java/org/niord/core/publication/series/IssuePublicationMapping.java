@@ -233,12 +233,20 @@ public final class IssuePublicationMapping {
      * Public because it is the one rule for "where does this document live", and
      * every surface that hands a desc's address to a client owes the same answer
      * -- the public list, the citation picker and the administration lists alike.
+     *
+     * The derived link writes a percent sign and a semicolon of the path encoded
+     * (%25 and %3B) and leaves every other character as it is: a raw percent sign
+     * is a broken escape, and a raw semicolon starts a path parameter, which cuts
+     * the name and which the request firewall refuses. The rest of the spelling is
+     * the one every derived link has always had.
      */
     public static String linkOf(PublicationIssueDesc desc) {
         if (notBlank(desc.getLink())) {
             return desc.getLink();
         }
-        return notBlank(desc.getFilePath()) ? REPO_FILE_PREFIX + desc.getFilePath() : null;
+        return notBlank(desc.getFilePath())
+                ? REPO_FILE_PREFIX + desc.getFilePath().replace("%", "%25").replace(";", "%3B")
+                : null;
     }
 
     /** What the repository serves its files under. */

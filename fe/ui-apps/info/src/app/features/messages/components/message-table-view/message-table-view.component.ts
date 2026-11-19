@@ -53,6 +53,14 @@ interface AreaRun {
         </p>
       }
 
+      <!-- Said in words, in a live region there from the start: a blank page under the filter
+           bar reads as a page that did not work. -->
+      <div role="status">
+        @if (store.empty()) {
+          <p class="py-5 text-center text-fg-muted">{{ 'MSGS_NONE' | transloco }}</p>
+        }
+      </div>
+
       @for (run of runs(); track run.messages[0].id) {
         @if (run.heading; as heading) {
           <h4 class="message-area-heading">

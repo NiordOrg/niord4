@@ -23,11 +23,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import jakarta.persistence.EntityManager;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Locale;
-import java.util.Properties;
 
 /**
  * Common settings and functionality for the Niord app
@@ -108,16 +105,13 @@ public class NiordApp {
     // PORT: the Quarkus launcher entry point `int run(String...)` (QuarkusApplication)
     // was removed; the Spring Boot application class lives in the deployable module (niord-app, or a country's).
 
-    /** Returns the build version **/
+    /**
+     * Returns the build version: the version of the niord-base library, which the build writes
+     * ({@code 4.0.<run>} in a published build, {@code 4.0.0-SNAPSHOT} in a local one), see {@link NiordBaseVersion}
+     * @return the build version, never blank
+     */
     public String getBuildVersion() {
-        // The "version.properties" file is updated by maven with the build timestamp.
-        try (InputStream in = getClass().getResourceAsStream("/version.properties")) {
-            Properties versionProperties = new Properties();
-            versionProperties.load(in);
-            return versionProperties.getProperty("niord.version");
-        } catch (IOException ignored) {
-        }
-        return "undefined";
+        return NiordBaseVersion.get();
     }
 
     /**

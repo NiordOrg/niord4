@@ -34,8 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  *         already leaves untouched;</li>
  *     <li>multi-byte UTF-8 characters expanding to several {@code %XX} octets;</li>
  *     <li>where this implementation <em>diverges</em> from a faithful JS {@code encodeURI()}
- *         (it only restores {@code : / ;}, so {@code @ , + $ #} stay percent-encoded, and it encodes
- *         {@code ?} and {@code '} as well, REPO4);</li>
+ *         (it only restores {@code : /}, so {@code @ , + $ #} stay percent-encoded, and it encodes
+ *         {@code ?}, {@code '} and {@code ;} as well, REPO4);</li>
  *     <li>the asymmetric null handling of the two encode/decode entry points;</li>
  *     <li>the {@code try/catch} fallback of {@link WebUtils#urlDecode(String)} for assorted
  *         malformed {@code %xx} sequences;</li>
@@ -104,7 +104,7 @@ public class WebUtilsEncodingTest {
     @Test
     public void encodeURIDivergesFromJsByStillEncodingAtCommaPlusDollarHash() {
         // A faithful JS encodeURI() leaves ; , / ? : @ & = + $ - _ . ! ~ * ' ( ) # untouched.
-        // This implementation only re-decodes %3A %2F %3B, so @ , + $ # remain percent-encoded (and ? ' too,
+        // This implementation only re-decodes %3A %2F, so @ , + $ # remain percent-encoded (and ? ' ; too,
         // see encodeURIEncodesAQuestionMarkAndAnApostropheInAName).
         assertEquals("%40", WebUtils.encodeURI("@"));
         assertEquals("%2C", WebUtils.encodeURI(","));
@@ -114,9 +114,10 @@ public class WebUtilsEncodingTest {
     }
 
     @Test
-    public void encodeURIRestoresOnlyTheThreeStructuralCharactersInAMixedReservedString() {
-        // Of ";,/?:@&=+$#" only ; / : are restored; the rest, the question mark among them, stay percent-encoded.
-        assertEquals(";%2C/%3F:%40%26%3D%2B%24%23", WebUtils.encodeURI(";,/?:@&=+$#"));
+    public void encodeURIRestoresOnlyTheTwoStructuralCharactersInAMixedReservedString() {
+        // Of ";,/?:@&=+$#" only / : are restored; the rest, the question mark and the semicolon among them, stay
+        // percent-encoded.
+        assertEquals("%3B%2C/%3F:%40%26%3D%2B%24%23", WebUtils.encodeURI(";,/?:@&=+$#"));
     }
 
     @Test
@@ -129,13 +130,14 @@ public class WebUtilsEncodingTest {
         assertEquals("%3F%27", WebUtils.encodeURI("?'"));
         // encodeURIComponent keeps the apostrophe, as JavaScript's does
         assertEquals("it's", WebUtils.encodeURIComponent("it's"));
-        // The other characters JavaScript leaves raw are kept, as before
-        assertEquals("a/b%20(1)!~*-_.:;", WebUtils.encodeURI("a/b (1)!~*-_.:;"));
+        // The other characters JavaScript leaves raw are kept, as before, but a semicolon, which would start a path
+        // parameter, is encoded
+        assertEquals("a/b%20(1)!~*-_.:%3B", WebUtils.encodeURI("a/b (1)!~*-_.:;"));
     }
 
     @Test
     public void encodeURIPreservesMultiByteUtf8AsEncodeURIComponentDoes() {
-        // encodeURI delegates to encodeURIComponent and only re-decodes : / ; afterwards, so
+        // encodeURI delegates to encodeURIComponent and only re-decodes : / afterwards, so
         // multi-byte characters are encoded identically by both methods.
         assertEquals("%E2%82%AC", WebUtils.encodeURI("€"));
     }

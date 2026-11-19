@@ -24,8 +24,7 @@ import static org.niord.web.sweep.DeliverySweepFixture.*;
 
 /**
  * The cases of {@code MailingListRestService} for {@link DeliverySweepGroup}. The recipient writes run on a list the
- * case makes and removes (the fixture's list keeps no recipient: a contact on a list cannot be deleted, CONTACT1), and
- * the list goes before the contact, so the case never meets CONTACT1.
+ * case makes and removes, and the list goes before the contact.
  */
 final class DeliverySweepMailingLists {
 

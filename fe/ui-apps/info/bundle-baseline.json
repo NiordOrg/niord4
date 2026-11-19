@@ -1,9 +1,9 @@
 {
   "_comment": "What a first visit to the public site transfers, measured from the build named under source. Written to ui-apps/info/bundle-baseline.json by --update-baseline, and then the gate every later build is held to.",
-  "generatedAt": "2026-09-24",
+  "generatedAt": "2026-11-18",
   "source": {
     "measuredFrom": "dist/niord-info/browser + dist/niord-info/browser-stats.json",
-    "angular": "^22.1.6",
+    "angular": "^22.2.2",
     "build": "ng build niord-info --stats-json (production, outputHashing all)"
   },
   "tolerancePercent": 2,
@@ -18,30 +18,30 @@
     "index": {
       "files": 1,
       "raw": 671,
-      "brotli": 250,
-      "gzip": 391,
-      "transfer": 250
+      "brotli": 246,
+      "gzip": 389,
+      "transfer": 246
     },
     "styles": {
       "files": 1,
-      "raw": 51790,
-      "brotli": 9657,
-      "gzip": 10883,
-      "transfer": 9657
+      "raw": 52386,
+      "brotli": 9780,
+      "gzip": 10985,
+      "transfer": 9780
     },
     "initialJs": {
       "files": 1,
-      "raw": 343346,
-      "brotli": 93374,
-      "gzip": 106794,
-      "transfer": 93374
+      "raw": 349587,
+      "brotli": 95172,
+      "gzip": 108824,
+      "transfer": 95172
     },
     "landingLazyJs": {
-      "files": 13,
-      "raw": 39029,
-      "brotli": 14899,
-      "gzip": 16491,
-      "transfer": 14899
+      "files": 11,
+      "raw": 43307,
+      "brotli": 15771,
+      "gzip": 17450,
+      "transfer": 15771
     },
     "fonts": {
       "files": 0,
@@ -53,39 +53,39 @@
   },
   "totals": {
     "firstVisit": {
-      "files": 16,
-      "raw": 434836,
-      "transfer": 118180
+      "files": 14,
+      "raw": 445951,
+      "transfer": 120969
     },
     "initial": {
-      "raw": 395807,
-      "transfer": 103281
+      "raw": 402644,
+      "transfer": 105198
     }
   },
   "reference": {
     "_comment": "Not gated. Recorded so a later piece of work can see what moved and where.",
     "largestScript": {
-      "file": "chunk-DKa4NVTx.js",
-      "raw": 346349,
-      "brotli": 85503
+      "file": "main-OHPTHR2T.js",
+      "raw": 349587,
+      "brotli": 95172
     },
     "largestComponentStyle": {
       "file": "message-print-view.component-OKGXIAM5.css",
       "raw": 969
     },
     "allJs": {
-      "files": 26,
-      "raw": 875846,
-      "brotli": 236786,
-      "gzip": 272163,
-      "transfer": 236786
+      "files": 27,
+      "raw": 891626,
+      "brotli": 241759,
+      "gzip": 277871,
+      "transfer": 241755
     },
     "notFirstVisit": {
-      "files": 28,
-      "raw": 516906,
-      "brotli": 140838,
-      "gzip": 162839,
-      "transfer": 140838
+      "files": 26,
+      "raw": 514785,
+      "brotli": 140909,
+      "gzip": 162821,
+      "transfer": 140901
     }
   },
   "targets": {

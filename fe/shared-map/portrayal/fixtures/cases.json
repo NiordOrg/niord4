@@ -302,7 +302,7 @@
     },
     {
       "id": "geometry-collection",
-      "description": "A collection of a point, a line and an area: the pen on the line and the outline, one tag at the centre of its extent, and no symbol for the point.",
+      "description": "A collection of a point, a line and an area: the pen on the line and the outline, one tag at the centre of its extent, and the point symbol at the point.",
       "view": {
         "centre": [11, 55.5],
         "zoom": 10,

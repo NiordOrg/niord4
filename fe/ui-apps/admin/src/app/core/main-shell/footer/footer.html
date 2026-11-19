@@ -58,8 +58,15 @@
 
       <div
         class="flex items-center justify-center gap-4 lg:justify-end"
-        [class.max-lg:hidden]="documents().length === 0"
+        [class.max-lg:hidden]="!accessibility() && documents().length === 0"
       >
+        @if (accessibility()) {
+          <a
+            href="{{ 'footer.accessibilityLink' | transloco }}"
+            class="inline-flex min-h-10 items-center outline-offset-2"
+            >{{ 'footer.accessibility' | transloco }}</a
+          >
+        }
         @for (id of documents(); track id) {
           <button
             type="button"

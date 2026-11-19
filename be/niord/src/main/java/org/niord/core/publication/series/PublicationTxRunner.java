@@ -57,10 +57,11 @@ public class PublicationTxRunner {
      * There is no ambient transaction timeout in this application -- nothing sets
      * {@code spring.transaction.default-timeout} -- so this ceiling is not raising
      * anything today. It is stated anyway because the import is genuinely long
-     * (measured at 784s against the previous deployment, never yet measured against
-     * PostgreSQL), so a global default introduced later must not silently cut it
-     * short. 30 minutes is far more than it needs, and the cost of a generous
-     * ceiling is nothing at all.
+     * (measured at 784s against the previous deployment; on PostgreSQL timed once,
+     * on a workstation, well inside this ceiling, and never on a cluster), so a
+     * global default introduced later must not silently cut it short. 30 minutes
+     * is far more than it needs, and the cost of a generous ceiling is nothing at
+     * all.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 1800)
     public <T> T callWithImportBudget(Supplier<T> work) {

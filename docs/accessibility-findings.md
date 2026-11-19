@@ -1,6 +1,13 @@
 # Accessibility: legal scope, current state and recommendations
 
-Investigated 2026-09-19. This is an analysis. No code was changed, and no page has been audited yet.
+Investigated 2026-09-19. This is an analysis. No code was changed. The public site's base build was
+audited on 2026-11-18 (recommendation A, for the public site): the record is
+[accessibility-audit-public-site.md](accessibility-audit-public-site.md), and each country's build
+and the screen-reader pass are still to be done there. A first automated pass of the administration
+app was made on 2026-11-18: an axe-core scan of every route but three and a keyboard walk that
+publishes a warning, against the sample deployment
+([First pass, administration app](#first-pass-administration-app)); its full page-by-page report is
+still to be done.
 
 This is not legal advice. The reading of the scope below should be confirmed in writing with
 Digitaliseringsstyrelsen before it is relied on.
@@ -17,7 +24,8 @@ Digitaliseringsstyrelsen before it is relied on.
 - The frontend was moved off PrimeNG onto Angular's headless building blocks. Focus handling, menus,
   trees and tabs still come tested from Angular. The select, autocomplete and date picker are now
   hand-written, declare the right roles, and have never been verified with assistive technology.
-- There is no automated accessibility check anywhere in the repository or in CI.
+- There is no automated accessibility check in CI. Both applications have a manual axe-core scan
+  (since 2026-11-18), and the administration app a scripted keyboard walk.
 - An accessibility statement in the agency's WAS-Tool is required.
 
 ## 1. Legal scope
@@ -114,6 +122,10 @@ A covered website needs its own accessibility statement, the tilgængelighedserk
 agency's WAS-Tool. A self-evaluation is an accepted basis, so an external audit is not mandatory. The
 statement must describe how the evaluation was done.
 
+Each application has a place to link its own statement: the public site from `accessibilityStatement`
+in its country configuration, the administration app's footer from the branding keys
+`footer.accessibility` and `footer.accessibilityLink`. Both stay empty until a country sets them.
+
 ## 2. Current state of the frontend
 
 ### Foundation
@@ -150,13 +162,19 @@ widget. These are now hand-written in `fe/ui-apps/admin/src/app/shared/forms/`:
 All three base widgets declare `combobox` and `listbox` roles and have keyboard handlers. The
 accessibility is not missing. It is unverified. Combobox and date picker are the two patterns most
 often subtly wrong in custom code, for example in how the active option is announced, or how the
-calendar grid is navigated. Nobody has tested these with a screen reader.
+calendar grid is navigated. Nobody has tested these with a screen reader. Reading the code found one
+fault, since fixed: the date and time fields' trigger hid the chosen value whenever the field was
+named, because a button's name replaces its content; the value is now the button's description.
 
 ### What does not exist
 
-- No automated runtime accessibility check. `fe/docs/testing.md` states there is no axe, pa11y or
-  Lighthouse dependency and no CI step.
-- No record of a manual audit against WCAG 2.1.
+- No automated runtime accessibility check in CI. Since 2026-11-18 the public site has a manual
+  axe-core scan, `npm run a11y:info` in `fe/`, and the administration app an axe-core scan of every
+  route and a keyboard walk in its end-to-end suite (`fe/docs/testing.md`); no workflow runs them.
+- No record of a manual audit of the administration app against WCAG 2.1: its first pass is automated
+  ([below](#first-pass-administration-app)), and the template review, reflow, zoom and text spacing
+  are still to be done. The public site's base build has one since 2026-11-18:
+  [accessibility-audit-public-site.md](accessibility-audit-public-site.md).
 - No way but a drag to reorder a message's references in the editor (`references-field-editor.ts`): no
   keyboard way and no single-pointer way (WCAG 2.1.1, 2.5.7). The attachments' grip has arrow keys since
   2026-11-13, but no single-pointer way either. Seen by the error hunt's fix stage (2026-11-13).
@@ -216,6 +234,98 @@ An internal pass can cover most of the work before anyone external is paid:
 - a report per page mapped to each success criterion, with pass, fail or needs human check
 
 Look hardest at the three hand-written form widgets, the map, and the geometry editor.
+
+#### First pass, administration app
+
+Made on 2026-11-18, on the base build against the local sample deployment (`./start-local.sh
+--sample`), so no page held real data. It is the automated half of recommendation A and its re-run;
+the template review, reflow at 320 pixels, 200 percent zoom, text spacing and the report per success
+criterion are still to be done.
+
+**Method.**
+
+- axe-core 4.14.0, driven by Playwright 1.64.1 in Chromium 156 at 1280 by 720 pixels, with the rules
+  axe-core tags `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa`: WCAG 2.0 and 2.1 at levels A and AA,
+  what EN 301 549 asks of web content. The best-practice rules were not run. The scan is
+  `fe/ui-apps/admin/e2e/a11y-routes.spec.ts` with the helper `fe/ui-apps/admin/e2e/a11y/axe.ts`.
+- Routes, each scanned once the page had settled: anonymous, `/` and `/messages/table`; as the
+  sysadmin, the five message views (table, grid, details, map, selection) and a message opened in
+  the table's drawer, the Schedule page, the editor's Start screen, a new warning's edit form (left
+  unsaved), and the edit, status, history and comments pages of a published warning, the admin
+  area's overview and its seven sections, and the sysadmin area's overview and its fourteen
+  sections. The overlays scanned on their own: the messages' Actions menu, the Print dialog, and the
+  header's domain and language menus.
+- Not scanned, or scanned in an empty state: the Schedule page shows its empty state (no firing
+  schedule) until the firing-schedule scenario has run on the sample, which it had not; a
+  publication series page, because the sample has no series until the weekly-publication scenario
+  has made one. Not scanned at all: the _Execute templates_ page (`/editor/execute-template`, the
+  first page of a warning made from a template), a copy's edit form (`/editor/copy/:id`), a one-off
+  publication series page (`/admin/publications/one-off/:seriesId`), and the editors and dialogs
+  that open inside the admin and sysadmin sections, whose pages are scanned without them.
+- The keyboard walk, `fe/ui-apps/admin/e2e/scenarios/keyboard-publish.spec.ts`: as an editor, from
+  the Start screen to a published warning with the keyboard alone (Tab, Shift+Tab, Enter, Space,
+  the arrow keys, Escape, typing). It sets the type, the series (the hand-written select), a typed
+  title, the follow-up date (the hand-written date picker), an area and the vicinity (the
+  hand-written autocomplete), a category, a position typed in the _Edit as text_ dialog, saves,
+  verifies and publishes, and reads the warning back through the admin API. After every step it
+  asserts which control has the focus and that the focus shows (an outline, a shadow, or a border in
+  the primary colour); inside a list it asserts the option `aria-activedescendant` names; after a
+  dialog or the calendar it asserts the focus is back on the control that opened it. Each overlay it
+  opens is scanned: the series list, the calendar, the area and category lists, the _Edit as text_
+  dialog, and the Verify and Publish confirmations.
+- Left out on purpose: the map's canvas (a map for navigational use is exempt while what it shows is
+  given as text, section 1; the controls around it are scanned); dark mode, which the product does
+  not have; every language but English, the only one the base product ships. A country's build has
+  its own languages and brand tokens and needs its own run; a country's workspace cannot run these
+  specs yet, since it may import only the login fixtures of the base suite, and opening them to it
+  is a deliberate change of the country API, still to be made.
+
+**Result per page.** Every scan is held to `fe/ui-apps/admin/e2e/a11y/known-violations.json`, which
+names the record of each violation; with it, the scan and the walk pass, so a new violation fails
+them.
+
+| Page or overlay | Rule (WCAG) | Impact | What |
+|---|---|---|---|
+| Editor, new warning | color-contrast (1.4.3) | serious | the status flow's steps not reached; the live preview's heading |
+| Editor, edit page | color-contrast (1.4.3) | serious | the same, and "All changes saved" |
+| Editor, status, history and comments pages | color-contrast (1.4.3) | serious | "All changes saved" |
+| Admin, publications | label-content-name-mismatch (2.5.3) | serious | the New button |
+| Admin, mailing lists | label-content-name-mismatch (2.5.3) | serious | the recipient count of each list |
+| Sysadmin, script resources | color-contrast (1.4.3) | serious | the `fm` and `js` badge of each row |
+| The area list (keyboard walk) | color-contrast (1.4.3) | serious | an area's parent on the active option |
+
+No WCAG A or AA rule failed on the other pages and overlays: the landing page and the table
+anonymously; the five message views, the drawer, the Actions menu, the Print dialog, the domain and
+language menus; the Schedule page; the editor's Start screen; the admin overview and its five other
+sections; the sysadmin overview and its thirteen other sections; the series list, the calendar, the
+category list, the _Edit as text_ dialog and the two confirmations.
+
+**Findings**, each an entry of `fe/docs/backlog.md` (two were there before):
+
+- The default `--niord-fg-subtle` is below AA off `--niord-surface` (known since 2026-10-26): "All
+  changes saved", 4.33:1; the live preview's heading and an area's parent on the active option,
+  4.45:1.
+- The status flow's steps not yet reached are drawn far under 4.5:1: 1.66:1 and 2.07:1.
+- The publications page's New button is named for something else ("Create a publication").
+- A mailing list's recipient count is named without the count.
+- The script resources' type badges are under 4.5:1: 3.59:1 for `fm`.
+- The progress bar has no accessible name; axe-core met it once while a page loaded, and the scan now
+  waits for loading to end.
+- The date picker's calendar does not take focus when it opens: Tab reaches its days only after the
+  rest of the form (keyboard walk).
+- The autocomplete and select buttons that remove a value did nothing from the keyboard (keyboard
+  walk; the entry was there already, from the preparation of the screen-reader pass), and every
+  chip's remove button had the same name. Fixed on 2026-11-19: the buttons act on Enter and Space,
+  the focus goes back to the input or the trigger, and each chip's button is named after its chip;
+  the walk now removes the area's chip with Enter and picks the area again.
+
+**Seen, and not counted as failures.** The select and the autocomplete show focus by turning their
+1-pixel border to the primary colour, and nothing else: enough for 2.4.7 in WCAG 2.1, short of the
+focus appearance WCAG 2.2 adds. After a navigation (the Start screen's _New blank_, a save) the focus
+is on the page's body, and the next Tab starts again at the header. The application has no skip link;
+its header, navigation and main landmarks are the way past the header (2.4.1). The admin areas nest
+a second `main` landmark inside the first, which axe-core's best-practice rules, not run here, would
+flag. The edit form's rows are one tab stop, moved between with the arrow keys.
 
 ### B. Move the select and autocomplete onto `@angular/aria`
 

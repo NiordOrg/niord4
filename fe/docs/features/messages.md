@@ -79,13 +79,16 @@ filter menu skips it. Do not document an AtoN field to users.
 ## Filter ↔ URL contract
 
 `messages-filter-params.serializer.ts` is the single source of the URL contract. The filter state _is_
-the URL: what a shared link carries, and what a saved filter stores verbatim.
+the URL: what a shared link carries, and what a saved filter stores verbatim. The table is that form,
+which the backend search, saved filters, print and export use; the address differs in two keys
+(`MessagesFilterUrlSync`): `messageId` appears as `refMessageId` and `domain` as `searchDomain`.
 
 | Parameter                                                 | Shape            | Notes                                                       |
 | --------------------------------------------------------- | ---------------- | ----------------------------------------------------------- |
 | `domain`                                                  | scalar           | `domainId`; unresolvable ids are held and retried           |
 | `query`                                                   | scalar           | free text                                                   |
 | `mainType`, `type`                                        | scalar, repeated | `NW`/`NM`; one `type` per checked message type              |
+| `kind`                                                    | scalar           | `CANCELLATION` only (the Type filter's chip); never with NM |
 | `status`                                                  | repeated         | masked outbound in public search (below)                    |
 | `tag`, `publication`, `promulgationType`                  | repeated         | opaque ids                                                  |
 | `username`, `userType`                                    | scalar           | `CREATED_BY` / `UPDATED_BY` / `LAST_UPDATED_BY`             |
@@ -131,6 +134,15 @@ the URL (restoring `messageId` only for the backend request) and skipping `MESSA
 both sync directions — inbound so opening the dialog does not refetch the list with a one-message
 filter and wipe the scroll position, outbound so a filter change does not close the open dialog.
 
+### The `domain` collision
+
+`domain` is also the session-domain deep link, which the application reads once when it starts
+(`DomainService.bootstrap`, see [shell and auth](./shell-and-auth.md)). Were the Domain filter written
+as `domain`, opening a bookmark of a filtered list would make the filtered domain the current one. The
+URL sync therefore writes the filter as **`searchDomain`** and reads it back as `domain`; an inbound
+`domain` is the deep link, already used at start-up, and never reaches the filter. A `domain` on a
+Messages address leaves at the first filter change, since the sync replaces the query.
+
 The URL sync writes with `replaceUrl: true` after a 200 ms debounce and canonicalises its own output
 to recognise and skip the echo of its own navigation.
 
@@ -164,6 +176,12 @@ appears only when some series supports that type, and the area / category / seri
 to that domain. With no domain resolved at all, everything is permissive. The domain also supplies the
 default sort — its `messageSortOrder`, falling back to `AREA ASC` when the domain configures none or an
 unparseable value — which is why `sortBy`/`sortOrder` are omitted from the URL when they match it.
+
+The Type filter also offers a _Cancellation warnings_ chip beside the NW types: it lists the
+cancellation warnings Niord published when warnings were cancelled (`kind=CANCELLATION`), one kind at
+a time, since the backend lists warnings when no `kind` is sent. Notices to Mariners have none, so a
+switch to NM, or to _All_ where the NW types are hidden, turns the chip off; while it is on, the chip
+shows whatever the main type, so it can always be turned off again.
 
 ## Named filters (saved searches)
 
@@ -210,6 +228,16 @@ and refresh.
   (`-999999`), rendered as the translated label "General".
 - The empty state distinguishes zero rows with total 0 ("no matches") from zero rows with a non-zero
   total ("N matches").
+- An answer marked `indexIncomplete: true` (a free-text search the backend ran while its text index
+  was still being built after a restart or a re-index) is shown as it came, and `MessageListStatus` shows a warning
+  (`messages.list.indexIncomplete`) above the result in every view that holds it, Table, Grid,
+  Details and the map's result list, inside a `role="status"` region that stays in the page. Each
+  answer of page 0 sets the facade's `indexIncomplete` anew, so the warning goes with the next answer
+  without the mark; an appended page (load more) keeps it while any page on screen carried it; a
+  failed search leaves it as it was. The other searches of the same endpoint show no
+  warning: the publication include dialog's message lookup (free text on the message id), and the
+  area-sort dialog and the home page (no free text). The print, export and mail of the list search on
+  the server and do not carry the mark.
 
 A **publication filter refusal** is reported per chip, not as a broken list: a `400` whose
 `error.code` starts with `PUBLICATION` is matched by prefix (not an enumeration) and its server message
@@ -477,6 +505,26 @@ the dialog open while the mail is posted and closes it only when the backend has
 a failure the dialog stays open with what was typed, and the toast names the backend's reason when
 it gives one (an address that is no mail address).
 
+**My mails** (`MyMailsDialog`, for a user with the `user` role in the session domain) lists the mails
+the user queued in the last 7 days, from this dialog or with a comment, newest first, read from
+`GET /rest/scheduled-mails/mine` each time it opens: the creation time in the domain's zone, the
+subject, the recipients and the status as the sender reads it — _Sent_, _Waiting_ (pending, not yet
+tried), _Retrying_ (pending after a failed attempt) or _Not sent_ (`ERROR`, after the last retry), the
+last two with the mail server's last error. The backend matches the mails on the sender address it
+recorded when the mail was queued; the mailing lists' mails carry none and are listed for nobody.
+`MyMailsNoticeService`, attached by the messages and editor shells while they are mounted, looks at
+the user's mails of the last 7 days (the dialog's period) at most every five minutes, only while a
+shell is mounted and the tab is shown, and raises one warning that stays until it is closed for the
+mails that ended in `ERROR` and were not yet announced; it keeps only their ids, the newest 100 in
+`localStorage` (`niord.myMails.announced`), so a failure is announced once and not at every page
+load (once per page load where the storage is blocked), and a look that fails is silent. Each look
+is a background read (`BACKGROUND_READ` in `core/interceptors/`): the interceptor sends it only
+with a token that needs no refresh, never refreshes the token for it and never drops the session
+to guest on its failure, so an idle tab still ends its session at the realm's idle timeout; a look
+the token is too old for is tried again every 30 seconds until the user's own work has refreshed
+the token. With the `mailValidRecipients` setting at `LOG` the backend only logs a mail and still
+marks it sent, so the dialog then says _Sent_ for a mail that left nothing.
+
 **Export** produces a ZIP: ticket, plus either the filter string or `tag=<temporaryTagId>` for the
 selection path.
 
@@ -501,7 +549,9 @@ whose list data already shows such a reason (no title; a Publish with a publish-
 ahead; the list carries no channels), but still sends it; after the 409 it marks the rows the backend
 named with the backend's reasons, toasts how many were refused
 (`messages.statusUpdate.toast.rowsRefused`) and stays open with the choices kept. Changing a marked
-row's target drops the backend's mark.
+row's target drops the backend's mark. When a row of an NW message is set to Cancelled, the dialog
+notes that cancelling a navigational warning in a series that numbers its messages itself publishes a
+cancellation warning; a list row carries neither the kind nor the numbering, so the note states the rule.
 
 **Compare** (exactly two selected, no login required) opens a two-message surface: two id pickers
 (deleted messages selectable) feeding two independent loads, rendered side by side through the same

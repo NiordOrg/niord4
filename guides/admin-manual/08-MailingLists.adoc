@@ -115,10 +115,10 @@ What every trigger has:
 | Mail Subject
 | The subject of the mails, in each language, each with a tick box before it. A mail is made for
   each language whose box is ticked. With one language ticked, every recipient receives that one.
-  With two or more, each recipient receives the one in the recipient's preferred language, and a
-  recipient whose preferred language is not ticked receives none. A recipient without a preferred
-  language receives English when English is ticked (in a deployment without English, its default
-  language when that is ticked), and otherwise the first ticked language.
+  With two or more, each recipient receives the one in the recipient's preferred language. A
+  recipient without a preferred language, or whose preferred language is not ticked, receives
+  English when English is ticked (in a deployment without English, its default language when that
+  is ticked), and otherwise the first ticked language.
   Unticking a language clears its subject.
   The subject can hold _tokens_ that are replaced in each mail: `${date-short}` and `${date-long}`
   (today's date), and for a status change trigger, which mails about one message, the message's

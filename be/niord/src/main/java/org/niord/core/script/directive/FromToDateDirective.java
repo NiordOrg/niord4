@@ -24,6 +24,8 @@ import freemarker.template.TemplateException;
 import freemarker.template.TemplateModel;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -46,6 +48,8 @@ public class FromToDateDirective implements TemplateDirectiveModel {
     private static final String PARAM_FROM_DATE = "fromDate";
     private static final String PARAM_TO_DATE = "toDate";
     private static final String PARAM_TZ = "tz";
+
+    private static final Logger log = LoggerFactory.getLogger(FromToDateDirective.class);
 
     /**
      * {@inheritDoc}
@@ -84,7 +88,12 @@ public class FromToDateDirective implements TemplateDirectiveModel {
             String result = formatFromToDates(text.getResourceBundle(), env.getLocale(), timeZone, fromDate, toDate);
             env.getOut().write(result);
         } catch (Exception e) {
-            // Prefer robustness over correctness
+            // Prefer robustness over correctness, but say so: a date format text missing or edited to a pattern
+            // that does not parse otherwise leaves the dates blank without a trace
+            log.warn("Dates {} - {} not printed in template {}: {}",
+                    fromDate == null ? "(none)" : fromDate.toInstant(),
+                    toDate == null ? "(none)" : toDate.toInstant(),
+                    LightCharacterDirective.templateName(env), LightCharacterDirective.reason(e));
         }
     }
 

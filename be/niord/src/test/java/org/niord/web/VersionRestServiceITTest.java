@@ -17,6 +17,7 @@ package org.niord.web;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
+import org.niord.core.NiordBaseVersion;
 import org.niord.test.ITTest;
 
 import static io.restassured.RestAssured.given;
@@ -34,11 +35,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * <p>The endpoint is {@code @PermitAll} (it carries no {@code @RolesAllowed}) and returns the build
  * version as {@code text/plain}. Its {@code Cache-Control: no-cache} directive is supplied by Spring
  * Security's default header writer — the legacy RESTEasy {@code @NoCache} annotation was a no-op under
- * the port and has been removed (see RST1). The build version is read from the
- * Maven-filtered {@code /version.properties} resource ({@code niord.version}), so its concrete value is
- * environment-dependent; the tests therefore assert the stable observable contract — HTTP status,
- * {@code text/plain} content type, the {@code no-cache} response directive, a non-blank body, and
- * stability across repeated/authenticated calls — rather than an exact version string.
+ * the port and has been removed (see RST1). The build version is the niord-base version
+ * ({@link org.niord.core.NiordBaseVersion}, which the build writes into the filtered
+ * {@code niord-base.properties}), so its concrete value is build-dependent; the tests therefore assert
+ * that it is that version with no unreplaced placeholder, and the stable observable contract — HTTP
+ * status, {@code text/plain} content type, the {@code no-cache} response directive, a non-blank body,
+ * and stability across repeated/authenticated calls — rather than an exact version string.
  *
  * <p>Because the endpoint is unsecured, these tests create no data and need no cleanup. The negative
  * cases assert that {@code @PermitAll} truly means "no token required" (a token neither helps nor
@@ -75,9 +77,9 @@ class VersionRestServiceITTest extends ITTest {
 
     @Test
     void buildVersionIsNeverTheLiteralUndefinedFallback() {
-        // VersionRestService delegates to NiordApp.getBuildVersion(), which only returns the literal
-        // "undefined" when /version.properties cannot be loaded. Since the resource is packaged on the
-        // classpath, the running application must report a real version, not the fallback.
+        // VersionRestService delegates to NiordApp.getBuildVersion(), which answers the niord-base
+        // version; the literal "undefined" was the answer of an earlier version source that could not be
+        // read, and the running application must never report it.
         String body = given()
                 .when().get(BUILD_VERSION_PATH)
                 .then().statusCode(200)
@@ -85,7 +87,20 @@ class VersionRestServiceITTest extends ITTest {
 
         assertNotNull(body);
         assertFalse("undefined".equals(body),
-                "build version should be resolved from version.properties, not the 'undefined' fallback");
+                "build version should be a real version, not the 'undefined' fallback");
+    }
+
+    @Test
+    void buildVersionIsTheNiordBaseVersion() {
+        // The build writes the version into niord-base.properties only; a resource nothing filters
+        // answered its placeholder on every build
+        String body = given()
+                .when().get(BUILD_VERSION_PATH)
+                .then().statusCode(200)
+                .extract().asString().trim();
+
+        assertEquals(NiordBaseVersion.get(), body);
+        assertFalse(body.contains("${") || body.contains("@"), "an unreplaced placeholder: " + body);
     }
 
     @Test

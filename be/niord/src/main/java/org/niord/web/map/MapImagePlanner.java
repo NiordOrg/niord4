@@ -30,6 +30,7 @@ import org.niord.model.geojson.PointVo;
 import org.niord.web.map.MapImageMark.Pen;
 import org.niord.web.map.OpenLayersGeometry.FlatBuilder;
 import org.niord.web.map.OpenLayersGeometry.Geom;
+import org.niord.web.map.OpenLayersGeometry.GeometryCollection;
 import org.niord.web.map.OpenLayersGeometry.LineString;
 import org.niord.web.map.OpenLayersGeometry.MultiLineString;
 import org.niord.web.map.OpenLayersGeometry.MultiPoint;
@@ -140,7 +141,7 @@ public final class MapImagePlanner {
      *   <li>a polygon gets the pen on its outline and no fill, and the tag at its interior point; a multi-polygon
      *       a tag per polygon;</li>
      *   <li>anything else (a geometry collection) gets the pen on its lines and outlines, one tag at the centre of
-     *       its extent, and no point symbol for its points;</li>
+     *       its extent, and the style's point symbol at every position of its points;</li>
      *   <li>a feature whose {@value #APPROXIMATE_KEY} property is {@code true} also gets the approximate-position
      *       adornment: at every position of a point, at the tag position of anything else.</li>
      * </ul>
@@ -196,6 +197,10 @@ public final class MapImagePlanner {
                 } else {
                     replay.render(geometry, null, line, null);
                     replay.render(interiorGeometry(geometry), null, null, tag);
+                    if (geometry instanceof GeometryCollection) {
+                        // A symbol with no geometry of its own: the replay draws it on the points of the collection
+                        replay.render(geometry, null, null, point);
+                    }
                 }
 
                 if (Boolean.TRUE.equals(properties.get(APPROXIMATE_KEY))) {

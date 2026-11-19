@@ -158,7 +158,8 @@ Editors. The extent is saved with *Save area*, like the other fields.
   unsaved changes.
 * To move an area to another parent area, drag it by the grip at the right end of its row and drop
   it on the new parent, or on the empty space below the tree to make it a root area. Niord asks
-  first (_Move area?_) and names the area and its new parent.
+  first (_Move area?_) and names the area and its new parent. An area cannot move under one of its
+  own sub-areas: Niord then says _The area was not moved_ and gives the reason.
 
 [#deleting-an-area]
 === Deleting an Area
@@ -167,8 +168,9 @@ Select the area and click *Delete* in the toolbar, then confirm with _Delete are
 deleted with all its sub-areas.
 
 An area that is in use cannot be deleted: when the area, or one of its sub-areas, is given to a
-message in any status, has firing periods or is used by a domain, Niord says _Error deleting area_
-and keeps it. Make such an area inactive instead.
+message in any status, has firing periods, is used by a domain or is the area of a NAVTEX
+transmitter, Niord says _The area was not deleted_, names what uses it, and keeps the area. Make
+such an area inactive instead, or take it out of use first.
 
 [#areas-actions]
 === The Area Actions Menu
@@ -184,7 +186,8 @@ image::AreasActionMenu.png[The Area actions menu, 167]
 * *Re-index published messages* computes again where each published message of the current domain
   belongs in its area, from the message sorting of its area. Use it after you have changed the
   _Message sorting_ of an area. It overwrites the order that editors have set by hand with the Sort
-  Area action, in every area of the domain.
+  Area action, in every area of the domain. Niord asks first, because the hand-made order cannot be
+  restored: *Re-index* goes on, *No* leaves the order as it is.
 * *Generate firing area messages…* is shown only in a domain that has a firing schedule; see
   <<areas-firing-areas>>.
 

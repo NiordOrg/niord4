@@ -27,8 +27,8 @@ import org.niord.core.publication.series.SeriesCadence;
 import org.niord.core.publication.series.resolve.TimeRelation;
 import org.niord.core.publication.PublicationDesc;
 import org.niord.core.publication.vo.PublicationStatus;
+import org.niord.core.repo.RepoPaths;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -47,10 +47,16 @@ import java.util.List;
  * goes through a name inherits that, and the corruption is already public.
  *
  * PATHS TRAVEL VERBATIM, REVISION SEGMENT AND ALL (R6). Legacy stores bytes at
- * <repoPath>/<revision>/<fileName> and that exact string is the citation href
- * inside stored message HTML. Re-deriving a flat path would 404 every imported
- * file and every citation pointing at it -- 1,077 public URLs -- and 42 of those
- * rows no longer have their bytes at all, so the path is the only record left.
+ * <repoPath>/<revision>/<fileName>, and the link a descriptor carries, which is
+ * also the citation href inside stored message HTML, names that file. The
+ * revision is NOT always the publication's current one: the old product raised it
+ * each time a publication was opened for editing, so a released file often sits
+ * in an older revision folder, and the link is what says which. The filePath is
+ * therefore taken from the link where it names a file under the publication's
+ * folder, and built from the current revision only where it does not
+ * (filePath). Re-deriving a flat path would 404 every imported file and every
+ * citation pointing at it, and some rows no longer have their bytes at all, so
+ * the path is the only record left.
  */
 public final class LegacyIssueTranslation {
 
@@ -309,17 +315,61 @@ public final class LegacyIssueTranslation {
     }
 
     /**
-     * The stored file path, verbatim, revision segment included.
+     * The file path under the publication's CURRENT revision folder.
      *
      * Kept as a function rather than inlined because the containment rule that
      * the containment invariant asserts -- filePath startsWith issue.repoPath -- is only meaningful
      * if both sides are built the same way.
+     *
+     * Not always where the file is: see {@link #filePath(Publication, PublicationDesc)}.
      */
     public static String filePath(Publication legacy, String fileName) {
         if (legacy.getRepoPath() == null || fileName == null || fileName.isBlank()) {
             return null;
         }
         return legacy.getRepoPath() + "/" + legacy.getRevision() + "/" + fileName;
+    }
+
+    /**
+     * The path of the file a legacy descriptor serves: what its link names, when
+     * the link is a repository link under the publication's own folder; otherwise
+     * the file under the current revision folder.
+     *
+     * THE LINK WINS because it is the one record of where the file went. The old
+     * product raised a publication's revision each time the publication was opened
+     * for editing, whether or not a new file was uploaded, so a released file can
+     * sit in an older revision folder than the current one -- and the link, which
+     * the public site serves, still names it there. A filePath built from the
+     * current revision would then name no file: the repository import's closing
+     * check reports it missing, the archive before a replacement finds nothing to
+     * archive, and a corrected upload is written where no link points.
+     *
+     * The link takes the FOLDER, the descriptor the NAME. The link's path is
+     * URL-encoded where the file name needed it, and the store holds the name as
+     * it was written, so the link is taken only where one of its spellings
+     * ({@link RepoPaths#candidates}) ends in the descriptor's own file name. A link
+     * whose name is another, or that lies outside the publication's folder, is
+     * not taken, and the current revision's path stands: guessing a spelling
+     * would give a name the store may not hold, and the import check counts such
+     * a row. The issue's files live under its repoPath, and the containment
+     * invariant says so.
+     */
+    public static String filePath(Publication legacy, PublicationDesc desc) {
+        String derived = filePath(legacy, desc.getFileName());
+        String folder = RepoPaths.normalize(legacy.getRepoPath());
+        if (derived == null || folder == null || folder.isEmpty()
+                || desc.getLink() == null || !desc.getLink().startsWith(RepoPaths.FILE_URL_PREFIX)) {
+            return derived;
+        }
+        List<String> links = RepoPaths.fileLinkPaths(desc.getLink());
+        if (links.size() != 1) {
+            return derived;
+        }
+        return RepoPaths.candidates(links.getFirst()).stream()
+                .filter(p -> RepoPaths.isBelow(p, folder))
+                .filter(p -> RepoPaths.nameOf(p).equals(desc.getFileName()))
+                .findFirst()
+                .orElse(derived);
     }
 
     /**
@@ -343,7 +393,7 @@ public final class LegacyIssueTranslation {
             desc.setName(d.getTitle());
             desc.setFileName(d.getFileName());
             desc.setLink(d.getLink());
-            desc.setFilePath(filePath(legacy, d.getFileName()));
+            desc.setFilePath(filePath(legacy, d));
         }
     }
 }

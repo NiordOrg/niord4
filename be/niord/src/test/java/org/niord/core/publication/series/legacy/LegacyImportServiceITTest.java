@@ -35,6 +35,7 @@ import org.niord.core.publication.series.SeriesCadence;
 import org.niord.core.publication.series.PublicationIssue;
 import org.niord.core.publication.series.SeriesStatus;
 import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.report.FmReport;
 import org.niord.model.publication.PublicationType;
 import org.niord.test.ITTest;
 import org.niord.test.Tx;
@@ -502,6 +503,8 @@ public class LegacyImportServiceITTest extends ITTest {
         LegacyTemplateRulings.CompilationShape shape =
                 LegacyTemplateRulings.compilationFor("accumulated-yearly-ntm");
         assertNotNull(shape, "the ruling this case is about is gone from the table");
+        // The ruled report has to exist, or the plan refuses (the case below).
+        ensureReport(shape.reportId());
 
         Publication weeklyTemplate = legacyTemplate("Weekly NTM", null);
         Publication annualTemplate = legacyTemplate("Accumulated Yearly NTM", null);
@@ -600,6 +603,74 @@ public class LegacyImportServiceITTest extends ITTest {
         } finally {
             cleanUpImported();
         }
+    }
+
+    /**
+     * The report a compilation ruling assigns is checked at PLAN time.
+     *
+     * The ruling sets the report at apply time, after every other check, and
+     * neither the activation nor the publish checklist asks whether a named report
+     * exists. A database without it would import and activate cleanly, and the
+     * series' first release would have no report to render.
+     */
+    @Test
+    @Transactional
+    public void aPlanRefusesWhenTheReportACompilationRulingAssignsDoesNotExist() {
+        ensureDomain("niord-nm");
+        ensureDomain(LegacyTemplateRulings.DEFAULT_DOMAIN);
+
+        LegacyTemplateRulings.CompilationShape shape =
+                LegacyTemplateRulings.compilationFor("accumulated-yearly-ntm");
+        assertNotNull(shape, "the ruling this case is about is gone from the table");
+        assertEquals(0L, (long) em.createQuery(
+                        "SELECT COUNT(r) FROM FmReport r WHERE r.reportId = :id", Long.class)
+                .setParameter("id", shape.reportId()).getSingleResult(),
+                "the fixture carries the built-in reports only, as a database restored from "
+                        + "the old system does");
+
+        Publication weeklyTemplate = legacyTemplate("Weekly NTM", null);
+        Publication annualTemplate = legacyTemplate("Accumulated Yearly NTM", null);
+        Publication weeklyIssue = legacyPublication("Weekly NTM 1", weeklyTemplate);
+        Publication annualIssue = legacyPublication("Accumulated Yearly NTM 1", annualTemplate);
+
+        LegacyImportService.Plan plan = importService.planFrom(
+                List.of(weeklyTemplate, annualTemplate), List.of(weeklyIssue, annualIssue));
+
+        List<String> refused = plan.report().getProblems().stream()
+                .filter(p -> "REPORT_NOT_FOUND".equals(p.getCode()))
+                .map(p -> p.getTitle() + ": " + p.getDetail())
+                .toList();
+        assertEquals(1, refused.size(), "the ruled report '" + shape.reportId() + "' is missing and "
+                + "the plan does not say so: " + plan.report().getProblems().stream()
+                        .map(p -> p.getCode() + " " + p.getDetail()).toList());
+        assertTrue(refused.getFirst().startsWith("accumulated-yearly-ntm:")
+                        && refused.getFirst().contains("'" + shape.reportId() + "'"),
+                "the problem names neither the series nor the report: " + refused);
+        assertFalse(plan.isClean());
+
+        // A ruling whose source series this estate does not carry does not apply, so
+        // its report is not asked for: the series imports unconverted.
+        LegacyImportService.Plan alone = importService.planFrom(
+                List.of(annualTemplate), List.of(annualIssue));
+        assertTrue(alone.report().getProblems().stream()
+                        .noneMatch(p -> "REPORT_NOT_FOUND".equals(p.getCode())),
+                "a ruling that will not apply refused the import: " + alone.report().getProblems()
+                        .stream().map(p -> p.getCode() + " " + p.getDetail()).toList());
+    }
+
+    /** A report the rulings name, created on first use. */
+    // Joins the caller's transaction, as ensureDomain does, so the row is rolled back.
+    void ensureReport(String reportId) {
+        if (em.createQuery("SELECT COUNT(r) FROM FmReport r WHERE r.reportId = :id", Long.class)
+                .setParameter("id", reportId).getSingleResult() > 0) {
+            return;
+        }
+        FmReport r = new FmReport();
+        r.setReportId(reportId);
+        r.setName(reportId);
+        r.setTemplatePath("/templates/messages/message-list-pdf.ftl");
+        em.persist(r);
+        em.flush();
     }
 
     /** A domain the rulings name, created on first use. */

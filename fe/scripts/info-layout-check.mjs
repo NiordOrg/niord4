@@ -15,7 +15,7 @@
  * depends on the width of the screen and on the language: a row of labels that fits in Danish
  * wraps in Kalaallisut. jsdom lays nothing out, so no unit test can see any of it. This script
  * opens the built artefact in Chromium, answers every /rest call from the fixture below, and
- * asserts ten things:
+ * asserts thirteen things:
  *
  *   1. At 320, 640, 1024 and 1920 px, in every language the build offers, every control of the
  *      menu bar — the four links and each language flag — lies inside the viewport and is the
@@ -35,7 +35,10 @@
  *   6. At 320, 640 and 1280 px, in every language the build offers, every field name of a message
  *      card shows whole — none cut to an ellipsis, none wider than its box — and the longest
  *      field name the language's bundle has is among them.
- *   7. At 390 px every chip of the filter bar is at least 40 px tall.
+ *   7. At 390 px every chip of the filter bar is at least 40 px tall, on the current list and
+ *      while an issue is browsed, when the bar names the issue in place of the main types; and
+ *      at 320 px, in every language the build offers, the browsed issue's page does not scroll
+ *      sideways.
  *   8. In a forced-colours theme each pressed filter chip looks unlike every unpressed one.
  *   9. On the card that carries every field, a link in the message text and an attachment's file
  *      name are underlined and coloured apart from the text around them, and a publication
@@ -51,6 +54,9 @@
  *  12. Served over plain HTTP under the policy the image sends, the teaser and the map view each
  *      ask for base-map tiles and raise no Content-Security-Policy violation — and no page of the
  *      whole run raises one.
+ *  13. At 320 × 568, 320 × 256, 768 × 500 and 1280 × 900, the map view's panel of messages
+ *      without a position covers none of the chart's own controls: the zoom buttons, the layer
+ *      switcher and every link of the credits are each the topmost element at their centre.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -394,6 +400,11 @@ export function answerRest(url) {
     return json(MESSAGES.filter((m) => !areaId || String(m.areas[0].parent.id) === areaId));
   }
   if (url.pathname === '/rest/public/v1/publications') return json(PUBLICATIONS);
+  const publication = /^\/rest\/public\/v1\/publication\/(.+)$/.exec(url.pathname);
+  if (publication) {
+    const found = PUBLICATIONS.find((p) => p.publicationId === decodeURIComponent(publication[1]));
+    if (found) return json(found);
+  }
   return json({ error: `${url.pathname} is not in the layout check's fixture` }, 404);
 }
 
@@ -457,6 +468,8 @@ function menuLabel(lang) {
 // ---------------------------------------------------------------------------------------------
 
 const MENU_CONTROLS = 'app-main-menu nav a, app-main-menu nav button';
+/** The address Browse opens on the fixture's issue. */
+const BROWSED = `/messages/details?publicationId=${PUBLICATIONS[0].publicationId}`;
 const FLAGS = 'app-main-menu nav button';
 
 /** Two frames: a resize observer's measurement and the layout that reads it have both landed. */
@@ -573,6 +586,57 @@ function mapProblems(page, pinned) {
     }
     return problems;
   }, pinned);
+}
+
+/**
+ * Every control of the chart that the panel of messages without a position, or anything else,
+ * covers at its centre: the zoom buttons, the layer switcher's boxes and each link of the
+ * credits. The fixture's messages carry no position, so the panel is always there; a run that
+ * finds none says so rather than holding by default.
+ */
+async function mapControlsCovered(page) {
+  // Where the bars are not pinned the chart is as tall as the viewport and starts below them.
+  await page.evaluate(() =>
+    document.querySelector('app-message-map').scrollIntoView({ block: 'start' }),
+  );
+  await settle(page);
+  return page.evaluate(() => {
+    const panel = document.querySelector('#no-pos-messages')?.parentElement;
+    if (!panel) return ['the panel of messages without a position is not shown'];
+    const controls = [
+      ...document.querySelectorAll(
+        'app-message-map .ol-zoom-in, app-message-map .ol-zoom-out, ' +
+          'app-message-map .ol-layer-switcher input, app-message-map .ol-attribution a',
+      ),
+    ].filter((control) => control.getClientRects().length > 0);
+    if (controls.length === 0) return ['the chart shows no control at all'];
+    const problems = [];
+    for (const control of controls) {
+      const name =
+        control.getAttribute('title') ||
+        control.textContent.trim() ||
+        control.closest('label')?.textContent.trim() ||
+        control.className;
+      const box = control.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) {
+        problems.push(`"${name}" lies outside the viewport`);
+        continue;
+      }
+      const hit = document.elementFromPoint(x, y);
+      if (!hit || !control.contains(hit)) {
+        problems.push(
+          `"${name}" is covered by ${
+            hit && panel.contains(hit)
+              ? 'the panel of messages without a position'
+              : `<${hit?.tagName.toLowerCase()} class="${hit?.className}">`
+          }`,
+        );
+      }
+    }
+    return problems;
+  });
 }
 
 /**
@@ -1193,6 +1257,20 @@ if (invokedDirectly) {
     await open(page, '/messages/details');
     record('filter chips at 390 px', await smallFilterChips(page));
 
+    //    While an issue is browsed the bar names it, with its document and a close control in
+    //    place of the main types: still 40 px chips on a phone, and nothing wider than 320 px,
+    //    in every language — its title is the widest thing the bar holds.
+    await page.setViewportSize({ width: 390, height: 900 });
+    await open(page, BROWSED);
+    record('filter chips at 390 px, browsing an issue', await smallFilterChips(page));
+    await page.setViewportSize({ width: 320, height: 800 });
+    await open(page, BROWSED);
+    const browsedFlags = await page.locator(FLAGS).count();
+    for (let index = 0; index < browsedFlags; index++) {
+      const lang = await switchLanguage(page, index);
+      record(`browsing an issue at 320 px, ${lang}`, await sidewaysScroll(page));
+    }
+
     // 8. A pressed filter chip still looks pressed in a forced-colours theme.
     await page.setViewportSize({ width: 1280, height: 900 });
     await open(page, '/messages/details');
@@ -1218,6 +1296,20 @@ if (invokedDirectly) {
         'a message part whose table changes width on a language switch',
         'the build offers no Danish and English to switch between',
       );
+
+    // 13. The panel of messages without a position leaves every control of the chart uncovered —
+    //     on a phone, at 400 % zoom, where the chart is barely taller than the panel's cap, and
+    //     beside the chart on a wider screen. Run before 12, whose last record covers every page.
+    for (const [width, height] of [
+      [320, 568],
+      [320, 256],
+      [768, 500],
+      [1280, 900],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await open(page, '/messages/map');
+      record(`map controls at ${width} × ${height}`, await mapControlsCovered(page));
+    }
 
     // 12. Over plain HTTP the base map asks for its tiles within the policy, and nothing on any page
     //     of the run broke the policy.

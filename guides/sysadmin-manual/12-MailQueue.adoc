@@ -36,6 +36,39 @@ fails too, the mail becomes _Error_, and Niord does not try again.
 So check the queue now and then for mails with the status _Error_, and put right what caused them, such as a
 mistyped address of a user or a contact.
 
+A mailing-list trigger that fails also leaves a mail with the status _Error_, which is never sent. Its subject
+starts "Not sent: mailing list", and names the list and either the message (a status change trigger) or the trigger
+(a scheduled trigger); its last error says why it failed. A scheduled trigger is tried again within the hour, and
+leaves at most one such mail a day while it keeps failing.
+
+After a restart, the server builds its text search index again, which takes some minutes on a large database. A
+scheduled trigger whose message query has a text term (`query=`) and that runs in those minutes would find only the
+messages indexed so far, so in the first half hour after the restart it waits, and is tried again every two
+minutes. It leaves one mail with the status _Error_, which is never sent, whose subject starts "Delayed: mailing
+list" and names the list and the trigger, and whose last error says that the text search index is being built again
+and by when the mail is made, at the latest half an hour after the restart; the server log has one WARN saying the
+trigger waits for the index. The trigger's mail is made as soon as the index is complete. When the index is still
+not complete half an hour after the restart, the mail is sent all the same, and the log has a WARN naming the
+trigger, since the mail may list too few messages.
+
+Niord notes every status change of a message in its database, together with the change, until the mails of the
+status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts
+just after the change: at once when the server is up again, or within a minute. Niord also notes, for each status
+change, which of its triggers are done: their mails are in the queue, or their failure is (the mail with the status
+_Error_ above). When a trigger is neither, for example because the database could not be reached for a moment, the
+status change is kept and tried again a few minutes later, and only the triggers not yet done are run again: the
+mailing lists that got their mail do not get it twice. When the server stops while it is putting a status change's
+mails in the queue, that status change is taken again within a few minutes (ten when the stop cut a trigger short),
+in the same way. A status change taken
+again is mailed for the status it had, so its mail can arrive after the mail of a later status change of the same
+message, for example a cancellation. A status change that could not be finished in five attempts (the server
+stopped, a trigger hung, or the database could not be reached, each time) is given up: each of its status change
+triggers not yet done leaves a mail with the status _Error_, as above, whose subject names its mailing list and whose
+last error says it was given up, and the server log has an ERROR naming the message. When even that mail cannot be
+saved, Niord tries five more times, minutes apart, and after that once an hour: the status change is kept until the
+mail with the status _Error_ is saved, and each try leaves an ERROR in the server log naming the trigger, its mailing
+list and the message.
+
 The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>):
 
 * `ALL` sends every mail.
@@ -85,7 +118,10 @@ others it has) and its subject.
 === Mail Details
 
 Click the *Open mail details* button (the envelope) at the end of a row to see the whole mail: its sender and
-recipients, when it was put in the queue and when it was sent, the last error and the number of attempts when
-sending failed, its subject and its content.
+recipients, when it was put in the queue and, by its status, when it is due to be sent (_Due_, for a pending
+mail; after a failed attempt, the time of the next one), when it was sent (_Sent_) or when the last attempt was
+made (_Last attempt_, for a mail with the status _Error_; a mailing-list trigger's failure record shows no such
+row, since it was never tried), the last error and the number of attempts when sending failed, its subject and its
+content.
 
 image::MailQueueDetails.png[Mail Details Dialog, 400]

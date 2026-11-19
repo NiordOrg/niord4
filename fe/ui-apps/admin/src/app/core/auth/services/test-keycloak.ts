@@ -57,6 +57,11 @@ export function createTestKeycloak(bundle: TestTokenBundle): Keycloak {
     init(): Promise<boolean> {
       return Promise.resolve(true);
     },
+    isTokenExpired(minValidity = 0): boolean {
+      // As the adapter judges it: expired when it ends within minValidity seconds from now.
+      const expiresAtMs = bundle.obtainedAtMs + bundle.expiresIn * 1000;
+      return Date.now() + minValidity * 1000 >= expiresAtMs;
+    },
     updateToken(): Promise<boolean> {
       // No-op: the bundle is good for the duration of the run. If a test outlives
       // expiresIn, the fixture should fetch a fresh bundle (one per worker process).

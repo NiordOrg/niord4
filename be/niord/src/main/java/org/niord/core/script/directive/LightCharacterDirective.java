@@ -18,6 +18,7 @@ package org.niord.core.script.directive;
 
 import freemarker.core.Environment;
 import freemarker.template.SimpleScalar;
+import freemarker.template.Template;
 import freemarker.template.TemplateDirectiveBody;
 import freemarker.template.TemplateDirectiveModel;
 import freemarker.template.TemplateException;
@@ -98,6 +99,12 @@ public class LightCharacterDirective implements TemplateDirectiveModel {
     static String reason(Exception e) {
         String message = e.getMessage();
         return StringUtils.isBlank(message) ? e.getClass().getName() : StringUtils.substringBefore(message, "\n").trim();
+    }
+
+    /** The name of the template being rendered, for a directive's log line, or "?" when it has none */
+    static String templateName(Environment env) {
+        Template main = env.getMainTemplate();
+        return (main != null && main.getName() != null) ? main.getName() : "?";
     }
 
 }

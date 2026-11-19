@@ -42,7 +42,8 @@ const CONFIG: MasterDetailAdminConfig = {
  * Areas admin section: a master-detail page (drag-to-re-parent area tree beside an inline area
  * editor) on the shared `MasterDetailTreeAdmin` shell + `HierarchicalAdminPage` base. Area-specifics:
  * the full-loaded parent drives the editor's message-sorting inheritance; the cog adds
- * re-index-published-messages and (firing-schedule domains) firing-area message generation.
+ * re-index-published-messages (asks first) and (firing-schedule domains) firing-area message
+ * generation.
  */
 @Component({
   selector: 'app-areas-page',
@@ -155,10 +156,20 @@ export class AreasPage extends HierarchicalAdminPage<AreaRef, AreaEditorModel> {
     });
   }
 
+  /**
+   * Re-sorts every published message of the domain within its area, replacing the order editors
+   * set by hand, which cannot be restored: asks first, with a destructive confirm.
+   */
   private recomputePublished(): void {
-    this.messagesAreaSort.recomputeAreaSortOrder().subscribe({
-      next: () => this.notifications.success('admin.areas.toast.reindexed'),
-      error: () => this.notifications.error('admin.areas.toast.reindexError'),
+    this.confirm.confirmDestructive({
+      header: this.transloco.translate('admin.areas.confirmReindexMessages.header'),
+      message: this.transloco.translate('admin.areas.confirmReindexMessages.message'),
+      acceptLabel: this.transloco.translate('admin.areas.confirmReindexMessages.accept'),
+      accept: () =>
+        this.messagesAreaSort.recomputeAreaSortOrder().subscribe({
+          next: () => this.notifications.success('admin.areas.toast.reindexed'),
+          error: () => this.notifications.error('admin.areas.toast.reindexError'),
+        }),
     });
   }
 }

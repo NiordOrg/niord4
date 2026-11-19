@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
+import org.niord.core.mailinglist.MailingList;
 import org.niord.model.search.PagedSearchResultVo;
 import org.niord.test.ITTest;
 
@@ -320,6 +321,48 @@ class ContactServiceITTest extends ITTest {
         em.clear();
 
         assertNull(em.find(Contact.class, id), "the deleted contact must be gone from the database");
+    }
+
+    /** An active mailing list with the given id and contacts, persisted in the test transaction */
+    private MailingList persistList(String mailingListId, Contact... contacts) {
+        MailingList list = new MailingList();
+        list.setMailingListId(mailingListId);
+        list.setActive(true);
+        list.createDesc("en").setName(mailingListId);
+        list.getContacts().addAll(List.of(contacts));
+        em.persist(list);
+        return list;
+    }
+
+    /**
+     * A contact who is a recipient of mailing lists is taken off them and deleted; the lists and their other
+     * recipients stay. FAILS on the pre-fix code, whose delete the database refused on the lists' link to the
+     * contact.
+     */
+    @Test
+    @Transactional
+    void deleteContactTakesTheContactOffItsMailingLists() {
+        Contact listed = contactService.createContact(
+                newContact("it-delete-listed@example.com", "IT Listed", "en"));
+        Contact stays = contactService.createContact(
+                newContact("it-delete-stays@example.com", "IT Stays", "en"));
+        Integer listA = persistList("it-contact-delete-a", listed, stays).getId();
+        Integer listB = persistList("it-contact-delete-b", listed).getId();
+        Integer listedId = listed.getId();
+        em.flush();
+
+        assertTrue(contactService.deleteContact(listedId));
+        em.flush();
+        em.clear();
+
+        assertNull(em.find(Contact.class, listedId), "the contact is deleted");
+        MailingList a = em.find(MailingList.class, listA);
+        MailingList b = em.find(MailingList.class, listB);
+        assertNotNull(a, "the lists stay");
+        assertNotNull(b, "the lists stay");
+        assertEquals(List.of("it-delete-stays@example.com"), a.getContacts().stream().map(Contact::getEmail).toList(),
+                "the list keeps its other recipient");
+        assertTrue(b.getContacts().isEmpty(), "the contact is off the list");
     }
 
     @Test

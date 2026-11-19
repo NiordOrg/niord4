@@ -95,12 +95,13 @@ value, the NW one. `messageType` is the message's own type (`TEMPORARY_NOTICE`, 
 a feature property the kit reads as a plain string; no layer sets it yet and no row names it, so it
 changes nothing until both happen. Then the GeoJSON geometry type decides what that style draws:
 
-| Geometry                         | Drawn                                                                                    | Standard rule                                             |
-| -------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `Point` / `MultiPoint`           | the NW-in-circle symbol, 32 px, anchored at its pivot (the centre of its box)            | point → `NavigationalWarningFeaturePart`                  |
-| `LineString` / `MultiLineString` | dashed magenta stroke **plus** upright "NW" tags repeated along the line                 | curve → dashed pen + periodic tag symbol                  |
-| `Polygon` / `MultiPolygon`       | dashed magenta outline with **no area fill**, plus exactly one tag at the interior point | surface → dashed boundary + one centred tag, never filled |
-| anything else                    | treated as a surface (dashed outline + centred tag)                                      | the catalogue's `QUESMRK1` "?" fallback is not reproduced |
+| Geometry                         | Drawn                                                                                                                            | Standard rule                                             |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `Point` / `MultiPoint`           | the NW-in-circle symbol, 32 px, anchored at its pivot (the centre of its box)                                                    | point → `NavigationalWarningFeaturePart`                  |
+| `LineString` / `MultiLineString` | dashed magenta stroke **plus** upright "NW" tags repeated along the line                                                         | curve → dashed pen + periodic tag symbol                  |
+| `Polygon` / `MultiPolygon`       | dashed magenta outline with **no area fill**, plus exactly one tag at the interior point                                         | surface → dashed boundary + one centred tag, never filled |
+| `GeometryCollection`             | dashed magenta stroke on its lines and outlines, one tag at the centre of its extent, and the point symbol at each of its points | each point keeps the point rule; the rest as a surface    |
+| anything else                    | treated as a surface (dashed outline + centred tag)                                                                              | the catalogue's `QUESMRK1` "?" fallback is not reproduced |
 
 Deriving the style from the geometry type is safe because the S-124 producer does the same: its GML
 template maps `Point` → `S100:Point`, `LineString` → `Curve` and `Polygon` → `Surface`, so the three
@@ -373,7 +374,8 @@ Three things on the map are not S-124 concepts and are kept on purpose:
   except tag spacing, which is resolution-multiplied precisely so the on-screen result does _not_
   change with zoom.
 - **Cancelled warnings must not draw on the map**, while staying discoverable in a list. That is a
-  filtering rule, not a portrayal one — see [features/messages.md](features/messages.md).
+  filtering rule, not a portrayal one: the public site's chart leaves cancelled messages out of a
+  list it draws (`MessageMapComponent`), and the map of one message draws it whatever its status.
 
 ## OpenLayers techniques you need to know before editing
 
@@ -504,9 +506,9 @@ and Grid views show. The rules below are settled; change one only with the produ
   image and is left as it is. It may carry WMS pixels: the capture dialog shows the administration
   app's base layers, the WMS included where the deployment enables it.
 - **A geometry collection** gets the pen on its lines and outlines, one tag at the centre of its
-  extent and no point symbol for its points — the web's rule ("anything else" under "Rules by
-  geometry primitive"), which the renderer mirrors. Whether its points should draw their symbols
-  is open in the [backlog](backlog.md); a decision changes the rule on both sides.
+  extent and the point symbol at each of its points — the web's rule (`GeometryCollection` under
+  "Rules by geometry primitive"), which the renderer mirrors. A change to it changes both sides,
+  with the golden fixture of the case.
 
 ## What is deliberately not implemented
 
@@ -574,6 +576,8 @@ applications, because one module now draws both:
 11. A line or a surface carries only its own tags — no point symbol at its middle, at any zoom.
 12. A hover or a click inside an area, away from its outline and its tag, names that area's
     message, and so does one at the middle of a point symbol, between its ring and its letters.
+13. A geometry the geometry editor merged from a point and a line or an area draws the point symbol
+    at the point, beside the pen and the one tag of the rest.
 
 ### Golden fixtures
 

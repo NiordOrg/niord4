@@ -337,7 +337,10 @@ public class IssueRenderService {
     private void renderTo(RenderRequest request, OutputStream out) {
         FmReport report;
         try {
-            report = fmReportService.getReport(request.reportId());
+            // Strict on purpose: the report is the document's layout, and a fallback would
+            // publish a wrong document. getReport's fallback to the standard report belongs
+            // to the message print only.
+            report = fmReportService.findByReportId(request.reportId());
         } catch (Exception e) {
             throw new RenderFailedException("no such report: " + request.reportId(), e);
         }
@@ -373,6 +376,14 @@ public class IssueRenderService {
 
             if (request.reportParams() != null) {
                 builder = builder.data(request.reportParams());
+                // The zone the document is dated in: the series' (IssuePublishService puts it there).
+                // Carried as data it reached only the templates that set it themselves; applied here,
+                // every date the template prints -- the cover date and each notice's publication
+                // date -- is in that zone, whatever template row the deployment draws.
+                Object zone = request.reportParams().get(FmTemplateService.TIME_ZONE_PROPERTY);
+                if (zone != null) {
+                    builder = builder.timeZone(zone.toString());
+                }
             }
 
             builder.dictionaryNames("web", "message", "pdf")

@@ -1,5 +1,6 @@
 import Feature from 'ol/Feature';
 import type Geometry from 'ol/geom/Geometry';
+import GeometryCollection from 'ol/geom/GeometryCollection';
 import LineString from 'ol/geom/LineString';
 import MultiPoint from 'ol/geom/MultiPoint';
 import Point from 'ol/geom/Point';
@@ -11,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type PortrayalSelectRow, selectStyleId, styleForMessageFeature } from './map-styles';
 
-function feat(geom: Point | LineString | Polygon, props: Record<string, unknown> = {}): Feature {
+function feat(geom: Geometry, props: Record<string, unknown> = {}): Feature {
   const feature = new Feature({ geometry: geom });
   for (const [key, value] of Object.entries(props)) feature.set(key, value);
   return feature;
@@ -77,6 +78,25 @@ describe('styleForMessageFeature — S-124 portrayal', () => {
     expect(styles[0].getFill()).toBeNull(); // S-124: surfaces are not filled
     expect(iconSrc(styles[1])).toContain('nw-tag.svg');
     expect(typeof styles[1].getGeometry()).toBe('function');
+  });
+
+  it('geometry collection → the pen, one centred tag and the point symbol for its points', () => {
+    const collection = new GeometryCollection([POINT(), LINE(), POLY()]);
+    const styles = styleForMessageFeature(feat(collection, { mainType: 'NW' }), BASE);
+    expect(styles).toHaveLength(3);
+    expect(styles[0].getStroke()?.getLineDash()).toEqual([13.6, 6.8]);
+    expect(styles[0].getFill()).toBeNull();
+    expect(iconSrc(styles[1])).toContain('nw-tag.svg');
+    expect(typeof styles[1].getGeometry()).toBe('function');
+    // No geometry function: OpenLayers draws the symbol on the collection's points only.
+    expect(iconSrc(styles[2])).toBe('assets/portrayal/nw-point.svg');
+    expect(styles[2].getGeometry()).toBeNull();
+  });
+
+  it('NM geometry collection → the NM point symbol for its points', () => {
+    const collection = new GeometryCollection([POINT(), LINE()]);
+    const styles = styleForMessageFeature(feat(collection, { mainType: 'NM' }), BASE);
+    expect(iconSrc(styles[styles.length - 1])).toBe('assets/portrayal/nm-point.svg');
   });
 
   it('buffered feature → the single buffered overlay style, no halos even when selected', () => {

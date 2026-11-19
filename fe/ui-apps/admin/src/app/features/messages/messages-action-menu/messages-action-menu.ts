@@ -11,6 +11,7 @@ import { TagPicker } from '../components/tag-picker/tag-picker';
 import { MessageComparisonDialogService } from '../dialogs/message-comparison-dialog/message-comparison-dialog.service';
 import { MailingListReportsDialog } from '../dialogs/mailing-list-reports-dialog/mailing-list-reports-dialog';
 import { MessageImportDialog } from '../dialogs/message-import-dialog/message-import-dialog';
+import { MyMailsDialog } from '../dialogs/my-mails-dialog/my-mails-dialog';
 import { MessageStatusUpdateDialog } from '../dialogs/message-status-update-dialog/message-status-update-dialog';
 import { MessageTagsDialogService } from '../dialogs/message-tags-dialog/message-tags-dialog.service';
 import { MessageAreaSortLauncher } from '../services/message-area-sort.launcher';
@@ -38,6 +39,7 @@ interface SortMenuItem extends MenuItem {
     MessageImportDialog,
     MessageStatusUpdateDialog,
     MailingListReportsDialog,
+    MyMailsDialog,
     TranslocoPipe,
   ],
   template: `
@@ -65,6 +67,7 @@ interface SortMenuItem extends MenuItem {
     <app-message-import-dialog #importDialog />
     <app-message-status-update-dialog #statusDialog />
     <app-mailing-list-reports-dialog #reportsDialog />
+    <app-my-mails-dialog #myMailsDialog />
   `,
 })
 export class MessagesActionMenu {
@@ -87,6 +90,7 @@ export class MessagesActionMenu {
   private readonly tagPicker = viewChild.required(TagPicker);
   private readonly importDialog = viewChild.required(MessageImportDialog);
   private readonly reportsDialog = viewChild.required(MailingListReportsDialog);
+  private readonly myMailsDialog = viewChild.required(MyMailsDialog);
   private readonly statusDialog = viewChild.required(MessageStatusUpdateDialog);
 
   protected readonly t = {
@@ -94,6 +98,7 @@ export class MessagesActionMenu {
     printSelection: translateSignal('menu.action.print.selection'),
     mailingListReport: translateSignal('menu.action.report'),
     mail: translateSignal('menu.action.mail'),
+    myMails: translateSignal('menu.action.my_mails'),
     tagAdd: translateSignal('menu.action.tag.add_selection'),
     tagRemove: translateSignal('menu.action.tag.remove_selection'),
     tagManage: translateSignal('messages.shell.action.tagManage'),
@@ -161,6 +166,13 @@ export class MessagesActionMenu {
         this.actionItem(this.t.mail(), 'lucideMail', () =>
           this.mailService.mailSelection(this.selection.selectedIds()).subscribe(),
         ),
+      );
+    }
+    // The mails the user sent (from the mail dialog or a comment) and what became of them; the
+    // read asks for the user role in the domain.
+    if (hasDomainRole) {
+      items.push(
+        this.actionItem(this.t.myMails(), 'lucideMail', () => this.myMailsDialog().open()),
       );
     }
 

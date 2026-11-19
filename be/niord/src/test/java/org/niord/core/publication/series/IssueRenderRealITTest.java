@@ -49,10 +49,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -109,7 +112,7 @@ public class IssueRenderRealITTest extends ITTest {
 
     /**
      * A weekly report of DK's whose template renders an issue (a base product template).
-     * Without the row the report service falls back to "standard" (RENDER3), so it is ensured first.
+     * Without the row the release fails (no such report), so it is ensured first.
      * "nm-report" includes {@code nm-report-pdf-intro.ftl}, an empty file until C4.2a, whose include
      * then failed; since C4.2a the bootstrap carries it as a one-line comment. This test keeps
      * "nm-tp-report", which it was written against. The base product's own reports, "standard" and
@@ -325,8 +328,8 @@ public class IssueRenderRealITTest extends ITTest {
      * Both reports draw {@code message-list-pdf.ftl}, whose front page prints
      * {@code ${searchCriteria}} with no default. The issue render passed no caption, so FreeMarker
      * failed on a missing variable and both the preview and the release answered RENDER_FAILED;
-     * Standard is the first report the series editor offers, and the fallback of a series whose
-     * report is missing (RENDER3). The render now gives the template the issue's name as the caption.
+     * Standard is the first report the series editor offers. The render now gives the template the
+     * issue's name as the caption.
      */
     @ParameterizedTest
     @ValueSource(strings = {"standard", "draft"})
@@ -371,6 +374,47 @@ public class IssueRenderRealITTest extends ITTest {
             assertTrue(trailer(bytes).contains("%%EOF"),
                     "the released " + lang + " document on '" + reportId + "' is truncated");
         }
+    }
+
+    /**
+     * A series whose report does not exist is neither previewed nor released: the render used to
+     * fall back to the standard report and publish the generic message list as the issue's document.
+     */
+    @Test
+    @Transactional
+    public void anIssueWhoseReportDoesNotExistIsNotPreviewedNorReleased() {
+        String missing = "no-such-report-" + UUID.randomUUID();
+        PublicationIssue issue = anIssueInTwoLanguages(missing);
+        writtenFolder = issue.getRepoPath();
+        previewFolder = paths.previewRoot().resolve(issue.getPublicId());
+
+        IssueRenderService.RenderFailedException preview = assertThrows(
+                IssueRenderService.RenderFailedException.class, () -> publishService.preview(issue.getId()),
+                "a preview on a report that does not exist drew a document");
+        assertTrue(causeChainMentions(preview, "no such report: " + missing),
+                "the preview's failure does not name the missing report: " + preview);
+
+        IssueRenderService.RenderFailedException release = assertThrows(
+                IssueRenderService.RenderFailedException.class,
+                () -> publishService.publish(issue.getId(), new IssuePublishService.PublishRequest(
+                        IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(1_700_000_000_000L))),
+                "a release on a report that does not exist published a document");
+        assertTrue(causeChainMentions(release, "no such report: " + missing),
+                "the release's failure does not name the missing report: " + release);
+        assertEquals(IssueStatus.OPEN, issue.getStatus(), "a release on a missing report flipped the status");
+        for (PublicationIssueDesc d : issue.getDescs()) {
+            assertNull(d.getFilePath(), "language " + d.getLang() + " got a document from a report that does not exist");
+        }
+    }
+
+    /** Whether the message of the exception or of one of its causes contains the text. */
+    private static boolean causeChainMentions(Throwable t, String text) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            if (c.getMessage() != null && c.getMessage().contains(text)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

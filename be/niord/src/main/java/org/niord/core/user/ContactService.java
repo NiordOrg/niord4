@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import org.apache.commons.lang3.StringUtils;
 import org.niord.core.db.CriteriaHelper;
+import org.niord.core.mailinglist.MailingList;
 import org.niord.core.service.BaseService;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
@@ -231,7 +232,8 @@ public class ContactService extends BaseService {
     }
 
     /**
-     * Deletes the contact with the given ID
+     * Deletes the contact with the given ID and takes it off every mailing list that holds it. The link is kept on
+     * the list's side only, so without that the database would refuse the delete.
      * @param id the ID of the contact to delete
      * @return if the contact was deleted
      * @noinspection all
@@ -240,7 +242,13 @@ public class ContactService extends BaseService {
     public boolean deleteContact(Integer id) {
         Contact original = findById(id);
         if (original != null) {
+            List<MailingList> mailingLists = em.createNamedQuery("MailingList.findByContact", MailingList.class)
+                    .setParameter("contact", original)
+                    .getResultList();
+            mailingLists.forEach(mailingList ->
+                    mailingList.getContacts().removeIf(c -> c.getId().equals(original.getId())));
             remove(original);
+            log.info("Deleted contact " + original.getId() + ", taken off " + mailingLists.size() + " mailing lists");
             return true;
         }
         return false;

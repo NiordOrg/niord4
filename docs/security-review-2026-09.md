@@ -476,7 +476,7 @@ stays open and why the risk is low. (F-X146 was the twelfth; it is fixed since t
 | Id | Severity | What stays open | Why it is accepted |
 |---|---|---|---|
 | F-X128 | medium | Anyone can read the title and status of an unreleased publication issue by its id. | Titles only: the document link of an unreleased issue is withheld since P06. A public-only variant of the endpoint means changing its callers too. |
-| N-03 | medium | The legacy publication write endpoints check the admin role, not the publication's domain. | Admins only, on the previous publication model, which no screen of the administration app edits any more; locking its admin is on the publications go-live task sheet (`fe/docs/publications/go-live/GO-LIVE-TASKS.md`). |
+| N-03 | medium | The legacy publication write endpoints check the admin role, not the publication's domain. | Admins only, on the previous publication model, which no screen of the administration app edits any more; locking its admin is on the publications go-live task sheet, kept outside this repository. |
 | F-X6 | low | The map image of a message, drafts included, is served to anyone who has the message's UID. | The UID is a random UUID, and the image shows the geometry only. |
 | F-X64 | low | Many open GET endpoints return administration configuration to anonymous callers. | Configuration, not message content. Closing it means deciding, endpoint by endpoint, which reads the public site and the administration app's guest mode need; `be/docs/potential-errors.md` (SECAUD-12) keeps the systemic item. |
 | N-17 | low | The anonymous legacy publication search loads both publication tables on every call, whatever page it asks for. | The cost is bounded by the size of the two tables, and anonymous callers get the public tier and at most 1000 rows (P06, P13). |
@@ -639,8 +639,9 @@ section:
 The same file's SECAUD-12 now carries F-X64 as accepted; SECAUD-15, MASSASSIGN-2, MASSASSIGN-3 and
 RENDER6 are removed, because the sweep closed them; and U6, SECAUD-9, LUCENE-2, TMPL6, PORT-5 and REPO3
 now describe the code as the sweep left it. Since then LUCENE-2 was fixed and removed from that file,
-and the open RENDER6 there now (the message-list PDF's labels and time stamp) is a later, unrelated entry
-under the reused code.
+and in November 2026 TMPL6 and REPO3 were too (what is still open of REPO3, a link stored earlier
+with a raw semicolon, is REPO6 there now); and the open RENDER6 there now (the message-list
+PDF's labels and time stamp) is a later, unrelated entry under the reused code.
 
 New items in [`fe/docs/backlog.md`](../fe/docs/backlog.md):
 

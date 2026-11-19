@@ -761,15 +761,15 @@
     "note": "This replaces NiordProxyDownloads.png. The shot may be shared with a public-site guide (publications.md pub-14). The 'Historical NtM and Publications' tab is the other tab."
   },
   {
-    "manual": "admin-manual", "chapterFile": "05-Publications.adoc", "line": 818, "file": "PublicSitePublicationBrowse.png",
+    "manual": "admin-manual", "chapterFile": "05-Publications.adoc", "line": 825, "file": "PublicSitePublicationBrowse.png",
     "caption": "Browsing an Issue on the Public Site", "inline": false,
-    "shows": "The public site's Details view filtered to one issue (after 'Browse'): the bar with Print and the one area chip (The Waters South of Zealand), and the issue's one message, NM-820-26",
-    "kind": "page", "disposition": "new", "app": "info",
+    "shows": "The public site's Details view filtered to one issue (after 'Browse'): the bar naming the issue by its title, with Download and the close button (X), then Print and the issue's one area chip, and the issue's one message",
+    "kind": "page", "disposition": "retake", "app": "info",
     "route": "/messages/details?publicationId=<id>", "role": "anonymous",
     "steps": "Downloads page: click 'Browse' on the first 'NtM Week …' row",
     "crop": "viewport",
     "needsData": "a published weekly issue in a public category",
-    "note": "The page names no issue: while a publication is browsed, the filter bar offers only Print and the areas of its messages (message-filter.component.ts browsingPublication). The text says so, since nothing in the picture says which issue it is."
+    "note": "To be taken again: the filter bar now names the issue while it is browsed, with its document and a close button, in place of the main-type, active-now and root-area chips (message-filter.component.ts browsingPublication)."
   },
   {
     "manual": "admin-manual", "chapterFile": "05-Publications.adoc", "line": 840, "file": "PublicationImportSeriesConfirm.png",

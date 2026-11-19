@@ -319,6 +319,32 @@ class MessageMailRestServiceITTest extends ITTest {
         }
     }
 
+    /**
+     * A free-text query the search cannot read (an unbalanced quote) is the caller's error: the mail answers 400,
+     * schedules nothing and logs no ERROR line, as the list, the print and the export do.
+     */
+    @Test
+    void anUnreadableFreeTextQueryAnswers400WithoutAnErrorLine_andNoMailIsScheduled() {
+        Logger logger = (Logger) LoggerFactory.getLogger(MessageMailRestService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            post(accessToken("editor"), Map.of("mailTo", List.of("query-" + mailToken + "@example.com"),
+                            "mailSubject", "IT"))
+                    .queryParam("lang", "en")
+                    .queryParam("query", "nw \"")
+                    .when().post(SEND)
+                    .then().statusCode(400);
+
+            assertEquals(0, scheduledMailsTo(mailToken), "no mail is scheduled for a query that never ran");
+            List<ILoggingEvent> errors = appender.list.stream().filter(e -> e.getLevel() == Level.ERROR).toList();
+            assertEquals(List.of(), errors, "a client error is not logged at ERROR");
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // POST /send (MAIL12): the recipients, the subject and the text are the JSON body, so a long text
     // goes through and none of it is in the request line; the search parameters stay in the query.

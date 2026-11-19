@@ -11,6 +11,7 @@ import { Message, Area } from '../../../../core/models/message.model';
 import {
   computeAreaHeadings,
   filterByAreaIds,
+  isActiveAt,
   sortDescs,
 } from '../../../../core/models/message.util';
 import { Icon } from '../../../../shared/icons/icon';
@@ -149,6 +150,13 @@ export class MessagePrintViewComponent {
   /** The moment the sheet was made, stamped on it once and rendered in the deployment's zone. */
   private readonly printedAt = new Date();
 
+  /**
+   * `?active=true` narrows a list to what is in force, judged at the instant stamped on the
+   * sheet. The public API has no such filter, so it is applied here; a publication is printed
+   * whole, as the page lists it.
+   */
+  private readonly activeOnly = this.query['active'] === 'true' && !this.query['publication'];
+
   constructor() {
     // The sheet is printed in the language its address names. Writing it into the language
     // service is state arriving from outside the signal graph, which is what a constructor write
@@ -186,7 +194,6 @@ export class MessagePrintViewComponent {
               externalize: 'false',
               ...(this.mainTypes().length > 0 ? { mainType: this.mainTypes() } : {}),
               ...(this.query['areaId'] ? { areaId: this.query['areaId'] as string } : {}),
-              ...(this.query['active'] ? { active: this.query['active'] as string } : {}),
               ...(this.query['publication']
                 ? { publication: this.query['publication'] as string }
                 : {}),
@@ -203,7 +210,10 @@ export class MessagePrintViewComponent {
     }
     const listed = this.listResource.hasValue() ? this.listResource.value() : [];
     const sorted = listed.map((message) => sortDescs(message, language));
-    return filterByAreaIds(sorted, this.subAreaIds);
+    const inForce = this.activeOnly
+      ? sorted.filter((message) => isActiveAt(message, this.printedAt.getTime()))
+      : sorted;
+    return filterByAreaIds(inForce, this.subAreaIds);
   });
 
   /** A printed list is grouped by area; one message is printed on its own, without a heading. */

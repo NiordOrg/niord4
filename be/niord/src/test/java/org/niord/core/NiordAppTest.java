@@ -102,6 +102,16 @@ class NiordAppTest {
         }
     }
 
+    @Test
+    void buildVersionIsTheNiordBaseVersion() {
+        // The build writes the version into niord-base.properties only; a resource nothing filters would
+        // answer its placeholder on every build
+        String version = new NiordApp(mock(SettingsService.class)).getBuildVersion();
+        assertEquals(NiordBaseVersion.get(), version);
+        assertFalse(version.isBlank());
+        assertFalse(version.contains("${") || version.contains("@"), "an unreplaced placeholder: " + version);
+    }
+
     /** Settings answering adminAppUrl and baseUri with the given values */
     private static SettingsService linkSettings(String adminAppUrl, String baseUri) {
         var settings = mock(SettingsService.class);

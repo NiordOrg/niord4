@@ -177,8 +177,8 @@ class NiordIntegrationFaultITTest extends ITTest {
 
     /**
      * INT5 (a). The other server first serves two warnings, which are imported PUBLISHED. Then it answers
-     * {@code 200 []} (its source series renamed, an empty server behind the URL, or its own search swallowing a
-     * failure, PORT-2). Every imported warning of the target series used to be cancelled with {@code updateStatus},
+     * {@code 200 []} (its source series renamed, or an empty server behind the URL; an older server's search could
+     * also answer a failure that way). Every imported warning of the target series used to be cancelled with {@code updateStatus},
      * with nothing logged, and the next normal answer imported the two again as new rows.
      *
      * <p>Now an empty answer for a series that holds imported warnings is not read as a withdrawal of all of them:

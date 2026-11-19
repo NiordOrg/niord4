@@ -7,7 +7,9 @@
 
 _Map_ in the menu bar shows the messages on a map: the same messages as the _Details_ and _List_
 views, the ones you chose in the filter bar. When it opens, the map is placed so that every message
-on it is in view.
+on it is in view. One kind is left off the map: a cancelled message of a publication you browse
+(see <<browse-publication>>) is listed in _Details_ and _List_ with its _Cancelled_ mark, but not
+drawn, so that it is not read as a message in force. An expired one is drawn.
 
 The pictures in this chapter show the map with only _Navigational Warnings_ switched on in the
 filter bar (see <<choosing-messages>>), so that the symbols stand apart. With _Notices to Mariners_
@@ -66,7 +68,8 @@ image::PublicSiteMapTooltip.png[Pointing at a message on the map, 255]
 
 Click a symbol, or inside an area, to open the message in its window (see <<message-window>>). Where
 several messages lie at the same place, the click opens the first one the box names; the arrow
-buttons of the window then step through the messages of the map in the order of the list.
+buttons of the window then step through the messages of the list, in its order, a cancelled one
+included.
 
 [#additional-messages]
 === Messages without a position

@@ -64,11 +64,11 @@
  * break splits is not seen. Check 8 reads a link one line at a time and its target's headings
  * whole.
  *
- * The publications specifications and the go-live runbooks are excluded: they are kept
- * verbatim until go-live and are guarded by scripts/publications instead. The country kit's own
- * documents are read; its example country is not, and of init's templates only the agent
- * template (templates/AGENTS.md) is, and only for its `.niord/kit/` and `.niord/base/` paths:
- * its other links and paths are written for a country repository, where they resolve.
+ * The publications specifications are excluded: they are kept verbatim until go-live and are
+ * guarded by scripts/publications instead. The country kit's own documents are read; its example
+ * country is not, and of init's templates only the agent template (templates/AGENTS.md) is, and
+ * only for its `.niord/kit/` and `.niord/base/` paths: its other links and paths are written for
+ * a country repository, where they resolve.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -86,10 +86,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Code. A folder under ui-apps/ holding either is an application.
 const AGENT_FILES = ['AGENTS.md', 'CLAUDE.md'];
 
-const EXCLUDED = [
-  /^docs\/publications\/go-live\//,
-  /^docs\/publications\/(DATA-MODEL|API-CONTRACT|COMPILATION-SERIES-PLAN)\.md$/,
-];
+const EXCLUDED = [/^docs\/publications\/(DATA-MODEL|API-CONTRACT|COMPILATION-SERIES-PLAN)\.md$/];
 
 // The folders beside the applications that the documentation names by path: the three both
 // applications build from, the workspace's own scripts and the language packs. The country kit,

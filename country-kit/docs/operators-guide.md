@@ -399,7 +399,12 @@ declares are listed: a row of an earlier version that no code declares stays in 
 unlisted. A password value is never shown. **Import...** and **Export...** take a settings file.
 
 Check at least the addresses (`baseUri`, `adminAppUrl`, `authServerUrl`), the mail sender
-(`mailSender`), and `documentationUrl`, which the Help links open. The language keys are in
+(`mailSender`), who mail really goes to (`mailValidRecipients`: `LOG`, the shipped value, only logs a
+mail; `ALL` sends it to its recipients, and a list of addresses sends it only to those, any other
+recipient replaced by the first), the deployment ribbon (`mode`: anything but `production` shows a
+ribbon in both applications; the shipped settings file says `test`), and `documentationUrl`, which
+the Help links open. A copy of production's data carries production's values of these two, so give
+each environment its own at the server's start (below). The language keys are in
 [A new language in a running deployment](#a-new-language-in-a-running-deployment).
 
 A value can also be given to the server at its start, as a system property or an environment
@@ -525,8 +530,22 @@ version needs and the old database never had is missing until you import it.
   a developer's own changes only when a person says so.
 - **A stale script row** copied from an older deployment stays as it is until a sysadmin imports the
   release file that carries the current one and ticks its overwrite.
-- **The message index** (a known fault, not yet fixed): an index of an older format in the home folder's
-  `message-index` folder stops the start. The remedy, the installer emptying that folder before the
-  first start, is not verified.
+- **The message index**: an index the backend cannot read in the home folder's `message-index` folder (one of
+  an older Lucene format, or a damaged one) is removed at the start, with a WARN that names the folder, and
+  rebuilt from the database.
+- **The jobs that act on the copied data.** From its first minute the backend publishes the messages
+  the database holds as due, expires those past their end, runs the firing schedules, sends the Mail
+  Queue's pending mails and runs the mailing lists' due triggers. To start on the data without that,
+  until you have checked it, add these to the chart value `app.javaOpts`, beside the options it
+  holds, and take them out again for the start that puts the deployment to use:
+
+  ```text
+  -Dniord.schedule.auto-publish-cron=- -Dniord.schedule.auto-expire-cron=-
+  -Dniord.schedule.firing-exercise-cron=- -Dniord.schedule.mail-send-cron=-
+  -Dniord.schedule.mailing-list-trigger-cron=-
+  ```
+
+  `mailValidRecipients` given as `LOG` at the start (step 15) keeps the mail from leaving, but the
+  jobs would still change the data.
 
 Every part on a real volume is verified at the deploy step.

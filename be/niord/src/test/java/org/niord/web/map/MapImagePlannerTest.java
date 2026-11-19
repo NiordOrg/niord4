@@ -22,6 +22,7 @@ import org.niord.core.portrayal.PortrayalDefinition;
 import org.niord.core.portrayal.PortrayalTestSupport;
 import org.niord.model.geojson.FeatureCollectionVo;
 import org.niord.model.geojson.FeatureVo;
+import org.niord.model.geojson.GeometryCollectionVo;
 import org.niord.model.geojson.GeometryVo;
 import org.niord.model.geojson.LineStringVo;
 import org.niord.model.geojson.MultiPointVo;
@@ -341,6 +342,28 @@ class MapImagePlannerTest {
         assertEquals(2 * portrayal.print().symbol("nm-point").width(), icon.width(), 1e-9);
         // The symbol's pivot lies on the point, within the whole-pixel snap
         assertEquals(256, icon.x() + portrayal.symbol("nm-point").anchorX() * icon.width(), 1.0);
+    }
+
+    /**
+     * The points of a geometry collection get the style's point symbol, every position of a multi-point too; the
+     * line in it gets the pen and the collection one tag
+     */
+    @Test
+    void thePointsOfAGeometryCollectionGetThePointSymbol() {
+        FeatureCollectionVo[] fcs = fcs(new GeometryCollectionVo(new GeometryVo[] {
+                new PointVo(new double[] { 10.95, 55.5 }),
+                new MultiPointVo(new double[][] { { 11.0, 55.52 }, { 11.02, 55.48 } }),
+                new LineStringVo(new double[][] { { 10.9, 55.45 }, { 11.05, 55.47 } }) }));
+        TileWindow window = MapImagePlanner.frame(fcs, 256, 7);
+
+        List<MapImageMark> marks = MapImagePlanner.plan(fcs, "NM", null, portrayal, portrayal.print(256), window);
+
+        List<String> symbols = marks.stream()
+                .filter(IconMark.class::isInstance)
+                .map(mark -> ((IconMark) mark).symbolId())
+                .toList();
+        assertEquals(List.of("nm-tag", "nm-point", "nm-point", "nm-point"), symbols);
+        assertEquals(1, marks.stream().filter(PathMark.class::isInstance).count(), "the pen on the line: " + marks);
     }
 
     private static double[][][] deepCopy(double[][][] rings) {

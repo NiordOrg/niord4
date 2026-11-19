@@ -82,6 +82,16 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   (`messageIndexDeleteOnStartup`) and refilled 5,000 messages a pass, so before the marker had the id (LUCENE-4,
   fixed 2026-11-12) a pass that ended among messages sharing one `updated` time left the rest of them out of the
   index. An index written before then has no such marker and is filled again from the first message.
+- Until a pass has made every message searchable again (`MessageLuceneIndex.allMessagesIndexed()`: cleared when
+  the index is deleted, set once a pass that found fewer messages than it may index has committed), a free-text
+  search answers from the messages indexed so far. It is not refused (the owner's decision of 2026-11-19):
+  `MessageSearchService` marks its result, `PagedSearchResultVo.indexIncomplete` (`true`, and left out of the JSON
+  otherwise), and the administration app's _Messages_ list shows a warning above such a result. It reads the
+  index's state before and after the search, so a re-index that empties the index meanwhile is marked too. The
+  mark is set only by the Lucene branch: a search without free text and a PostgreSQL search are never marked. The public API
+  takes no free text and serializes the messages alone, the export drops the mark, a scheduled mailing-list trigger
+  waits for the index in the half hour after the start (`MailingListExecutionService.INCOMPLETE_INDEX_WAIT`), and the
+  print, the message mail and the mailing-list report pass the answer on without it ([`potential-errors.md`](./potential-errors.md), LUCENE-7).
 - Both passes also look five minutes behind their marker (`MessageQueryService.INDEX_LOOK_BACK`, a constant).
   A message's `updated` time is stamped when its transaction writes it, and transactions commit in another
   order: a message stamped before the time a pass read up to, and committed after that pass, lay below the
@@ -174,3 +184,7 @@ removed, because they change which messages a given query returns):
 - `MessageFreeTextSearchToggleITTest` — end-to-end through `MessageSearchService.search`: the toggle
   switches backends (the plural `harbours` matches only the stemming PostgreSQL backend), results come back
   in relevance order (best match first), plus the match-nothing semantics.
+- `MessageLuceneIndexStartWindowTest` and `MessageSearchIndexIncompleteITTest` — the window after a start: the
+  index says it is not complete until a pass has committed every message, and a free-text search in the window
+  answers as before with its result marked, on the service and the editors' search, never on a search without
+  free text, on the PostgreSQL backend or on the public API.

@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *   <li>A <em>compile-time</em> error (syntactically invalid expression) surfaces as a
  *       checked {@link ScriptException} thrown from {@code getInstance}.</li>
  *   <li>A <em>runtime</em> error inside {@code matches} (e.g. calling a non-existent
- *       method) throws {@link IllegalArgumentException} naming the filter (MAILLIST2);
+ *       method) throws {@link IllegalArgumentException} naming the filter;
  *       reading a property of, or calling a function on, a value that is null (a null
  *       {@code msg}, a missing promulgation) yields {@code false}.</li>
  *   <li>The expression is free to ignore {@code msg} entirely, so a constant-{@code true}
@@ -111,7 +111,7 @@ public class MessageFilterTest {
 
     @Test
     public void runtimeErrorInsideMatchesThrowsNamingTheFilter() throws ScriptException {
-        // Compiles fine, but invoking msg.noSuchMethod() throws at runtime: an error, not "no match" (MAILLIST2)
+        // Compiles fine, but invoking msg.noSuchMethod() throws at runtime: an error, not "no match"
         MessageFilter filter = MessageFilter.getInstance("msg.noSuchMethod()");
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> filter.matches(new Message()),
                 "A runtime error inside the filter must surface, not read as no match");

@@ -75,7 +75,8 @@ not work. The _missing-path report_ lists every path that something names but th
 a category, a mailing list trigger, a promulgation type or a print report, a path included or loaded by another
 script resource, a path the Niord program itself needs, and a language variant of a path that is named (see
 <<language-specific-freemarker-templates,Language-Specific Freemarker Templates>>). It also lists a built-in print
-report (`standard`, `draft` or `public`) that the deployment lacks. Niord writes the report to its log every time
+report (`standard`, `draft` or `public`), and a print report a publication series or issue names, that the
+deployment lacks. Niord writes the report to its log every time
 it starts, except on a new database whose bootstrap has not been applied (while it waits, runs or has failed), and a
 system administrator can ask for it at any time at the address `/rest/script-resources/missing-paths` of the
 server; it only reads. When you import a release file, its preview marks the paths the report lists (see
@@ -98,7 +99,8 @@ system. The stored script resources themselves run for every user whose work cal
 message template or prints, and when a mailing list sends its mails.
 
 The following example searches for published messages of a firing exercises message series (here with the
-invented series id "example-fe"):
+invented series id "example-fe"). It calls `searchOrFail`, as a script that mails or publishes what it finds
+should, so that a failed search fails the run instead of answering an empty list:
 
 [source,javascript]
 ----
@@ -107,7 +109,7 @@ var seriesIds = java.util.Collections.singleton('example-fe');
 var searchParams = new org.niord.core.message.MessageSearchParams();
 searchParams.seriesIds(seriesIds)
     .statuses(org.niord.model.message.Status.PUBLISHED);
-var searchResult = searchService.search(searchParams);
+var searchResult = searchService.searchOrFail(searchParams);
 ----
 
 [#inclusion-in-javascript]
@@ -247,6 +249,13 @@ example:
 The "field" attribute (a JavaScript expression) names the field of the message to fill in. The "update"
 attribute says whether to replace the field or append to it. The "format" attribute says what the content is: with
 "text", for example, the content is tidied into a single line of text.
+
+A field the template cannot fill in makes the whole run fail: a description in a language the message part does not
+have, a promulgation the message does not carry, or a "field" that is not a property path like the ones above (names,
+and calls with a quoted argument such as `getDesc('en')`). The other fields are still tried first, the editor's
+template dialog or *Generate* shows an error, and the server log names each field that failed ("Error applying field
+template" or "Skipping field template"). Guard a field that may be missing with an `<#if>`, as the shipped templates
+do for the promulgations.
 
 Most script resources are run for one language. The templates of a message template must handle every language
 of the message themselves, and change the language they write in with:

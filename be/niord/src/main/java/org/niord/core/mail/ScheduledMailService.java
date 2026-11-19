@@ -33,12 +33,16 @@ import org.slf4j.Logger;
 import jakarta.persistence.criteria.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.niord.core.settings.Setting.Type.Integer;
@@ -86,6 +90,13 @@ public class ScheduledMailService extends BaseService {
     // bounded java.util.concurrent.ExecutorService to preserve the limited-concurrency
     // (SMTP connection) behavior. invokeAll(...) is unchanged (ExecutorService method).
     final ExecutorService managedExecutor = Executors.newFixedThreadPool(5);
+
+    /**
+     * The longest a run of {@link #sendPendingMails()} waits for its sender threads. Well above the worst honest
+     * run: at most {@code mailMaxPerMinute} mails on five threads, each exchange with the SMTP server bounded by the
+     * session's time limits ({@link MailConfig}). A test sets it shorter.
+     */
+    Duration sendRunLimit = Duration.ofMinutes(10);
 
     /**
      * Searches the filtered set of scheduled mails
@@ -175,6 +186,30 @@ public class ScheduledMailService extends BaseService {
     }
 
     /**
+     * Returns the mails queued with the given sender since the given date, newest first.
+     * <p>
+     * The sender is the address the mail service recorded when the mail was queued
+     * ({@code IMailable.computeInternetAddress()} of the user who sent it), matched exactly. A blank sender matches
+     * nothing, so a user without a name and an e-mail address never sees the mails that carry no sender (the
+     * mailing lists' mails).
+     *
+     * @param sender the sender address to match
+     * @param since the earliest creation date to include
+     * @param max the maximum number of mails to return
+     * @return the mails queued by the sender since the date
+     */
+    public List<ScheduledMail> findBySender(String sender, Date since, int max) {
+        if (StringUtils.isBlank(sender)) {
+            return List.of();
+        }
+        return em.createNamedQuery("ScheduledMail.findBySender", ScheduledMail.class)
+                .setParameter("sender", sender)
+                .setParameter("since", since)
+                .setMaxResults(max)
+                .getResultList();
+    }
+
+    /**
      * Returns the pending scheduled mails
      * @return the pending scheduled mails
      */
@@ -192,8 +227,16 @@ public class ScheduledMailService extends BaseService {
      * mail's own transaction ({@code MailService.sendScheduledMail}), so a slow SMTP server costs at most as many
      * connections as there are sender threads. The class inherits a transaction for every method from
      * {@code BaseService}, so this one says it runs without.
+     * <p>
+     * The run waits at most {@link #sendRunLimit} for its sender threads, and each exchange with the SMTP server is
+     * bounded by the session's time limits ({@link MailConfig}), so a server that stops answering cannot stop the
+     * mail queue for good.
+     * <p>
+     * The schedule is the property {@code niord.schedule.mail-send-cron}, with the shipped value as its default;
+     * {@code -} ({@link Scheduled#CRON_DISABLED}) switches the job off, so that a copy of another deployment's data
+     * can be started without its pending mails being sent and marked sent.
      */
-    @Scheduled(cron="24 * * * * ?")
+    @Scheduled(cron = "${niord.schedule.mail-send-cron:24 * * * * ?}")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void sendPendingMails() {
 
@@ -212,15 +255,42 @@ public class ScheduledMailService extends BaseService {
                     .collect(Collectors.toList());
 
             try {
-                // managedExecutor is a plain java.util.concurrent pool, outside Spring's MDC
-                // TaskDecorator. The calling thread is a @Scheduled sweep and so already carries a
-                // job id; wrapAll captures it once here so each mail's log lines name the sweep
-                // that sent it.
-                managedExecutor.invokeAll(MdcContext.wrapAll(tasks));
+                List<Integer> unfinished = runSenders(scheduledMailIds, tasks);
+                if (!unfinished.isEmpty()) {
+                    log.error("The run of pending scheduled mails passed its limit of " + sendRunLimit.toMinutes()
+                            + " minutes; the mails still being sent or not started, " + unfinished
+                            + ", stay pending and are tried again by a later run");
+                }
             } catch (InterruptedException e) {
                 log.error("Error sending scheduled emails: " + scheduledMailIds, e);
             }
         }
+    }
+
+    /**
+     * Runs the sender tasks on the sender threads and waits at most {@link #sendRunLimit} for them. A task not
+     * finished by then is cancelled: one not yet started is dropped, and its mail stays pending for a later run; a
+     * running one is interrupted, and the session's time limits end its exchange with the SMTP server.
+     *
+     * @param ids the ids of the mails, in the order of the tasks
+     * @param tasks the sender tasks
+     * @return the ids of the mails whose task did not finish within the limit
+     */
+    List<Integer> runSenders(List<Integer> ids, List<? extends Callable<ScheduledMail>> tasks)
+            throws InterruptedException {
+        // managedExecutor is a plain java.util.concurrent pool, outside Spring's MDC
+        // TaskDecorator. The calling thread is a @Scheduled sweep and so already carries a
+        // job id; wrapAll captures it once here so each mail's log lines name the sweep
+        // that sent it.
+        List<Future<ScheduledMail>> futures = managedExecutor.invokeAll(
+                MdcContext.wrapAll(tasks), sendRunLimit.toMillis(), TimeUnit.MILLISECONDS);
+        List<Integer> unfinished = new ArrayList<>();
+        for (int i = 0; i < futures.size(); i++) {
+            if (futures.get(i).isCancelled()) {
+                unfinished.add(ids.get(i));
+            }
+        }
+        return unfinished;
     }
 
     /**

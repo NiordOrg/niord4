@@ -41,7 +41,11 @@ import org.niord.test.ITTest;
 import org.niord.test.Tx;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.AopTestUtils;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -50,6 +54,7 @@ import java.util.List;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,8 +62,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Fault injection at the REST edges of the delivery paths: what a duty officer or a public client is told when a
  * step behind the endpoint does not do what was asked: the cascade-cancel across domains, the public API's malformed
- * wkt (API3 in be/docs/potential-errors.md), the outward callers of the search that turns its failures into an empty
- * answer (PORT-2 there), the UTM import's unreadable line, and the message endpoints given an incomplete body.
+ * wkt (API3 in be/docs/potential-errors.md), the editor's search given a query or an index it cannot read, the UTM
+ * import's unreadable line, and the message endpoints given an incomplete body.
  *
  * <p>The messages are committed with {@link Tx} (an HTTP request sees committed rows only) and removed afterwards.
  */
@@ -360,9 +365,8 @@ class DeliveryFaultRestITTest extends ITTest {
      */
     @Test
     void aSelfIntersectingWktPolygonIsAppliedAsGivenWithoutAServerError() {
-        // The search swallows its own failures into an empty answer (PORT-2), and an empty answer also leaves
-        // NW-001-26 out, so the status and the body alone cannot tell "applied" from "failed and swallowed". The log
-        // of the search says which: nothing at WARN or above.
+        // The public API's search lets its failures through, so a failed search would answer a 5xx here, not this
+        // 200. The log of the search is checked as well: nothing at WARN or above.
         var log = org.niord.test.JmsFaults.captureLog(org.niord.core.message.MessageSearchService.class);
         try {
             given().queryParam("messageSeries", "dma-nw").queryParam("lang", "en")
@@ -429,34 +433,81 @@ class DeliveryFaultRestITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // PORT-2's outward callers: the editor's search
+    // The editor's search: a query that cannot be read, and an index that cannot be read
     // ------------------------------------------------------------------------------------------- //
 
     /**
-     * PORT-2, the editor's search. A free-text query with an unbalanced quote ({@code "zz...}) makes the Lucene query
-     * parser throw a {@code ParseException}; {@code MessageSearchService} logs a WARN without the exception and goes on
-     * with no matching ids, so a signed-in editor's search answers 200 with no messages, the same answer as a search
-     * that matched nothing.
-     *
-     * <p>What is wrong: "no messages" for a query that was never run; a duty officer checking whether a warning
-     * exists is told it does not. The right assertion: 400 with "invalid query".
+     * The editor's search with a free-text query the Lucene parser cannot read (an unbalanced quote) answers 400,
+     * so the editor sees an error rather than "no messages" for a query that never ran.
      */
     @Test
-    void anUnbalancedQuoteInTheEditorsSearchAnswersNoMessagesInsteadOfInvalidQuery_documentsBug() throws Exception {
-        // The free-text index first rebuilt from the committed rows, as MessageSearchRestServiceITTest does: the index
-        // folder is shared by every application context of the run, each context empties it when it starts
-        // (MessageLuceneIndex.init), and a context closed within the five seconds before its start-up pass leaves it
-        // empty ("Error updating Lucene index: Error creating bean with name 'messageLuceneIndex'"). In the whole run
-        // of 2026-11-12 in UTC the control below then waited 90 seconds for a search that found nothing.
+    void anUnbalancedQuoteInTheEditorsSearchAnswersInvalidQuery() throws Exception {
+        rebuildTheIndexAndAwaitTheFixture();
+
+        given().auth().oauth2(accessToken())
+                .header("NiordDomain", "niord-nw")
+                .queryParam("query", "nw \"")
+                .queryParam("maxSize", 10)
+                .when().get("/rest/messages/search")
+                .then().statusCode(400);
+    }
+
+    /**
+     * The editor's search while the free-text index cannot be read (here its folder is swapped for an empty one, so
+     * opening the reader throws {@code IndexNotFoundException}) answers a server error, not 200 with no messages: a
+     * duty officer checking whether a warning exists is not told that it does not.
+     */
+    @Test
+    void aFreeTextSearchWhileTheIndexIsUnreadableAnswersAnErrorNotNoMessages() throws Exception {
+        rebuildTheIndexAndAwaitTheFixture();
+
+        // The shared index's own pass (MessageLuceneIndex.updateLuceneIndex, second 38 of every minute) must not run
+        // while its folder is swapped: it would fill the empty folder, and the shared index would miss what it indexed
+        Object index = AopTestUtils.getUltimateTargetObject(messageLuceneIndex);
+        awayFromSecond(38);
+        Object sharedFolder = ReflectionTestUtils.getField(index, "indexFolder");
+        Object sharedReader = ReflectionTestUtils.getField(index, "reader");
+        Path emptyFolder = Files.createTempDirectory("niord-it-index-down");
+        ReflectionTestUtils.setField(index, "indexFolder", emptyFolder);
+        ReflectionTestUtils.setField(index, "reader", null);
+        try {
+            given().auth().oauth2(accessToken())
+                    .header("NiordDomain", "niord-nw")
+                    .queryParam("query", "nw")
+                    .queryParam("maxSize", 10)
+                    .when().get("/rest/messages/search")
+                    .then().statusCode(greaterThanOrEqualTo(500));
+        } finally {
+            ReflectionTestUtils.setField(index, "indexFolder", sharedFolder);
+            ReflectionTestUtils.setField(index, "reader", sharedReader);
+        }
+    }
+
+    /**
+     * Rebuilds the free-text index from the committed rows, as MessageSearchRestServiceITTest does, and waits until
+     * "nw" (a token of every NW short id, NW-001-26 and on) finds the fixture's NW warnings. The index folder is shared
+     * by every application context of the run, each context empties it when it starts (MessageLuceneIndex.init), and a
+     * context closed within the five seconds before its start-up pass leaves it empty.
+     */
+    private void rebuildTheIndexAndAwaitTheFixture() throws Exception {
         messageLuceneIndex.recreateIndex();
-        // Control: "nw" (a token of every NW short id, NW-001-26 and on) finds the fixture's NW warnings once the
-        // index holds them
         org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(90))
                 .pollInterval(java.time.Duration.ofSeconds(2))
                 .until(() -> editorSearchTotal("nw") > 0);
+    }
 
-        assertEquals(0, editorSearchTotal("nw \""),
-                "the same query with an unbalanced quote answers 200 with no messages");
+    /**
+     * Waits until a per-minute job that runs at the given second of the minute is at least 20 seconds away and its
+     * last run was due at least five seconds ago. A narrowing of the window, not a lock.
+     */
+    private static void awayFromSecond(int cronSecond) throws InterruptedException {
+        while (true) {
+            int sinceRun = Math.floorMod(java.time.LocalTime.now().getSecond() - cronSecond, 60);
+            if (sinceRun >= 5 && sinceRun <= 40) {
+                return;
+            }
+            Thread.sleep(250);
+        }
     }
 
     private int editorSearchTotal(String query) {

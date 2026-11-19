@@ -508,5 +508,12 @@ describe('SafetyNetAreasPlugin', () => {
     // The 21 NAVAREA options carry their country labels.
     expect(Object.keys(en.admin.promulgation.safetynet.navareaOptions)).toHaveLength(21);
     expect(en.admin.promulgation.safetynet.navareaOptions.XIX).toBe('XIX - Norway');
+    // The position help states one sign per hemisphere: north and east positive, south and west negative.
+    for (const text of [
+      en.admin.promulgation.safetynet.centerTooltip,
+      en.admin.promulgation.safetynet.swCornerTooltip,
+    ]) {
+      expect(text).toContain('Positive for N and E, negative for S and W');
+    }
   });
 });

@@ -32,6 +32,19 @@ describe('PublicationService', () => {
     );
   });
 
+  // The publication being browsed is read on its own, and its document is offered beside its
+  // title, so its link is treated as a link of the list is.
+  it('points the repository link of one publication at this origin, as for the list', () => {
+    const parsed = service.parseOne({
+      publicationId: 'p1',
+      descs: [
+        { lang: 'en', link: 'https://niord.example.org/rest/repo/file/publications/p1/NtM.pdf' },
+      ],
+    });
+    expect(parsed.publicationId).toBe('p1');
+    expect(parsed.descs![0].link).toBe('/rest/repo/file/publications/p1/NtM.pdf');
+  });
+
   it('should leave a publication with no descriptions alone', () => {
     expect(service.parse([{ publicationId: 'p1' }])).toEqual([{ publicationId: 'p1' }]);
   });

@@ -68,7 +68,34 @@ describe('MessageTableViewComponent', () => {
     expect(list.querySelector('[aria-hidden="true"] app-icon')).toBeNull();
   });
 
-  it('says a read failed, where a list with nothing in it says nothing', () => {
+  // A blank page under the filter bar cannot be told from one that did not work.
+  it('says in words that a list arrived with nothing in it', () => {
+    const store = fakeMessagesStore();
+
+    TestBed.configureTestingModule({
+      imports: [MessageTableViewComponent, getTranslocoTestingModule()],
+      providers: [
+        provideTestNiordConfig(),
+        { provide: MessagesStore, useValue: store },
+        { provide: Dialog, useValue: { open: vi.fn() } },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    });
+
+    const fixture = TestBed.createComponent(MessageTableViewComponent);
+    fixture.detectChanges();
+    // The live region is there before the words, so they are announced when they land.
+    const status = (fixture.nativeElement as HTMLElement).querySelector('[role="status"]')!;
+    expect(status.textContent!.trim()).toBe('');
+
+    store.empty.set(true);
+    fixture.detectChanges();
+    expect(status.textContent!.trim()).toBe('No messages to show');
+    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')!;
+    expect(alert.textContent!.trim()).toBe('');
+  });
+
+  it('says a read failed, and nothing alarming for a list with nothing in it', () => {
     const store = fakeMessagesStore();
 
     TestBed.configureTestingModule({
@@ -124,14 +151,16 @@ describe('MessageTableViewComponent', () => {
 
     const list = (fixture.nativeElement as HTMLElement).querySelector('.message-details-list')!;
     const outline = [...list.children]
-      .slice(1)
+      .slice(2)
       .map((child) =>
         child.tagName === 'UL'
           ? `${child.getAttribute('role')}: ${[...child.children].map((li) => li.textContent!.trim().split(/\s+/).at(-1)).join(', ')}`
           : `${child.tagName}: ${child.textContent!.trim()}`,
       );
-    // After the live region, which says nothing while the list is there.
-    expect(list.firstElementChild!.getAttribute('role')).toBe('alert');
+    // After the two live regions, which say nothing while the list is there.
+    expect(list.children[0].getAttribute('role')).toBe('alert');
+    expect(list.children[1].getAttribute('role')).toBe('status');
+    expect(list.children[1].textContent!.trim()).toBe('');
     expect(outline).toEqual(['H4: The Sound', 'list: One, Two', 'H4: Kattegat', 'list: Three']);
     expect(list.querySelector('li h4')).toBeNull();
   });

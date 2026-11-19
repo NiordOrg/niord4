@@ -38,6 +38,24 @@ afterEach(() => {
 });
 
 describe('TimeField', () => {
+  it('a named trigger keeps its name and is described by the chosen time', async () => {
+    const { el, fixture } = setup('en', new Date(2026, 4, 14, 14, 30));
+    fixture.componentRef.setInput('ariaLabel', 'Send at');
+    await fixture.whenStable();
+    const button = el.querySelector('button')!;
+    expect(button.getAttribute('aria-label')).toBe('Send at');
+    const describedBy = button.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)?.textContent).toMatch(/2:30/);
+  });
+
+  it('an empty named field has no description', async () => {
+    const { el, fixture } = setup('en', null);
+    fixture.componentRef.setInput('ariaLabel', 'Send at');
+    await fixture.whenStable();
+    expect(el.querySelector('button')!.hasAttribute('aria-describedby')).toBe(false);
+  });
+
   it('shows the value in 12h AM/PM for English', async () => {
     const { el, fixture } = setup('en', new Date(2026, 4, 14, 14, 30));
     await fixture.whenStable();

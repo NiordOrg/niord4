@@ -9,8 +9,6 @@ import { filterTree, seedExpandKeys, setEquals } from './tree-filter';
  * fixed seed: every node whose label holds the query, in any case, is shown;
  * every node shown either matches, lies under a match, or leads to one; the nodes leading to a match
  * are expanded; nothing outside the tree is expanded; and an empty query changes nothing.
- * (The tree component's own caching of pruned rows is the backlog's "The entity tree's search prunes
- * only its top level"; it is not in this function.)
  */
 
 /** A small seeded generator (mulberry32): the same seed gives the same inputs on every run. */

@@ -137,9 +137,7 @@ test.describe('editor-manual: position editor', () => {
     await runAction(editor, 'Import geometry');
     const dialog = page.getByRole('dialog', { name: 'Import geometry' });
     await expect(dialog).toBeVisible();
-    // The tree opened by hand, the search box left empty: a search prunes only the top level of
-    // the tree in this build (the rows under Denmark stay), so a search term over the whole tree
-    // would show a search that does nothing.
+    // The tree opened by hand, the search box left empty.
     const baltic = dialog.locator('.tree-row').filter({ hasText: /^The Baltic Sea$/ });
     await baltic.getByRole('button', { name: 'Expand' }).click();
     await dialog.getByRole('button', { name: 'ES D 139 Bornholm E.' }).click();

@@ -197,6 +197,9 @@ The messages come in the order the first domain named keeps its messages in, whi
 order of the area tree. The search lists only messages written by an editor; a message the system
 made by itself is left out.
 
+The search takes no free text and does not use the server's text index, so its answer is complete
+in the minutes after a restart of the server too, when that index is being built again.
+
 The answer is a list of messages, each one as described in the
 link:../model/model.html#message[message model]. An example, taken from a test system and
 shortened (one message, one chart, and the position table cut), with the publication and the

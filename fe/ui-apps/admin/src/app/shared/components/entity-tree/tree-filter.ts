@@ -69,6 +69,26 @@ export function filterTree<T extends HierarchicalEntity>(
 }
 
 /**
+ * Each visible node's key mapped to the children it shows, at every depth, for a nested tree
+ * that must follow a search or a reload below its top level. The arrays are kept by reference:
+ * `filterTree` returns an unpruned node's own `children`, so an unchanged branch maps to the
+ * identical array.
+ */
+export function childrenByKey<T extends HierarchicalEntity>(
+  roots: readonly EntityTreeNode<T>[],
+): ReadonlyMap<string, EntityTreeNode<T>[]> {
+  const index = new Map<string, EntityTreeNode<T>[]>();
+  const walk = (list: readonly EntityTreeNode<T>[]): void => {
+    for (const node of list) {
+      index.set(node.key, node.children);
+      walk(node.children);
+    }
+  };
+  walk(roots);
+  return index;
+}
+
+/**
  * Collects the keys of nodes whose mapper `expanded` HINT is `true` — the base
  * initial-expansion seed (autoExpand → every node; expandFirstLevel / picker
  * roots → root nodes only). CDK does not read `expanded` off the node, so the

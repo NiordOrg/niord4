@@ -69,7 +69,10 @@ import jakarta.validation.constraints.NotNull;
                 query = "SELECT m FROM ScheduledMail m where m.status = 'PENDING' and m.sendDate <= :date " +
                         " order by m.sendDate asc"),
         @NamedQuery(name = "ScheduledMail.findExpiredMails",
-                query = "SELECT m.id FROM ScheduledMail m where m.created <= :expiryDate ")
+                query = "SELECT m.id FROM ScheduledMail m where m.created <= :expiryDate "),
+        @NamedQuery(name = "ScheduledMail.findBySender",
+                query = "SELECT m FROM ScheduledMail m where m.sender = :sender and m.created >= :since "
+                        + " order by m.created desc, m.id desc")
 })
 @SuppressWarnings("unused")
 public class ScheduledMail extends BaseEntity<Integer> {

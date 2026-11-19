@@ -13,36 +13,43 @@ Where an item is a whole subject of its own, the line points at the document tha
 ## 1. Before production go-live
 
 The operational sheet — who does what, in what order, with the measured figures from the rehearsals — is
-[`publications/go-live/GO-LIVE-TASKS.md`](publications/go-live/GO-LIVE-TASKS.md) and the runbook beside it.
-That set is kept verbatim until the window closes. What follows is the part of it that lives in code or
-needs a decision outside the sheet.
+the go-live task sheet and the runbook beside it, kept outside this repository. What follows is the part
+of it that lives in code or needs a decision outside the sheet.
 
 One item of that set is not open: the HTTP 500s on concurrent GETs (the sheet's E4, the runbook's §9).
 They came from a defect of the Quarkus backend the redesign was built on, fixed the morning after they were
 measured: every read of a series or an issue rewrote the rows it had loaded, so two reads at once collided
 on them. This backend's reads write nothing (`PublicationReadsWriteNothingITTest`). What rests on that finding
-alone is what the [go-live process](publications/go-live/GO-LIVE-PROCESS.md) carries into every rehearsal
+alone is what the go-live process carries into every rehearsal
 because of it: its repeat of "nobody on the system during the import", and verification in sequence
 afterwards. Those are the owner's to reconsider. Keeping users off production from the final rehearsal's
 backup until the window closes, which the process and the sheet's D1 both require, has a reason of its own,
 no new data after the backup, and stands.
 
-| Item                                                                   | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Where it lives                                                                                                                               |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| No deployable production build                                         | `environment.production.ts` carries 5 of the ~40 help anchors. Its API and Keycloak addresses are origin-relative (`/rest`, `/auth`), and the publish workflow puts each deployable's bundle into its backend image, which serves it at `/`; the missing help anchors remain.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `ui-apps/admin/src/environments/environment.production.ts`, `.github/workflows/`                                                             |
-| A `test` build runs unflagged                                          | `environment.test.ts` sets `production: false`, and a country's own `environment.test.ts`, which replaces the base file for the `test` configuration, is held to nothing else: set-up checks `production: true` in the production file alone. Two dev-only paths stay live in a deployed `test` build: the `/dev/geo-editor` sandbox route, and the pre-authenticated Keycloak stub that returns a session from a token bundle seeded on `window`. Only a `production: true` environment closes both.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `ui-apps/admin/src/environments/environment.test.ts`, `ui-apps/admin/src/app/app.routes.ts`, `ui-apps/admin/src/app/app.config.ts`           |
-| No curator role                                                        | There is no publication-curate realm role and no curator capability on `AuthFacade` — the whole role vocabulary is `user` / `editor` / `admin` / `sysadmin`. Curation is gated by three coarser facts instead: the `/admin` route is role-guarded on admin/sysadmin, every curation control is disabled unless the session desk owns the series (`seriesWritable`), and the issue must be open. Provision a finer right, or record that admin-in-the-owning-domain is the intended gate.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `ui-apps/admin/src/app/core/auth/area-roles.ts`, `ui-apps/admin/src/app/features/admin/sections/admin/publications/series-rules.ts`, backend |
-| Public download site not checked                                       | Nobody has looked at how the public site renders the exact stamped cut-off instant. Needs the site owner's sign-off before the window opens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | [`publications/domain-rules.md`](publications/domain-rules.md) (cut-off model)                                                               |
-| Open rehearsal steps and sign-offs                                     | The schema-validate boot on the deployed container, the UAT pass with no developer present, and the reviewer signatures on both checklists.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | [`publications/go-live/GO-LIVE-TASKS.md`](publications/go-live/GO-LIVE-TASKS.md)                                                             |
-| Sequenced after the window                                             | Two backend follow-ups, both listed on the task sheet: decommission the message-tag coupling (in the outgoing model each publication also owned a message tag holding its members; the series/issues model mints none) and lock that frontend's publication pages; write the admin-manual chapter for the series/issues model. These are ordering, not omissions. The sheet's third, gating the anonymous listing, is done: `GET /rest/publications/search` and `/all` serve an anonymous caller the public tier only (`OQ-18`, closed 2026-09-25).                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | backend + [`publications/go-live/GO-LIVE-TASKS.md`](publications/go-live/GO-LIVE-TASKS.md)                                                   |
-| Base map on OSM's volunteer servers                                    | The web maps of both applications and the backend's map images draw their base map from `tile.openstreetmap.org`, the OpenStreetMap Foundation's volunteer-run tile servers. Production volume needs a tile source of our own or a paid one: choose it before go-live and set it in the `osmUrl` setting, which switches the web maps and the server images together. The host must serve https and send CORS headers (the administration app's Content-Security-Policy admits it from the setting by itself), and a public site that moves to another host updates its cookie statement, which names `tile.openstreetmap.org`.                                                                                                                                                                                                                                                                                                                                                                                      | the `osmUrl` setting ([map-portrayal.md](map-portrayal.md), _Server-made map images_), deployment                                            |
-| Map images: slower for uncached places, untested over the real network | The backend now draws the map images of messages from OSM tiles it fetches itself. Measured on a workstation against stand-in map servers, they are faster than the previous renderer's wherever the tiles are cached, and 1.1 to 1.45 times slower for a place whose tiles are not: an image waits for the slowest of up to four tile requests instead of one static map. The first image after a start and a page of images right after a portrayal change are slower too. Whether that blocks go-live is the product owner's decision. Over the real network nothing is measured yet: at the next test deployment (Kubernetes, on the test data), check that the application pod reaches `tile.openstreetmap.org` (a proxy goes in as `-Dhttps.proxyHost` and `-Dhttps.proxyPort` through `app.javaOpts`), set `mapTileContact`, then run the benchmark in `remote` mode and hold its table against the one recorded for the previous Niord on the test environment.                                              | [`be/docs/map-image-benchmark.md`](../../be/docs/map-image-benchmark.md), deployment                                                         |
-| Performance not compared with the previous Niord                       | **Must be fixed before go-live** (owner, 2026-11-02). The message reads are far slower than the previous Niord's: its list answers in ~110–150 ms on its test environment, Niord 4's in ~1 s on a workstation, on the same data but not yet the same machine, database engine or path to the database. Measured on the sample (2026-11-05): every association is batched, so the round trips are set by the batch fetch size: a page of 100 messages costs 86 statements at 16 and 19 at 128 or more, and the second-level cache the previous Niord had (still off) saves 2 of them. niord-base's core defaults load 256 owners a query since 2026-11-05 (16 before); the local profiles of niord-dk and niord-gl still set 16, which wins in their local runs. Still to do: the time on the test data, the comparison of both applications on the same data and machine, and the cache; the assessment, the measurements and the plan are in [the message-read benchmark](../../be/docs/message-read-benchmark.md). | backend: `config/niord-core-defaults.yml`, `niord/pom.xml`; [`be/docs/message-read-benchmark.md`](../../be/docs/message-read-benchmark.md)   |
+| Item                                                                   | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Where it lives                                                                                                                               |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| No deployable production build                                         | `environment.production.ts` carries 5 of the ~40 help anchors. Its API and Keycloak addresses are origin-relative (`/rest`, `/auth`), and the publish workflow puts each deployable's bundle into its backend image, which serves it at `/`; the missing help anchors remain.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `ui-apps/admin/src/environments/environment.production.ts`, `.github/workflows/`                                                             |
+| A `test` build runs unflagged                                          | `environment.test.ts` sets `production: false`, and a country's own `environment.test.ts`, which replaces the base file for the `test` configuration, is held to nothing else: set-up checks `production: true` in the production file alone. Two dev-only paths stay live in a deployed `test` build: the `/dev/geo-editor` sandbox route, and the pre-authenticated Keycloak stub that returns a session from a token bundle seeded on `window`. Only a `production: true` environment closes both.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `ui-apps/admin/src/environments/environment.test.ts`, `ui-apps/admin/src/app/app.routes.ts`, `ui-apps/admin/src/app/app.config.ts`           |
+| No curator role                                                        | There is no publication-curate realm role and no curator capability on `AuthFacade` — the whole role vocabulary is `user` / `editor` / `admin` / `sysadmin`. Curation is gated by three coarser facts instead: the `/admin` route is role-guarded on admin/sysadmin, every curation control is disabled unless the session desk owns the series (`seriesWritable`), and the issue must be open. Provision a finer right, or record that admin-in-the-owning-domain is the intended gate.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `ui-apps/admin/src/app/core/auth/area-roles.ts`, `ui-apps/admin/src/app/features/admin/sections/admin/publications/series-rules.ts`, backend |
+| Public download site not checked                                       | Nobody has looked at how the public site renders the exact stamped cut-off instant. Needs the site owner's sign-off before the window opens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | [`publications/domain-rules.md`](publications/domain-rules.md) (cut-off model)                                                               |
+| Open rehearsal steps and sign-offs                                     | The schema-validate boot on the deployed container, the UAT pass with no developer present, and the reviewer signatures on both checklists.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | the go-live task sheet, kept outside this repository                                                                                         |
+| Sequenced after the window                                             | Two backend follow-ups, both listed on the task sheet: decommission the message-tag coupling (in the outgoing model each publication also owned a message tag holding its members; the series/issues model mints none) and lock that frontend's publication pages; write the admin-manual chapter for the series/issues model. These are ordering, not omissions. The sheet's third, gating the anonymous listing, is done: `GET /rest/publications/search` and `/all` serve an anonymous caller the public tier only (`OQ-18`, closed 2026-09-25).                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | backend + the go-live task sheet, kept outside this repository                                                                               |
+| Base map on OSM's volunteer servers                                    | The web maps of both applications and the backend's map images draw their base map from `tile.openstreetmap.org`, the OpenStreetMap Foundation's volunteer-run tile servers. Production volume needs a tile source of our own or a paid one: choose it before go-live and set it in the `osmUrl` setting, which switches the web maps and the server images together. The host must serve https and send CORS headers (the administration app's Content-Security-Policy admits it from the setting by itself), and a public site that moves to another host updates its cookie statement, which names `tile.openstreetmap.org`.                                                                                                                                                                                                                                                                                                                                                                                            | the `osmUrl` setting ([map-portrayal.md](map-portrayal.md), _Server-made map images_), deployment                                            |
+| Map images: slower for uncached places, untested over the real network | The backend now draws the map images of messages from OSM tiles it fetches itself. Measured on a workstation against stand-in map servers, they are faster than the previous renderer's wherever the tiles are cached, and 1.1 to 1.45 times slower for a place whose tiles are not: an image waits for the slowest of up to four tile requests instead of one static map. The first image after a start and a page of images right after a portrayal change are slower too. Whether that blocks go-live is the product owner's decision. Over the real network nothing is measured yet: at the next test deployment (Kubernetes, on the test data), check that the application pod reaches `tile.openstreetmap.org` (a proxy goes in as `-Dhttps.proxyHost` and `-Dhttps.proxyPort` through `app.javaOpts`), set `mapTileContact`, then run the benchmark in `remote` mode and hold its table against the one recorded for the previous Niord on the test environment.                                                    | [`be/docs/map-image-benchmark.md`](../../be/docs/map-image-benchmark.md), deployment                                                         |
+| Performance not compared with the previous Niord                       | **Must be fixed before go-live** (owner, 2026-11-02). The message reads are far slower than the previous Niord's: its list answers in ~110–150 ms on its test environment, Niord 4's in ~1 s on a workstation, on the same data but not yet the same machine, database engine or path to the database. Measured on the sample (2026-11-05): every association is batched, so the round trips are set by the batch fetch size: a page of 100 messages costs 86 statements at 16 and 19 at 128 or more, and the second-level cache the previous Niord had (still off) saves 2 of them. niord-base's core defaults load 256 owners a query since 2026-11-05 (16 before); the local profiles of niord-dk and niord-gl no longer set it, so their local runs take 256 too. Still to do: the time on the test data, the comparison of both applications on the same data and machine, and the cache; the assessment, the measurements and the plan are in [the message-read benchmark](../../be/docs/message-read-benchmark.md). | backend: `config/niord-core-defaults.yml`, `niord/pom.xml`; [`be/docs/message-read-benchmark.md`](../../be/docs/message-read-benchmark.md)   |
 
 ### Also due in the same window, outside publications
 
 - **Stored date offsets.** Date intervals and firing periods written before the time-zone handling was fixed
   carry browser-zone offsets and were never retro-corrected. A data review, not a code change.
+- **Repository file names and links.** At the first restore from the old system, count what the repository
+  import carries over that may still not open: file names under the old repository folder that hold a `%`, a
+  `;` or a `\` (a `\` becomes a folder separator on import, so the file lands
+  under another path), file names
+  that hold a valid `%XX` escape (`50%20off.pdf`, which both frontends read as already encoded and ask for under
+  the wrong name), and stored links with a raw `;` after `/rest/repo/file/` (in the publication descs' `link`
+  and in message texts), which the backend refuses. The counts decide whether these need a fix of their own; see
+  REPO6 in [`be/docs/potential-errors.md`](../../be/docs/potential-errors.md).
 - **Protected-WMS redirect flood.** The WMS answers a no-data tile with a redirect to a blank image; because the
   protected loader fetches tiles with auth headers, the redirect fails the CORS preflight and a pan or zoom
   floods the console. The fix belongs at the gateway or the proxy servlet — a frontend workaround was tried and
@@ -120,27 +127,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   out brands every language, so it asks for every language's file (the in-tree configurations and the kit's
   generated one always set it). The administration app renders a
   message language it ships no flag for as its code.
-- **The filter bar's "active now" chip changes nothing.** The list read sends `active=true`, and
-  `/rest/public/v1/messages` declares no `active` parameter, so the backend drops it: against a live
-  backend the same filter returned 211 messages with the chip on and 211 with it off. The chip
-  presses, looks pressed and narrows nothing. Either the public API grows the parameter, or the
-  narrowing is done where the list is rendered — every message carries the dates it would be judged
-  by. Carried over from the site as it arrived, and the reason the printed sheet does not map it.
-- **A publication being browsed is not named on the page.** Browse on a message report opens
-  `/messages/details?publicationId=<id>`, which lists that publication's messages and leaves the main-type,
-  active-now and root-area chips out of the filter bar — but nothing on the page says which publication it is,
-  and the menu's Details, Table and Map links carry no query, so each of them returns to the current list rather
-  than showing the publication in another view. The site this one replaced showed the publication's title in the
-  filter bar with a download link and a control that left it. Doing the same means reading
-  `/public/v1/publication/{id}`, a label for the leaving control that no bundle has yet, and menu links that keep
-  `publicationId` while it is set.
-- **A list that comes back empty shows nothing.** The details view renders the failure line, the spinner and
-  one card per message (`ui-apps/info/src/app/features/messages/components/message-details-view/message-details-view.component.ts`
-  16-47) and has no branch for a list that arrived empty, so Browse on a released issue that holds no message
-  (`/messages/details?publicationId=<id>`) shows only the Print bar and the footer: no heading and no sentence
-  saying the issue lists no notices, which a reader can take for a page that failed. The same holds for a filter
-  that matches nothing. A line for the empty list (and, with the entry above, the publication's name) closes it;
-  it needs wording the site owner has not been asked for. Found by the error hunt's live check (2026-11-13).
 - The filter bar is a row of toggles with no name of its own. Each button carries its visible label and its
   `aria-pressed`, which meets AA, but a `role="group"` with an `aria-label` would tell a screen-reader user what
   the row of toggles is for. It needs a word that exists in no bundle, so it waits for the site owner to write one
@@ -148,12 +134,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - No route has an `<h1>`. The headings start at `<h4>` — the area and category headings the site has always
   shown — so a screen reader finds no page title in the document. Giving each route one means either a new visible
   heading or a visually hidden one, and both need wording the site owner has not been asked for.
-- **The map view's panel of messages without a position covers the chart's own controls on a phone.**
-  Below 640 px the panel spans the full width of the chart from its top edge, so it lies over the zoom
-  buttons in the top-left corner, and on a chart not much taller than the panel it reaches the attribution
-  links at the bottom as well. All of them stay in the tab order, so a keyboard user's focus lands on the
-  zoom-out button and on the attribution links out of sight. Starting the panel clear of the zoom buttons —
-  as the line that reports a failed load already does — and ending it above the attribution closes it.
 - The print route (`/messages/print`) and the teaser render outside the site's layout, so neither has a main
   landmark and a screen reader's jump to the main content finds nothing there. Wrapping each view's content in
   `<main>` closes it.
@@ -181,12 +161,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - **The map view's panel of messages without a position is translucent.** Over the map its background lets
   the terrain and the place names show through behind the titles, and a title that wraps continues under the
   id chip rather than in line with the title's first line. An opaque background and a hanging indent close it.
-- **Cancelled messages are drawn on the map like the live ones.** The map view draws every message of the list
-  (`shared/components/message-features-layer/message-features-layer.ts` 155-163, no status check), and the list of
-  a publication being browsed holds its cancelled messages: the card says _Cancelled_, the map draws the same
-  symbol as for a message in force. [`map-portrayal.md`](map-portrayal.md) says cancelled warnings must not be
-  drawn on the map and stay findable in a list. Leaving `CANCELLED` messages out of the layer closes it. Found by
-  the user guides' writers (2026-11-11), read in the code; not seen in a picture.
 - **The map tooltip's id badge breaks at its hyphens.** Each row of the map's hover tooltip is a flex row of the id
   badge and the title inside a box at most `max-w-xs` wide
   (`ui-apps/info/src/app/features/messages/components/map-layers/message-map-tooltip.ts` 37-49). The badge may
@@ -210,10 +184,30 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   messages". Either the frozen v1 API answers 400 for an area id that resolves to no area, as it does for a
   publication, so the existing failure line shows; or the teaser and the print sheet get a line for an empty list.
   The first changes what an outside consumer with a stale area id gets, and the second needs a text, so the owner
-  decides first. The hunt proposes keeping the API as it is and giving both views the empty-list line that _A list
-  that comes back empty shows nothing_ above needs anyway, worded by the owner. Found by the error hunt's phase 2
+  decides first. The hunt proposes keeping the API as it is and giving both views the line the details and table
+  views now show for an empty list (`MSGS_NONE`, "No messages to show"). Found by the error hunt's phase 2
   (2026-11-15), seen in a browser on a local rig; Low. Left by the owner on 2026-11-15: no new public-site text
   and no API change.
+- **The map credit's link is told from its line by a shade of grey alone** (WCAG 1.4.1). OpenLayers' own
+  stylesheet (`ol/ol.css`, imported by `ui-apps/info/src/styles.css`) draws the attribution's text in `#333` and
+  its link to the licence in `#666`, with no underline: 2.2:1 between the two, where a link that is told apart by
+  colour alone needs 3:1 and a second cue on focus and hover. It is on every chart of the site — the map view, the
+  map in a message's dialog and the teaser (whose credit line is its own markup, drawn with the same classes). An
+  underline on `.ol-attribution a`, in a stylesheet both applications load because the map kit draws the same
+  credit in the administration app, closes it. Found by the public site's audit
+  ([accessibility-audit-public-site.md](../../docs/accessibility-audit-public-site.md), 2026-11-18).
+- **The teaser's banner can fall just under 4.5:1** (WCAG 1.4.3). Its white 18 px text (normal weight, so not
+  large text) stands on the chrome colour at 60 % opacity over the chart (`features/teaser/teaser.component.ts`,
+  `bg-chrome/60`). With the default tokens that is 4.89:1 over the chart's land and 5.98:1 over its sea, and
+  4.44:1 where the tile under the banner is white. axe-core cannot measure text over an image and leaves it to a
+  person. A fill of 70 % (6.23:1 over white with the default tokens) closes it; a country's own header colour
+  changes every figure, so each country's build is measured again. Found by the public site's audit (2026-11-18).
+- **Closing a message's dialog opened by its own address leaves focus nowhere** (WCAG 2.4.3).
+  `/messages/details/message/<id>` opens the message in a dialog over the list; Escape closes it and moves the address to `/messages/details`, but there is no control the dialog was opened from, so focus
+  falls to the page's body and the next Tab starts again at the skip link. A dialog opened from the list returns
+  focus to its row, as it should. Moving focus to the main content (`#main-content`, which takes focus already for
+  the skip link) when the dialog closes without an opener closes it. Found by the public site's audit
+  (2026-11-18).
 
 ### The public site's image, configuration and gates
 
@@ -358,14 +352,6 @@ Background: [`country-deployments.md`](country-deployments.md).
 
 Background: [`features/messages.md`](features/messages.md).
 
-- **Cancellation warnings cannot be listed.** Cancelling a published NW warning in an auto-numbered series makes
-  the backend issue a cancellation warning: a separate message of `kind=CANCELLATION`, published at once with no
-  end date, which stays in force until an editor retires it. The messages search sends no `kind` parameter and
-  every query-driven search defaults to `kind=WARNING`, so no list in the application shows one; each is
-  reachable by its id alone. Until the application can list them, they stay in the S-124 in-force datasets.
-  Needed: a kind switch in the message list, a banner in the editor on a `kind=CANCELLATION` message, and the
-  announcement in the cancel dialog that cancelling will issue one (`SystemMessageVo.autoCancellationWarning`).
-  The backend design is in [`s124-cancellation-plan.md`](../../be/docs/s124-cancellation-plan.md).
 - **The tag dialog offers changes the backend refuses.** Unlock, edit, delete, and adding or removing
   messages are offered on a PUBLIC tag that belongs to another domain; the backend refuses each of them from
   any domain but the tag's own with 403, and the user sees a generic error. Hiding or disabling them needs the
@@ -395,14 +381,6 @@ Background: [`features/messages.md`](features/messages.md).
 - The table view keeps its date-column choice in the un-namespaced browser-storage key `dateColumnType`, while
   the rest of the application's keys carry the `niord.` prefix.
 - There are no skeleton placeholders anywhere; lists signal loading with the thin progress strip only.
-- **A bookmark with the Domain filter switches the current domain.** The Domain filter writes `domain=<id>` into
-  the address (`features/messages/services/messages-filter-params.serializer.ts` 93-96), and at start-up the
-  application reads the same parameter as a link to the current domain (`app.config.ts` 134-146,
-  `core/domain/services/domain.service.ts` `resolveInitialSessionDomain`). Opening a bookmarked or shared Messages
-  address with a Domain filter therefore makes the filtered domain the current one, with its roles and menus, where
-  the filter only meant to search it. A filter parameter of its own name closes it. The editor manual
-  (`guides/editor-manual/03-Messages.adoc`, _Domain Filter_ and the page's introduction) describes it as it is;
-  change it with the fix. Found by the user guides' check (2026-11-11), read in the code.
 - **The Report... dialog's result frame leaves an empty band.** The result of a mailing-list report sits in a box
   24rem high (`h-96`, `features/messages/dialogs/mailing-list-reports-dialog/mailing-list-reports-dialog.html` 75)
   around `app-sandboxed-html`, whose frame is fixed at 18rem (`h-72`,
@@ -425,13 +403,6 @@ Background: [`features/messages.md`](features/messages.md).
   _Access denied._ and sent to the home page. Showing the link to system administrators only, or a job status
   the dialog shows itself, closes it. The editor manual (`guides/editor-manual/03-Messages.adoc`, _Import Action_)
   describes it as it is; change it with the fix. Found by the user guides' check (2026-11-11), read in the code.
-- **The sender of a message mail is never told whether it was sent.** The backend only queues the mail (a pending
-  `ScheduledMail`, `MessageMailService.java`), and the toast has said so since 2026-11-13. A mail that fails ends
-  as _Error_ on the sysadmin's Mail Queue only, after its retries, and with `mailValidRecipients` at its shipped
-  default `LOG` (`MailService.java`) nothing is sent at all. A way for the sender to see the mail's status, and a
-  notice when it ends in _Error_, close it; both need a backend feature, as the Mail Queue is sysadmin-only and
-  nothing records the sender to notify. Found by the error hunt (2026-11-12, track C, a reading of the delivery
-  path); Medium.
 - **Two lookups send `geometry=false` to handlers that do not read it.** `charts-api.service.ts` 42-61 and
   `areas-api.service.ts` 56-67 (`features/messages/services/api/`) send `geometry`, but `ChartRestService`'s
   `searchCharts` (83-90) and `/charts/search/{ids}` read no such parameter and map with `DataFilter.ALL`, and
@@ -499,12 +470,6 @@ Background: [`map-portrayal.md`](map-portrayal.md).
 - The administration app's own animations ignore a reader's reduced-motion setting: the 300 ms fit of the
   message-list layer, the geometry editor's zoom-to-extent and the drawer's slide. The map kit's own zooms and
   pans honour it; these three are started by the application and would read the same media query.
-- **Points inside a geometry collection draw no symbol.** A geometry collection — the geometry editor's merge
-  makes one from a mixed selection — is drawn with the pen on its lines and outlines and one tag at the centre
-  of its extent; its points get no point symbol, on the maps and, mirroring them, in the backend's map images.
-  Whether they should is a decision nobody has taken. It changes `map-styles.ts` and the backend's
-  `MapImagePlanner` together, with the golden fixture of the case
-  ([map-portrayal.md](map-portrayal.md), _Server-made map images_).
 - **The administration app takes the tile addresses unchecked.** It applies the `osmUrl` and `openSeaMapUrl`
   web settings to every map as they are, a blank value aside (`ui-apps/admin/src/app/core/config/web-settings.ts`):
   a template that is not https, or lacks one of the `{z}`, `{x}` and `{y}` placeholders, reaches the tile layers
@@ -530,14 +495,6 @@ Background: [`map-portrayal.md`](map-portrayal.md).
   country switches the cache on in its settings file. The public site gets no cache: its `/wms/` location is
   anonymous and stays dormant (_The `/wms/` proxy would not work as written_ and _Three `proxy_cache_valid`
   directives do nothing_, under the public site's image above).
-- **_Edit as text_: an answer for the older text can end the wait and be saved.** The dialog parses with
-  `debounceTime(500)` then `switchMap`
-  (`ui-apps/admin/src/app/shared/components/geometry-editor/edit-as-text-dialog/edit-as-text-dialog.ts` 158-179), so
-  a parse already in flight is not dropped by a newer keystroke until the pause after it ends. Its answer, landing
-  in that pause, sets the working geometry and clears the pending flag, and _Save_ then commits the older text's
-  positions. A `switchMap` over `timer(500)` and then the parse, as the geometry import dialog has since
-  2026-11-16, closes it. Met by the error hunt's phase 2 fix stage (2026-11-16, cluster P1-13), read in the code;
-  Low.
 - **Geometry import: a text parse in flight when the dialog closes can fill it again after a reopen.** In a
   dialog with no area source (it opens on _Text_), `reset()`
   (`ui-apps/admin/src/app/shared/components/geometry-editor/geometry-import-dialog/geometry-import-dialog.ts`
@@ -602,27 +559,6 @@ Background: [`features/editor.md`](features/editor.md).
   apart, and a screen reader hears the same name twice. "Cancel message" on the red button and "Close" on the other
   close it. `04-Editor.adoc` (_Cancelling a Message_) says so as it is. Found by the user guides' writers
   (2026-11-11).
-- **_Run template…_ on a message never saved starts from a blank one.** The Categories row seeds the execution
-  page with the working copy, unsaved changes included
-  (`features/editor/components/fields/categories-field-row/categories-field-row.ts` 97-105), but the page replaces
-  any seed without a `created` time by a fresh server blank of the same main type
-  (`features/editor/views/template-execution-view/template-execution-view.ts` 171-184), meant for the blank-card
-  and template-search flows. A new message whose title, areas and positions were filled in before _Run template…_
-  therefore loses them: they are not on the page, and _Execute_ replaces the message with the result. The confirm
-  before _Execute_ warns that unsaved changes are discarded, but for a message saved before they are in fact kept.
-  Swapping in the blank only when the seed is an untouched new message (or merging the blank's defaults under the
-  seed's fields) closes it. The editor manual (`guides/editor-manual/06-TemplateExecution.adoc`, _Running a
-  Template on an Open Message_) describes it as it is; change it with the fix. Found by the user guides' check
-  (2026-11-11), read in the code.
-- **An open issue with a frozen member list is labelled _Published_ in the Publications panel.** The panel calls
-  every row whose membership is `FROZEN` published unless the issue is `RETIRED`
-  (`features/editor/components/message-issues-panel/message-issues-panel.ts` 166-178), and the backend reports
-  as frozen every issue that has `IssueMember` rows, whatever its status (`MessageIssueLookup.frozenIssues`,
-  `be/.../publication/series/MessageIssueLookup.java` 151-158). Issues the publications import brought in open with
-  their members recorded are such issues: `niord_test` has three (511 "Active P&T Week 36 - 2026", 1019 and 1035,
-  never released), and a message in one shows _Published_ with no date and no document. Reading the issue's status
-  (`PUBLISHED` for _Published_, `OPEN` as pending) closes it. Found by the user guides' picture review (2026-11-12,
-  `editor-manual/MessagePublicationsPanel.png`, now taken on another message); the issue numbers read by SQL.
 - **The History tab cannot tell apart two versions with the same number.** The revision table tracks its rows by
   `version` and the selection compares versions
   (`features/editor/components/revision-table/revision-table.ts` 29 and 58-60,
@@ -660,6 +596,23 @@ Background: [`features/editor.md`](features/editor.md).
   `<div><!-- c --><p>x</p></div>` (pasted Word HTML can hold such comments) comes out with `undefined` in place
   of the comment. Writing a comment node as `<!--…-->`, or dropping it, closes it. Met by the error hunt's phase 2
   fix stage (2026-11-16, cluster P3-11), read in the code; Low.
+- **The date picker's calendar does not take focus when it opens** (WCAG 2.4.3). Enter on a date field opens the
+  calendar (`ui-apps/admin/src/app/shared/forms/date-picker/date-picker.ts`, `toggle`) and leaves the focus on the
+  field. The calendar is drawn in the overlay container at the end of the page, so Tab reaches its days only after
+  every other control of the form (twelve presses from the editor's _Follow-up date_). Once there, the arrow keys
+  move between the days and Enter picks one and returns the focus to the field, as it should. Moving the focus to
+  the roving day when the calendar opens closes it; the time field's popover is built the same way. Found by the
+  first accessibility pass of the administration app (the keyboard walk, 2026-11-18).
+- **The status flow's steps not yet reached are drawn far under 4.5:1** (WCAG 1.4.3). The editor's status flow
+  (the Draft, Verified and Published steps beside the live preview) dims the steps a message has not reached with
+  `opacity-40` and `opacity-55` over `text-fg-subtle`: 1.66:1 and 2.07:1 on the preview's background. The steps are
+  text, not inactive controls, so the exception for those does not apply. A colour that holds 4.5:1, with the
+  current step told apart by weight or a mark, closes it. Found by the first accessibility pass of the
+  administration app (the axe-core scan, 2026-11-18).
+- **The progress bar has no accessible name** (WCAG 4.1.2). The shared `app-progress-bar`
+  (`shared/components/progress-bar/progress-bar.html`) is a `role="progressbar"` with no `aria-label`; axe-core
+  flags it while a page loads (seen on the editor's new-message form). The existing `common.loading` text as its
+  name closes it. Found by the first accessibility pass of the administration app (the axe-core scan, 2026-11-18).
 
 ### Admin and sysadmin
 
@@ -682,8 +635,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   "view batch job" link.
 - Areas registers no param segment, so an area cannot be linked to — only publications and batch jobs have the
   trailing-param route.
-- Choosing a geometric message-sorting strategy for an area, or running "Re-index published messages", silently
-  replaces an editor's hand-made drag order. Nothing warns.
 - The mailing-list list filters in the browser over the whole download. The API service's optional `name=`
   parameter has no caller (the client filter is broader: id, name and description).
 - The Keycloak console deep link is assembled as `{url}/admin/master/console/#/{realm}/clients` and has never been
@@ -697,15 +648,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
 - A published compilation whose sources have moved since its release shows **no banner**. The issue records
   the source issues it covered, so comparing that record against today's published set is cheap; what to do
   about a difference (amend to refresh) is the decision, and it is sequenced after the first annual is out.
-- **The SafetyNET area dialog's position tooltips contradict themselves.** _Center_ and _SW Corner_ say
-  "Positive for N and W, negative for S and W" (`fe/languages/en/i18n/admin/en.json` 1008 and 1013,
-  `centerTooltip` and `swCornerTooltip`). The fields are free "Lat Lon" text in whole degrees, checked only against
-  `^-?\d+\s+-?\d+$` (`sections/sysadmin/promulgation/safetynet-areas-plugin.ts` 30, 164, 168), and Niord copies them
-  unchanged into the SafetyNET mail (`be/niord/bootstrap/templates/mailinglist/publish-safetynet.ftl` 70, 84), so
-  the code cannot tell which sign the receiving SafetyNET service reads as east. The second "W" is probably meant
-  as "E" (positive north and east is the usual rule), but the right wording is the receiving service's rule and needs
-  confirming before the text changes. The system administrators' manual (`05-PromulgationTypes.adoc`, _SafetyNET_)
-  states only what the field takes. Found by the user guides' check (2026-11-11).
 - **The series criteria editor lists message types by their codes.** The _Message type_ criterion's boxes read
   `LOCAL_WARNING`, `TEMPORARY_NOTICE` and the like: its options carry the code as their label and no
   `labelKey` (`sections/admin/publications/series-criteria-editor.ts` 387-392), while the _Main type_ options
@@ -735,17 +677,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   periods (`series-detail.html` 337-383). The comment there means to keep a lone _Upcoming_ row out; a _Missing_
   row is a finding and could be shown. _New issue_ under _Current issue_ still opens the first period. Found by
   the user guides' pictures (2026-11-12).
-- **The entity tree's search prunes only its top level.** `filterTree`
-  (`ui-apps/admin/src/app/shared/components/entity-tree/tree-filter.ts`) prunes at every depth, but the CDK nested
-  tree renders a pruned node under the same `trackBy` key as before and keeps its cached child rows
-  (`entity-tree.ts` 104-106 and 124-138, whose comment names the same caching for the selection): searching
-  "Bornholm" in the geometry import's _From Area_ tab drops the other countries but leaves every row under Denmark
-  and The Baltic Sea, and a click on a nested row then did nothing. Every `app-entity-tree` may be affected (the
-  areas and categories pages, the user editor, the template selection). Seen by the user guides' picture
-  review and measured by its fixer (2026-11-12); the finishing round an hour earlier saw the tree pruned, so the
-  conditions are not settled, and the cause is inferred from the code. A spec that filters an expanded nested tree
-  and counts the rendered rows would settle it. `fe/guides-shots/editor-manual-positions.shots.ts` leaves the
-  search empty for `PositionEditorImportGeometry.png` until it is fixed.
 - **Category _Test…_ runs the template without parameters.** The editor's _Test…_ sends the example message's id
   and the category, no template parameters
   (`ui-apps/admin/src/app/features/admin/services/api/categories-admin-api.service.ts` 101-106), and the backend
@@ -756,15 +687,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   message with this category) closes it. The system administrators' manual
   (`guides/sysadmin-manual/10-Categories.adoc`, the _Test…_ paragraphs) describes it as it is; change it with the
   fix. Found by the user guides' check (2026-11-11, `CategoryTemplateResult.png`).
-- **The mail details' _Sent_ row shows when a mail is due, also for a mail not yet sent.** The row prints the
-  mail's `sendDate` (`ui-apps/admin/src/app/features/admin/sections/sysadmin/mails/mails-page.html` 166), which is
-  the time the mail becomes due: set to the creation time when it is queued and moved on after each failed attempt
-  (`be/.../core/mail/ScheduledMail.java` 85-87, 119-120 and 180). A _Pending_ mail therefore shows a _Sent_ time,
-  and a failed one the time of its next attempt; the template's comment (`mail-details-dialog.html` 51) expects
-  the value to be empty while pending. Labelling the row _Send date_, or showing it as _Sent_ only for a sent
-  mail, closes it. The system administrators' manual (`guides/sysadmin-manual/12-MailQueue.adoc`, _Mail Details_)
-  says the dialog shows when the mail was sent. Found by the user guides' picture review (2026-11-12); read in the
-  code (the picture's own time was the rig's).
 - **The Batch Jobs card reads "1 executions".** `admin.batch.executionsCount` is `{{count}} executions` with no
   singular (`languages/en/i18n/admin/en.json` 1658, used in `batch-page.html` 31), as the issue history's "1
   entries" above. Found by the user guides' picture review (2026-11-12).
@@ -782,13 +704,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   key on each render. It breaks the translation-ownership rule (the component that renders a text translates it),
   as the drawer header and the comment e-mail placeholder did before they were fixed on 2026-11-11/12; passing the
   key closes it. Found by the user guides' check (2026-11-12, its map of the frontend).
-- **A refused delete of an area, a category or a message series shows no reason.** Since 2026-11-13 the backend
-  refuses to delete one that is in use with a 409 whose detail names the uses (messages, domains, firing periods,
-  NAVTEX transmitters, firing schedules, S-124 configurations), and deletes a sub-area or sub-category that is not.
-  The three pages' delete-error toasts show only their generic text. Showing the 409's detail closes it; the
-  administrators' manual (`guides/admin-manual/04-Areas.adoc`, the delete paragraph) and the system administrators'
-  manual (`guides/sysadmin-manual/03-MessageSeries.adoc`, the delete paragraph) can then name the reason. Found by
-  the error hunt's fix stage (2026-11-13, cluster B3).
 - **A refused delete of a parameter type shows no reason.** Sysadmin > Parameter types shows only the generic
   "Error deleting parameter type" toast (`param-types-page.ts`) when a delete fails. Since 2026-11-13 the backend
   refuses to delete a type that a template or a composite type uses, with a 409 whose detail names the categories
@@ -840,6 +755,35 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   keeps its old status and buttons until the operator presses _Refresh_. Nothing is sent again or cancelled.
   Refreshing the outbox in both error branches, as the success branches do, closes it. Met by the check of the
   error hunt's phase 2 fix stage (2026-11-16, cluster P1-19), read in the code; Low.
+- **The publications page's New button is named for something else** (WCAG 2.5.3). The menu trigger reads "New"
+  and is named "Create a publication" (`admin.publications.new.aria`, set as its `ariaLabel` in
+  `features/admin/sections/admin/publications/publications-page.html`), so a person who speaks the label they see
+  to voice control does not reach it. Leaving out the `ariaLabel`, or a name that starts with the visible word,
+  closes it. Found by the first accessibility pass of the administration app (the axe-core scan, 2026-11-18).
+- **A mailing list's recipient count is named without the count** (WCAG 2.5.3). The button in the mailing lists'
+  table shows the number of recipients and is named "Manage recipients"
+  (`features/admin/sections/admin/mailing-lists/mailing-lists-page.html`), so the number it shows is not in its
+  name. A name that holds the number (a new text with a `count` parameter) closes it. Found by the first
+  accessibility pass of the administration app (the axe-core scan, 2026-11-18).
+- **The script resources' type badges are under 4.5:1** (WCAG 1.4.3). The `fm` badge of the script resources'
+  table draws the accent on an accent tint, 3.59:1 with the default tokens, and the `js` badge the warning colour
+  on its tint (`.is-script-fm` and `.is-script-js` in `ui-apps/admin/src/styles/components-admin.css`). A darker
+  text colour mixed off the same token closes it; a country's own accent changes the figure. Found by the first
+  accessibility pass of the administration app (the axe-core scan, 2026-11-18).
+- **Removing a chip drops the focus on the page's body in three places.** The chips of
+  `ui-apps/admin/src/app/features/admin/sections/admin/publications/series-criteria-editor.html` (a
+  publication series' criteria), of the shared domain multiselect
+  (`ui-apps/admin/src/app/shared/forms/domain-multiselect-field/domain-multiselect-field.html`,
+  `(click)="remove(domain)"`) and the message-id chip of
+  `ui-apps/admin/src/app/features/messages/components/message-id-field/message-id-field.html`
+  (`(click)="onClear()"`, the autocomplete takes the chip's place) are named for their value and act on a
+  click, so Enter and Space remove them, but the focused button leaves the DOM with its chip and nothing
+  takes the focus: a keyboard user starts again from the top of the page. This breaks the rule of
+  `ui-standards.md` that a button leaving the DOM with what it removes hands the focus to a defined element
+  first. The shared autocomplete does it right (`onRemoveClick` in
+  `ui-apps/admin/src/app/shared/forms/autocomplete/autocomplete.ts`, which gives the focus back to its
+  input); the fix gives the focus to the next chip, or else to the picker button or the input. Found
+  2026-11-19 while fixing the autocomplete's chips.
 
 ### Schedule
 
@@ -849,13 +793,6 @@ Background: [`features/schedule.md`](features/schedule.md).
   returns to today.
 - Cancelling the inline period editor discards unsaved rows with no prompt.
 - Pressing Add appends an empty row but leaves keyboard focus where it was.
-- **The schedule map's Layers card covers the zoom buttons and the attribution.** The Firing Area Schedule page
-  places its layer switcher at the map's bottom right (`absolute right-2 bottom-2 z-10`,
-  `ui-apps/admin/src/app/features/schedule/schedule-view.html` 172-175), where the administration app also puts
-  the zoom buttons (`app-ol-map .ol-zoom`, bottom right, `ui-apps/admin/src/styles.css` 139-144) and OpenLayers
-  its attribution, so the card lies over both and they cannot be reached. The other maps with a card of their own
-  (the message details, the editor's positions preview) put it at the bottom left; doing the same here closes it.
-  Found by the user guides' picture review (2026-11-12, `editor-manual/FiringAreaSchedule.png`, kept as it is).
 - **A firing period's time fields have no visible label and cut their placeholder.** The From and To fields of a
   period are named by their aria-labels only
   (`ui-apps/admin/src/app/features/schedule/components/time-schedule-editor/time-schedule-editor.html` 5-17), and
@@ -901,7 +838,9 @@ Background: [`styling-reference.md`](styling-reference.md).
   (`styles/components-core.css`). The brief tells a designer to meet 4.5:1 there too and calls the default's
   figure a known gap. Fix: a darker default (`#5f6d80` measures 5.27:1, 4.86:1 and 4.99:1 on the three) and the
   floor widened to the three backgrounds. Found by the design route of the country guides'
-  verification (2026-10-26).
+  verification (2026-10-26). The first accessibility pass of the administration app (2026-11-18) meets it on the
+  editor's "All changes saved" (4.33:1 on `--niord-bg`), the live preview's heading and an area's parent in the
+  area list (4.45:1 on the sunken fill); they are on its list of known violations.
 
 ### Quality gates and tooling
 
@@ -918,8 +857,16 @@ Background: [`testing.md`](testing.md).
   `fe/`. Found in KM-2 (2026-11-01). The fix runs husky from the root (it refuses a folder named with `..`), for
   instance a `prepare` of `cd .. && husky fe/.husky`, and the hook then has to `cd fe` before `npx lint-staged`,
   since git runs hooks at the repository root. Tooling only; nothing in production depends on it.
-- No accessibility tooling at all: neither axe nor Lighthouse is installed or wired into CI. The only automated
-  check is the Angular template accessibility lint rule set.
+- **`node scripts/ci-test-shard.mjs 1 1` cannot start on Windows.** It passes every spec file of the shard to
+  `ng test` as its own absolute `--include`; for the whole suite (532 files on 2026-11-19) that command line is
+  far past Windows' limit of 32 767 characters, so the spawn fails, the script prints only its "Shard 1/1" line
+  and exits 1 without a test having run. CI runs on Linux and is not affected; on Windows run the suite as
+  `npm test -- --watch=false`, as `./verify-local` does. A fix would pass workspace-relative patterns, or a
+  shared folder pattern when the shard is the whole suite. Tooling only.
+- No accessibility check runs in CI. The only automated check there is the Angular template accessibility lint
+  rule set. Both applications have an axe-core scan as a manual tool, run by no workflow (see
+  [testing.md](testing.md)): the public site's `npm run a11y:info`, and the administration app's
+  `a11y-routes.spec.ts` and keyboard walk in the end-to-end suite, against the sample deployment.
 - The Playwright suite is excluded from CI by design — it needs a live backend and Keycloak — so nothing runs it
   on a push. It is a local, deliberate step.
 - The Playwright suite cannot pass against the local stack `start-local.sh` starts, which is why it is documented

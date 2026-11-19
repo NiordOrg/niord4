@@ -30,6 +30,7 @@ export class TypeFilterPanel {
   readonly slice = computed(() => this.messages.filter.slice('type')());
   readonly mainType = computed(() => this.slice().mainType);
   readonly types = computed(() => this.slice().types);
+  readonly cancellationWarnings = computed(() => this.slice().cancellationWarnings);
 
   readonly supportsNwBoth = this.domain.supportsNw(false);
   readonly supportsNmBoth = this.domain.supportsNm(false);
@@ -49,6 +50,13 @@ export class TypeFilterPanel {
   readonly showNwTypes = computed(
     () => this.mainType() === 'NW' || (this.mainType() === '' && this.supportsNwOnly()),
   );
+  /**
+   * The Cancellation warnings chip shows beside the NW types, and also whenever it is on (as from an
+   * address), so a list narrowed to cancellation warnings always has the chip that turns it off.
+   */
+  readonly showCancellationWarnings = computed(
+    () => this.showNwTypes() || this.cancellationWarnings(),
+  );
   readonly showNmTypes = computed(
     () => this.mainType() === 'NM' || (this.mainType() === '' && this.supportsNmOnly()),
   );
@@ -64,7 +72,20 @@ export class TypeFilterPanel {
         : value === 'NM'
           ? this.dropTypes(NW_TYPES)
           : this.types();
-    this.messages.filter.setSliceValue('type', { mainType: value, types: cleared });
+    // The chip stays on only where it stays in sight: beside the NW types.
+    const keepsNwTypes = value === 'NW' || (value === '' && this.supportsNwOnly());
+    this.messages.filter.setSliceValue('type', {
+      mainType: value,
+      types: cleared,
+      cancellationWarnings: this.cancellationWarnings() && keepsNwTypes,
+    });
+  }
+
+  onCancellationWarningsToggle(): void {
+    this.messages.filter.setSliceValue('type', {
+      ...this.slice(),
+      cancellationWarnings: !this.cancellationWarnings(),
+    });
   }
 
   onTypeToggle(type: MessageType, checked: boolean): void {
@@ -74,7 +95,7 @@ export class TypeFilterPanel {
         ? current
         : [...current, type]
       : current.filter((t) => t !== type);
-    this.messages.filter.setSliceValue('type', { mainType: this.mainType(), types: next });
+    this.messages.filter.setSliceValue('type', { ...this.slice(), types: next });
   }
 
   selectAll(group: 'NW' | 'NM'): void {
@@ -85,7 +106,7 @@ export class TypeFilterPanel {
       return;
     }
     this.messages.filter.setSliceValue('type', {
-      mainType: this.mainType(),
+      ...this.slice(),
       types: [...current, ...additions],
     });
   }
@@ -93,7 +114,7 @@ export class TypeFilterPanel {
   reset(group: 'NW' | 'NM'): void {
     const drop = group === 'NW' ? NW_TYPES : NM_TYPES;
     this.messages.filter.setSliceValue('type', {
-      mainType: this.mainType(),
+      ...this.slice(),
       types: this.dropTypes(drop),
     });
   }

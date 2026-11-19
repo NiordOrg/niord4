@@ -67,8 +67,8 @@ that the forward-looking vocabulary holds. In a document the kit package carries
 inside the kit, and a `.niord/kit/` or `.niord/base/` path names a file of the kit package or the
 source zip. In one the source zip carries, a link stays inside it. The kit's guides may name only a
 country workspace's npm scripts. The agent template is checked for its `.niord/kit/` and
-`.niord/base/` paths. The publications specifications and
-the go-live runbooks are excluded on purpose — they stay verbatim.
+`.niord/base/` paths. The publications specifications are
+excluded on purpose — they stay verbatim.
 
 `npm run format` rewrites **every** file in the repository. Do not run it: format only what you
 changed. The pre-commit hook (husky + lint-staged) already formats and lints staged files.
@@ -97,7 +97,7 @@ _Guards_.
 | The public site's image: proxy allow-list, headers, start-up checks, frames | `npm run test:container:info -- --browser` against the example country's image (Frontend CI's `Example country` job, on pull requests) — the frame policy as Chromium applies it included — and by hand against the base build's                                                          |
 | Documentation links, paths, scripts, configurations, commands, vocabulary   | `npm run docs:check` — the Checks + builds job of both workflows                                                                                                                                                                                                                          |
 | End-to-end flows                                                            | `npm run e2e` — needs a dev server, a live backend and `KEYCLOAK_URL` given by the runner, so it is deliberately out of CI                                                                                                                                                                |
-| Accessibility beyond the static template rules                              | **Review only** — no automated accessibility run exists                                                                                                                                                                                                                                   |
+| Accessibility beyond the static template rules                              | Administration app: `a11y-routes.spec.ts` and the keyboard scenario `scenarios/keyboard-publish.spec.ts`, against the sample deployment, by hand before a release; public site: `npm run a11y:info`, by hand. **Not in CI**                                                               |
 | No component library                                                        | **Review only** — no lint guard exists                                                                                                                                                                                                                                                    |
 | No country branch in shared code                                            | Public site: lint fails a country-folder import anywhere but `app.config.ts`. A branch on a country value, and anything in the administration app: **review only**                                                                                                                        |
 

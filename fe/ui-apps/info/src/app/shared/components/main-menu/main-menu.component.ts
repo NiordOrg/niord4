@@ -1,5 +1,5 @@
 import { Component, ElementRef, inject, computed, viewChild } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../../core/services/language.service';
 import { AppConfigService } from '../../../core/services/app-config.service';
@@ -36,11 +36,13 @@ import { publishHeight } from '../../utils/publish-height';
       <!--
         The icon beside each label is decorative, so the label is the link's whole accessible
         name. Below 640 px it is hidden from the eye alone: sr-only, never the hidden utility,
-        which is display:none and takes the name out of the accessibility tree with it.
+        which is display:none and takes the name out of the accessibility tree with it. The
+        three message views keep the publication being browsed; Downloads never does.
       -->
       <a
         class="nav-item-states mx-2 my-1 inline-block cursor-pointer rounded-md px-2 leading-8 sm:mx-5"
         routerLink="/messages/details"
+        [queryParams]="viewQuery()"
         routerLinkActive="bg-white/10 font-semibold"
         ariaCurrentWhenActive="page"
       >
@@ -50,6 +52,7 @@ import { publishHeight } from '../../utils/publish-height';
       <a
         class="nav-item-states mx-2 my-1 inline-block cursor-pointer rounded-md px-2 leading-8 sm:mx-5"
         routerLink="/messages/table"
+        [queryParams]="viewQuery()"
         routerLinkActive="bg-white/10 font-semibold"
         ariaCurrentWhenActive="page"
       >
@@ -59,6 +62,7 @@ import { publishHeight } from '../../utils/publish-height';
       <a
         class="nav-item-states mx-2 my-1 inline-block cursor-pointer rounded-md px-2 leading-8 sm:mx-5"
         routerLink="/messages/map"
+        [queryParams]="viewQuery()"
         routerLinkActive="bg-white/10 font-semibold"
         ariaCurrentWhenActive="page"
       >
@@ -112,6 +116,20 @@ export class MainMenuComponent {
   private readonly languageService = inject(LanguageService);
   private readonly appConfig = inject(AppConfigService);
   private readonly bar = viewChild.required<ElementRef<HTMLElement>>('bar');
+  private readonly router = inject(Router);
+
+  /**
+   * The query the three message views' links carry: the publication being browsed while one is,
+   * so a change of view keeps it, and nothing otherwise. Only that one parameter is carried, never
+   * the whole query: a `?lang=` an embedding link opened the site with, or a country page's own
+   * query, does not belong on the message views.
+   */
+  readonly viewQuery = computed<{ publicationId: string } | null>(() => {
+    const url = this.router.lastSuccessfulNavigation()?.finalUrl;
+    const publicationId = url?.queryParamMap.get('publicationId');
+    const onMessages = url?.root.children['primary']?.segments[0]?.path === 'messages';
+    return publicationId && onMessages ? { publicationId } : null;
+  });
 
   readonly languages = this.appConfig.languages;
   readonly currentLang = this.languageService.language;

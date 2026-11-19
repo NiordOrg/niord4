@@ -27,6 +27,8 @@ interface TimeOption {
 /** 12-hour clock face order (12 leads, as on a clock), mapped to a 24h hour via the meridiem. */
 const TWELVE_HOUR_ROW: readonly number[] = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
+let valueSeq = 0;
+
 /**
  * Locale-aware time field — a Signal Forms `FormValueControl<Date | null>` replacing the native
  * `<input type="time">` (which renders 12h/24h in the browser locale, not the app language). The
@@ -74,6 +76,16 @@ export class TimeField implements FormValueControl<Date | null> {
     return this.localeFormat.formatTime(value, { local: true });
   });
   protected readonly hasValue = computed(() => this.displayValue() !== '');
+
+  protected readonly valueId = `app-time-field-value-${valueSeq++}`;
+  /**
+   * The field's `ariaLabel` replaces the button's content as its accessible name, so the chosen
+   * time is tied to the button as its description. Without a name the content already is the
+   * name, and an empty field has no time to describe.
+   */
+  protected readonly describedBy = computed(() =>
+    this.hasValue() && this.ariaLabel() !== '' ? this.valueId : null,
+  );
   // Hint mirrors the display separator: Danish (24h) shows a period ("09.35"), English AM/PM a colon.
   protected readonly placeholder = computed(() => (this.use12h() ? 'h:mm AM/PM' : 'HH.mm'));
 

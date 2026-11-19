@@ -18,6 +18,14 @@ const MESSAGES: Message[] = [
   { id: 'msg-2', mainType: 'NM', areas: [BELT], messageSeries: { seriesId: 'dma-nm' } },
 ];
 
+/** A message whose only event interval starts on 1 January 2100: not in force today. */
+const LATER: Message = {
+  id: 'later',
+  mainType: 'NW',
+  areas: [SOUND],
+  parts: [{ type: 'DETAILS', eventDates: [{ fromDate: 4102444800000 }] }],
+};
+
 describe('MessagesStore', () => {
   let store: MessagesStore;
   let httpTesting: HttpTestingController;
@@ -66,6 +74,9 @@ describe('MessagesStore', () => {
     expect(store.areaRoots()).toHaveLength(1);
     expect(store.rootArea()?.id).toBe(453);
     expect(store.messages()).toHaveLength(2);
+    // No publication is named, so none is read.
+    expect(httpTesting.match((r) => r.url.includes('/rest/public/v1/publication/'))).toEqual([]);
+    expect(store.publication()).toBeUndefined();
 
     // The root-area specs are a build-time constant, so nothing can key a second read off them.
     await settle();
@@ -104,12 +115,29 @@ describe('MessagesStore', () => {
     narrowed.flush([]);
     await settle();
 
+    // The public API has no active filter: the chip narrows what is on screen and reads nothing.
     store.toggleActiveNow();
     await settle();
-    const active = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages'));
-    expect(active.request.urlWithParams).toContain('active=true');
-    active.flush([]);
+    httpTesting.verify();
+  });
+
+  it('narrows the list on screen to what is in force now, without a read', async () => {
+    setUp();
+    await load([LATER, { id: 'undated', mainType: 'NM', areas: [BELT] }]);
+    expect(store.messages()).toHaveLength(2);
+
+    store.toggleActiveNow();
     await settle();
+    httpTesting.verify();
+    expect(store.activeNow()).toBe(true);
+    expect(store.messages().map((message) => message.id)).toEqual(['undated']);
+    // The sub-areas offered are the ones that still have rows.
+    expect(store.subAreas().map((area) => area.id)).toEqual([22]);
+
+    store.toggleActiveNow();
+    await settle();
+    httpTesting.verify();
+    expect(store.messages().map((message) => message.id)).toEqual(['later', 'undated']);
   });
 
   it('reads nothing when a sub-area is ticked, and narrows the list on the spot', async () => {
@@ -134,7 +162,7 @@ describe('MessagesStore', () => {
     await settle();
     expect(store.subAreaSelection().size).toBe(1);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
     await settle();
@@ -146,7 +174,7 @@ describe('MessagesStore', () => {
     await load();
     expect(store.messages()).toHaveLength(2);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     const inFlight = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages'));
     expect(store.messages()).toHaveLength(2);
@@ -160,22 +188,26 @@ describe('MessagesStore', () => {
     setUp();
     await load();
     expect(store.failed()).toBe(false);
+    expect(store.empty()).toBe(false);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     httpTesting
       .expectOne((r) => r.url.includes('/rest/public/v1/messages'))
       .flush('no', { status: 500, statusText: 'Server Error' });
     await settle();
     expect(store.failed()).toBe(true);
+    // A failure is not a list with nothing in it, and the views must not say both.
+    expect(store.empty()).toBe(false);
 
     // An area with nothing to report empties the list without saying anything went wrong.
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: true });
     await settle();
     httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush([]);
     await settle();
     expect(store.failed()).toBe(false);
     expect(store.messages()).toEqual([]);
+    expect(store.empty()).toBe(true);
   });
 
   // On a slow link the first visit is seconds of nothing; the views need to tell that apart
@@ -183,6 +215,7 @@ describe('MessagesStore', () => {
   it('is loading from the first moment until the list has arrived, and not after', async () => {
     setUp();
     expect(store.loading()).toBe(true);
+    expect(store.empty()).toBe(false);
     await settle();
     // The root area is on its way, then the list that waits for it.
     expect(store.loading()).toBe(true);
@@ -193,10 +226,13 @@ describe('MessagesStore', () => {
     await settle();
     expect(store.loading()).toBe(false);
     expect(store.messages()).toEqual([]);
+    expect(store.empty()).toBe(true);
 
-    store.toggleActiveNow();
+    store.setMainTypes({ NW: true, NM: false });
     await settle();
     expect(store.loading()).toBe(true);
+    // A read on its way says nothing about the list it will bring.
+    expect(store.empty()).toBe(false);
     httpTesting
       .expectOne((r) => r.url.includes('/rest/public/v1/messages'))
       .flush('no', { status: 500, statusText: 'Server Error' });
@@ -204,6 +240,7 @@ describe('MessagesStore', () => {
     // A failed read is not a read on its way.
     expect(store.loading()).toBe(false);
     expect(store.failed()).toBe(true);
+    expect(store.empty()).toBe(false);
   });
 
   // A build may name two root areas; the backend of one country may stop carrying the
@@ -350,6 +387,36 @@ describe('MessagesStore', () => {
     expect(query.getAll('messageSeries')).toEqual(['dma-nw', 'dma-nm']);
   });
 
+  // The report endpoint has no active-now parameter, so the sheet is the list before the chip
+  // narrows it; the series it names must be that list's too, or a series with no row in force
+  // drops out of the sheet without a word.
+  it('prints the list before active-now narrows it', async () => {
+    setUp();
+    await load([
+      { ...LATER, messageSeries: { seriesId: 'dma-nw' } },
+      { id: 'undated', mainType: 'NM', areas: [BELT], messageSeries: { seriesId: 'dma-nm' } },
+    ]);
+
+    store.toggleActiveNow();
+    await settle();
+    expect(store.messages().map((message) => message.id)).toEqual(['undated']);
+    expect(store.canPrintList()).toBe(true);
+    const query = new URLSearchParams(store.printPdfUrl().split('?')[1]);
+    expect(query.getAll('messageSeries')).toEqual(['dma-nw', 'dma-nm']);
+  });
+
+  it('keeps Print offered when nothing is in force', async () => {
+    setUp();
+    await load([{ ...LATER, messageSeries: { seriesId: 'dma-nw' } }]);
+
+    store.toggleActiveNow();
+    await settle();
+    expect(store.messages()).toEqual([]);
+    expect(store.canPrintList()).toBe(true);
+    const query = new URLSearchParams(store.printPdfUrl().split('?')[1]);
+    expect(query.getAll('messageSeries')).toEqual(['dma-nw']);
+  });
+
   it('prints the ticked sub-areas instead of the root, never both', async () => {
     setUp();
     await load();
@@ -385,6 +452,13 @@ describe('MessagesStore', () => {
       httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/area/')).flush(ANCHORLAND);
     }
 
+    /** The read of the publication itself, which names it in the filter bar. */
+    function answerThePublication(body: object = { publicationId: PUBLICATION_ID }) {
+      const read = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/publication/'));
+      read.flush(body);
+      return read;
+    }
+
     it('reads the publication and nothing the filter bar chooses', async () => {
       // A reader whose last filter was warnings only must still see a notices publication.
       localStorage.setItem('niord-info.NM', 'false');
@@ -401,22 +475,71 @@ describe('MessagesStore', () => {
       expect(list.request.params.has('active')).toBe(false);
       list.flush(MESSAGES);
       answerTheRootArea();
+      answerThePublication();
       await settle();
 
+      expect(store.messages()).toHaveLength(2);
+    });
+
+    it('reads the publication itself, and names it with the page language first', async () => {
+      await setUpOnPublication();
+      await settle();
+      httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
+      answerTheRootArea();
+      const read = answerThePublication({
+        publicationId: PUBLICATION_ID,
+        type: 'MESSAGE_REPORT',
+        descs: [
+          { lang: 'da', title: 'EfS uge 38 2026' },
+          { lang: 'en', title: 'NtM week 38 2026', link: '/rest/repo/file/publications/x.pdf' },
+        ],
+      });
+      expect(read.request.url).toBe(`/rest/public/v1/publication/${PUBLICATION_ID}`);
+      expect(read.request.params.get('lang')).toBe('en');
+      expect(read.request.params.get('externalize')).toBe('false');
+      await settle();
+
+      expect(store.publication()?.descs?.[0]).toEqual({
+        lang: 'en',
+        title: 'NtM week 38 2026',
+        link: '/rest/repo/file/publications/x.pdf',
+      });
+    });
+
+    // The two reads resolve the id alike, so one refused alone is a passing failure or a
+    // publication withdrawn between them; the list is the page, and stays.
+    it('lists the messages when the read of the publication itself fails', async () => {
+      await setUpOnPublication();
+      await settle();
+      httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
+      answerTheRootArea();
+      httpTesting
+        .expectOne((r) => r.url.includes('/rest/public/v1/publication/'))
+        .flush('no', { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(store.publication()).toBeUndefined();
+      expect(store.failed()).toBe(false);
+      expect(store.loading()).toBe(false);
       expect(store.messages()).toHaveLength(2);
     });
 
     it('does not read again when a chip the bar leaves out would have changed', async () => {
       await setUpOnPublication();
       await settle();
-      httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
+      httpTesting
+        .expectOne((r) => r.url.includes('/rest/public/v1/messages'))
+        .flush([...MESSAGES, LATER]);
       answerTheRootArea();
+      answerThePublication();
       await settle();
 
       store.toggleActiveNow();
       store.setMainTypes({ NW: true, NM: false });
       await settle();
       httpTesting.verify();
+      // Nor is a publication narrowed to what is in force: it is the list it was published with.
+      expect(store.messages()).toHaveLength(3);
     });
 
     it('prints the publication in place of the main types and the root area', async () => {
@@ -424,6 +547,7 @@ describe('MessagesStore', () => {
       await settle();
       httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush(MESSAGES);
       answerTheRootArea();
+      answerThePublication();
       await settle();
 
       const query = new URLSearchParams(store.printPdfUrl().split('?')[1]);
@@ -446,11 +570,14 @@ describe('MessagesStore', () => {
       await settle();
       httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages')).flush([]);
       answerTheRootArea();
+      answerThePublication();
       await settle();
+      expect(store.publication()).toBeDefined();
 
       await TestBed.inject(Router).navigateByUrl('/');
       await settle();
       expect(store.publicationId()).toBeUndefined();
+      expect(store.publication()).toBeUndefined();
       const current = httpTesting.expectOne((r) => r.url.includes('/rest/public/v1/messages'));
       expect(current.request.params.has('publication')).toBe(false);
       expect(current.request.params.get('areaId')).toBe('453');

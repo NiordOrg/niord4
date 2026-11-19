@@ -15,7 +15,7 @@
 <cdk-tree
   #tree="cdkTree"
   class="tree-root"
-  [dataSource]="visibleRoots()"
+  [dataSource]="visibleRoots$"
   [childrenAccessor]="childrenOf"
   [trackBy]="trackByKey"
   [expansionKey]="keyOf"

@@ -32,13 +32,15 @@ import {
   type DeserializerContext,
   type SerializerContext,
 } from './messages-filter-params.serializer';
+import { filterApiKey, filterUrlKey } from './messages-filter-url-sync.service';
 
 /**
  * Properties of the Messages filter's address, over generated filters from a fixed seed:
  * a bookmark, a shared link and a saved filter must give back the filter they were made
  * from. The round trip runs the way the application runs it: `toQuery`, the URL sync's map of
- * parameters (the reference filter renamed to `refMessageId`), Angular's own URL serializer
- * writing the address and reading it back, the sync's rename back, and `fromQuery`.
+ * parameters (the reference filter renamed to `refMessageId`, the Domain filter to
+ * `searchDomain`), Angular's own URL serializer writing the address and reading it back, the
+ * sync's rename back, and `fromQuery`.
  */
 
 /** A small seeded generator (mulberry32): the same seed gives the same inputs on every run. */
@@ -128,6 +130,8 @@ function filter(
     slices.type = {
       mainType,
       types: mainType === '' || rng.next() < 0.5 ? rng.some(MESSAGE_TYPES) : [],
+      // Notices to Mariners have no cancellation warnings: the panel never sets the choice there.
+      cancellationWarnings: mainType !== 'NM' && rng.next() < 0.3,
     };
   }
   if (on('status')) slices.status = { statuses: rng.some(MESSAGE_STATUSES) };
@@ -206,24 +210,25 @@ const SERIALIZER = new DefaultUrlSerializer();
 const ROOT = SERIALIZER.parse('/messages/grid');
 
 /**
- * What the address bar holds and what is read back from it, as `MessagesFilterUrlSync` does: the
- * query as a parameter map (the reference filter's `messageId` as `refMessageId`), Angular's URL
- * serializer both ways, and the parameter map read back into a query.
+ * What the address bar holds and what is read back from it, with `MessagesFilterUrlSync`'s own key
+ * maps: the query as a parameter map (the reference filter's `messageId` as `refMessageId`, the
+ * Domain filter's `domain` as `searchDomain`), Angular's URL serializer both ways, and the
+ * parameter map read back into a query.
  */
 function throughTheAddressBar(query: string): { address: string; read: URLSearchParams } {
   const search = new URLSearchParams(query);
   const params: Record<string, string | string[]> = {};
   for (const key of new Set(search.keys())) {
     const values = search.getAll(key);
-    params[key === 'messageId' ? 'refMessageId' : key] = values.length === 1 ? values[0] : values;
+    params[filterUrlKey(key)] = values.length === 1 ? values[0] : values;
   }
   const address = SERIALIZER.serialize(new UrlTree(ROOT.root, params));
   const map = SERIALIZER.parse(address).queryParamMap;
   const read = new URLSearchParams();
   for (const key of map.keys) {
-    if (key === 'messageId') continue;
-    for (const value of map.getAll(key))
-      read.append(key === 'refMessageId' ? 'messageId' : key, value);
+    const apiKey = filterApiKey(key);
+    if (apiKey === undefined) continue;
+    for (const value of map.getAll(key)) read.append(apiKey, value);
   }
   return { address, read };
 }
@@ -253,7 +258,9 @@ function searched(params: MessagesFilterParams): unknown {
   return {
     domain: e.domain ? params.domain.domain?.domainId : undefined,
     text: e.text ? params.text.query : undefined,
-    type: e.type ? [params.type.mainType, [...params.type.types]] : undefined,
+    type: e.type
+      ? [params.type.mainType, [...params.type.types], params.type.cancellationWarnings]
+      : undefined,
     status: e.status ? [...params.status.statuses] : undefined,
     tag: e.tag ? params.tag.tags.map((t) => t.tagId) : undefined,
     publication: e.publication
@@ -295,6 +302,9 @@ describe('the Messages filter address, properties over generated filters', () =>
       const result = fromQuery(read, defaultParams(defaults), INBOUND);
 
       expect(searched(result.params), address).toEqual(searched(params));
+      // The address never holds the session-domain deep link, nor the dialog's message id.
+      expect(SERIALIZER.parse(address).queryParamMap.has('domain'), address).toBe(false);
+      expect(SERIALIZER.parse(address).queryParamMap.has('messageId'), address).toBe(false);
       expect(result.pendingDomainId).toBeUndefined();
       expect(result.mapExtent, address).toEqual(map);
       // And the address of the filter read back is the same address.
@@ -309,6 +319,7 @@ describe('the Messages filter address, properties over generated filters', () =>
       'query',
       'mainType',
       'type',
+      'kind',
       'status',
       'tag',
       'comments',
@@ -331,6 +342,9 @@ describe('the Messages filter address, properties over generated filters', () =>
       ...MESSAGE_STATUSES,
       ...MESSAGE_TYPES,
       'NW',
+      'NM',
+      'WARNING',
+      'CANCELLATION',
       'xx',
       '',
       '-1',
@@ -359,6 +373,11 @@ describe('the Messages filter address, properties over generated filters', () =>
         query,
       ).toBe(true);
       expect(KNOWN_COMMENTS_VALUES.has(params.comments.value), query).toBe(true);
+      // The cancellation warnings are read from kind=CANCELLATION alone, and never with NM.
+      if (params.type.cancellationWarnings) {
+        expect(new URLSearchParams(query).get('kind'), query).toBe('CANCELLATION');
+        expect(params.type.mainType, query).not.toBe('NM');
+      }
       expect(KNOWN_DATE_TYPES.has(params.date.dateType), query).toBe(true);
       expect(KNOWN_SORT_BY_VALUES.has(params.sortBy), query).toBe(true);
       expect(KNOWN_SORT_ORDERS.has(params.sortOrder), query).toBe(true);

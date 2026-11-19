@@ -20,6 +20,28 @@ const MESSAGES: Message[] = [
   { id: 'm2', mainType: 'NM', shortId: 'NM-2', parts: [] },
 ];
 
+/** A message with a position of its own, which the chart draws. */
+const PLACED: Message = {
+  id: 'm3',
+  mainType: 'NW',
+  shortId: 'NW-3',
+  parts: [
+    {
+      type: 'DETAILS',
+      geometry: {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: { type: 'Point', coordinates: [12, 55] },
+          },
+        ],
+      },
+    },
+  ],
+};
+
 /** A country's own credits, as its branding file words them. */
 const BRANDING = {
   en: {
@@ -149,30 +171,10 @@ describe('MessageMapComponent', () => {
   // The list is the messages themselves, not a report from the layer that draws the rest: it is
   // there on the first render and follows the list the chart is given.
   it('lists exactly the messages that have no position, from the first render on', () => {
-    const placed: Message = {
-      id: 'm3',
-      mainType: 'NW',
-      shortId: 'NW-3',
-      parts: [
-        {
-          type: 'DETAILS',
-          geometry: {
-            type: 'FeatureCollection',
-            features: [
-              {
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'Point', coordinates: [12, 55] },
-              },
-            ],
-          },
-        },
-      ],
-    };
-    const fixture = createMap({ messages: [...MESSAGES, placed], showNoPosMessages: true });
+    const fixture = createMap({ messages: [...MESSAGES, PLACED], showNoPosMessages: true });
     expect(fixture.componentInstance.noPos().map((msg) => msg.id)).toEqual(['m1', 'm2']);
 
-    fixture.componentRef.setInput('messages', [placed]);
+    fixture.componentRef.setInput('messages', [PLACED]);
     fixture.detectChanges();
     expect(fixture.componentInstance.noPos()).toEqual([]);
     expect(fixture.nativeElement.querySelector('#no-pos-messages')).toBeNull();
@@ -196,6 +198,47 @@ describe('MessageMapComponent', () => {
       ['Skydeøvelser', 'da'],
       ['Firing exercises', null],
     ]);
+  });
+
+  // The list of an issue being browsed holds its cancelled messages: they stay findable in the
+  // list views, but the chart of the list draws only what may still be in force.
+  it('draws no cancelled message of a list, and leaves it out of the panel beside the chart', () => {
+    const live: Message = { ...PLACED, id: 'live', status: 'PUBLISHED' };
+    const cancelled: Message = { ...PLACED, id: 'cancelled', status: 'CANCELLED' };
+    const cancelledNoPos: Message = { ...MESSAGES[0], id: 'gone', status: 'CANCELLED' };
+    const fixture = createMap({
+      messages: [live, cancelled, cancelledNoPos],
+      showNoPosMessages: true,
+    });
+
+    expect(
+      featuresLayer(fixture)
+        .messages()
+        .map((msg) => msg.id),
+    ).toEqual(['live']);
+    expect(fixture.componentInstance.noPos()).toEqual([]);
+    expect(fixture.nativeElement.querySelector('#no-pos-messages')).toBeNull();
+  });
+
+  it('keeps an expired message of a list on the chart', () => {
+    const expired: Message = { ...PLACED, id: 'expired', status: 'EXPIRED' };
+    const fixture = createMap({ messages: [expired] });
+
+    expect(
+      featuresLayer(fixture)
+        .messages()
+        .map((msg) => msg.id),
+    ).toEqual(['expired']);
+  });
+
+  it('draws a cancelled message on the map of that one message', () => {
+    const fixture = createMap({ message: { ...PLACED, status: 'CANCELLED' } });
+
+    expect(
+      featuresLayer(fixture)
+        .messages()
+        .map((msg) => msg.id),
+    ).toEqual([PLACED.id]);
   });
 
   it('folds the list of messages with no position away and back', () => {

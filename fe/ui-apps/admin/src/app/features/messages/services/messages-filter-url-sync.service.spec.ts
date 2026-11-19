@@ -178,3 +178,65 @@ describe('MessagesFilterUrlSync — reference filter key rename', () => {
     });
   });
 });
+
+describe('MessagesFilterUrlSync — domain filter key rename', () => {
+  describe('inbound (URL → facade)', () => {
+    it('reads `searchDomain` from the URL as the Domain filter `domain`', () => {
+      const { applyQueryParams } = setup({ searchDomain: 'nw' });
+      expect(applyQueryParams).toHaveBeenCalledTimes(1);
+      const search = applyQueryParams.mock.calls[0][0];
+      expect(search.get('domain')).toBe('nw');
+      expect(search.get('searchDomain')).toBeNull();
+    });
+
+    it('does not read the session-domain deep link `domain` as a filter', () => {
+      const { applyQueryParams } = setup({ domain: 'nw', status: 'PUBLISHED' });
+      expect(applyQueryParams).toHaveBeenCalledTimes(1);
+      const search = applyQueryParams.mock.calls[0][0];
+      expect(search.get('domain')).toBeNull();
+      expect(search.get('status')).toBe('PUBLISHED');
+    });
+
+    it('passes a key named like a property of every object through as itself', () => {
+      const { applyQueryParams } = setup({ constructor: 'x', toString: 'y' });
+      const search = applyQueryParams.mock.calls[0][0];
+      expect(search.get('constructor')).toBe('x');
+      expect(search.get('toString')).toBe('y');
+    });
+
+    it('reads the filter, not the deep link, when the URL has both', () => {
+      const { applyQueryParams } = setup({ domain: 'nw', searchDomain: 'nm' });
+      const search = applyQueryParams.mock.calls[0][0];
+      expect(search.getAll('domain')).toEqual(['nm']);
+    });
+  });
+
+  describe('outbound (facade → URL)', () => {
+    it('writes the Domain filter as `searchDomain`, never as `domain`', async () => {
+      const { navigate, requestParams } = setup();
+      await flushInitialEmission();
+      requestParams.set('domain=nm&status=DRAFT');
+      TestBed.tick();
+      await settleDebounce();
+      expect(navigate).toHaveBeenCalledTimes(1);
+      const [, extras] = navigate.mock.calls[0] as [unknown[], NavigateExtras];
+      expect(extras.queryParams['searchDomain']).toBe('nm');
+      expect(extras.queryParams['domain']).toBeUndefined();
+      expect(extras.queryParams['status']).toBe('DRAFT');
+    });
+
+    it('renames the Domain and the reference filters together', async () => {
+      const { navigate, requestParams } = setup();
+      await flushInitialEmission();
+      requestParams.set('domain=nm&messageId=NM-2');
+      TestBed.tick();
+      await settleDebounce();
+      expect(navigate).toHaveBeenCalledTimes(1);
+      const [, extras] = navigate.mock.calls[0] as [unknown[], NavigateExtras];
+      expect(extras.queryParams['searchDomain']).toBe('nm');
+      expect(extras.queryParams['refMessageId']).toBe('NM-2');
+      expect(extras.queryParams['domain']).toBeUndefined();
+      expect(extras.queryParams['messageId']).toBeUndefined();
+    });
+  });
+});

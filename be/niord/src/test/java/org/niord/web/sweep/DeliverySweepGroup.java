@@ -524,6 +524,26 @@ class DeliverySweepGroup implements SweepGroup {
                         .query("status", "abc").note("malformed status"),
                         Cell.status(400, "Failed to convert 'status' with value: 'abc'"))));
 
+        cases.add("myScheduledMails", SweepCase
+                .of((ctx, row) -> SweepRequest.get("/rest/scheduled-mails/mine"))
+                .sweep((ctx, as) -> {
+                    // Each signed-in identity reads its own mails: a list, never the fixture's mail, whose sender
+                    // is no identity's address (the IT holds one user's own mails to that user's answer)
+                    for (String identity : List.of("user", "editor", "admin", "sysadmin", "curator", "domainEditor",
+                            "adminElsewhere")) {
+                        SweepResponse mine = ctx.ok(identity, SweepRequest.get("/rest/scheduled-mails/mine")
+                                .query("days", 30));
+                        List<Object> subjects = mine.json().getList("subject");
+                        ctx.check(mine.json().get("$") instanceof List<?>, "the answer to " + identity
+                                + " is a list", mine);
+                        ctx.check(!subjects.contains(MAIL), "the fixture's mail is not in the answer to "
+                                + identity, mine);
+                    }
+                })
+                .probes((ctx, as) -> ctx.call(as.name(), SweepRequest.get("/rest/scheduled-mails/mine")
+                        .query("days", "abc").note("malformed days"),
+                        Cell.status(400, "Failed to convert 'days' with value: 'abc'"))));
+
         cases.add("getScheduledMail", SweepCase
                 .of((ctx, row) -> SweepRequest.get("/rest/scheduled-mails/scheduled-mail/{scheduledMailId}")
                         .var("scheduledMailId", ctx.row(MAIL)))

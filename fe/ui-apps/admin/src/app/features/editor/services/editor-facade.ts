@@ -10,6 +10,7 @@ import { LanguageService } from '../../../core/main-shell/services/language.serv
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { shiftDaysInZone } from '../../../shared/utils/zoned-date';
 import {
+  isSystemMessage,
   type BasePromulgation,
   type DateInterval,
   type MainType,
@@ -228,16 +229,22 @@ export class EditorFacade implements OnDestroy {
   readonly isEditor = this.auth.hasRole('editor');
   readonly isAdmin = this.auth.hasRole('admin');
 
-  // A message is editable while DRAFT or VERIFIED, or always for an admin.
+  // A message is editable while DRAFT or VERIFIED, or always for an admin — unless Niord made it by
+  // itself (a cancellation warning), which nobody edits: the backend refuses its save.
   readonly editable = computed<boolean>(() => {
-    const status = this._message()?.status;
+    const message = this._message();
+    if (isSystemMessage(message)) {
+      return false;
+    }
+    const status = message?.status;
     return status === 'DRAFT' || status === 'VERIFIED' || this.isAdmin();
   });
 
   // The single "may mutate now" gate: an editor (not a plain user) acting on an editable message.
   // Every form-field disable, the part add/remove/move controls, and the Save affordance key off
   // this so they cannot diverge — a non-admin editor on a PUBLISHED/CANCELLED message is read-only,
-  // while the admin override rides through `editable()`.
+  // while the admin override rides through `editable()`; a cancellation warning is read-only for
+  // everyone. Status actions are gated on the status, not on this.
   readonly editableNow = computed<boolean>(() => this.editable() && this.isEditor());
 
   // Candidate message series for the dropdown: the current session domain's series, narrowed to
@@ -418,13 +425,16 @@ export class EditorFacade implements OnDestroy {
       next: (base) =>
         this.acceptLoad(token, () =>
           base
-            ? // The server template carries the freshly-minted message UUID. Keep it: the seed
-              // template (from the Start screen) only ever sets `id: ''` to satisfy the required
-              // Message.id type, and letting that blank win would POST an empty id — the backend
-              // then persists a broken uid/repo-path instead of the server-assigned one.
-              this.applyLoaded(template ? { ...base, ...template, id: base.id } : base, {
-                dirty: true,
-              })
+            ? // The Start screen's seed carries `id: ''` only to satisfy the required Message.id
+              // type; letting that blank win would POST an empty id, so it takes the server
+              // template's freshly-minted UUID. A template that has an id of its own (the result of
+              // Run template > Execute, or a draft re-seeded by its Cancel) keeps it: its repoPath
+              // and the attachment and image paths are derived from that id, and the create POST
+              // refuses an attachment outside the folder of the id it sends.
+              this.applyLoaded(
+                template ? { ...base, ...template, id: template.id || base.id } : base,
+                { dirty: true },
+              )
             : this.failLoad('editor.load.error.create'),
         ),
       error: () => this.acceptLoad(token, () => this.failLoad('editor.load.error.create')),

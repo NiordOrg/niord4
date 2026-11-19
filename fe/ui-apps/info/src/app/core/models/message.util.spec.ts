@@ -1,8 +1,9 @@
-import { Area, Desc, Message } from './message.model';
+import { Area, DateInterval, Desc, Message } from './message.model';
 import {
   computeAreaHeadings,
   featuresForMessage,
   filterByAreaIds,
+  isActiveAt,
   rootAreaOf,
   sortDescs,
 } from './message.util';
@@ -132,6 +133,68 @@ describe('message.util', () => {
     it('should match when message has multiple areas', () => {
       const msgs: Message[] = [{ id: '1', mainType: 'NW', areas: [{ id: 10 }, { id: 11 }] }];
       expect(filterByAreaIds(msgs, new Set([11]))).toHaveLength(1);
+    });
+  });
+
+  describe('isActiveAt()', () => {
+    const NOW = 1_800_000_000_000;
+    const HOUR = 3_600_000;
+    const withIntervals = (...parts: DateInterval[][]): Message => ({
+      id: '1',
+      mainType: 'NW',
+      parts: parts.map((eventDates) => ({ type: 'DETAILS', eventDates })),
+    });
+
+    // A warning the data cannot judge is never hidden.
+    it('counts a message without event dates as in force', () => {
+      expect(isActiveAt({ id: '1', mainType: 'NW' }, NOW)).toBe(true);
+      expect(isActiveAt({ id: '1', mainType: 'NW', parts: [{ type: 'DETAILS' }] }, NOW)).toBe(true);
+      expect(isActiveAt(withIntervals([]), NOW)).toBe(true);
+    });
+
+    it('is in force inside an interval', () => {
+      expect(isActiveAt(withIntervals([{ fromDate: NOW - HOUR, toDate: NOW + HOUR }]), NOW)).toBe(
+        true,
+      );
+    });
+
+    it('is not in force before its only interval starts', () => {
+      expect(
+        isActiveAt(withIntervals([{ fromDate: NOW + HOUR, toDate: NOW + 2 * HOUR }]), NOW),
+      ).toBe(false);
+    });
+
+    it('is not in force after its only interval ended', () => {
+      expect(
+        isActiveAt(withIntervals([{ fromDate: NOW - 2 * HOUR, toDate: NOW - HOUR }]), NOW),
+      ).toBe(false);
+    });
+
+    it('reads an open end as reaching as far as it likes', () => {
+      expect(isActiveAt(withIntervals([{ fromDate: NOW - HOUR }]), NOW)).toBe(true);
+      expect(isActiveAt(withIntervals([{ toDate: NOW + HOUR }]), NOW)).toBe(true);
+      expect(isActiveAt(withIntervals([{ fromDate: NOW + HOUR }]), NOW)).toBe(false);
+      expect(isActiveAt(withIntervals([{ toDate: NOW - HOUR }]), NOW)).toBe(false);
+    });
+
+    it('is in force when any interval of any part holds the instant', () => {
+      expect(
+        isActiveAt(
+          withIntervals(
+            [{ fromDate: NOW + HOUR, toDate: NOW + 2 * HOUR }],
+            [
+              { fromDate: NOW - 3 * HOUR, toDate: NOW - 2 * HOUR },
+              { fromDate: NOW - HOUR, toDate: NOW + HOUR },
+            ],
+          ),
+          NOW,
+        ),
+      ).toBe(true);
+    });
+
+    it('includes both ends of an interval', () => {
+      expect(isActiveAt(withIntervals([{ fromDate: NOW, toDate: NOW + HOUR }]), NOW)).toBe(true);
+      expect(isActiveAt(withIntervals([{ fromDate: NOW - HOUR, toDate: NOW }]), NOW)).toBe(true);
     });
   });
 

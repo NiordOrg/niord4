@@ -38,7 +38,9 @@ import java.io.ByteArrayInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
@@ -48,6 +50,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Integration tests for {@link org.niord.web.BatchRestService}: the HTTP contract and authorization matrix
@@ -355,19 +358,71 @@ class BatchRestServiceITTest extends ITTest {
                 .then().statusCode(400);
     }
 
-    /** An empty folder below the home starts the job, which has nothing to import and verifies the references */
+    /**
+     * An empty folder below the home starts the job, which has nothing to import and verifies the references. The
+     * answer names the job it started, so that a script can follow it to its end and read its log, and still holds
+     * the status line it answered before.
+     */
     @Test
-    void repoImportOfAFolderBelowTheHomeStartsTheJob() throws Exception {
+    void repoImportOfAFolderBelowTheHomeStartsTheJobAndAnswersItsIds() throws Exception {
         Path dir = Files.createDirectories(repoCache.home().resolve("it-repo-import-empty-" + System.nanoTime()));
         try {
-            given().auth().oauth2(accessToken())
+            Response answer = given().auth().oauth2(accessToken())
                     .contentType(ContentType.JSON)
                     .body(Map.of("dir", dir.toString(), "verify", true))
                     .when().post("/rest/batch/repo-import")
                     .then().statusCode(200)
-                    .body(containsString("Started batch job 'repo-import' of " + dir));
+                    .contentType(ContentType.JSON)
+                    .body(containsString("Started batch job 'repo-import' of "))
+                    .extract().response();
+            assertEquals("repo-import", answer.path("jobName"));
+            assertEquals("Started batch job 'repo-import' of " + dir, answer.path("message"));
+            long executionId = answer.jsonPath().getLong("executionId");
+            long instanceId = answer.jsonPath().getLong("instanceId");
+
+            assertEquals(instanceId, jobOperator.getJobInstance(executionId).getInstanceId(),
+                    "the instance id is the started execution's");
+            assertEquals("COMPLETED", awaitTheEndOverRest(instanceId, executionId),
+                    "a script follows the job to its end through the instances listing");
+            given().auth().oauth2(accessToken())
+                    .when().get("/rest/batch/instance/" + instanceId + "/logs")
+                    .then().statusCode(200)
+                    .body("size()", greaterThanOrEqualTo(1));
         } finally {
             Files.deleteIfExists(dir);
         }
+    }
+
+    /**
+     * Waits for a repo-import job the way a script does, since no endpoint reads one execution by its id: pages
+     * {@code GET /rest/batch/repo-import/instances}, finds the row of the instance id the start answered, and reads
+     * the batch status of its execution until it is terminal. Answers that status.
+     */
+    private String awaitTheEndOverRest(long instanceId, long executionId) throws InterruptedException {
+        Set<String> terminal = Set.of("COMPLETED", "FAILED", "STOPPED", "ABANDONED");
+        long deadline = System.currentTimeMillis() + 90_000L;
+        while (System.currentTimeMillis() < deadline) {
+            List<Map<String, Object>> rows = given().auth().oauth2(accessToken())
+                    .when().get("/rest/batch/repo-import/instances?page=0&pageSize=200")
+                    .then().statusCode(200)
+                    .extract().jsonPath().getList("data");
+            for (Map<String, Object> row : rows) {
+                if (((Number) row.get("instanceId")).longValue() != instanceId) {
+                    continue;
+                }
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> executions = (List<Map<String, Object>>) row.get("executions");
+                for (Map<String, Object> execution : executions) {
+                    String status = String.valueOf(execution.get("batchStatus"));
+                    if (((Number) execution.get("executionId")).longValue() == executionId
+                            && terminal.contains(status)) {
+                        return status;
+                    }
+                }
+            }
+            Thread.sleep(250);
+        }
+        fail("the repo-import job of instance " + instanceId + " did not end within 90 s");
+        return null;
     }
 }

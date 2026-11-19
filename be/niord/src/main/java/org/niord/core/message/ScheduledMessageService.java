@@ -322,6 +322,10 @@ public class ScheduledMessageService extends BaseService {
      * <p>
      * Only the uids and labels leave the search: each change runs in a transaction of its own, which must not use
      * an entity of the sweep's persistence context.
+     * <p>
+     * The lenient search is deliberate here: a failed search is logged by it and the sweep does nothing this minute
+     * and tries again the next, while a thrown failure would need a catch per domain so that one domain's failure
+     * does not stop the others.
      *
      * @param domain the domain
      * @param status the message status

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { HierarchicalEntity } from './hierarchical-entity.model';
 import type { EntityTreeNode } from './to-tree-nodes';
-import { filterTree, setEquals } from './tree-filter';
+import { childrenByKey, filterTree, setEquals } from './tree-filter';
 
 function node(
   key: string,
@@ -93,6 +93,29 @@ describe('filterTree', () => {
     expect(upper.nodes).toEqual(lower.nodes);
     expect([...upper.expandKeys].sort()).toEqual([...lower.expandKeys].sort());
     expect(upper.nodes[0].children.map((c) => c.key)).toEqual(['kat']);
+  });
+});
+
+describe('childrenByKey', () => {
+  it('maps every visible key to the children it shows, at every depth', () => {
+    const tree = sampleTree();
+    const index = childrenByKey(filterTree(tree, 'Læsø').nodes);
+
+    expect([...index.keys()].sort()).toEqual(['anc', 'kat', 'lae']);
+    // The pruned ancestor maps to its pruned list, not to its full children.
+    expect(index.get('anc')?.map((c) => c.key)).toEqual(['kat']);
+    expect(index.get('kat')?.map((c) => c.key)).toEqual(['lae']);
+    expect(index.get('lae')).toEqual([]);
+  });
+
+  it('keeps the children array of an unpruned node by reference', () => {
+    const tree = sampleTree();
+    const index = childrenByKey(filterTree(tree, '').nodes);
+
+    expect(index.size).toBe(6);
+    expect(index.get('anc')).toBe(tree[0].children);
+    expect(index.get('kat')).toBe(tree[0].children[0].children);
+    expect(index.get('se')).toBe(tree[1].children);
   });
 });
 

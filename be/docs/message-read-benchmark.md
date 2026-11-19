@@ -1,12 +1,13 @@
 # Message reads: Niord 4 against the previous Niord
 
 **Status:** 2026-11-05. niord-base's core defaults batch lazy loads 256 owners a query (16 before). niord-dk's and
-niord-gl's local profiles still set 16, which wins over the core defaults, so their local runs stay at 16 and only
-their deployments have 256 until the copies go. The check on the test data (section 4, step 1) needs no decision,
-only the data; steps 2 to 4 wait for the owner's go. The owner ruled on 2026-11-02 that the gap is closed before
+niord-gl's local profiles no longer set their own value (since 2026-11-06), so both countries' local runs and
+deployments take 256 from the core defaults. The check on the test data (section 4, step 1) needs no decision,
+only the data; steps 2 to 4 wait for the owner's go. Step 2's cases exist in the benchmark script since
+2026-11-19 and have run once on the sample (section 3); the comparison itself has not run. The owner ruled on 2026-11-02 that the gap is closed before
 production go-live ([backlog](../../fe/docs/backlog.md), _Before production go-live_).
 **Scope:** the message reads of both web applications: the administration app's list (`GET /rest/messages/search`,
-a page of 200, and its map view, 1,000), the public site's list (`GET /rest/public/v1/messages`, every published
+a page of 200, its map view, 1,000, and the default page of 100 the backlog's figure timed), the public site's list (`GET /rest/public/v1/messages`, every published
 message) and one message (`/rest/messages/message/{id}`, `/rest/public/v1/message/{id}`). Not the PDFs and not the
 map images, which have [their own benchmark](map-image-benchmark.md).
 
@@ -41,7 +42,7 @@ objects walk each message's associations.
 | | Previous Niord | Niord 4 |
 | --- | --- | --- |
 | Stack | Quarkus 3.7.2, Hibernate ORM 6.4.3, MySQL | Spring Boot 4.0.7, Hibernate ORM 7.2, PostgreSQL 18 |
-| Batch fetch size | 16, Quarkus's default | 256 in `niord-core-defaults.yml` since 2026-11-05 (16 before); 16 in the local runs of niord-dk and niord-gl, whose local profiles still set it |
+| Batch fetch size | 16, Quarkus's default | 256 in `niord-core-defaults.yml` since 2026-11-05 (16 before) |
 | Second-level cache | on for the 18 `@Cacheable` entities: Quarkus's default, built on Caffeine, 10,000 entries a region, no expiry | off: no cache provider is configured, so `@Cacheable` does nothing |
 | Cached collections | none: no collection carries `@Cache` | none |
 | Bytecode enhancement | always: Quarkus enhances the entities at build time | none |
@@ -80,25 +81,79 @@ millisecond: the times are that machine's, the statement counts are not.
   IDX2 fix they name their table.
 - A read-only transaction saves 1–2 ms; writing the page's JSON takes about 1 ms.
 
+### The read cases on the sample, 2026-11-19
+
+**What this is:** one run of the script's read cases (section 4, step 2) on the sample deployment, which is small
+and synthetic, on a Windows workstation. It shows that the cases run and what they cost there. It is **not** the
+pass/fail comparison of step 2: that needs both systems on the same large data, and is the owner's to order.
+Nothing here says how Niord 4 compares with the previous Niord.
+
+The setting: `./start-local.sh --sample --admin --slot 1` from the branch that added the cases (niord-app, its
+`local` profile, batch fetch size 256, the default), PostgreSQL 18 in the shared Docker container on the same
+machine; Windows 11, Intel Core Ultra 9 185H, 22 logical processors, 63 GB; Node 24.15. Logged in as the sample's
+sysadmin, no `--domain`. The command: `local --variant new --base http://127.0.0.1:8889 --cases 6,6b,6c,6d`, the
+read cases' default counts (200 message GETs, 30 lists). On the sample the NW and NM search lists 18 messages
+(6b and 6c), case 6's set is 16 published messages with a geometry (`status=PUBLISHED`, 18 found), and the public
+list names 13. No check failed; the run took 21 s.
+
+| Case | Metric | n | Median ms | p95 ms | Max ms |
+| --- | --- | --- | --- | --- | --- |
+| 6 | message GET | 200 | 25.8 | 45.3 | 1042.4 |
+| 6 | list search, `maxSize=200` (29,430 bytes) | 30 | 38.2 | 45.5 | 48.6 |
+| 6b | list search, NW and NM, default page (29,452 bytes) | 30 | 34.3 | 44.1 | 46.5 |
+| 6c | map view, `maxSize=1000` (9,649 bytes) | 30 | 18.9 | 22.7 | 23.6 |
+| 6d | public list (20,607 bytes) | 30 | 42.3 | 51.4 | 59.0 |
+| 6d | public message GET (1,536 bytes median) | 200 | 21.1 | 27.6 | 36.2 |
+
+Case 6's maximum is one message GET of about 1 s among 200; the run does not say why. With 18 messages every list
+is far below the batch size, so these times say nothing about a page of 100 or a map of 1,000 on real data.
+
 ## 4. Plan
 
 In this order; steps 2 and 3 are independent of each other.
 
-1. **The check on the test data**: time the same requests on a country stack with the test data, at 16 and at
-   256. niord-dk's and niord-gl's local profiles set 16, which wins over the core defaults, and their launcher
-   passes no argument through to the backend. Delete the line from `be/src/main/resources/application-local.yml`,
-   or start the stack with `SPRING_APPLICATION_JSON='{"spring.jpa.properties.hibernate.default_batch_fetch_size":256}'`
-   in the environment: the backend's JVM inherits it, and it wins over the profile. A `-D` on Maven's command line
-   never reaches that JVM. If the time is in the statements, it falls with their count.
-2. **The benchmark**, built on `be/scripts/bench-map-images.mjs` (its harness, credentials and result files; its
-   case 6 and R5 already time one message and the list search) rather than a second script beside it: the reads of
-   the scope as cases, each timed (median and p95), with Niord 4's statements per request recorded, in its two
-   modes: `local`, both applications on one workstation with the test data (the previous one on MySQL, Niord 4 on
-   its PostgreSQL copy), and `remote`, the two test environments with GET requests only. The pass rule is the
-   map-image benchmark's, for `local`: in every case Niord 4's median and p95 are at most the previous Niord's
-   × 1.05, with an allowance of at least 2 ms for operations under about 40 ms. `remote` is a guide, not the
-   gate. **Needs:** for `local`, the test data's MySQL dump and a running build of the previous Niord; for
-   `remote`, a Niord 4 test deployment on the test data.
+1. **The check on the test data**: time the same requests on a country stack with the test data, at 256 and at
+   16. A country's local run takes 256 from the core defaults, and its launcher passes no argument through to the
+   backend. For the run at 16, start the stack with
+   `SPRING_APPLICATION_JSON='{"spring.jpa.properties.hibernate.default_batch_fetch_size":16}'` in the environment:
+   the backend's JVM inherits it, and it wins over the core defaults. A `-D` on Maven's command line never reaches
+   that JVM. If the time is in the statements, it falls with their count. Production-size data arrives with the
+   first regular restore of the previous Niord's production database (the go-live rehearsal); the requests are
+   timed there too.
+2. **The benchmark**, built on `be/scripts/bench-map-images.mjs` (its harness, credentials and result files)
+   rather than a second script beside it. Every read of the scope is a case there since 2026-11-19, in `local`
+   mode and, with the R names, in `remote` mode:
+
+   | Local | Remote | What is timed, one request at a time |
+   | --- | --- | --- |
+   | 6 | R5 | `GET /rest/messages/message/{id}` for the set's messages, `--message-gets` times (200), and the list search of `--list-filter` with `maxSize=200`, `--searches` times (30) |
+   | 6b | R6 | the backlog's request: `GET /rest/messages/search?mainType=NW&mainType=NM&lang=<lang>`, the default page of 100, `--searches` times |
+   | 6c | R7 | the map view's: the same with `page=0&maxSize=1000&viewMode=map&includeNoPos=true`, as the administration app sends it, `--searches` times |
+   | 6d | R8 | the public site's, with no login: `GET /rest/public/v1/messages?lang=<lang>&externalize=false` `--searches` times (without the `mainType=NW&mainType=NM` the site sends by default, which selects the same messages), then `GET /rest/public/v1/message/{id}` with the same parameters `--message-gets` times over the first `--count` ids (50) of that list |
+
+   The read cases do not take `--warmup` or `--rounds`: each discards its first answers (`local` 10 message
+   GETs and 3 lists, `remote` 5 and 2) and times `--message-gets` and `--searches` requests, so the defaults are
+   the recipe. 6b to 6d and R6 to R8 run only when `--cases` names them, and a run of read cases alone fetches
+   no map image, so it needs neither the stand-ins nor `--cache`. 6b, 6c, R6 and R7 are timed without `--domain`:
+   the search without a domain, which lists every published NW and NM message. A `--domain` sends `NiordDomain`
+   and narrows them to that domain's series, so both systems are run with the same `--domain` or both without:
+
+   ```
+   NIORD_USER=<user> NIORD_PASS=<password> node be/scripts/bench-map-images.mjs local --variant new \
+     --cases 6,6b,6c,6d --out reads-local.json
+   NIORD_USER=<user> NIORD_PASS=<password> node be/scripts/bench-map-images.mjs remote \
+     --base https://<host> --keycloak https://<keycloak host>/auth --cases R5,R6,R7,R8 --out reads-remote.json
+   ```
+
+   The script records times and answer sizes, not statements: Niord 4's statements per request come from the
+   backend's Hibernate statistics. The two modes: `local`, both applications on one workstation with the test
+   data (the previous one on MySQL, Niord 4 on its PostgreSQL copy), and `remote`, the two test environments with
+   GET requests only. The pass rule is the map-image benchmark's, applied by the script's `compare` to the result
+   files of a `local` run of each (`--tolerance 0.05 --floor-ms 2 --small-ms 40`, the defaults): in every case
+   Niord 4's median and p95 are at most the previous Niord's × 1.05, with an allowance of at least 2 ms for
+   operations under about 40 ms. `remote` is a guide, not the gate. **Needs:** for `local`, the test data's
+   MySQL dump and a running build of the previous Niord; for `remote`, a Niord 4 test deployment on the test
+   data, and the owner's go before any request goes to either test environment.
 3. **The second-level cache**, as the previous Niord had it: `org.hibernate.orm:hibernate-jcache` with Caffeine's
    JCache (`com.github.ben-manes.caffeine:jcache`), both versions managed by Spring Boot, `ENABLE_SELECTIVE`,
    10,000 entries a region; a deliberate `pom.xml` change. Three conditions come first:
@@ -111,13 +166,15 @@ In this order; steps 2 and 3 are independent of each other.
      (met since 2026-11-12: each carries the hint `HibernateHints.HINT_NATIVE_SPACES`);
    - the backend runs one replica (the chart's `replicaCount: 1`), and no write outside Hibernate touches the table
      of a cached entity. Such writes exist: `RepoStore`'s `JdbcTemplate`, the `Session.doWork` writers of
-     `SettingsService` and `DefaultsLedger`, `BootstrapMarker`'s native SQL and `LegacyImportService`'s two native
-     deletes of `PublicationSeries` collection tables. None of their tables belongs to a cached entity: `Setting`
-     carries no `@Cacheable`, `PublicationSeries` neither, and `RepoFile`, `BootstrapState` and `DefaultsLedger`
-     have no entity. `Setting`, `RepoFile`, `BootstrapState` and `DefaultsLedger` stay uncached. A native write
-     that declares no table empties the cache when it runs, as `MessagePostgresIndex`'s did; `BootstrapMarker`'s
-     run at start-up and during a bootstrap and `LegacyImportService`'s in the legacy import, so they cost a cold
-     cache then, not stale reads.
+     `SettingsService` and `DefaultsLedger`, `BootstrapMarker`'s native SQL, `LegacyImportService`'s two native
+     deletes of `PublicationSeries` collection tables and `MailingListStatusChangeOutbox`'s native SQL (a row
+     written, taken and deleted with every status change). None of their tables belongs to a cached entity:
+     `Setting` carries no `@Cacheable`, `PublicationSeries` neither, and `RepoFile`, `BootstrapState`,
+     `DefaultsLedger` and `MailingListStatusChange` have no entity. `Setting`, `RepoFile`, `BootstrapState` and
+     `DefaultsLedger` stay uncached. A native write that declares no table empties the cache when it runs, as
+     `MessagePostgresIndex`'s did; the outbox's writes declare their table, while `BootstrapMarker`'s run at
+     start-up and during a bootstrap and `LegacyImportService`'s in the legacy import, so they cost a cold cache
+     then, not stale reads.
 
    With `hibernate-jcache` on the class path Hibernate switches the cache on by itself, so the core defaults state
    the settings rather than leave them to that.

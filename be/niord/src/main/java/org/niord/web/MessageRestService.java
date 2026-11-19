@@ -482,7 +482,9 @@ public class MessageRestService  {
         // Compute the default set of editor fields to display for the message
         computeEditorFields(editMessage);
 
-        // Reset various fields
+        // Reset various fields. A copy is always an ordinary editorial message, also the copy of a
+        // cancellation warning, which could otherwise never be saved
+        editMessage.setKind(MessageKind.WARNING);
         editMessage.setShortId(null);
         editMessage.setStatus(DRAFT);
         editMessage.setCreated(null);
@@ -970,7 +972,7 @@ public class MessageRestService  {
     @PutMapping("/recompute-area-sort-order")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @RolesAllowed(Roles.ADMIN)
-    public void reindexPublishedMessageAreaSorting() {
+    public void reindexPublishedMessageAreaSorting() throws Exception {
 
         // Search for published message in the curretn domain
         Domain domain = domainService.currentDomain();
@@ -986,9 +988,10 @@ public class MessageRestService  {
         params.statuses(Collections.singleton(Status.PUBLISHED))
                 .seriesIds(messageSeries);
 
-        // Perform the search and update the area sort order of the messages
+        // Perform the search and update the area sort order of the messages. A failed search is an error, not a
+        // "done" over no messages
         long t0 = System.currentTimeMillis();
-        PagedSearchResultVo<Message> searchResult = messageSearchService.search(params);
+        PagedSearchResultVo<Message> searchResult = messageSearchService.searchOrFail(params);
         searchResult.getData().forEach(m -> messageService.computeMessageAreaSortingOrder(m));
 
         log.debug(String.format("Updates area sort order for  %d messages in %d ms",

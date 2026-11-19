@@ -21,6 +21,9 @@ import org.niord.core.mail.ScheduledMailSearchParams;
 import org.niord.core.mail.ScheduledMailService;
 import org.niord.core.mail.vo.ScheduledMailVo;
 import org.niord.core.user.Roles;
+import org.niord.core.user.User;
+import org.niord.core.user.UserService;
+import org.niord.core.util.TimeUtils;
 import org.niord.model.DataFilter;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
@@ -34,6 +37,10 @@ import jakarta.annotation.security.RolesAllowed;
 import org.springframework.transaction.annotation.Transactional;
 import org.niord.core.web.NiordWebException;
 
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
 /**
  * REST interface for searching scheduled e-mails.
  */
@@ -45,10 +52,44 @@ public class ScheduledMailRestService {
 
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ScheduledMailRestService.class);
 
+    /** The most mails the user's own list returns */
+    static final int MY_MAILS_MAX = 100;
+
+    /** The longest period, in days, the user's own list covers */
+    static final int MY_MAILS_MAX_DAYS = 30;
+
     private final ScheduledMailService scheduledMailService;
 
-    ScheduledMailRestService(ScheduledMailService scheduledMailService) {
+    private final UserService userService;
+
+    ScheduledMailRestService(ScheduledMailService scheduledMailService, UserService userService) {
         this.scheduledMailService = scheduledMailService;
+        this.userService = userService;
+    }
+
+    /**
+     * Returns the current user's own queued mails of the last {@code days} days (1 to 30, a value outside is
+     * clamped), newest first, at most 100, without the mail's text.
+     * <p>
+     * A mail is the user's own when the address it was queued with as its sender is the user's address now (the
+     * mail dialog and a comment's mail record it). The answer holds each mail's status, attempts and last error,
+     * so the sender learns whether the mail was sent; the last error is the mail server's own message, which may
+     * name the mail relay's host and port. A user without a name and an e-mail address has no sender address and
+     * gets an empty list.
+     */
+    @GetMapping(value = "/mine", produces = "application/json;charset=UTF-8")
+    @RolesAllowed(Roles.USER)
+    public List<ScheduledMailVo> mine(@RequestParam(name = "days", defaultValue = "7") int days) {
+        User user = userService.currentUser();
+        if (user == null) {
+            return List.of();
+        }
+        int period = Math.clamp(days, 1, MY_MAILS_MAX_DAYS);
+        Date since = TimeUtils.add(new Date(), Calendar.DATE, -period);
+        DataFilter dataFilter = DataFilter.get();
+        return scheduledMailService.findBySender(user.computeInternetAddress(), since, MY_MAILS_MAX).stream()
+                .map(m -> m.toVo(dataFilter))
+                .toList();
     }
 
     /**

@@ -455,7 +455,14 @@ A JBeret job `repo-import`, started by a SYSADMIN through a new `POST /rest/batc
 adds (jobs start today from an upload, a batch set, the bootstrap command, or a JSON body for
 `execute-javascript`, `BatchRestService.java:344-358`, which is the shape R1e follows; none from parameters
 alone), so that `BatchData` records who ran it and the admin app's Batch page shows its progress. The runbook says how a
-sysadmin calls it (a `curl` with a token). Its parameters:
+sysadmin calls it (a `curl` with a token). Since 2026-11-19 it answers JSON naming the job it started,
+`{"jobName", "executionId", "instanceId", "message"}` (`message` is the status line it answered before as
+text), so that a script can follow its own job without guessing it by its start time. No endpoint reads one
+execution by its id: a script waits for its job by paging `GET /rest/batch/repo-import/instances` (newest
+first, `pageSize` may be raised), finding the row whose `instanceId` is the one answered and reading its
+`executions[].batchStatus` until it is `COMPLETED`, `FAILED`, `STOPPED` or `ABANDONED`; it reads the log at
+`/rest/batch/instance/{instanceId}/logs`. The execution id is the one `PUT /rest/batch/execution/{id}/stop`,
+`/restart` and `/abandon` take. Its parameters:
 
 - `dir`: the old repository root, readable by the pod (on staging the PVC, still mounted at
   `/niord-home/repo` during the window; for a tree copied from another installation, a mount under the
@@ -480,8 +487,9 @@ resumable: a second run after an interruption does the rest.
 pins that), and an editor may upload a file named like a thumbnail or a map image. A rule that skipped
 what the listing hides would lose every custom map thumbnail. So the job first collects every path a
 reference names (`Attachment.path` decoded, `Message.thumbnailPath`, `PublicationIssueDesc.filePath`,
-`PublicationDesc.link`, `IssueAuditEntry.archivePath`, and every `/rest/repo/file/` URL in the message
-HTML), and a referenced path is imported whatever its name (a custom thumbnail is
+`PublicationIssueDesc.link`, `PublicationDesc.link`, `IssueAuditEntry.archivePath`, and every
+`/rest/repo/file/` URL in the message HTML and in a message's publication texts, `MessageDesc.publication`
+and `.internalPublication`), and a referenced path is imported whatever its name (a custom thumbnail is
 `custom_thumb_<mapImageSize>.png`, and `mapImageSize` is a setting, 256 by default; an upload an editor
 named `chart_thumb_64.png` beside `chart.png` is an attachment). Of the rest, it imports every file, under
 a revision folder or not (an issue's folder has no revision level, and a cleared issue's PDF is such an
@@ -489,14 +497,16 @@ unreferenced file, kept as the bytes are kept on disk today), and treats as deri
 `<name>_thumb_<32|64|128>.<ext>` (the `IconSize` values) where `<name>.<ext>` lies beside it in the same
 folder, and `map_<n>[_<version>].png` directly in a message folder; a file the heuristic is unsure of is
 an upload. Those it does not insert: it **moves them into the cache tree
-on the same volume with their mtimes kept**, so the first views after the cutover are warm, and leaves a
-file the cache tree already holds, which the window may have drawn (the regenerator draws on request). Without that, the public list PDF (a 180 s proxy timeout) and the publish step,
+on the same volume with their mtimes kept**, so the first views after the cutover are warm (from a tree it may
+not change, a read-only copy kept for another run, it copies them and leaves the tree as it is; they count as
+moved, not failed), and leaves a file the cache tree already holds, which the window may have drawn (the regenerator draws on request). Without that, the public list PDF (a 180 s proxy timeout) and the publish step,
 which embed `/rest/message-map-image/…`, would draw up to a thousand images with no cached tiles.
 
 **Verification is from the rows' side, not `find | wc -l`.** After the run, every reference must resolve
-to a row: `Attachment.path` (decoded), `Message.thumbnailPath`, `PublicationIssueDesc.filePath`,
-`PublicationDesc.link`, every `IssueAuditEntry.archivePath` entry, and every `/rest/repo/file/` URL in the
-message HTML. The job reports each reference that does not, which catches an encoding mistake as well as
+to a row: `Attachment.path` (decoded), `Message.thumbnailPath`, `PublicationIssueDesc.filePath` and
+`.link`, `PublicationDesc.link`, every `IssueAuditEntry.archivePath` entry, and every `/rest/repo/file/` URL in
+the message HTML and in a message's publication texts (`MessageDesc.publication`, `.internalPublication`;
+read since 2026-11-19). The job reports each reference that does not, which catches an encoding mistake as well as
 a file the rule missed. An HTML link to a thumbnail or a map image resolves to a row like any other,
 because the reference-first rule above imported that file as one; `/file` has no fallback to consult
 (§4.3), so what the check reports is exact, and a derived file it reports is a file the tree did not hold. The

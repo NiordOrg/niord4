@@ -1,6 +1,6 @@
 {
   "_comment": "What a first visit to the public site transfers, measured from the build named under source. Written to info/bundle-baseline.json by --update-baseline, and then the gate every later build is held to.",
-  "generatedAt": "2026-10-22",
+  "generatedAt": "2026-11-18",
   "source": {
     "measuredFrom": "dist/niord-info/browser + dist/niord-info/browser-stats.json",
     "angular": "^22.2.2",
@@ -17,31 +17,31 @@
   "groups": {
     "index": {
       "files": 1,
-      "raw": 742,
-      "brotli": 273,
-      "gzip": 436,
-      "transfer": 273
+      "raw": 761,
+      "brotli": 313,
+      "gzip": 476,
+      "transfer": 313
     },
     "styles": {
       "files": 1,
-      "raw": 51662,
-      "brotli": 9725,
-      "gzip": 10924,
-      "transfer": 9725
+      "raw": 52972,
+      "brotli": 9898,
+      "gzip": 11132,
+      "transfer": 9898
     },
     "initialJs": {
       "files": 2,
-      "raw": 346578,
-      "brotli": 96720,
-      "gzip": 109480,
-      "transfer": 96720
+      "raw": 350422,
+      "brotli": 97602,
+      "gzip": 110434,
+      "transfer": 97602
     },
     "landingLazyJs": {
       "files": 11,
-      "raw": 39378,
-      "brotli": 14525,
-      "gzip": 16093,
-      "transfer": 14525
+      "raw": 43566,
+      "brotli": 15876,
+      "gzip": 17559,
+      "transfer": 15876
     },
     "fonts": {
       "files": 1,
@@ -54,20 +54,20 @@
   "totals": {
     "firstVisit": {
       "files": 16,
-      "raw": 461940,
-      "transfer": 144782
+      "raw": 471301,
+      "transfer": 147228
     },
     "initial": {
-      "raw": 398982,
-      "transfer": 106718
+      "raw": 404155,
+      "transfer": 107813
     }
   },
   "reference": {
     "_comment": "Not gated. Recorded so a later piece of work can see what moved and where.",
     "largestScript": {
-      "file": "chunk-BRqP4-P2.js",
-      "raw": 347427,
-      "brotli": 85788
+      "file": "chunk-Cfm0e8Up.js",
+      "raw": 347480,
+      "brotli": 85888
     },
     "largestComponentStyle": {
       "file": "message-print-view.component-OKGXIAM5.css",
@@ -75,17 +75,17 @@
     },
     "allJs": {
       "files": 30,
-      "raw": 885121,
-      "brotli": 242635,
-      "gzip": 277849,
-      "transfer": 242635
+      "raw": 894451,
+      "brotli": 245302,
+      "gzip": 280673,
+      "transfer": 245302
     },
     "notFirstVisit": {
       "files": 31,
-      "raw": 512173,
-      "brotli": 136908,
-      "gzip": 158765,
-      "transfer": 136896
+      "raw": 513587,
+      "brotli": 137396,
+      "gzip": 159214,
+      "transfer": 137388
     }
   },
   "targets": {

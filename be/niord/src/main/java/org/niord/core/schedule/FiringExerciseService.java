@@ -443,7 +443,8 @@ public class FiringExerciseService extends BaseService {
      * meant. The stored row is not changed. The periods so read are named in one WARN line per schedule and run. A
      * period that still ends before it starts after that is left out, with a WARN of its own.
      * <p>
-     * A period is kept when its end, so read, is at or after the start of the window.
+     * A period is kept when its end, so read, is after the start of the window: one that ends exactly at it has no
+     * time in the window and is left out.
      *
      * @param stored      the stored periods, read from one day before the window
      * @param zone        the target domain's zone
@@ -468,7 +469,7 @@ public class FiringExerciseService extends BaseService {
                     continue;
                 }
             }
-            if (to.before(windowStart)) {
+            if (!to.after(windowStart)) {
                 continue;
             }
             if (backward) {

@@ -52,13 +52,15 @@ import java.util.stream.Stream;
  * <p>
  * A derived file (an image thumbnail beside its source, a generated map image in a message folder) is not
  * imported: it is moved into the cache tree on the same volume, with its modification time kept, so that the
- * first views after the cutover are warm. The rule runs after the references: a file the database names is
+ * first views after the cutover are warm; a tree the job may not change keeps its copy, and the file still counts
+ * as moved. The rule runs after the references: a file the database names is
  * imported whatever its name, since an editor's custom map thumbnail is named like a generated one, and an upload
  * may be named like a thumbnail.
  * <p>
  * The import ends with the verification from the rows' side: every reference the database holds (an attachment's
- * path, a message's thumbnail, an issue's file, a publication's link, an audit entry's archived locations, and
- * every repository link in the message texts) must resolve to a row, and each one that does not is reported.
+ * path, a message's thumbnail, an issue's file and link, a publication's link, an audit entry's archived locations,
+ * and every repository link in the message texts and in a message's publication texts) must resolve to a row, and
+ * each one that does not is reported.
  */
 @Service
 public class RepoImportService {
@@ -305,9 +307,30 @@ public class RepoImportService {
         try {
             Files.move(file, target);
         } catch (IOException e) {
-            // Another volume: copied with its attributes, then deleted
-            Files.copy(file, target, StandardCopyOption.COPY_ATTRIBUTES);
+            // Another volume, or a tree the job may not change: copied with its attributes, then deleted
+            return copyIntoCache(file, target);
+        }
+        return Outcome.MOVED;
+    }
+
+    /**
+     * Copies a derived file into the cache tree with its attributes, then deletes it from the tree. A tree that
+     * refuses the deletion (a read-only copy of the old tree, kept so that it can be used again) keeps the file:
+     * the copy in the cache tree is what the move was for, so the file counts as moved. A copy that fails is a
+     * failure of the item.
+     *
+     * @param file the derived file on the tree
+     * @param target its place in the cache tree, which does not exist yet
+     * @return {@link Outcome#MOVED}
+     * @throws IOException when the copy fails
+     */
+    static Outcome copyIntoCache(Path file, Path target) throws IOException {
+        Files.copy(file, target, StandardCopyOption.COPY_ATTRIBUTES);
+        try {
             Files.delete(file);
+        } catch (IOException e) {
+            log.debug("Copied the derived file {} into the cache tree and left it on the tree, which refuses its"
+                    + " deletion: {}", file, e.toString());
         }
         return Outcome.MOVED;
     }
@@ -429,6 +452,11 @@ public class RepoImportService {
         for (Object[] row : rows("select d.id, d.lang, d.filePath from PublicationIssueDesc d where d.filePath is not null")) {
             refs.add(Reference.of("The " + row[1] + " file of publication issue desc " + row[0], (String) row[2]));
         }
+        for (Object[] row : rows("select d.id, d.lang, d.link from PublicationIssueDesc d where d.link is not null")) {
+            for (String link : RepoPaths.fileLinkPaths((String) row[2])) {
+                refs.add(Reference.of("The " + row[1] + " link of publication issue desc " + row[0], link));
+            }
+        }
         for (Object[] row : rows("select d.id, d.lang, d.link from PublicationDesc d where d.link is not null")) {
             for (String link : RepoPaths.fileLinkPaths((String) row[2])) {
                 refs.add(Reference.of("The " + row[1] + " link of publication desc " + row[0], link));
@@ -443,6 +471,17 @@ public class RepoImportService {
                 + RepoPaths.FILE_URL_PREFIX + "%'")) {
             for (String link : RepoPaths.fileLinkPaths((String) row[1])) {
                 refs.add(Reference.of("The text of message part desc " + row[0], link));
+            }
+        }
+        // A message's publication texts, the public and the internal one, are HTML that may link a file too
+        for (Object[] row : rows("select d.id, d.lang, d.publication, d.internalPublication from MessageDesc d"
+                + " where d.publication like '%" + RepoPaths.FILE_URL_PREFIX + "%'"
+                + " or d.internalPublication like '%" + RepoPaths.FILE_URL_PREFIX + "%'")) {
+            for (String link : RepoPaths.fileLinkPaths((String) row[2])) {
+                refs.add(Reference.of("The " + row[1] + " publication text of message desc " + row[0], link));
+            }
+            for (String link : RepoPaths.fileLinkPaths((String) row[3])) {
+                refs.add(Reference.of("The " + row[1] + " internal publication text of message desc " + row[0], link));
             }
         }
         return refs;

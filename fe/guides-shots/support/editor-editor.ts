@@ -107,8 +107,9 @@ const RULES = {
     ` order by m."publishDateFrom" desc, m.id`,
   /**
    * As nmPublished, but in no open issue that holds a frozen list of members: the copy has such
-   * issues (imported weeks never released, such as Active P&T Week 36 - 2026), and the Publications
-   * panel labels them Published without a date.
+   * issues (imported weeks never released), which the Publications panel once labelled Published
+   * without a date; it now answers them by their rule, and the picture keeps to the message it was
+   * taken on.
    */
   nmInPublications:
     `select m.uid from ${english('niord-nm', 'PUBLISHED')} and ${PARTS} = 'DETAILS+NOTE'` +

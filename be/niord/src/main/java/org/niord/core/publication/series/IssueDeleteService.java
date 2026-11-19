@@ -400,10 +400,12 @@ public class IssueDeleteService extends BaseService {
 
     /**
      * The files the legacy publications' descriptors name, as normalised repository paths: the file of each
-     * descriptor under the publication's revision folder, which is the path the import gives an issue's descriptor,
-     * and the file each descriptor's link serves ({@code /rest/repo/file/<path>}), as written and decoded, read by
-     * the rule the import's verification reads links with ({@link RepoPaths#fileLinkPaths},
-     * {@link RepoPaths#candidates}), so the two agree on what a legacy publication names.
+     * descriptor under the publication's current revision folder, and the file each descriptor's link serves
+     * ({@code /rest/repo/file/<path>}), as written and decoded (the import gives an issue's descriptor the second
+     * when it lies under the publication's folder and ends in the descriptor's file name, else the first:
+     * {@code LegacyIssueTranslation.filePath}), read by the rule the import reads links with
+     * ({@link RepoPaths#fileLinkPaths}, {@link RepoPaths#candidates}), so the two agree on what a legacy
+     * publication names, and with the repository import's verification of the links it keeps.
      */
     private static Set<String> legacyFiles(List<Publication> legacy) {
         Set<String> files = new HashSet<>();

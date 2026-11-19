@@ -22,7 +22,10 @@ import freemarker.template.TemplateDirectiveBody;
 import freemarker.template.TemplateDirectiveModel;
 import freemarker.template.TemplateException;
 import freemarker.template.TemplateModel;
+import org.apache.commons.lang3.StringUtils;
 import org.niord.core.util.TextUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
@@ -38,6 +41,8 @@ import java.util.Map;
 public class TextToHtmlDirective implements TemplateDirectiveModel {
 
     private static final String PARAM_TEXT = "text";
+
+    private static final Logger log = LoggerFactory.getLogger(TextToHtmlDirective.class);
 
     /**
      * {@inheritDoc}
@@ -61,7 +66,10 @@ public class TextToHtmlDirective implements TemplateDirectiveModel {
                 env.getOut().write(TextUtils.txt2html(txt));
             }
         } catch (Exception e) {
-            // Prefer robustness over correctness
+            // Prefer robustness over correctness, but say so (the length only, never the text)
+            log.warn("Text of {} characters not printed as HTML in template {}: {}",
+                    StringUtils.length(txtModel.getAsString()),
+                    LightCharacterDirective.templateName(env), LightCharacterDirective.reason(e));
         }
     }
 

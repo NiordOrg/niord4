@@ -139,6 +139,7 @@ class BootstrapITTest {
         registry.add("niord.schedule.auto-publish-cron", () -> "-");
         registry.add("niord.schedule.auto-expire-cron", () -> "-");
         registry.add("niord.schedule.firing-exercise-cron", () -> "-");
+        registry.add("niord.mailinglist.status-change-sweep-cron", () -> "-");
     }
 
     @LocalServerPort

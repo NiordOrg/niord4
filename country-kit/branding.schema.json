@@ -32,6 +32,20 @@
           "required": false,
           "description": "The footer's label for the cookie policy; the footer offers the document only when set."
         },
+        "footer.accessibility": {
+          "kind": "text",
+          "placeholders": [],
+          "required": false,
+          "requires": ["footer.accessibilityLink"],
+          "description": "The footer's label for the link to the administration app's accessibility statement; the footer shows it only when set, with its address."
+        },
+        "footer.accessibilityLink": {
+          "kind": "url",
+          "placeholders": [],
+          "required": false,
+          "requires": ["footer.accessibility"],
+          "description": "The address of the administration app's own accessibility statement (its own statement, not the public site's), which the footer label links."
+        },
         "main.footer.links.center.url": {
           "kind": "url",
           "placeholders": [],

@@ -245,11 +245,19 @@ export class MessageIssuesPanel {
  * Each membership is named; nothing falls through to `pending`. The panel once
  * drew every row that was not frozen as pending, which is how a new value from
  * the server would have read as "will be in this issue".
+ *
+ * A frozen row is named by its issue's status too: published or retired, and
+ * nothing for any other status. The server sends frozen rows only for those two,
+ * so a frozen row in an open issue cannot read as published.
  */
 function membershipState(issue: MessageIssueRef): MembershipState {
   switch (issue.membership) {
     case 'FROZEN':
-      return issue.status === 'RETIRED' ? 'withdrawn' : 'published';
+      return issue.status === 'PUBLISHED'
+        ? 'published'
+        : issue.status === 'RETIRED'
+          ? 'withdrawn'
+          : 'unknown';
     case 'LIVE':
       return 'pending';
     case 'MISSED':

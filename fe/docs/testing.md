@@ -140,14 +140,15 @@ spies. Component-level `providers: [SomeFacade]` is a common shape here, so this
 
 `ui-apps/admin/src/app/shared/testing/` holds the helpers every spec should reach for instead of hand-rolling one.
 
-| Helper                                                                | What it gives you                                                                                                                                                                                                                   |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provideTestTransloco()`                                              | Transloco with **two** languages and a stub loader                                                                                                                                                                                  |
-| `provideFakeAuthFacade({ editor, admin, sysadmin, isAuthenticated })` | Signal-backed role flags; roles are fixed at construction                                                                                                                                                                           |
-| `provideFakeDomainFacade({ canEditSeries })`                          | A fixed answer for series edit rights                                                                                                                                                                                               |
-| `provideTestSessionZone(zone)` + `wallClockIn(zone, instant)`         | A session domain carrying only a time zone (pass none for the "no domain yet" state), and a readable wall-clock assertion                                                                                                           |
-| `fakeRowLinkRouter()`                                                 | The `createUrlTree` / `serializeUrl` / `events` a row link needs to render an `href`                                                                                                                                                |
-| `provideTestLanguages(config?)`                                       | An English-and-Danish language configuration on the `LANGUAGE_CONFIG` token (`TEST_LANGUAGES` by default). The base product's own configuration is English only, so a spec that switches to Danish or formats in `da` provides this |
+| Helper                                                                | What it gives you                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provideTestTransloco()`                                              | Transloco with **two** languages and a stub loader                                                                                                                                                                                                                            |
+| `provideFakeAuthFacade({ editor, admin, sysadmin, isAuthenticated })` | Signal-backed role flags; roles are fixed at construction                                                                                                                                                                                                                     |
+| `provideFakeDomainFacade({ canEditSeries })`                          | A fixed answer for series edit rights                                                                                                                                                                                                                                         |
+| `provideTestSessionZone(zone)` + `wallClockIn(zone, instant)`         | A session domain carrying only a time zone (pass none for the "no domain yet" state), and a readable wall-clock assertion                                                                                                                                                     |
+| `fakeRowLinkRouter()`                                                 | The `createUrlTree` / `serializeUrl` / `events` a row link needs to render an `href`                                                                                                                                                                                          |
+| `provideTestLanguages(config?)`                                       | An English-and-Danish language configuration on the `LANGUAGE_CONFIG` token (`TEST_LANGUAGES` by default). The base product's own configuration is English only, so a spec that switches to Danish or formats in `da` provides this                                           |
+| `pressWithMouse(button)` / `pressWithKey(button, 'Enter' \| ' ')`     | Presses a button the way a browser does: the mouse fires mousedown, mouseup and click and returns whether the focus was kept; a key focuses the button and fires the click Enter or Space would. Use both to prove that a button works from the keyboard as well as the mouse |
 
 Two languages, not one, is load-bearing: a language Transloco has not been told about is read as a
 _scope_, so switching to it silently turns every lookup into `da.some.key` and every label assertion
@@ -305,7 +306,9 @@ duty-officer scenarios below, which run only against the sample deployment and o
 
 [`ui-apps/admin/e2e/scenarios/`](../ui-apps/admin/e2e/scenarios/) holds whole working days of a
 duty officer, through the screens: a warning from a template to its cancellation, a notice to
-mariners with parts and attachments, the firing schedule and its exercises, a weekly publication.
+mariners with parts and attachments, the firing schedule and its exercises, a weekly publication,
+and a warning written, saved, verified and published with the keyboard alone (the accessibility
+check below).
 They write data, so they are opt-in: without `E2E_SCENARIOS=1` every one of them skips by name, and
 a plain `npm run e2e` stays as harmless as before. With it, a guard refuses to write unless the run
 has one worker and the backend holds the sample deployment in a mode other than production. They
@@ -431,9 +434,41 @@ before shipping anything that touches a journey it covers.
 
 Also unautomated today, and worth knowing before you assume a gate exists:
 
-- No accessibility scanner anywhere — no axe, pa11y or Lighthouse dependency and no CI step. The
-  public site's layout check below asserts reflow and visible focus around its two bars, and
-  nothing else.
+- No accessibility scanner in CI. The public site has one as a manual tool,
+  `npm run a11y:info -- --base <url> --out <dir>` (`scripts/info-a11y-scan.mjs`): axe-core, a dev
+  dependency, over every page and dialog of a running site at 1280 and 320 px in each language the
+  switcher offers, the WCAG 2.1 A and AA rules and the best-practice ones apart, written to a JSON
+  and a Markdown report that hold no page content. It exits 1 while a rule fails (3 when a page
+  could not be opened at all), so it can become a gate, but no workflow runs it; the audit record
+  it served is [the public site's audit](../../docs/accessibility-audit-public-site.md). The public
+  site's layout check below asserts reflow and visible focus around its two bars, and nothing else.
+- The administration app's accessibility check is two specs of the end-to-end suite, by hand before
+  a release like the rest of it, and only against the sample deployment:
+  - [`a11y-routes.spec.ts`](../ui-apps/admin/e2e/a11y-routes.spec.ts) runs axe-core
+    ([`a11y/axe.ts`](../ui-apps/admin/e2e/a11y/axe.ts)) over every route of the application but
+    `/editor/execute-template`, `/editor/copy/:id` (with or without a reference type) and
+    `/admin/publications/one-off/:seriesId`, as an anonymous reader and as the sysadmin, and over
+    the messages' Actions menu, the Print dialog and the header's domain and language menus, but
+    not the admin sections' editors and dialogs, against the WCAG 2.1 A and AA rules, light mode
+    and English only. It is read-only, runs only with `E2E_A11Y=1` and checks that the backend
+    holds the sample first; without the switch it skips by name.
+  - The scenario [`scenarios/keyboard-publish.spec.ts`](../ui-apps/admin/e2e/scenarios/keyboard-publish.spec.ts)
+    writes, saves, verifies and publishes a warning with the keyboard alone, asserting where the focus
+    is and that it shows after every step, and scans each overlay it opens. It runs with the other
+    scenarios (`E2E_SCENARIOS=1`, one worker).
+
+  Each scan is held to [`a11y/known-violations.json`](../ui-apps/admin/e2e/a11y/known-violations.json),
+  a list of the violations already known, each with the backlog entry it is filed under: a violation
+  not on the list fails the test, and so does an entry that no longer shows, so the list shrinks with
+  each fix. A fault the keyboard walk meets is a `knownFault` of the scenario rules above. Every
+  scan's result is attached to the test as JSON (rule, impact, selectors; no markup). The first pass
+  with them is recorded in [accessibility-findings.md](../../docs/accessibility-findings.md#first-pass-administration-app).
+
+  ```bash
+  E2E_A11Y=1 E2E_BASE_URL=http://localhost:<admin port> KEYCLOAK_URL=http://localhost:8080/auth \
+  KEYCLOAK_TEST_USERNAME=sysadmin KEYCLOAK_TEST_PASSWORD=... npx playwright test a11y-routes.spec.ts
+  ```
+
 - No coverage thresholds.
 
 Five repo-level checks sit outside both suites:
@@ -455,11 +490,13 @@ Five repo-level checks sit outside both suites:
   see: every menu control on top at four widths in each of the build's languages, no bar pinned
   at 400 % zoom, focus never landing under a bar, nothing scrolling sideways at 320 px, the focused
   skip link drawn above a test site's corner ribbon, every field name of a message card whole in
-  each language (the bundle's longest among them), a 40 px filter chip on a phone, a pressed chip
-  told apart in a forced-colours theme, a link in a message drawn as one at rest, on a printed
-  page a link's address in its own line and only where a reader can type it, and a message part
-  that becomes a named tab stop when a language switch widens its table and stops being one when
-  the switch back narrows it. Every page carries the Content-Security-Policy of the image's nginx
+  each language (the bundle's longest among them), a 40 px filter chip on a phone, on the current
+  list and while an issue is browsed, a pressed chip told apart in a forced-colours theme, a link
+  in a message drawn as one at rest, on a printed page a link's address in its own line and only
+  where a reader can type it, a message part that becomes a named tab stop when a language switch
+  widens its table and stops being one when the switch back narrows it, and the map view's zoom
+  buttons, layer switcher and credit links left uncovered by the panel of messages without a
+  position at four sizes. Every page carries the Content-Security-Policy of the image's nginx
   configuration and is served over plain HTTP, as the container serves it: the teaser and the map
   view must ask for their base-map tiles within that policy, and no page may break it. Frontend
   CI's Example country job runs it on the example's build on pull requests; on the base build it

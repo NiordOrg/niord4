@@ -206,10 +206,12 @@ public class WebUtilsTest {
     }
 
     @Test
-    public void encodeURIRestoresColonSlashSemicolon_andEncodesAQuestionMark() {
-        // encodeURI re-decodes %3A %2F %3B so these structural characters survive; a question mark in a name
-        // stays encoded, so a file link does not end at it (REPO4)
-        assertEquals("a:b/c;d%3Fe", WebUtils.encodeURI("a:b/c;d?e"));
+    public void encodeURIRestoresColonSlash_andEncodesASemicolonAndAQuestionMark() {
+        // encodeURI re-decodes %3A %2F so these structural characters survive; a question mark in a name
+        // stays encoded, so a file link does not end at it (REPO4), and so does a semicolon, which would start a
+        // path parameter
+        assertEquals("a:b/c%3Bd%3Fe", WebUtils.encodeURI("a:b/c;d?e"));
+        assertEquals("a%3Bb", WebUtils.encodeURI("a;b"));
     }
 
     @Test

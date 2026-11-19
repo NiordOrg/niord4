@@ -25,15 +25,16 @@ import java.util.Properties;
 
 /**
  * The version of the niord-base library this backend runs, for the places where the backend names itself to
- * another server, such as the User-Agent of its map tile requests.
+ * another server, such as the User-Agent of its map tile requests, and for the build version the administration
+ * app shows.
  *
  * <p>The version is the Maven project version, which the build writes into {@code niord-base.properties} next to
  * this class (the one filtered resource of the module, see its {@code pom.xml}): {@code 4.0.<run>} in a published
  * build, {@code 4.0.0-SNAPSHOT} in a local one. When that resource is missing or was copied without filtering,
  * the jar manifest's {@code Implementation-Version} is used, and failing that {@value #FALLBACK}.
  *
- * <p>This is not {@link NiordApp#getBuildVersion()}, which reads {@code /version.properties}; nothing filters
- * that file, so it reads its placeholder.
+ * <p>The build-version endpoint ({@link NiordApp#getBuildVersion()}, {@code GET /rest/version/build-version})
+ * answers this version too.
  */
 public final class NiordBaseVersion {
 

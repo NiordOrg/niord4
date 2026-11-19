@@ -16,6 +16,7 @@
 
 package org.niord.core.promulgation;
 
+import jakarta.persistence.ManyToMany;
 import org.junit.jupiter.api.Test;
 import org.niord.core.promulgation.NavtexMessagePromulgation.NavtexPriority;
 import org.niord.core.promulgation.vo.NavtexMessagePromulgationVo;
@@ -207,5 +208,16 @@ public class NavtexMessagePromulgationTest {
 
         assertEquals(NavtexPriority.ROUTINE, entity.getPriority(),
                 "default priority of a fresh promulgation should be ROUTINE");
+    }
+
+    /**
+     * The transmitters are shared reference data: removing a promulgation must remove only its join rows, so the
+     * mapping cascades nothing to them (PromulgationFaultITTest runs the removal itself).
+     */
+    @Test
+    public void theTransmittersAreNotCascadedTo() throws Exception {
+        ManyToMany mapping = NavtexMessagePromulgation.class.getDeclaredField("transmitters")
+                .getAnnotation(ManyToMany.class);
+        assertEquals(0, mapping.cascade().length, "no cascade to the transmitters");
     }
 }

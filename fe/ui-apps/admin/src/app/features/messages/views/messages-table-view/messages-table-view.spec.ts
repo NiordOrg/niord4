@@ -34,6 +34,7 @@ interface FakeFacade {
     loading: ReturnType<typeof signal<boolean>>;
     hasMore: ReturnType<typeof signal<boolean>>;
     error: ReturnType<typeof signal<unknown>>;
+    indexIncomplete: ReturnType<typeof signal<boolean>>;
     groupedMessages: ReturnType<
       typeof signal<readonly { message: Message; areaHeading?: unknown }[]>
     >;
@@ -65,6 +66,7 @@ function makeFacade(): FakeFacade {
       loading: signal(false),
       hasMore: signal(false),
       error: signal(null as unknown),
+      indexIncomplete: signal(false),
       groupedMessages: signal<readonly { message: Message; areaHeading?: unknown }[]>([]),
       loadMore: vi.fn(),
       retry: vi.fn(),

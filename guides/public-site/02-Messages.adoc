@@ -33,12 +33,15 @@ only while you browse a publication (see <<browse-publication>>).
 [#active-now]
 ==== Show Active Now, and the dates of a message
 
-_Show Active Now_ is there to keep only the messages that are in force at this moment. In this
-version of the site, pressing the button does not change the list: with it pressed or not, you see
-every published message of the kinds you chose. The site does not remember the button either: it is
-always off when the site opens.
+_Show Active Now_ keeps only the messages that are in force at this moment: the ones whose dates of
+the event include the present moment. A message that gives no such dates is kept, so that no
+message is hidden because its dates cannot be judged. Press the button again to see every published
+message of the kinds you chose. The site does not remember the button: it is always off when the
+site opens. While you browse a publication the button is not there (see <<browse-publication>>),
+and _Print_ prints the whole list whether it is pressed or not (see <<printing>>).
 
-So read the dates in the message itself to know when it applies:
+The button judges by the dates the authority gave the event, so read the dates in the message
+itself to know when it applies:
 
 * The text of the message says when the work, the exercise or the change takes place, for example
   "In the period 1 October - 12 October 2026, dredging will be carried out". Some messages have a
@@ -189,7 +192,8 @@ browser, where you can print it or save it.
 * _Print_ in the filter bar makes a document of the list you are looking at: the kinds of message
   you chose, and the areas you chose when the filter bar has area buttons. While you browse a
   publication, it prints that publication's messages. _Show Active Now_ makes no difference to it.
-  The button is greyed out while the list is loading, and when the list is empty.
+  The button is greyed out while the list is loading, and when there are no messages of the
+  kinds and areas you chose.
 * The printer button at the bottom of a message's window makes a document of that one message.
 
 .The printed list

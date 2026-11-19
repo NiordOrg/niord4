@@ -315,6 +315,27 @@ describe('MessageIssuesPanel', () => {
   });
 
   /**
+   * A frozen membership in an issue that is still open claims nothing.
+   *
+   * Only a published or retired issue's rows are a record; an open issue's rows
+   * are the old system's member list an import copied, which the publish
+   * rewrites. Badged as published, they told an editor the notice was out.
+   */
+  it('does not call a frozen membership in an open issue published', async () => {
+    const { fixture, http } = await setup();
+
+    http
+      .expectOne('/rest/publication-issues/by-message/msg-1')
+      .flush([issue({ status: 'OPEN', membership: 'FROZEN', publishedAt: undefined })]);
+    await settle();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('EfS uge 29, 2026');
+    expect(element.querySelector('.is-issue-published')).toBeNull();
+    expect(element.textContent).not.toContain('editor.status.publications.published');
+  });
+
+  /**
    * A failed fetch says so instead of claiming the message is in nothing.
    *
    * As a banner with a retry, not a grey paragraph: "could not load" and "not in

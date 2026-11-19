@@ -22,15 +22,19 @@ import org.niord.core.promulgation.vo.PromulgationTypeVo;
 import org.niord.core.promulgation.vo.TwitterMessagePromulgationVo;
 import org.niord.model.message.MessagePartVo;
 
+import javax.script.ScriptException;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for how {@link ScriptExecutionService} assigns field templates (F-X42): a field of the supported
- * property-path shape is assigned; any other field is skipped, and the rest of the templates still apply.
+ * property-path shape is assigned; any other field is never evaluated. A field that is refused or cannot be
+ * assigned fails the run once the rest of the templates have been tried, naming the field.
  * The field templates come from Freemarker output, which prints values the caller supplied.
  */
 class ScriptExecutionServiceFieldTemplateTest {
@@ -53,7 +57,7 @@ class ScriptExecutionServiceFieldTemplateTest {
     }
 
     @Test
-    void aPropertyPathFieldIsAssignedAndAppended() {
+    void aPropertyPathFieldIsAssignedAndAppended() throws Exception {
         SystemMessageVo message = new SystemMessageVo();
         PromulgationTypeVo type = new PromulgationTypeVo();
         type.setTypeId("twitter");
@@ -73,18 +77,40 @@ class ScriptExecutionServiceFieldTemplateTest {
     }
 
     @Test
-    void aFieldThatIsNotAPropertyPathIsSkippedAndTheOthersStillApply() {
+    void aFieldThatIsNotAPropertyPathFailsTheRunAfterTheOthersApply() {
         MessagePartVo part = partWithDescs();
 
-        service.applyFieldTemplates(FieldTemplateProcessor.parse(
-                "<field-template field=\"part.getDesc('da').subject = 'set by the field'; part.getDesc('en').subject\">"
-                        + "x</field-template>"
-                        + "<field-template field=\"part.getDesc('en').details\" format=\"html\">"
-                        + "Details</field-template>"),
-                contextData(new SystemMessageVo(), part));
+        ScriptException e = assertThrows(ScriptException.class, () -> service.applyFieldTemplates(
+                FieldTemplateProcessor.parse(
+                        "<field-template field=\"part.getDesc('da').subject = 'set by the field'; part.getDesc('en').subject\">"
+                                + "x</field-template>"
+                                + "<field-template field=\"part.getDesc('en').details\" format=\"html\">"
+                                + "Details</field-template>"),
+                contextData(new SystemMessageVo(), part)));
 
         assertNull(part.getDesc("da").getSubject(), "the statement in the field is never run");
         assertNull(part.getDesc("en").getSubject(), "the refused field is not assigned");
         assertEquals("Details", part.getDesc("en").getDetails(), "the next field template still applies");
+        assertTrue(e.getMessage().contains("part.getDesc('da').subject = 'set by the field'; part.getDesc('en').subject"
+                + " (not a property path)"), e.getMessage());
+    }
+
+    @Test
+    void aFieldWhoseTargetIsMissingFailsTheRun() {
+        // A template written for a language the part does not have: the assignment meets a null description
+        MessagePartVo part = new MessagePartVo();
+        part.checkCreateDesc("en");
+
+        ScriptException e = assertThrows(ScriptException.class, () -> service.applyFieldTemplates(
+                FieldTemplateProcessor.parse(
+                        "<field-template field=\"part.getDesc('da').details\" format=\"html\">Other details</field-template>"
+                                + "<field-template field=\"part.getDesc('en').details\" format=\"html\">"
+                                + "Details</field-template>"),
+                contextData(new SystemMessageVo(), part)));
+
+        assertTrue(e.getMessage().startsWith("1 field template(s) could not be applied: part.getDesc('da').details ("),
+                e.getMessage());
+        assertEquals("Details", part.getDesc("en").getDetails(), "the other field templates are still tried");
+        assertNull(part.getDesc("da"), "no description is made for the missing language");
     }
 }

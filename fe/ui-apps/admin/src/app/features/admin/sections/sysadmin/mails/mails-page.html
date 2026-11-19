@@ -163,7 +163,7 @@
   <app-mail-details-dialog
     [mail]="detailsMail()"
     [createdLabel]="formatDateTime(detailsMail()?.created)"
-    [sentLabel]="formatDateTime(detailsMail()?.sendDate)"
+    [sendDateLabel]="formatDateTime(detailsMail()?.sendDate)"
     (closed)="detailsMail.set(undefined)"
   />
 </app-admin-section-page>

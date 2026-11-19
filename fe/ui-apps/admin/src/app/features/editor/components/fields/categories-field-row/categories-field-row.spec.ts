@@ -126,10 +126,12 @@ describe('CategoriesFieldRow', () => {
     handle.runTemplate();
 
     expect(seedStore.set).toHaveBeenCalledTimes(1);
-    const [seededMessage, returnUrl] = seedStore.set.mock.calls[0];
+    const [seededMessage, returnUrl, blank] = seedStore.set.mock.calls[0];
     expect(seededMessage.id).toBe('m');
     expect(seededMessage).not.toBe(facade.message()); // a clone, not the live copy
     expect(returnUrl).toBe('/editor/edit/m');
+    // The working copy is never a placeholder: the execution view keeps it as it is.
+    expect(blank ?? false).toBe(false);
     expect(router.navigate).toHaveBeenCalledWith(['/editor/execute-template']);
   });
 });

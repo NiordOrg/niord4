@@ -375,6 +375,57 @@ describe('MessageListFacade', () => {
     expect(selection.refreshSnapshotsFromSearchResults).toHaveBeenCalledWith([{ id: 'm-1' }]);
   });
 
+  it('carries the incomplete-index mark of each answer, and drops it with the next answer without it', () => {
+    const { facade, filter, emitNext } = setup();
+    expect(facade.indexIncomplete()).toBe(false);
+
+    filter.requestParams.set('query=buoy');
+    TestBed.tick();
+    flushDebounce();
+    emitNext({ data: makeMessages(['m-1']), total: 1, indexIncomplete: true });
+    expect(facade.indexIncomplete()).toBe(true);
+    expect(facade.messages().map((m) => m.id)).toEqual(['m-1']);
+
+    filter.requestParams.set('query=light');
+    TestBed.tick();
+    flushDebounce();
+    emitNext({ data: makeMessages(['m-2']), total: 1 });
+    expect(facade.indexIncomplete()).toBe(false);
+  });
+
+  it('keeps the incomplete-index mark of page 0 when a page without it is appended', () => {
+    const { facade, filter, emitNext } = setup();
+
+    filter.requestParams.set('query=buoy');
+    TestBed.tick();
+    flushDebounce();
+    emitNext({ data: makeMessages(['m-1']), total: 2, indexIncomplete: true });
+    expect(facade.indexIncomplete()).toBe(true);
+
+    // The index completes before the next page is fetched: the rows of page 0 are still on
+    // screen and may still miss messages.
+    facade.loadMore();
+    TestBed.tick();
+    emitNext({ data: makeMessages(['m-2']), total: 2 });
+    expect(facade.messages().map((m) => m.id)).toEqual(['m-1', 'm-2']);
+    expect(facade.indexIncomplete()).toBe(true);
+  });
+
+  it('sets the incomplete-index mark when only an appended page carries it', () => {
+    const { facade, filter, emitNext } = setup();
+
+    filter.requestParams.set('query=buoy');
+    TestBed.tick();
+    flushDebounce();
+    emitNext({ data: makeMessages(['m-1']), total: 2 });
+    expect(facade.indexIncomplete()).toBe(false);
+
+    facade.loadMore();
+    TestBed.tick();
+    emitNext({ data: makeMessages(['m-2']), total: 2, indexIncomplete: true });
+    expect(facade.indexIncomplete()).toBe(true);
+  });
+
   it('sets error on failure and retry re-issues exact request', () => {
     const { facade, filter, api, emitNext, emitError } = setup();
 

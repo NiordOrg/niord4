@@ -36,6 +36,7 @@ describe('MapResultList', () => {
       list: {
         loading: signal(false),
         error: signal(null),
+        indexIncomplete: signal(false),
         retry: vi.fn(),
         hasMore: signal(false),
         messages: signal([] as readonly Message[]),

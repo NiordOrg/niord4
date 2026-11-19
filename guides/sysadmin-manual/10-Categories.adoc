@@ -189,7 +189,9 @@ image::CategoryTemplateResult.png[Template Result, 520]
 
 You change the place of a category in two ways:
 
-* To move a category beneath another parent, drag it there by its handle in the tree, and confirm.
+* To move a category beneath another parent, drag it there by its handle in the tree, and confirm. A category
+  cannot move under one of its own sub-categories: Niord then says "The category was not moved" and gives the
+  reason.
 * To move a category up or down among the categories of its parent, select it and click the up or down arrow
   above the tree.
 
@@ -201,8 +203,9 @@ tree.
 
 Select the category and click *Delete* above the tree, and confirm. The category is deleted with all its
 sub-categories. Niord does not delete a category, or one of its sub-categories, that a message of any status has
-now, or that a domain names among its categories: it says "Error deleting category", and nothing is deleted. Make
-such a category inactive instead, or remove it from the messages and the domains first.
+now, or that a domain names among its categories: it says "The category was not deleted", names the messages and
+the domains that use it, and nothing is deleted. Make such a category inactive instead, or remove it from the
+messages and the domains first.
 
 [#importing-and-exporting-categories]
 === Importing and Exporting Categories

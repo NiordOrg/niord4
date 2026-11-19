@@ -363,8 +363,9 @@ function s124Styles(feature: Feature, bundle: StyleBundle, resolution: number): 
     case 'Polygon':
     case 'MultiPolygon':
     default:
-      // Polygon (and any other / GeometryCollection): dashed outline, NO fill, + a
-      // single centred NW tag. (S-124: surfaces are not filled.)
+      // Polygon (and any other type): dashed outline, NO fill, + a single centred NW
+      // tag; a GeometryCollection also gets the point symbol, below. (S-124: surfaces
+      // are not filled.)
       out.push(bundle.dashedStroke);
       out.push(
         new Style({
@@ -375,6 +376,10 @@ function s124Styles(feature: Feature, bundle: StyleBundle, resolution: number): 
           },
         }),
       );
+      // A collection's points are positions of the message: each draws the point symbol, as a
+      // point of its own would. The symbol style has no geometry function, so OpenLayers draws
+      // it on the collection's Point and MultiPoint members only, and nothing on the rest.
+      if (type === 'GeometryCollection') out.push(bundle.pointSymbol);
       break;
   }
 
@@ -422,8 +427,9 @@ export interface MessageFeatureStyleContext {
  * Returns the S-124 portrayal style(s) for a message map feature: the style the definition's
  * selection rows give the feature's `mainType` (and `messageType`, when it carries one), drawn by
  * geometry primitive (point → symbol; line → dashed + along-line tags; surface → no-fill dashed
- * outline + centred tag), plus the optional niord selection/hover halos (stacked underneath so the
- * symbol stays on top).
+ * outline + centred tag; geometry collection → the pen on its lines and outlines, one tag at the
+ * centre of its extent and the symbol at each of its points), plus the optional niord
+ * selection/hover halos (stacked underneath so the symbol stays on top).
  *
  * `resolution` (the OL view resolution) scales the along-line tag spacing so it is
  * roughly constant on screen across zoom.

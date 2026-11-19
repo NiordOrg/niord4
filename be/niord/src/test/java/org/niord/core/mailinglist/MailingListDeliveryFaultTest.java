@@ -18,9 +18,11 @@ package org.niord.core.mailinglist;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.niord.core.area.Area;
 import org.niord.core.message.Message;
+import org.niord.model.message.Status;
 import org.niord.test.JmsFaults;
 
 import java.time.Duration;
@@ -34,15 +36,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Fault injection on two steps of the status-change mail path that used to fail silently, as unit tests. Both steps
- * are MAILLIST2's (be/docs/potential-errors.md), run on 2026-11-12: a trigger's message
- * filter that throws, and the listener's poll loop when the broker connection fails. Both are regression tests of the
- * fix now.
+ * Fault injection on two steps of the status-change mail path that used to fail silently, as unit tests, both found
+ * by the error hunt of 2026-11-12: a trigger's message filter that throws, and the listener's poll loop when the
+ * broker connection fails. Both are regression tests of the fix now. Beside them, the outbox pass at start, which mails
+ * a status change whose topic message was lost in a restart.
  */
 class MailingListDeliveryFaultTest {
 
     /**
-     * MAILLIST2 (ii). A trigger filter that throws for a message ({@code msg.getAreas().get(0)} on a message with no
+     * A trigger filter that throws for a message ({@code msg.getAreas().get(0)} on a message with no
      * area, an {@code IndexOutOfBoundsException} inside the script) used to read as "no match", with nothing logged:
      * the subscribers got no mail and the administrator who wrote the filter was never told it failed. Now
      * {@code matches} throws {@link IllegalArgumentException} naming the filter, the message and the cause, which the
@@ -112,16 +114,17 @@ class MailingListDeliveryFaultTest {
     }
 
     /**
-     * MAILLIST2 (iii). The listener's poll loop used to have no catch, and {@code onStart} submits it to an executor
+     * The listener's poll loop used to have no catch, and {@code onStart} submits it to an executor
      * and discards the {@code Future}: when {@code receive()} threw (the broker connection lost, the consumer closed
      * under it), the loop ended with nothing logged, and no later status change was received until the application
-     * restarted. Now the loop ({@link org.niord.core.util.JmsTopicLoop}) logs one ERROR and subscribes again.
+     * restarted. Now the loop ({@link org.niord.core.util.JmsTopicLoop}) logs one ERROR and subscribes again. The
+     * outbox pass {@code onStart} runs first finds no row here, and logs nothing.
      */
     @Test
     void theListenerLoopSubscribesAgainAfterTheBrokerConnectionFails() throws Exception {
         AtomicInteger receives = new AtomicInteger();
         MailingListMessageListener listener = new MailingListMessageListener(null, null,
-                JmsFaults.consumerThatFailsOnFirstReceive(receives));
+                new MailingListMessageListenerTest.RecordingOutbox(), JmsFaults.consumerThatFailsOnFirstReceive(receives));
         listener.reconnectDelayMillis = 10;
         ListAppender<ILoggingEvent> log = JmsFaults.captureLog(MailingListMessageListener.class);
         try {
@@ -135,5 +138,42 @@ class MailingListDeliveryFaultTest {
         assertTrue(receives.get() >= 2, "the loop subscribed again after the failed receive: " + receives.get());
         assertEquals(1, log.list.stream().filter(e -> e.getLevel() == Level.ERROR).count(),
                 "and logged one ERROR: " + JmsFaults.warningsAndErrors(log));
+    }
+
+    /**
+     * A status change committed just before a restart was announced on the topic while no listener was subscribed: its
+     * outbox row is all that is left of it. {@code onStart} hands a drain to the listener's drain worker as it starts
+     * the poll loop, so the row is mailed at start; with the per-minute sweep switched off ({@code -}, as in the
+     * integration suite) this pass is the only one that reaches it before the next status change. Would fail if the
+     * start's drain were left out, or queued behind the poll loop, which never returns.
+     */
+    @Test
+    void theStartDrainsTheStatusChangesCommittedBeforeIt() throws Exception {
+        MailingListMessageListenerTest.RecordingOutbox outbox = new MailingListMessageListenerTest.RecordingOutbox();
+        outbox.due.add(new MailingListStatusChangeOutbox.Claim(5, "uid-before-restart", Status.PUBLISHED));
+        MailingListService noTriggers = new MailingListService(null, null) {
+            @Override
+            public List<MailingListTrigger> findStatusChangeTriggers(Status status) {
+                return List.of();
+            }
+        };
+        AtomicInteger receives = new AtomicInteger();
+        MailingListMessageListener listener = new MailingListMessageListener(noTriggers, null, outbox,
+                JmsFaults.consumerThatFailsOnFirstReceive(receives));
+        listener.reconnectDelayMillis = 10;
+        ListAppender<ILoggingEvent> log = JmsFaults.captureLog(MailingListMessageListener.class);
+        try {
+            listener.onStart();
+            Awaitility.await().atMost(Duration.ofSeconds(10)).pollInterval(Duration.ofMillis(20))
+                    .until(() -> outbox.completed.equals(List.of(5L)));
+        } finally {
+            listener.onStop();
+            JmsFaults.stopCapture(MailingListMessageListener.class, log);
+        }
+        assertTrue(outbox.due.isEmpty(), "the row was taken");
+        assertTrue(outbox.failures.isEmpty(), "and its run did not fail: " + outbox.failures);
+        assertTrue(log.list.stream().anyMatch(e -> e.getLevel() == Level.INFO
+                        && e.getFormattedMessage().equals("Made the mailing lists' mails of 1 status change(s) at start")),
+                "the start's pass says what it did: " + log.list);
     }
 }

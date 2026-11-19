@@ -288,26 +288,24 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   `inlineStylesRemovesStyleBlock`).
 - **Severity:** Low — design asymmetry, may surprise callers.
 
-## MAIL7. An SMTP server that accepts and then stalls stops the mail queue for good, holding a scheduler thread and a database connection
+## MAIL14. Every mail of a user without an e-mail address and with a name of two words ends in _Error_
 
-- **Location:** `niord/src/main/java/org/niord/core/mail/MailConfig.java` (`createMailSession` sets only
-  `mail.smtp.host` and `mail.smtp.port`), `MailService.sendScheduledMail` (sends inside its transaction, with the
-  mail's row locked `FOR UPDATE`) and `ScheduledMailService.sendPendingMails` (`@Scheduled`, without a transaction
-  of its own since 2026-11-16, waits in `invokeAll` with no time limit).
-- **Description:** Jakarta Mail's `mail.smtp.connectiontimeout`, `mail.smtp.timeout` and `mail.smtp.writetimeout`
-  default to no limit, and the session sets none. An SMTP server that accepts the connection and then stops
-  answering keeps `Transport.send` waiting for good. The sending task then holds its mail's row lock and a database
-  connection, and `sendPendingMails` waits in `invokeAll` on one of the scheduler's four threads
-  (`spring.task.scheduling.pool.size` in `niord-core-defaults.yml`). A cron job is not started again while its last
-  run is running, so no mail of the node is sent until it restarts, and nothing is logged; the other scheduled jobs
-  go on on the other three threads [read in the code; not run].
-- **Why it looks wrong:** the SECOM outbound client bounds every exchange by a deadline for exactly this reason
-  (F-X152 in the September 2026 security review, `SecomOutboundClient.requestTimeout`); the mail path has no such
-  bound. Its claim itself is sound: a second replica's sender waits on the row lock and then sees the mail SENT.
-- **Exposed by:** reading `ScheduledMailService` for the SECOM outbox claim (SECREV-2, 2026-11-12), whose design
-  document said the outbox claimed its rows the way the mail queue does.
-- **Severity:** Medium: rare (a relay that stalls rather than refuses), but when it happens every mail of the node
-  stops without an error. Fix: set the three timeouts on the session, and give `invokeAll` a time limit.
+- **Location:** `niord/src/main/java/org/niord/core/mail/IMailable.java` (`computeInternetAddress`),
+  `niord/src/main/java/org/niord/core/message/MessageMailService.java` (records it as the mail's sender) and
+  `niord/src/main/java/org/niord/core/mail/ScheduledMail.java` (`toMail`: `mail.replyTo(new InternetAddress(sender))`).
+- **Description:** for a user whose mirror row has no e-mail address, `computeInternetAddress` returns the bare name.
+  `toMail` parses the sender strictly as the mail's Reply-To, and a name with a space is refused
+  (`AddressException: Local address contains control or whitespace in string ``Test Editor''`, run against the
+  Jakarta Mail of the build). `MailService.sendScheduledMail` records each refusal as a failed attempt, so every mail
+  such a user sends from the mail dialog or with a comment ends in _Error_ after its retries, and nothing reaches the
+  recipients. A one-word name parses and is sent with that word as its Reply-To.
+- **Why it looks wrong:** the Reply-To is a convenience; a sender without an address should give the mail no Reply-To,
+  not stop it.
+- **Exposed by:** the sender's own list of mails (`GET /rest/scheduled-mails/mine`, the admin app's _My mails..._),
+  which matches mails on that sender value and now shows such a user the failure (2026-11-18); pinned by
+  `ScheduledMailTest.toMailWithABareTwoWordSenderIsRefused_documentsBug`.
+- **Severity:** Low: a Keycloak user without an e-mail address is rare among staff who send mail. Fix: set the
+  Reply-To only when the sender holds an address (or parse it leniently and skip it on a refusal).
 
 ## REPOFILTER1 — `RepositoryServletFilter` catches a RESTEasy exception the MVC stack never throws
 
@@ -339,29 +337,60 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
 - **Exposed by:** `FileTypesTest` asserts the *actual* mappings (including unknown-extension → `null`).
 - **Severity:** Low.
 
-## REPO3 — A repository file whose name holds `%`, `;` or `\` cannot be downloaded
+## REPO5 — A message PDF may leave out an image attachment whose name holds `%` or `;`
 
-- **Location:** `GET /rest/repo/file/**` (`RepositoryService.streamFile`) behind Spring Security's
-  `StrictHttpFirewall`. The one firewall the backend declares, `EncodedSlashConfig.MessageIdFirewall`
-  (`org.niord.core.conf`, since 2026-11-13), allows an encoded `/` on three message GET paths only and is strict
-  everywhere else. Uploads keep the file name as it was submitted, reduced to its bare name
-  (`WebUtils.bareFileName`). Because `\` separates folders there, an upload no longer stores a name with `\` in it;
-  `%` and `;` still reach the stored name.
-- **Description:** both frontends write a repository path into an address one encoded segment at a time
-  (`fe/shared-html/repo-path.ts`), so a `%` in a file name is sent as `%25`, a `;` as `%3B` and a `\` as `%5C`.
-  The default firewall rejects every one of these as a bypass attempt and answers 400 before any handler runs.
-  Sent unencoded they are no better: a bare `%` is an invalid escape, and a bare `;` is rejected too.
-- **Why it looks wrong:** the backend accepts the upload and lists the file, and the editor can link it, but no
-  reader or editor can open it. The frontends cannot work around it: the firewall refuses every spelling.
-- **Suggested check before fixing:** upload `100% dækning.pdf` and open it from the administration app's
-  attachment list; then either rename such a file on upload (replacing the three characters) or relax the
-  firewall — it applies to every path, not only to `/rest/repo/file/**`, so weigh what that opens elsewhere.
-  If the firewall is relaxed for this entry, add its allowances (encoded percent, semicolon and backslash, on the
-  repository path only) to `MessageIdFirewall`, which since 2026-11-13 lets a message short id hold an encoded `/`
-  on three message paths, rather than declaring a second firewall; or rename on upload instead.
-- **Severity:** Low — a file name with one of these characters is rare, and the upload itself succeeds.
-- **The same firewall elsewhere:** PUBCAT2 (a publication category or series id with `/` or `;` can still be
-  created by three imports and then never opened).
+- **Location:** `be/niord/bootstrap/templates/messages/message-support.ftl`, macro `renderAttachment`
+  (`<img src="/rest/repo/file/${att.path}">`, the path written unencoded), fetched by the PDF renderer over HTTP
+  from the backend's own origin (`org/niord/core/script/pdf/SameOriginUserAgent`). The same line is in the
+  Greenland repository's copy of the template.
+- **Description:** since the request firewall accepts `%25` and `%3B` on a repository file's path, a file whose
+  name holds `%` or `;` opens in the administration app and on the public site. The
+  template does not encode the path, so the renderer asks for a raw `%` (an invalid escape) or a raw `;` (a path
+  parameter, refused by the firewall), and the image is presumably missing from the PDF. Not checked by running it.
+- **Why it looks wrong:** the attachment shows in the admin app and on the public site but not in the printed
+  message.
+- **Exposed by:** reading the template while the firewall was opened for such names, 2026-11-18; no test.
+- **Severity:** Low — an image attachment whose name holds one of these characters is rare. The template is data:
+  a fix (`?url` on each segment, or a path the code encodes) ships in a release folder and reaches a database only
+  by import.
+
+## REPO6 — A link stored with a raw `;` in a repository file name still does not open
+
+- **Location:** the stored links that point at repository files: a publication desc's `link` written by
+  `RepositoryService.getRepoUri` before it encoded a `;`, a legacy publication link kept as it was
+  (`IssuePublicationMapping.linkOf` returns an explicit link untouched), and any message HTML that names a file.
+- **Description:** the request firewall accepts `%25` and `%3B` on `/rest/repo/file/**` and `/rest/repo/thumb/**`,
+  the links the backend derives write `;` as `%3B` (`WebUtils.encodeURI`, `IssuePublicationMapping.linkOf`), and
+  the public site's proxy passes the path of a repository file on as it arrived
+  (`fe/ui-apps/info/nginx/default.conf.template`), so a file whose name holds `;` opens in the administration
+  app and on the public site through a link written now. What is left: a link stored earlier with a raw `;`
+  after `/rest/repo/file/` stays refused everywhere, and no firewall setting can serve it: Tomcat would cut the
+  name at the `;`.
+- **Why it looks wrong:** the file is listed and linked, and whoever follows the old link gets an error.
+- **Suggested fix:** count the stored links first (fe/docs/backlog.md, section 1, the repository file names);
+  rewriting them is data, not code.
+- **Exposed by:** reading the public site's proxy while the firewall was opened for such names, 2026-11-18.
+- **Severity:** Low — a file name with `;` is rare; to be weighed by the count at the first restore.
+
+## REPO7 — With vips, the thumbnail of an image whose name holds `%s` is written under another name
+
+- **Location:** `niord/src/main/java/org/niord/core/repo/ThumbnailService.java`, `createThumbnailUsingVips` (the
+  thumbnail's path handed to `vipsthumbnail` as `-o`), with the cached thumbnail's name from
+  `RepoCache.thumbnailName` (`<name>_thumb_<size>_<hash>.<ext>`, the upload's own name kept).
+- **Description:** `vipsthumbnail` reads its `-o` argument as a format, in which `%s` (and `%<n>s`) stands for the
+  input file's base name. The thumbnail's name keeps the upload's name, so for an image named, say, `50%sale.png`
+  the format names another file: the input is the spooled copy of the row, under a temporary name, so vips writes
+  `50<spool name>ale_thumb_64_<hash>.png` into the cache folder. `Files.setLastModifiedTime(thumbFile)` then fails,
+  the request falls back to the file type's icon, and the stray file stays. Since the request firewall accepts
+  `%25` on `/rest/repo/thumb/**`, such a name can be asked for, also anonymously for a published message's image.
+- **Why it looks wrong:** the thumbnail is never served, and every request for it leaves one more file on the
+  cache volume.
+- **Exposed by:** reading the vips path while the firewall was opened for names holding `%`, 2026-11-18; not run.
+  It applies only where the `vipsPath` setting is set: it is unset by default, and no image installs libvips.
+- **Severity:** Low — vips is off unless a deployment turns it on, and such a name is rare. Fix, once the vips
+  behaviour is checked on a machine with libvips: let vips write to a neutral temporary name in the cache folder
+  (`Files.createTempFile(folder, "thumb-", "." + ext)`) and move that to the thumbnail's name, or draw a name
+  holding `%` with the Java path.
 
 ## INT4 — `NiordIntegrationExecutionService.processNiordIntegration` still swallows a failed re-import and shares one transaction per target series
 
@@ -527,28 +556,6 @@ suffixed `_documentsBug` / `_documentsBehavior` where practical._
 
 ---
 
-# Potential errors — `core.script` package (rendering & scripting)
-
-## SCRIPT5. Directives swallow all exceptions silently ("Prefer robustness over correctness")
-
-- **Location:** most directives — `LatLonDirective`, `DateIntervalDirective`, `FromToDateDirective`,
-  `NavtexDateFormatDirective`, `AreaLineageDirective`, `HtmlToTextDirective`, `TextToHtmlDirective` — each
-  wraps its body emission in `try { ... } catch (Exception e) { /* Prefer robustness over correctness */ }` with
-  **no logging**. (`CallSignDirective` and `LightCharacterDirective` log their fallback at WARN since wave 3b's
-  TMPL19 repair: a missing aton template was otherwise seen nowhere; `AtonDirectiveMissingTemplateITTest`.)
-- **Description:** any failure during formatting (bad data, an unresolvable bean, a malformed light
-  character, etc.) results in **empty (or partial) output with no diagnostic**. For example
-  `NavtexDateFormatDirective` with a null date emits the empty string; `AreaLineageDirective` emits nothing
-  when it cannot resolve the area service.
-- **Why it looks wrong:** silent failure makes template/data errors invisible — a report can render with
-  blank fields and no trace in the logs. A `log.debug`/`log.warn` would preserve robustness while keeping
-  failures discoverable.
-- **Exposed by:** the directive unit tests (e.g. `NavtexDateFormatDirectiveTest` null-date → "",
-  `AreaLineageDirectiveTest` unresolvable-bean → "").
-- **Severity:** Low/Medium — operational observability gap, by design but easy to mitigate.
-
----
-
 # AtoN subsystem (`core/aton`, `web/aton`)
 
 Found while covering `org.niord.core.aton.*`, `org.niord.web.aton.AtonIconRenderer` and the AtoN
@@ -581,27 +588,7 @@ service/REST integration tests. Tests pinning the current (incorrect) behaviour 
 - **Exposed by:** `FieldTemplateProcessorTest.parseContentTextWhitespacePaddedNewlinesCollapseAndJoin_documentsQuirk`
   (vs. `...PreservesSingleNewlineBetweenLines`).
 - **Severity:** Low — formatting quirk in generated plain-text fields (e.g. NAVTEX/subject text). Related
-  to the "prefer robustness over correctness" clean-up philosophy noted in SCRIPT5.
-
-## TMPL6. Template field-template assignment silently swallows failures (robustness over correctness)
-
-- **Location:** `org.niord.core.category.ScriptExecutionService.applyFieldTemplates` — the
-  `catch (ScriptException e)` around the assignment logs and continues. Since 2026-09 a field template whose
-  field is not a plain property path is logged and skipped the same way, before anything is evaluated.
-- **Why it is worth noting:** when a field-template targets a field that does not exist on the message
-  (e.g. `part.getDesc('da').subject` where the part has no `da` description, or a missing promulgation),
-  the Nashorn assignment throws `TypeError`/`ScriptException`, which is caught and logged at ERROR but
-  otherwise ignored — the field is silently left unset and template execution "succeeds". This is the
-  same swallow-and-continue philosophy recorded in SCRIPT5 for the Freemarker directives; it makes
-  authoring errors in templates hard to notice.
-- **Exposed by:** `TemplateExecutionServiceITTest.executeScriptResources_fieldTemplateForMissingDescIsSwallowed`.
-  Seen live in the error hunt's wave 3 (2026-11-12): a DK category's field template writing
-  `part.getDesc('da').details` in an English-only copy logged "Error applying field template ... TypeError: Cannot
-  set property "details" of null" on every template preview, and the preview succeeded. Since 2026-11-13 Generate
-  fails when a promulgation type's script fails (`PromulgationManager.generateMessagePromulgation`), and that check
-  wraps the call that ends here (`applyFreemarkerTemplate` 78-92 calls `applyFieldTemplates`); a failure swallowed
-  here never reaches it, so a failed field assignment still changes a generated text without a word.
-- **Severity:** Low — by design, but it hides template authoring mistakes.
+  to the "prefer robustness over correctness" clean-up philosophy of the template helpers.
 
 ---
 
@@ -704,11 +691,16 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** code inspection during the port comparison.
 - **Severity:** Medium — reliability; silent loss of an outbound promulgation on any transient failure.
 - **Related:** PROM10. X refuses the endpoint the post goes to, so today every attempt fails the same way, and a
-  retry alone would not get a tweet out. MAILLIST2 (the error hunt of 2026-11-12) is the step before this one:
-  the status-change event that starts a tweet rides the same fire-and-forget topic as the mails, and
-  `TwitterMessageListener.run` (79-88) ends its loop silently on a broker failure, so no later publication is
-  tweeted until a restart (`TwitterMessageListenerFaultTest#theListenerLoopEndsSilentlyWhenTheBrokerConnectionFails_documentsBug`).
-  MAILLIST2's catch-and-restart covers that listener; it does not record or retry a refused tweet, which stays here.
+  retry alone would not get a tweet out. The step before the post is lost the same silent way: the status-change
+  event that starts a tweet rides the JMS status topic, which is not stored (the embedded broker's
+  `persistent: false`) and whose subscription is not durable, so a status change committed just before a restart,
+  one whose broadcast meets a broker error ("Failed sending JMS" is only logged) and one broadcast while
+  `TwitterMessageListener` subscribes again after a broker failure is never tweeted, with no record. The error
+  hunt's fix stage of 2026-11-13 made the listener's loop log the failure and subscribe again (`JmsTopicLoop`,
+  `TwitterMessageListenerFaultTest`) instead of ending; the mailing lists have kept their status changes in an
+  outbox since (`MailingListStatusChangeOutbox`), and SECOM has its reconciliation sweep. A tweet has neither: the
+  outbox row this entry recommends would cover the lost event too, if it is written in the status change's own
+  transaction, as the mailing lists' is.
 
 ## PROM10 — Tweets go to X's v1.1 `statuses/update`, which X refuses for its Free and Basic apps
 
@@ -821,26 +813,42 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
   cluster.
 
-## WEB12. `GET /rest/version/build-version` answers the literal `${timestamp}`: `version.properties` is never filtered
+## LUCENE-7. For minutes after each start, the print, export and mail of a free-text search can miss messages without a sign
 
-- **Location:** `niord/src/main/resources/version.properties` (`niord.version = ${timestamp}`), read by
-  `niord/src/main/java/org/niord/core/NiordApp.java` `getBuildVersion()` and served by `VersionRestService`.
-- **Description:** nothing in the build filters `version.properties`. `niord/pom.xml` filters only
-  `org/niord/core/niord-base.properties`, the Spring Boot parent would filter only `application*` files, and
-  both use the `@..@` delimiter, not `${..}`; no `timestamp` property is defined either. Every build therefore
-  ships the placeholder, and every deployment answers `${timestamp}`. The administration app prints that value
-  as the backend build on its update banner. `VersionRestServiceITTest` asserts a non-blank body other than
-  `undefined`, which the placeholder passes, and its Javadoc calls the resource Maven-filtered.
-- **Why it looks wrong:** a build stamp that reads the same on every build tells nobody which build runs.
-  Reading the version the build does write (`NiordBaseVersion`, from `niord-base.properties`), or filtering
-  the file with the parent's delimiter and a property the build defines, would fix it; either changes what the
-  update banner shows, so it is left to a change of its own.
-- **Exposed by:** the User-Agent of the backend's map tile requests, which needed the library's version and
-  reads it through `NiordBaseVersion` instead. Met again by the user guides' screenshot rig (2026-11-11): the
-  editor manual (`guides/editor-manual/02-Home.adoc`, _When Niord Is Updated_) tells users to give the banner's
-  _Server Version_ when they report a problem, and `UpdateBanner.png` leaves the version notes out. (The banner's
-  empty _Web Version_ on the rig is the rig's unhashed local build, `main.js`, which the bundle-name pattern of
-  `build-version.service.ts` does not match; a production build's `main-<hash>.js` does.)
+- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java`: `init()` deletes the index when
+  `messageIndexDeleteOnStartup` is on (the default), the start-up pass follows five seconds later and then one pass a
+  minute, each of at most `LUCENE_MAX_INDEX_COUNT` (5,000) messages, and `allMessagesIndexed()` is false until a pass
+  has made every message searchable. `niord/src/main/java/org/niord/core/message/MessageSearchService.java`, the
+  free-text branch of `searchPagedMessageIds`, marks a result answered in that window
+  (`PagedSearchResultVo.indexIncomplete`), reading the index's state before and after the search, so a re-index
+  (`recreateIndex`) that empties the index while a search runs marks that search too. The callers that hand such a result on without the mark:
+  `MessageReportRestService` (the print), `MessageExportRestService` (the export, which drops the mark so the
+  archive keeps its form), `MessageMailRestService` (the message mail of a search) and `MailingListExecutionService`
+  (the mailing-list report, and a scheduled mailing-list mail more than half an hour after the start).
+- **Description:** the delete at start commits an empty index that can be read. Until the passes have indexed every
+  message again, which on a large database takes several minutes, a free-text search answers with the hits among the
+  messages indexed so far, possibly none. The owner's decision (2026-11-19): the search keeps answering, and the
+  editors are told. The editors' _Messages_ list shows a warning above such a result. A scheduled mailing-list
+  trigger whose stored query holds a `query=` term waits for the index in the half hour after the start: tried again
+  every two minutes, so its mail follows soon after the index is complete, with one WARN and one "Delayed:" record in
+  the Mail Queue, kept apart from the "Not sent:" records of failed runs; after that half hour it is mailed from what
+  the index holds, with a WARN naming the trigger, so a refill that stalls delays such a mail by at most half an hour.
+  With `messageIndexDeleteOnStartup` off the index is kept, but it counts as not complete until the start-up pass
+  (five seconds after the start) has run, so a trigger due in those seconds waits a few minutes too.
+  The print (PDF), export (ZIP) and message mail of the list and a mailing-list report pass the short answer on as a
+  real one, and so does a deployment's script that searches with free text. The public API (`/rest/public/v1/messages`)
+  takes no free text and does not read the index, a status-change mail is about its one message and runs no search,
+  and the PostgreSQL backend (`disableLucene`) keeps its table across a start: none of them is affected.
+- **Why it looks wrong:** a PDF or a mail made minutes after a deploy can leave warnings out without a word.
+- **Exposed by:** `MessageLuceneIndexStartWindowTest` (a message indexed before a restart is not found right after
+  it, the search does not fail, and the index says it is not complete) and `MessageSearchIndexIncompleteITTest` (the
+  mark, on the service, the editors' search and not on the public API); `MailingListDeliveryFaultITTest` holds a
+  scheduled trigger to the half hour's wait, its retry and its record. What the print, export, message mail and
+  report do with a marked result is not tested.
+- **Severity:** Low — the window is short, the editors' list warns in it and the scheduled mails wait for it. Fix,
+  for the owner to weigh: carry the mark on (a line in the print and the mailing-list report, a warning in the mail
+  and export dialogs before they are sent). With `messageIndexDeleteOnStartup` off the index is kept across a start,
+  and only the messages changed since its last pass are missing until the first pass (not checked by a test).
 
 # Potential errors — REST-controller security audit
 
@@ -882,9 +890,13 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   `64:ff9b::/96`, 6to4 `2002::/16`), unless the `niordIntegrationAllowPrivateHosts` setting is on.
 - **Operating note:** two Niord servers on the same private network or k8s cluster need
   `niordIntegrationAllowPrivateHosts=true`. The default is off, and a blocked fetch surfaces only as a
-  swallowed `log.error` on the hourly schedule. Set it from the sysadmin Settings page, a JVM system
-  property, or the chart's `app.settings.niordIntegrationAllowPrivateHosts` (rendered as an environment
-  variable of that name by `k8s/helm/niord/templates/app/deployment.yaml`).
+  swallowed `log.error` on the hourly schedule. The field is injected once, at bean creation, so every route
+  needs a restart. Three routes work: the sysadmin Settings page (the stored row); a JVM system property
+  named like the key, which `SettingsService.overrideOf` reads before the database
+  (`-DniordIntegrationAllowPrivateHosts=true` in an environment's `app.javaOpts`, which the chart hands to
+  the JVM as `JAVA_TOOL_OPTIONS`); or the chart's `app.settings.niordIntegrationAllowPrivateHosts`, rendered
+  as an environment variable of that name by `k8s/helm/niord/templates/app/deployment.yaml`. The last two
+  are set from an environment's values and survive a restore of another environment's database.
 - **Residual:** a public host that itself proxies inward; an https→http downgrade on a redirect
   (`DefaultRedirectStrategy` permits it); `NiordIntegrationRestService.createNiordIntegration` logs the raw
   URL at INFO *before* the service validates, so a rejected `http://user:pw@host` still reaches the
@@ -1246,25 +1258,6 @@ was changed in production code.
   `LiquibaseBootstrapITTest` now sets the system property in its static bootstrap. **Exposed by:** the first
   CI run of the merged publications port.
 
-## PORT-2. `MessageSearchService.search()` turns every failure into an empty result
-
-- **Location:** `niord/src/main/java/org/niord/core/message/MessageSearchService.java` (`search`, 178-213: the
-  `TransitionRefusedException` rethrow at 198, the catch that swallows the rest at 208-210; the free-text branch
-  322-325, which logs WARN without the exception and goes on with an empty id list).
-- **Description:** every exception except `TransitionRefusedException` is logged and converted to an
-  empty `PagedSearchResultVo`; a failed free-text lookup substitutes an empty id list.
-- **Why it looks wrong:** publications membership resolution now rides on this method, and a caller
-  cannot distinguish a failed resolution from a genuine zero-member answer. Pre-existing; the port
-  only rescues the one exception it needs. Other callers take the same empty answer for "no messages": the
-  scheduled and status-change mailing-list mails (`MailingListExecutionService` 257 and 320) and the public API
-  (`AbstractApiService` 222). The hourly firing run no longer rests on it: since 2026-11-13 it searches through
-  `MessageSearchService.searchOrFail`, which lets a failure propagate; the other callers still take `search`.
-- **Exposed by:** reproduced by the error hunt of 2026-11-12 (tracks C and CT):
-  `DeliveryFaultRestITTest#anUnbalancedQuoteInTheEditorsSearchAnswersNoMessagesInsteadOfInvalidQuery_documentsBug`
-  (the query `nw "` answers 200 with total 0, and only a WARN without the exception is logged) and
-  `MailingListDeliveryFaultITTest#aScheduledTriggerWithAFreeTextQueryMailsAnEmptyListWhenTheIndexIsDown_documentsBug`
-  (a scheduled trigger with `query=nw` still makes its mail, with count 0, while the index is unreadable).
-
 ## PORT-3. Release endpoint dereferences `stampedAt` without a null guard, after the irreversible half
 
 - **Location:** `niord/src/main/java/org/niord/web/publication/PublicationIssueRestService.java`,
@@ -1331,8 +1324,8 @@ was changed in production code.
 - **Location:** `LegacyImportService.IMPORT_TIMEOUT_SECONDS` (reported in the run's log line only)
   and `PublicationTxRunner.callWithImportBudget` (`@Transactional(timeout = 1800)`, the one enforced).
 - **Why it looks wrong:** changing one silently makes the log lie about the budget. The number itself
-  was argued from MySQL's shared `hibernate_sequence`, which this schema does not have; it has never
-  been measured against PostgreSQL.
+  was argued from MySQL's shared `hibernate_sequence`, which this schema does not have. On PostgreSQL
+  the import has been timed once, on a workstation, well inside the budget, and never on a cluster.
 
 ## PORT-11. The local-dev realm grants no Niord roles on the `niord-web` client
 
@@ -1398,15 +1391,6 @@ was changed in production code.
   named above still catches every exception, `TwitterPromulgationService.getSettings` included (PROM7). One change
   that narrows every such lookup to `NoResultException` would close this entry.
 
-## RENDER3. A report id that does not exist renders the STANDARD report instead of failing
-
-- **Location:** `org/niord/core/report/FmReportService.getReport` (falls back to `getStandardReport()` when
-  `findByReportId` returns null), called from `org/niord/core/publication/series/IssueRenderService.renderTo`.
-- **Why it looks wrong:** `renderTo` guards with `if (report == null) throw new RenderFailedException("no such report: …")`,
-  which can never fire: a publication whose `reportId` is misspelled, or whose report row has been deleted, silently
-  publishes a generic message list in place of its own document — a released PDF that is wrong rather than absent. The
-  "no such report" path is reachable only through the test stub today.
-
 ## RENDER4. `PublicationIssueDesc.fileSize`, `fileHash` and `fileGeneratedAt` are never written
 
 - **Location:** `org/niord/core/publication/series/PublicationIssueDesc.java` (the three fields and their setters); no
@@ -1415,24 +1399,6 @@ was changed in production code.
   `IssueFileService.upload` (uploaded) — record only `fileName`, `filePath` and `fileSource`, so the columns that would
   let a released document be verified against its record, or tell two generations apart without reading the archive,
   are permanently NULL.
-
-## RENDER5. A publication issue hands its template the series' zone, but only the accumulated template prints in it
-
-- **Location:** `org/niord/core/publication/series/IssuePublishService` (puts `timeZone`, the series' cut-off zone,
-  into the report params) and `IssueRenderService.renderTo`, which passes it on as template data only; the shipped
-  `nm-report-pdf.ftl`, `nm-tp-report-pdf.ftl`, `nm-almanac-report-pdf.ftl`, `nm-annex-report-pdf.ftl`,
-  `fa-list-pdf.ftl` and `message-support.ftl` never `<#setting time_zone>`.
-- **Description:** the value reaches the date-interval directives, but the cover date (`.now?string[...]`) and each
-  message's publication date (`publishDateFrom?string(...)` in `message-support.ftl`) are formatted in FreeMarker's
-  zone, which is the JVM's. The runtime image sets no zone, so a weekly issue prints UTC dates, and a notice
-  published in the first hour or two of a Copenhagen day carries the day before. `nm-accumulated-report-pdf.ftl`
-  applies the zone itself and is unaffected.
-- **Why it looks wrong:** `IssuePublishService` puts the zone there so that the document's dates follow the series'
-  desk rather than the container, and these templates are the rows each deployment keeps in its database (templates
-  are data since C4.2a), which a change to the bootstrap's files never reaches. `FmTemplateBuilder.timeZone(String)` applies a zone to the
-  rendering itself, whatever the template; the message-report endpoints use it.
-- **Exposed by:** reading the render path while dating the public site's print PDFs in the domain's zone; not by a
-  test.
 
 ## NAMING-1. A release more than two periods late names its issue for the closing weeks and drops a fully covered week
 
@@ -1566,9 +1532,31 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   track): on two local copies of `niord_test` (`niord_d`, `niord_guides`) the audio-broadcast list's
   firing-exercise trigger 1949666 fails with `messageService.search is not a function`, so the list's scheduled
   mail is never made, and `GET /rest/mailing-lists/execute-report/1949666.html` answers 500 on the same script;
-  `niord_test` holds the same trigger and due time. MAILLIST6 is the consequence there: the failed run is never
-  rescheduled and is retried every minute. MAILLIST6's fix stops the retry, not this row; the test environment's
+  `niord_test` holds the same trigger and due time. There the failed run is now retried every hour and leaves a
+  mail in status Error in the Mail Queue once a day, which does not mend the row; the test environment's
   row is replaced only by a sysadmin's release import with the overwrite ticked, on a human's say-so. Open.
+
+## SCRIPT11. A failed search in DK's and GL's firing-exercise script mails the list an empty schedule
+
+- **Location:** the country repositories' own `be/bootstrap/templates/mailinglist/fetch-firing-exercises.js`
+  (`SIFA-DK/niord-dk` and `SIFA-DK/niord-gl`; DK's is the file the base sample's copy was taken from, and GL's is
+  the same but for its line 19, `docs/code-data-config-plan.md` §9.2), which call
+  `messageService.search(searchParams)`, and the `templates/mailinglist/fetch-firing-exercises.js` rows of the
+  deployments made from them; `niord/src/main/java/org/niord/core/message/MessageSearchService.java` `search` (logs
+  a failure and answers an empty result) beside `searchOrFail` (throws it).
+- **Description:** when that search fails (a database error, say, after the trigger's own `searchOrFail`
+  succeeded), the script puts an empty `firingExercises` list into the mail and `audio-broadcast.ftl` prints the
+  heading for tomorrow's firing exercises with no exercise under it. The mail is sent and the trigger is not
+  postponed [read in the code; not run]. The base sample's copy (`niord/sample/archive/`) calls `searchOrFail` and
+  `BootstrapScriptBeanCallsTest` refuses the lenient call in the base bootstrap and the sample; the countries' files
+  are their own, not shadows of a base file, so neither the base bump nor a country's release import changes them.
+- **Why it looks wrong:** a failure reaches the list's readers as "no firing exercises tomorrow", which they
+  cannot tell from a real empty schedule.
+- **Exposed by:** a review of 2026-11-18, which named the script in the javadoc of `MessageSearchService.search`.
+- **Severity:** Low — it needs a search that fails between the trigger's and the script's. Fix: the same one-line
+  change to `searchOrFail` in each country's bootstrap file, in that country's repository; a deployment's existing
+  row then changes only by a sysadmin's release import with the overwrite ticked, on a human's say-so (as SCRIPT8).
+  Open.
 
 ## TZ1. Time-dependent ITs fail by exactly one hour when they run in the hour the clocks go back
 
@@ -1608,21 +1596,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9). Built in the
   image and the chart on 2026-11-18 (`TZ=UTC`, not in `app.javaOpts`); the entry stays open for the tests' zone,
   which Surefire and Failsafe still do not pin.
-
-## LUCENE-3. A message index of an older Lucene format in the index folder stops the start-up
-
-- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java:158-180` (`init`: the start-up's
-  `deleteIndex()` at 174, which catches only `IOException`, 175) and `:416-429` (`deleteIndex` opens an
-  `IndexWriter` over the existing folder and calls `deleteAll()` instead of removing the folder's files).
-- **Description:** when the index folder holds an index written by an older Lucene version, opening the writer
-  throws `IllegalArgumentException: Could not load codec 'Lucene95'` (seen with the legacy backend's Lucene 9.5
-  index under Lucene 9.12). It is not an `IOException`, so it is not caught, and the application stops with
-  "Application run failed". Nothing in the folder is deleted.
-- **Why it looks wrong:** deleting the index on start-up is meant to start from an empty one whatever the folder
-  holds; an unreadable old index is exactly that case. Removing the folder's files, or catching the failure and
-  then removing them, would let the start-up rebuild the index.
-- **Exposed by:** P7h's §5 dry run of the country split (2026-10-25), where `niord.home` resolved to the
-  workstation's `~/.niord`, which held an index of the legacy backend.
 
 ## BATCH5. Sysadmin > Batch Jobs forgets every execution at a restart, and the bootstrap's job logs with it
 
@@ -1805,8 +1778,8 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Why it looks wrong:** a type's transmitters, areas and settings are its own configuration, not records that
   refer to it from outside, and the sysadmin gets no reason and, for Twitter, no way out. A type that messages were
   promulgated with is a different case: keeping it for their history is right, and the refusal should say so.
-  CONTACT1 is the same kind of refusal for another entity. An area, category or message series in use is refused
-  with a 409 that names its uses since 2026-11-13; that refusal is the model for this one.
+  A contact on mailing lists is taken off them when it is deleted. An area, category or message series in use is
+  refused with a 409 that names its uses since 2026-11-13; that refusal is the model for this one.
 - **Exposed by:** the user guides' screenshot rig (2026-11-11). The system administrators' manual
   (`guides/sysadmin-manual/05-PromulgationTypes.adoc`, _Deleting a Promulgation Type_) describes the refusals as
   they are; change it with the fix.
@@ -1885,45 +1858,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   hunt's fix of 2026-11-13 to line 53 of `nm-almanac-report-pdf.ftl` ships that template in the release folder
   `be/niord/bootstrap/releases/2026-11-12-error-hunt-templates/` and leaves line 35, this entry's, as it was.
 
-## CONTACT1. A contact who is on a mailing list cannot be deleted, and the page gives no reason
-
-- **Location:** `niord/src/main/java/org/niord/core/user/ContactService.java` `deleteContact` (199-206, a plain
-  `remove` of the contact); the join table `MailingList_Contact`, whose foreign key `contacts_id` to `Contact` has no
-  `ON DELETE` (`db/changelog/changes/V001__baseline_schema.sql` 3662-3663, no later changeset touches it; its
-  `confdeltype` is `a`, no action, in `niord_guides`). The link is mapped on the list's side only
-  (`MailingList.contacts`, `MailingList.java` 68-69); `Contact` has no mapping back.
-- **Description:** Admin > Users & Contacts > Contacts > delete removes the contact's row and nothing else. For a
-  contact who is still a recipient of a list, the database refuses the delete, and the page shows the toast
-  "Contact operation failed" (`deleteError`, `fe/languages/en/i18n/admin/en.json` 1914) with no reason; the contact
-  can be deleted only after it has been taken off every list on its _Mailing lists_ tab [read in the code and the
-  schema; no delete was tried on the rig].
-- **Why it looks wrong:** a contact's list memberships belong to the contact, not to a record that refers to it from
-  outside, and the administrator is not told what blocks the delete. The same family as PROM8; an area, category
-  or message series in use is refused with a 409 that names its uses since 2026-11-13.
-- **Exposed by:** the user guides' check (2026-11-11, the checker of the administrators' manual). The manual
-  (`guides/admin-manual/07-Users.adoc`, _Deleting a Contact_) describes the refusal as it is; change it with the fix.
-- **Severity:** Low. Fix: take the contact off every list's `contacts` before the `remove` (a query for the lists
-  that hold it, or a delete from the join table), with an IT that deletes a contact who is on a list.
-
-## MAIL5. With two or more trigger languages, a recipient whose preferred language is not among them gets no mail
-
-- **Location:** `niord/src/main/java/org/niord/core/mailinglist/MailingListExecutionService.java`
-  `createMailTemplate` (351-386). A trigger makes one mail per language of its descriptions (`languages`, 130-132
-  and 234-236) and addresses each to the users and contacts whose language equals it, to those without a language
-  when it is the default-language mail, and to everyone only when the trigger has one language (372-381).
-- **Description:** a user or contact whose preferred language is set but is not one of the trigger's languages
-  matches none of the mails when the trigger has two or more, and receives nothing; no log line says so. With one
-  language ticked, the same recipient receives that one. For example, in a deployment with three languages, a
-  trigger with subjects in two of them never mails a recipient who prefers the third [read in the code; not run].
-- **Why it looks wrong:** a recipient without a preferred language falls back to the default-language mail, while
-  one with an unticked language is dropped silently; an administrator who unticks a language removes recipients
-  without being told. The checker noted that it may be intended; the owner's call.
-- **Exposed by:** the user guides' check (2026-11-11, the checker of the administrators' manual). The manual
-  (`guides/admin-manual/08-MailingLists.adoc`, _Mailing List Triggers_, the Mail Subject row, and
-  `guides/admin-manual/07-Users.adoc`, Preferred Language) describes it as it is; change it with the fix.
-- **Severity:** Low. Fix: treat a recipient whose language the trigger lacks like one without a language, so that
-  the default-language mail reaches it.
-
 ## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
 
 - **Location:** `niord/src/main/java/org/niord/core/keycloak/KeycloakIntegrationService.java` `createKeycloakDomain`
@@ -1943,6 +1877,30 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `fe/docs/backlog.md`.
 - **Severity:** Low today; Medium once the ADMIN fallback is removed. Fix: create `publication-curate` (not part of
   the composite ladder) with the other four roles, before the fallback goes.
+
+## KEYCLOAK3. The integration tests sign in against Keycloak 22.0.5, a version no environment runs
+
+- **Location:** `niord/src/test/java/org/niord/test/NiordTestContainers.java` `KEYCLOAK_IMAGE` (57,
+  `quay.io/keycloak/keycloak:22.0.5`), whose comment (51) says the images are pinned to the versions of
+  `docker-compose.yml`, and `docs/test-infrastructure.md` (211), whose table heading says the same; against
+  `docker-compose.yml` (51) and `k8s/helm/niord/values.yaml` (`keycloak.image.tag`, 343), both `26.8.2`. The
+  integration tests' realm, `niord/src/test/resources/keycloak/niord-realm.json`, was exported from 22.0.5
+  (`keycloakVersion`, 3851).
+- **Description:** every integration test that signs in gets its token from a 22.0.5 server and validates it
+  against that server's keys: the token requests (`KeycloakTestTokens`, `JwtAuthorizedPartyITTest`), the
+  resource server's `issuer-uri` (`ITTest` and the classes that set their own), and the endpoint sweep's cells that
+  point the backend's admin calls at the container (`web/sweep/SystemSweepKeycloak.java`, `realm`). The local run
+  and the chart run 26.8.2, and the stagings' shared Keycloak is pinned to the same version
+  (F-X114 in the repository root's `docs/security-review-2026-09.md`).
+- **Why it looks wrong:** the suite proves the login integration against a server that no environment runs, four
+  major versions behind. A change between them in the tokens, the realm import or the Admin API is met only by
+  hand: 26.8.2's Admin API accepts only a token with the client scope `kc-admin-api` (`k8s/README.md` 268-274),
+  which a 22.0.5 server never asks for, so no test can tell whether the realm files carry it.
+- **Exposed by:** the preparation of a Keycloak bump checklist, 2026-11-18 (read in the code and the pins; not
+  run).
+- **Severity:** Low, tests only; it narrows what a green CI says about sign-in. Fix, the smallest step: set
+  `KEYCLOAK_IMAGE` to the chart's pin (and the table row with it), run the integration suite
+  (`be/test-it`), and see what fails; then keep the two pins together, as the comment already claims.
 
 ## TESTQ6. Five REST ITs accept a 500 as a refusal, and the one IT that reloads two of each list skips on CI
 
@@ -1986,7 +1944,7 @@ The fix stage of 2026-11-13 fixed every entry of the hunt that is no longer list
 test, most of them the entry's `_documentsBug` pin turned round, and git history keeps the entries it removed. The
 entries still listed are of three kinds: those the fix stage left on purpose, each saying why and what is
 recommended, for the owner to decide (MAILLIST1, SERIES7, SCRIPT10, LUCENE-5, API3, SETTINGS-7, MSG6); the part of
-an entry the fix stage fixed only in part (MAILLIST2, DOMAIN2, MAILLIST6); and, under a line of their own at the end
+an entry the fix stage fixed only in part (DOMAIN2); and, under a line of their own at the end
 of the section, the faults the fix stage met on its way and did not fix. Paths are under `niord/src/main/java/`
 unless they say otherwise.
 
@@ -2045,30 +2003,8 @@ unless they say otherwise.
   the format for any count, or refuse an unsupported one loudly.
 - **Left by the fix stage (2026-11-13):** latent, as no template or dialog asks for another precision, and a fix
   needs a choice the entry leaves open (what 0 decimals prints, and how a refusal is shown when the directive
-  swallows its exceptions, SCRIPT5); recommended to decide with the next template that wants another precision.
-
-## MAILLIST2. Status-change mails ride a fire-and-forget topic, and a status change lost on the way leaves no record
-
-- **Location:** `MessageService.broadcastStatusUpdate` (a failed send logged only, "Failed sending JMS"); the
-  embedded Artemis, `persistent: false` (`config/niord-core-defaults.yml` 87); the three listeners' non-durable
-  subscriptions, opened at `ApplicationReadyEvent` and reopened by `org/niord/core/util/JmsTopicLoop.java`.
-- **Description:** status changes committed just before a restart, or before the non-durable subscriptions open at
-  `ApplicationReadyEvent`, are lost, and so are those broadcast while a listener waits to subscribe again after a
-  broker error. With the broker unreachable at publish, the warning is PUBLISHED and its mail is never made. The
-  rest of the entry was fixed on 2026-11-13 (the error hunt's fix stage): a failing status-change trigger leaves an
-  ERROR row in the Mail Queue (`MailingListExecutionService.recordStatusChangeTriggerFailure`), a trigger filter
-  that throws is an error (a read or call on null still reads as no match), and the three listener loops log one
-  ERROR and subscribe again (`JmsTopicLoop`).
-- **Why it looks wrong:** the message shows PUBLISHED or CANCELLED while the subscribers' mails (and a country's
-  coast-radio mail) were never made, and the Mail Queue cannot show the gap.
-- **Exposed by:** the error hunt of 2026-11-12, track C, read in the delivery path, then reproduced by track CT:
-  `MailingListDeliveryFaultITTest#aStatusChangeThatCannotReachTheBrokerIsLostWithoutARecord_documentsBug`. The loss
-  across a restart was not testable there. The tweet's side is PROM5; the reconnecting loop keeps
-  `TwitterMessageListener` alive, and the dropped `TwitterException` is still PROM5's.
-- **Severity:** Medium — rare (a restart, or a broker error, at the moment of a status change), but a lost mail is
-  silent. Fix: a durable outbox per status change, as SECOM has.
-- **Left by the fix stage (2026-11-13):** the outbox is a new table and a change of the delivery's semantics, which
-  the plan left to the owner; recommended as its own piece of work, modelled on SECOM's outbox.
+  turns its exceptions into an empty output and a warning in the log); recommended to decide with the next template
+  that wants another precision.
 
 ## LUCENE-5. One message that throws stalls the free-text index for every later message
 
@@ -2201,52 +2137,9 @@ new (F1, F2), every endpoint called once per role (D1, D2a, D2b) and the three b
   owner; recommended: the same, a log line or a warning in the answer naming each reference left out, not a
   refusal.
 
-## MAILLIST6. A scheduled mailing-list trigger whose run fails is recorded only in the log
-
-- **Location:** `org/niord/core/mailinglist/MailingListSchedulerService.java` `checkExecuteScheduledTriggers` (the
-  catch that postpones a failed trigger); `MailingListTrigger.java` (no column for a last failure, and no value
-  object carries `nextScheduledExecution`); the Mailing lists page of the admin app.
-- **Description:** since the error hunt's fix stage of 2026-11-13, a scheduled trigger whose run fails is no longer
-  run again every minute: it is postponed to the earlier of its next regular time and one hour later, and one ERROR
-  line with the cause says when it is tried again. Nothing outside the log records the failure: the trigger has no
-  column for its last failure, and the Mailing lists page cannot show it, or the due time. The case seen is the
-  audio-broadcast list's firing-exercise trigger, which fails on SCRIPT8's stale `fetch-firing-exercises.js` row
-  (`messageService.search is not a function`).
-- **Why it looks wrong:** the list's recipients silently stop getting a scheduled mail, and a sysadmin has no sign
-  of it in the admin app.
-- **Exposed by:** the error hunt of 2026-11-12, wave 3, the soak track, the three backends' logs read after the
-  wave: on the copies of `niord_test` the log had "Failed executing scheduled mailing list trigger 1949666" every
-  minute, each preceded by the script error, and `ScheduledMail` held no mail from it. The retry every minute is
-  guarded since 2026-11-13 by `MailingListDeliveryFaultITTest` and `MailingListSchedulerServiceITTest`; no test
-  pins the missing record.
-- **Severity:** Low — no mariner sees anything, but a list's recipients silently stop getting a scheduled mail.
-  Fix: keep the last failure (time and cause) on the trigger, and show it with the due time on the Mailing lists
-  page.
-- **Left by the fix stage (2026-11-13):** the record needs a column and a change of the page, which the plan left
-  to the owner; recommended as a follow-up together with INT4's failure record, which asks for the same kind of
-  column and page.
-
 **Found by the fix stage.** The entries from here on are faults the error hunt's fix stage of 2026-11-13 met while
 it fixed the entries above, and did not fix because they were outside the fault it was fixing. Each was read in the
 code by the developer or the checker of the cluster named; most were not run.
-
-## PROM17. Removing a NAVTEX promulgation removes the transmitters it selects
-
-- **Location:** `org/niord/core/promulgation/NavtexMessagePromulgation.java`, the field `transmitters`
-  (`@ManyToMany(cascade = CascadeType.REMOVE)`).
-- **Description:** a cascade REMOVE on a many-to-many to reference data removes the `NavtexTransmitter` rows a
-  promulgation selects whenever the promulgation is removed. Seen: `MessageService.updateMessage` with a NAVTEX
-  promulgation that carries no id, for a message that already has one, orphan-removes the stored promulgation,
-  cascades the removal to its transmitters, and the flush fails with `TransientPropertyValueException`
-  ("Persistent instance of NavtexMessagePromulgation references an unsaved transient instance of
-  NavtexTransmitter"). The same cascade would delete transmitters, or fail on the join table's foreign key,
-  wherever a NAVTEX promulgation is removed: a message deleted with `em.remove`, or a strict load that drops a
-  promulgation of an inactive type before a save [read in the code; only the first was run].
-- **Why it looks wrong:** a message's promulgation does not own the station list; removing one must never remove a
-  transmitter that every other message selects too.
-- **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster A15 (seen in its tests, before and after its fix).
-- **Severity:** Low today (the editor sends the stored promulgation's id), High if a path that removes a NAVTEX
-  promulgation is reached. Fix: no cascade on a many-to-many to reference data.
 
 ## PROM18. A NAVTEX transmitter or SafetyNET area write for a name or type that does not exist answers 500
 
@@ -2405,6 +2298,22 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster B18 (read in the code; not run).
 - **Severity:** Low. Fix: 400 for a missing or unknown message and for a null trigger.
 
+## MAILLIST9. A list recipient without any address stops every mail of the list's triggers
+
+- **Location:** `org/niord/core/mailinglist/MailingListExecutionService.java` `createMailTemplate` (the recipients:
+  `new ScheduledMailRecipient(TO, r.computeInternetAddress())`); `IMailable.computeInternetAddress`.
+- **Description:** for a contact with a blank e-mail address and no name, or a user with a blank user name and no
+  name or address, `computeInternetAddress` returns null, and `ScheduledMailRecipient.address` is `@NotNull` (and
+  `NOT NULL` in the table). Every mail a trigger of that recipient's list makes then fails as it is saved, for all its
+  recipients, a status-change trigger's and a scheduled trigger's alike. The failure is recorded in the Mail Queue
+  (the record leaves that recipient out since 2026-11-19), but no subscriber of the list gets the mail.
+- **Why it looks wrong:** one recipient without an address should be left out of the mail, not stop it for everyone.
+- **Exposed by:** a review of the status-change outbox, 2026-11-19; the failure record's half is pinned by
+  `MailingListDeliveryFaultITTest.theFailureRecordLeavesOutARecipientWithoutAnAddress`.
+- **Severity:** Low: `ContactService` refuses a blank contact address and a user always has a user name, so only a
+  row written before those checks or by hand is hit. Fix: leave out a recipient whose address is null in
+  `createMailTemplate` too, with a WARN naming it.
+
 ## CG7. Two typed position forms are read as another position without a word
 
 - **Location:** `org/niord/core/geojson/PlainTextConverter.java` (`POSITION_FORMAT`, 84) and the admin app's
@@ -2458,33 +2367,6 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Exposed by:** the error hunt's fix stage, its closing `./verify-local`, 2026-11-13 (read in the summary and the
   script).
 - **Severity:** Low, tooling only. Fix: `grep -a` on the three calls, so the log is read as text whatever it holds.
-
-## FIRING5. The hourly firing run keeps a period that ended exactly at the start of its window
-
-- **Location:** `org/niord/core/schedule/FiringExerciseService.java` `runPeriods` (`if (to.before(windowStart))`),
-  with the window's start from `updateFiringExercises(Set)` (`TimeUtils.resetTime(new Date())`).
-- **Description:** the run's window starts at today's midnight in the JVM's zone (UTC on the servers) and reaches
-  the schedule's days ahead; the periods are read from one day before it. A period is kept when its end (for a row
-  stored with its end at or before its start, that end read one day later in the target zone) is at or after the
-  window's start, so one that ends exactly at it is kept although none of it lies in the window. A correctly
-  stored period is treated the same: the query (`fp.toDate >= :fromDate`) reads it and the same check keeps it. In
-  the Copenhagen zone the boundary is 01:00 in winter and 02:00 in summer, so a firing "until 01:00" is listed in
-  the area's warning for the whole of the next UTC day, while one ending a minute earlier drops out at the first
-  run after midnight. A warning that already listed it (it was ahead the day before) is not reissued for it. It is
-  visible when the area's set of periods changes on that day: the run then publishes a new warning whose time
-  part starts with yesterday's firing, for example "12 November 2026, hours 07:00 - 13 November 2026, hours 01:00."
-  in a warning issued at 13:21 Copenhagen time on 13 November. The first run of a build that reads the backward rows is such a
-  change for every area that has one ending at the boundary.
-- **Why it looks wrong:** a period that has no time in the window is announced as part of a warning published
-  after it ended; a mariner reads a fresh warning for a firing that is over.
-- **Exposed by:** the live check of the error hunt's fix stage, 2026-11-13 (a stored backward row of a firing area,
-  07:00 to 01:00 Copenhagen time of 12 November, put into a warning reissued by the run of 13 November 12:21 UTC;
-  read in the code after).
-- **Severity:** Low — only a period ending exactly at the boundary, and the next day's first run drops it. Fix:
-  keep a period only when its end is after the window's start (`!to.after(windowStart)` leaves it out), for
-  backward and forward rows alike, with a test beside
-  `FiringExerciseBoundaryITTest#aPeriodThatEndedBeforeTheWindowIsLeftOut` of both shapes ending exactly at the
-  window's start (today's midnight in the JVM's zone).
 
 ## DB5. Description lists come back in no defined order
 
@@ -2717,8 +2599,9 @@ path is from the repository root.
 - **Severity:** Low. Fix: call `PathSegmentId.refusal` in `findOrCreatePublicationCategory` before it creates a
   category, and in the series import's new-series branch, and skip the row with the sentence, as the category
   import does. Could break: an import file that already holds such an id; read the stagings' and the country
-  repositories' category and series ids first (read only). REPO3 is the same firewall cause on repository file
-  names.
+  repositories' category and series ids first (read only). Repository file names, whose `%` and `;` the
+  firewall refused the same way, were given their own allowance in `EncodedSlashConfig.MessageIdFirewall`; an id
+  here is better refused where it is made.
 
 # Potential errors — met by the error hunt's phase 2 fix stage (2026-11-16)
 

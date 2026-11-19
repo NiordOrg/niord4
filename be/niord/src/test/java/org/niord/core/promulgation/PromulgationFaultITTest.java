@@ -270,6 +270,68 @@ class PromulgationFaultITTest extends ITTest {
     }
 
     /**
+     * Two messages tick a shared transmitter, and the first also ticks one of its own. Removing the first message's
+     * NAVTEX promulgation (the save after a type change that drops it), sending the second's without its id, and
+     * deleting the second message each remove only the promulgation's join rows: both transmitters stay, and the
+     * second message keeps its selection. With a remove cascade to the transmitters, the first save failed on the
+     * join table's foreign key (the shared one) or deleted the station (the other one), and the second failed with a
+     * transient-instance error.
+     */
+    @Test
+    void removingANavtexPromulgationKeepsTheTransmittersItTicked() {
+        String n = Long.toString(System.nanoTime(), 36);
+        String keep = "IT-TX-Keep-" + n;
+        String only = "IT-TX-Only-" + n;
+        createTransmitter(keep);
+        createTransmitter(only);
+
+        String uidA = Tx.requiringNew().call(() ->
+                messageService.createMessage(navtexMessage(null, null, n, List.of(keep, only))).getUid());
+        messageUids.add(uidA);
+        String uidB = Tx.requiringNew().call(() ->
+                messageService.createMessage(navtexMessage(null, null, n, List.of(keep))).getUid());
+        messageUids.add(uidB);
+        assertEquals(List.of(keep, only), storedTransmitters(uidA), "precondition: A ticks both");
+        Status statusA = Tx.requiringNew().call(() -> messageQueryService.findByUid(uidA).getStatus());
+        Status statusB = Tx.requiringNew().call(() -> messageQueryService.findByUid(uidB).getStatus());
+
+        // The save after a type change that dropped the NAVTEX promulgation: the update carries none
+        Message withoutNavtex = navtexMessage(uidA, statusA, n, List.of());
+        withoutNavtex.getPromulgations().clear();
+        Tx.requiringNew().run(() -> messageService.updateMessage(withoutNavtex));
+        assertNull(Tx.requiringNew().call(() -> messageQueryService.findByUid(uidA)
+                .promulgation(NavtexMessagePromulgation.class, NAVTEX)), "A's NAVTEX promulgation is removed");
+        assertTransmittersExist(keep, only);
+        assertEquals(List.of(keep), storedTransmitters(uidB), "B still ticks the shared transmitter");
+
+        // A NAVTEX promulgation sent without its id replaces the stored one
+        Message withoutId = navtexMessage(uidB, statusB, n, List.of(keep));
+        withoutId.promulgation(NavtexMessagePromulgation.class, NAVTEX).setId(null);
+        Tx.requiringNew().run(() -> messageService.updateMessage(withoutId));
+        assertEquals(List.of(keep), storedTransmitters(uidB), "B's new promulgation ticks the shared transmitter");
+        assertTransmittersExist(keep, only);
+
+        // A message removed outright, as the clean-up of a test does
+        Tx.requiringNew().run(() -> {
+            Message msg = messageQueryService.findByUid(uidB);
+            em.createNamedQuery("MessageHistory.findByMessageId", MessageHistory.class)
+                    .setParameter("messageId", msg.getId())
+                    .getResultList()
+                    .forEach(em::remove);
+            em.remove(msg);
+        });
+        messageUids.remove(uidB);
+        assertTransmittersExist(keep, only);
+    }
+
+    private void assertTransmittersExist(String... names) {
+        for (String name : names) {
+            assertNotNull(Tx.requiringNew().call(() -> navtexPromulgationService.findTransmitterByName(NAVTEX, name)),
+                    "the transmitter " + name + " still exists");
+        }
+    }
+
+    /**
      * A transmitter whose name differs from an existing one of the type only in case is refused with an
      * {@code IllegalStateException} (409), so no new twins are made. Where twins already exist, a name that matches
      * neither exactly is ambiguous and refused the same way, instead of being read as "no such transmitter".
@@ -456,9 +518,10 @@ class PromulgationFaultITTest extends ITTest {
     }
 
     /**
-     * Three NAVTEX-backed types generate the text of one message: one whose script rewrites the text (the
-     * control: its rewrite shows in the result), one whose script throws while it renders (an undefined value), and
-     * one whose script path has no resource. The script adjusts the broadcast text (a header, a cancellation footer,
+     * Four NAVTEX-backed types generate the text of one message: one whose script rewrites the text (the
+     * control: its rewrite shows in the result), one whose script throws while it renders (an undefined value),
+     * one whose script path has no resource, and one whose script writes a field that cannot be assigned (a
+     * promulgation the message does not carry), which used to be logged and skipped. The script adjusts the broadcast text (a header, a cancellation footer,
      * the wording), so a failing script fails Generate for its type with a {@code PromulgationException} that names
      * the type and carries the script's error as its cause, instead of answering the unscripted text. Over HTTP,
      * Generate answers 500 for the failing type with a problem detail that names the type and quotes neither the
@@ -476,9 +539,13 @@ class PromulgationFaultITTest extends ITTest {
         String okType = navtexBackedType("it-p12ok-" + n, rewrite);
         assertEquals("SCRIPTED BUOY ADRIFT", generatedText(okType), "control: a working script rewrites the text");
 
+        String unassignable = scriptResource("templates/it/prom12-unassignable-" + n + ".ftl",
+                "<field-template field=\"message.promulgation('it-none-" + n + "').text\">X</field-template>");
+
         String boomType = navtexBackedType("it-p12boom-" + n, boom);
         String missingType = navtexBackedType("it-p12miss-" + n, "templates/it/prom12-missing-" + n + ".ftl");
-        for (String typeId : List.of(boomType, missingType)) {
+        String unassignableType = navtexBackedType("it-p12unas-" + n, unassignable);
+        for (String typeId : List.of(boomType, missingType, unassignableType)) {
             PromulgationException failure = generateFailure(typeId);
             assertTrue(failure.getMessage().contains("promulgation type " + typeId + " failed"),
                     "the failure names the type: " + failure.getMessage());
@@ -488,5 +555,6 @@ class PromulgationFaultITTest extends ITTest {
         assertEquals(200, generateOverHttp(okType).statusCode(), "control: Generate over HTTP answers the working type");
         assertGenerateFailsReadably(boomType, "noSuchValue");
         assertGenerateFailsReadably(missingType, "prom12-missing-" + n);
+        assertGenerateFailsReadably(unassignableType, "it-none-" + n);
     }
 }

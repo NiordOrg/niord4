@@ -135,6 +135,16 @@ public class BatchService extends BaseService {
     }
 
     /**
+     * The job instance of an execution: the id the Batch page lists a job by, and its logs and data file are read by
+     *
+     * @param executionId the execution id a start returned
+     * @return the id of its job instance
+     */
+    public long getInstanceId(long executionId) {
+        return jobOperator.getJobInstance(executionId).getInstanceId();
+    }
+
+    /**
      * Creates and initializes a new batch job data entity
      */
     private BatchData initBatchData(String jobName, Map<String, Object> properties) throws IOException {

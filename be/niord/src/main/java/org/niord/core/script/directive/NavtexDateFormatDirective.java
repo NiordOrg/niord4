@@ -22,6 +22,8 @@ import freemarker.template.TemplateDirectiveModel;
 import freemarker.template.TemplateException;
 import freemarker.template.TemplateModel;
 import org.niord.core.util.TimeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Date;
@@ -34,6 +36,8 @@ import java.util.Map;
 public class NavtexDateFormatDirective implements TemplateDirectiveModel {
 
     private static final String PARAM_DATE = "date";
+
+    private static final Logger log = LoggerFactory.getLogger(NavtexDateFormatDirective.class);
 
     /**
      * {@inheritDoc}
@@ -55,7 +59,10 @@ public class NavtexDateFormatDirective implements TemplateDirectiveModel {
             String result = TimeUtils.formatNavtexDate(date);
             env.getOut().write(result);
         } catch (Exception e) {
-            // Prefer robustness over correctness
+            // Prefer robustness over correctness, but say so (a missing date is no fault: the formatter prints
+            // nothing for it without reaching this catch)
+            log.warn("NAVTEX date {} not printed in template {}: {}", date == null ? "(none)" : date.toInstant(),
+                    LightCharacterDirective.templateName(env), LightCharacterDirective.reason(e));
         }
     }
 }

@@ -142,11 +142,16 @@ export class Autocomplete<T> {
   protected readonly rowTpl = computed(() => this.optionTpl() ?? this.optionTemplate());
 
   private readonly control = viewChild.required<ElementRef<HTMLElement>>('control');
+  private readonly inputEl = viewChild.required<ElementRef<HTMLInputElement>>('input');
   private readonly optionItems = viewChildren(AutocompleteOption);
 
   protected readonly positions = POSITIONS;
   protected readonly scrollStrategy: ScrollStrategy = this.overlay.scrollStrategies.reposition();
-  protected readonly listboxId = `app-ac-listbox-${listboxSeq++}`;
+  private readonly instance = listboxSeq++;
+  protected readonly listboxId = `app-ac-listbox-${this.instance}`;
+
+  /** Set while the input takes the focus back from a removed button: see `focusInputQuietly`. */
+  private refocusing = false;
 
   /**
    * The input's text — resets to `text()` whenever the consumer changes it. A pick in free-text
@@ -224,6 +229,7 @@ export class Autocomplete<T> {
   }
 
   protected onFocus(): void {
+    if (this.refocusing) return;
     if (this.browseOnFocus()) {
       // Ask the consumer for the empty-query list and open regardless — on a cold field there are
       // no suggestions yet, so waiting for them would mean the panel never opens on first focus.
@@ -281,14 +287,56 @@ export class Autocomplete<T> {
     this.pick(item);
   }
 
-  protected onRemoveMousedown(event: MouseEvent, item: T): void {
+  // The chip-remove and clear buttons act on click, which is also what Enter and Space on a
+  // focused button fire. Their mousedown only keeps the focus where it is (the input, while the
+  // user types), as the rows do; acting on mousedown would leave the keyboard with no way to
+  // press them.
+  protected keepInputFocus(event: MouseEvent): void {
     event.preventDefault();
-    this.removeChip(item);
   }
 
-  protected onClearMousedown(event: MouseEvent): void {
-    event.preventDefault();
+  protected onRemoveClick(event: MouseEvent, item: T): void {
+    const hadFocus = this.holdsFocus(event);
+    this.removeChip(item);
+    if (hadFocus) this.focusInputQuietly();
+  }
+
+  protected onClearClick(event: MouseEvent): void {
+    const hadFocus = this.holdsFocus(event);
     this.clearAll();
+    if (hadFocus) this.focusInputQuietly();
+  }
+
+  /** The id of a chip's label, and of its remove button, which is named by both. */
+  protected chipLabelId(index: number): string {
+    return `app-ac-${this.instance}-chip-${index}`;
+  }
+
+  protected chipRemoveId(index: number): string {
+    return `app-ac-${this.instance}-chip-${index}-remove`;
+  }
+
+  /**
+   * Whether the pressed button holds the focus: always from the keyboard, never from the mouse,
+   * whose press `keepInputFocus` kept off it. Such a button is about to leave the DOM (its chip,
+   * or the whole value, is gone), which would drop the focus on the page's body.
+   */
+  private holdsFocus(event: MouseEvent): boolean {
+    const button = event.currentTarget;
+    return button instanceof HTMLElement && button.ownerDocument.activeElement === button;
+  }
+
+  /**
+   * Moves the focus to the input without the side effects of a user focusing it: no browse query
+   * and no panel opened over the box the user has just emptied.
+   */
+  private focusInputQuietly(): void {
+    this.refocusing = true;
+    try {
+      this.inputEl().nativeElement.focus();
+    } finally {
+      this.refocusing = false;
+    }
   }
 
   protected onOutsideClick(event: MouseEvent): void {

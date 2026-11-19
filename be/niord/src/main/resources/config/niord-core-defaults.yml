@@ -119,6 +119,20 @@ niord:
   smtp:
     host: localhost
     port: 1025
+    # The time, in milliseconds, a connect, one read and one write to the SMTP server may each take. Without
+    # them a server that accepts the connection and then goes silent holds the mail queue for good. A
+    # deployment can set its own (NIORD_SMTP_CONNECTION_TIMEOUT_MS, NIORD_SMTP_TIMEOUT_MS,
+    # NIORD_SMTP_WRITE_TIMEOUT_MS); the -ms suffix keeps Kubernetes' service-link variables
+    # (NIORD_SMTP_PORT=tcp://...) from ever binding onto them.
+    connection-timeout-ms: 30000
+    timeout-ms: 60000
+    write-timeout-ms: 60000
+    # For a relay that asks for a login or TLS (MailConfig); all off when unset, as here:
+    #   username: ""   a user name turns the login on; the password comes from the environment
+    #                  (NIORD_SMTP_PASSWORD) and is never written into a file
+    #   tls: none      none | starttls (required before the login and the mail; usually port 587)
+    #                  | ssl (implicit TLS; usually port 465). The relay's certificate is checked against
+    #                  the JVM's trust store; a relay with a private CA needs -Djavax.net.ssl.trustStore.
   # The message-report PDFs (/rest/message-reports/report.pdf and /message/{id}.pdf) made at once for
   # anonymous callers, the public site's readers among them; a further anonymous request is answered
   # 503 until one of them is done. Signed-in and ticketed callers (the administration application,
@@ -143,10 +157,23 @@ niord:
   # the integration-test suite also turns off.
   # Auto-publish runs at second 7, a second no other per-minute job uses, so a message due at a whole
   # minute is published before that minute's mail sender (second 24) and mailing-list run (second 37).
+  # The mail sender (ScheduledMailService.sendPendingMails, sends the pending mails of the Mail Queue)
+  # and the mailing lists' scheduled triggers (MailingListSchedulerService.checkExecuteScheduledTriggers,
+  # writes the mails of each due trigger and sets its next time) are properties too. A start on a copy of
+  # another deployment's data sets all five to "-" until the copy has been checked: otherwise, in its
+  # first minute, the copy publishes, expires, mails and runs the triggers the copied data holds as due.
   # schedule:
   #   auto-publish-cron: 7 * * * * ?
   #   auto-expire-cron: 28 * * * * ?
   #   firing-exercise-cron: 50 21 */1 * * ?
+  #   mail-send-cron: 24 * * * * ?
+  #   mailing-list-trigger-cron: 37 */1 */1 * * ?
+  # The mailing lists' outbox of status changes (MailingListMessageListener.sweep): once a minute, at second 23,
+  # before the mail sender's run, the rows the JMS status topic did not prompt for are mailed. "-" switches the
+  # sweep off, which the integration-test suite does (its tests drain the outbox themselves); the prompt and the
+  # pass at start still run.
+  # mailinglist:
+  #   status-change-sweep-cron: 23 * * * * ?
   # S-124 (org.niord.s124): the deployment's IHO S-62 producer code. REQUIRED to generate any
   # S-124 dataset - it is the agencyResponsibleForProduction (S-124 clause 4.3.3) and part of
   # the datasetFileIdentifier of every dataset, and names the SECOM exchange-set files - and

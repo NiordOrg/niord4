@@ -63,8 +63,14 @@ import java.util.regex.Pattern;
  * answers 400. None of them acts on the path: the redirect answers only an exact {@code /}, and the ticket filter
  * resolves a {@code ?ticket=} (which a refused request then uses up) without looking at the path.
  *
- * <p>REPO3 (a repository file name holding {@code %}, {@code ;} or {@code \}, refused by the same firewall) decides
- * its own allowances, in this firewall, when it is taken up; nothing here allows them.
+ * <p>A repository file name may hold a {@code %} or a {@code ;}: an upload keeps the name it was given, and the files
+ * of the old system keep theirs. Both frontends write them encoded, as {@code %25} and {@code %3B}, and
+ * {@link MessageIdFirewall} accepts those two on {@link #REPO_FILE_PATH} only (GET and HEAD of a file or a thumbnail,
+ * DELETE of a file). It is safe there because the path goes nowhere but a lexical normalisation and an exact lookup
+ * of a repository row; nothing on the file system is named by it except the thumbnail cache of an existing row, and
+ * the DELETE is held to the temp folder. A raw {@code ;} (a path parameter to Tomcat and Spring, which would cut the
+ * name), a doubly encoded slash, backslash, period or NUL, and every escape the strict firewall refuses besides are
+ * refused there as everywhere else. (An upload never stores a name with a backslash: it separates folders there.)
  *
  * <p>A deployment's proxies must pass {@code %2F} on unchanged: nginx does when {@code proxy_pass} names no URI part,
  * and decodes it when it does.
@@ -81,6 +87,16 @@ public class EncodedSlashConfig {
             Pattern.compile("/rest/public/v1/message/[^/]+"),
             Pattern.compile("/rest/messages/message/[^/]+"),
             Pattern.compile("/rest/message-reports/message/[^/]+\\.pdf"));
+
+    /**
+     * The paths, after the context path, of a repository file and its thumbnail ({@code RepositoryService.streamFile},
+     * {@code getThumbnail} and {@code deleteFile}), on which an encoded percent and an encoded semicolon are accepted.
+     * Matched against the raw request URI, query excluded.
+     */
+    static final Pattern REPO_FILE_PATH = Pattern.compile("/rest/repo/(?:file|thumb)/.+");
+
+    /** An escape that, decoded once, is still an escape of a separator, a period or NUL ({@code %252F}) */
+    private static final Pattern DOUBLY_ENCODED_SEPARATOR = Pattern.compile("(?i)%25(?:2f|5c|2e|00)");
 
     /** Tomcat keeps an encoded slash in the path rather than refusing the request; see the class comment */
     @Bean
@@ -103,20 +119,29 @@ public class EncodedSlashConfig {
      * {@code %25} (an encoded percent, as in {@code %252F}) is never accepted, so the only {@code %} it can see there
      * is the encoded slash's. Everything else the strict firewall checks (an encoded double slash, period, backslash,
      * semicolon, the normalised path, the method, the headers) it still checks.
+     * <p>
+     * And except for a request of a repository file ({@link #isRepoFileRequest}): there an encoded percent
+     * ({@code %25}) and an encoded semicolon ({@code %3B}) are accepted, and nothing else the strict firewall refuses.
      */
     static final class MessageIdFirewall implements HttpFirewall {
 
         private final StrictHttpFirewall strict = new StrictHttpFirewall();
         private final StrictHttpFirewall encodedSlashAllowed = new StrictHttpFirewall();
+        private final StrictHttpFirewall repoFileNameAllowed = new StrictHttpFirewall();
 
         MessageIdFirewall() {
             encodedSlashAllowed.setAllowUrlEncodedSlash(true);
             encodedSlashAllowed.setAllowUrlEncodedPercent(true);
+            repoFileNameAllowed.setAllowUrlEncodedPercent(true);
+            repoFileNameAllowed.setAllowSemicolon(true);
         }
 
         @Override
         public FirewalledRequest getFirewalledRequest(HttpServletRequest request) throws RequestRejectedException {
-            return (isMessageIdRead(request) ? encodedSlashAllowed : strict).getFirewalledRequest(request);
+            StrictHttpFirewall firewall = isMessageIdRead(request) ? encodedSlashAllowed
+                    : isRepoFileRequest(request) ? repoFileNameAllowed
+                    : strict;
+            return firewall.getFirewalledRequest(request);
         }
 
         @Override
@@ -130,15 +155,42 @@ public class EncodedSlashConfig {
             if (!"GET".equals(request.getMethod()) || uri == null || uri.contains("%25")) {
                 return false;
             }
+            String path = pathAfterContext(request);
+            return path != null && MESSAGE_ID_PATHS.stream().anyMatch(p -> p.matcher(path).matches());
+        }
+
+        /**
+         * Whether the request is a GET or HEAD of a repository file or its thumbnail, or a DELETE of a repository
+         * file ({@link #REPO_FILE_PATH}), whose raw URI holds no raw semicolon and no doubly encoded separator,
+         * period or NUL
+         */
+        static boolean isRepoFileRequest(HttpServletRequest request) {
+            String method = request.getMethod();
+            String path = pathAfterContext(request);
+            if (path == null || path.indexOf(';') >= 0 || DOUBLY_ENCODED_SEPARATOR.matcher(path).find()
+                    || !REPO_FILE_PATH.matcher(path).matches()) {
+                return false;
+            }
+            if ("GET".equals(method) || "HEAD".equals(method)) {
+                return true;
+            }
+            return "DELETE".equals(method) && path.startsWith("/rest/repo/file/");
+        }
+
+        /** The raw request URI after the context path, or null when there is none or it is outside the context */
+        private static String pathAfterContext(HttpServletRequest request) {
+            String uri = request.getRequestURI();
+            if (uri == null) {
+                return null;
+            }
             String contextPath = request.getContextPath();
             if (contextPath != null && !contextPath.isEmpty()) {
                 if (!uri.startsWith(contextPath)) {
-                    return false;
+                    return null;
                 }
                 uri = uri.substring(contextPath.length());
             }
-            String path = uri;
-            return MESSAGE_ID_PATHS.stream().anyMatch(p -> p.matcher(path).matches());
+            return uri;
         }
     }
 }

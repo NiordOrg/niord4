@@ -142,9 +142,22 @@ export interface GeoJsonGeometry {
   readonly geometries?: readonly GeoJsonGeometry[];
 }
 
+/**
+ * When a part's event takes place, as epoch milliseconds; either end may be open. An all-day
+ * interval arrives already stretched from 00:00 to 23:59:59 in the domain's zone, so an instant
+ * compares against it as it is.
+ */
+export interface DateInterval {
+  readonly allDay?: boolean;
+  readonly fromDate?: number;
+  readonly toDate?: number;
+}
+
 export interface MessagePart {
   /** A raw wire value; `MESSAGE_PART_TYPES` are the ones with a heading of their own. */
   readonly type?: string;
+  /** Epoch milliseconds, resolved at the service boundary; an interval with neither end is dropped. */
+  readonly eventDates?: readonly DateInterval[];
   readonly geometry?: GeoJsonGeometry;
   readonly descs?: readonly Desc[];
   readonly hideSubject?: boolean;

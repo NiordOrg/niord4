@@ -149,7 +149,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 58,
+    "line": 61,
     "file": "PublicSiteDetailsPage.png",
     "caption": "The Details view",
     "inline": false,
@@ -198,12 +198,12 @@
     "steps": "Open /messages/details; wait until Print is enabled (the list has arrived)",
     "crop": "the row of buttons (div.filter-bar > div > div) with a 12 px margin in the bar's colour",
     "needsData": "published messages (any)",
-    "note": "The last main type left on cannot be turned off; the guide text says so. Show Active Now is not pressed: in this version it changes nothing (fe/docs/backlog.md), and the guide says so, so the picture shows the default state. No area row in the base build."
+    "note": "The last main type left on cannot be turned off; the guide text says so. Show Active Now is not pressed, the state the site opens in; the guide describes in words what pressing it does. No area row in the base build."
   },
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 71,
+    "line": 74,
     "file": "PublicSiteListPage.png",
     "caption": "The List view",
     "inline": false,
@@ -221,7 +221,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 81,
+    "line": 84,
     "file": "PublicSiteMessageCard.png",
     "caption": "A message in the Details view",
     "inline": false,
@@ -239,7 +239,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 145,
+    "line": 148,
     "file": "PublicSiteMessageDialog.png",
     "caption": "A message opened from the list",
     "inline": false,
@@ -257,7 +257,7 @@
   {
     "manual": "public-site",
     "chapterFile": "public-site/02-Messages.adoc",
-    "line": 195,
+    "line": 198,
     "file": "PublicSitePrintPdf.png",
     "caption": "The printed list",
     "inline": false,
@@ -369,16 +369,16 @@
     "file": "PublicSiteBrowsePublication.png",
     "caption": "Browsing a publication",
     "inline": false,
-    "shows": "The Details view while browsing one publication: the filter bar holds only Print and the area chips of the publication's messages, the list is the publication's messages",
+    "shows": "The Details view while browsing one publication: the filter bar naming the publication by its title, with Download and the close button (X), then Print and the area chips of the publication's messages; the list is the publication's messages",
     "kind": "page",
-    "disposition": "new",
+    "disposition": "retake",
     "app": "info",
     "route": "/messages/details",
     "role": "anonymous",
     "steps": "Open /publications; wait for the table of the tab (the page has no busy state); click Browse on 'Firing Practice Areas at Sea 2026' (else the first Browse of the tab); the address becomes /messages/details?publicationId=<id>",
     "crop": "viewport",
     "needsData": "a publication public now whose messages fall in two or more areas (Firing Practice Areas at Sea 2026: 32 messages in 5 areas, one cancelled)",
-    "note": "The only state in the base build where area chips appear. Nothing on the page names the publication (fe/docs/backlog.md); the text says so. The week 38 issue, the first Browse of the tab, has one message in one area. The picture shows the top of the list and no status mark: the publication's one cancelled message, last area but one down the list (The North Sea), carries the number FA/2025 2026, which does not follow its series (its published successor is FA/15 2026), so the picture does not scroll to it; the text describes the marks in words."
+    "note": "To be taken again: the filter bar now names the publication while it is browsed, with its document and a close button, in place of the main-type and active-now chips (message-filter.component.ts browsingPublication). The only state in the base build where area chips appear. The first Browse of the tab, a weekly issue, has one message in one area. The picture shows the top of the list and no status mark: the publication's one cancelled message, further down the list, is not scrolled to; the text describes the marks in words."
   },
   {
     "manual": "public-site",
@@ -432,7 +432,7 @@
     "steps": "Set the viewport to 390x844; open /messages/map; click Minimize in the Additional Messages panel; click Notices to Mariners in the filter bar to switch it off, and wait until the map draws warnings only (showWarningsOnly); move the map to lon 11.3, lat 55.6, zoom 6.9",
     "crop": "viewport",
     "needsData": "published warnings with geometries",
-    "note": "Phone width. Warnings only, the owner's choice of 2026-11-13 (the earlier picture, both kinds, was crowded). Every published warning of the copy has a position, so the Additional Messages panel is not shown with warnings only; the text describes the panel (full width, lying over the + zoom button even minimized, fe/docs/backlog.md) in words and says the picture has no panel. The firing-exercise warnings' areas in Kattegat are among the outlines; which show follows the schedule and the real day."
+    "note": "Phone width. Warnings only, the owner's choice of 2026-11-13 (the earlier picture, both kinds, was crowded). Every published warning of the copy has a position, so the Additional Messages panel is not shown with warnings only; the text describes the panel (along the top of the map beside the zoom buttons, which stay free, and clear of the credits) in words and says the picture has no panel. The firing-exercise warnings' areas in Kattegat are among the outlines; which show follows the schedule and the real day."
   },
   {
     "manual": "public-site",

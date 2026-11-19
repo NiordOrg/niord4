@@ -17,6 +17,8 @@ const FULL_BRANDING = [
   'footer.link',
   'footer.disclaimer',
   'footer.cookies',
+  'footer.accessibility',
+  'footer.accessibilityLink',
   'main.footer.links.center.url',
   'main.footer.links.center.ariaLabel',
   'main.footer.links.center.imageAlt',
@@ -81,8 +83,28 @@ describe('Footer', () => {
     const logo = element.querySelector('img');
     expect(logo?.getAttribute('src')).toBe('main.footer.links.center.imageSrc');
     expect(logo?.closest('a')?.getAttribute('href')).toBe('main.footer.links.center.url');
+    const statement = element.querySelector('a[href="footer.accessibilityLink"]');
+    expect(statement?.textContent?.trim()).toBe('footer.accessibility');
+    expect(statement?.getAttribute('target')).toBeNull();
     const buttons = [...element.querySelectorAll('button')].map((b) => b.textContent?.trim());
     expect(buttons).toEqual(['footer.disclaimer', 'footer.cookies']);
+  });
+
+  it('renders the footer with the accessibility statement link when only it is branded', async () => {
+    const { fixture, element } = setup(['footer.accessibility', 'footer.accessibilityLink']);
+    await fixture.whenStable();
+    expect(element.querySelector('footer')).not.toBeNull();
+    const links = [...element.querySelectorAll('a')];
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['footer.accessibilityLink']);
+    expect(links[0].textContent?.trim()).toBe('footer.accessibility');
+    expect(element.querySelector('button')).toBeNull();
+  });
+
+  it('renders no statement link for a label without its address', async () => {
+    const { fixture, element } = setup(['footer.accessibility']);
+    await fixture.whenStable();
+    expect(element.querySelector('footer')).toBeNull();
+    expect(element.querySelector('a')).toBeNull();
   });
 
   it('shows only what the branding sets, ignoring same-named keys from elsewhere', async () => {

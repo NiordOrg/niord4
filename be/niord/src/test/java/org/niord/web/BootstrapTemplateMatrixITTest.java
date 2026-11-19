@@ -22,7 +22,10 @@ import org.junit.jupiter.api.Test;
 import org.niord.core.category.Category;
 import org.niord.core.category.CategoryType;
 import org.niord.core.category.TemplateParam;
+import org.niord.core.settings.Setting;
+import org.niord.core.settings.SettingsService;
 import org.niord.test.Tx;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,6 +72,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BootstrapTemplateMatrixITTest extends RoundTripSupport {
 
     private static final String EXECUTE = "/rest/templates/execute";
+
+    private static final String MODEL_LANGUAGES = "modelLanguages";
+
+    @Autowired
+    SettingsService settingsService;
 
     /** The sample's "The Baltic Sea", a child of "Denmark": the title line's area */
     private static final int AREA_ID = 1000002;
@@ -768,6 +776,30 @@ class BootstrapTemplateMatrixITTest extends RoundTripSupport {
 
     private static String details(Output o) {
         return readable(o.details().get(0));
+    }
+
+    /**
+     * The sample's DGPS template on a deployment whose model languages are English only, as the sample runs with the
+     * base product's settings: it fills in the English subject, details and NAVTEX text. The message part has no
+     * Danish description there, and a field template that cannot be filled in fails the whole run, so the template
+     * writes its Danish fields only when Danish is a model language.
+     */
+    @Test
+    void theDgpsTemplate_runsOnAnEnglishOnlyDeployment() {
+        TemplateDef t = template("DGPS");
+        Object original = Tx.requiringNew().call(() -> em.find(Setting.class, MODEL_LANGUAGES).getValue());
+        Output o;
+        try {
+            Tx.requiringNew().run(() -> settingsService.set(MODEL_LANGUAGES, List.of("en")));
+            o = execute(t, ordinary(t));
+        } finally {
+            Tx.requiringNew().run(() -> settingsService.set(MODEL_LANGUAGES, original));
+            settingsService.evictFromCache(MODEL_LANGUAGES);
+        }
+        assertEquals(200, o.status(), "DGPS on an English-only deployment: " + o.error());
+        assertEquals("DGPS unreliable", o.subjects().get(0));
+        assertTrue(details(o).startsWith("Skagen DGPS-station in pos. 57° 44.9'N - 010° 35.7'E"), details(o));
+        assertTrue(o.navtex().contains("DGPS-STATION SKAGEN 296.0 KHZ"), o.navtex());
     }
 
     @Test

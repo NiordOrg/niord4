@@ -342,8 +342,7 @@ roles are exact rather than inherited — are in [testing.md](./testing.md) → 
   the kit package or the source zip; in one the source zip carries, a link stays inside it and never
   leads into the kit. The kit's guides may name only a country workspace's npm scripts, and the
   agent template is checked for its `.niord/kit/` and `.niord/base/` paths. The publications
-  specifications and the go-live runbooks are excluded, because `scripts/publications/` guards those
-  instead.
+  specifications are excluded, because `scripts/publications/` guards those instead.
 
 ## Copyright
 

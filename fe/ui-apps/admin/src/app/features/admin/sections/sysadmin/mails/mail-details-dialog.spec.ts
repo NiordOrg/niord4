@@ -11,12 +11,13 @@ import { MailDetailsDialog } from './mail-details-dialog';
   imports: [MailDetailsDialog],
   template: `<app-mail-details-dialog
     [mail]="mail()"
-    sentLabel=""
+    [sendDateLabel]="sendDateLabel()"
     (closed)="closedCount = closedCount + 1"
   />`,
 })
 class Host {
   readonly mail = signal<ScheduledMail | undefined>(undefined);
+  readonly sendDateLabel = signal('2026-06-11 10:00');
   closedCount = 0;
 }
 
@@ -33,12 +34,13 @@ const baseMail: ScheduledMail = {
   contents: '<p>Hello</p>',
 };
 
-async function setup(mail: ScheduledMail) {
+async function setup(mail: ScheduledMail, sendDateLabel = '2026-06-11 10:00') {
   TestBed.configureTestingModule({
     providers: [provideTestTransloco(), provideNiordIcons()],
   });
   const fixture = TestBed.createComponent(Host);
   fixture.componentInstance.mail.set(mail);
+  fixture.componentInstance.sendDateLabel.set(sendDateLabel);
   fixture.autoDetectChanges();
   await fixture.whenStable();
   return { fixture, doc: fixture.nativeElement.ownerDocument as Document };
@@ -59,11 +61,52 @@ describe('MailDetailsDialog', () => {
     expect(text).not.toContain('admin.mails.details.cc'); // careful: bcc contains 'cc'
   });
 
-  it('keeps the Sent row label while PENDING and shows no error row without lastError', async () => {
+  it('labels the send date Due while PENDING, and shows no error row without lastError', async () => {
     const { doc } = await setup(baseMail);
     const text = doc.body.textContent ?? '';
-    expect(text).toContain('admin.mails.details.sent');
+    expect(text).toContain('admin.mails.details.due');
+    expect(text).not.toContain('admin.mails.details.sent');
+    expect(text).toContain('2026-06-11 10:00');
     expect(text).not.toContain('admin.mails.details.error');
+  });
+
+  it('labels the send date Sent for a sent mail', async () => {
+    const { doc } = await setup({ ...baseMail, status: 'SENT', attempts: 1 });
+    const text = doc.body.textContent ?? '';
+    expect(text).toContain('admin.mails.details.sent');
+    expect(text).not.toContain('admin.mails.details.due');
+    expect(text).toContain('2026-06-11 10:00');
+  });
+
+  it('labels the send date Last attempt for a mail that failed for good', async () => {
+    const { doc } = await setup({ ...baseMail, status: 'ERROR', attempts: 5, lastError: 'x' });
+    const text = doc.body.textContent ?? '';
+    expect(text).toContain('admin.mails.details.lastAttempt');
+    expect(text).not.toContain('admin.mails.details.sent');
+    expect(text).not.toContain('admin.mails.details.due');
+    expect(text).toContain('2026-06-11 10:00');
+  });
+
+  it('leaves the date row out for a failure record, a mail in Error never attempted', async () => {
+    const { doc } = await setup({
+      ...baseMail,
+      status: 'ERROR',
+      attempts: 0,
+      lastError: 'No template',
+    });
+    const text = doc.body.textContent ?? '';
+    expect(text).not.toContain('admin.mails.details.lastAttempt');
+    expect(text).not.toContain('admin.mails.details.due');
+    expect(text).not.toContain('2026-06-11 10:00');
+    expect(text).toContain('No template');
+  });
+
+  it('leaves the date row out when the mail has no send date', async () => {
+    const { doc } = await setup(baseMail, '');
+    const text = doc.body.textContent ?? '';
+    expect(text).not.toContain('admin.mails.details.due');
+    expect(text).not.toContain('admin.mails.details.sent');
+    expect(text).not.toContain('admin.mails.details.lastAttempt');
   });
 
   it('renders the error row with attempts when a send error exists', async () => {

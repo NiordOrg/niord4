@@ -2426,6 +2426,16 @@ INSERT INTO public."MailingListDesc" (id, lang, description, name, entity_id) VA
 ALTER TABLE public."MailingListDesc" ENABLE TRIGGER ALL;
 
 --
+-- Data for Name: MailingListStatusChange; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+ALTER TABLE public."MailingListStatusChange" DISABLE TRIGGER ALL;
+
+
+
+ALTER TABLE public."MailingListStatusChange" ENABLE TRIGGER ALL;
+
+--
 -- Data for Name: MailingListTrigger; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -7304,7 +7314,9 @@ searchParams.seriesIds(seriesIds)
     .from(fromDate)
     .to(toDate);
 
-var searchResult = messageService.search(searchParams);
+// searchOrFail, not search: a failed search fails the trigger, which the scheduler postpones, where search would
+// answer it with an empty list and the mail would tell its readers that there are no firing exercises tomorrow
+var searchResult = messageService.searchOrFail(searchParams);
 
 var areaFilter = org.niord.model.DataFilter.get().fields(''DETAILS'').lang(language);
 
@@ -7367,14 +7379,17 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 <#if params.dgps_station?? && params.dgps_station.key??>
     <#assign key=params.dgps_station.key>
 
+<#if languages?seq_contains(''da'')>
 <field-template field="part.getDesc(''da'').subject" format="text">
     DGPS <@renderStatus format="normal" lang="da"/>
 </field-template>
+</#if>
 
 <field-template field="part.getDesc(''en'').subject" format="text">
     DGPS <@renderStatus format="normal" lang="en"/>
 </field-template>
 
+<#if languages?seq_contains(''da'')>
 <field-template field="part.getDesc(''da'').details" format="html">
     <#setting locale=''da''>
     <@renderStationName format="long" lang="da"/> DGPS-station
@@ -7385,6 +7400,7 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
         <@renderDateIntervals dateIntervals=part.eventDates lang="da"/>
     </#if>.
 </field-template>
+</#if>
 
 <field-template field="part.getDesc(''en'').details" format="html">
     <#setting locale=''en''>
@@ -8021,6 +8037,13 @@ SELECT pg_catalog.setval('public."IssueOverride_SEQ"', 1, false);
 --
 
 SELECT pg_catalog.setval('public."MailingListDesc_SEQ"', 1000010, true);
+
+
+--
+-- Name: MailingListStatusChange_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public."MailingListStatusChange_id_seq"', 1, false);
 
 
 --

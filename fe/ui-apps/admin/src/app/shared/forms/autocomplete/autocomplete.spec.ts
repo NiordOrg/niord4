@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { pressWithKey, pressWithMouse } from '../../testing/button-testing';
 import { Autocomplete } from './autocomplete';
 
 interface Item {
@@ -22,11 +23,12 @@ const B: Item = { id: 2, name: 'Bravo' };
     [leadingIcon]="leadingIcon()"
     [panelWidth]="panelWidth()"
     [loading]="loading()"
+    [browseOnFocus]="browseOnFocus()"
     emptyMessage="No results found"
     errorMessage="Error fetching data"
     clearLabel="Clear"
     removeLabel="Remove"
-    (query)="lastQuery.set($event)"
+    (query)="lastQuery.set($event); queries.set(queries() + 1)"
     (selectionChange)="onSelectionChange($event)"
     (clear)="cleared.set(cleared() + 1)"
     (touched)="touched.set(touched() + 1)"
@@ -40,8 +42,10 @@ class Host {
   readonly leadingIcon = signal<string | undefined>(undefined);
   readonly panelWidth = signal<'control' | 'content'>('control');
   readonly loading = signal(false);
+  readonly browseOnFocus = signal(false);
   readonly labelOf = (item: Item): string => item.name;
   readonly lastQuery = signal('');
+  readonly queries = signal(0);
   readonly cleared = signal(0);
   readonly touched = signal(0);
   onSelectionChange(items: readonly Item[]): void {
@@ -138,16 +142,140 @@ describe('Autocomplete (app-autocomplete primitive)', () => {
     expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([1]);
   });
 
-  it('the clear affordance emits (clear)', async () => {
+  it('Backspace in the empty box removes the last chip', async () => {
+    const fixture = setup();
+    fixture.componentInstance.value.set([A, B]);
+    await fixture.whenStable();
+    const el = input(fixture.nativeElement);
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([1]);
+    expect(fixture.nativeElement.querySelectorAll('.ac-chip').length).toBe(1);
+
+    // With text in the box, Backspace edits the text and leaves the chips alone.
+    await type(fixture.nativeElement, 'b');
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([1]);
+  });
+
+  // --- The clear and chip-remove buttons, with the mouse and with the keyboard ---
+  const clearButton = (host: HTMLElement) => host.querySelector('.ac-clear') as HTMLButtonElement;
+  const removeButtons = (host: HTMLElement) =>
+    Array.from(host.querySelectorAll<HTMLButtonElement>('.ac-chip .ac-chip-remove'));
+  const KEYS = [
+    ['Enter', 'Enter'],
+    ['Space', ' '],
+  ] as const;
+
+  it('the clear button emits (clear) once on a mouse press, and the input keeps the focus', async () => {
     const fixture = setup();
     fixture.componentInstance.value.set([A]);
     await fixture.whenStable();
+    const el = input(fixture.nativeElement);
+    el.focus();
 
-    const clear = fixture.nativeElement.querySelector('.ac-clear') as HTMLElement;
-    clear.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    expect(pressWithMouse(clearButton(fixture.nativeElement)), 'the press keeps the focus').toBe(
+      true,
+    );
     await fixture.whenStable();
 
     expect(fixture.componentInstance.cleared()).toBe(1);
+    expect(document.activeElement).toBe(el);
+  });
+
+  it.each(KEYS)(
+    'the clear button emits (clear) on %s and gives the focus back to the input',
+    async (_name, key) => {
+      const fixture = setup();
+      const host = fixture.componentInstance;
+      host.browseOnFocus.set(true);
+      host.value.set([A]);
+      await fixture.whenStable();
+      const queries = host.queries();
+
+      pressWithKey(clearButton(fixture.nativeElement), key);
+      await fixture.whenStable();
+
+      expect(host.cleared()).toBe(1);
+      expect(document.activeElement).toBe(input(fixture.nativeElement));
+      // The focus comes back quietly: no browse query, no panel over the box just emptied.
+      expect(host.queries()).toBe(queries);
+      expect(q('.ac-panel')).toBeNull();
+    },
+  );
+
+  it("a chip's remove button removes its chip on a mouse press, and the input keeps the focus", async () => {
+    const fixture = setup();
+    fixture.componentInstance.value.set([A, B]);
+    await fixture.whenStable();
+    const el = input(fixture.nativeElement);
+    el.focus();
+
+    expect(
+      pressWithMouse(removeButtons(fixture.nativeElement)[0]),
+      'the press keeps the focus',
+    ).toBe(true);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([2]);
+    expect(document.activeElement).toBe(el);
+  });
+
+  it("a mouse press on a chip's remove button leaves the focus where it was", async () => {
+    const fixture = setup();
+    fixture.componentInstance.value.set([A, B]);
+    await fixture.whenStable();
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    pressWithMouse(removeButtons(fixture.nativeElement)[1]);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.value().map((i) => i.id)).toEqual([1]);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it.each(KEYS)(
+    "a chip's remove button removes its chip on %s and gives the focus to the input",
+    async (_name, key) => {
+      const fixture = setup();
+      const host = fixture.componentInstance;
+      host.browseOnFocus.set(true);
+      host.value.set([A, B]);
+      await fixture.whenStable();
+      const queries = host.queries();
+
+      pressWithKey(removeButtons(fixture.nativeElement)[0], key);
+      await fixture.whenStable();
+
+      expect(host.value().map((i) => i.id)).toEqual([2]);
+      expect(fixture.nativeElement.querySelectorAll('.ac-chip').length).toBe(1);
+      expect(document.activeElement).toBe(input(fixture.nativeElement));
+      expect(host.queries()).toBe(queries);
+      expect(q('.ac-panel')).toBeNull();
+    },
+  );
+
+  it("names each chip's remove button after its chip", async () => {
+    const fixture = setup();
+    fixture.componentInstance.value.set([A, B]);
+    await fixture.whenStable();
+
+    // The accessible name of `aria-labelledby`: each id's text, the button itself by its
+    // aria-label.
+    const nameOf = (button: HTMLButtonElement): string =>
+      (button.getAttribute('aria-labelledby') ?? '')
+        .split(' ')
+        .map((id) => {
+          const part = document.getElementById(id);
+          return part === button ? button.getAttribute('aria-label') : part?.textContent?.trim();
+        })
+        .join(' ');
+    expect(removeButtons(fixture.nativeElement).map(nameOf)).toEqual([
+      'Remove Alpha',
+      'Remove Bravo',
+    ]);
   });
 
   it('renders a projected #option template for rows', async () => {

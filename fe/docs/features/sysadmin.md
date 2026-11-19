@@ -494,8 +494,10 @@ back-off) is entirely backend-driven.
 - The list response never carries the mail body; it arrives only from the per-mail details fetch,
   which is issued first — the dialog opens only on success, and a failure shows an error toast and no
   dialog.
-- In the details dialog the **Sent** row shows the _scheduled_ send time for a mail that is still
-  pending; the label does not change. Error text and attempt count show only when an error was
+- In the details dialog the date row shows the mail's `sendDate`, the time it is or was due,
+  labelled by status: _Due_ for a pending mail (after a failed attempt, the time of the next
+  attempt), _Sent_ for a sent one, _Last attempt_ for one that failed for good; it is left out when
+  the mail has no send date. Error text and attempt count show only when an error was
   recorded. Recipients are partitioned into TO / CC / BCC client-side and empty groups are hidden.
 - Mail bodies are full, style-laden HTML documents. They render in the sandboxed-iframe primitive
   (`<app-sandboxed-html>`, empty `sandbox` attribute, an injected stylesheet because linked

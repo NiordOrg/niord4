@@ -56,6 +56,65 @@ afterEach(() => {
 });
 
 describe('DatePicker', () => {
+  describe('the chosen date reaches a screen reader when the field is named', () => {
+    function trigger(el: HTMLElement): HTMLButtonElement {
+      return el.querySelector('button') as HTMLButtonElement;
+    }
+
+    it('a named trigger keeps its name and is described by the chosen date', async () => {
+      const ctx = setup({ value: new Date(2026, 4, 14), local: true });
+      ctx.fixture.componentRef.setInput('ariaLabel', 'From');
+      await ctx.fixture.whenStable();
+      const button = trigger(ctx.el);
+      expect(button.getAttribute('aria-label')).toBe('From');
+      const describedBy = button.getAttribute('aria-describedby');
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy!)?.textContent).toMatch(/May/);
+    });
+
+    it('a trigger named by an outside label is described by the chosen date too', async () => {
+      const ctx = setup({ value: new Date(2026, 4, 14), local: true });
+      ctx.fixture.componentRef.setInput('inputId', 'valid-from');
+      await ctx.fixture.whenStable();
+      const describedBy = trigger(ctx.el).getAttribute('aria-describedby');
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy!)?.textContent).toMatch(/May/);
+    });
+
+    it('an empty named field has no description', async () => {
+      const ctx = setup({ local: true });
+      ctx.fixture.componentRef.setInput('ariaLabel', 'From');
+      ctx.fixture.componentRef.setInput('placeholder', 'Pick a date');
+      await ctx.fixture.whenStable();
+      expect(trigger(ctx.el).hasAttribute('aria-describedby')).toBe(false);
+    });
+
+    it('an unnamed field, whose content is its name, has no description', async () => {
+      const ctx = setup({ value: new Date(2026, 4, 14), local: true });
+      await ctx.fixture.whenStable();
+      expect(trigger(ctx.el).hasAttribute('aria-describedby')).toBe(false);
+    });
+
+    it('two pickers describe themselves by different elements', async () => {
+      const first = setup({ value: new Date(2026, 4, 14), local: true });
+      first.fixture.componentRef.setInput('ariaLabel', 'From');
+      const second = TestBed.createComponent(DatePicker);
+      second.componentRef.setInput('value', new Date(2026, 4, 20));
+      second.componentRef.setInput('local', true);
+      second.componentRef.setInput('ariaLabel', 'To');
+      second.autoDetectChanges();
+      await first.fixture.whenStable();
+      await second.whenStable();
+      const firstId = trigger(first.el).getAttribute('aria-describedby');
+      const secondId = trigger(second.nativeElement as HTMLElement).getAttribute(
+        'aria-describedby',
+      );
+      expect(firstId).toBeTruthy();
+      expect(secondId).toBeTruthy();
+      expect(firstId).not.toBe(secondId);
+    });
+  });
+
   describe('local mode — a browser wall-clock carrier', () => {
     it('shows the formatted value in the trigger', async () => {
       const ctx = setup({ value: new Date(2026, 4, 14), local: true });

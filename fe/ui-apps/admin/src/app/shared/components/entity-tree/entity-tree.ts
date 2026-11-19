@@ -1,12 +1,17 @@
 import { Component, computed, effect, input, output, signal, viewChild } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CdkDrag, CdkDragHandle, type CdkDragEnd } from '@angular/cdk/drag-drop';
 import { CdkTree, CdkTreeModule } from '@angular/cdk/tree';
 import { TranslocoPipe, translateSignal } from '@jsverse/transloco';
+import { BehaviorSubject, type Observable, distinctUntilChanged, map, tap } from 'rxjs';
 
 import { Icon } from '../../icons/icon';
 import type { HierarchicalEntity } from './hierarchical-entity.model';
 import { type EntityTreeNode, toTreeNodes } from './to-tree-nodes';
-import { filterTree, seedExpandKeys, setEquals } from './tree-filter';
+import { childrenByKey, filterTree, seedExpandKeys, setEquals } from './tree-filter';
+
+/** One stable empty list for a leaf, so a leaf's children never look changed. */
+const NO_CHILDREN: never[] = [];
 
 /** A drag-reparent request: move `movedId` under `targetParentId` (null = the tree root). */
 export interface EntityTreeMove {
@@ -106,6 +111,20 @@ export class EntityTree<T extends HierarchicalEntity = HierarchicalEntity> {
   );
 
   /**
+   * CDK's nested rows read their children once, when a row is created, and a row whose key stays
+   * keeps them: a search (a pruned copy of an ancestor under the same key) or new entities would
+   * never reach the rows below the top level. So each row's children are served from an index of
+   * the visible tree, keyed by node key, and that index is published before CDK receives the new
+   * roots, because CDK walks the children of the roots as soon as it gets them.
+   */
+  private readonly visibleChildren = new BehaviorSubject<ReadonlyMap<string, EntityTreeNode<T>[]>>(
+    new Map(),
+  );
+  protected readonly visibleRoots$ = toObservable(this.visibleRoots).pipe(
+    tap((roots) => this.visibleChildren.next(childrenByKey(roots))),
+  );
+
+  /**
    * Keys to force-expand. When filtering: ancestors + subtrees of matches. When
    * not: the base seed from the mapper `expanded` hint. `setEquals` stops an
    * unrelated `selectedIds` re-map (identical key set) from re-running the
@@ -121,9 +140,10 @@ export class EntityTree<T extends HierarchicalEntity = HierarchicalEntity> {
   );
 
   /**
-   * Selection is read reactively per row (not baked into `node.styleClass`): CDK's nested tree reuses
-   * cached child rows by `trackBy` key, so a recomputed node's `styleClass` never reaches nested rows.
-   * A signal read in the row binding re-evaluates on every configured selection change instead.
+   * Selection is read reactively per row (not baked into `node.styleClass`): the selection changes
+   * without the entities changing, and CDK keeps a row whose `trackBy` key stays, so a re-mapped
+   * node's `styleClass` would not repaint it. A signal read in the row binding re-evaluates on every
+   * selection change instead.
    */
   private readonly selectedIdSet = computed<ReadonlySet<number | string>>(
     () => new Set(this.selectedIds()),
@@ -134,7 +154,11 @@ export class EntityTree<T extends HierarchicalEntity = HierarchicalEntity> {
 
   // CDK holds expansion in the tree's expansion model (keyed by node.key), never
   // on the node — seed it imperatively whenever the desired set changes.
-  protected readonly childrenOf = (node: EntityTreeNode<T>): EntityTreeNode<T>[] => node.children;
+  protected readonly childrenOf = (node: EntityTreeNode<T>): Observable<EntityTreeNode<T>[]> =>
+    this.visibleChildren.pipe(
+      map((index) => index.get(node.key) ?? NO_CHILDREN),
+      distinctUntilChanged(),
+    );
   protected readonly trackByKey = (_index: number, node: EntityTreeNode<T>): string => node.key;
   protected readonly keyOf = (node: EntityTreeNode<T>): string => node.key;
 

@@ -49,7 +49,9 @@ import java.util.stream.Collectors;
         @NamedQuery(name = "MailingList.findByMailingListId",
                 query = "SELECT m FROM MailingList m where m.mailingListId = :mailingListId"),
         @NamedQuery(name = "MailingList.findByUser",
-                query = "SELECT distinct m FROM MailingList m join m.users u where u = :user")
+                query = "SELECT distinct m FROM MailingList m join m.users u where u = :user"),
+        @NamedQuery(name = "MailingList.findByContact",
+                query = "SELECT distinct m FROM MailingList m join m.contacts c where c = :contact")
 })
 @SuppressWarnings("unused")
 public class MailingList extends VersionedEntity<Integer> implements ILocalizable<MailingListDesc> {

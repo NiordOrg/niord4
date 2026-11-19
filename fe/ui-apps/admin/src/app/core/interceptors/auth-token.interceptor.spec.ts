@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { computed, signal } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthService } from '../auth/services/auth.service';
 import { authTokenInterceptor } from './auth-token.interceptor';
+import { BACKGROUND_READ, BackgroundReadSkipped } from './background-read';
 import { niordDomainInterceptor } from './niord-domain.interceptor';
 import { APP_CONFIG } from '../config/app-config.token';
 import type { AppConfig } from '../config/app-config.interface';
@@ -15,6 +16,8 @@ interface ConfigureOptions {
   readonly authenticated?: boolean;
   readonly token?: string | undefined;
   readonly tokenRejects?: boolean;
+  /** What `currentFreshToken()` answers: the token while it needs no refresh. */
+  readonly freshToken?: string;
   readonly withDomainInterceptor?: boolean;
   readonly sessionDomainId?: string;
   readonly apiBaseUrl?: string;
@@ -28,9 +31,11 @@ function configure(opts: ConfigureOptions = {}) {
     return Promise.resolve(opts.token);
   });
   const sessionExpired = vi.fn();
+  const currentFreshToken = vi.fn(() => opts.freshToken);
   const authStub = {
     isAuthenticated: computed(() => authenticated()),
     ensureFreshToken,
+    currentFreshToken,
     sessionExpired,
   } as unknown as AuthService;
 
@@ -72,6 +77,8 @@ function configure(opts: ConfigureOptions = {}) {
     sessionExpired,
   };
 }
+
+const background = { context: new HttpContext().set(BACKGROUND_READ, true) };
 
 describe('authTokenInterceptor', () => {
   let httpMock: HttpTestingController | null = null;
@@ -221,5 +228,63 @@ describe('authTokenInterceptor', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer tkn-order');
     expect(req.request.headers.get('NiordDomain')).toBe('niord-dk');
     req.flush({});
+  });
+  describe('a background read', () => {
+    it('goes with the token as it is, without a refresh', () => {
+      const {
+        http,
+        httpMock: m,
+        ensureFreshToken,
+      } = configure({
+        authenticated: true,
+        freshToken: 'tkn-fresh',
+      });
+      httpMock = m;
+      http.get('/api/scheduled-mails/mine', background).subscribe();
+      const req = m.expectOne('/api/scheduled-mails/mine');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer tkn-fresh');
+      expect(ensureFreshToken).not.toHaveBeenCalled();
+      req.flush([]);
+    });
+
+    it('is not sent, and leaves the session alone, when the token would need a refresh', () => {
+      const errors: unknown[] = [];
+      const {
+        http,
+        httpMock: m,
+        ensureFreshToken,
+        sessionExpired,
+      } = configure({
+        authenticated: true,
+        token: 'tkn',
+      });
+      httpMock = m;
+      http.get('/api/scheduled-mails/mine', background).subscribe({ error: (e) => errors.push(e) });
+      m.expectNone('/api/scheduled-mails/mine');
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toBeInstanceOf(BackgroundReadSkipped);
+      expect(ensureFreshToken).not.toHaveBeenCalled();
+      expect(sessionExpired).not.toHaveBeenCalled();
+    });
+
+    it('does not drop to guest when the backend answers 401', () => {
+      const errors: unknown[] = [];
+      const {
+        http,
+        httpMock: m,
+        sessionExpired,
+      } = configure({
+        authenticated: true,
+        freshToken: 'tkn-fresh',
+      });
+      httpMock = m;
+      http.get('/api/scheduled-mails/mine', background).subscribe({ error: (e) => errors.push(e) });
+      m.expectOne('/api/scheduled-mails/mine').flush(
+        { message: 'unauthorized' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+      expect(errors).toHaveLength(1);
+      expect(sessionExpired).not.toHaveBeenCalled();
+    });
   });
 });

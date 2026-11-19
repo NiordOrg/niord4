@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { disabled, form, FormField } from '@angular/forms/signals';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { pressWithKey, pressWithMouse } from '../../testing/button-testing';
 import { Select } from './select';
 
 interface Item {
@@ -119,18 +120,45 @@ describe('Select (app-select primitive)', () => {
     expect(selected[0].textContent).toContain('Charlie');
   });
 
-  it('the clear affordance resets the value to null', async () => {
+  const clearButton = (host: HTMLElement) => host.querySelector('.sel-clear') as HTMLButtonElement;
+
+  it('the clear button resets the value to null on a mouse press, and the trigger keeps the focus', async () => {
     const fixture = scalarSetup();
     fixture.componentInstance.value.set(2);
     await fixture.whenStable();
+    const btn = trigger(fixture.nativeElement);
+    btn.focus();
 
-    const clear = fixture.nativeElement.querySelector('.sel-clear') as HTMLElement;
+    const clear = clearButton(fixture.nativeElement);
     expect(clear).not.toBeNull();
-    clear.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    expect(pressWithMouse(clear), 'the press keeps the focus').toBe(true);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.changes.at(-1)).toBeNull();
+    expect(fixture.componentInstance.changes).toEqual([null]);
+    expect(document.activeElement).toBe(btn);
+    expect(clearButton(fixture.nativeElement)).toBeNull();
   });
+
+  it.each([
+    ['Enter', 'Enter'],
+    ['Space', ' '],
+  ] as const)(
+    'the clear button resets the value to null on %s and gives the focus to the trigger',
+    async (_name, k) => {
+      const fixture = scalarSetup();
+      fixture.componentInstance.value.set(2);
+      await fixture.whenStable();
+
+      pressWithKey(clearButton(fixture.nativeElement), k);
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.changes).toEqual([null]);
+      expect(clearButton(fixture.nativeElement)).toBeNull();
+      // Not lost to the page's body with the button: on the trigger, with the panel closed.
+      expect(document.activeElement).toBe(trigger(fixture.nativeElement));
+      expect(q('.sel-panel')).toBeNull();
+    },
+  );
 
   it('Escape closes the panel without committing', async () => {
     const fixture = scalarSetup();

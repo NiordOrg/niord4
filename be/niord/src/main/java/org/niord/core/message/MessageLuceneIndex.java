@@ -38,6 +38,7 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -62,6 +63,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
 import org.niord.core.NiordApp;
 import org.niord.core.service.BaseService;
 import org.niord.core.settings.annotation.Setting;
@@ -141,7 +143,13 @@ public class MessageLuceneIndex extends BaseService {
 
     DirectoryReader reader;
     int optimizeIndexCount = 0;
-    boolean allMessagesIndexed;
+
+    /**
+     * Whether the index holds every message: set by the first pass that finds fewer messages after the marker than it
+     * may index, once its commit can be read, and cleared when the index is deleted. Read by the searches, on other
+     * threads than the passes.
+     */
+    volatile boolean allMessagesIndexed;
 
     /**
      * The messages whose {@code updated} time lies in the look-back window behind the marker
@@ -185,7 +193,8 @@ public class MessageLuceneIndex extends BaseService {
             lock.lock();
             try {
                 deleteIndex();
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
+                // A search index never stops the application from starting
                 log.error("Failed re-creating the index on startup", e);
             } finally {
                 lock.unlock();
@@ -266,7 +275,10 @@ public class MessageLuceneIndex extends BaseService {
     }
 
     /**
-     * Returns if all messages have been indexed
+     * Returns if all messages have been indexed. False from a start that deleted the index (or a re-index) until a
+     * pass has indexed every message again: a search in that window answers from the messages indexed so far, which
+     * {@code MessageSearchService} marks on its result.
+     *
      * @return if all messages have been indexed
      */
     public boolean allMessagesIndexed() {
@@ -289,17 +301,8 @@ public class MessageLuceneIndex extends BaseService {
      * @return the updated messages
      */
     private List<Message> findUpdatedMessages(Marker marker, int maxCount) {
-
-        List<Message> messages = messageQueryService.findUpdatedMessagesAfter(
+        return messageQueryService.findUpdatedMessagesAfter(
                 Timestamp.from(marker.updated()), marker.messageId(), maxCount);
-
-        // The first time less that the maximum number of messages are found,
-        // we flag that the indexing is complete
-        if (messages.size() < maxCount) {
-            allMessagesIndexed = true;
-        }
-
-        return messages;
     }
 
     /**
@@ -385,17 +388,62 @@ public class MessageLuceneIndex extends BaseService {
      * Creates and returns a Lucene writer
      */
     private IndexWriter getNewWriter() throws IOException {
+        try {
+            return openWriter();
+        } catch (IOException | RuntimeException ex) {
+            log.error("Failed to create message Lucene Index in folder " + indexFolder, ex);
+            throw ex;
+        }
+    }
+
+    /**
+     * Opens a writer on the index folder, and logs nothing: when it fails, the folder's directory is closed, so
+     * that the folder's files can be removed (on Windows too) by a caller that recovers. A failure to close it is
+     * added to the exception as a suppressed one, so that it does not hide why the writer could not be opened.
+     */
+    private IndexWriter openWriter() throws IOException {
 
         IndexWriterConfig iwc = new IndexWriterConfig(getAnalyzer());
         // Add new documents to an existing index:
         iwc.setOpenMode(OpenMode.CREATE_OR_APPEND);
 
+        Directory dir = FSDirectory.open(indexFolder);
         try {
-            Directory dir = FSDirectory.open(indexFolder);
             return new IndexWriter(dir, iwc);
-        } catch (IOException ex) {
-            log.error("Failed to create message Lucene Index in folder " + indexFolder, ex);
+        } catch (IOException | RuntimeException ex) {
+            try {
+                dir.close();
+            } catch (IOException closeFailure) {
+                ex.addSuppressed(closeFailure);
+            }
             throw ex;
+        }
+    }
+
+    /**
+     * Opens a writer on the index folder for {@link #deleteIndex()}. An index this Lucene version cannot open
+     * (written by another version, whose codec it does not know, or damaged) is exactly what deleting the index
+     * should cure: its files are removed, with one WARN that names the folder, and an empty index is opened instead.
+     * The index is a cache, rebuilt from the database. The caller holds the folder's {@link #writerLock(Path) writer
+     * lock}, so no other writer of this JVM is open on the folder; a writer of another process (two backends on one
+     * Niord home) holds the folder's own lock, and its index is in use, not unreadable: that failure is passed on,
+     * and nothing is removed.
+     */
+    private IndexWriter openWriterDiscardingUnreadable() throws IOException {
+        try {
+            return openWriter();
+        } catch (LockObtainFailedException e) {
+            throw e;
+        } catch (IOException | IllegalArgumentException e) {
+            log.warn("The message index in {} cannot be opened ({}); removing its files, the index is rebuilt from "
+                    + "the database", indexFolder, e.toString());
+            closeReader();
+            try (Stream<Path> files = Files.list(indexFolder)) {
+                for (Path file : files.filter(Files::isRegularFile).toList()) {
+                    Files.deleteIfExists(file);
+                }
+            }
+            return getNewWriter();
         }
     }
 
@@ -484,10 +532,13 @@ public class MessageLuceneIndex extends BaseService {
      * Deletes the current index. The caller holds the folder's {@link #writerLock(Path) writer lock}.
      */
     private void deleteIndex() throws IOException {
+        // From here until a pass has indexed every message again, a search answers from part of them
+        allMessagesIndexed = false;
+
         // Delete the index
         IndexWriter writer = null;
         try {
-            writer = getNewWriter();
+            writer = openWriterDiscardingUnreadable();
             writer.deleteAll();
             writer.setLiveCommitData(new HashMap<String, String>().entrySet());
             writer.commit();
@@ -576,7 +627,11 @@ public class MessageLuceneIndex extends BaseService {
             List<Message> missedMessages = findMissedMessages(marker, maxIndexCount);
             log.debug(String.format("Found %d messages to index, and %d missed ones behind the marker",
                     updatedMessages.size(), missedMessages.size()));
+            // Fewer messages after the marker than a pass may index: once this pass's commit can be read, the
+            // index holds every message. Not before it, so a search in between is not taken for a complete one
+            boolean completesTheIndex = updatedMessages.size() < maxIndexCount;
             if (updatedMessages.isEmpty() && missedMessages.isEmpty()) {
+                allMessagesIndexed = true;
                 return 0;
             }
 
@@ -614,6 +669,9 @@ public class MessageLuceneIndex extends BaseService {
 
             // Re-open the reader from the writer
             refreshReader(writer);
+            if (completesTheIndex) {
+                allMessagesIndexed = true;
+            }
 
             // Check if we need to optimize the index
             optimizeIndexCount += indexed.size();

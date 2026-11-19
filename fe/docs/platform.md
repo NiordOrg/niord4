@@ -258,6 +258,13 @@ A failed refresh, or a 401 from the backend, calls `sessionExpired()`: the sessi
 **locally** and `authFallback` becomes `'expired'` — never a logout, per the rule above. Signals
 coalesce equal values, so a burst of 401s settling here is harmless.
 
+The one exception is a background read: a request whose `HttpContext` sets `BACKGROUND_READ`
+(`core/interceptors/background-read.ts`), a read the application makes on its own, such as the look
+for failed mails. It goes out with the current token only while that token is outside the 60 s
+leeway (`AuthService.currentFreshToken()`); otherwise it is refused in the browser with
+`BackgroundReadSkipped`. It never refreshes the token, and a 401 on it does not call
+`sessionExpired()`, so only an act of the user keeps a session alive or ends it.
+
 ### Interceptor scoping
 
 Both interceptors gate on `isNiordBackendRequest(url)`, which matches the URL against `apiBaseUrl`
@@ -305,7 +312,8 @@ and supplies the clock, the map defaults and the message-series set on the clien
 **The initial session domain** is chosen by `DomainService.bootstrap` — a `?domain=` deep link, then
 the persisted id, then the first catalogue entry; the order and how it degrades are in
 [features/shell-and-auth.md](./features/shell-and-auth.md) → _Session domain_. The deep-link id is
-parsed out of `Location.path()` through the router before any navigation happens.
+parsed out of `Location.path()` through the router before any navigation happens. The Messages
+Domain filter travels as `searchDomain` on the address, so it never selects the session domain.
 
 **Every request to the backend carries `NiordDomain: <sessionDomainId>`** when a session domain
 exists — including anonymous requests. This is the multi-tenancy channel.

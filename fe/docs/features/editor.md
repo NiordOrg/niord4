@@ -106,7 +106,10 @@ for every guarded route of the application, not only the editor's.
   deep link or a message-row link; see [shell and auth](./shell-and-auth.md) → _Areas and who may
   enter them_ before widening either.
 - A message is **editable** while `DRAFT` or `VERIFIED`, or always for an `admin` (admins may edit
-  `PUBLISHED` and `CANCELLED` messages).
+  `PUBLISHED` and `CANCELLED` messages) — except a message Niord made by itself (`kind` present and
+  not `WARNING`, `isSystemMessage`), which nobody edits: the backend refuses its save. A cancellation
+  warning shows a read-only banner above every tab and offers no Copy; its status actions stay, so
+  it can be cancelled.
 - `EditorFacade.editableNow() = editable() && isEditor()` is the single "may mutate now" gate. Every
   form-control `disabled` rule, every part control and the Save button key off it, so they cannot
   diverge; the facade's structural mutators refuse when it is false, so a broken UI cannot write
@@ -647,15 +650,22 @@ inputs validate server-side while typing and commit the backend-normalised value
 ### Entry points and the two transient stores
 
 - **Start screen → "from a template"** opens an anchored template-search popover; picking one seeds
-  the execution store and enters the execution view directly.
+  the execution store with a placeholder (`blank`: only the main type and the template) and enters
+  the execution view directly, which swaps the placeholder for a fresh server blank of that type.
 - **Categories row → "Run template…"** in an open message seeds a clone of the working message and
-  the current URL as the return target.
+  the current URL as the return target. The execution view keeps that clone as it is, saved or not
+  (a new message or a copy), unsaved changes included.
 
 Two root-provided stores carry state in opposite directions and are deliberately separate, so the
 shared execute route has no consume-ordering coupling:
 
 - `TemplateExecutionSeedStore` carries the seed **into** the execution view, plus the return URL.
 - `TemplateMessageStore` carries the finished result **out**, into the `/editor/edit` route.
+
+The editor lays a result from `TemplateMessageStore` over a fresh server blank but keeps the result's
+own id: a never-saved message or copy has a repository path, and attachment and image paths, made
+from that id, and the create request refuses an attachment outside the folder of the id it sends.
+Only the Start screen's blank seed, whose id is empty, takes the server blank's id.
 
 ### The execution view
 

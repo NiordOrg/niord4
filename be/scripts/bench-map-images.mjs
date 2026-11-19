@@ -21,15 +21,22 @@
  *              --static-map-model fetching the static-map server fetches the tiles under its window from
  *              the tile server and keeps them, as a real one does, instead of answering after one draw.
  *   local      Times a backend on this machine whose map source points at the stand-ins: cases 1, 2a, 2b,
- *              2c, 3, 3b, 4, 4b, 5, 6 and 7 (see --help). It deletes generated map images under --cache
- *              (the cache tree, <niord.home>/cache: each message's images sit in its folder there, the
- *              message's repoPath) to make them cold, and case 5 saves a scratch message, so it is for a
- *              benchmark copy of the data only.
- *   remote     Times a deployed system with GET requests only (cases R1 to R5); it never writes there. The
+ *              2c, 3, 3b, 4, 4b, 5, 6, 6b, 6c, 6d and 7 (see --help). It deletes generated map images
+ *              under --cache (the cache tree, <niord.home>/cache: each message's images sit in its folder
+ *              there, the message's repoPath) to make them cold, and case 5 saves a scratch message, so it
+ *              is for a benchmark copy of the data only.
+ *   remote     Times a deployed system with GET requests only (cases R1 to R8); it never writes there. The
  *              one other request it sends is the Keycloak token POST.
  *   compare    Applies the pass criteria to the result files of an old and a new run.
- *   selftest   Starts the stand-ins on free ports and checks their answers, and the map-image client
- *              against a stand-in of the endpoint's answers; no backend needed.
+ *   selftest   Starts the stand-ins on free ports and checks their answers, the map-image client
+ *              against a stand-in of the endpoint's answers, and the message reads against a stand-in of
+ *              their endpoints; no backend needed.
+ *
+ * MESSAGE READS. Cases 6b, 6c and 6d (local) and R6, R7 and R8 (remote) time the message reads of
+ * be/docs/message-read-benchmark.md: the administration app's list search with the owner's filter (NW and NM,
+ * the default page of 100), its map view (1,000), and the public site's list and single message without a
+ * login. They run only when --cases names them, read --searches and --message-gets as cases 6 and R5 do, and
+ * need no image: a run of read cases alone (6 and R5 among them) fetches no map image and needs no stand-ins.
  *
  * USAGE (every flag: --help)
  *   node be/scripts/bench-map-images.mjs stand-ins --latency 250
@@ -72,9 +79,15 @@ const PLACEHOLDER_FILE = /map_image_placeholder\.png$/;
 const MAP_IMAGE_FILE = /^map_\d{1,4}(_[0-9a-f]{1,32})?\.png$/;
 const VERSIONED_MAP_IMAGE_FILE = /^map_(\d{1,4})_[0-9a-f]{1,32}\.png$/;
 const IMAGE_ACCEPT = 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8';
-const LOCAL_CASES = ['1', '2a', '2b', '2c', '3', '3b', '4', '4b', '5', '6', '7'];
+const LOCAL_CASES = ['1', '2a', '2b', '2c', '3', '3b', '4', '4b', '5', '6', '6b', '6c', '6d', '7'];
 const LIST_STATES = ['cached', 'cold', 'coldTiles', 'stale'];
-const REMOTE_CASES = ['R1', 'R2', 'R3', 'R4', 'R5'];
+const REMOTE_CASES = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
+// What a run does without --cases: the map-image benchmark's cases; the new message reads only when named.
+const DEFAULT_LOCAL_CASES = ['1', '2a', '2b', '3', '3b', '4', '4b', '5', '6', '7'];
+const DEFAULT_REMOTE_CASES = ['R1', 'R2', 'R3', 'R4', 'R5'];
+// The message reads: they fetch no map image. Those of SETLESS_CASES need no set of messages either.
+const READ_CASES = ['6', '6b', '6c', '6d', 'R5', 'R6', 'R7', 'R8'];
+const SETLESS_CASES = ['6b', '6c', '6d', 'R6', 'R7', 'R8'];
 
 const USAGE = `Usage: node be/scripts/bench-map-images.mjs <subcommand> [flags]
 
@@ -105,6 +118,7 @@ local       --variant old|new   (required) which renderer the backend runs
                                 message's folder (its repoPath); --repo is refused
             --tile-cache <niord.home>/tile-cache deleted for a cold tile cache (new)
             --cases 1,2a,2b,3,3b,4,4b,5,6,7      case 2c runs on its own
+                                6b, 6c, 6d only when named (the message reads, below)
             --warmup 1  --rounds 20  --cold-rounds 3  --pdf-runs 10  --pdf-cold-runs 5
             --concurrency 6,50  --list-rounds 3  --message-gets 200  --searches 30
             --states cached,cold,coldTiles,stale  the states of cases 4 and 4b (default all)
@@ -120,15 +134,31 @@ local       --variant old|new   (required) which renderer the backend runs
 remote      --base https://<host>  --keycloak https://<keycloak host>/auth   (both required)
             --realm niord  --client niord-web  --domain <domainId>  --lang en
             --filter <query>  --count 50  --set <file>  --list-filter <query>
-            --cases R1,R2,R3,R4,R5  --rounds 5  --warmup 1  --concurrency 6,50
+            --cases R1,R2,R3,R4,R5  (R6, R7, R8 only when named)
+            --rounds 5  --warmup 1  --concurrency 6,50
             --list-rounds 3  --pdf-runs 5  --message-gets 200  --searches 30
             --pause 1000  --out <file>
+
+message reads (be/docs/message-read-benchmark.md), one request at a time; local / remote:
+            6  / R5  GET /rest/messages/message/{id} --message-gets times, the list
+                     search of --list-filter (maxSize 200) --searches times
+            6b / R6  GET /rest/messages/search?mainType=NW&mainType=NM&lang=<lang>
+                     (the default page of 100) --searches times
+            6c / R7  the same as the map view sends it: maxSize=1000, viewMode=map,
+                     includeNoPos=true; --searches times
+            6d / R8  no login: GET /rest/public/v1/messages --searches times, then
+                     GET /rest/public/v1/message/{id} --message-gets times over the
+                     first --count ids of that list (both lang=<lang>&externalize=false)
+            The first answers are not counted: local 10 message GETs and 3 lists,
+            remote 5 and 2; --warmup and --rounds are not read. A run of these
+            cases alone fetches no map image.
 
 compare     --old a.json[,c.json]  --new b.json[,d.json]
             --tolerance 0.05  --floor-ms 2  --small-ms 40
 
-selftest    starts the stand-ins on free ports and checks their answers, and the
-            map-image client against a stand-in of the endpoint's answers
+selftest    starts the stand-ins on free ports and checks their answers, the
+            map-image client against a stand-in of the endpoint's answers, and the
+            message reads against a stand-in of their endpoints
 
 Credentials: NIORD_USER and NIORD_PASS in the environment, nowhere else.`;
 
@@ -1435,6 +1465,106 @@ async function apiReads(ctx, uids, listFilter, gets, searches, warmGets, warmSea
     return out;
 }
 
+// --------------------------------------------------------------------------------------- message reads
+// The reads of be/docs/message-read-benchmark.md beside cases 6 and R5, each request as the application
+// sends it (messages-api.service.ts and messages-shell.facade.ts of the administration app; messages.store.ts
+// and message-details-dialog.component.ts of the public site). One exception: the public list leaves out the
+// mainType=NW&mainType=NM the site sends by default, which selects the same messages.
+
+/** The filter the owner timed: NW and NM; the backend lists the published ones when no status is given (it ignores areaId and language). */
+const READ_FILTER = 'mainType=NW&mainType=NM';
+
+/** The administration app's list search: the default page (100), or the map view's 1,000. */
+function adminListUrl(ctx, mapView) {
+    const query = `${READ_FILTER}&lang=${encodeURIComponent(ctx.lang)}`;
+    return `${ctx.base}/rest/messages/search?${query}${mapView ? '&page=0&maxSize=1000&viewMode=map&includeNoPos=true' : ''}`;
+}
+
+/** The public site's list and single message: no login, and no repository links rewritten to absolute ones. */
+function publicListUrl(ctx) {
+    return `${ctx.base}/rest/public/v1/messages?lang=${encodeURIComponent(ctx.lang)}&externalize=false`;
+}
+
+function publicMessageUrl(ctx, id) {
+    return `${ctx.base}/rest/public/v1/message/${encodeURIComponent(id)}?lang=${encodeURIComponent(ctx.lang)}&externalize=false`;
+}
+
+/** What the public site sends: no token and no NiordDomain. */
+const anonymousHeaders = async () => ({ Accept: 'application/json' });
+
+/**
+ * GETs one after another, the first `warm` not counted: the times and sizes of the answers that came back
+ * 200 with a body, the others as errors, and the first good answer (its body tells what was listed).
+ */
+async function timedGets(label, urlAt, count, warm, headers) {
+    const agents = agentsFor(1);
+    const out = { ms: [], bytes: [], errors: [], first: null };
+    try {
+        for (let i = 0; i < warm + count; i++) {
+            const r = await get(urlAt(i), { headers: await headers(), agents });
+            if (r.status !== 200 || r.bytes === 0) {
+                out.errors.push(`${label} answered ${r.status}`);
+                continue;
+            }
+            out.first ??= r;
+            if (i >= warm) {
+                out.ms.push(r.totalMs);
+                out.bytes.push(r.bytes);
+            }
+        }
+    } finally {
+        destroyAgents(agents);
+    }
+    return out;
+}
+
+function readCheck(errors) {
+    return { name: 'no failed read', pass: errors.length === 0, detail: errors.slice(0, 5).join('; ') || '0' };
+}
+
+/** 6b / R6 (the default page of 100) and 6c / R7 (the map view): --searches list searches, one at a time. */
+async function adminListCase(ctx, id, mapView, o, warm) {
+    const c = newCase(id, mapView
+        ? 'Map view: NW and NM list search, maxSize 1000 (viewMode=map), one at a time'
+        : 'List search as the owner timed it: NW and NM, the default page of 100, one at a time');
+    const r = await timedGets('list search', () => adminListUrl(ctx, mapView), o.searches, warm, () => apiHeaders(ctx));
+    c.metrics.listSearch = metric(r.ms);
+    c.metrics.listSearchBytes = metric(r.bytes, 'bytes');
+    if (r.first) {
+        const page = jsonBody(r.first);
+        c.counts.listed = page.data?.length ?? 0;
+        c.counts.total = page.total ?? null;
+    }
+    c.checks.push(readCheck(r.errors));
+    return endCase(c);
+}
+
+/**
+ * 6d / R8: the public site's list, then its single message for the first --count ids of that list, cycled
+ * --message-gets times; no login.
+ */
+async function publicReadsCase(ctx, id, o, warmGets, warmLists) {
+    const c = newCase(id, 'Public list and public message GET, no login, one at a time');
+    const list = await timedGets('public list', () => publicListUrl(ctx), o.searches, warmLists, anonymousHeaders);
+    c.metrics.publicList = metric(list.ms);
+    c.metrics.publicListBytes = metric(list.bytes, 'bytes');
+    const listed = list.first ? jsonBody(list.first) : [];
+    const ids = (Array.isArray(listed) ? listed : []).map((m) => m?.id).filter(Boolean).slice(0, o.count);
+    c.counts.listed = Array.isArray(listed) ? listed.length : 0;
+    c.counts.messages = ids.length;
+    let errors = list.errors;
+    if (ids.length === 0) {
+        c.checks.push({ name: 'public messages to read', pass: false, detail: 'the public list named no message, so no single message was read' });
+    } else {
+        const one = await timedGets('public message', (i) => publicMessageUrl(ctx, ids[i % ids.length]), o.messageGets, warmGets, anonymousHeaders);
+        c.metrics.publicMessageGet = metric(one.ms);
+        c.metrics.publicMessageBytes = metric(one.bytes, 'bytes');
+        errors = errors.concat(one.errors);
+    }
+    c.checks.push(readCheck(errors));
+    return endCase(c);
+}
+
 // ------------------------------------------------------------------------------- files in the cache tree
 // root is --cache (<niord.home>/cache), or --legacy-from; a folder is a message's repoPath (messageFolder).
 
@@ -2278,7 +2408,7 @@ async function runLocal(flags) {
         fail('local mode needs --variant old or --variant new');
     }
     const o = localOptions(flags);
-    const cases = csv(flags.cases ?? '1,2a,2b,3,3b,4,4b,5,6,7');
+    const cases = csv(flags.cases ?? DEFAULT_LOCAL_CASES.join(','));
     const unknown = cases.filter((k) => !LOCAL_CASES.includes(k));
     if (unknown.length) {
         fail(`unknown local case(s): ${unknown.join(', ')}`);
@@ -2308,18 +2438,21 @@ async function runLocal(flags) {
     }
     ctx.mapImageSize = jsonBody(settings).mapImageSize ?? 256;
     result.probe.mapImageSize = ctx.mapImageSize;
-    const set = await resolveSet(ctx, flags, o.count);
+    // The message reads fetch no image, and 6b to 6d no set: a run of them alone skips what they do not use.
+    const set = cases.some((k) => !SETLESS_CASES.includes(k)) ? await resolveSet(ctx, flags, o.count) : null;
     result.set = set;
-    o.listFilter = flags['list-filter'] ?? set.filter;
-    const discovery = await discover(ctx, set);
-    result.probe.discovery = discovery;
-    const naming = imageNaming(Object.values(set.files));
-    result.probe.imageNaming = naming;
-    if ((ctx.variant === 'old' && naming === 'versioned') || (ctx.variant === 'new' && naming === 'unversioned')) {
-        result.findings.push(`--variant ${ctx.variant} but the backend names its images ${naming}: check which jar is running`);
-    }
-    if (discovery.placeholders > 0 || discovery.errors > 0) {
-        result.findings.push(`the first fetch of the set got ${discovery.placeholders} placeholder(s) and ${discovery.errors} error(s): check the backend's map source and baseUri`);
+    o.listFilter = flags['list-filter'] ?? set?.filter;
+    if (set && cases.some((k) => !READ_CASES.includes(k))) {
+        const discovery = await discover(ctx, set);
+        result.probe.discovery = discovery;
+        const naming = imageNaming(Object.values(set.files));
+        result.probe.imageNaming = naming;
+        if ((ctx.variant === 'old' && naming === 'versioned') || (ctx.variant === 'new' && naming === 'unversioned')) {
+            result.findings.push(`--variant ${ctx.variant} but the backend names its images ${naming}: check which jar is running`);
+        }
+        if (discovery.placeholders > 0 || discovery.errors > 0) {
+            result.findings.push(`the first fetch of the set got ${discovery.placeholders} placeholder(s) and ${discovery.errors} error(s): check the backend's map source and baseUri`);
+        }
     }
 
     let pool = null;
@@ -2348,6 +2481,9 @@ async function runLocal(flags) {
         if (id === '4b') c = await localList(ctx, '4b', pool.uids, pool, o, othersThan(set, pool.uids));
         if (id === '5') c = await localSave(ctx, o);
         if (id === '6') c = await localReads(ctx, set, o);
+        if (id === '6b') c = await adminListCase(ctx, '6b', false, o, 3);
+        if (id === '6c') c = await adminListCase(ctx, '6c', true, o, 3);
+        if (id === '6d') c = await publicReadsCase(ctx, '6d', o, 10, 3);
         if (id === '7') c = await localReadsUnderLoad(ctx, pool, o);
         result.cases[id] = c;
         await sleep(o.pause);
@@ -2361,7 +2497,7 @@ async function runLocal(flags) {
 async function runRemote(flags) {
     const t0 = performance.now();
     const ctx = makeContext(flags, 'remote');
-    const cases = csv(flags.cases ?? REMOTE_CASES.join(','));
+    const cases = csv(flags.cases ?? DEFAULT_REMOTE_CASES.join(','));
     const unknown = cases.filter((k) => !REMOTE_CASES.includes(k));
     if (unknown.length) {
         fail(`unknown remote case(s): ${unknown.join(', ')}`);
@@ -2388,26 +2524,46 @@ async function runRemote(flags) {
     }
     ctx.mapImageSize = jsonBody(settings).mapImageSize ?? 256;
     result.probe.mapImageSize = ctx.mapImageSize;
-    const set = await resolveSet(ctx, flags, o.count);
+    // R6 to R8 need no set, and the message reads no image: a run of them alone skips what they do not use.
+    const set = cases.some((k) => !SETLESS_CASES.includes(k)) ? await resolveSet(ctx, flags, o.count) : null;
     result.set = set;
-    if (set.uids.length < o.count) {
+    if (set && set.uids.length < o.count) {
         result.findings.push(`the filter gave ${set.uids.length} messages with a geometry, not ${o.count}`);
     }
-    const listFilter = flags['list-filter'] ?? set.filter;
-    const probeImage = await fetchImage(ctx, set.uids[0], agentsFor(1));
-    result.probe.image = { status: probeImage.error ?? 'ok', totalMs: round1(probeImage.totalMs), file: probeImage.file, upgraded: probeImage.upgraded };
-    if (probeImage.error) {
-        fail(`the image probe failed: ${probeImage.error}`);
+    const listFilter = flags['list-filter'] ?? set?.filter;
+    let probeImage = null;
+    if (set && cases.some((k) => !READ_CASES.includes(k))) {
+        probeImage = await fetchImage(ctx, set.uids[0], agentsFor(1));
+        result.probe.image = { status: probeImage.error ?? 'ok', totalMs: round1(probeImage.totalMs), file: probeImage.file, upgraded: probeImage.upgraded };
+        if (probeImage.error) {
+            fail(`the image probe failed: ${probeImage.error}`);
+        }
+        result.findings.push(`the probe fetched the image of ${set.uids[0]} once before R1`);
     }
-    const probeMessage = await get(`${ctx.base}/rest/messages/message/${encodeURIComponent(set.uids[0])}`, { headers: await apiHeaders(ctx) });
-    const probeSearch = await get(`${ctx.base}/rest/messages/search?${listFilter}&lang=${ctx.lang}&page=0&maxSize=200`, { headers: await apiHeaders(ctx) });
-    result.probe.message = probeMessage.status;
-    result.probe.listSearch = probeSearch.status;
-    if (probeMessage.status !== 200 || probeSearch.status !== 200) {
-        fail(`message GET answered ${probeMessage.status}, list search ${probeSearch.status}`);
+    if (set) {
+        const probeMessage = await get(`${ctx.base}/rest/messages/message/${encodeURIComponent(set.uids[0])}`, { headers: await apiHeaders(ctx) });
+        const probeSearch = await get(`${ctx.base}/rest/messages/search?${listFilter}&lang=${ctx.lang}&page=0&maxSize=200`, { headers: await apiHeaders(ctx) });
+        result.probe.message = probeMessage.status;
+        result.probe.listSearch = probeSearch.status;
+        if (probeMessage.status !== 200 || probeSearch.status !== 200) {
+            fail(`message GET answered ${probeMessage.status}, list search ${probeSearch.status}`);
+        }
+        result.probe.listSearchTotal = jsonBody(probeSearch).total;
     }
-    result.probe.listSearchTotal = jsonBody(probeSearch).total;
-    result.findings.push(`the probe fetched the image of ${set.uids[0]} once before R1`);
+    if (cases.includes('R6') || cases.includes('R7')) {
+        const probeReadList = await get(adminListUrl(ctx, false), { headers: await apiHeaders(ctx) });
+        result.probe.readListSearch = probeReadList.status;
+        if (probeReadList.status !== 200) {
+            fail(`the NW and NM list search answered ${probeReadList.status}`);
+        }
+    }
+    if (cases.includes('R8')) {
+        const probePublicList = await get(publicListUrl(ctx), { headers: await anonymousHeaders() });
+        result.probe.publicList = probePublicList.status;
+        if (probePublicList.status !== 200) {
+            fail(`the public list answered ${probePublicList.status}`);
+        }
+    }
 
     for (const id of REMOTE_CASES.filter((k) => cases.includes(k))) {
         console.log(`case ${id} ...`);
@@ -2475,10 +2631,16 @@ async function runRemote(flags) {
             c.checks.push({ name: 'no failed read', pass: r.errors.length === 0, detail: r.errors.slice(0, 5).join('; ') || '0' });
             result.cases.R5 = endCase(c);
         }
+        if (id === 'R6' || id === 'R7') {
+            result.cases[id] = await adminListCase(ctx, id, id === 'R7', o, 2);
+        }
+        if (id === 'R8') {
+            result.cases.R8 = await publicReadsCase(ctx, 'R8', o, 5, 2);
+        }
         await sleep(o.pause);
     }
     const upgraded = Object.values(result.cases).reduce((s, c) => s + Object.values(c.counts ?? {}).reduce((t, v) => t + (v?.upgradedLocations ?? 0), 0), 0);
-    if (upgraded > 0 || probeImage.upgraded) {
+    if (upgraded > 0 || probeImage?.upgraded) {
         result.findings.push(`the 307 Location names http:// on an https deployment (${upgraded} times); the harness went to https:// directly, as a browser upgrades a mixed-content image`);
     }
     const limited = Object.values(result.cases).flatMap((c) => Object.entries(c.counts ?? {})
@@ -2881,6 +3043,73 @@ async function selftestCacheTree(expect) {
     }
 }
 
+/**
+ * The message reads against a stand-in of the three endpoints, which answers only the request each
+ * application sends: the list search with a token, NW and NM and either no page size (the default 100) or
+ * the map view's; the public list and message without a token, with lang and externalize=false.
+ */
+async function selftestMessageReads(expect) {
+    const ids = ['1a2b3c4d-0000-4000-8000-000000000001', '5e6f7a8b-0000-4000-8000-000000000002'];
+    let publicList = ids.map((id) => ({ id }));
+    const hits = { search: 0, map: 0, list: 0, message: {} };
+    const server = http.createServer((req, res) => {
+        const url = new URL(req.url, 'http://127.0.0.1');
+        const q = url.searchParams;
+        const answer = (status, body) => {
+            const buf = Buffer.from(JSON.stringify(body));
+            res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': buf.length });
+            res.end(buf);
+        };
+        const anonymous = !req.headers.authorization && !req.headers.niorddomain;
+        const publicQuery = q.get('lang') === 'en' && q.get('externalize') === 'false';
+        if (url.pathname === '/rest/messages/search') {
+            const filter = q.getAll('mainType').join(',') === 'NW,NM' && q.get('lang') === 'en' && Boolean(req.headers.authorization);
+            const page = !q.has('maxSize') && !q.has('viewMode');
+            const map = q.get('maxSize') === '1000' && q.get('viewMode') === 'map' && q.get('includeNoPos') === 'true' && q.get('page') === '0';
+            if (filter && (page || map)) {
+                hits[map ? 'map' : 'search']++;
+                return answer(200, { total: 3, data: [{ id: ids[0] }, { id: ids[1] }, { id: 'x' }] });
+            }
+            return answer(400, { error: 'not the request the administration app sends' });
+        }
+        if (url.pathname === '/rest/public/v1/messages' && anonymous && publicQuery) {
+            hits.list++;
+            return answer(200, publicList);
+        }
+        const one = url.pathname.match(/^\/rest\/public\/v1\/message\/([^/]+)$/);
+        if (one && anonymous && publicQuery && ids.includes(decodeURIComponent(one[1]))) {
+            hits.message[one[1]] = (hits.message[one[1]] ?? 0) + 1;
+            return answer(200, { id: one[1] });
+        }
+        return answer(404, {});
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    try {
+        const ctx = { base: `http://127.0.0.1:${server.address().port}`, lang: 'en', domain: null, tokens: { bearer: async () => 'selftest' } };
+        const o = { searches: 3, messageGets: 4, count: 50 };
+        const page = await adminListCase(ctx, '6b', false, o, 1);
+        expect(page.metrics.listSearch.summary.n === 3 && hits.search === 4 && page.counts.listed === 3 && page.counts.total === 3
+            && page.checks.every((k) => k.pass), `6b sends the NW and NM list search with no page size, one uncounted (${hits.search} requests)`);
+        const map = await adminListCase(ctx, 'R7', true, o, 1);
+        expect(map.metrics.listSearch.summary.n === 3 && hits.map === 4 && map.checks.every((k) => k.pass),
+            `R7 sends the map view's search: maxSize=1000, viewMode=map, includeNoPos=true (${hits.map} requests)`);
+        const reads = await publicReadsCase(ctx, '6d', o, 2, 1);
+        expect(reads.metrics.publicList.summary.n === 3 && reads.metrics.publicMessageGet.summary.n === 4
+            && hits.message[ids[0]] === 3 && hits.message[ids[1]] === 3 && reads.counts.messages === 2 && reads.checks.every((k) => k.pass),
+            `6d reads the public list, then each listed message in turn, without a token (${JSON.stringify(hits.message)})`);
+        publicList = [];
+        const empty = await publicReadsCase(ctx, 'R8', o, 0, 0);
+        expect(empty.checks.some((k) => !k.pass && /named no message/.test(k.detail)) && !('publicMessageGet' in empty.metrics),
+            'an empty public list fails the case rather than timing nothing');
+        const refused = await adminListCase({ ...ctx, lang: 'da' }, '6b', false, o, 0);
+        expect(refused.checks.some((k) => !k.pass && /answered 400/.test(k.detail)) && refused.metrics.listSearch.summary.n === 0,
+            'a refused list search is a failed read, not a fast sample');
+    } finally {
+        server.closeAllConnections?.();
+        await new Promise((resolve) => server.close(resolve));
+    }
+}
+
 async function runSelftest() {
     const problems = [];
     const expect = (ok, what) => {
@@ -2978,6 +3207,7 @@ async function runSelftest() {
 
         await selftestMapImageAnswers(expect);
         await selftestCacheTree(expect);
+        await selftestMessageReads(expect);
     } catch (e) {
         expect(false, `selftest aborted: ${e.stack}`);
     } finally {

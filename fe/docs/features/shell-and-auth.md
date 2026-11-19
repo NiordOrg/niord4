@@ -101,7 +101,8 @@ rather than guess — see [coding-standards.md](../coding-standards.md) → _Dat
 
 Bootstrap picks the initial session domain in strict order (`DomainService.bootstrap`):
 
-1. a `?domain=<id>` query parameter on the first load that matches a known domain;
+1. a `?domain=<id>` query parameter on the first load that matches a known domain (the Messages
+   Domain filter is `searchDomain` on the address, so it never selects the session domain);
 2. the id persisted in `localStorage`;
 3. the first domain in the catalogue.
 
@@ -164,11 +165,11 @@ inline, so the Content-Security-Policy can stay at `script-src 'self'`.
 
 ### Degraded authentication — the rules that must not regress
 
-| Situation                                       | Behaviour                                                                                                                                                      |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keycloak.init()` fails or exceeds the 8 s cap  | Continue as an anonymous guest, `authFallback = 'unreachable'`, log to console. A late-settling init is left unawaited so it cannot clobber the guest session. |
-| Token refresh fails, or the backend answers 401 | `sessionExpired()` — drop to anonymous **locally**, `authFallback = 'expired'`.                                                                                |
-| Either of the above                             | **Never** `window.location.reload()` and **never** `keycloak.logout()`.                                                                                        |
+| Situation                                       | Behaviour                                                                                                                                                                                |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keycloak.init()` fails or exceeds the 8 s cap  | Continue as an anonymous guest, `authFallback = 'unreachable'`, log to console. A late-settling init is left unawaited so it cannot clobber the guest session.                           |
+| Token refresh fails, or the backend answers 401 | `sessionExpired()` — drop to anonymous **locally**, `authFallback = 'expired'`. Not for a background read ([platform.md → Token refresh and 401](../platform.md#token-refresh-and-401)). |
+| Either of the above                             | **Never** `window.location.reload()` and **never** `keycloak.logout()`.                                                                                                                  |
 
 Both redirect-based recoveries loop: reloading against a slow or unstable identity provider produces
 blank reload cycles (the third-party-cookie probe alone can block ~10 s), and a full logout redirect
@@ -185,7 +186,9 @@ no banner.
 
 Before every request to the Niord backend, `authTokenInterceptor` refreshes the access token if it
 would expire within 60 s, then attaches `Authorization: Bearer`. Anonymous sessions and non-Niord
-URLs short-circuit before any of that.
+URLs short-circuit before any of that. A background read is the exception: it is never refreshed
+for and never ends the session
+([platform.md → Token refresh and 401](../platform.md#token-refresh-and-401)).
 
 Role checks read an immutable **session snapshot** (`identity`, `realmRoles`, `resourceRoles`) rather
 than the live token, so the snapshot is re-captured after every successful refresh — otherwise a
@@ -237,8 +240,10 @@ burger, because it is the one piece of chrome that says which data set is being 
 ## Footer
 
 The footer is the country's branding and nothing else: a copyright link (`footer.copyright`,
-`footer.link`), a centre logo (`main.footer.links.center.*`, its image path included) and one button
-per legal document (`footer.disclaimer`, `footer.cookies`), each shown only when the country's
+`footer.link`), a centre logo (`main.footer.links.center.*`, its image path included), a link to the
+administration app's own accessibility statement (`footer.accessibility`, `footer.accessibilityLink`,
+shown only with both set) and one button per legal document (`footer.disclaimer`, `footer.cookies`),
+each shown only when the country's
 branding file `assets/branding/<lang>.json` sets its key. `BrandingService` records which keys the
 branding layer set; the footer reads that, not the merged translation, because the backend's web
 dictionary carries footer keys of its own that reach every build as Dictionary overrides. With
@@ -321,7 +326,7 @@ without it, a raw key could end up baked into the tab title with nothing to fix 
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `/messages?messageId={id}`   | Opens the [message details dialog](./messages.md#message-details-dialog) over the messages list.                                |
 | `/#/message/{id}`            | Forwarded to `/messages?messageId={id}` by `ui-apps/admin/src/app/core/guards/legacy-hash-redirect.guard.ts` on the home route. |
-| `?domain={id}` on first load | Wins over the persisted session domain (only on the initial load).                                                              |
+| `?domain={id}` on first load | Wins over the persisted session domain (only on the initial load). The Messages Domain filter is `?searchDomain=`, not this.    |
 | Any unknown path             | Redirected to home by the `**` route.                                                                                           |
 
 Both message forms are share and bookmark URLs that stay in circulation. The message links the
