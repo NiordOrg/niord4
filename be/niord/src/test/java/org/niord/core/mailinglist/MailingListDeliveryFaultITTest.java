@@ -54,6 +54,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -65,6 +66,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -744,6 +746,13 @@ class MailingListDeliveryFaultITTest extends ITTest {
      */
     private Integer committedDueScheduledTrigger(Integer list, String subject, String time, String templatePath,
                                                  String storedTime) {
+        return committedDueScheduledTrigger(list, subject, time, templatePath, storedTime,
+                "status=PUBLISHED&mainType=NW");
+    }
+
+    /** As above, with the given message query */
+    private Integer committedDueScheduledTrigger(Integer list, String subject, String time, String templatePath,
+                                                 String storedTime, String messageQuery) {
         subjects.add(subject);
         Integer triggerId = Tx.requiringNew().call(() -> {
             MailingList ml = em.find(MailingList.class, list);
@@ -752,7 +761,7 @@ class MailingListDeliveryFaultITTest extends ITTest {
             trigger.setScheduleType(ScheduleType.DAILY);
             trigger.setScheduledExecutionTime(time);
             trigger.setScheduledExecutionTimeZone("UTC");
-            trigger.setMessageQuery("status=PUBLISHED&mainType=NW");
+            trigger.setMessageQuery(messageQuery);
             trigger.getScriptResourcePaths().add(templatePath);
             trigger.createDesc("en").setSubject(subject);
             ml.addTrigger(trigger);
@@ -953,5 +962,138 @@ class MailingListDeliveryFaultITTest extends ITTest {
         schedulerService.checkExecuteScheduledTriggers();
         assertEquals(1, mailsWithSubject(subject), "a second run in the same minute makes no second mail");
         assertTrue(errorRecords(n).isEmpty(), "a run that succeeds leaves no failure record");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // A scheduled trigger whose free-text search meets the index being filled after the start
+    // ------------------------------------------------------------------------------------------- //
+
+    /**
+     * Runs the work with this context's free-text index marked as not complete, as after a start until the passes
+     * have indexed every message again; its writer lock is held, so no pass marks it complete meanwhile. The mark is
+     * put back afterwards.
+     */
+    private <T> T withTheIndexIncomplete(Callable<T> work) throws Exception {
+        Object index = AopTestUtils.getUltimateTargetObject(messageLuceneIndex);
+        Path folder = (Path) ReflectionTestUtils.getField(index, "indexFolder");
+        ReentrantLock lock = ReflectionTestUtils.invokeMethod(MessageLuceneIndex.class, "writerLock", folder);
+        lock.lock();
+        Object was = ReflectionTestUtils.getField(index, "allMessagesIndexed");
+        try {
+            ReflectionTestUtils.setField(index, "allMessagesIndexed", false);
+            return work.call();
+        } finally {
+            ReflectionTestUtils.setField(index, "allMessagesIndexed", was);
+            lock.unlock();
+        }
+    }
+
+    /** Runs the work with this context's execution service started at the given time, put back afterwards */
+    private <T> T startedAt(Instant started, Callable<T> work) throws Exception {
+        MailingListExecutionService service =
+                (MailingListExecutionService) AopTestUtils.getUltimateTargetObject(executionService);
+        Instant was = service.startedAt;
+        service.startedAt = started;
+        try {
+            return work.call();
+        } finally {
+            service.startedAt = was;
+        }
+    }
+
+    /**
+     * Runs the real scheduler's pass once with the scheduler's and the execution's log captured, and returns their
+     * WARN and ERROR events about the trigger
+     */
+    private List<ILoggingEvent> schedulerRunWarningsAbout(Integer triggerId) {
+        List<Logger> loggers = List.of(
+                (Logger) LoggerFactory.getLogger(MailingListSchedulerService.class),
+                (Logger) LoggerFactory.getLogger(MailingListExecutionService.class));
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        loggers.forEach(l -> l.addAppender(appender));
+        try {
+            schedulerService.checkExecuteScheduledTriggers();
+        } finally {
+            loggers.forEach(l -> l.detachAppender(appender));
+        }
+        return appender.list.stream()
+                .filter(e -> e.getLevel().isGreaterOrEqual(Level.WARN))
+                .filter(e -> e.getFormattedMessage().contains("trigger " + triggerId + " "))
+                .toList();
+    }
+
+    /**
+     * A due scheduled trigger whose query has a free-text term, run in the half hour after the start while the index
+     * is still being filled: its search answers from the messages indexed so far, and a mail cannot say that it may
+     * list too few. So no mail is made; the trigger is postponed as one whose run failed, and recorded in the Mail
+     * Queue the same way, but only to the end of that half hour (not the hour of a failure), and the scheduler logs
+     * one WARN, no ERROR, saying it waits for the index and when it is tried again. FAILS without the wait: the mail
+     * is made from the incomplete index and the trigger moves to its next regular time.
+     */
+    @Test
+    void aScheduledTriggerWhoseFreeTextSearchMeetsTheIndexBeingFilledWaitsInTheHalfHourAfterTheStart()
+            throws Exception {
+        messageLuceneIndex.recreateIndex();
+        awayFromTheRealSchedulersRun();
+        String n = Long.toString(System.nanoTime(), 36);
+        Integer list = committedListWithOneContact(n);
+        String subject = "IT-INDEX-WAIT-" + n;
+        String inThreeHours = ZonedDateTime.now(ZoneOffset.UTC).plusHours(3)
+                .format(DateTimeFormatter.ofPattern("HH:mm"));
+        Integer triggerId = committedDueScheduledTrigger(list, subject, inThreeHours, IT_TEMPLATE, null,
+                "query=nw&status=PUBLISHED");
+        Instant started = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+
+        List<ILoggingEvent> run = startedAt(started, () -> withTheIndexIncomplete(
+                () -> schedulerRunWarningsAbout(triggerId)));
+
+        assertEquals(0, mailsWithSubject(subject), "no mail is made from the incomplete index");
+        assertEquals(1, run.size(), "one line about the trigger: " + run);
+        assertEquals(Level.WARN, run.get(0).getLevel(), "a warning, not an error: " + run.get(0));
+        assertTrue(run.get(0).getFormattedMessage().contains("waits for the free-text index"),
+                "the line says why: " + run.get(0).getFormattedMessage());
+        Instant endOfTheWait = started.plus(MailingListExecutionService.INCOMPLETE_INDEX_WAIT);
+        assertTrue(run.get(0).getFormattedMessage().contains("tried again at " + endOfTheWait),
+                "and when it is tried again: " + run.get(0).getFormattedMessage());
+        assertEquals(endOfTheWait, nextExecutionOf(triggerId).toInstant(),
+                "postponed to the end of the half hour after the start, not by the hour of a failure");
+        List<String[]> records = errorRecords(n);
+        assertEquals(1, records.size(), "recorded in the Mail Queue as a failed run is");
+        assertEquals("Not sent: mailing list IT-MLFAULT-" + n + ", scheduled trigger " + triggerId, records.get(0)[0]);
+        assertTrue(records.get(0)[2].startsWith("The text search index is being built again after a restart"),
+                "its last error says why: " + records.get(0)[2]);
+    }
+
+    /**
+     * The same trigger run more than half an hour after the start, the index still not complete (a refill that
+     * stalls): the wait does not stop the mail. It is made from what the index found, the trigger moves to its next
+     * regular time, no failure is recorded, and one WARN names the trigger.
+     */
+    @Test
+    void aScheduledTriggerWhoseFreeTextSearchMeetsTheIndexBeingFilledIsMailedAfterTheHalfHour() throws Exception {
+        messageLuceneIndex.recreateIndex();
+        awayFromTheRealSchedulersRun();
+        String n = Long.toString(System.nanoTime(), 36);
+        Integer list = committedListWithOneContact(n);
+        String subject = "IT-INDEX-LATE-" + n;
+        ZonedDateTime inThreeHours = ZonedDateTime.now(ZoneOffset.UTC).plusHours(3);
+        Integer triggerId = committedDueScheduledTrigger(list, subject,
+                inThreeHours.format(DateTimeFormatter.ofPattern("HH:mm")), IT_TEMPLATE, null,
+                "query=nw&status=PUBLISHED");
+        Instant longAgo = Instant.now().minus(MailingListExecutionService.INCOMPLETE_INDEX_WAIT).minusSeconds(60);
+
+        List<ILoggingEvent> run = startedAt(longAgo, () -> withTheIndexIncomplete(
+                () -> schedulerRunWarningsAbout(triggerId)));
+
+        assertEquals(1, mailsWithSubject(subject), "the mail is made");
+        assertEquals(ScheduledMail.Status.PENDING, mailStatus(subject), "and queued to be sent");
+        assertEquals(1, run.size(), "one line about the trigger: " + run);
+        assertEquals(Level.WARN, run.get(0).getLevel());
+        assertTrue(run.get(0).getFormattedMessage().contains("is mailed although the free-text index is still not "
+                + "complete"), "the warning says so: " + run.get(0).getFormattedMessage());
+        assertEquals(inThreeHours.truncatedTo(ChronoUnit.MINUTES).toInstant(), nextExecutionOf(triggerId).toInstant(),
+                "the trigger moves to its next regular time");
+        assertTrue(errorRecords(n).isEmpty(), "and leaves no failure record");
     }
 }

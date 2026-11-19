@@ -48,6 +48,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.web.util.HtmlUtils;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -68,6 +70,18 @@ public class MailingListExecutionService extends BaseService {
 
     /** A scheduled trigger that keeps failing leaves at most one record in the Mail Queue in this interval **/
     static final long FAILED_TRIGGER_RECORD_INTERVAL_MILLIS = 24L * 60L * 60L * 1000L;
+
+    /**
+     * How long after the start a scheduled trigger whose free-text search was answered by an incomplete index waits
+     * for the index, rather than mail what was found so far
+     **/
+    static final Duration INCOMPLETE_INDEX_WAIT = Duration.ofMinutes(30);
+
+    /**
+     * When this backend started, as near as this service knows: when it was made, during the start. The free-text
+     * index is emptied at the start and filled again; {@link #INCOMPLETE_INDEX_WAIT} counts from here.
+     */
+    volatile Instant startedAt = Instant.now();
 
     private final NiordApp app;
 
@@ -314,6 +328,11 @@ public class MailingListExecutionService extends BaseService {
      * whose next time cannot be computed (an invalid stored time) fails before any mail is made, and a run that fails
      * (its search or its template) leaves the trigger as it was. The scheduler then postpones the failed trigger with
      * {@link #postponeFailedScheduledTrigger(Integer)}.
+     * <p>
+     * A run whose free-text search was answered while the index was still being filled after the start fails the same
+     * way, with an {@link IncompleteIndexException}, while the backend has been up for less than
+     * {@link #INCOMPLETE_INDEX_WAIT}; after that the mail is made from what the index found, and a warning naming the
+     * trigger is logged.
      *
      * @param triggerId the ID of the scheduled mailing list trigger to execute
      */
@@ -329,7 +348,7 @@ public class MailingListExecutionService extends BaseService {
         trigger.setNextScheduledExecution(ScheduledExecutionTimeUtil.computeNextExecutionTime(trigger));
         saveEntity(trigger);
 
-        executeScheduledTrigger(trigger, true);
+        executeScheduledTrigger(trigger, true, true);
     }
 
     /**
@@ -344,6 +363,20 @@ public class MailingListExecutionService extends BaseService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Date postponeFailedScheduledTrigger(Integer triggerId) {
+        return postponeFailedScheduledTrigger(triggerId, null);
+    }
+
+    /**
+     * Postpones a scheduled trigger whose run failed, as {@link #postponeFailedScheduledTrigger(Integer)} does, but
+     * to no later than the given time: a trigger that waits for the free-text index is tried again at the end of the
+     * wait at the latest ({@link IncompleteIndexException#getRetryBy()}).
+     *
+     * @param triggerId the ID of the scheduled mailing list trigger that failed
+     * @param notAfter the latest next execution, or null for none
+     * @return the next execution set, or null when there is no such scheduled trigger
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Date postponeFailedScheduledTrigger(Integer triggerId, Date notAfter) {
 
         MailingListTrigger trigger = getByPrimaryKey(MailingListTrigger.class, triggerId);
         if (trigger == null || trigger.getType() != TriggerType.SCHEDULED) {
@@ -351,6 +384,9 @@ public class MailingListExecutionService extends BaseService {
         }
 
         Date next = new Date(System.currentTimeMillis() + FAILED_TRIGGER_RETRY_MILLIS);
+        if (notAfter != null && notAfter.before(next)) {
+            next = notAfter;
+        }
         try {
             Date regular = ScheduledExecutionTimeUtil.computeNextExecutionTime(trigger);
             if (regular.before(next)) {
@@ -393,6 +429,22 @@ public class MailingListExecutionService extends BaseService {
      */
     @Transactional
     public List<ScheduledMail> executeScheduledTrigger(MailingListTrigger trigger, boolean persist) throws Exception {
+        return executeScheduledTrigger(trigger, persist, false);
+    }
+
+    /**
+     * Executes the scheduled mailing list trigger, as {@link #executeScheduledTrigger(MailingListTrigger, boolean)}
+     * does. A scheduled run (not a test of the trigger) waits for the free-text index: when its search was answered
+     * while the index was still being filled after the start ({@link PagedSearchResultVo#getIndexIncomplete()}), it
+     * fails with an {@link IncompleteIndexException} while the backend has been up for less than
+     * {@link #INCOMPLETE_INDEX_WAIT}, and after that makes its mails from what the index found and logs a warning.
+     *
+     * @param trigger the scheduled mailing list trigger to execute
+     * @param persist whether to persist the mails or not
+     * @param scheduledRun whether this is the scheduler's run of the trigger
+     */
+    private List<ScheduledMail> executeScheduledTrigger(MailingListTrigger trigger, boolean persist,
+                                                        boolean scheduledRun) throws Exception {
 
         if (trigger.getType() != TriggerType.SCHEDULED) {
             throw new IllegalAccessException("Must be a scheduled trigger");
@@ -426,6 +478,19 @@ public class MailingListExecutionService extends BaseService {
         params.maxSize(Integer.MAX_VALUE);
         // A failed search fails the trigger, which the scheduler logs and postpones, rather than mail an empty list
         PagedSearchResultVo<Message> messageResult = messageSearchService.searchOrFail(params);
+
+        // A search answered while the free-text index is still being filled after the start may miss messages, and
+        // a mail cannot say so: in the half hour after the start the run waits for the index, as for one that
+        // cannot be read; after it, a refill that stalls does not stop the mail
+        if (scheduledRun && Boolean.TRUE.equals(messageResult.getIndexIncomplete())) {
+            Instant waitUntil = startedAt.plus(INCOMPLETE_INDEX_WAIT);
+            if (Instant.now().isBefore(waitUntil)) {
+                throw new IncompleteIndexException(Date.from(waitUntil));
+            }
+            log.warn("Scheduled mailing list trigger " + trigger.getId() + " is mailed although the free-text index "
+                    + "is still not complete " + INCOMPLETE_INDEX_WAIT.toMinutes() + " minutes after the start: "
+                    + "its mail may list too few messages");
+        }
 
         // Create mails language by language
         for (String language : languages) {

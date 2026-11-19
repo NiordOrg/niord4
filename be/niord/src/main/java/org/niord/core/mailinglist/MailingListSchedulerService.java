@@ -33,7 +33,9 @@ import java.util.stream.Collectors;
  * With this model, if one mailing list execution fails, it will not roll back a single transaction
  * for all mailing lists. A trigger whose run fails is postponed by at most an hour, rather than run again every
  * minute, and its failure is recorded in the Mail Queue as a mail in status Error, at most once a day while it keeps
- * failing.
+ * failing. A trigger whose free-text search was answered while the index was being filled after the start
+ * ({@link IncompleteIndexException}) is postponed and recorded the same way, but only to the end of the half hour after
+ * the start, and logged as a warning.
  */
 // PORT: was @jakarta.ejb.Stateless; now a Spring @Component (singleton).
 @Service
@@ -74,12 +76,20 @@ public class MailingListSchedulerService extends BaseService {
                     // In a new transaction: the mails and the trigger's next execution commit together or not at all
                     mailingListExecutionService.executeScheduledTrigger(triggerId);
                 } catch (Exception e) {
-                    // Per trigger, so one bad trigger does not stop the rest of the run. The failed trigger is
-                    // postponed, so it is not run again every minute; the ERROR line carries the trace, because
-                    // the cause (an invalid stored time, a stale publication= id in the stored query, a template
-                    // error) is in the exception rather than in this message.
-                    log.error("Scheduled mailing list trigger " + triggerId + " failed; it is tried again "
-                            + postponeFailedTrigger(triggerId), e);
+                    if (e instanceof IncompleteIndexException wait) {
+                        // Not a fault: the free-text index is being filled after the start. Postponed as a failed
+                        // trigger is, but to the end of the wait at the latest, and recorded as one is below
+                        log.warn("Scheduled mailing list trigger " + triggerId + " waits for the free-text index, "
+                                + "which is being built again after the start; it is tried again "
+                                + postponeFailedTrigger(triggerId, wait.getRetryBy()));
+                    } else {
+                        // Per trigger, so one bad trigger does not stop the rest of the run. The failed trigger is
+                        // postponed, so it is not run again every minute; the ERROR line carries the trace, because
+                        // the cause (an invalid stored time, a stale publication= id in the stored query, a template
+                        // error) is in the exception rather than in this message.
+                        log.error("Scheduled mailing list trigger " + triggerId + " failed; it is tried again "
+                                + postponeFailedTrigger(triggerId, null), e);
+                    }
                     // Leave a record in the Mail Queue, so the mail that was due does not vanish without a trace.
                     // After the postponement, so a failure to record cannot bring back the every-minute retry.
                     try {
@@ -97,12 +107,15 @@ public class MailingListSchedulerService extends BaseService {
     }
 
     /**
-     * Postpones a failed trigger, and says when it is tried again: "at" the time set, or "in a minute" when the
-     * postponement itself failed (its failure is logged) and the trigger stays due
+     * Postpones a failed trigger, to no later than the given time when there is one, and says when it is tried
+     * again: "at" the time set, or "in a minute" when the postponement itself failed (its failure is logged) and the
+     * trigger stays due
      */
-    private String postponeFailedTrigger(Integer triggerId) {
+    private String postponeFailedTrigger(Integer triggerId, Date notAfter) {
         try {
-            Date next = mailingListExecutionService.postponeFailedScheduledTrigger(triggerId);
+            Date next = notAfter == null
+                    ? mailingListExecutionService.postponeFailedScheduledTrigger(triggerId)
+                    : mailingListExecutionService.postponeFailedScheduledTrigger(triggerId, notAfter);
             return next == null ? "never: it is no longer a scheduled trigger" : "at " + next.toInstant();
         } catch (Exception e) {
             log.error("Failed postponing scheduled mailing list trigger " + triggerId + " after its run failed", e);
