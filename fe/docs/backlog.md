@@ -521,8 +521,8 @@ Background: [`features/editor.md`](features/editor.md).
   card's own implementation.
 - The two insert-dialog preference keys (`formatLocationSettings`, `formatTimeSettings`) are un-namespaced while
   the rest carry the `niord.` prefix.
-- Two editors saving the same message overwrite each other: there is no revision check on the save path. Accepted
-  today; worth a decision if concurrent editing becomes common.
+- Two editors saving the same message overwrite each other: there is no revision check on the save path. Not in
+  scope for the foreseeable future (the owner, 2026-11-19).
 - The deployment setting for the base editor-field visibility has no consumer; the additional-editor-field pool
   is a pinned list in `editor-field-candidates.ts`.
 - The rich-text toolbar's text-colour picker (description and comments) writes an inline `color` on a `<span>`,
