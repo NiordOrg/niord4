@@ -559,16 +559,6 @@ Background: [`features/editor.md`](features/editor.md).
   apart, and a screen reader hears the same name twice. "Cancel message" on the red button and "Close" on the other
   close it. `04-Editor.adoc` (_Cancelling a Message_) says so as it is. Found by the user guides' writers
   (2026-11-11).
-- **The History tab cannot tell apart two versions with the same number.** The revision table tracks its rows by
-  `version` and the selection compares versions
-  (`features/editor/components/revision-table/revision-table.ts` 29 and 58-60,
-  `features/editor/views/editor-history-page/editor-history-page.ts` 199-205; `MessageHistoryVo` carries no id).
-  Messages carried over from the previous system hold repeated numbers: in `niord_guides` 384 version numbers are
-  used twice or more, on 354 messages (entries from 2016 to 2022); entries written by Niord 4 repeat none (0 of
-  the 1,745 in `niord_test` since August). On such a message, ticking one of the two rows ticks both and the pair
-  is compared, neither can be shown alone, and Angular's `@for` meets a duplicate key [read in the code and the
-  data; not clicked]. Keying the rows and the selection on the entry's id, or on its index, closes it; SCRIPT9 in
-  `be/docs/potential-errors.md` is the same fault in the script resources' history dialog.
 - **Load errors read as empty data in several places.** Nine components declare an `httpResource` and never read
   its error state: the home page, the editor's action menu, recently edited drafts, the template selection drawer
   and search popover, the comments store, the History page, the message details menu and the template parameters

@@ -36,8 +36,8 @@ const message: Message = {
   created: 'x',
 };
 
-function hist(version: number, snapshot: string): MessageHistory {
-  return { version, created: '2026-06-01T10:00:00Z', user: 'alice', status: 'DRAFT', snapshot };
+function hist(version: number, snapshot: string, created = '2026-06-01T10:00:00Z'): MessageHistory {
+  return { version, created, user: 'alice', status: 'DRAFT', snapshot };
 }
 
 function setup() {
@@ -109,6 +109,21 @@ describe('EditorHistoryPage ≤2-select cap', () => {
     // Snapshots come out version-ascending (older = left/old, newer = right/new), NOT click order,
     // so the diff direction + "comparing #a and #b" header are deterministic.
     expect(view.selectedSnapshots()).toEqual(['{"v":1}', '{"v":2}']);
+  });
+
+  it('tells two entries with the same version number apart', () => {
+    // A message carried over from an older system can hold two entries numbered alike.
+    const view = setup();
+    const later = hist(3, '{"v":"later"}', '2016-05-02T09:00:00Z');
+    const earlier = hist(3, '{"v":"earlier"}', '2016-05-01T09:00:00Z');
+    view.toggle(later);
+    view.toggle(earlier);
+    expect(view.selected()).toEqual([later, earlier]);
+    // The pair compared is these two, the earlier one on the old side.
+    expect(view.selectedSnapshots()).toEqual(['{"v":"earlier"}', '{"v":"later"}']);
+
+    view.toggle(later);
+    expect(view.selected()).toEqual([earlier]);
   });
 });
 

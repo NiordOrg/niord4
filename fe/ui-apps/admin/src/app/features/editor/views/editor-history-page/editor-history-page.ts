@@ -171,11 +171,15 @@ export class EditorHistoryPage {
   );
   protected readonly selected = signal<readonly MessageHistory[]>([]);
 
-  // The selection ordered oldest→newest by version, so the diff is deterministic and independent of
-  // click order: the older revision is always the left/old (removed) side and the newer the
-  // right/new (added) side, and the "Comparing #a and #b" header reads the same way.
+  // The selection ordered oldest→newest by version, then by time for two entries with the same
+  // number (a message carried over from an older system can hold such), so the diff is
+  // deterministic and independent of click order: the older revision is always the left/old
+  // (removed) side and the newer the right/new (added) side, and the "Comparing #a and #b" header
+  // reads the same way.
   protected readonly orderedSelection = computed<readonly MessageHistory[]>(() =>
-    [...this.selected()].sort((a, b) => a.version - b.version),
+    [...this.selected()].sort(
+      (a, b) => a.version - b.version || Date.parse(a.created) - Date.parse(b.created),
+    ),
   );
 
   protected readonly selectedSnapshots = computed<readonly string[]>(() =>
@@ -207,19 +211,21 @@ export class EditorHistoryPage {
       untracked(() => this.facade.loadExisting(id));
     });
     // Clear the revision selection whenever the resolved history changes (the message id changed),
-    // so revisions picked for one message can't leak into another's diff/attachment panes — the
-    // table matches rows by version number alone, which would otherwise mis-highlight.
+    // so revisions picked for one message can't leak into another's diff/attachment panes.
     effect(() => {
       this.history();
       untracked(() => this.selected.set([]));
     });
   }
 
-  /** Toggle a revision in/out of the ≤2 selection. */
+  /**
+   * Toggle a revision in/out of the ≤2 selection. A revision is the entry itself, not its version
+   * number, which two entries of a message carried over from an older system can share.
+   */
   protected toggle(revision: MessageHistory): void {
     const selected = this.selected();
-    if (selected.some((candidate) => candidate.version === revision.version)) {
-      this.selected.set(selected.filter((candidate) => candidate.version !== revision.version));
+    if (selected.includes(revision)) {
+      this.selected.set(selected.filter((candidate) => candidate !== revision));
     } else if (selected.length < 2) {
       this.selected.set([...selected, revision]);
     }
