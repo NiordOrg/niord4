@@ -457,8 +457,12 @@ adds (jobs start today from an upload, a batch set, the bootstrap command, or a 
 alone), so that `BatchData` records who ran it and the admin app's Batch page shows its progress. The runbook says how a
 sysadmin calls it (a `curl` with a token). Since 2026-11-19 it answers JSON naming the job it started,
 `{"jobName", "executionId", "instanceId", "message"}` (`message` is the status line it answered before as
-text), so that a script follows its own job to the end by the execution id and reads its log by the instance
-id. Its parameters:
+text), so that a script can follow its own job without guessing it by its start time. No endpoint reads one
+execution by its id: a script waits for its job by paging `GET /rest/batch/repo-import/instances` (newest
+first, `pageSize` may be raised), finding the row whose `instanceId` is the one answered and reading its
+`executions[].batchStatus` until it is `COMPLETED`, `FAILED`, `STOPPED` or `ABANDONED`; it reads the log at
+`/rest/batch/instance/{instanceId}/logs`. The execution id is the one `PUT /rest/batch/execution/{id}/stop`,
+`/restart` and `/abandon` take. Its parameters:
 
 - `dir`: the old repository root, readable by the pod (on staging the PVC, still mounted at
   `/niord-home/repo` during the window; for a tree copied from another installation, a mount under the
