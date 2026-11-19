@@ -770,13 +770,20 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
   on its tint (`.is-script-fm` and `.is-script-js` in `ui-apps/admin/src/styles/components-admin.css`). A darker
   text colour mixed off the same token closes it; a country's own accent changes the figure. Found by the first
   accessibility pass of the administration app (the axe-core scan, 2026-11-18).
-- **Removing a chip of a publication series' criteria drops the focus on the page's body.** The chips of
-  `ui-apps/admin/src/app/features/admin/sections/admin/publications/series-criteria-editor.html` are named
-  for their value and act on a click, so Enter and Space remove them, but the focused button leaves the DOM
-  with its chip and nothing takes the focus: a keyboard user starts again from the top of the page. The
-  shared autocomplete gives the focus back to its input in the same case (`onRemoveClick` in
-  `ui-apps/admin/src/app/shared/forms/autocomplete/autocomplete.ts`). Found 2026-11-19 while fixing the
-  autocomplete's chips.
+- **Removing a chip drops the focus on the page's body in three places.** The chips of
+  `ui-apps/admin/src/app/features/admin/sections/admin/publications/series-criteria-editor.html` (a
+  publication series' criteria), of the shared domain multiselect
+  (`ui-apps/admin/src/app/shared/forms/domain-multiselect-field/domain-multiselect-field.html`,
+  `(click)="remove(domain)"`) and the message-id chip of
+  `ui-apps/admin/src/app/features/messages/components/message-id-field/message-id-field.html`
+  (`(click)="onClear()"`, the autocomplete takes the chip's place) are named for their value and act on a
+  click, so Enter and Space remove them, but the focused button leaves the DOM with its chip and nothing
+  takes the focus: a keyboard user starts again from the top of the page. This breaks the rule of
+  `ui-standards.md` that a button leaving the DOM with what it removes hands the focus to a defined element
+  first. The shared autocomplete does it right (`onRemoveClick` in
+  `ui-apps/admin/src/app/shared/forms/autocomplete/autocomplete.ts`, which gives the focus back to its
+  input); the fix gives the focus to the next chip, or else to the picker button or the input. Found
+  2026-11-19 while fixing the autocomplete's chips.
 
 ### Schedule
 
