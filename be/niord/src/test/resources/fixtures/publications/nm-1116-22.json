@@ -3,7 +3,7 @@
   "kind": "message",
   "shortId": "NM-1116-22",
   "absent": false,
-  "source": "https://niord.t-dma.dk",
+  "source": "https://niord.staging.brs2.dk",
   "synthetic": false,
   "facts": {
     "uid": "86aba751-8436-4818-bceb-b0b6ea521a0f",

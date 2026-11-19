@@ -1,7 +1,7 @@
 {
   "_": "The messageTagFilter values that actually exist, byte for byte.",
   "__": "Generated from the captured production estate; never hand-typed. The consent document abbreviates these (msg.type==T) and the code once matched the abbreviation, which would have failed every P&T publication in the estate.",
-  "capturedFrom": "niord.t-dma.dk, publications/search-details, 2026-08-23",
+  "capturedFrom": "niord.staging.brs2.dk, publications/search-details, 2026-08-23",
   "total": 1077,
   "distinctColumnValues": 5,
   "values": [
