@@ -671,6 +671,8 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   backoff and escalate to `ERROR`, so a transient Twitter/network failure is retried rather than lost.
 - **Exposed by:** code inspection during the port comparison.
 - **Severity:** Medium — reliability; silent loss of an outbound promulgation on any transient failure.
+  Neither national deployment uses Twitter/X promulgation (the owner, 2026-11-19); the code is left as it is and is
+  planned for removal.
 - **Related:** PROM10. X refuses the endpoint the post goes to, so today every attempt fails the same way, and a
   retry alone would not get a tweet out. The step before the post is lost the same silent way: the status-change
   event that starts a tweet rides the JMS status topic, which is not stored (the embedded broker's
@@ -699,7 +701,8 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** the PROM5 assessment (2026-11-12). The owner decided to leave Twitter as it is for now.
 - **Severity:** Medium where Twitter promulgation is used; none where it is not (the test seed's `twitter` type
   is inactive). Fix: post through `POST /2/tweets` (twitter4j has no v2 client, so a client of its own or another
-  library), and then PROM5's record and retry.
+  library), and then PROM5's record and retry. Neither national deployment uses Twitter/X promulgation (the owner,
+  2026-11-19); the code is left as it is and is planned for removal.
 
 ## BUILD1 — A build without a warm Maven cache fails whenever GRAD's repository is down
 
@@ -1749,7 +1752,8 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   (2026-11-12), and the entry goes with it. Fix, should it stay: a transaction around the handlers, as the NAVTEX
   transmitters' and the SafetyNET areas' handlers have; an error state in the
   dialog instead of the silent switch to an empty form; and secrets that may be left empty in edit mode to keep the
-  stored ones.
+  stored ones. Neither national deployment uses Twitter/X promulgation (the owner, 2026-11-19); the code is left as
+  it is and is planned for removal.
 
 ## PROM8. A promulgation type with transmitters, areas or saved Twitter settings cannot be deleted
 
