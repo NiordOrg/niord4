@@ -28,14 +28,9 @@ import org.niord.core.publication.series.resolve.TimeRelation;
 import org.niord.core.publication.PublicationDesc;
 import org.niord.core.publication.vo.PublicationStatus;
 import org.niord.core.repo.RepoPaths;
-import org.springframework.web.util.UriUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * A legacy publication becomes an issue, frozen.
@@ -352,7 +347,7 @@ public final class LegacyIssueTranslation {
      * The link takes the FOLDER, the descriptor the NAME. The link's path is
      * URL-encoded where the file name needed it, and the store holds the name as
      * it was written, so the link is taken only where one of its spellings
-     * ({@link #linkSpellings}) ends in the descriptor's own file name. A link
+     * ({@link RepoPaths#candidates}) ends in the descriptor's own file name. A link
      * whose name is another, or that lies outside the publication's folder, is
      * not taken, and the current revision's path stands: guessing a spelling
      * would give a name the store may not hold, and the import check counts such
@@ -370,44 +365,11 @@ public final class LegacyIssueTranslation {
         if (links.size() != 1) {
             return derived;
         }
-        return linkSpellings(links.getFirst()).stream()
+        return RepoPaths.candidates(links.getFirst()).stream()
                 .filter(p -> RepoPaths.isBelow(p, folder))
                 .filter(p -> RepoPaths.nameOf(p).equals(desc.getFileName()))
                 .findFirst()
                 .orElse(derived);
-    }
-
-    /**
-     * The store paths a legacy repository link's path may name, each normalised:
-     * as written; decoded as the repository endpoint decodes a request path, where
-     * a '+' stays a '+' (the file the link serves); and URL-decoded as a form
-     * value, where a '+' becomes a space ({@link RepoPaths#candidates}). A
-     * spelling that is no path of the repository, or cannot be decoded, is left
-     * out.
-     *
-     * @param linkPath the path after {@link RepoPaths#FILE_URL_PREFIX}; null for none
-     * @return the paths it may name, the spelling as written first
-     */
-    public static Set<String> linkSpellings(String linkPath) {
-        Set<String> spellings = new LinkedHashSet<>();
-        if (linkPath == null) {
-            return spellings;
-        }
-        String served;
-        try {
-            served = RepoPaths.normalize(UriUtils.decode(linkPath, StandardCharsets.UTF_8));
-        } catch (IllegalArgumentException e) {
-            served = null;
-        }
-        List<String> candidates = new ArrayList<>(RepoPaths.candidates(linkPath));
-        if (!candidates.isEmpty()) {
-            spellings.add(candidates.getFirst());
-        }
-        if (served != null && !served.isEmpty()) {
-            spellings.add(served);
-        }
-        spellings.addAll(candidates);
-        return spellings;
     }
 
     /**

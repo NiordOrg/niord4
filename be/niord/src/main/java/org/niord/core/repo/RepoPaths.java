@@ -18,9 +18,12 @@ package org.niord.core.repo;
 import org.apache.commons.lang3.StringUtils;
 import org.niord.core.util.TextUtils;
 import org.niord.core.util.WebUtils;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -150,7 +153,8 @@ public final class RepoPaths {
     /**
      * The paths of the served file links in a text, as written: the path after each {@link #FILE_URL_PREFIX} the
      * text holds, cut as {@link #FILE_LINK} says. One rule for everything that reads a link back to a row: the
-     * import's verification and the files a legacy publication's links keep from a deleted issue.
+     * import's verification and the files a legacy publication's links keep from a deleted issue; each path is then
+     * decoded by {@link #candidates}.
      *
      * @param text a text, a link field or HTML; null for none
      * @return the paths as written, in the order of the text; empty when the text holds no link
@@ -168,9 +172,14 @@ public final class RepoPaths {
     }
 
     /**
-     * The store paths a stored reference may name: the reference as written and URL-decoded, each normalised. A
-     * row's path is stored as it is, a link's path is encoded, and a reference the database holds may be either;
-     * a spelling that is no path of the repository (absolute, climbing, the root) is left out.
+     * The store paths a stored reference may name, each normalised: the reference as written; decoded as the
+     * repository endpoint decodes a request path, where a '+' stays a '+' (the file a link serves); and decoded as
+     * a form value, where a '+' becomes a space (a link written with '+' for a space). A row's path is stored as it
+     * is, a link's path is encoded, and a reference the database holds may be either; a spelling that is no path of
+     * the repository (absolute, climbing, the root) or cannot be decoded is left out. The one decoding rule for
+     * everything that reads a reference back to a row: the repository import's verification and the paths it
+     * keeps, the legacy publications' import and its check, and the files a legacy publication's links keep from a
+     * deleted issue.
      *
      * @param reference a stored path or a link's path; null for none
      * @return the paths it may name, the spelling as written first; empty when it names none
@@ -180,13 +189,22 @@ public final class RepoPaths {
         if (reference == null) {
             return candidates;
         }
-        for (String spelling : List.of(reference, WebUtils.urlDecode(reference))) {
+        for (String spelling : Arrays.asList(reference, pathDecode(reference), WebUtils.urlDecode(reference))) {
             String path = normalize(spelling);
             if (path != null && !path.isEmpty()) {
                 candidates.add(path);
             }
         }
         return candidates;
+    }
+
+    /** A link's path decoded as a request path, where a '+' stays a '+'; null when it cannot be decoded */
+    private static String pathDecode(String reference) {
+        try {
+            return UriUtils.decode(reference, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     /** The first segment of a path: its top-level folder, or the path itself when it has one segment */

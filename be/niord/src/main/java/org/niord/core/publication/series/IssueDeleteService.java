@@ -404,8 +404,8 @@ public class IssueDeleteService extends BaseService {
      * ({@code /rest/repo/file/<path>}), as written and decoded (the import gives an issue's descriptor the second
      * when it lies under the publication's folder and ends in the descriptor's file name, else the first:
      * {@code LegacyIssueTranslation.filePath}), read by the rule the import reads links with
-     * ({@link RepoPaths#fileLinkPaths}, {@link LegacyIssueTranslation#linkSpellings}), so the two agree on what a
-     * legacy publication names.
+     * ({@link RepoPaths#fileLinkPaths}, {@link RepoPaths#candidates}), so the two agree on what a legacy
+     * publication names, and with the repository import's verification of the links it keeps.
      */
     private static Set<String> legacyFiles(List<Publication> legacy) {
         Set<String> files = new HashSet<>();
@@ -419,7 +419,7 @@ public class IssueDeleteService extends BaseService {
                     files.add(named);
                 }
                 for (String link : RepoPaths.fileLinkPaths(desc.getLink())) {
-                    files.addAll(LegacyIssueTranslation.linkSpellings(link));
+                    files.addAll(RepoPaths.candidates(link));
                 }
             }
         }
