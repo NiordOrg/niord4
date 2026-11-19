@@ -530,7 +530,8 @@ border.
   a single mail, the first 10 distinct addresses and how many more for a group.
 - Accept posts `POST /rest/scheduled-mails/send-again` (sysadmin only) with
   `{"mails":[{"id","status","sentAgainAt"}]}`, the status and `sentAgainAt` (epoch millis or null)
-  the page showed; the backend locks each row and refuses it as `CHANGED` when either differs, as
+  the page showed (the endpoints write a mail's dates as ISO text, and the API service turns them
+  into epoch millis as it reads them: see _Dates on the wire_ in `backend-api-notes.md`); the backend locks each row and refuses it as `CHANGED` when either differs, as
   `GONE` when the row was deleted, as `RECORD` for a failure record and as `FILTER` for a `SENT`
   mail while the mail filter is a list that would redirect one of its recipients (it would end
   `HELD`, and a later Send again of the held mails would deliver it to them twice), and queues the

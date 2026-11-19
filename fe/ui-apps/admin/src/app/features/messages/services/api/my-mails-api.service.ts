@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { BACKGROUND_READ } from '../../../../core/interceptors/background-read';
+import { epochMillisOf } from '../../../../shared/utils/epoch-dates';
 
 /** The period the My mails dialog lists, and the failed-mail notice looks at, in days. */
 export const MY_MAILS_DAYS = 7;
@@ -34,16 +35,24 @@ export interface MyMail {
   readonly lastError?: string;
 }
 
-/** The wire shape: the backend leaves out an empty recipient list and a zero it never set. */
-export interface MyMailVo extends Omit<MyMail, 'recipients' | 'attempts'> {
+/**
+ * The wire shape: the backend leaves out an empty recipient list and a zero it never set, and
+ * writes the dates as ISO 8601 text with an offset, which {@link fromMyMailVo} turns into epoch
+ * millis.
+ */
+export interface MyMailVo extends Omit<MyMail, 'recipients' | 'attempts' | 'created' | 'sendDate'> {
   readonly recipients?: readonly MyMailRecipient[] | null;
   readonly attempts?: number | null;
+  readonly created?: string | number | null;
+  readonly sendDate?: string | number | null;
 }
 
 export const fromMyMailVo = (vo: MyMailVo): MyMail => ({
   ...vo,
   recipients: vo.recipients ?? [],
   attempts: vo.attempts ?? 0,
+  created: epochMillisOf(vo.created),
+  sendDate: epochMillisOf(vo.sendDate),
 });
 
 /**

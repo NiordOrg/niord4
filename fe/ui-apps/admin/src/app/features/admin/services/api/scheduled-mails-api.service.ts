@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
+import { epochMillisOf } from '../../../../shared/utils/epoch-dates';
 
 /**
  * A mail's state in the queue. HELD: when the sender job handled it, the mail filter
@@ -18,7 +19,9 @@ export interface ScheduledMailRecipient {
 
 export interface ScheduledMail {
   readonly id: number;
+  /** Epoch millis (ISO text on the wire, converted by the service). */
   readonly created?: number;
+  /** Epoch millis: when the mail is, or was, due to be sent. */
   readonly sendDate?: number;
   readonly status: string;
   readonly sender: string;
@@ -92,8 +95,19 @@ export interface ScheduledMailSearchResult {
   readonly total: number;
 }
 
-interface ScheduledMailVo extends Omit<ScheduledMail, 'recipients'> {
+/**
+ * The wire shape. The endpoints write a mail's dates (`java.util.Date`) as ISO 8601 text with an
+ * offset, `"2026-11-19T09:27:20.142+00:00"`; {@link fromVo} turns them into the epoch millis the
+ * model declares, so the page can count with them and posts `sentAgainAt` back as a number.
+ */
+interface ScheduledMailVo extends Omit<
+  ScheduledMail,
+  'recipients' | 'created' | 'sendDate' | 'sentAgainAt'
+> {
   recipients?: ScheduledMailRecipient[] | null;
+  created?: string | number | null;
+  sendDate?: string | number | null;
+  sentAgainAt?: string | number | null;
 }
 
 interface SearchResultVo {
@@ -105,12 +119,16 @@ interface SearchResultVo {
 const fromVo = (vo: ScheduledMailVo): ScheduledMail => ({
   ...vo,
   recipients: vo.recipients ?? [],
+  created: epochMillisOf(vo.created),
+  sendDate: epochMillisOf(vo.sendDate),
+  sentAgainAt: epochMillisOf(vo.sentAgainAt),
 });
 
 /**
  * Scheduled-mails (mail queue) search, details and Send again. Wire contract: the backend
  * page param is 0-BASED; text params and status are emitted only when
- * non-empty; dates go as epoch millis `from`/`to`.
+ * non-empty; dates go as epoch millis `from`/`to`, and the mails' dates, which
+ * come back as ISO text, are epoch millis from here on.
  */
 @Injectable({ providedIn: 'root' })
 export class ScheduledMailsApiService {

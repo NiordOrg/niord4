@@ -82,9 +82,13 @@ interface MailVo {
   recipients: { recipientType: 'TO' | 'CC' | 'BCC'; address: string }[];
   attempts?: number;
   lastError?: string;
-  created?: number;
-  sentAgainAt?: number;
+  /** Epoch millis, or the ISO text the backend really writes (see {@link iso}). */
+  created?: number | string;
+  sentAgainAt?: number | string;
 }
+
+/** An instant as the backend writes it on the wire: "2026-11-19T09:27:20.142+00:00". */
+const iso = (epoch: number): string => new Date(epoch).toISOString().replace('Z', '+00:00');
 
 /** 11 June 2026, 10:00:00 UTC: the minute the mailing list's run made its mails. */
 const RUN = Date.UTC(2026, 5, 11, 10, 0, 0);
@@ -440,8 +444,9 @@ describe('MailsPage', () => {
       seedTexts();
       filterStatus(s, 'HELD', [mail(1, 'HELD')]);
       sendAllButton(s.fixture)!.click();
+      const olderCreated = RUN - 3_600_000;
       const older = mail(9, 'HELD', {
-        created: RUN - 3_600_000,
+        created: olderCreated,
         recipients: [{ recipientType: 'TO', address: 'b@example.org' }],
       });
       answerBulkRead(s, 'HELD', [
@@ -460,7 +465,7 @@ describe('MailsPage', () => {
         .map((r) => r.address)
         .join(', ');
       expect(confirm.details).toEqual([
-        `1 × Firing exercise · made ${format(older.created!)} · Held · to b@example.org`,
+        `1 × Firing exercise · made ${format(olderCreated)} · Held · to b@example.org`,
         `3 × Firing exercise · made ${format(RUN + 1000)} · Held · to ${first10} and 2 more`,
         `1 × Another subject · made ${format(RUN + 4000)} · Held · to to4@example.org`,
       ]);
@@ -474,6 +479,40 @@ describe('MailsPage', () => {
       expect(s.notifications.success).toHaveBeenCalledWith('admin.mails.sendAgain.queued', {
         count: 5,
       });
+      answerSearch(s, [], 'HELD');
+    });
+
+    it('reads the dates the backend writes as ISO text: a line per creation minute, the time shown, epoch millis posted', () => {
+      const s = setup();
+      seedTexts();
+      filterStatus(s, 'HELD', [mail(1, 'HELD')]);
+      sendAllButton(s.fixture)!.click();
+      const firstRun = Date.UTC(2026, 10, 19, 9, 27, 20, 142);
+      const nextDay = firstRun + 86_400_000;
+      const heldAgain = firstRun + 60_000 + 7;
+      // The newer run first, as the search orders them: the confirmation puts the oldest first.
+      answerBulkRead(s, 'HELD', [
+        mail(2, 'HELD', { created: iso(nextDay), sentAgainAt: iso(heldAgain) }),
+        mail(1, 'HELD', { created: iso(firstRun) }),
+      ]);
+
+      const format = (epoch: number) =>
+        TestBed.inject(LocaleFormatService).formatDateTime(new Date(epoch));
+      expect(format(firstRun)).not.toBe('');
+      expect(activeConfirm(s.fixture)?.details).toEqual([
+        `1 × Firing exercise · made ${format(firstRun)} · Held · to to1@example.org`,
+        `1 × Firing exercise · made ${format(nextDay)} · Held · to to2@example.org`,
+      ]);
+
+      accept(s.fixture);
+      const req = s.httpTesting.expectOne('/rest/scheduled-mails/send-again');
+      expect(req.request.body).toEqual({
+        mails: [
+          { id: 2, status: 'HELD', sentAgainAt: heldAgain },
+          { id: 1, status: 'HELD', sentAgainAt: null },
+        ],
+      });
+      req.flush({ queued: [2, 1], refused: [] });
       answerSearch(s, [], 'HELD');
     });
 

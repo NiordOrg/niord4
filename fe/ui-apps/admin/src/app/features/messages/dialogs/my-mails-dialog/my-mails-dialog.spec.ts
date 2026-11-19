@@ -144,6 +144,15 @@ describe('MyMailsDialog', () => {
     expect(row).toContain('a@example.org, b@example.org');
   });
 
+  it('reads the creation time the backend writes as ISO text as epoch millis', async () => {
+    const { formatDateTime } = await openWith([
+      mail({ id: 8, status: 'HELD', attempts: 1, created: '2026-11-19T09:27:20.142+00:00' }),
+    ]);
+    const created = Date.UTC(2026, 10, 19, 9, 27, 20, 142);
+    expect(formatDateTime).toHaveBeenCalledWith(created);
+    expect(text()).toContain(`zoned:${created}`);
+  });
+
   it('takes a mail without recipients or attempts on the wire', async () => {
     await openWith([{ id: 9, status: 'PENDING', subject: 'Bare', recipients: null }]);
     expect(text()).toContain('messages.myMails.status.waiting');

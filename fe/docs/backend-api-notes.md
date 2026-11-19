@@ -73,6 +73,14 @@ descriptors pass the same function as the resource's `parse`. Requests need no c
 reads an epoch number into a `Date`. Nothing outside those services sees the string form, so the rest of
 this section holds.
 
+**The mail queue's endpoints write ISO 8601 strings too**: `GET /rest/scheduled-mails/search`,
+`/scheduled-mail/{id}` and `/mine` send a mail's `created`, `sendDate` and `sentAgainAt` as
+`"2026-11-19T09:27:20.142+00:00"`. `ScheduledMailsApiService` (its `fromVo`) and `MyMailsApiService`
+(`fromMyMailVo`, which the My mails dialog's resource also parses with) turn each into epoch
+milliseconds with `epochMillisOf` from the same utility, under the same offset rule; the
+millisecond is kept, so `sentAgainAt` posted back to `POST /send-again` as a number still matches
+the row it names.
+
 The backend serialises every other instant as an **epoch-millisecond number** — message dates, batch
 timestamps, script-resource revisions. Some model types say `string` anyway
 (`Message.publishDateFrom`, `publishDateTo`, `followUpDate`, `MessagePart.eventDates[]` in

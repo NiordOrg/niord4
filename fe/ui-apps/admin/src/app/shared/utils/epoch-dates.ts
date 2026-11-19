@@ -119,6 +119,21 @@ function convert(value: unknown): unknown {
   return value;
 }
 
+/**
+ * One instant of a payload as epoch milliseconds, for a model that types a single field `number`
+ * while its endpoint writes the `java.util.Date` as ISO 8601 text (the mail queue's). A number
+ * passes as it came, an ISO instant with an offset is parsed under the same rule as
+ * {@link withEpochDates}, and anything else (absent, null, a date-time with no offset, an
+ * impossible date) is undefined: no time is shown rather than one read from the browser's clock.
+ */
+export function epochMillisOf(value: unknown): number | undefined {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  const instant = instantOf(value);
+  return typeof instant === 'number' ? instant : undefined;
+}
+
 /** A declared date field's value: converted when it is an ISO instant, else as it came. */
 function instantOf(value: unknown): unknown {
   if (typeof value !== 'string' || !ISO_DATE_TIME.test(value)) {
