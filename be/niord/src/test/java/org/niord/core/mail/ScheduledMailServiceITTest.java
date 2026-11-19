@@ -665,6 +665,34 @@ class ScheduledMailServiceITTest extends ITTest {
                 "a held mail older than the retention is deleted");
     }
 
+    /**
+     * The clean-up reads the old mails in ascending id order, the order Send again locks them in, so the two never wait
+     * for each other's rows in a cycle. The first mail is changed after the second is made, which writes its row
+     * behind the second's in the table: the order a query without an order returns them in. Read in the test's
+     * transaction; the mails were made long before any other.
+     */
+    @Test
+    @Transactional
+    void findExpiredMailsReadsTheMailsInIdOrder() {
+        long n = System.nanoTime();
+        long day = 24L * 60 * 60 * 1000L;
+        ScheduledMail first = newMail("IT-MAIL-expired-first-" + n, "a@b.com");
+        first.setStatus(Status.HELD);
+        first.setCreated(new Date(day));
+        persist(first);
+        ScheduledMail second = newMail("IT-MAIL-expired-second-" + n, "a@b.com");
+        second.setStatus(Status.SENT);
+        second.setCreated(new Date(day));
+        persist(second);
+        first.setStatus(Status.SENT);
+        em.flush();
+
+        List<Integer> ids = em.createNamedQuery("ScheduledMail.findExpiredMails", Integer.class)
+                .setParameter("expiryDate", new Date(2 * day))
+                .getResultList();
+        assertEquals(List.of(first.getId(), second.getId()), ids, "in id order");
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // sendAgain() and the sender's order
     // ------------------------------------------------------------------------------------------- //

@@ -70,9 +70,11 @@ import jakarta.validation.constraints.NotNull;
                 // new mail back; among the mails sent again in one request, the id keeps the order they were made in
                 query = "SELECT m FROM ScheduledMail m where m.status = 'PENDING' and m.sendDate <= :date " +
                         " order by case when m.sentAgainAt is null then 0 else 1 end, m.sendDate asc, m.id asc"),
-        // A pending mail is never deleted, however old: it may have been sent again and wait to be sent
+        // A pending mail is never deleted, however old: it may have been sent again and wait to be sent. In id order,
+        // so the clean-up locks the rows in the order Send again locks them, and the two cannot deadlock
         @NamedQuery(name = "ScheduledMail.findExpiredMails",
-                query = "SELECT m.id FROM ScheduledMail m where m.created <= :expiryDate and m.status <> 'PENDING'"),
+                query = "SELECT m.id FROM ScheduledMail m where m.created <= :expiryDate and m.status <> 'PENDING' "
+                        + "order by m.id"),
         @NamedQuery(name = "ScheduledMail.findBySender",
                 query = "SELECT m FROM ScheduledMail m where m.sender = :sender and m.created >= :since "
                         + " order by m.created desc, m.id desc")
