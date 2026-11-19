@@ -79,7 +79,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code executeStatusChangeTrigger(trigger, message, persist)} (unannotated, joins the test tx) and
  * {@code executeScheduledTrigger(trigger, persist)} ({@code @Transactional}, joins the test tx) see the
  * trigger that was flushed inside the test transaction. The id-based overloads
- * {@code executeScheduledTrigger(Integer)}, {@code executeStatusChangeTrigger(Integer, String)},
+ * {@code executeScheduledTrigger(Integer)}, {@code executeStatusChangeTrigger(Integer, String, long)},
  * {@code computeNextScheduledExecution(Integer)} and {@code postponeFailedScheduledTrigger(Integer)} are
  * {@code @Transactional(REQUIRES_NEW)}: under a
  * {@link TestTransaction} they run in a fresh transaction that cannot see the uncommitted trigger, so
