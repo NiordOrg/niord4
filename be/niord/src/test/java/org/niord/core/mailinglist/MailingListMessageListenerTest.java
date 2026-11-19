@@ -543,11 +543,12 @@ public class MailingListMessageListenerTest {
     /**
      * A trigger whose mails AND failure record fail on every take (a recipient the Mail Queue refuses, say) runs on
      * the first {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS} takes, its "Given up" record is tried on as many
-     * more, and on the last take the row is deleted all the same, with an ERROR in the log as the only record. FAILS
-     * on the code that kept such a row for ever, given up again every few minutes.
+     * more, minutes apart, and from then on the row is kept and tried once an hour: it is deleted only when the record
+     * is saved. FAILS on the code that deleted such a row on its tenth take, with an ERROR in the log as the only
+     * record, and on the code that gave it up again every few minutes for ever.
      */
     @Test
-    public void aRecordThatCanNeverBeSavedEndsItsRowAtTheLastTake() {
+    public void aRecordThatCanNeverBeSavedKeepsItsRowAndIsTriedSeldom() {
         mailingListService.triggers = triggers(1);
         executionService.failForTriggerId = 1;
         executionService.failRecording = true;
@@ -555,17 +556,30 @@ public class MailingListMessageListenerTest {
         outbox.due.add(new Claim(91, "uid-91", Status.PUBLISHED));
 
         listener.drainOutbox();
-        for (int take = 2; take <= MailingListMessageListener.LAST_TAKE; take++) {
-            assertTrue(outbox.completed.isEmpty(), "the row is kept before take " + take);
+        int slowFrom = MailingListMessageListener.SLOW_FROM_TAKE;
+        for (int take = 2; take <= slowFrom + 2; take++) {
+            assertEquals(Math.max(0, take - slowFrom), outbox.lastingFailures.size(),
+                    "the row is kept for minutes before take " + slowFrom + ", for an hour from it on; before take "
+                            + take + ": " + outbox.lastingFailures);
             outbox.comeDue();
             listener.drainOutbox();
         }
 
-        assertEquals(List.of(91L), outbox.completed, "the last take deletes the row");
+        assertTrue(outbox.completed.isEmpty(), "the row is never deleted while its record is not saved");
+        assertEquals(3, outbox.lastingFailures.size(), "takes 10, 11 and 12 kept it for an hour each");
+        assertEquals(slowFrom - 1, outbox.failures.size(), "the takes before them kept it for minutes");
+        assertTrue(outbox.lastingFailures.get(0).startsWith("91:Trigger(s) [1] neither made their mails nor recorded"),
+                "naming the trigger still owed: " + outbox.lastingFailures);
         assertEquals(MailingListStatusChangeOutbox.MAX_ATTEMPTS, executionService.attemptedTriggerIds.size(),
                 "the trigger ran on the first takes only: " + executionService.attemptedTriggerIds);
-        assertEquals(MailingListMessageListener.LAST_TAKE, executionService.recordAttempts.get(),
-                "and its record was tried on every take");
+        assertEquals(slowFrom + 2, executionService.recordAttempts.get(), "and its record was tried on every take");
+
+        // The Mail Queue takes the record again: the next take saves it, and only then is the row deleted
+        executionService.failRecording = false;
+        outbox.comeDue();
+        listener.drainOutbox();
+        assertEquals(List.of(91L), outbox.completed, "the row is deleted once its record is saved");
+        assertEquals(List.of("91:1"), outbox.settled, "its trigger settled by that record");
         outbox.comeDue();
         assertEquals(0, listener.drainOutbox());
         assertTrue(outbox.due.isEmpty(), "nothing is left to take");
@@ -862,6 +876,15 @@ public class MailingListMessageListenerTest {
         @Override
         public void failed(long id, String error) {
             failures.add(id + ":" + error);
+            putBack(id);
+        }
+
+        /** The failures recorded on rows kept for an hour ({@link #failedLastingly}), as "row:error" */
+        final List<String> lastingFailures = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void failedLastingly(long id, String error) {
+            lastingFailures.add(id + ":" + error);
             putBack(id);
         }
 

@@ -65,8 +65,9 @@ message, for example a cancellation. A status change that could not be finished 
 stopped, a trigger hung, or the database could not be reached, each time) is given up: each of its status change
 triggers not yet done leaves a mail with the status _Error_, as above, whose subject names its mailing list and whose
 last error says it was given up, and the server log has an ERROR naming the message. When even that mail cannot be
-saved, Niord tries five more times, minutes apart, and then deletes the status change all the same: an ERROR in the
-server log naming the trigger, its mailing list and the message is then the only record of the mail that was due.
+saved, Niord tries five more times, minutes apart, and after that once an hour: the status change is kept until the
+mail with the status _Error_ is saved, and each try leaves an ERROR in the server log naming the trigger, its mailing
+list and the message.
 
 The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>):
 

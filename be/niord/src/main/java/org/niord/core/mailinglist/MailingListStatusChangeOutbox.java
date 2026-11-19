@@ -51,7 +51,8 @@ import java.util.Set;
  * same trigger of a row at once, which takes a trigger that runs longer than the row's {@link #claimLease lease} (the
  * other node then takes the row again); the chart runs one node. A row is run at most {@link #MAX_ATTEMPTS} times: a
  * row whose run keeps failing, hangs or stops the server is then given up, and each trigger still owed leaves a record
- * in the Mail Queue. A row whose status is not a {@link Status} has no such bound (its triggers never run).
+ * in the Mail Queue; a row whose record cannot be saved either stays, tried seldom ({@link #failedLastingly}). A row
+ * whose status is not a {@link Status} has no such bound (its triggers never run).
  * <p>
  * Native SQL only, like {@code DefaultsLedger}: the table has no entity, and its identity id draws on no shared
  * sequence. It depends on nothing in {@code org.niord.core.message}, so {@code MessageService} uses it without a cycle.
@@ -243,6 +244,29 @@ public class MailingListStatusChangeOutbox {
                         + "\"dueAt\" = now() + make_interval(mins => LEAST(attempts, :maxMinutes)) WHERE id = :id")
                 .setParameter("error", error)
                 .setParameter("maxMinutes", (int) Math.max(1, claimLease.toMinutes()))
+                .setParameter("id", id)
+                .executeUpdate();
+    }
+
+    /**
+     * How long a row waits between takes once {@link #failedLastingly} keeps it: the "Not sent" record of a trigger it
+     * still owes could not be saved on take after take, so it is tried seldom, and the row is never deleted without it
+     */
+    public static final Duration SLOW_RETRY = Duration.ofHours(1);
+
+    /**
+     * Records why a row given up long ago is still kept: the record of a trigger it owes cannot be saved. As
+     * {@link #failed}, but the row is due again only after {@link #SLOW_RETRY}.
+     *
+     * @param id the id of the row taken
+     * @param error what failed
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void failedLastingly(long id, String error) {
+        write("UPDATE public.\"MailingListStatusChange\" SET \"lastError\" = :error, "
+                        + "\"dueAt\" = now() + make_interval(secs => :seconds) WHERE id = :id")
+                .setParameter("error", error)
+                .setParameter("seconds", SLOW_RETRY.toMillis() / 1000.0)
                 .setParameter("id", id)
                 .executeUpdate();
     }

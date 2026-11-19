@@ -693,6 +693,39 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     /**
+     * A row given up whose record cannot be saved on take after take ({@code failedLastingly}) is kept, with its
+     * error, and is due again an hour later. Would fail if the row were deleted, or made due within minutes again.
+     */
+    @Test
+    void aRowKeptForItsUnsavedRecordIsDueAgainInAnHour() {
+        String uid = UUID.randomUUID().toString();
+        outboxUids.add(uid);
+        ReentrantLock drains = drainLock();
+        drains.lock();
+        try {
+            listener.drainOutbox();
+            Tx.requiringNew().run(() -> outbox.enqueue(uid, Status.DRAFT));
+            long id = Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
+                            "SELECT id FROM public.\"MailingListStatusChange\" WHERE \"messageUid\" = :uid")
+                    .setParameter("uid", uid).getSingleResult()).longValue());
+            assertTrue(claimOwn(id).isPresent(), "the row is taken");
+
+            outbox.failedLastingly(id, "IT: the record could not be saved");
+
+            Object[] row = Tx.requiringNew().call(() -> (Object[]) em.createNativeQuery(
+                            "SELECT \"lastError\", \"dueAt\" > now() + interval '59 minutes', "
+                                    + "\"dueAt\" <= now() + interval '1 hour' "
+                                    + "FROM public.\"MailingListStatusChange\" WHERE id = :id")
+                    .setParameter("id", id).getSingleResult());
+            assertEquals("IT: the record could not be saved", row[0], "the row is kept, with its error");
+            assertEquals(Boolean.TRUE, row[1], "it is not due within minutes");
+            assertEquals(Boolean.TRUE, row[2], "but an hour on");
+        } finally {
+            drains.unlock();
+        }
+    }
+
+    /**
      * A row whose status is no {@link Status} (renamed or removed since it was written, or written by hand) used to
      * throw at the take and roll back its lease: as the oldest due row it was taken first by every later drain, and
      * no status change after it was mailed again. Now the take skips it, leased, with its error, and takes the next

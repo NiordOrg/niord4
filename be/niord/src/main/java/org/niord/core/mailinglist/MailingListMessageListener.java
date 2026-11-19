@@ -81,9 +81,10 @@ import jakarta.jms.ConnectionFactory;
  * ({@link #stopWaitMillis}), or whose node died while running it, waits out its lease. Such a row is tried again with
  * an ERROR each time; its {@code attempts} and {@code "lastError"} show how long it has failed. A row taken more than {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS}
  * times (its run failed, hung or stopped the server each time) is given up: each trigger it still owes leaves a "Not
- * sent" ERROR record in the Mail Queue, and the row is deleted once each is recorded. A record that cannot be saved is
- * tried on as many further takes; on the last ({@link #LAST_TAKE}) the row is deleted all the same, with one ERROR in
- * the server log naming each such trigger, its list and the message.
+ * sent" ERROR record in the Mail Queue, and the row is deleted once each is recorded, never before. A record that
+ * cannot be saved is tried on as many further takes, minutes apart; from take {@link #SLOW_FROM_TAKE} on the row is
+ * tried once an hour ({@link MailingListStatusChangeOutbox#SLOW_RETRY}), with one ERROR in the server log each time
+ * naming each such trigger, its list and the message, until the record is saved or an operator removes the row.
  * <p>
  * The topic is polled on a single-thread executor, started when the application is ready and stopped when the context
  * closes ({@link JmsTopicLoop}). When the context closes the drain takes no further row and starts no further trigger;
@@ -385,12 +386,25 @@ public class MailingListMessageListener implements Runnable {
         String error = stopping
                 ? "The server stopped before trigger(s) " + owed + " ran"
                 : "Trigger(s) " + owed + " neither made their mails nor recorded their failure in the Mail Queue";
-        log.error("Kept the status-change outbox row " + claim.id() + " of message " + claim.messageUid()
-                + " in status " + claim.status() + " after attempt " + claim.attempts() + " of "
-                + MailingListStatusChangeOutbox.MAX_ATTEMPTS + ": " + error + "; only those are run again, when the row "
-                + "comes due" + (stopping ? "" : " within minutes (see the errors above)"));
+        // A row given up whose record could not be saved on take after take: kept all the same, and tried seldom
+        boolean slow = !stopping && claim.attempts() >= SLOW_FROM_TAKE;
+        if (slow) {
+            log.error("Kept the status-change outbox row " + claim.id() + " of message " + claim.messageUid()
+                    + " in status " + claim.status() + " after take " + claim.attempts() + ": " + error
+                    + " (see the errors above); the row stays until that record is saved, and is tried again in "
+                    + MailingListStatusChangeOutbox.SLOW_RETRY.toMinutes() + " minutes");
+        } else {
+            log.error("Kept the status-change outbox row " + claim.id() + " of message " + claim.messageUid()
+                    + " in status " + claim.status() + " after attempt " + claim.attempts() + " of "
+                    + MailingListStatusChangeOutbox.MAX_ATTEMPTS + ": " + error + "; only those are run again, when "
+                    + "the row comes due" + (stopping ? "" : " within minutes (see the errors above)"));
+        }
         try {
-            outbox.failed(claim.id(), error);
+            if (slow) {
+                outbox.failedLastingly(claim.id(), error);
+            } else {
+                outbox.failed(claim.id(), error);
+            }
             return true;
         } catch (Throwable recordFailure) {
             // The lease taken with the row makes it due again all the same
@@ -405,11 +419,11 @@ public class MailingListMessageListener implements Runnable {
      * time, hung, or stopped the server. Its triggers are not run again: each trigger it still owes leaves its "Not
      * sent" ERROR record in the Mail Queue, naming its list, as a failing trigger does; the triggers settled before
      * leave none. A failure to look up the triggers propagates, so the row is kept and the records are made on a later
-     * pass, and so is a trigger whose record cannot be saved: it stays owed, at most until the row's
-     * {@link #LAST_TAKE}. There a record that still cannot be saved is given up too: the row is deleted, and one ERROR
-     * in the server log, naming each such trigger, its list and the message, is all that is left of it.
+     * pass, and so is a trigger whose record cannot be saved: it stays owed, and its row is kept, on every take. From
+     * take {@link #SLOW_FROM_TAKE} on, one ERROR in the server log names each such trigger, its list and the message,
+     * and the row is tried only once an hour ({@link #keepOwed}).
      *
-     * @return the triggers still owed: those whose record could not be saved, none on the last take
+     * @return the triggers still owed: those whose record could not be saved
      */
     private List<Integer> giveUp(Claim claim) {
         // The triggers ran on the first MAX_ATTEMPTS takes; the takes after them only tried to save these records
@@ -428,24 +442,23 @@ public class MailingListMessageListener implements Runnable {
                 unrecorded.add(trigger);
             }
         }
-        if (!unrecorded.isEmpty() && claim.attempts() >= LAST_TAKE) {
-            log.error("Deleted the status-change outbox row " + claim.id() + " of message " + claim.messageUid()
-                    + " in status " + claim.status() + " after " + claim.attempts() + " takes: the mails of "
+        if (!unrecorded.isEmpty() && claim.attempts() >= SLOW_FROM_TAKE) {
+            log.error("The status-change outbox row " + claim.id() + " of message " + claim.messageUid()
+                    + " in status " + claim.status() + " has been taken " + claim.attempts() + " times: the mails of "
                     + unrecorded.stream().map(MailingListMessageListener::describe).collect(Collectors.joining(", "))
-                    + " were not made, and the record of that could not be saved in the Mail Queue either "
-                    + "(see the errors above); this line is the only record left");
-            return List.of();
+                    + " were not made, and the record of that cannot be saved in the Mail Queue either "
+                    + "(see the errors above); the row is the only record of them, and is kept");
         }
         return unrecorded.stream().map(BaseEntity::getId).toList();
     }
 
     /**
-     * The take on which a given-up row is deleted even when the record of a trigger still owed cannot be saved: the
-     * records are tried on as many takes as the triggers were ({@link MailingListStatusChangeOutbox#MAX_ATTEMPTS}),
-     * so a record that can never be saved (a list whose recipient the Mail Queue refuses) does not keep its row for
-     * ever
+     * The take from which a given-up row whose record still cannot be saved is tried only once an hour: the records
+     * are tried minutes apart on as many takes as the triggers were
+     * ({@link MailingListStatusChangeOutbox#MAX_ATTEMPTS}), and a record that can never be saved (a list whose
+     * recipient the Mail Queue refuses) then costs one take and one ERROR an hour. The row is never deleted for it.
      */
-    static final int LAST_TAKE = 2 * MailingListStatusChangeOutbox.MAX_ATTEMPTS;
+    static final int SLOW_FROM_TAKE = 2 * MailingListStatusChangeOutbox.MAX_ATTEMPTS;
 
     /** A trigger and its list, for the log */
     private static String describe(MailingListTrigger trigger) {
