@@ -15,7 +15,7 @@
  * depends on the width of the screen and on the language: a row of labels that fits in Danish
  * wraps in Kalaallisut. jsdom lays nothing out, so no unit test can see any of it. This script
  * opens the built artefact in Chromium, answers every /rest call from the fixture below, and
- * asserts fourteen things:
+ * asserts fifteen things:
  *
  *   1. At 320, 640, 1024 and 1920 px, in every language the build offers, every control of the
  *      menu bar — the four links and each language flag — lies inside the viewport and is the
@@ -59,6 +59,8 @@
  *      switcher and every link of the credits are each the topmost element at their centre. A
  *      link that wraps onto a second line is tested at the centre of each line.
  *  14. Every link of a chart's credit line is underlined, on the map view and on the teaser.
+ *  15. The teaser's banner text holds 4.5:1 over a white tile and over the chart's land and water,
+ *      in the build's own colours.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -892,6 +894,51 @@ function creditLinkProblems(page) {
   });
 }
 
+/** OpenStreetMap's tile colours a banner over the chart can stand on: a white tile, land, water. */
+const TILE_COLOURS = { 'a white tile': '#ffffff', land: '#f2efe9', water: '#aad3df' };
+
+/**
+ * The teaser's banner text holds 4.5:1 over every tile colour it can stand on (WCAG 1.4.3; the
+ * text is 18 px and not bold, so not large). axe-core cannot measure text over an image, so the
+ * banner's own fill is laid over each tile colour on a canvas, whatever syntax the browser
+ * reports the fill in, and the text's colour is measured against what that gives. The colours are
+ * the build's, so a country's build measures its own.
+ */
+function teaserBannerProblems(page) {
+  return page.evaluate((tiles) => {
+    const banner = document.querySelector('#teaser-banner');
+    if (!banner) return ['the teaser shows no banner'];
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const paint = (...fills) => {
+      context.clearRect(0, 0, 1, 1);
+      for (const fill of fills) {
+        context.fillStyle = fill;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+    };
+    const luminance = (rgb) => {
+      const [r, g, b] = rgb.map((c) => {
+        const v = c / 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const style = getComputedStyle(banner);
+    const text = paint('#ffffff', style.color);
+    return Object.entries(tiles)
+      .map(([tile, colour]) => [tile, ratio(text, paint(colour, style.backgroundColor))])
+      .filter(([, measured]) => measured < 4.5)
+      .map(([tile, measured]) => `the banner's text is ${measured.toFixed(2)}:1 over ${tile}`);
+  }, TILE_COLOURS);
+}
+
 /**
  * The publications table fits inside its panel, and no link of it reaches past the panel's edge.
  * A table wider than its panel need not widen the page: an ancestor that clips it cuts the links
@@ -1331,6 +1378,9 @@ if (invokedDirectly) {
     await page.waitForSelector('#teaser-banner');
     await settle(page);
     record('the credit link of the teaser', await creditLinkProblems(page));
+
+    // 15. The teaser's banner text holds 4.5:1 over a white tile, land and water.
+    record("the teaser's banner over the chart", await teaserBannerProblems(page));
 
     // 13. The panel of messages without a position leaves every control of the chart uncovered —
     //     on a phone, at 400 % zoom, where the chart is barely taller than the panel's cap, and

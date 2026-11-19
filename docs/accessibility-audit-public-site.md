@@ -207,7 +207,7 @@ Pass, fail, not applicable, or needs a person, for the base build. A fail names 
 | 1.3.5 Identify input purpose | AA | N/A | The site takes no personal data |
 | 1.4.1 Use of colour | A | Pass (2026-11-19) | Fixed: the chart's credit links are underlined (the map view, a message's dialog and the teaser); measured in Chromium on the map view and the teaser of the base build by `npm run layout:info` |
 | 1.4.2 Audio control | A | N/A | |
-| 1.4.3 Contrast (minimum) | AA | **Fail** | The teaser's banner over a white tile, 4.44:1: _The teaser's banner can fall just under 4.5:1_. Every other text axe-core measured passes; the default subtle text colour (backlog) was not met on any page scanned, and its entry stays for the token |
+| 1.4.3 Contrast (minimum) | AA | Pass (2026-11-19) | Fixed: the teaser's banner is the chrome colour at 80 %, so its text is 8.82:1 over a white tile, 9.24:1 over the chart's land and 10.30:1 over its sea with the default tokens (measured in Chromium by `npm run layout:info`, which holds every build to 4.5:1 over all three); computed from the countries' tokens, Denmark's navy 7.94, 8.33 and 9.19:1, Greenland's 6.28, 6.58 and 7.22:1. Every other text axe-core measured passes; the default subtle text colour (backlog) was not met on any page scanned, and its entry stays for the token |
 | 1.4.4 Resize text | AA | Pass | At 200 % page zoom; the browser's text-only zoom was not checked |
 | 1.4.5 Images of text | AA | Pass | None |
 | 1.4.10 Reflow | AA | Pass | Nothing scrolls sideways at 320 px or 400 %; the Downloads tab strip scrolls in its own box (backlog). The chart is exempt as content that needs two dimensions |

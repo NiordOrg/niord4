@@ -187,12 +187,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   views now show for an empty list (`MSGS_NONE`, "No messages to show"). Found by the error hunt's phase 2
   (2026-11-15), seen in a browser on a local rig; Low. Left by the owner on 2026-11-15: no new public-site text
   and no API change.
-- **The teaser's banner can fall just under 4.5:1** (WCAG 1.4.3). Its white 18 px text (normal weight, so not
-  large text) stands on the chrome colour at 60 % opacity over the chart (`features/teaser/teaser.component.ts`,
-  `bg-chrome/60`). With the default tokens that is 4.89:1 over the chart's land and 5.98:1 over its sea, and
-  4.44:1 where the tile under the banner is white. axe-core cannot measure text over an image and leaves it to a
-  person. A fill of 70 % (6.23:1 over white with the default tokens) closes it; a country's own header colour
-  changes every figure, so each country's build is measured again. Found by the public site's audit (2026-11-18).
 
 ### The public site's image, configuration and gates
 

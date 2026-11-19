@@ -53,10 +53,13 @@ import { initialMapView } from '../../shared/utils/root-area-view';
         />
       </app-ol-map>
       <!-- The banner names the link: its text carries line breaks as markup, so binding the key
-           to aria-label would read the tags aloud, where the rendered element reads as its text. -->
+           to aria-label would read the tags aloud, where the rendered element reads as its text.
+           Its fill is the chrome colour at 80 %: the text is 18 px and not bold, so it needs
+           4.5:1 over whatever tile lies under it, a white one included, and at 60 % the default
+           colours gave 4.44:1 there and Greenland's navy 3.60:1. -->
       <div
         id="teaser-banner"
-        class="absolute right-10 top-10 z-30 bg-chrome/60 p-5 text-lg/7 text-chrome-fg shadow-niord-md"
+        class="absolute right-10 top-10 z-30 bg-chrome/80 p-5 text-lg/7 text-chrome-fg shadow-niord-md"
         [innerHTML]="'TEASER_TEXT' | transloco"
       ></div>
     </a>
