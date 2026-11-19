@@ -27,7 +27,9 @@ does not fit a hardened pod_) and as F-X99 in
   images of a country always share one tag.
 - **The Image workflow runs only when `staging-bump.py` starts it.** It is disabled in both
   country repositories while Actions minutes are short. The script enables it for one run and
-  disables it again (devops-niord, `scripts/staging-bump.py`).
+  disables it again (devops-niord, `scripts/staging-bump.py`). *Until 2026-11-19. Since then
+  Image runs after every green CI run on `main`, and the staging bump is devops-niord's promote
+  job with `TARGET=staging`, which reads the images in Harbor.*
 - **Nothing runs the image.** The chart (`be/k8s/helm/niord`) has five components and none for
   the site. Its `NOTES.txt` says "The public site (fe/ui-apps/info) runs separately". The staging
   values in devops-niord have nothing for it.
@@ -54,7 +56,7 @@ would also reverse R8 of the country split ([`fe-country-split-plan.md`](fe-coun
 the base product owns the site's container.
 
 **A chart of its own.** The site and the backend it reads must be the same version. One chart
-gives one pin, which `staging-bump.py` and `promote.py` already move. A second chart would be a
+gives one pin, which the staging bump and `promote.py` already move. A second chart would be a
 second pin that can disagree with the first.
 
 ## 3. The shape
@@ -80,7 +82,7 @@ editor ─ https://<admin host> ─ Traefik ─ Ingress (proxy) ─ the chart's 
   release.
 - **One tag for both images.** `info.image.tag` is empty by default and then takes the app
   image's tag. The helper `niord.image` refuses an empty tag for every component but `app`
-  today, so it learns this one case. `staging-bump.py` moves two fields (the chart pin and
+  today, so it learns this one case. The staging bump moves two fields (the chart pin and
   `app.image.tag`) and `promote.py` three (those and the Postgres image tag). Neither changes.
 - **Off by default.** The base product publishes no image of the site for the generic deployable,
   so the chart's own defaults render no `info` component. An environment turns it on.
@@ -225,9 +227,9 @@ chart with each staging values file plus the block of step 6, read for five thin
 image reference (registry, repository, the app's tag), the pull secret on its pod, the Service's
 type, the Ingress's host, and that the chart's defaults alone render no site.
 
-**Why the block has a merge request of its own (step 6).** `staging-bump.py` rebuilds its branch
-`staging/<base>` from `main` on every run and force-pushes it, so a commit added there by hand is
-lost on a rerun. A separate merge request also keeps a failure of the site, such as a refused
+**Why the block has a merge request of its own (step 6).** The staging bump rebuilds its branch
+(`staging/<base>` then, `staging/bump` since 2026-11-19) from `main` on every run and force-pushes
+it, so a commit added there by hand is lost on a rerun. A separate merge request also keeps a failure of the site, such as a refused
 Ingress, from showing as a failed bump. Nothing forces the two together: a chart older than
 4.0.N ignores the block, and the site's image tag follows `app.image.tag`, which only ever moves
 with the chart pin. The one case to avoid by hand is setting `info.image.tag` to an image built

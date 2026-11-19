@@ -47,7 +47,7 @@ backend path.
 | 3. A country image follows a green pin bump on its `main` | niord-dk #1, niord-gl #1, `ci.yml` + `image.yml` | 2026-10-08 |
 | 4a. Both Argo CD controllers poll GitLab every minute | devops-shared, `argocd/test/` | 2026-10-08, on the test cluster |
 | 5. The integration job runs Failsafe only and pulls its container images while Maven compiles | niord, `be-ci.yml`, `be/test-it`, `be/scripts/it-images.sh` | 4.0.64 |
-| 17. A staging deploy in one command | devops-niord, `scripts/staging-bump.py` | 2026-10-08 |
+| 17. A staging deploy in one command (one button since 2026-11-19) | devops-niord, `scripts/staging-bump.py`; since 2026-11-19 the promote job, `TARGET=staging` | 2026-10-08 |
 
 **Step 1.** `be-ci.yml`'s `push` filter excludes `be/docs/**` and Markdown under `be/`
 (re-including `src/test/resources`, where one fixture lives) and includes `publish.yml`;
@@ -97,6 +97,13 @@ CI and the Image run, reads the tags, writes the four pins into a branch with
 hand. `--dry-run`, `--country`, `--no-wait`, `--timeout`; an already-pinned country reuses
 its newest green image or dispatches `image.yml`; a red CI stops it before the deploy repo
 is touched. First run: both countries 4.0.61 → 4.0.66, images `4.0.66.6`, nine minutes.
+
+*Since 2026-11-19 the script is gone.* devops-niord's promote job does the staging bump with
+`TARGET=staging` (`scripts/staging_bump.py`), from the country images in Harbor: the highest
+base that is a `v4.0.N` tag here and that both countries have an image of, and the newest
+image of each on it. It opens the merge request on `staging/bump`, and a person merges it.
+Image runs again after every green CI run on a country's `main`, so there is nothing to
+dispatch or wait for. First run: both countries 4.0.182 → 4.0.214.
 
 ---
 
@@ -162,5 +169,5 @@ for a private repository), Renovate and per-publish country pipelines (decided
 - `.github/workflows/be-ci.yml` (its header explains steps 1, 2 and 5), `publish.yml`.
 - `SIFA-DK/niord-dk`, `SIFA-DK/niord-gl`: `.github/workflows/ci.yml`, `image.yml`.
 - `devops-shared/argocd/test/` (`argocd-cm.yaml`, the two ApplicationSets), `runbooks/bootstrap.md`; the closed draft for the webhooks that were not built.
-- `devops-niord/scripts/staging-bump.py`, `tests/test_staging_bump.py`, README "Moving staging to a new base: one command".
+- `devops-niord`: the promote job in `.gitlab-ci.yml` and `scripts/staging_bump.py` (`scripts/staging-bump.py` until 2026-11-19), `tests/test_staging_bump.py`, README "Moving staging to a new base: one button".
 - `be/docs/cicd/design.md` §3–§7, `implementation-plan.md` *The order of work*; `docs/renovate-plan.md`.

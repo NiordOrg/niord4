@@ -7,7 +7,7 @@
 
 ## The idea in one paragraph
 
-Every code change, once merged, is built, fully tested and published automatically. Each country takes the new version through an **update request** that is never merged by itself: a person reviews and merges it. From there the country's **staging** environment follows (by itself from step D of the implementation plan; until then its pins move by hand). Production is updated only when a human presses a button, and that button produces a reviewable summary of exactly what will change before anything happens. The human actions are: **merging the change**; per country, **the merge of the update**; and **approving a production release**. Everything in between is automation that leaves a written trail.
+Every code change, once merged, is built, fully tested and published automatically. Each country takes the new version through an **update request** that is never merged by itself: a person reviews and merges it. From there the country's **staging** environment follows: one button opens the merge request that moves its pins, and a person merges it (since 2026-11-19; until then the pins moved by hand). Whether staging should follow by itself, with no merge, is still open. Production is updated only when a human presses a button, and that button produces a reviewable summary of exactly what will change before anything happens. The human actions are: **merging the change**; per country, **the merge of the update**; and **approving a production release**. Everything in between is automation that leaves a written trail.
 
 A few words used throughout:
 
