@@ -30,7 +30,9 @@ import static io.restassured.RestAssured.given;
  * the augmentation itself, exercising the cases that matrix does <em>not</em>: it verifies that the filter
  * can only ever <em>add</em> the roles the bearer token actually carries on the exact domain named in the
  * {@code NiordDomain} header, and can never be abused to escalate a caller beyond their tier or to mint roles
- * by naming an unrelated or unknown domain.
+ * by naming an unrelated or unknown domain. The fail-closed cases are driven with {@code testuser}, whose only role
+ * is on {@code niord-nw}: the base client {@code niord-client-master} holds {@code user} in its ladder, as every
+ * domain client does, so a base editor, admin or sysadmin is a user in every domain and needs no header for it.
  *
  * <p>The filter augments only an <em>authenticated</em> bearer token, and only when the {@code NiordDomain}
  * header is present and names a stored, active Niord domain; it then adds exactly
@@ -38,15 +40,17 @@ import static io.restassured.RestAssured.given;
  * an <em>unknown</em> client name resolves to no entry in {@code resource_access} and yields an empty role
  * list (fail-closed, no roles added); a token that does not already carry a role on the named domain cannot
  * acquire it (no escalation); and roles the token does carry on a Keycloak client that is <em>not</em> a Niord
- * domain — the SPA client {@code niord-web} defines the same role names — are not added either.
+ * domain — the SPA client {@code niord-web} defines the same role names — are not added either. That last case is
+ * held by {@code NiordDomainFilterTest} ({@code rolesOnAClientThatIsNotADomain_areNotAdded}): no user of the test
+ * realm holds a role on {@code niord-web} that its base roles do not already give.
  *
  * <p>Role matrix the assertions are reasoned from (see {@link KeycloakTestTokens}):
  * <table>
  *   <caption>Effective client roles per seeded identity</caption>
  *   <tr><th>identity</th><th>{@code niord-client-master}</th><th>{@code niord-nw}</th></tr>
- *   <tr><td>sysadmin</td><td>{@code sysadmin,admin,editor}</td><td>{@code sysadmin,admin,editor,user}</td></tr>
- *   <tr><td>testadmin (admin)</td><td>{@code admin,editor}</td><td>{@code admin,editor,user}</td></tr>
- *   <tr><td>testeditor (editor)</td><td>{@code editor}</td><td>{@code editor,user}</td></tr>
+ *   <tr><td>sysadmin</td><td>{@code sysadmin,admin,editor,user}</td><td>{@code sysadmin,admin,editor,user}</td></tr>
+ *   <tr><td>testadmin (admin)</td><td>{@code admin,editor,user}</td><td>{@code admin,editor,user}</td></tr>
+ *   <tr><td>testeditor (editor)</td><td>{@code editor,user}</td><td>{@code editor,user}</td></tr>
  *   <tr><td>testuser (user)</td><td>(none)</td><td>{@code user}</td></tr>
  * </table>
  *
@@ -64,7 +68,7 @@ class DomainAugmentorEdgeCaseITTest extends ITTest {
 
     /** The domain whose role chain the augmentor legitimately grants when named in the header. */
     private static final String NW_DOMAIN = "niord-nw";
-    /** The base bearer-only client; defines no {@code user} role, so it never grants USER on its own. */
+    /** The base bearer-only client; its roles count in every domain, its ladder ending in {@code user}. */
     private static final String MASTER_DOMAIN = "niord-client-master";
     /** The SPA client: it defines user/editor/admin/sysadmin roles of its own but is not a Niord domain. */
     private static final String SPA_CLIENT = "niord-web";
@@ -95,7 +99,7 @@ class DomainAugmentorEdgeCaseITTest extends ITTest {
 
     @Test
     void editorNamingMasterDomain_cannotReachAdminEndpoint_403() {
-        // niord-client-master grants testeditor only {editor}. Naming the base client adds nothing the
+        // niord-client-master grants testeditor only {editor, user}. Naming the base client adds nothing the
         // token did not already carry, so admin remains out of reach -> 403.
         as(accessToken("editor"), MASTER_DOMAIN).when().get(ADMIN_ENDPOINT).then().statusCode(403);
     }
@@ -133,30 +137,41 @@ class DomainAugmentorEdgeCaseITTest extends ITTest {
     }
 
     @Test
-    void sysadminNamingUnknownDomain_getsNoRoles_userEndpoint403() {
-        // sysadmin's niord-client-master roles are {sysadmin, admin, editor} — notably NOT user. Because
-        // niord-client-master defines no user role, the only way to USER is via the augmentor; an unknown
-        // domain adds nothing, so even the all-powerful token is rejected by the USER endpoint -> 403.
-        as(accessToken(), UNKNOWN_DOMAIN).when().get(USER_ENDPOINT).then().statusCode(403);
+    void sysadminNamingUnknownDomain_keepsItsBaseRoles_userEndpoint200() {
+        // An unknown domain adds nothing, and takes nothing away: the sysadmin's niord-client-master roles
+        // are {sysadmin, admin, editor, user}, so the USER endpoint answers 200 on the base roles alone.
+        as(accessToken(), UNKNOWN_DOMAIN).when().get(USER_ENDPOINT).then().statusCode(200);
     }
 
     @Test
-    void sysadminNamingTheSpaClient_getsNoRolesFromIt_userEndpoint403() {
-        // The token is issued through niord-web, so it carries resource_access.niord-web roles, whose
-        // composites include user. niord-web is a Keycloak client but not a Niord domain, so naming it in
-        // the header must add nothing: the base roles {sysadmin, admin, editor} hold no user -> 403.
-        as(accessToken(), SPA_CLIENT).when().get(USER_ENDPOINT).then().statusCode(403);
+    void sysadminNamingTheSpaClient_keepsItsBaseRoles_userEndpoint200() {
+        // niord-web is a Keycloak client but not a Niord domain, so naming it adds nothing; the base roles
+        // already hold user. (That the SPA client's own roles are not added is NiordDomainFilterTest's.)
+        as(accessToken(), SPA_CLIENT).when().get(USER_ENDPOINT).then().statusCode(200);
+    }
+
+    @Test
+    void editorNamingADomainItHoldsNoRoleIn_isAUserThere_userEndpoint200() {
+        // testeditor holds no role on niord-nm's client; its base editor role holds user, so it is a user in
+        // niord-nm too, as a base role counts in every domain (the operators' guide).
+        as(accessToken("editor"), "niord-nm").when().get(USER_ENDPOINT).then().statusCode(200);
+    }
+
+    @Test
+    void editorNamingADomainItHoldsNoRoleIn_isNoAdminThere_403() {
+        // The base roles grant user and editor, never more: still no admin in niord-nm.
+        as(accessToken("editor"), "niord-nm").when().get(ADMIN_ENDPOINT).then().statusCode(403);
     }
 
     @Test
     void sysadminNamingNwDomain_getsUserRole_userEndpoint200() {
-        // Positive contrast: naming niord-nw adds {user} to the sysadmin token -> USER endpoint 200.
+        // Naming niord-nw adds the domain's roles to the sysadmin token -> USER endpoint 200.
         as(accessToken(), NW_DOMAIN).when().get(USER_ENDPOINT).then().statusCode(200);
     }
 
     // ========================================================================================== //
     // NO HEADER — the augmentor needs the NiordDomain header to act at all. Without it, only the base
-    // niord-client-master roles apply (which never include user).
+    // niord-client-master roles apply: user for a base editor, admin or sysadmin, nothing for testuser.
     // ========================================================================================== //
 
     @Test
@@ -167,10 +182,15 @@ class DomainAugmentorEdgeCaseITTest extends ITTest {
     }
 
     @Test
-    void sysadminWithoutDomainHeader_getsNoUserRole_userEndpoint403() {
-        // Even the sysadmin token cannot reach the USER endpoint without the NiordDomain header, because
-        // niord-client-master defines no user role and the augmentor is the only source of it.
-        given().auth().oauth2(accessToken()).when().get(USER_ENDPOINT).then().statusCode(403);
+    void sysadminWithoutDomainHeader_isAUserOnItsBaseRoles_userEndpoint200() {
+        // No header, so the augmentor does not run; the sysadmin's niord-client-master roles hold user.
+        given().auth().oauth2(accessToken()).when().get(USER_ENDPOINT).then().statusCode(200);
+    }
+
+    @Test
+    void editorWithoutDomainHeader_isAUserOnItsBaseRoles_userEndpoint200() {
+        // The base editor role holds user: a base editor is a user with no domain chosen.
+        given().auth().oauth2(accessToken("editor")).when().get(USER_ENDPOINT).then().statusCode(200);
     }
 
     // ========================================================================================== //

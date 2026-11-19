@@ -28,10 +28,10 @@ password for a user that was never created, would stop the app at its next start
 {{- end }}
 {{- /*
 The superuser's Secret is this release's Postgres' own, and an environment that names it names the
-app's too: the chart's default user and password are for local runs. One Secret under both names
-would make the app the superuser again without saying so. Without Secrets the two default users
-must differ for the same reason. The database's name reaches the init container's psql, so where
-that container runs it is a plain name, as postgres.databases are.
+app's too: the chart's default user and password are for local runs. One Secret under both names,
+or the app's alone (below), would make the app the superuser again without saying so. Without
+Secrets the two default users must differ for the same reason. The database's name reaches the
+init container's psql, so where that container runs it is a plain name, as postgres.databases are.
 */ -}}
 {{- $pgAdmin := .Values.postgres.admin }}
 {{- if and $pgAdmin.existingSecret (not .Values.postgres.enabled) }}
@@ -41,7 +41,17 @@ that container runs it is a plain name, as postgres.databases are.
 {{- fail "postgres.admin.existingSecret needs postgres.existingSecret: an environment that names the superuser's Secret names the app's user too, never the chart's default user and password" }}
 {{- end }}
 {{- if and $pgAdmin.existingSecret (eq (toString $pgAdmin.existingSecret) (toString .Values.postgres.existingSecret)) }}
-{{- fail (printf "postgres.admin.existingSecret and postgres.existingSecret both name %q: the app's user is another user than the superuser, in a Secret of its own. To keep one account for both, leave postgres.admin.existingSecret empty" (toString $pgAdmin.existingSecret)) }}
+{{- fail (printf "postgres.admin.existingSecret and postgres.existingSecret both name %q: the app's user is another user than the superuser, in a Secret of its own" (toString $pgAdmin.existingSecret)) }}
+{{- end }}
+{{- /*
+The app's Secret alone, in a release that renders the app and its own Postgres, made that one
+Secret the superuser's and the app's: the app connected as the superuser of its database server
+(F-X100). Every environment has moved to a user of its own, so the form is refused. A release on a
+database of someone else's (postgres.host, or postgres.enabled false) is given its user and is not
+concerned, and neither is a release without the app (an infra release).
+*/ -}}
+{{- if and .Values.app.enabled .Values.postgres.enabled (not .Values.postgres.host) .Values.postgres.existingSecret (not $pgAdmin.existingSecret) }}
+{{- fail "postgres.existingSecret is named without postgres.admin.existingSecret: one Secret for both would make the app connect as the superuser of this release's Postgres. Seal a second Secret for the superuser and name it in postgres.admin.existingSecret (README, \"The database users\")" }}
 {{- end }}
 {{- if and (include "niord.postgres.separateAdmin" .) (not $pgAdmin.existingSecret) (eq (toString .Values.postgres.username) (toString $pgAdmin.username)) }}
 {{- fail (printf "postgres.username and postgres.admin.username are both %q: the app's user (postgres.username) is another user than the superuser (postgres.admin.username)" (toString .Values.postgres.username)) }}
@@ -102,8 +112,48 @@ the app validate tokens of a realm that does not exist and the readiness probe w
 {{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "dev") (ne (toString .Values.keycloak.realm) "niord") }}
 {{- fail (printf "keycloak.realm is %q: dev mode imports the test realm, which is named niord; another name needs keycloak.mode production" (toString .Values.keycloak.realm)) }}
 {{- end }}
+{{- /*
+Dev mode (the test realm with its users and any redirect, the niord-web-admin client, admin/admin)
+is for a Keycloak the browser reaches on this workstation. Elsewhere it is refused unless the
+environment says so (keycloak.devModeOffLocalhost): staging and production run production mode or a
+shared Keycloak, and a values file that forgets keycloak.mode must not fall back to dev. A value
+missing from an older release's values is nil, so the guard applies; a string such as "false" would
+read as true and switch the guard off, so it fails.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.keycloak.devModeOffLocalhost) (kindIs "bool" .Values.keycloak.devModeOffLocalhost)) }}
+{{- fail (printf "keycloak.devModeOffLocalhost is %q: it is true or false" (toString .Values.keycloak.devModeOffLocalhost)) }}
+{{- end }}
+{{- if and .Values.keycloak.enabled (eq (toString .Values.keycloak.mode) "dev") (not .Values.keycloak.devModeOffLocalhost) }}
+{{- range $name := list "externalBaseUri" "externalKeycloakUrl" }}
+{{- $host := regexReplaceAll ":[0-9]+$" (lower (index (urlParse (toString (index $.Values $name))) "host")) "" }}
+{{- if not (has $host (list "localhost" "127.0.0.1" "[::1]")) }}
+{{- fail (printf "keycloak.mode is dev with %s on %q: dev mode gives Keycloak the test realm, its users and admin/admin, and is for this workstation only. Staging and production set keycloak.mode production with keycloak.existingSecret; a test environment that wants dev mode sets keycloak.devModeOffLocalhost true" $name $host) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- /*
+keycloak.testUsers (values.yaml) keeps the test users in a production-mode realm. It is a boolean or
+unset (an older release's values: no users, the safe side): a string such as "no" would read as true
+and give the realm users whose passwords are public.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.keycloak.testUsers) (kindIs "bool" .Values.keycloak.testUsers)) }}
+{{- fail (printf "keycloak.testUsers is %q: it is true or false" (toString .Values.keycloak.testUsers)) }}
+{{- end }}
 {{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "production") (not .Values.keycloak.existingSecret) }}
 {{- fail "keycloak.mode production needs keycloak.existingSecret: the bootstrap admin comes from the environment's Secret, never from keycloak.adminUser/adminPassword" }}
+{{- end }}
+{{- /*
+Production mode is for staging and production, whose database credentials are Secrets of the
+environment's: the chart's default users and passwords are printed in this repository (F-X76).
+A release in production mode that would render the app's database Secret from postgres.username/
+password fails instead. That one check covers the others: with postgres.existingSecret named, the
+superuser's Secret is rendered only where postgres.admin.existingSecret is named too
+(niord.postgres.separateAdmin), and Keycloak's database Secret is refused above where the
+superuser's is named. The test is the mode and not keycloak.enabled: an app-only release on a shared
+Keycloak that sets production mode is held to it as well.
+*/ -}}
+{{- if and (eq (toString .Values.keycloak.mode) "production") (or .Values.app.enabled .Values.postgres.enabled) (not .Values.postgres.existingSecret) }}
+{{- fail "keycloak.mode production needs postgres.existingSecret: a staging or production release takes its database users from the environment's Secrets, never from postgres.username/password, postgres.admin or keycloak.db (README, \"The database users\")" }}
 {{- end }}
 {{- /*
 keycloak.database goes into the init container's SQL and Keycloak's JDBC URL, so it is a plain
@@ -162,5 +212,84 @@ and leaves the pod restarting.
 {{- end }}
 {{- if not (regexMatch "^[A-Za-z0-9 .:/*'_-]+$" (toString .Values.info.teaserFrameAncestors)) }}
 {{- fail (printf "info.teaserFrameAncestors is %q: it is a CSP frame-ancestors source list — *, 'self', 'none' or origins such as https://www.example.org, separated by spaces, not commas — and not empty; the container refuses to start with any other value" (toString .Values.info.teaserFrameAncestors)) }}
+{{- end }}
+{{- end }}
+{{- /*
+smtp.requireRelay (values.yaml): the environment's mail must reach people. MailHog accepts every
+mail and delivers none, without an error the app could see, so where the values say the mail must
+reach people the release renders no MailHog and the app's smtp.host names no MailHog Service of this
+chart (<fullname>-smtp, a name without a dot, e.g. staging-infra-niord-smtp). An empty smtp.host or
+smtp.port with MailHog off already fails in niord.smtp.host/port (_helpers.tpl). The value is a
+boolean or unset (an older release's values: false); a string such as "false" would read as true,
+so a string fails.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.smtp.requireRelay) (kindIs "bool" .Values.smtp.requireRelay)) }}
+{{- fail (printf "smtp.requireRelay is %q: it is true or false" (toString .Values.smtp.requireRelay)) }}
+{{- end }}
+{{- if .Values.smtp.requireRelay }}
+{{- if .Values.mailhog.enabled }}
+{{- fail "smtp.requireRelay is true and mailhog.enabled is true: an environment whose mail must reach people renders no MailHog. Set mailhog.enabled false and name the mail relay in smtp.host and smtp.port" }}
+{{- end }}
+{{- if and .Values.app.enabled (regexMatch "^[^.]*-smtp$" (toString .Values.smtp.host)) }}
+{{- fail (printf "smtp.requireRelay is true and smtp.host is %q, the name of a MailHog Service of this chart (<fullname>-smtp): name the mail relay" (toString .Values.smtp.host)) }}
+{{- end }}
+{{- end }}
+{{- /*
+smtp.tls and smtp.existingSecret (values.yaml): TLS to the mail relay and its login. The backend
+version whose mail session carries them reads niord.smtp.tls as none, starttls or ssl in any case,
+so the chart does too (an older app image ignores both values; values.yaml); a value missing
+from an older release's values is none. Both are for a relay: this release's MailHog (smtp.host
+empty) asks for no login and offers no TLS, so with it either value would point at the wrong server
+and, for TLS, fail every mail.
+*/ -}}
+{{- $smtpTls := lower (toString (.Values.smtp.tls | default "none")) }}
+{{- if not (has $smtpTls (list "none" "starttls" "ssl")) }}
+{{- fail (printf "smtp.tls is %q: it is none, starttls (usually port 587) or ssl (usually port 465)" (toString .Values.smtp.tls)) }}
+{{- end }}
+{{- if not (or (kindIs "invalid" .Values.smtp.existingSecret) (kindIs "string" .Values.smtp.existingSecret)) }}
+{{- fail (printf "smtp.existingSecret is %q: it is the name of a Secret with the keys username and password, or empty" (toString .Values.smtp.existingSecret)) }}
+{{- end }}
+{{- if and .Values.app.enabled .Values.mailhog.enabled (not .Values.smtp.host) }}
+{{- if .Values.smtp.existingSecret }}
+{{- fail "smtp.existingSecret is set and the app sends to this release's MailHog (smtp.host empty), which asks for no login: name the mail relay in smtp.host and smtp.port, or leave smtp.existingSecret empty" }}
+{{- end }}
+{{- if ne $smtpTls "none" }}
+{{- fail (printf "smtp.tls is %q and the app sends to this release's MailHog (smtp.host empty), which offers no TLS: name the mail relay in smtp.host and smtp.port, or leave smtp.tls none" $smtpTls) }}
+{{- end }}
+{{- end }}
+{{- /*
+app.settings (values.yaml): settings this environment pins, each rendered as an environment variable
+named like the setting key. A setting key starts with a lower-case letter, so no key can take the
+name of a variable the chart sets itself (SPRING_*, NIORD_*, JAVA_TOOL_OPTIONS). It has no dot: a
+dotted variable name is also a Spring property name, which Spring looks up before the upper-case
+variable, so spring.datasource.username would outrank the Secret's and server.port the ConfigMap's;
+and the one dotted setting, niord.home, is the chart's (NIORD_HOME, the app's volume). For the same
+reason no key starts with the first part of a Spring property the app is configured by, then an
+underscore (spring_datasource_url reads as spring.datasource.url). authServerUrl is the chart's own
+(the in-cluster Keycloak), a key also set in secom.settings would render two variables of one name,
+and a password, secret or token reaches the app from a Secret, never from values, which an
+environment keeps in its repository.
+*/ -}}
+{{- if not (or (kindIs "invalid" .Values.app.settings) (kindIs "map" .Values.app.settings)) }}
+{{- fail "app.settings is not a map: it maps setting keys to their values, e.g. baseUri: https://niord.example.org" }}
+{{- end }}
+{{- range $key, $value := (.Values.app.settings | default dict) }}
+{{- if not (regexMatch "^[a-z][A-Za-z0-9_-]*$" $key) }}
+{{- fail (printf "app.settings.%s is not a setting key that can be pinned: it starts with a lower-case letter, followed by letters, digits, '_' or '-'. A dotted name is a Spring property, which the chart's ConfigMap and Secrets set, and niord.home is the chart's (NIORD_HOME)" $key) }}
+{{- end }}
+{{- if regexMatch "^(spring|server|management|logging|niord)_" $key }}
+{{- fail (printf "app.settings.%s reads as a Spring property (an underscore stands for a dot), which the chart's ConfigMap and Secrets set: it is not a setting of the Settings page" $key) }}
+{{- end }}
+{{- if regexMatch "(?i)password|secret|token" $key }}
+{{- fail (printf "app.settings.%s looks like a secret: a secret reaches the app from a Secret, never from values" $key) }}
+{{- end }}
+{{- if eq $key "authServerUrl" }}
+{{- fail "app.settings.authServerUrl: the chart sets authServerUrl itself, to the Keycloak the app reaches in the cluster" }}
+{{- end }}
+{{- if not (or (kindIs "invalid" $value) (kindIs "string" $value) (kindIs "bool" $value) (kindIs "float64" $value) (kindIs "int64" $value) (kindIs "int" $value)) }}
+{{- fail (printf "app.settings.%s is not a text, a number or true/false: a pinned setting is one value" $key) }}
+{{- end }}
+{{- if and (not (kindIs "invalid" $value)) (ne (toString $value) "") $.Values.secom.enabled (index ($.Values.secom.settings | default dict) $key) }}
+{{- fail (printf "app.settings.%s is also set in secom.settings: set it in one place" $key) }}
 {{- end }}
 {{- end }}

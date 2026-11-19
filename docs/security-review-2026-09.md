@@ -427,12 +427,37 @@ still name the WMS over plain http (N-20).
    object. The databases Job, which also connects to the application's database as the superuser,
    was tried the same way and needed nothing. SECREV-4 is closed; the stagings run the script
    without the fix until they take a base version that carries it.
+   The one-account form refused in the chart on 2026-11-18 (F-X100): a release that renders the
+   application and its own Postgres and names `postgres.existingSecret` without
+   `postgres.admin.existingSecret` fails the render, so values in the parked production shape can no
+   longer start the application as the superuser. F-X100 stays deferred until production exists.
 2. A chart value that renders the production realm without the test users (F-X92).
+   Done on 2026-11-18: `keycloak.testUsers`, default false, renders the production realm without
+   users; a realm already made keeps its users until they are removed by hand.
 3. The guards (F-X76, F-X92): the chart refuses production mode with a default database credential,
    and the deploy repository's validator refuses a staging or production environment that renders dev
    mode or a default credential of the chart.
+   The chart's half for dev mode, done on 2026-11-18: dev mode with `externalBaseUri` or
+   `externalKeycloakUrl` off `localhost`, `127.0.0.1` and `[::1]` fails the render unless
+   `keycloak.devModeOffLocalhost` is true.
+   The chart's half for the database credentials, done on 2026-11-18: production mode without
+   `postgres.existingSecret` fails the render, so no Secret is made from the chart's default users
+   there. The deploy repository's validator is still open.
+   MailHog in production (F-X116), done in the chart on 2026-11-18: the value `smtp.requireRelay`
+   refuses MailHog and a MailHog Service as the relay; production's values set it at go-live.
+   The outbound mail's login (F-X76), the chart's half done on 2026-11-18: `smtp.existingSecret`
+   names a Secret with the relay's user name and password, passed to the application from that
+   Secret, and `smtp.tls` names STARTTLS or implicit TLS; both are inert when unset. The
+   backend's half, the mail session's login and TLS, is separate: an app image without it ignores
+   both values and sends in clear text with no login. Whether production's relay needs them is
+   still the host's answer.
 4. The read of the running realms and of the stagings' settings, from the jump server (F-X70, F-X72,
    the realm pattern, N-20), and of the administration host's `Strict-Transport-Security` (F-X96).
+   The public site's half of F-X96, done on 2026-11-18: its container sends
+   `Strict-Transport-Security: max-age=31536000` (this host alone) on every response where a TLS
+   front reports https, and hides the backend's copy. The administration host's header is the
+   backend's own, Spring Security's default on a request it holds for secure; `WebAppITTest` pins
+   that rule, and the read on the stagings is still open.
 5. F-X157's check into the SECOM cutover runbook, and the countries' default WMS address on https
    (N-20).
 6. Someone who watches Keycloak's and nginx's releases: both pins move by hand (F-X114, F-X116).
@@ -583,7 +608,10 @@ Operators also notice:
   override once Boot manages those releases or later ones.
 - **Dependabot** opens security-update pull requests only, one grouped pull request per ecosystem
   (Maven, npm, GitHub Actions; the SECOM test client's Maven updates in one of their own), and no
-  version updates (`.github/dependabot.yml`).
+  version updates (`.github/dependabot.yml`). Alerts and security updates are settings of the repository
+  and do not move with it: in this public repository security updates were switched on on 2026-11-19
+  (alerts were already on). Read them again after any move or change of owner
+  (`gh api repos/<owner>/<repo>/automated-security-fixes` answers `"enabled": true`).
 - **Publishing** starts only from a push to `main` in this repository, and a break-glass run only from
   `main`. The `harbor` environment already limits its deployments to `main` (checked 2026-09-25); a
   required reviewer on it is the owner's decision. The publish job's Harbor credentials are secrets of
@@ -611,8 +639,8 @@ section:
 The same file's SECAUD-12 now carries F-X64 as accepted; SECAUD-15, MASSASSIGN-2, MASSASSIGN-3 and
 RENDER6 are removed, because the sweep closed them; and U6, SECAUD-9, LUCENE-2, TMPL6, PORT-5 and REPO3
 now describe the code as the sweep left it. Since then LUCENE-2 was fixed and removed from that file,
-and in November 2026 TMPL6 and REPO3 were too (what is still open of REPO3, a file name with a
-semicolon on the public site, is REPO6 there now); and the open RENDER6 there now (the message-list
+and in November 2026 TMPL6 and REPO3 were too (what is still open of REPO3, a link stored earlier
+with a raw semicolon, is REPO6 there now); and the open RENDER6 there now (the message-list
 PDF's labels and time stamp) is a later, unrelated entry under the reused code.
 
 New items in [`fe/docs/backlog.md`](../fe/docs/backlog.md):
@@ -633,6 +661,6 @@ rulings.
 |---|---|---|---|
 | 1 | Sanitising message HTML on the server (F-X112, F-X145, F-X146), and escaping dictionary text in the FreeMarker templates (N-04) | Clean subscriber mails with the allow-list the comment mail already uses; stored message HTML stays as it is. N-04 is accepted: only a sysadmin can upload dictionaries since P08. | `MailHtml` holds both allow-lists. A comment keeps the comment mail's list (formatting and links; no classes, images, styles or scripts). The texts of each message — title, vicinity, publications, source, the subject and details of each part, the description of each reference, the caption of each attachment — are cleaned before a mailing-list template runs, and before `MessageMailService` renders the mail dialog's mail and the message in a comment mail. The ruling is about active and foreign content, not the message's formatting, so a message text keeps, on top of the comment list, the classes of the frontends' message-HTML vocabulary (`fe/shared-html/message-html-classes.ts`, mirrored in `MailHtml` and held to it by `MailHtmlTest`) on the elements they are meant for, and images from the backend's own `baseUri` origin with their alternative text and a plain-length size; any other class, foreign or `data:` images, styles and scripts go. The path, width and height of an attachment, which the templates print into the attributes of its image, are checked there too, and the SafetyNET cancellation mail escapes the SafetyNET id. `MessageMailService` escapes the recipient's and the sender's names, which `message-mail.ftl` prints into the greeting and the regards, before it renders the mail, so every stored copy of the template is covered. F-X146 is fixed. |
 | 2 | Validating a message's short id when it is saved (F-X21) | Refuse `<`, `>`, `"` and `&` in a message short id when a message is saved (400). Formats with slashes and spaces, such as `FA/EK-D-371 2017` and `A/1 2024`, stay valid. | Creating and updating a message refuse such a short id with 400, and such a message id of a reference, which names another message by its short id; an id the stored message already has is kept, so a message saved before stays editable. The message import and the message-archive import refuse them too. Ids Niord generates are not checked. The Niord-integration import, which reads another Niord server rather than a request, is not checked. Accepted edge: a copy made with a reference to a message whose short id was saved with such a character before the rule is refused when it is saved; no short-id format in use produces one. The editor shows its general save error for the 400, not the reason (`fe/docs/backlog.md`, Editor). |
-| 3 | Referencing GitHub's own actions by commit SHA, and a Dependabot configuration (F-X108) | `actions/*` on major tags is accepted. Dependabot alerts and security updates are switched on (done on 2026-09-26). | `.github/dependabot.yml` opens no version-update pull requests and groups the security updates of each ecosystem into one pull request: Maven under `be/` (the SECOM test client, outside the reactor, in a pull request of its own), npm under `fe/`, GitHub Actions. |
+| 3 | Referencing GitHub's own actions by commit SHA, and a Dependabot configuration (F-X108) | `actions/*` on major tags is accepted. Dependabot alerts and security updates are switched on (done on 2026-09-26; in the public repository again on 2026-11-19). | `.github/dependabot.yml` opens no version-update pull requests and groups the security updates of each ecosystem into one pull request: Maven under `be/` (the SECOM test client, outside the reactor, in a pull request of its own), npm under `fe/`, GitHub Actions. |
 | 4 | Per-country database users (F-X100) | Stays deferred to the go-live recheck, with a narrower goal: the application connects as a non-superuser owner of its own database. One Postgres per country (design §6) already separates DK and GL. | Section 5. |
 | 5 | Who may receive a message mail or a comment mail (F-X68, N-07) | Accepted as it is: own domain only; attributable (Reply-To, the scheduled-mail record, the log); comment mails capped at 20 single mailboxes. | Section 6. |

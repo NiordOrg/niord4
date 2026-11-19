@@ -348,8 +348,8 @@ class MessageRestServiceITTest extends ITTest {
     void messageHistoryWithBareTokenButNoDomainIsForbidden() {
         String uid = createCommittedDraft("IT history no-domain");
 
-        // The @RolesAllowed(USER) check needs the user role, which the bare token only carries once a
-        // NiordDomain is supplied; without it the request is rejected with 403.
+        // The bare sysadmin token passes @RolesAllowed(USER) on its base roles, but the history takes the
+        // domain gate of an edit: without a NiordDomain there is no current domain, so the request is 403.
         given().auth().oauth2(accessToken())
                 .when().get("/rest/messages/message/" + uid + "/history")
                 .then().statusCode(403);

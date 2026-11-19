@@ -349,7 +349,8 @@ class PublicationRestServiceITTest extends ITTest {
 
     @Test
     void searchDetails_withoutDomainHeaderForbidsEditorWith403() {
-        // No NiordDomain header -> the augmentor never grants 'user', so even an editor is below the bar.
+        // No NiordDomain header: the editor is still a user and an editor on niord-client-master's roles,
+        // but /search-details asks for admin, which an editor never holds -> 403 (not the missing header).
         given().auth().oauth2(accessToken("editor")).when().get(SEARCH_DETAILS).then().statusCode(403);
     }
 

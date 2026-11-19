@@ -141,7 +141,8 @@ http://{{ include "niord.keycloak.host" . }}:{{ .Values.keycloak.service.port }}
 
 {{/*
 The realm Keycloak imports (keycloak.mode, values.yaml). dev: files/niord-realm.json as it is.
-production: the same realm, users included, without the niord-web-admin client and its service
+production: the same realm without its users (unless keycloak.testUsers, which keeps the test
+users: their passwords are in this public repository), without the niord-web-admin client and its service
 account (unused: the app's admin calls carry the signed-in user's own token) and without any
 client secret (the file's are masked placeholders, so Keycloak generates new ones), and with
 niord-web accepting only redirects to externalBaseUri, from its origin, with PKCE, and no
@@ -180,9 +181,11 @@ password grant (which asks for neither a redirect nor PKCE).
 {{- end -}}
 {{- $_ := set $realm "clients" $clients -}}
 {{- $users := list -}}
+{{- if .Values.keycloak.testUsers -}}
 {{- range $realm.users -}}
 {{- if ne (default "" .serviceAccountClientId) "niord-web-admin" -}}
 {{- $users = append $users . -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- $_ := set $realm "users" $users -}}
@@ -322,9 +325,9 @@ niord.postgres.secretName is the user the app connects as.
 Whether the superuser of this release's Postgres has a Secret of its own (values.yaml,
 postgres.admin), apart from the app's. True for a release that renders Postgres and either names
 the superuser's Secret or names no Secret at all (the local default, two rendered Secrets). Not
-true for a release that names only postgres.existingSecret: until November 2026 that one Secret was the
-superuser's and the app's, and such an environment keeps running that way until its values name
-both. Renders "true" or nothing, for use in an if.
+true for a release that names only postgres.existingSecret: that one Secret is then the superuser's,
+which validate.yaml allows only in a release without the app (an infra release), since an app in
+it would connect as the superuser. Renders "true" or nothing, for use in an if.
 */}}
 {{- define "niord.postgres.separateAdmin" -}}
 {{- $admin := .Values.postgres.admin | default dict -}}

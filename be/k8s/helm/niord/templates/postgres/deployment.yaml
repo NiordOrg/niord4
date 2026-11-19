@@ -37,7 +37,8 @@ spec:
             {{- include "niord.containerSecurityContext" . | nindent 12 }}
           env:
             # The superuser, created on first start only (the Secret: postgres.admin.existingSecret,
-            # or postgres.existingSecret where the app still shares it).
+            # or postgres.existingSecret named alone, in a release without the app or whose app
+            # uses postgres.host).
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:

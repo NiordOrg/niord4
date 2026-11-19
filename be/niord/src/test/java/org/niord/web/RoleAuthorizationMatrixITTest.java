@@ -59,8 +59,8 @@ import static org.hamcrest.Matchers.is;
  * base roles come from {@code resource_access.niord-client-master.roles}; the
  * {@link org.niord.core.web.NiordDomainFilter} then <em>adds</em> the roles the
  * caller holds on the domain named in the {@code NiordDomain} header. Sending
- * {@code NiordDomain: niord-nw} therefore realizes each identity's full role chain (it is also the
- * only way to obtain the {@code user} role, which {@code niord-client-master} does not define). Crucially,
+ * {@code NiordDomain: niord-nw} therefore realizes each identity's full role chain (for {@code testuser}, whose
+ * roles are on {@code niord-nw} alone, it is the only way to the {@code user} role). Crucially,
  * the augmentor only <em>adds</em> the domain's roles — it never escalates beyond them — so the
  * {@code 403}s below also verify that the augmentor cannot be used to jump a tier.
  *

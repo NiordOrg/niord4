@@ -31,7 +31,7 @@
       "username": "testeditor",
       "sessionDomain": "niord-nw",
       "resourceAccess": {
-        "niord-client-master": ["editor"],
+        "niord-client-master": ["editor", "user"],
         "niord-nw": ["editor", "user"]
       }
     },
@@ -39,7 +39,7 @@
       "username": "testadmin",
       "sessionDomain": "niord-nw",
       "resourceAccess": {
-        "niord-client-master": ["admin", "editor", "publication-curate"],
+        "niord-client-master": ["admin", "editor", "publication-curate", "user"],
         "niord-nw": ["admin", "editor", "publication-curate", "user"]
       }
     },
@@ -61,7 +61,7 @@
         "niord-almanac": ["admin", "editor", "publication-curate", "sysadmin", "user"],
         "niord-web": ["admin", "editor", "sysadmin", "user"],
         "niord-fa": ["admin", "editor", "publication-curate", "sysadmin", "user"],
-        "niord-client-master": ["admin", "editor", "publication-curate", "sysadmin"],
+        "niord-client-master": ["admin", "editor", "publication-curate", "sysadmin", "user"],
         "niord-nw": ["admin", "editor", "publication-curate", "sysadmin", "user"]
       }
     }

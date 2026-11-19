@@ -76,6 +76,10 @@ class WebAppITTest extends ITTest {
     @DynamicPropertySource
     static void webAppDir(DynamicPropertyRegistry registry) {
         registry.add("niord.web-app.dir", WebAppITTest::fixtureDir);
+        // How a pod answers: Spring Boot deduces the native strategy from the Kubernetes platform, so
+        // Tomcat takes X-Forwarded-Proto from a proxy on a private address (here the test's own client).
+        // Set here, the tests below pin Spring Security's rule, not that deduction nor the chart's proxy.
+        registry.add("server.forward-headers-strategy", () -> "native");
     }
 
     private static String fixtureDir() {
@@ -219,6 +223,32 @@ class WebAppITTest extends ITTest {
                     path + " is a country's data, never code of this application");
             assertEquals(List.of("nosniff"), response.headers().getValues("X-Content-Type-Options"), path);
         }
+    }
+
+    /**
+     * The administration host's Strict-Transport-Security is the backend's own: Spring Security's default
+     * header writer sends it on a request it holds for secure, which behind a TLS front is one whose proxy
+     * reports https. A pin of that rule; whether a running host sends it also depends on the platform's
+     * forward-headers deduction and on the proxy passing the front's https on.
+     */
+    @Test
+    void aNavigationOverHttpsCarriesStrictTransportSecurityOnce() {
+        Response response = given().accept(BROWSER_ACCEPT).header("X-Forwarded-Proto", "https")
+                .redirects().follow(false).when().get("/");
+
+        assertIndexPage(response, "/ over https");
+        List<String> values = response.headers().getValues("Strict-Transport-Security");
+        assertEquals(1, values.size(), "one Strict-Transport-Security header, was " + values);
+        assertTrue(values.get(0).startsWith("max-age=31536000"), "a year, was " + values.get(0));
+    }
+
+    @Test
+    void aNavigationOverHttpCarriesNoStrictTransportSecurity() {
+        Response response = navigate("/");
+
+        assertIndexPage(response, "/ over http");
+        assertEquals(List.of(), response.headers().getValues("Strict-Transport-Security"),
+                "a browser ignores the header over http, and the server sends none");
     }
 
     // ------------------------------------------------------------------------------------------- //

@@ -1,7 +1,8 @@
 # Dependabot: security updates only (the owner's ruling of 2026-09-26, docs/security-review-2026-09.md §8).
 #
 # Dependabot alerts and security updates are switched on in the repository settings; this file only shapes
-# the pull requests they open. `open-pull-requests-limit: 0` switches version updates off (the limit does not
+# the pull requests they open. They are repository settings and do not move with the repository: read them
+# again after a move. `open-pull-requests-limit: 0` switches version updates off (the limit does not
 # apply to security updates), and the security updates of each directory arrive as one grouped pull request.
 # A security-update pull request targets main and runs the full CI like any other.
 version: 2

@@ -335,7 +335,16 @@ the request line on as it arrived, so the backend receives a short id that holds
 (`B%2F1%202026`) whole, and the raw line is held to the shape `encodeURIComponent` gives the id,
 one path segment: an encoded slash, in either case, is let through there, and an encoded dot,
 backslash, percent, semicolon or NUL, an encoded or literal doubled slash, a further segment or a
-`..` is a 403.
+`..` is a 403. `/rest/repo/file/` passes the request line on as it arrived as well, so a file name's
+`;`, which every link writes as `%3B`, reaches the backend escaped rather than decoded into a path
+parameter the backend refuses; its raw line is held to the paths the backend's firewall serves for
+a repository file: `/rest/repo/file/` spelt so, then non-empty segments of RFC 3986 path characters
+(letters, digits, `-._~`, `!$&'()*+,=:@`) and `%XX` escapes, `%25` and `%3B` among them. Any other
+raw character (a `;`, a backslash, brackets, `^`, a letter outside ASCII), an empty segment (a
+doubled or trailing slash), a `.` or `..` segment, and an encoded dot, slash, backslash or NUL or any
+of them encoded twice (`%252F`) is a 403; a name that merely holds two dots (`Rapport..pdf`) is
+not. Its query is passed on unchecked but for the ticket, and its headers are its own: the sandbox
+for every type but a PDF, nosniff and the referrer policy.
 
 The container runs as the unprivileged user `nginx`, uid and gid 101, never as root, and listens on
 port 8080. It writes under `/tmp` alone — the server block the entrypoint renders (`/etc/nginx/http.d`
@@ -375,7 +384,10 @@ Content-Security-Policy that allows the site's own script files and no inline sc
 `nosniff` and `strict-origin-when-cross-origin` referrer policy of
 `nginx/niord-common-headers.conf`, which it includes — and every location that sets a header of its
 own includes that file again, because nginx drops a server's `add_header` in such a location. The
-backend's own `nosniff` is hidden, so the header is never sent twice. So neither `index.html` nor
+backend's own `nosniff` is hidden, so the header is never sent twice. Behind a TLS front that
+reports https in `X-Forwarded-Proto`, every response also carries
+`Strict-Transport-Security: max-age=31536000` (this host only, from the same file), and an
+upstream's copy is hidden; over plain HTTP it carries none. So neither `index.html` nor
 the teaser frame document carries an inline script; what has to run before the router starts goes
 at the top of `main.ts`, where it must not be able to throw. The policy takes images over https
 and never over plain http, and the container itself serves plain HTTP behind a TLS front, so every

@@ -44,7 +44,7 @@ no new data after the backup, and stands.
   carry browser-zone offsets and were never retro-corrected. A data review, not a code change.
 - **Repository file names and links.** At the first restore from the old system, count what the repository
   import carries over that may still not open: file names under the old repository folder that hold a `%`, a
-  `;` (not yet opened by the public site) or a `\` (a `\` becomes a folder separator on import, so the file lands
+  `;` or a `\` (a `\` becomes a folder separator on import, so the file lands
   under another path), file names
   that hold a valid `%XX` escape (`50%20off.pdf`, which both frontends read as already encoded and ask for under
   the wrong name), and stored links with a raw `;` after `/rest/repo/file/` (in the publication descs' `link`

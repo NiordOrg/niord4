@@ -36,9 +36,9 @@ import java.util.Map;
  *
  * <p>Messages: a published one and a draft in {@code dma-nw-local} (niord-nw; numbering NONE, so publishing takes no
  * number and cancelling mints no cancellation warning), made by the editor, and a draft in {@code dma-nm} (niord-nm)
- * made by the sysadmin in that domain (the test realm's admin holds no user role in niord-nm, which the create's own
- * read-back of a draft asks for). The draft holds two of every list (descriptions, parts with geometry and event
- * dates, areas, categories, charts, references to the published message, attachments: a text file and a PNG), so
+ * made by the sysadmin in that domain (the sysadmin holds the roles of niord-nm's own client, the admin only its base
+ * roles). The draft holds two of every list (descriptions, parts with geometry and event dates, areas, categories,
+ * charts, references to the published message, attachments: a text file and a PNG), so
  * that the reads show each list and the repository reads have files. Comments: one by the user and one by the editor
  * on the draft, one by the sysadmin on the niord-nm draft. Tags: a PRIVATE tag of the user (holding the draft) and of
  * the editor, a PUBLIC tag of niord-nw (holding the published message) and one of niord-nm (sysadmin), a locked

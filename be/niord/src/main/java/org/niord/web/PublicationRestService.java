@@ -178,9 +178,11 @@ public class PublicationRestService extends AbstractBatchableRestService {
     /**
      * Whether the caller reads the PUBLIC tier of the legacy publication reads.
      * <p>
-     * Everyone who is not a signed-in user of a domain: an anonymous caller, and a token sent without
-     * the NiordDomain header, which carries no user role. The admin app's pickers always send both, so
-     * they keep the unfiltered list; the public site never calls this resource.
+     * Every caller without the user role: an anonymous caller, and a token whose only roles are on a
+     * domain client the NiordDomain header does not name. The base client's editor, admin and sysadmin
+     * are users in every domain, so such a token reads the unfiltered list with or without the header,
+     * as do the admin app's pickers, which always send token and header; the public site never calls
+     * this resource.
      */
     private boolean isPublicTier() {
         return !userService.isCallerInRole(Roles.USER);

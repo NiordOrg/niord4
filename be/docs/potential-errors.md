@@ -344,7 +344,7 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   from the backend's own origin (`org/niord/core/script/pdf/SameOriginUserAgent`). The same line is in the
   Greenland repository's copy of the template.
 - **Description:** since the request firewall accepts `%25` and `%3B` on a repository file's path, a file whose
-  name holds `%` or `;` opens in the administration app (on the public site, a `;` does not yet: REPO6). The
+  name holds `%` or `;` opens in the administration app and on the public site. The
   template does not encode the path, so the renderer asks for a raw `%` (an invalid escape) or a raw `;` (a path
   parameter, refused by the firewall), and the image is presumably missing from the PDF. Not checked by running it.
 - **Why it looks wrong:** the attachment shows in the admin app and on the public site but not in the printed
@@ -354,35 +354,22 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   a fix (`?url` on each segment, or a path the code encodes) ships in a release folder and reaches a database only
   by import.
 
-## REPO6 — A repository file whose name holds `;` still does not open on the public site, nor does a stored link with a raw `;`
+## REPO6 — A link stored with a raw `;` in a repository file name still does not open
 
-- **Location:** the public site's nginx, `fe/ui-apps/info/nginx/default.conf.template`, location
-  `^~ /rest/repo/file/` (`proxy_pass ${NIORD_SERVER_URL}/rest/repo/file/;`); and the stored links that point at
-  repository files: a publication desc's `link` written by `RepositoryService.getRepoUri` before it encoded a `;`,
-  a legacy publication link kept as it was (`IssuePublicationMapping.linkOf` returns an explicit link untouched),
-  and any message HTML that names a file.
+- **Location:** the stored links that point at repository files: a publication desc's `link` written by
+  `RepositoryService.getRepoUri` before it encoded a `;`, a legacy publication link kept as it was
+  (`IssuePublicationMapping.linkOf` returns an explicit link untouched), and any message HTML that names a file.
 - **Description:** the request firewall accepts `%25` and `%3B` on `/rest/repo/file/**` and `/rest/repo/thumb/**`,
-  and the links the backend derives now write `;` as `%3B` (`WebUtils.encodeURI`, `IssuePublicationMapping.linkOf`).
-  Two parts are left:
-  1. The public site's location passes the request on with a URI part, so nginx decodes the path and escapes it
-     again. A `%` comes out as `%25` again, but a `;` comes out raw, and the backend refuses a raw `;` with 400 (a
-     path parameter to Tomcat and Spring; `RepositoryRestServiceITTest` asserts that refusal). A published issue
-     document or an attachment whose name holds `;` therefore opens in the administration app and not on the
-     public site.
-  2. A link stored before this change with a raw `;` after `/rest/repo/file/` stays refused everywhere, and no
-     firewall setting can serve it: Tomcat would cut the name at the `;`.
-- **Why it looks wrong:** the file is listed and linked on the public site, and a mariner who follows the link gets
-  an error.
-- **Suggested fix:** for part 1, let the location pass the request line on as it arrived
-  (`proxy_pass ${NIORD_SERVER_URL};`), as the message-id locations of the same file do, guarded by a `map` on
-  `$request_uri` that admits RFC 3986 path characters (unreserved, `%XX`, `!$&'()*+,=:@`, no raw `;`), refuses
-  `%2E`, `%2F`, `%5C`, `%00` and their doubly encoded forms, and refuses `..` only as a whole segment, so that the
-  links that open today (with `:`, sub-delims or `Rapport..pdf`) keep opening; prove it with the public site's
-  container test, adding a `%25` and a `%3B` file path. This is a change to the public site's image, made apart
-  from code changes. For part 2, count the stored links first (fe/docs/backlog.md, section 1, the repository
-  file names); rewriting them is data, not code.
-- **Exposed by:** reading the public site's proxy while the firewall was opened for such names, 2026-11-18; not
-  run through the image.
+  the links the backend derives write `;` as `%3B` (`WebUtils.encodeURI`, `IssuePublicationMapping.linkOf`), and
+  the public site's proxy passes the path of a repository file on as it arrived
+  (`fe/ui-apps/info/nginx/default.conf.template`), so a file whose name holds `;` opens in the administration
+  app and on the public site through a link written now. What is left: a link stored earlier with a raw `;`
+  after `/rest/repo/file/` stays refused everywhere, and no firewall setting can serve it: Tomcat would cut the
+  name at the `;`.
+- **Why it looks wrong:** the file is listed and linked, and whoever follows the old link gets an error.
+- **Suggested fix:** count the stored links first (fe/docs/backlog.md, section 1, the repository file names);
+  rewriting them is data, not code.
+- **Exposed by:** reading the public site's proxy while the firewall was opened for such names, 2026-11-18.
 - **Severity:** Low — a file name with `;` is rare; to be weighed by the count at the first restore.
 
 ## REPO7 — With vips, the thumbnail of an image whose name holds `%s` is written under another name
@@ -816,7 +803,11 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   at the first start).
 - **Description:** nothing maps `externalBaseUri` onto `baseUri` (no env var, no `-DbaseUri`), and `adminAppUrl`
   is empty in the chart, so the message links in mails and tweets (`<adminAppUrl or baseUri>/messages?messageId=`)
-  name `http://localhost:8888`, not the chart's public `http://localhost:18888`.
+  name `http://localhost:8888`, not the chart's public `http://localhost:18888`. A cluster environment pins the
+  setting in its values (`app.settings.baseUri`, rendered as an environment variable named `baseUri`, which the
+  app reads before the stored row); the chart's default, `app.settings: {}`, pins nothing, so the local release
+  keeps the stored row. Mapping `externalBaseUri` onto `baseUri` by itself would break the local mails' styling
+  and images, which the pod fetches from `baseUri` and cannot fetch from the host's `localhost:18888`.
 - **Why it looks wrong:** a link a recipient clicks should name the public origin. The backend's own HTTP fetches
   of `/css/templates` and `/img` through `baseUri` work only because the pod itself listens on 8888.
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
@@ -900,14 +891,12 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 - **Operating note:** two Niord servers on the same private network or k8s cluster need
   `niordIntegrationAllowPrivateHosts=true`. The default is off, and a blocked fetch surfaces only as a
   swallowed `log.error` on the hourly schedule. The field is injected once, at bean creation, so every route
-  needs a restart. Two routes work today: the sysadmin Settings page (the stored row), or a JVM system
-  property named like the key, which `SettingsService.overrideOf` reads before the database. The chart hands
-  `app.javaOpts` to the JVM as `JAVA_TOOL_OPTIONS` (`k8s/helm/niord/templates/app/deployment.yaml`), so
-  `-DniordIntegrationAllowPrivateHosts=true` appended to an environment's `app.javaOpts` sets it from that
-  environment's values, and it survives a restore of another environment's database. What is missing is the
-  environment-variable route: the code reads an environment variable of the key's name too, but the chart
-  sets such variables only for `authServerUrl` and, with SECOM on, the keys of `.Values.secom.settings`; it
-  has no generic place for a setting (the same gap as WEB11's `baseUri`).
+  needs a restart. Three routes work: the sysadmin Settings page (the stored row); a JVM system property
+  named like the key, which `SettingsService.overrideOf` reads before the database
+  (`-DniordIntegrationAllowPrivateHosts=true` in an environment's `app.javaOpts`, which the chart hands to
+  the JVM as `JAVA_TOOL_OPTIONS`); or the chart's `app.settings.niordIntegrationAllowPrivateHosts`, rendered
+  as an environment variable of that name by `k8s/helm/niord/templates/app/deployment.yaml`. The last two
+  are set from an environment's values and survive a restore of another environment's database.
 - **Residual:** a public host that itself proxies inward; an https→http downgrade on a redirect
   (`DefaultRedirectStrategy` permits it); `NiordIntegrationRestService.createNiordIntegration` logs the raw
   URL at INFO *before* the service validates, so a rejected `http://user:pw@host` still reaches the
@@ -1593,18 +1582,20 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `niord/scripts/regen-test-seed-postgres.sh:178-180`, `-Duser.timezone=UTC`); Surefire and Failsafe do not.
 - **Why it looks wrong:** a stored instant that moves by an hour once a year is a wrong value, not only a test
   artefact: whatever the ITs check (publish stamps, publication windows, a tag's expiry, a mail's due time) is
-  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: neither
-  `k8s/docker/Dockerfile` (`eclipse-temurin:25-jre`, no `TZ`) nor the chart (`k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`, `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, passed as `JAVA_TOOL_OPTIONS` by
-  `templates/app/deployment.yaml:89-90`) sets `TZ` or `-Duser.timezone`, so a pod runs in the base image's zone,
-  UTC unless a deployment sets one [inferred from the base image; not read in a running pod]. In UTC there is no
-  repeated hour; a developer's or a test server's JVM in a zone with summer time has one each year.
+  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: the image
+  (`k8s/docker/Dockerfile`, `ENV TZ=UTC`) and the chart (`k8s/helm/niord/templates/app/deployment.yaml`, a fixed
+  `TZ: UTC` entry in the app container's environment, outside `app.javaOpts`, so a values file that replaces
+  that value keeps it) pin the pod's JVM to UTC; only an explicit `-Duser.timezone` in `app.javaOpts` would
+  override it, which the chart's README and the operators' guide say not to add. In UTC there is no repeated
+  hour; a developer's or a test server's JVM in a zone with summer time has one each year, and so has an
+  integration-test run.
 - **Exposed by:** the first `./verify-local` of the country split's P7-bs, which ran at 02:04 local on
   2026-10-25, in the repeated hour.
 - **Decided (the owner, 2026-10-25):** the JVM runs in UTC; the chart and the images set it at the deploy step
   (e.g. `TZ`/`-Duser.timezone=UTC` in `k8s/docker/Dockerfile` and `k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9); the entry stays
-  open until that is built.
+  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9). Built in the
+  image and the chart on 2026-11-18 (`TZ=UTC`, not in `app.javaOpts`); the entry stays open for the tests' zone,
+  which Surefire and Failsafe still do not pin.
 
 ## BATCH5. Sysadmin > Batch Jobs forgets every execution at a restart, and the bootstrap's job logs with it
 
@@ -1655,21 +1646,38 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   §5), `curl -s http://localhost:4200/rest/domains/all` against a local country.
 - **Severity:** Low — log noise only. Fix: skip the Keycloak states, or log at DEBUG, when no user is authenticated.
 
-## K8S1. `deploy.sh` overwrites the chart's realm with a test realm that names the domain clients differently
+## K8S2. The chart cannot pin a setting whose value is a secret
 
-- **Location:** `be/k8s/scripts/deploy.sh` ("Syncing realm JSON into the chart") copies
-  `niord/src/test/resources/keycloak/niord-realm.json` over `k8s/helm/niord/files/niord-realm.json` before every
-  install.
-- **Description:** the two files differ. The chart's realm names the sample domains' clients `niord-client-annex`,
-  `niord-client-almanac` and so on; the test realm names them `niord-annex`, `niord-almanac`. Every local
-  `deploy.sh` run leaves the chart's file changed in the working tree, and the local bundle then runs a realm that
-  is not the one the chart publishes, the one test environments import and production mode derives its realm from.
-- **Why it looks wrong:** the copy is meant to keep the two in step ("Keep the chart's bundled realm in sync with the
-  test resource it came from"), so one of them is stale, and a deploy should not change a tracked file.
-- **Exposed by:** the public site's local rehearsal (2026-11-10, `docs/public-site-deploy-plan.md`), whose
-  `deploy.sh` run showed the file changed.
-- **Severity:** Low — local runs and a dirty tree. Fix: decide which names are right, make the two files equal,
-  and have `deploy.sh` refuse a difference rather than copy over it.
+- **Location:** `be/k8s/helm/niord/templates/app/deployment.yaml` (the app container's environment) and
+  `templates/validate.yaml` (`app.settings`).
+- **Description:** a setting is pinned per environment, over its stored row, by `app.settings` (an environment
+  variable named like the key, which `SettingsService` reads before the row) or by `-D<key>=<value>` in
+  `app.javaOpts`. Both are plain values: the render refuses an `app.settings` key that names a password, secret or
+  token, and the chart has no value that passes a key of a Secret to the app container under a setting's name.
+  The two settings of type `Password`, `pdfEncryptionPassword` and `wmsPassword`, can therefore only be the stored
+  row, and a database restored from another system brings that system's values for them.
+- **Why it looks wrong:** every other setting a restore must override can be pinned outside the database; these
+  two cannot be without writing the secret into the values.
+- **Exposed by:** a reading of the chart's pinned settings against what a restored database brings (2026-11-19).
+- **Severity:** Low — both are empty by default and are changed on the Settings page after a restore. Fix: a value
+  that maps a setting key to a Secret and its key, rendered as an environment variable from `secretKeyRef`, held to
+  the key rules of `app.settings`.
+
+## K8S3. On a dev-mode Keycloak the chart makes, a domain outside the sample's five has no lasting client
+
+- **Location:** `be/k8s/helm/niord/files/niord-realm.json` (the chart's realm) and the dev-mode Keycloak the chart
+  runs for test environments (`be/k8s/README.md`, the realm's import).
+- **Description:** the chart's realm holds a client for each of the base sample's five domains and for no other.
+  A database restored from a deployment with further domains brings domains that have no client on that realm. The
+  client can be made from the Domains page's *Create in Keycloak* or in the admin console, but a dev-mode Keycloak
+  keeps its data in the container and imports the realm file again at every restart, so the client and every role
+  given on it are gone after the next pod restart or chart upgrade that changes the realm's checksum.
+- **Why it looks wrong:** a person whose roles are on domain clients alone is refused in such a domain again after
+  each restart, and nothing in the realm or the chart keeps the client a sysadmin made.
+- **Exposed by:** a reading of the chart's realm against the domains a restored database brings (2026-11-19).
+- **Severity:** Low — test environments only (a production-mode realm, or a realm on a shared Keycloak, keeps the
+  client), and roles on the base client `niord-client-master` count in every domain. Fix: a chart value that adds
+  domain clients to the realm the chart renders, or a dev-mode Keycloak with a lasting database.
 
 ## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
 
