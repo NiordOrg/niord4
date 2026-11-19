@@ -45,7 +45,9 @@ hosted app, in a phase that has not started. The GitLab leg is two pins per repo
 **What happens instead.**
 
 - Staging pins and platform pins move by hand, as they do today: a two-line merge request
-  after a publish, the pin edit in the same session as a mirror.
+  after a publish, the pin edit in the same session as a mirror. *Since 2026-11-19 the
+  staging pins move by devops-niord's promote job with `TARGET=staging`, which reads the
+  country images in Harbor and opens the merge request; a person merges it.*
 - Open, decided separately: whether `publish.yml` should move the staging pins itself. It
   knows the version it just pushed to Harbor and could upsert the merge request in
   devops-niord through the GitLab API, the way the promote job does, with auto-merge on
