@@ -36,7 +36,10 @@ import org.niord.core.web.NiordWebException;
 import org.niord.model.message.MessageSeriesVo;
 import org.niord.model.message.MessageVo;
 import org.niord.model.search.PagedSearchResultVo;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.ByteArrayOutputStream;
@@ -615,6 +618,14 @@ class MessageReportRestServiceTest {
 
             assertEquals(503, list.getStatusCode().value());
             assertEquals(503, one.getStatusCode().value());
+            // A client is told when to ask again, and Spring's problem-details handling, which
+            // answers the refusal, sends the header with the body
+            assertEquals("10", list.getHeaders().getFirst(HttpHeaders.RETRY_AFTER));
+            assertEquals("10", one.getHeaders().getFirst(HttpHeaders.RETRY_AFTER));
+            ResponseEntity<Object> answer = new ResponseEntityExceptionHandler() { }
+                    .handleException(list, new ServletWebRequest(mock(HttpServletRequest.class)));
+            assertEquals(503, answer.getStatusCode().value());
+            assertEquals("10", answer.getHeaders().getFirst(HttpHeaders.RETRY_AFTER));
             // Only the held render searched and rendered
             verify(messageSearchRestService, times(1)).searchMessages(any());
             verify(messageRestService, never()).getMessage(anyString(), any());

@@ -11,6 +11,10 @@
       "reason": "The teaser frame document and its script, from ui-apps/info/public/. Unhashed by design: the pages that embed the teaser address them by name."
     },
     {
+      "glob": "pdf-busy.{html,js}",
+      "reason": "The page nginx answers a busy PDF with, and its script, from ui-apps/info/public/. Unhashed by design: nginx names the page in its configuration, and the page its script."
+    },
+    {
       "glob": "{main,chunk,styles}-*.{js,css}",
       "reason": "The builder's bundles: the entry script, the lazy and shared chunks and the global stylesheet, each named by its content hash."
     },

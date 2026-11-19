@@ -386,11 +386,13 @@ shows.
 **Only a few anonymous PDFs are made at a time.** A caller with no identity — no token and no
 ticket, the public site's reader among them — takes one of `niord.reports.anonymous-pdf-concurrency`
 permits (3 by default) while its PDF is made, on either endpoint. When none is free the answer is
-**503** at once, a problem+json body with no `Retry-After`, before anything is searched or looked up;
+**503** at once, a problem+json body with `Retry-After: 10`, before anything is searched or looked up;
 the same request a moment later can succeed. Such a PDF is rendered in full before its first byte is
 sent, and never with map thumbnails. A signed-in or ticketed caller takes no permit, and its PDF is
-streamed as it is rendered. The public site opens both PDFs in a new tab, so its reader sees that
-503 body there ([backlog.md](backlog.md), _The public site_).
+streamed as it is rendered. The public site opens both PDFs in a new tab, so its container answers
+that 503 with a page of the site's own (`ui-apps/info/public/pdf-busy.html`), still a 503 with
+`Retry-After: 10`, which says in the language the PDF was asked in (the bundle's `PDF_BUSY`) that
+documents are being prepared for other readers and to try again in a moment.
 
 `debug=true` on either endpoint returns the HTML the PDF is rendered from instead of the PDF —
 the cheap way to see which messages a set of parameters actually selects — and the free-form

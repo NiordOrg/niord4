@@ -40,6 +40,7 @@ import org.niord.model.message.MessageVo;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -453,8 +454,9 @@ public class MessageReportRestService extends AbstractBatchableRestService {
      * search of up to 1000 messages, holding a database connection, and a layout of all of them. So
      * only {@code niord.reports.anonymous-pdf-concurrency} anonymous PDFs are made at once, and a caller
      * who finds every permit taken is answered 503 straight away, before anything is looked up or
-     * rendered. A caller the backend knows - signed in, or presenting a ticket, which is how the
-     * administration application and the publication release come - takes no permit.
+     * rendered, with a {@code Retry-After} of {@value #ANONYMOUS_PDF_RETRY_AFTER_SECONDS} seconds. A
+     * caller the backend knows - signed in, or presenting a ticket, which is how the administration
+     * application and the publication release come - takes no permit.
      *
      * @param knownCaller whether the caller is one the backend knows
      * @return whether a permit was taken; the caller releases it in a {@code finally} block, and renders
@@ -466,9 +468,35 @@ public class MessageReportRestService extends AbstractBatchableRestService {
             return false;
         }
         if (!anonymousPdfPermits.tryAcquire()) {
-            throw new NiordWebException("Too many documents are being generated, please try again shortly", 503);
+            throw new AnonymousPdfsBusyException();
         }
         return true;
+    }
+
+    /**
+     * The seconds an anonymous caller turned away for want of a permit is asked to wait. An anonymous PDF
+     * is rendered in seconds, so a permit is usually free again by then. The public site's container
+     * answers its reader with the same figure ({@code fe/ui-apps/info/nginx/default.conf.template}).
+     */
+    static final int ANONYMOUS_PDF_RETRY_AFTER_SECONDS = 10;
+
+    /**
+     * The 503 an anonymous caller gets while every permit is taken: the problem detail every refusal
+     * here carries, and a {@code Retry-After} header, which Spring's problem-details handling sends
+     * with it.
+     */
+    static final class AnonymousPdfsBusyException extends NiordWebException {
+
+        AnonymousPdfsBusyException() {
+            super("Too many documents are being generated, please try again shortly", 503);
+        }
+
+        @Override
+        public HttpHeaders getHeaders() {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(HttpHeaders.RETRY_AFTER, String.valueOf(ANONYMOUS_PDF_RETRY_AFTER_SECONDS));
+            return headers;
+        }
     }
 
     /**

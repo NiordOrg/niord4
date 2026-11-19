@@ -143,12 +143,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   visit that lands on the message list, which draws no map, transfers about 1.2 kB (brotli) of map chrome in the
   styles group that `bundle:info` measures. Both applications import it globally today; loading it with the map
   kit instead means a lazy stylesheet in `shared-map/`, a map change measured for both.
-- **A busy PDF answers with a raw error.** The backend makes only a few PDFs at a time for readers without an
-  identity (three by default) and answers every further request with 503 at once — see _The PDF reports are
-  anonymous_ in [backend-api-notes.md](backend-api-notes.md). Both print buttons open the PDF's address in a
-  new tab, so a reader who meets the limit sees the backend's JSON error there rather than a page that asks
-  them to try again shortly. A page of the site's own for that answer, served by the container for a 503 on the
-  two PDF locations, needs wording the site owner has not been asked for.
 - **The site reserves no scrollbar gutter.** A permanent gutter would show as a stripe beside the full-bleed map
   view, so there is none, and where a platform draws classic scrollbars the centred message list can shift
   sideways by the scrollbar's width when the list arrives and grows past one screen. Not observed on the
