@@ -99,7 +99,8 @@ system. The stored script resources themselves run for every user whose work cal
 message template or prints, and when a mailing list sends its mails.
 
 The following example searches for published messages of a firing exercises message series (here with the
-invented series id "example-fe"):
+invented series id "example-fe"). It calls `searchOrFail`, as a script that mails or publishes what it finds
+should, so that a failed search fails the run instead of answering an empty list:
 
 [source,javascript]
 ----
@@ -108,7 +109,7 @@ var seriesIds = java.util.Collections.singleton('example-fe');
 var searchParams = new org.niord.core.message.MessageSearchParams();
 searchParams.seriesIds(seriesIds)
     .statuses(org.niord.model.message.Status.PUBLISHED);
-var searchResult = searchService.search(searchParams);
+var searchResult = searchService.searchOrFail(searchParams);
 ----
 
 [#inclusion-in-javascript]
