@@ -104,12 +104,23 @@ class MissingPathReportITTest extends ITTest {
         return paths;
     }
 
+    /**
+     * The fixture (db/niord-test-seed.sql) holds no publication series and no issue, so every one the shared database holds was committed by
+     * another test class, and many of those name a placeholder report that has no row ("some-report"). Their
+     * entries are not the fixture's; {@link #aReportASeriesOrIssueNamesIsReportedWhenItHasNoRow()} covers that kind.
+     */
+    private static boolean namedOnlyByTestSeriesOrIssues(Entry entry) {
+        return entry.kind() == Kind.REPORT && entry.namedBy().stream().allMatch(by ->
+                by.startsWith(MissingPathReport.SERIES + " ") || by.startsWith(MissingPathReport.ISSUE + " "));
+    }
+
     @Test
     @Transactional
     void theFixtureMissesNothing() {
         // As on a deployment bootstrapped with the base product's archive and loaded with the sample: the sample
         // carries the two Danish scripts its first mailing-list trigger names (until C4b the IT seed did not, SEED1)
-        assertEquals(List.of(), missingPathReport.report());
+        assertEquals(List.of(), missingPathReport.report().stream()
+                .filter(e -> !namedOnlyByTestSeriesOrIssues(e)).toList());
         assertTrue(missingPathReport.report(MissingPathReport.expectedPaths()).stream().map(Entry::path)
                         .noneMatch(baseProductPaths()::contains),
                 "nothing of the base product is missing");
