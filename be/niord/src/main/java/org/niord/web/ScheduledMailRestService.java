@@ -152,7 +152,7 @@ public class ScheduledMailRestService {
      * 400 for a request that names no mail, too many, a mail without its id or status, a status other than HELD, SENT
      * or ERROR, or a mail twice; 409 while the mail filter is LOG or empty; 401 without a current user, who is
      * recorded on each mail. Otherwise 200 with the ids queued and the mails refused, each with its reason (GONE,
-     * CHANGED or RECORD).
+     * CHANGED, RECORD, or FILTER: a sent mail the mail filter, a list of addresses, would keep from a recipient).
      */
     @PostMapping(value = "/send-again",
             consumes = "application/json;charset=UTF-8",

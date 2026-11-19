@@ -30,9 +30,11 @@ public class SendAgainResultVo implements IJsonSerializable {
 
     /**
      * Why a mail was not sent again. GONE: no such mail (deleted since). RECORD: a record of a failure, never sent.
-     * CHANGED: its status or its last Send again differs from what the page showed.
+     * CHANGED: its status or its last Send again differs from what the page showed. FILTER: a sent mail, and the mail
+     * filter is a list of addresses that does not name every one of its recipients, so the filter would keep it from
+     * them: it would end held, and a later Send again of the held mails would reach its recipients a second time.
      */
-    public enum Reason { GONE, CHANGED, RECORD }
+    public enum Reason { GONE, CHANGED, RECORD, FILTER }
 
     List<Integer> queued = new ArrayList<>();
     List<Refusal> refused = new ArrayList<>();

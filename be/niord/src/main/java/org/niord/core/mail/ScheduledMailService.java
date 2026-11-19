@@ -33,6 +33,7 @@ import org.niord.core.web.NiordWebException;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
 
+import jakarta.mail.internet.InternetAddress;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.*;
 import org.springframework.transaction.annotation.Transactional;
@@ -249,8 +250,12 @@ public class ScheduledMailService extends BaseService {
      * ({@code mailValidRecipients}) is LOG or empty, so no mail is held or failed again by it. Otherwise each mail is
      * claimed in ascending id order with the lock the sender takes, and refused alone, with its reason, when it is
      * gone, is a record of a failure, or no longer has the status and the last Send again the page showed (a double
-     * click, a second administrator, a stale page, or a mail the sender has handled since). A refusal leaves the
-     * others queued; an exception rolls the whole request back.
+     * click, a second administrator, a stale page, or a mail the sender has handled since). While the filter is a list
+     * of addresses, a sent mail with a recipient the list does not name is refused too (FILTER): the list would
+     * redirect that recipient, the mail would end held, and a later Send again of the held mails would reach its
+     * recipients a second time. A held or failed mail is accepted under a list, and ends sent or held again by what
+     * the list lets through when it is sent. A refusal leaves the others queued; an exception rolls the whole request
+     * back.
      *
      * @param items the mails to send again, as the page showed them
      * @param username the user name of the system administrator, recorded on each mail
@@ -264,7 +269,8 @@ public class ScheduledMailService extends BaseService {
         if (StringUtils.isBlank(filter)) {
             throw new NiordWebException(SEND_AGAIN_REFUSED_EMPTY, 409);
         }
-        if (new ValidMailRecipients(filter).simulate()) {
+        ValidMailRecipients validRecipients = new ValidMailRecipients(filter);
+        if (validRecipients.simulate()) {
             throw new NiordWebException(SEND_AGAIN_REFUSED_LOG, 409);
         }
 
@@ -285,6 +291,8 @@ public class ScheduledMailService extends BaseService {
             } else if (mail.getStatus() != item.getStatus()
                     || !Objects.equals(millis(mail.getSentAgainAt()), millis(item.getSentAgainAt()))) {
                 refusal = SendAgainResultVo.Reason.CHANGED;
+            } else if (mail.getStatus() == ScheduledMail.Status.SENT && redirectsARecipient(mail, validRecipients)) {
+                refusal = SendAgainResultVo.Reason.FILTER;
             }
             if (refusal != null) {
                 result.getRefused().add(new SendAgainResultVo.Refusal(item.getId(), refusal));
@@ -326,6 +334,17 @@ public class ScheduledMailService extends BaseService {
                 throw new NiordWebException("The mail " + item.getId() + " is named twice", 400);
             }
         }
+    }
+
+    /**
+     * Whether the mail filter would redirect one of the mail's stored recipients to the first listed address, by the
+     * rule the sender applies ({@link ValidMailRecipients#redirects}, as {@link Mail#filterRecipients} asks it)
+     */
+    private static boolean redirectsARecipient(ScheduledMail mail, ValidMailRecipients validRecipients) {
+        return mail.getRecipients().stream()
+                .map(ScheduledMailRecipient::toMailRecipient)
+                .filter(Objects::nonNull)
+                .anyMatch(r -> r.getAddress() instanceof InternetAddress address && validRecipients.redirects(address));
     }
 
     /** The date as epoch milliseconds, or null */

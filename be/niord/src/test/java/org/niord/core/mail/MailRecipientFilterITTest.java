@@ -26,6 +26,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.niord.core.mail.ScheduledMail.Status;
 import org.niord.core.mail.ScheduledMailRecipient.RecipientType;
+import org.niord.core.mail.vo.SendAgainRequestVo.Item;
+import org.niord.core.mail.vo.SendAgainResultVo;
 import org.niord.test.ITTest;
 import org.niord.test.MailHog;
 import org.niord.test.Tx;
@@ -71,8 +73,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>The list names a second address ({@link #ALSO_ALLOWED}) too. A scheduled mail the sender handles under the list
  * ends SENT only when the list names every one of its recipients (TO, CC and BCC); when a recipient was redirected,
- * the filter kept the mail from it, and the mail ends HELD. These mails are committed, as the send runs in a
- * transaction of its own, and removed after each test.
+ * the filter kept the mail from it, and the mail ends HELD. The Mail Queue's Send again under the list accepts a held
+ * mail, which ends held again unless every recipient is listed, and refuses (FILTER) a sent mail with a recipient the
+ * list does not name: it would end held, and a later Send again of the held mails would reach its recipients a second
+ * time. These mails are committed, as the send and Send again run in transactions of their own, and removed after
+ * each test. A mail sent again is due at once, so a minute sender may send it before the test does; the outcome is
+ * the same, as every sender reads the one list.
  *
  * <p>This is a framework-coupled test — see docs/framework-coupled-tests.md.
  */
@@ -86,6 +92,7 @@ class MailRecipientFilterITTest extends ITTest {
     /** The setting: the two listed addresses */
     private static final String LIST = ALLOWED + ", " + ALSO_ALLOWED;
     private static final String STRANGER = "stranger@example.com";
+    private static final String SYSADMIN = "it-filter-sysadmin";
 
     /**
      * Port of {@code MailRecipientsAllowlistResource}: put {@code MailService} into allow-list mode by
@@ -106,6 +113,9 @@ class MailRecipientFilterITTest extends ITTest {
 
     @Autowired
     MailService mailService;
+
+    @Autowired
+    ScheduledMailService scheduledMailService;
 
     @PersistenceContext
     EntityManager em;
@@ -252,6 +262,62 @@ class MailRecipientFilterITTest extends ITTest {
 
         assertNotNull(MailHog.waitForOne(subject), "the mail is handed to the mail server");
         assertEquals(Status.HELD, reload(id).getStatus(), "the CC was redirected, so the mail is held");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // Send again under the list
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    void sendAgainRefusesASentMailWithARecipientTheListDoesNotName() {
+        Integer id = commitMail(unique("sent-unlisted"), Status.SENT, 1, ALLOWED, STRANGER);
+        ScheduledMail before = reload(id);
+
+        SendAgainResultVo result = scheduledMailService.sendAgain(List.of(new Item(id, Status.SENT, null)), SYSADMIN);
+
+        assertTrue(result.getQueued().isEmpty(), "nothing is queued");
+        assertEquals(1, result.getRefused().size());
+        assertEquals(id, result.getRefused().get(0).getId());
+        assertEquals(SendAgainResultVo.Reason.FILTER, result.getRefused().get(0).getReason());
+        ScheduledMail after = reload(id);
+        assertEquals(Status.SENT, after.getStatus(), "the row is as it was");
+        assertEquals(1, after.getAttempts());
+        assertEquals(before.getSendDate().getTime(), after.getSendDate().getTime());
+        assertNull(after.getSentAgainAt());
+        assertNull(after.getSentAgainBy());
+    }
+
+    @Test
+    void sendAgainAcceptsAHeldMailUnderTheListAndItIsHeldAgain() {
+        String subject = unique("held-unlisted");
+        Integer id = commitMail(subject, Status.HELD, 1, ALLOWED, STRANGER);
+
+        SendAgainResultVo result = scheduledMailService.sendAgain(List.of(new Item(id, Status.HELD, null)), SYSADMIN);
+        assertEquals(List.of(id), result.getQueued(), "a held mail is accepted under a list: " + result.getRefused());
+
+        mailService.sendScheduledMail(id);
+        MailHog.Message m = MailHog.waitForOne(subject);
+        assertNotNull(m, "the mail sent again reaches the mail server");
+        assertFalse(m.envelopeRecipients().contains(STRANGER), "was " + m.envelopeRecipients());
+        assertEquals(Status.HELD, reload(id).getStatus(), "the list still redirects the stranger, so it is held again");
+    }
+
+    @Test
+    void sendAgainOfMailsToListedRecipientsOnlyEndsSent() {
+        String subject = unique("listed");
+        Integer sent = commitMail(subject + "-sent", Status.SENT, 1, ALLOWED, ALSO_ALLOWED);
+        Integer held = commitMail(subject + "-held", Status.HELD, 1, ALLOWED, ALSO_ALLOWED);
+
+        SendAgainResultVo result = scheduledMailService.sendAgain(List.of(new Item(sent, Status.SENT, null),
+                new Item(held, Status.HELD, null)), SYSADMIN);
+        assertEquals(List.of(sent, held), result.getQueued(), "both are accepted: " + result.getRefused());
+
+        mailService.sendScheduledMail(sent);
+        mailService.sendScheduledMail(held);
+        assertNotNull(MailHog.waitForOne(subject + "-sent"));
+        assertNotNull(MailHog.waitForOne(subject + "-held"));
+        assertEquals(Status.SENT, reload(sent).getStatus());
+        assertEquals(Status.SENT, reload(held).getStatus());
     }
 
     /**
