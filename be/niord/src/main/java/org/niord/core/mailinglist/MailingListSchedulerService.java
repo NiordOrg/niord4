@@ -53,8 +53,12 @@ public class MailingListSchedulerService extends BaseService {
 
     /**
      * Checks every minute if there are pending scheduled mailing list triggers.
+     * <p>
+     * The schedule is the property {@code niord.schedule.mailing-list-trigger-cron}, with the shipped value as its
+     * default; {@code -} ({@link Scheduled#CRON_DISABLED}) switches the job off, so that a copy of another
+     * deployment's data can be started without its due triggers writing mails and moving on to their next time.
      */
-    @Scheduled(cron="37 */1 */1 * * ?")
+    @Scheduled(cron = "${niord.schedule.mailing-list-trigger-cron:37 */1 */1 * * ?}")
     void checkExecuteScheduledTriggers() {
 
         long t0 = System.currentTimeMillis();

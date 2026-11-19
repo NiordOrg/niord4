@@ -78,7 +78,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * placeholder instead of a bare literal, so it can be re-tuned per environment or switched off with
  * {@code -} ({@code Scheduled.CRON_DISABLED}) — {@code ScheduledMessageService}'s two status sweeps, the
  * hourly firing-exercise run and the mailing lists' status-change outbox sweep are, and the IT suite disables them
- * that way. What ships is still the placeholder's <em>default</em>, so that is what
+ * that way; so are the mail sender and the mailing lists' scheduled triggers, which a start on a copy of another
+ * deployment's data switches off. What ships is still the placeholder's <em>default</em>, so that is what
  * the table below pins, alongside the property name: renaming the property or editing the default fails this
  * test, which is what makes the property name a real contract with the configuration that sets it (the
  * {@code @TestPropertySource} on {@code ITTest}). A deployment's override is ordinary configuration and out
@@ -124,10 +125,14 @@ public class ScheduledCronExpressionTest {
             new CronRow(FiringExerciseService.class,       "updateFiringExercises",
                     "niord.schedule.firing-exercise-cron", "50 21 */1 * * ?", "50 21 */1 * * *"),
             new CronRow(CategoryService.class,             "recomputeTreeSortOrder",             "13 23 * * * ?",   "13 23 * * * *"),
-            new CronRow(ScheduledMailService.class,        "sendPendingMails",                   "24 * * * * ?",    "24 * * * * *"),
+            // Externalized: "-" lets a copy of another deployment's data start without sending its pending mails.
+            new CronRow(ScheduledMailService.class,        "sendPendingMails",
+                    "niord.schedule.mail-send-cron", "24 * * * * ?", "24 * * * * *"),
             new CronRow(ScheduledMailService.class,        "deleteExpiredMails",                 "48 28 5 * * ?",   "48 28 5 * * *"),
             new CronRow(AreaService.class,                 "recomputeTreeSortOrder",             "13 3 * * * ?",    "13 3 * * * *"),
-            new CronRow(MailingListSchedulerService.class, "checkExecuteScheduledTriggers",      "37 */1 */1 * * ?","37 */1 */1 * * *"),
+            // Externalized: "-" lets a copy of another deployment's data start without running its due triggers.
+            new CronRow(MailingListSchedulerService.class, "checkExecuteScheduledTriggers",
+                    "niord.schedule.mailing-list-trigger-cron", "37 */1 */1 * * ?", "37 */1 */1 * * *"),
             // Externalized: the IT suite sets the property to "-", since every context of the run shares the outbox.
             new CronRow(MailingListMessageListener.class, "sweep",
                     "niord.mailinglist.status-change-sweep-cron", "23 * * * * ?", "23 * * * * *"),

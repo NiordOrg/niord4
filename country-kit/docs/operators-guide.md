@@ -528,5 +528,19 @@ version needs and the old database never had is missing until you import it.
 - **The message index**: an index the backend cannot read in the home folder's `message-index` folder (one of
   an older Lucene format, or a damaged one) is removed at the start, with a WARN that names the folder, and
   rebuilt from the database.
+- **The jobs that act on the copied data.** From its first minute the backend publishes the messages
+  the database holds as due, expires those past their end, runs the firing schedules, sends the Mail
+  Queue's pending mails and runs the mailing lists' due triggers. To start on the data without that,
+  until you have checked it, add these to the chart value `app.javaOpts`, beside the options it
+  holds, and take them out again for the start that puts the deployment to use:
+
+  ```text
+  -Dniord.schedule.auto-publish-cron=- -Dniord.schedule.auto-expire-cron=-
+  -Dniord.schedule.firing-exercise-cron=- -Dniord.schedule.mail-send-cron=-
+  -Dniord.schedule.mailing-list-trigger-cron=-
+  ```
+
+  `mailValidRecipients` given as `LOG` at the start (step 15) keeps the mail from leaving, but the
+  jobs would still change the data.
 
 Every part on a real volume is verified at the deploy step.

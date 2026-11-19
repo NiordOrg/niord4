@@ -231,8 +231,12 @@ public class ScheduledMailService extends BaseService {
      * The run waits at most {@link #sendRunLimit} for its sender threads, and each exchange with the SMTP server is
      * bounded by the session's time limits ({@link MailConfig}), so a server that stops answering cannot stop the
      * mail queue for good.
+     * <p>
+     * The schedule is the property {@code niord.schedule.mail-send-cron}, with the shipped value as its default;
+     * {@code -} ({@link Scheduled#CRON_DISABLED}) switches the job off, so that a copy of another deployment's data
+     * can be started without its pending mails being sent and marked sent.
      */
-    @Scheduled(cron="24 * * * * ?")
+    @Scheduled(cron = "${niord.schedule.mail-send-cron:24 * * * * ?}")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void sendPendingMails() {
 

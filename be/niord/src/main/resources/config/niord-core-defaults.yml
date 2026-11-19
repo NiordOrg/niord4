@@ -157,10 +157,17 @@ niord:
   # the integration-test suite also turns off.
   # Auto-publish runs at second 7, a second no other per-minute job uses, so a message due at a whole
   # minute is published before that minute's mail sender (second 24) and mailing-list run (second 37).
+  # The mail sender (ScheduledMailService.sendPendingMails, sends the pending mails of the Mail Queue)
+  # and the mailing lists' scheduled triggers (MailingListSchedulerService.checkExecuteScheduledTriggers,
+  # writes the mails of each due trigger and sets its next time) are properties too. A start on a copy of
+  # another deployment's data sets all five to "-" until the copy has been checked: otherwise, in its
+  # first minute, the copy publishes, expires, mails and runs the triggers the copied data holds as due.
   # schedule:
   #   auto-publish-cron: 7 * * * * ?
   #   auto-expire-cron: 28 * * * * ?
   #   firing-exercise-cron: 50 21 */1 * * ?
+  #   mail-send-cron: 24 * * * * ?
+  #   mailing-list-trigger-cron: 37 */1 */1 * * ?
   # The mailing lists' outbox of status changes (MailingListMessageListener.sweep): once a minute, at second 23,
   # before the mail sender's run, the rows the JMS status topic did not prompt for are mailed. "-" switches the
   # sweep off, which the integration-test suite does (its tests drain the outbox themselves); the prompt and the
