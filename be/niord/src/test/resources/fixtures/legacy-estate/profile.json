@@ -17,7 +17,7 @@
     "NONE": 2,
     "REPOSITORY": 24
   },
-  "capturedFrom": "https://niord.staging.brs2.dk/rest",
+  "capturedFrom": "the old test environment",
   "distinctMessageTagFilters": [
     {
       "filter": "(msg.type == Type.TEMPORARY_NOTICE || msg.type == Type.PRELIMINARY_NOTICE) && msg.status == Status.PUBLISHED",
