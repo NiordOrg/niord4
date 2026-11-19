@@ -83,6 +83,11 @@ class UserDeleteMailingListsITTest extends ITTest {
     /** Held under the LOG mail filter: not sent, and a system administrator may still send them again */
     private static final String MAIL_HELD_FOR_LEAVER = "IT-USER1 held for the leaver";
     private static final String MAIL_HELD_FOR_BOTH = "IT-USER1 held for both";
+    /** Failed after an attempt: not sent, and a system administrator may still send them again */
+    private static final String MAIL_FAILED_FOR_LEAVER = "IT-USER1 failed for the leaver";
+    private static final String MAIL_FAILED_FOR_BOTH = "IT-USER1 failed for both";
+    /** A record of a failure (Error with no attempt): never sent, so it keeps the addresses it names */
+    private static final String MAIL_RECORD = "IT-USER1 Not sent: a record naming the leaver";
 
     @Autowired
     KeycloakIntegrationService keycloakIntegrationService;
@@ -109,6 +114,9 @@ class UserDeleteMailingListsITTest extends ITTest {
             em.persist(mail(MAIL_TO_STAYER, ScheduledMail.Status.PENDING, STAYER_ADDRESS));
             em.persist(mail(MAIL_HELD_FOR_LEAVER, ScheduledMail.Status.HELD, LEAVER_ADDRESS));
             em.persist(mail(MAIL_HELD_FOR_BOTH, ScheduledMail.Status.HELD, LEAVER_ADDRESS, STAYER_ADDRESS));
+            em.persist(failed(mail(MAIL_FAILED_FOR_LEAVER, ScheduledMail.Status.ERROR, LEAVER_ADDRESS)));
+            em.persist(failed(mail(MAIL_FAILED_FOR_BOTH, ScheduledMail.Status.ERROR, LEAVER_ADDRESS, STAYER_ADDRESS)));
+            em.persist(mail(MAIL_RECORD, ScheduledMail.Status.ERROR, LEAVER_ADDRESS));
         });
     }
 
@@ -216,8 +224,8 @@ class UserDeleteMailingListsITTest extends ITTest {
     }
 
     /**
-     * The leaver is off both lists and the queued and held mails, the sent mail is as it was, and the stayer is
-     * untouched.
+     * The leaver is off both lists and the queued, held and failed mails, the sent mail and the record of a failure
+     * are as they were, and the stayer is untouched.
      */
     private void assertStoppedMailingTheLeaver() {
         Tx.requiringNew().run(() -> {
@@ -230,6 +238,10 @@ class UserDeleteMailingListsITTest extends ITTest {
             assertEquals(List.of(STAYER_ADDRESS), addresses(MAIL_TO_STAYER));
             assertNull(mailBySubject(MAIL_HELD_FOR_LEAVER), "a held mail with no recipient left is removed");
             assertEquals(List.of(STAYER_ADDRESS), addresses(MAIL_HELD_FOR_BOTH), "a held mail loses the leaver");
+            assertNull(mailBySubject(MAIL_FAILED_FOR_LEAVER), "a failed mail with no recipient left is removed");
+            assertEquals(List.of(STAYER_ADDRESS), addresses(MAIL_FAILED_FOR_BOTH),
+                    "a failed mail, which may be sent again, loses the leaver");
+            assertEquals(List.of(LEAVER_ADDRESS), addresses(MAIL_RECORD), "a record of a failure is never sent");
 
             User leaver = user(LEAVER);
             assertNotNull(leaver, "the record stays, for the history the user made");
@@ -279,6 +291,12 @@ class UserDeleteMailingListsITTest extends ITTest {
         for (String address : addresses) {
             mail.addRecipient(new ScheduledMailRecipient(TO, address));
         }
+        return mail;
+    }
+
+    /** The mail as one the sender job gave up after an attempt: a system administrator may send it again */
+    private static ScheduledMail failed(ScheduledMail mail) {
+        mail.setAttempts(1);
         return mail;
     }
 
