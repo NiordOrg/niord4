@@ -169,6 +169,8 @@ class MailingListDeliveryFaultITTest extends ITTest {
         for (String n : listSuffixes) {
             bestEffort(() -> em.createQuery("select m from ScheduledMail m where m.subject like :p", ScheduledMail.class)
                     .setParameter("p", errorRecordPrefix(n) + "%").getResultList().forEach(em::remove));
+            bestEffort(() -> em.createQuery("select m from ScheduledMail m where m.subject like :p", ScheduledMail.class)
+                    .setParameter("p", waitRecordPrefix(n) + "%").getResultList().forEach(em::remove));
         }
         for (String uid : messageUids) {
             bestEffort(() -> {
@@ -336,11 +338,25 @@ class MailingListDeliveryFaultITTest extends ITTest {
         return "Not sent: mailing list IT-MLFAULT-" + n + ",";
     }
 
+    /** The subject prefix of the records of a scheduled trigger of the test list that waits for the index */
+    private static String waitRecordPrefix(String n) {
+        return "Delayed: mailing list IT-MLFAULT-" + n + ",";
+    }
+
     /** The failure records of the test list: subject, status, last error and the first recipient, each */
     private List<String[]> errorRecords(String n) {
+        return recordsWithPrefix(errorRecordPrefix(n));
+    }
+
+    /** The records of the test list's waits for the index, as {@link #errorRecords(String)} */
+    private List<String[]> waitRecords(String n) {
+        return recordsWithPrefix(waitRecordPrefix(n));
+    }
+
+    private List<String[]> recordsWithPrefix(String prefix) {
         return Tx.requiringNew().call(() -> em.createQuery(
                         "select m from ScheduledMail m where m.subject like :p", ScheduledMail.class)
-                .setParameter("p", errorRecordPrefix(n) + "%")
+                .setParameter("p", prefix + "%")
                 .getResultList().stream()
                 .map(m -> new String[] {
                         m.getSubject(),
@@ -1026,9 +1042,12 @@ class MailingListDeliveryFaultITTest extends ITTest {
     /**
      * A due scheduled trigger whose query has a free-text term, run in the half hour after the start while the index
      * is still being filled: its search answers from the messages indexed so far, and a mail cannot say that it may
-     * list too few. So no mail is made; the trigger is postponed as one whose run failed, and recorded in the Mail
-     * Queue the same way, but only to the end of that half hour (not the hour of a failure), and the scheduler logs
-     * one WARN, no ERROR, saying it waits for the index and when it is tried again. FAILS without the wait: the mail
+     * list too few. So no mail is made; the trigger is postponed by a few minutes (not the hour of a failure, nor
+     * the whole half hour), so its mail follows soon after the index is complete, and the scheduler logs one WARN, no
+     * ERROR, saying it waits for the index, when it is tried again and by when its mail is made. The wait is recorded
+     * in the Mail Queue apart from the failures: a "Delayed:" record that says the mail follows, and that does not
+     * hold back the record of a run that fails for a real cause later the same day. Tried again while the index is
+     * still being filled, it waits again with no second WARN and no second record. FAILS without the wait: the mail
      * is made from the incomplete index and the trigger moves to its next regular time.
      */
     @Test
@@ -1044,25 +1063,81 @@ class MailingListDeliveryFaultITTest extends ITTest {
         Integer triggerId = committedDueScheduledTrigger(list, subject, inThreeHours, IT_TEMPLATE, null,
                 "query=nw&status=PUBLISHED");
         Instant started = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        Instant endOfTheWait = started.plus(MailingListExecutionService.INCOMPLETE_INDEX_WAIT);
 
+        long beforeRun = System.currentTimeMillis();
         List<ILoggingEvent> run = startedAt(started, () -> withTheIndexIncomplete(
                 () -> schedulerRunWarningsAbout(triggerId)));
+        long afterRun = System.currentTimeMillis();
 
         assertEquals(0, mailsWithSubject(subject), "no mail is made from the incomplete index");
         assertEquals(1, run.size(), "one line about the trigger: " + run);
         assertEquals(Level.WARN, run.get(0).getLevel(), "a warning, not an error: " + run.get(0));
-        assertTrue(run.get(0).getFormattedMessage().contains("waits for the free-text index"),
-                "the line says why: " + run.get(0).getFormattedMessage());
+        String line = run.get(0).getFormattedMessage();
+        assertTrue(line.contains("waits for the free-text index"), "the line says why: " + line);
+        Date next = nextExecutionOf(triggerId);
+        assertTrue(line.contains("tried again at " + next.toInstant()), "and when it is tried again: " + line);
+        assertTrue(line.contains("by " + endOfTheWait + " at the latest"), "and by when its mail is made: " + line);
+        long retry = MailingListExecutionService.INCOMPLETE_INDEX_RETRY.toMillis();
+        assertTrue(next.getTime() >= beforeRun + retry && next.getTime() <= afterRun + retry,
+                "postponed by a few minutes, not to the end of the half hour nor by the hour of a failure: "
+                        + next.toInstant());
+        assertTrue(errorRecords(n).isEmpty(), "no record of a failed run: " + errorRecords(n).size());
+        List<String[]> waits = waitRecords(n);
+        assertEquals(1, waits.size(), "one record of the wait in the Mail Queue");
+        assertEquals("Delayed: mailing list IT-MLFAULT-" + n + ", scheduled trigger " + triggerId, waits.get(0)[0]);
+        assertEquals("ERROR", waits.get(0)[1], "in status ERROR, so it is never sent");
+        assertTrue(waits.get(0)[2].startsWith("The text search index is being built again after a restart"),
+                "its last error says why: " + waits.get(0)[2]);
+        assertTrue(waits.get(0)[2].contains("by " + endOfTheWait + " at the latest"),
+                "and by when the mail is made: " + waits.get(0)[2]);
+
+        // Due again, as at the retry, the index still being filled: it waits again, without a second WARN or record
+        Tx.requiringNew().run(() -> em.createQuery(
+                        "update MailingListTrigger t set t.nextScheduledExecution = :past where t.id = :id")
+                .setParameter("past", new Date(System.currentTimeMillis() - 60_000L))
+                .setParameter("id", triggerId)
+                .executeUpdate());
+        List<ILoggingEvent> retried = startedAt(started, () -> withTheIndexIncomplete(
+                () -> schedulerRunWarningsAbout(triggerId)));
+        assertTrue(retried.isEmpty(), "no second WARN while it waits: " + retried);
+        assertEquals(0, mailsWithSubject(subject), "and still no mail");
+        assertTrue(nextExecutionOf(triggerId).after(new Date()), "postponed again");
+        assertEquals(1, waitRecords(n).size(), "and no second record of the wait");
+
+        // A run that fails for a real cause the same day is still recorded as a failure
+        assertTrue(executionService.recordScheduledTriggerFailure(triggerId,
+                        new IllegalStateException("it-real-failure-" + n)),
+                "the record of the wait does not hold back the record of a failure");
+        List<String[]> failures = errorRecords(n);
+        assertEquals(1, failures.size());
+        assertEquals("Not sent: mailing list IT-MLFAULT-" + n + ", scheduled trigger " + triggerId, failures.get(0)[0]);
+    }
+
+    /**
+     * A trigger that waits for the index near the end of the half hour after the start is tried again at its end,
+     * not a few minutes on, so the half hour bounds the delay of its mail.
+     */
+    @Test
+    void aScheduledTriggerThatWaitsNearTheEndOfTheHalfHourIsTriedAgainAtItsEnd() throws Exception {
+        messageLuceneIndex.recreateIndex();
+        awayFromTheRealSchedulersRun();
+        String n = Long.toString(System.nanoTime(), 36);
+        Integer list = committedListWithOneContact(n);
+        String subject = "IT-INDEX-END-" + n;
+        String inThreeHours = ZonedDateTime.now(ZoneOffset.UTC).plusHours(3)
+                .format(DateTimeFormatter.ofPattern("HH:mm"));
+        Integer triggerId = committedDueScheduledTrigger(list, subject, inThreeHours, IT_TEMPLATE, null,
+                "query=nw&status=PUBLISHED");
+        Instant started = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+                .minus(MailingListExecutionService.INCOMPLETE_INDEX_WAIT).plusSeconds(60);
         Instant endOfTheWait = started.plus(MailingListExecutionService.INCOMPLETE_INDEX_WAIT);
-        assertTrue(run.get(0).getFormattedMessage().contains("tried again at " + endOfTheWait),
-                "and when it is tried again: " + run.get(0).getFormattedMessage());
+
+        startedAt(started, () -> withTheIndexIncomplete(() -> schedulerRunWarningsAbout(triggerId)));
+
+        assertEquals(0, mailsWithSubject(subject), "no mail is made from the incomplete index");
         assertEquals(endOfTheWait, nextExecutionOf(triggerId).toInstant(),
-                "postponed to the end of the half hour after the start, not by the hour of a failure");
-        List<String[]> records = errorRecords(n);
-        assertEquals(1, records.size(), "recorded in the Mail Queue as a failed run is");
-        assertEquals("Not sent: mailing list IT-MLFAULT-" + n + ", scheduled trigger " + triggerId, records.get(0)[0]);
-        assertTrue(records.get(0)[2].startsWith("The text search index is being built again after a restart"),
-                "its last error says why: " + records.get(0)[2]);
+                "tried again at the end of the half hour after the start");
     }
 
     /**
@@ -1095,5 +1170,6 @@ class MailingListDeliveryFaultITTest extends ITTest {
         assertEquals(inThreeHours.truncatedTo(ChronoUnit.MINUTES).toInstant(), nextExecutionOf(triggerId).toInstant(),
                 "the trigger moves to its next regular time");
         assertTrue(errorRecords(n).isEmpty(), "and leaves no failure record");
+        assertTrue(waitRecords(n).isEmpty(), "nor a record of a wait");
     }
 }

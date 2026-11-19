@@ -78,6 +78,12 @@ public class MailingListExecutionService extends BaseService {
     static final Duration INCOMPLETE_INDEX_WAIT = Duration.ofMinutes(30);
 
     /**
+     * How often a scheduled trigger that waits for the free-text index is tried again, so its mail follows soon after
+     * the index is complete rather than at the end of {@link #INCOMPLETE_INDEX_WAIT}
+     **/
+    static final Duration INCOMPLETE_INDEX_RETRY = Duration.ofMinutes(2);
+
+    /**
      * When this backend started, as near as this service knows: when it was made, during the start. The free-text
      * index is emptied at the start and filled again; {@link #INCOMPLETE_INDEX_WAIT} counts from here.
      */
@@ -198,13 +204,7 @@ public class MailingListExecutionService extends BaseService {
         String subject = StringUtils.abbreviate(
                 "Not sent: mailing list " + mailingList.getMailingListId() + ", scheduled trigger " + trigger.getId(),
                 255);
-        long recent = em.createQuery("select count(m) from ScheduledMail m where m.subject = :s "
-                        + "and m.status = :st and m.created > :since", Long.class)
-                .setParameter("s", subject)
-                .setParameter("st", ScheduledMail.Status.ERROR)
-                .setParameter("since", new Date(System.currentTimeMillis() - FAILED_TRIGGER_RECORD_INTERVAL_MILLIS))
-                .getSingleResult();
-        if (recent > 0) {
+        if (hasRecentRecord(subject)) {
             log.debug("Scheduled trigger " + triggerId + " already has a failure record in the Mail Queue");
             return false;
         }
@@ -216,6 +216,57 @@ public class MailingListExecutionService extends BaseService {
                         + " while it keeps failing, this record is made at most once a day.</p>",
                 describeFailure(cause));
         return true;
+    }
+
+    /**
+     * Records that a scheduled trigger waits for the free-text index ({@link IncompleteIndexException}), as one mail
+     * in the Mail Queue in status ERROR, never sent. It is not a failure, so it is kept apart from the records of
+     * {@link #recordScheduledTriggerFailure}: its subject starts "Delayed:", it says that the mail follows, and it does
+     * not count toward their limit (nor theirs toward its), so a run that fails for a real cause after the wait is
+     * still recorded. At most one such record in {@link #FAILED_TRIGGER_RECORD_INTERVAL_MILLIS}, however often the
+     * trigger is tried again while it waits.
+     *
+     * @param triggerId the ID of the scheduled trigger that waits
+     * @param wait the wait, with the time by which the mail is made
+     * @return whether a record was made
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean recordScheduledTriggerWait(Integer triggerId, IncompleteIndexException wait) throws IOException {
+
+        MailingListTrigger trigger = triggerId == null ? null : getByPrimaryKey(MailingListTrigger.class, triggerId);
+        if (trigger == null || trigger.getType() != TriggerType.SCHEDULED || trigger.getMailingList() == null) {
+            log.warn("No record of the wait of scheduled trigger " + triggerId + ": the trigger or its list is gone");
+            return false;
+        }
+        MailingList mailingList = trigger.getMailingList();
+
+        String subject = StringUtils.abbreviate(
+                "Delayed: mailing list " + mailingList.getMailingListId() + ", scheduled trigger " + trigger.getId(),
+                255);
+        if (hasRecentRecord(subject)) {
+            log.debug("Scheduled trigger " + triggerId + " already has a record of its wait in the Mail Queue");
+            return false;
+        }
+
+        saveFailureRecord(mailingList, subject,
+                "<p>The scheduled trigger " + trigger.getId() + " of the mailing list "
+                        + HtmlUtils.htmlEscape(mailingList.getMailingListId())
+                        + " waits for the text search index, which is being built again after a restart, so its"
+                        + " mail is not made yet. It is tried again every few minutes, and its mail is made once"
+                        + " the index is complete, by " + wait.getWaitUntil().toInstant() + " at the latest."
+                        + " This record is not sent.</p>",
+                describeFailure(wait));
+        return true;
+    }
+
+    /** Whether the Mail Queue holds a record (status ERROR) with the subject, made in the last day **/
+    private boolean hasRecentRecord(String subject) {
+        return em.createQuery("select count(m) from ScheduledMail m where m.subject = :s "
+                        + "and m.status = :st and m.created > :since", Long.class)
+                .setParameter("s", subject)
+                .setParameter("st", ScheduledMail.Status.ERROR)
+                .setParameter("since", new Date(System.currentTimeMillis() - FAILED_TRIGGER_RECORD_INTERVAL_MILLIS))
+                .getSingleResult() > 0;
     }
 
     /**
@@ -331,8 +382,8 @@ public class MailingListExecutionService extends BaseService {
      * <p>
      * A run whose free-text search was answered while the index was still being filled after the start fails the same
      * way, with an {@link IncompleteIndexException}, while the backend has been up for less than
-     * {@link #INCOMPLETE_INDEX_WAIT}; after that the mail is made from what the index found, and a warning naming the
-     * trigger is logged.
+     * {@link #INCOMPLETE_INDEX_WAIT}, and is tried again every {@link #INCOMPLETE_INDEX_RETRY}; after that the mail is
+     * made from what the index found, and a warning naming the trigger is logged.
      *
      * @param triggerId the ID of the scheduled mailing list trigger to execute
      */
@@ -368,8 +419,8 @@ public class MailingListExecutionService extends BaseService {
 
     /**
      * Postpones a scheduled trigger whose run failed, as {@link #postponeFailedScheduledTrigger(Integer)} does, but
-     * to no later than the given time: a trigger that waits for the free-text index is tried again at the end of the
-     * wait at the latest ({@link IncompleteIndexException#getRetryBy()}).
+     * to no later than the given time: a trigger that waits for the free-text index is tried again a few minutes on
+     * ({@link IncompleteIndexException#getRetryAt()}).
      *
      * @param triggerId the ID of the scheduled mailing list trigger that failed
      * @param notAfter the latest next execution, or null for none
@@ -484,8 +535,12 @@ public class MailingListExecutionService extends BaseService {
         // cannot be read; after it, a refill that stalls does not stop the mail
         if (scheduledRun && Boolean.TRUE.equals(messageResult.getIndexIncomplete())) {
             Instant waitUntil = startedAt.plus(INCOMPLETE_INDEX_WAIT);
-            if (Instant.now().isBefore(waitUntil)) {
-                throw new IncompleteIndexException(Date.from(waitUntil));
+            Instant now = Instant.now();
+            if (now.isBefore(waitUntil)) {
+                // Tried again every few minutes, so the mail follows soon after the index is complete
+                Instant retryAt = now.plus(INCOMPLETE_INDEX_RETRY);
+                throw new IncompleteIndexException(Date.from(retryAt.isBefore(waitUntil) ? retryAt : waitUntil),
+                        Date.from(waitUntil));
             }
             log.warn("Scheduled mailing list trigger " + trigger.getId() + " is mailed although the free-text index "
                     + "is still not complete " + INCOMPLETE_INDEX_WAIT.toMinutes() + " minutes after the start: "

@@ -838,9 +838,12 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   message again, which on a large database takes several minutes, a free-text search answers with the hits among the
   messages indexed so far, possibly none. The owner's decision (2026-11-19): the search keeps answering, and the
   editors are told. The editors' _Messages_ list shows a warning above such a result. A scheduled mailing-list
-  trigger whose stored query holds a `query=` term waits for the index in the half hour after the start (postponed
-  and recorded in the Mail Queue as a failed run is, with a WARN); after that half hour it is mailed from what the
-  index holds, with a WARN naming the trigger, so a refill that stalls delays such a mail by at most half an hour.
+  trigger whose stored query holds a `query=` term waits for the index in the half hour after the start: tried again
+  every two minutes, so its mail follows soon after the index is complete, with one WARN and one "Delayed:" record in
+  the Mail Queue, kept apart from the "Not sent:" records of failed runs; after that half hour it is mailed from what
+  the index holds, with a WARN naming the trigger, so a refill that stalls delays such a mail by at most half an hour.
+  With `messageIndexDeleteOnStartup` off the index is kept, but it counts as not complete until the start-up pass
+  (five seconds after the start) has run, so a trigger due in those seconds waits a few minutes too.
   The print (PDF), export (ZIP) and message mail of the list and a mailing-list report pass the short answer on as a
   real one, and so does a deployment's script that searches with free text. The public API (`/rest/public/v1/messages`)
   takes no free text and does not read the index, a status-change mail is about its one message and runs no search,
@@ -849,8 +852,8 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** `MessageLuceneIndexStartWindowTest` (a message indexed before a restart is not found right after
   it, the search does not fail, and the index says it is not complete) and `MessageSearchIndexIncompleteITTest` (the
   mark, on the service, the editors' search and not on the public API); `MailingListDeliveryFaultITTest` holds a
-  scheduled trigger to the half hour's wait. What the print, export, message mail and report do with a marked result
-  is not tested.
+  scheduled trigger to the half hour's wait, its retry and its record. What the print, export, message mail and
+  report do with a marked result is not tested.
 - **Severity:** Low — the window is short, the editors' list warns in it and the scheduled mails wait for it. Fix,
   for the owner to weigh: carry the mark on (a line in the print and the mailing-list report, a warning in the mail
   and export dialogs before they are sent). With `messageIndexDeleteOnStartup` off the index is kept across a start,

@@ -19,24 +19,35 @@ import java.util.Date;
 
 /**
  * A scheduled trigger's run waits for the free-text index: its search was answered while the index was still being
- * filled after the start, so its mail could list too few messages. The scheduler postpones the trigger as it does one
- * whose run failed, to no later than {@link #getRetryBy()}, when the run makes its mail whatever the index holds.
+ * filled after the start, so its mail could list too few messages. The scheduler postpones the trigger to
+ * {@link #getRetryAt()}, a few minutes on and never after {@link #getWaitUntil()}, when the run makes its mail
+ * whatever the index holds. It is not a failure: the scheduler records it apart from the failed runs.
  */
 public class IncompleteIndexException extends Exception {
 
-    private final Date retryBy;
+    private final Date retryAt;
+
+    private final Date waitUntil;
 
     /**
-     * @param retryBy the end of the wait, when the trigger is run again at the latest
+     * @param retryAt when the trigger is tried again
+     * @param waitUntil the end of the wait, when the trigger's mail is made at the latest
      */
-    public IncompleteIndexException(Date retryBy) {
+    public IncompleteIndexException(Date retryAt, Date waitUntil) {
         super("The text search index is being built again after a restart, so the message query's search may miss "
-                + "messages; the trigger is run again by " + retryBy.toInstant() + ", and its mail is made then");
-        this.retryBy = retryBy;
+                + "messages; the mail is made once the index is complete, by " + waitUntil.toInstant()
+                + " at the latest");
+        this.retryAt = retryAt;
+        this.waitUntil = waitUntil;
     }
 
-    /** @return the end of the wait, when the trigger is run again at the latest */
-    public Date getRetryBy() {
-        return retryBy;
+    /** @return when the trigger is tried again */
+    public Date getRetryAt() {
+        return retryAt;
+    }
+
+    /** @return the end of the wait, when the trigger's mail is made at the latest */
+    public Date getWaitUntil() {
+        return waitUntil;
     }
 }

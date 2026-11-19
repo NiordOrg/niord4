@@ -43,11 +43,13 @@ leaves at most one such mail a day while it keeps failing.
 
 After a restart, the server builds its text search index again, which takes some minutes on a large database. A
 scheduled trigger whose message query has a text term (`query=`) and that runs in those minutes would find only the
-messages indexed so far, so in the first half hour after the restart it waits: it leaves a mail with the status
-_Error_ as above, whose last error says that the text search index is being built again and when the trigger is run
-again, at the latest half an hour after the restart, and the server log has a WARN saying the trigger waits for the
-index. The trigger's mail follows then. When the index is still not complete half an hour after the restart, the
-mail is sent all the same, and the log has a WARN naming the trigger, since the mail may list too few messages.
+messages indexed so far, so in the first half hour after the restart it waits, and is tried again every two
+minutes. It leaves one mail with the status _Error_, which is never sent, whose subject starts "Delayed: mailing
+list" and names the list and the trigger, and whose last error says that the text search index is being built again
+and by when the mail is made, at the latest half an hour after the restart; the server log has one WARN saying the
+trigger waits for the index. The trigger's mail is made as soon as the index is complete. When the index is still
+not complete half an hour after the restart, the mail is sent all the same, and the log has a WARN naming the
+trigger, since the mail may list too few messages.
 
 Niord notes every status change of a message in its database, together with the change, until the mails of the
 status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts
