@@ -549,25 +549,34 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     /**
-     * A list contact with neither a name nor an e-mail address (a blank one, which the contact services refuse today
-     * but a row written before them or by hand may hold) has no address, which the Mail Queue refuses: the trigger's
-     * own mails fail on that contact (see MAILLIST9 in be/docs/potential-errors.md). Its failure record leaves the
-     * contact out and holds the list's other recipients, so it is saved and the trigger is settled. FAILS on the code
-     * that added every recipient to the record: the record failed for the same reason, on every take.
+     * Adds a committed contact with neither a name nor an e-mail address (a blank one, which the contact services
+     * refuse today but a row written before them or by hand may hold) to the list, written past ContactService.
+     * Returns the contact's id.
+     */
+    private Integer addContactWithoutAnAddress(Integer list) {
+        Integer id = Tx.requiringNew().call(() -> {
+            Contact blank = new Contact();
+            blank.setEmail("");
+            em.persist(blank);
+            em.flush();
+            em.find(MailingList.class, list).getContacts().add(blank);
+            return blank.getId();
+        });
+        contactIds.add(id);
+        return id;
+    }
+
+    /**
+     * A list contact with neither a name nor an e-mail address has no address, which the Mail Queue refuses. The
+     * failure record of a trigger leaves the contact out and holds the list's other recipients, so it is saved and the
+     * trigger is settled. FAILS on the code that added every recipient to the record: the record failed for that
+     * reason, on every take.
      */
     @Test
     void theFailureRecordLeavesOutARecipientWithoutAnAddress() throws Exception {
         String n = Long.toString(System.nanoTime(), 36);
         Integer list = committedListWithOneContact(n);
-        Tx.requiringNew().run(() -> {
-            // Written past ContactService, which refuses a blank address
-            Contact blank = new Contact();
-            blank.setEmail("");
-            em.persist(blank);
-            em.flush();
-            contactIds.add(blank.getId());
-            em.find(MailingList.class, list).getContacts().add(blank);
-        });
+        addContactWithoutAnAddress(list);
         String subject = "IT-NO-ADDRESS-" + n;
         String uid = "it-no-address-" + n;
         addStatusChangeTrigger(list, subject, IT_TEMPLATE, uid);
@@ -586,6 +595,52 @@ class MailingListDeliveryFaultITTest extends ITTest {
                         "select count(r) from ScheduledMailRecipient r where r.mail.subject like :p", Long.class)
                 .setParameter("p", errorRecordPrefix(n) + "%").getSingleResult()),
                 "and no other");
+    }
+
+    /**
+     * A list contact with neither a name nor an e-mail address is left out of the mails of the list's trigger, with a
+     * WARN that names the list and the contact by its id, and the list's other recipient gets the mail. FAILS on the
+     * code that added every recipient to the mail: the contact's missing address was refused as the mails were saved,
+     * so the trigger failed and nobody on the list got the mail.
+     */
+    @Test
+    void aRecipientWithoutAnAddressIsLeftOutOfTheTriggersMails() {
+        String n = Long.toString(System.nanoTime(), 36);
+        String uid = committedDraft("IT no address mail " + n);
+        Integer list = committedListWithOneContact(n);
+        Integer blankId = addContactWithoutAnAddress(list);
+        String subject = "IT-NO-ADDRESS-MAIL-" + n;
+        addStatusChangeTrigger(list, subject, IT_TEMPLATE, uid);
+        Integer triggerId = Tx.requiringNew().call(() -> em.createQuery(
+                        "select t.id from MailingListTrigger t where t.mailingList.id = :list", Integer.class)
+                .setParameter("list", list).getSingleResult());
+
+        Logger logger = (Logger) LoggerFactory.getLogger(MailingListExecutionService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            // No outbox row is needed: the mark on a row that does not exist marks nothing
+            assertDoesNotThrow(() -> executionService.executeStatusChangeTrigger(triggerId, uid, -1L),
+                    "the trigger runs");
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertEquals(1, mailsWithSubject(subject), "one mail, for the recipient with an address");
+        String address = Tx.requiringNew().call(() -> em.createQuery(
+                        "select r.address from ScheduledMailRecipient r where r.mail.subject = :s", String.class)
+                .setParameter("s", subject).getSingleResult());
+        assertEquals("it-fault-" + n + "@example.com", address.replaceAll(".*<(.*)>.*", "$1"),
+                "to the list's recipient that has an address: " + address);
+        List<String> warnings = appender.list.stream()
+                .filter(e -> e.getLevel() == Level.WARN)
+                .map(ILoggingEvent::getFormattedMessage)
+                .filter(m -> m.contains("IT-MLFAULT-" + n))
+                .toList();
+        assertEquals(1, warnings.size(), "one WARN about the list: " + warnings);
+        assertTrue(warnings.get(0).contains("contact " + blankId + " has no e-mail address"),
+                "it names the contact by its id: " + warnings.get(0));
     }
 
     /**

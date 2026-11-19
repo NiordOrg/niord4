@@ -34,11 +34,14 @@ import org.niord.core.message.MessageSearchService;
 import org.niord.core.message.MessageSeriesService;
 import org.niord.core.message.MessageTokenExpander;
 import org.niord.core.message.vo.SystemMessageVo;
+import org.niord.core.model.BaseEntity;
 import org.niord.core.model.DescEntity;
 import org.niord.core.script.FmTemplateService;
 import org.niord.core.script.JsResourceService;
 import org.niord.core.script.ScriptResource;
 import org.niord.core.service.BaseService;
+import org.niord.core.user.Contact;
+import org.niord.core.user.User;
 import org.niord.core.util.TimeUtils;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
@@ -293,8 +296,8 @@ public class MailingListExecutionService extends BaseService {
     /**
      * Saves the record of a failed trigger: a mail in status ERROR, never sent, to the recipients of the list, with
      * the given subject, the note (HTML) followed by the cause, and the cause as its last error. A recipient with
-     * neither a name nor an e-mail address is left out (the Mail Queue holds no recipient without an address): the
-     * record must be saved even when that recipient is why the trigger's own mails failed.
+     * neither a name nor an e-mail address is left out (the Mail Queue holds no recipient without an address), as it
+     * is from the trigger's own mails.
      */
     private void saveFailureRecord(MailingList mailingList, String subject, String noteHtml, String error)
             throws IOException {
@@ -694,9 +697,27 @@ public class MailingListExecutionService extends BaseService {
                 .filter(r -> receives(r.getLanguage(), language, languages, isDefaultLanguage))
                 .collect(Collectors.toList()));
 
-        recipients.forEach(r -> mail.addRecipient(new ScheduledMailRecipient(TO, r.computeInternetAddress())));
+        // A recipient with neither a name nor an e-mail address has no address, which the Mail Queue refuses: it is
+        // left out, so it does not stop the mail of everyone else on the list
+        for (IMailable r : recipients) {
+            String address = r.computeInternetAddress();
+            if (address == null) {
+                log.warn("Mailing list " + trigger.getMailingList().getMailingListId() + ": "
+                        + describeRecipient(r) + " has no e-mail address and is left out of the mail of trigger "
+                        + trigger.getId());
+                continue;
+            }
+            mail.addRecipient(new ScheduledMailRecipient(TO, address));
+        }
 
         return mail;
+    }
+
+    /** A recipient by its kind and id, never by name or address, for the log: "contact 12", "user 7" **/
+    private static String describeRecipient(IMailable recipient) {
+        String kind = recipient instanceof User ? "user" : recipient instanceof Contact ? "contact" : "recipient";
+        Object id = recipient instanceof BaseEntity<?> entity ? entity.getId() : null;
+        return kind + " " + id;
     }
 
     /**

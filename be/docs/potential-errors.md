@@ -2304,22 +2304,6 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster B18 (read in the code; not run).
 - **Severity:** Low. Fix: 400 for a missing or unknown message and for a null trigger.
 
-## MAILLIST9. A list recipient without any address stops every mail of the list's triggers
-
-- **Location:** `org/niord/core/mailinglist/MailingListExecutionService.java` `createMailTemplate` (the recipients:
-  `new ScheduledMailRecipient(TO, r.computeInternetAddress())`); `IMailable.computeInternetAddress`.
-- **Description:** for a contact with a blank e-mail address and no name, or a user with a blank user name and no
-  name or address, `computeInternetAddress` returns null, and `ScheduledMailRecipient.address` is `@NotNull` (and
-  `NOT NULL` in the table). Every mail a trigger of that recipient's list makes then fails as it is saved, for all its
-  recipients, a status-change trigger's and a scheduled trigger's alike. The failure is recorded in the Mail Queue
-  (the record leaves that recipient out since 2026-11-19), but no subscriber of the list gets the mail.
-- **Why it looks wrong:** one recipient without an address should be left out of the mail, not stop it for everyone.
-- **Exposed by:** a review of the status-change outbox, 2026-11-19; the failure record's half is pinned by
-  `MailingListDeliveryFaultITTest.theFailureRecordLeavesOutARecipientWithoutAnAddress`.
-- **Severity:** Low: `ContactService` refuses a blank contact address and a user always has a user name, so only a
-  row written before those checks or by hand is hit. Fix: leave out a recipient whose address is null in
-  `createMailTemplate` too, with a WARN naming it.
-
 ## CG7. A `-` before the longitude is read as a divider, and the hemisphere letter decides
 
 - **Location:** `org/niord/core/geojson/PlainTextConverter.java` (`POSITION_FORMAT`, 84) and the admin app's
