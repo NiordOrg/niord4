@@ -28,9 +28,9 @@ subcommands; `--help` lists every flag.
 | --- | --- |
 | `stand-ins` | Serves a static-map server and an OSM-like tile server on loopback (below). |
 | `local` | Times a backend on this machine whose map source points at the stand-ins: cases 1 to 7. Deletes generated images under `--cache` (the cache tree, `<niord.home>/cache`), and case 5 saves a scratch message: a benchmark copy of the data only. A message's images sit in its folder there, the message's `repoPath`; the search answer carries none, so the script takes the folder the backend gives every message from its UID (`messages/<uid[0]>/<uid[1..2]>/<uid>`), not the image's answer, which names no file when the image comes at once. It learns the renderer's file names from those folders after its first fetch of the set. Only `map_<size>.png` and `map_<size>_<version>.png` are deleted. The old flag `--repo` is refused with a message naming `--cache`: a current backend keeps nothing to delete there, so a command line of the earlier version would time cached images as cold ones. |
-| `remote` | Times a deployed system with GET requests only (cases R1 to R5). The one other request is the Keycloak token POST. |
+| `remote` | Times a deployed system with GET requests only (cases R1 to R5; R6 to R8, the message reads, when named). The one other request is the Keycloak token POST. |
 | `compare` | Applies the pass criteria to the result files of an old and a new run. |
-| `selftest` | Starts the stand-ins on free ports and checks their answers, then checks the map-image client against a stand-in of the endpoint's answers (a generated image at once, the placeholder, a custom thumbnail's 307, an older backend's redirects), `compare`'s note on one request against two, and the local mode's files in a temporary cache tree (each message's folder from the search answer, the file names, the deletion of the map images only, the refusal of `--repo`). |
+| `selftest` | Starts the stand-ins on free ports and checks their answers, then checks the map-image client against a stand-in of the endpoint's answers (a generated image at once, the placeholder, a custom thumbnail's 307, an older backend's redirects), `compare`'s note on one request against two, and the local mode's files in a temporary cache tree (each message's folder from the search answer, the file names, the deletion of the map images only, the refusal of `--repo`), and the message reads against a stand-in of their endpoints. |
 
 Credentials come from the environment only: `NIORD_USER` and `NIORD_PASS`, a password grant on the public
 client `niord-web` (`--keycloak`, `--realm`, `--client`). They are never taken from a flag or a file and never
@@ -183,6 +183,11 @@ Every case first runs `--warmup` rounds (1) that are not counted.
 | 5 | Save round trip | `GET /rest/messages/editable-message/{id}` + `PUT /rest/messages/message/{id}`, 30 times. |
 | 6 | Message GET and list search | `GET /rest/messages/message/{id}` 200 times, the list search (`maxSize=200`) 30 times. |
 | 7 | Case 6 under load | While 200 cold (`--load cold`) or stale (`--load stale`, new) images are requested at concurrency 50. |
+
+Cases 6b, 6c and 6d (and R6, R7 and R8 in `remote` mode) are the [message-read benchmark](message-read-benchmark.md)'s:
+the administration app's list search at its default page and in its map view, and the public site's list and
+single message. They run only when `--cases` names them, and a run of read cases alone (6 and R5 among them)
+fetches no map image.
 
 ## Pass criteria
 
