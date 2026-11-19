@@ -1547,6 +1547,28 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   mail in status Error in the Mail Queue once a day, which does not mend the row; the test environment's
   row is replaced only by a sysadmin's release import with the overwrite ticked, on a human's say-so. Open.
 
+## SCRIPT11. A failed search in DK's and GL's firing-exercise script mails the list an empty schedule
+
+- **Location:** the country repositories' own `be/bootstrap/templates/mailinglist/fetch-firing-exercises.js`
+  (`SIFA-DK/niord-dk` and `SIFA-DK/niord-gl`; DK's is the file the base sample's copy was taken from, and GL's is
+  the same but for its line 19, `docs/code-data-config-plan.md` §9.2), which call
+  `messageService.search(searchParams)`, and the `templates/mailinglist/fetch-firing-exercises.js` rows of the
+  deployments made from them; `niord/src/main/java/org/niord/core/message/MessageSearchService.java` `search` (logs
+  a failure and answers an empty result) beside `searchOrFail` (throws it).
+- **Description:** when that search fails (a database error, say, after the trigger's own `searchOrFail`
+  succeeded), the script puts an empty `firingExercises` list into the mail and `audio-broadcast.ftl` prints the
+  heading for tomorrow's firing exercises with no exercise under it. The mail is sent and the trigger is not
+  postponed [read in the code; not run]. The base sample's copy (`niord/sample/archive/`) calls `searchOrFail` and
+  `BootstrapScriptBeanCallsTest` refuses the lenient call in the base bootstrap and the sample; the countries' files
+  are their own, not shadows of a base file, so neither the base bump nor a country's release import changes them.
+- **Why it looks wrong:** a failure reaches the list's readers as "no firing exercises tomorrow", which they
+  cannot tell from a real empty schedule.
+- **Exposed by:** a review of 2026-11-18, which named the script in the javadoc of `MessageSearchService.search`.
+- **Severity:** Low — it needs a search that fails between the trigger's and the script's. Fix: the same one-line
+  change to `searchOrFail` in each country's bootstrap file, in that country's repository; a deployment's existing
+  row then changes only by a sysadmin's release import with the overwrite ticked, on a human's say-so (as SCRIPT8).
+  Open.
+
 ## TZ1. Time-dependent ITs fail by exactly one hour when they run in the hour the clocks go back
 
 - **Location:** the timestamp columns of `niord/src/main/resources/db/changelog/changes/V001__baseline_schema.sql`,
