@@ -95,9 +95,9 @@ public class MailingListStatusChangeOutbox {
     /**
      * How long a taken row stays out of every other node's reach ({@link #claimNextDue}): the time the triggers of
      * one status change may take, many times over (each trigger renders its template and queues its mails in one
-     * transaction). It is also how long a row whose node stopped while running it waits before it is tried again; a
-     * row whose run failed and was recorded ({@link #failed}) is tried again sooner. Package-private so the ITs can
-     * shorten it.
+     * transaction). It is also how long a row whose node died while running it, or still ran it when the stop ended
+     * its wait, waits before it is tried again; a row whose run failed, or that a stop left owing triggers, is
+     * recorded ({@link #failed}) and tried again sooner. Package-private so the ITs can shorten it.
      */
     Duration claimLease = Duration.ofMinutes(10);
 

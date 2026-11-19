@@ -74,19 +74,23 @@ import jakarta.jms.ConnectionFactory;
  * per node), so across nodes two status changes of one message may be mailed at once or in reverse with no failure at
  * all; the chart runs one replica. A row whose triggers could not be looked up, or that still owes a trigger, waits a
  * few minutes (one more for each time it was taken, at most its lease), and the passes meanwhile take the rows after
- * it (the pass that kept a row owing a trigger goes straight on to them): a later status change of the same message (CANCELLED after PUBLISHED) may then be mailed before it. A
- * row whose node stopped while running it waits out its lease. Such a row is tried again with an ERROR each time; its
- * {@code attempts} and {@code "lastError"} show how long it has failed. Once the context closes, the drain starts no
- * further trigger and takes no further row. A row taken more than {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS}
+ * it (the pass that kept a row owing a trigger goes straight on to them): a later status change of the same message
+ * (CANCELLED after PUBLISHED) may then be mailed before it. Once the context closes, the drain starts no further
+ * trigger and takes no further row: a row that the close leaves with triggers not yet run is kept owing them, and so
+ * is due again within minutes too; only a row still running when the close stops waiting for it
+ * ({@link #stopWaitMillis}), or whose node died while running it, waits out its lease. Such a row is tried again with
+ * an ERROR each time; its {@code attempts} and {@code "lastError"} show how long it has failed. A row taken more than {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS}
  * times (its run failed, hung or stopped the server each time) is given up: each trigger it still owes leaves a "Not
  * sent" ERROR record in the Mail Queue, and the row is deleted once each is recorded. A record that cannot be saved is
  * tried on as many further takes; on the last ({@link #LAST_TAKE}) the row is deleted all the same, with one ERROR in
  * the server log naming each such trigger, its list and the message.
  * <p>
  * The topic is polled on a single-thread executor, started when the application is ready and stopped when the context
- * closes ({@link JmsTopicLoop}). When the context closes the drain takes no further row; a row it is running then is
- * finished if it ends within {@link #stopWaitMillis}, and otherwise keeps its lease and is taken again once that runs
- * out, by this node's next start or by another node.
+ * closes ({@link JmsTopicLoop}). When the context closes the drain takes no further row and starts no further trigger;
+ * the trigger it is running then is waited for up to {@link #stopWaitMillis}. When it ends in that time, its row is
+ * deleted if every trigger is settled, and otherwise kept owing the triggers not yet run, due again within minutes. A
+ * row still running after that keeps its lease and is taken again once that runs out, by this node's next start or by
+ * another node.
  */
 @SuppressWarnings("unused")
 @Component
@@ -190,7 +194,9 @@ public class MailingListMessageListener implements Runnable {
     /**
      * Stops the poll loop and the drain worker. The drain takes no further row; the one it runs, if any, is not
      * interrupted (an interrupted trigger would be recorded in the Mail Queue as failed) and is waited for up to
-     * {@link #stopWaitMillis}. A row still running after that keeps its lease and is taken again once it runs out.
+     * {@link #stopWaitMillis}; it starts no further trigger, so a row it ends in that time is kept owing the triggers
+     * not yet run and is due again within minutes. A row still running after that keeps its lease and is taken again
+     * once it runs out.
      */
     @EventListener(ContextClosedEvent.class)
     void onStop() {

@@ -58,7 +58,8 @@ change, which of its triggers are done: their mails are in the queue, or their f
 _Error_ above). When a trigger is neither, for example because the database could not be reached for a moment, the
 status change is kept and tried again a few minutes later, and only the triggers not yet done are run again: the
 mailing lists that got their mail do not get it twice. When the server stops while it is putting a status change's
-mails in the queue, that status change is taken again ten minutes later, in the same way. A status change taken
+mails in the queue, that status change is taken again within a few minutes (ten when the stop cut a trigger short),
+in the same way. A status change taken
 again is mailed for the status it had, so its mail can arrive after the mail of a later status change of the same
 message, for example a cancellation. A status change that could not be finished in five attempts (the server
 stopped, a trigger hung, or the database could not be reached, each time) is given up: each of its status change
