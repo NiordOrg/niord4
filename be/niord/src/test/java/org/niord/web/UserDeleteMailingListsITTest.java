@@ -80,6 +80,9 @@ class UserDeleteMailingListsITTest extends ITTest {
     private static final String MAIL_TO_BOTH = "IT-USER1 queued for both";
     private static final String MAIL_SENT = "IT-USER1 sent to the leaver";
     private static final String MAIL_TO_STAYER = "IT-USER1 queued for the stayer";
+    /** Held under the LOG mail filter: not sent, and a system administrator may still send them again */
+    private static final String MAIL_HELD_FOR_LEAVER = "IT-USER1 held for the leaver";
+    private static final String MAIL_HELD_FOR_BOTH = "IT-USER1 held for both";
 
     @Autowired
     KeycloakIntegrationService keycloakIntegrationService;
@@ -104,6 +107,8 @@ class UserDeleteMailingListsITTest extends ITTest {
             em.persist(mail(MAIL_TO_BOTH, ScheduledMail.Status.PENDING, LEAVER_ADDRESS, STAYER_ADDRESS));
             em.persist(mail(MAIL_SENT, ScheduledMail.Status.SENT, LEAVER_ADDRESS));
             em.persist(mail(MAIL_TO_STAYER, ScheduledMail.Status.PENDING, STAYER_ADDRESS));
+            em.persist(mail(MAIL_HELD_FOR_LEAVER, ScheduledMail.Status.HELD, LEAVER_ADDRESS));
+            em.persist(mail(MAIL_HELD_FOR_BOTH, ScheduledMail.Status.HELD, LEAVER_ADDRESS, STAYER_ADDRESS));
         });
     }
 
@@ -210,7 +215,10 @@ class UserDeleteMailingListsITTest extends ITTest {
         assertStoppedMailingTheLeaver();
     }
 
-    /** The leaver is off both lists and the queued mails, the sent mail is as it was, and the stayer is untouched. */
+    /**
+     * The leaver is off both lists and the queued and held mails, the sent mail is as it was, and the stayer is
+     * untouched.
+     */
     private void assertStoppedMailingTheLeaver() {
         Tx.requiringNew().run(() -> {
             assertEquals(List.of(STAYER), recipients(LIST_A), "the other recipient stays on the list");
@@ -220,6 +228,8 @@ class UserDeleteMailingListsITTest extends ITTest {
             assertEquals(List.of(STAYER_ADDRESS), addresses(MAIL_TO_BOTH));
             assertEquals(List.of(LEAVER_ADDRESS), addresses(MAIL_SENT), "a sent mail is history");
             assertEquals(List.of(STAYER_ADDRESS), addresses(MAIL_TO_STAYER));
+            assertNull(mailBySubject(MAIL_HELD_FOR_LEAVER), "a held mail with no recipient left is removed");
+            assertEquals(List.of(STAYER_ADDRESS), addresses(MAIL_HELD_FOR_BOTH), "a held mail loses the leaver");
 
             User leaver = user(LEAVER);
             assertNotNull(leaver, "the record stays, for the history the user made");

@@ -38,8 +38,10 @@ import jakarta.validation.constraints.NotNull;
  */
 @Entity
 @NamedQueries({
-        @NamedQuery(name = "ScheduledMailRecipient.findPendingByAddress",
-                query = "SELECT r FROM ScheduledMailRecipient r where r.mail.status = 'PENDING' and r.address = :address")
+        // The recipients of the mails not sent: the pending ones and the held ones, which may still be sent again
+        @NamedQuery(name = "ScheduledMailRecipient.findUnsentByAddress",
+                query = "SELECT r FROM ScheduledMailRecipient r where r.mail.status in ('PENDING', 'HELD') "
+                        + "and r.address = :address")
 })
 @SuppressWarnings("unused")
 public class ScheduledMailRecipient extends BaseEntity<Integer> {

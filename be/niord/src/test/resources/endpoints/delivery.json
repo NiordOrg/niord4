@@ -1417,6 +1417,34 @@
       "reviewed": true
     },
     {
+      "key": "POST /rest/scheduled-mails/send-again",
+      "handler": "ScheduledMailRestService.sendAgain",
+      "alsoAt": [],
+      "kind": "write",
+      "guard": "RolesAllowed(SYSADMIN)",
+      "codeCheck": "found",
+      "codeCheckEvidence": [
+        "status 401/403 in ScheduledMailRestService.sendAgain",
+        "currentUser() in ScheduledMailRestService.sendAgain",
+        "not followed: ScheduledMail, SettingsService, ValidMailRecipients"
+      ],
+      "params": [],
+      "rules": [],
+      "realmRole": null,
+      "answers": {
+        "admin": {"status": 403, "detail": null},
+        "sysadmin": {"status": 409, "detail": "is LOG, so the mails would only be held again"}
+      },
+      "case": "DeliverySweepGroup#sendAgainScheduledMails",
+      "coveredBy": "ScheduledMailRestServiceITTest#sendAgainQueuesAHeldMailWhenTheFilterIsOpen",
+      "expect": null,
+      "expectedLog": [],
+      "knownFault": [],
+      "exempt": null,
+      "note": "the suite runs with the mail filter at LOG, so a well-formed Send again is refused with 409 before any row is read (the sysadmin cell, on the fixture's mail); the 401 without a current user is the annotation's for an anonymous call. The round trip with the filter open is the covering test's; the probes send an empty list (400) and read the fixture's mail unchanged after the 409",
+      "reviewed": true
+    },
+    {
       "key": "PUT /rest/templates/execute",
       "handler": "TemplateExecutionRestService.applyTemplate",
       "alsoAt": [],

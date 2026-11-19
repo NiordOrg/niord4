@@ -38,6 +38,8 @@ public class ScheduledMailVo implements IJsonSerializable {
     Status status = Status.PENDING;
     int attempts = 0;
     String lastError;
+    Date sentAgainAt;
+    String sentAgainBy;
 
     /*************************/
     /** Getters and Setters **/
@@ -121,5 +123,21 @@ public class ScheduledMailVo implements IJsonSerializable {
 
     public void setLastError(String lastError) {
         this.lastError = lastError;
+    }
+
+    public Date getSentAgainAt() {
+        return sentAgainAt;
+    }
+
+    public void setSentAgainAt(Date sentAgainAt) {
+        this.sentAgainAt = sentAgainAt;
+    }
+
+    public String getSentAgainBy() {
+        return sentAgainBy;
+    }
+
+    public void setSentAgainBy(String sentAgainBy) {
+        this.sentAgainBy = sentAgainBy;
     }
 }

@@ -20,6 +20,8 @@ import org.niord.core.mail.ScheduledMail;
 import org.niord.core.mail.ScheduledMailSearchParams;
 import org.niord.core.mail.ScheduledMailService;
 import org.niord.core.mail.vo.ScheduledMailVo;
+import org.niord.core.mail.vo.SendAgainRequestVo;
+import org.niord.core.mail.vo.SendAgainResultVo;
 import org.niord.core.user.Roles;
 import org.niord.core.user.User;
 import org.niord.core.user.UserService;
@@ -29,6 +31,8 @@ import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,7 +46,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * REST interface for searching scheduled e-mails.
+ * REST interface for searching scheduled e-mails, and for sending them again.
  */
 @RestController
 @RequestMapping("/rest/scheduled-mails")
@@ -88,7 +92,12 @@ public class ScheduledMailRestService {
         Date since = TimeUtils.add(new Date(), Calendar.DATE, -period);
         DataFilter dataFilter = DataFilter.get();
         return scheduledMailService.findBySender(user.computeInternetAddress(), since, MY_MAILS_MAX).stream()
-                .map(m -> m.toVo(dataFilter))
+                .map(m -> {
+                    // The user is not shown the user name of the system administrator who sent the mail again
+                    ScheduledMailVo mail = m.toVo(dataFilter);
+                    mail.setSentAgainBy(null);
+                    return mail;
+                })
                 .toList();
     }
 
@@ -132,6 +141,29 @@ public class ScheduledMailRestService {
             throw new NiordWebException(404);
         }
         return mail.toVo(DataFilter.get().fields(DataFilter.DETAILS));
+    }
+
+    /**
+     * Sends held, sent or failed mails again, as the Mail Queue page asks: each named mail is put back in the queue
+     * as it was made, and the sender job sends it within a minute or two under the mail filter in force then
+     * ({@link ScheduledMailService#sendAgain(List, String)}). At most {@link ScheduledMailService#SEND_AGAIN_MAX}
+     * mails a request.
+     * <p>
+     * 400 for a request that names no mail, too many, a mail without its id or status, a status other than HELD, SENT
+     * or ERROR, or a mail twice; 409 while the mail filter is LOG or empty; 401 without a current user, who is
+     * recorded on each mail. Otherwise 200 with the ids queued and the mails refused, each with its reason (GONE,
+     * CHANGED or RECORD).
+     */
+    @PostMapping(value = "/send-again",
+            consumes = "application/json;charset=UTF-8",
+            produces = "application/json;charset=UTF-8")
+    @RolesAllowed(Roles.SYSADMIN)
+    public SendAgainResultVo sendAgain(@RequestBody SendAgainRequestVo request) {
+        User user = userService.currentUser();
+        if (user == null) {
+            throw new NiordWebException(401);
+        }
+        return scheduledMailService.sendAgain(request.getMails(), user.getUsername());
     }
 
 }

@@ -56,6 +56,8 @@ public class ScheduledMailMapper {
         mail.setSubject(mailEntity.getSubject());
         mail.setAttempts(mailEntity.getAttempts());
         mail.setLastError(mailEntity.getLastError());
+        mail.setSentAgainAt(mailEntity.getSentAgainAt());
+        mail.setSentAgainBy(mailEntity.getSentAgainBy());
         if (!mailEntity.getRecipients().isEmpty()) {
             mail.setRecipients(mailEntity.getRecipients().stream()
                 .map(this::toVo)
@@ -101,6 +103,8 @@ public class ScheduledMailMapper {
         mail.setSubject(vo.getSubject());
         mail.setAttempts(vo.getAttempts());
         mail.setLastError(vo.getLastError());
+        mail.setSentAgainAt(vo.getSentAgainAt());
+        mail.setSentAgainBy(vo.getSentAgainBy());
         if (vo.getRecipients() != null) {
             mail.getRecipients().clear();
             vo.getRecipients().forEach(r -> mail.addRecipient(toEntity(r)));

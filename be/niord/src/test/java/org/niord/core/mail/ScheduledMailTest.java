@@ -128,6 +128,68 @@ public class ScheduledMailTest {
     }
 
     /**
+     * sendAgain: a held, a sent and a failed mail each become PENDING, due at the request's time, with no attempt
+     * and no error, and record who sent it again and when; the mail itself is not touched.
+     */
+    @Test
+    public void sendAgain_putsAHeldSentOrFailedMailBackInTheQueueAsItIs() throws Exception {
+        Date now = new Date(1_700_000_000_000L);
+        for (ScheduledMail.Status before : List.of(ScheduledMail.Status.HELD, ScheduledMail.Status.SENT,
+                ScheduledMail.Status.ERROR)) {
+            ScheduledMail mail = new ScheduledMail();
+            Date created = new Date(1_500_000_000_000L);
+            mail.setCreated(created);
+            mail.setSendDate(new Date(1_600_000_000_000L));
+            mail.setSender("sender@example.com");
+            mail.setSubject("Subject-" + before);
+            mail.setHtmlContents("<p>as it was</p>");
+            mail.addRecipient(new ScheduledMailRecipient(RecipientType.TO, "to@example.com"));
+            mail.setStatus(before);
+            mail.setAttempts(before == ScheduledMail.Status.ERROR ? 5 : 1);
+            mail.setLastError(before == ScheduledMail.Status.ERROR ? "Connection refused" : null);
+            byte[] contents = mail.getContents();
+
+            mail.sendAgain(now, "sysadmin-" + before);
+
+            assertEquals(ScheduledMail.Status.PENDING, mail.getStatus(), before + " becomes PENDING");
+            assertEquals(now, mail.getSendDate(), before + ": due at once");
+            assertEquals(0, mail.getAttempts(), before + ": the full ladder of retries again");
+            assertNull(mail.getLastError(), before + ": no error");
+            assertEquals(now, mail.getSentAgainAt());
+            assertEquals("sysadmin-" + before, mail.getSentAgainBy());
+            assertEquals(created, mail.getCreated(), before + ": the creation time is kept");
+            assertEquals("sender@example.com", mail.getSender());
+            assertEquals("Subject-" + before, mail.getSubject());
+            assertSame(contents, mail.getContents(), before + ": the contents are kept");
+            assertEquals(List.of("to@example.com"),
+                    mail.getRecipients().stream().map(ScheduledMailRecipient::getAddress).toList());
+            assertFalse(mail.isRecord());
+        }
+    }
+
+    /**
+     * isRecord: true only for ERROR with no attempt, the row saveFailureRecord makes; a mail given up after its
+     * attempts, and every other status, is a mail.
+     */
+    @Test
+    public void isRecord_onlyForAnErrorWithNoAttempt() {
+        ScheduledMail mail = new ScheduledMail();
+        mail.setStatus(ScheduledMail.Status.ERROR);
+        mail.setAttempts(0);
+        assertTrue(mail.isRecord(), "ERROR with no attempt is a record");
+
+        mail.setAttempts(5);
+        assertFalse(mail.isRecord(), "ERROR after its attempts is a failed mail");
+
+        for (ScheduledMail.Status status : List.of(ScheduledMail.Status.PENDING, ScheduledMail.Status.SENT,
+                ScheduledMail.Status.HELD)) {
+            mail.setStatus(status);
+            mail.setAttempts(0);
+            assertFalse(mail.isRecord(), status + " with no attempt is not a record");
+        }
+    }
+
+    /**
      * splitByRecipient: one ScheduledMail per recipient, each carrying exactly one recipient and
      * copying subject/sender/sendDate/created and the (same) contents byte array.
      */
@@ -257,10 +319,14 @@ public class ScheduledMailTest {
         mail.setSubject(subject);
         mail.setAttempts(3);
         mail.setLastError("boom");
+        mail.setSentAgainAt(new Date(1_700_000_000_000L));
+        mail.setSentAgainBy("a-sysadmin");
         mail.setHtmlContents("<p>secret</p>");
         mail.addRecipient(new ScheduledMailRecipient(RecipientType.CC, "cc@example.com"));
 
         ScheduledMailVo vo = mail.toVo(DataFilter.get());
+        assertEquals(new Date(1_700_000_000_000L), vo.getSentAgainAt());
+        assertEquals("a-sysadmin", vo.getSentAgainBy());
 
         assertEquals(created, vo.getCreated());
         assertEquals(sendDate, vo.getSendDate());

@@ -66,10 +66,13 @@ import jakarta.validation.constraints.NotNull;
 })
 @NamedQueries({
         @NamedQuery(name = "ScheduledMail.findPendingMails",
+                // The mails the system makes go before the mails sent again, so a large Send again never holds a
+                // new mail back; among the mails sent again in one request, the id keeps the order they were made in
                 query = "SELECT m FROM ScheduledMail m where m.status = 'PENDING' and m.sendDate <= :date " +
-                        " order by m.sendDate asc"),
+                        " order by case when m.sentAgainAt is null then 0 else 1 end, m.sendDate asc, m.id asc"),
+        // A pending mail is never deleted, however old: it may have been sent again and wait to be sent
         @NamedQuery(name = "ScheduledMail.findExpiredMails",
-                query = "SELECT m.id FROM ScheduledMail m where m.created <= :expiryDate "),
+                query = "SELECT m.id FROM ScheduledMail m where m.created <= :expiryDate and m.status <> 'PENDING'"),
         @NamedQuery(name = "ScheduledMail.findBySender",
                 query = "SELECT m FROM ScheduledMail m where m.sender = :sender and m.created >= :since "
                         + " order by m.created desc, m.id desc")
@@ -83,7 +86,10 @@ public class ScheduledMail extends BaseEntity<Integer> {
     /**
      * PENDING: waits for the sender job. SENT: handed to the mail server. HELD: handled while the mail filter
      * ({@code mailValidRecipients}) was LOG, so nothing left the server. ERROR: given up after the last attempt, or a
-     * record of a failure that is never sent (made with no attempt by {@code MailingListExecutionService}).
+     * record of a failure that is never sent ({@link ScheduledMail#isRecord()}).
+     *
+     * <p>A system administrator can send a HELD, SENT or ERROR mail again, except a record: it becomes PENDING again
+     * ({@link ScheduledMail#sendAgain(Date, String)}).
      */
     public enum Status { PENDING, SENT, HELD, ERROR }
 
@@ -152,6 +158,8 @@ public class ScheduledMail extends BaseEntity<Integer> {
         mail.setSubject(subject);
         mail.setAttempts(attempts);
         mail.setLastError(lastError);
+        mail.setSentAgainAt(sentAgainAt);
+        mail.setSentAgainBy(sentAgainBy);
         if (!recipients.isEmpty()) {
             mail.setRecipients(recipients.stream()
                 .map(ScheduledMailRecipient::toVo)
@@ -217,6 +225,36 @@ public class ScheduledMail extends BaseEntity<Integer> {
         status = Status.HELD;
         attempts++;
         lastError = null;
+    }
+
+    /**
+     * Whether this row is a record of a failure, not a mail: status ERROR with no attempt. Only
+     * {@code MailingListExecutionService.saveFailureRecord} makes such a row ("Not sent: ...", "Delayed: ..."), and it
+     * is never sent, nor sent again. This is the one rule for it; the administration app's mail details
+     * ({@code mail-details-dialog.ts}) tells a record by the same rule.
+     *
+     * @return whether this row is a record of a failure
+     */
+    public boolean isRecord() {
+        return status == Status.ERROR && attempts == 0;
+    }
+
+    /**
+     * Puts the mail back in the queue, as a system administrator's Send again: PENDING, due at once, with the full
+     * ladder of retries again, and who did it and when. The mail itself (its creation time, sender, subject, contents
+     * and recipients) is not touched: it is sent exactly as it was made, under the mail filter in force when it is
+     * sent.
+     *
+     * @param now the time of the request, one for every mail of the request
+     * @param username the user name of the system administrator
+     */
+    public void sendAgain(Date now, String username) {
+        status = Status.PENDING;
+        sendDate = now;
+        attempts = 0;
+        lastError = null;
+        sentAgainAt = now;
+        sentAgainBy = username;
     }
 
     /**

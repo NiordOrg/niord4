@@ -525,6 +525,27 @@ class DeliverySweepGroup implements SweepGroup {
                         .query("status", "abc").note("malformed status"),
                         Cell.status(400, "Failed to convert 'status' with value: 'abc'"))));
 
+        cases.add("sendAgainScheduledMails", SweepCase
+                // The suite runs with the mail filter at LOG, so a well-formed request is refused (409) before any
+                // row is read; the round trip with the filter open is ScheduledMailRestServiceITTest's
+                .of((ctx, row) -> sendAgain(List.of(map("id", ctx.row(MAIL), "status", "HELD", "sentAgainAt", null))))
+                .probes((ctx, as) -> {
+                    ctx.call(as.name(), sendAgain(List.of()).note("no mail"), Cell.status(400, "No mail to send again"));
+                    ctx.call(as.name(), sendAgain(List.of(map("id", ctx.row(MAIL), "status", "PENDING",
+                            "sentAgainAt", null))).note("a pending mail"),
+                            Cell.status(400, "Only a held, sent or failed mail can be sent again"));
+                    ctx.call(as.name(), sendAgain(List.of(map("id", ctx.row(MAIL), "status", "HELD",
+                            "sentAgainAt", null))).note("under the suite's LOG filter"),
+                            Cell.status(409, "is LOG, so the mails would only be held again"));
+                    SweepResponse after = ctx.ok(as, SweepRequest.get("/rest/scheduled-mails/search")
+                            .query("subject", MAIL).note("read after the refused Send again"));
+                    String status = after.json().getString("data.find { it.subject == '" + MAIL + "' }.status");
+                    ctx.check("PENDING".equals(status) || "HELD".equals(status), "the fixture's mail is as it was, "
+                            + "PENDING or HELD (is " + status + ")", after);
+                    ctx.checkEquals(null, after.json().get("data.find { it.subject == '" + MAIL + "' }.sentAgainAt"),
+                            "the fixture's mail was not sent again", after);
+                }));
+
         cases.add("myScheduledMails", SweepCase
                 .of((ctx, row) -> SweepRequest.get("/rest/scheduled-mails/mine"))
                 .sweep((ctx, as) -> {
@@ -551,6 +572,11 @@ class DeliverySweepGroup implements SweepGroup {
                 .probes((ctx, as) -> ctx.call(as.name(), SweepRequest.get(
                         "/rest/scheduled-mails/scheduled-mail/{scheduledMailId}").var("scheduledMailId", UNKNOWN)
                         .note("unknown-id probe: the handler's 404 carries no detail"), Cell.status(404, null))));
+    }
+
+    /** A Send again of the given mails ({@code id}, {@code status}, {@code sentAgainAt}) */
+    static SweepRequest sendAgain(List<Map<String, Object>> mails) {
+        return SweepRequest.post("/rest/scheduled-mails/send-again").json(Map.of("mails", mails));
     }
 
     static Map<String, Object> integration(Integer id, String url, List<Map<String, Object>> mappings) {

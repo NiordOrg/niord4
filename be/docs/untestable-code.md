@@ -917,7 +917,10 @@ year-sized margins, robust to JVM/DB timezone skew) rather than by controlling t
 2. **Concurrent runs of different jobs.** No `@Lock` annotation exists in the code. A cron job is never
    started again while its own last run is running, but since SCHED3 two different jobs can run at the same
    time on the scheduler's four threads; `SchedulerPoolSizeITTest` asserts the four threads and that four tasks run side by side. `ScheduledMailService.sendPendingMails()` and
-   `deleteExpiredMails()` have no guard between them, and no test runs them at the same time.
+   `deleteExpiredMails()` no longer act on the same rows: the sender takes pending mails only, the clean-up
+   never deletes a pending one and loads each row with the sender's lock, so a mail sent again in between is
+   skipped (`ScheduledMailServiceITTest.deleteExpiredMailsKeepsAnOldPendingMailAndDeletesAnOldHeldOne`); no
+   test runs the two at the same time.
    `MessageLuceneIndex.updateLuceneIndex()` writes under a `ReentrantLock`, one per index folder for the whole JVM:
    `MessageLuceneIndexWriterLockTest` holds one instance inside its writer (a latch, no clock) and asserts that a
    second instance's `recreateIndex()` waits for it.

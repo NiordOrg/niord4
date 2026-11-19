@@ -22,17 +22,25 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import io.restassured.http.ContentType;
 import org.niord.core.mail.ScheduledMail;
 import org.niord.core.mail.ScheduledMailRecipient;
+import org.niord.core.mail.ScheduledMailService;
+import org.niord.core.settings.Setting;
+import org.niord.core.settings.SettingsService;
 import org.niord.core.user.User;
 import org.niord.core.user.UserService;
 import org.niord.test.ITTest;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -41,7 +49,10 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration tests for {@link ScheduledMailRestService}: the HTTP contract of the
@@ -77,6 +88,12 @@ class ScheduledMailRestServiceITTest extends ITTest {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    SettingsService settingsService;
+
+    /** The mail filter, LOG in the shared test application */
+    private static final String VALID_RECIPIENTS = "mailValidRecipients";
 
     /** IDs of the committed ScheduledMail rows to remove in cleanup. */
     private final List<Integer> createdMailIds = new ArrayList<>();
@@ -392,5 +409,191 @@ class ScheduledMailRestServiceITTest extends ITTest {
                 .body("find { it.id == " + id + " }.status", is("ERROR"))
                 .body("find { it.id == " + id + " }.attempts", is(5))
                 .body("find { it.id == " + id + " }.lastError", is("Connection refused"));
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // Held mails, and Send again
+    // ------------------------------------------------------------------------------------------- //
+
+    /** Inserts a committed mail with the given status and last Send again, and records its id for cleanup */
+    private int insertCommittedMail(String subject, ScheduledMail.Status status, String sender, Date sentAgainAt,
+                                    String sentAgainBy) {
+        int id = Tx.requiringNew().call(() -> {
+            ScheduledMail mail = new ScheduledMail();
+            mail.setSubject(subject);
+            mail.setStatus(status);
+            mail.setAttempts(1);
+            mail.setSender(sender);
+            mail.setSentAgainAt(sentAgainAt);
+            mail.setSentAgainBy(sentAgainBy);
+            mail.setHtmlContents("<html>" + subject + "</html>");
+            mail.addRecipient(new ScheduledMailRecipient(
+                    ScheduledMailRecipient.RecipientType.TO, "recipient@example.com"));
+            em.persist(mail);
+            em.flush();
+            return mail.getId();
+        });
+        createdMailIds.add(id);
+        return id;
+    }
+
+    /** A Send again request of one mail, as the page sends it */
+    private static Map<String, Object> sendAgainBody(Object id, Object status) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", id);
+        item.put("status", status);
+        item.put("sentAgainAt", null);
+        return Map.of("mails", List.of(item));
+    }
+
+    @Test
+    void searchByStatusHeldFindsAHeldMail() {
+        String subject = uniqueSubject();
+        int id = insertCommittedMail(subject, ScheduledMail.Status.HELD, null, null, null);
+
+        given().auth().oauth2(accessToken())
+                .queryParam("subject", subject)
+                .queryParam("status", "HELD")
+                .when().get("/rest/scheduled-mails/search")
+                .then().statusCode(200)
+                .body("total", is(1))
+                .body("data[0].id", is(id))
+                .body("data[0].status", is("HELD"));
+        given().auth().oauth2(accessToken())
+                .queryParam("subject", subject)
+                .queryParam("status", "SENT")
+                .when().get("/rest/scheduled-mails/search")
+                .then().statusCode(200)
+                .body("data.id", not(hasItem(id)));
+    }
+
+    @Test
+    void mineShowsAHeldMailWithoutTheNameOfWhoSentItAgain() {
+        String editor = senderAddressOf("editor", "testeditor");
+        Date sentAgainAt = new Date(System.currentTimeMillis() - 60_000L);
+        int id = insertCommittedMail(uniqueSubject(), ScheduledMail.Status.HELD, editor, sentAgainAt, "sysadmin");
+
+        String mine = given().auth().oauth2(accessToken("editor")).header("NiordDomain", DOMAIN)
+                .when().get("/rest/scheduled-mails/mine")
+                .then().statusCode(200)
+                .body("find { it.id == " + id + " }.status", is("HELD"))
+                .body("find { it.id == " + id + " }.sentAgainBy", nullValue())
+                .extract().path("find { it.id == " + id + " }.sentAgainAt");
+        // A date is written as ISO-8601 text, as the mail's other dates are
+        assertEquals(sentAgainAt.getTime(), OffsetDateTime.parse(mine).toInstant().toEpochMilli());
+
+        // The Mail Queue shows the system administrator who sent it again
+        String queue = given().auth().oauth2(accessToken())
+                .when().get("/rest/scheduled-mails/scheduled-mail/" + id)
+                .then().statusCode(200)
+                .body("sentAgainBy", is("sysadmin"))
+                .extract().path("sentAgainAt");
+        assertEquals(sentAgainAt.getTime(), OffsetDateTime.parse(queue).toInstant().toEpochMilli());
+    }
+
+    @Test
+    void sendAgainIsForASystemAdministratorOnly() {
+        int id = insertCommittedMail(uniqueSubject(), ScheduledMail.Status.HELD, null, null, null);
+
+        given().contentType(ContentType.JSON).body(sendAgainBody(id, "HELD"))
+                .when().post("/rest/scheduled-mails/send-again")
+                .then().statusCode(401);
+        for (String role : List.of("user", "editor", "admin")) {
+            given().auth().oauth2(accessToken(role)).header("NiordDomain", DOMAIN)
+                    .contentType(ContentType.JSON).body(sendAgainBody(id, "HELD"))
+                    .when().post("/rest/scheduled-mails/send-again")
+                    .then().statusCode(403);
+        }
+        Tx.requiringNew().run(() -> assertNull(em.find(ScheduledMail.class, id).getSentAgainAt()));
+    }
+
+    @Test
+    void sendAgainRefusesARequestThatIsNotWellFormed() {
+        int id = insertCommittedMail(uniqueSubject(), ScheduledMail.Status.HELD, null, null, null);
+
+        sendAgainAsSysadmin(Map.of("mails", List.of()), 400, "No mail to send again");
+        List<Map<String, Object>> tooMany = new ArrayList<>();
+        for (int i = 0; i <= ScheduledMailService.SEND_AGAIN_MAX; i++) {
+            tooMany.add(Map.of("id", UNKNOWN_MAIL_ID - i, "status", "HELD"));
+        }
+        sendAgainAsSysadmin(Map.of("mails", tooMany), 400, "At most 500 mails can be sent again at a time");
+        sendAgainAsSysadmin(sendAgainBody(id, null), 400, "needs its id and its status");
+        sendAgainAsSysadmin(sendAgainBody(null, "HELD"), 400, "needs its id and its status");
+        sendAgainAsSysadmin(sendAgainBody(id, "PENDING"), 400, "Only a held, sent or failed mail can be sent again");
+        sendAgainAsSysadmin(Map.of("mails", List.of(Map.of("id", id, "status", "HELD"),
+                Map.of("id", id, "status", "SENT"))), 400, "is named twice");
+        Tx.requiringNew().run(() -> assertNull(em.find(ScheduledMail.class, id).getSentAgainAt()));
+    }
+
+    @Test
+    void sendAgainIsRefusedUnderTheLogFilter() {
+        int id = insertCommittedMail(uniqueSubject(), ScheduledMail.Status.HELD, null, null, null);
+
+        sendAgainAsSysadmin(sendAgainBody(id, "HELD"), 409, "is LOG, so the mails would only be held again");
+        Tx.requiringNew().run(() -> {
+            ScheduledMail mail = em.find(ScheduledMail.class, id);
+            assertEquals(ScheduledMail.Status.HELD, mail.getStatus());
+            assertNull(mail.getSentAgainAt());
+        });
+    }
+
+    /**
+     * With the filter set for the test, as LiveSettingReadsITTest sets it, a held mail is queued again, and so is a
+     * sent mail sent again before, named with the date the search answered with (ISO-8601 text) or in epoch
+     * milliseconds; a mail that is gone is refused.
+     */
+    @Test
+    void sendAgainQueuesAHeldMailWhenTheFilterIsOpen() {
+        String subject = uniqueSubject();
+        Date earlier = new Date(System.currentTimeMillis() - 10 * 60_000L);
+        int held = insertCommittedMail(subject + "-held", ScheduledMail.Status.HELD, null, null, null);
+        int sentAsText = insertCommittedMail(subject + "-text", ScheduledMail.Status.SENT, null, earlier, "sysadmin");
+        int sentAsMillis = insertCommittedMail(subject + "-millis", ScheduledMail.Status.SENT, null, earlier,
+                "sysadmin");
+        int gone = UNKNOWN_MAIL_ID;
+        String shown = given().auth().oauth2(accessToken())
+                .queryParam("subject", subject + "-text")
+                .when().get("/rest/scheduled-mails/search")
+                .then().statusCode(200)
+                .extract().path("data[0].sentAgainAt");
+
+        Object original = Tx.requiringNew().call(() -> em.find(Setting.class, VALID_RECIPIENTS).getValue());
+        try {
+            settingsService.set(VALID_RECIPIENTS, "ALL");
+
+            given().auth().oauth2(accessToken())
+                    .contentType(ContentType.JSON)
+                    .body(Map.of("mails", List.of(
+                            Map.of("id", held, "status", "HELD"),
+                            Map.of("id", sentAsText, "status", "SENT", "sentAgainAt", shown),
+                            Map.of("id", sentAsMillis, "status", "SENT", "sentAgainAt", earlier.getTime()),
+                            Map.of("id", gone, "status", "SENT"))))
+                    .when().post("/rest/scheduled-mails/send-again")
+                    .then().statusCode(200)
+                    .body("queued", is(List.of(held, sentAsText, sentAsMillis)))
+                    .body("refused.size()", is(1))
+                    .body("refused[0].id", is(gone))
+                    .body("refused[0].reason", is("GONE"));
+        } finally {
+            settingsService.set(VALID_RECIPIENTS, original);
+            settingsService.evictFromCache(VALID_RECIPIENTS);
+        }
+
+        // The minute sender may have taken them up since, so their status is not asserted; who and when stay
+        Tx.requiringNew().run(() -> {
+            for (int id : List.of(held, sentAsText, sentAsMillis)) {
+                ScheduledMail mail = em.find(ScheduledMail.class, id);
+                assertEquals("sysadmin", mail.getSentAgainBy());
+                assertTrue(mail.getSentAgainAt().after(earlier), "sent again now");
+            }
+        });
+    }
+
+    private void sendAgainAsSysadmin(Object body, int status, String detail) {
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON).body(body)
+                .when().post("/rest/scheduled-mails/send-again")
+                .then().statusCode(status)
+                .body("detail", containsString(detail));
     }
 }
