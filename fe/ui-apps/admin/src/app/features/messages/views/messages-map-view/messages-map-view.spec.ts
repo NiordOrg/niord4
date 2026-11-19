@@ -73,6 +73,7 @@ const facade = {
     loading: signal(false),
     hasMore: signal(false),
     error: signal<unknown>(null),
+    indexIncomplete: signal(false),
     loadMore: vi.fn(),
     retry: vi.fn(),
   },
