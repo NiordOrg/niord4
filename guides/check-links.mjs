@@ -40,7 +40,8 @@ const HELP_URLS = path.resolve(
 // rule spells that environment's domain on purpose: a rule that keeps a name out has to name it.
 const FORBIDDEN = [
   [/\b(?:[a-z0-9-]+\.)*sitcloud\.dk\b/gi, 'an internal host'],
-  [/\b(?:[a-z0-9-]+\.)*t-dma\.dk\b/gi, 'the old test environment, now niord.staging.brs2.dk'],
+  [/\b(?:[a-z0-9-]+\.)*t-dma\.dk\b/gi,
+    'the old test environment (its administration site and API are now niord.staging.brs2.dk; its login server has no published name)'],
   [/\bniord\.dma\.dk\b/gi, 'the old production address, now niord.brs2.dk'],
   [/\bnautiskinformation\.soefartsstyrelsen\.dk\b/gi, 'the old public site, now nautiskinformation.brs2.dk'],
   [/\b[a-z]:(?:\\|\/|&#92;)+users(?:\\|\/|&#92;)+[a-z0-9._-]+/gi, "a person's home folder"],
