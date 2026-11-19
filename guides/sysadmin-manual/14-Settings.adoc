@@ -150,7 +150,11 @@ Among the many settings, these are the ones a system administrator usually sets 
 
 | `mailSender`, `mailValidRecipients`, `mailDeleteAfterDays`
 | The sender of Niord's mails, who receives them, and how long the mail queue keeps them (see
-  <<mail-queue,Mail Queue>>). Mail is only pretended to be sent until `mailValidRecipients` is changed from `LOG`.
+  <<mail-queue,Mail Queue>>). A mail that `mailValidRecipients` keeps from its recipients reads _Held_ in the mail
+  queue: every mail while it is `LOG`, when no mail leaves the server, and, while it is a list of addresses, every
+  mail with a recipient who is not on the list, whose copy goes to the list's first address instead; on a deployment
+  whose setting is a list, most mails show as _Held_. A system administrator can send a held mail again once the
+  setting is changed (see <<send-again,Sending a Mail Again>>).
 
 | `adminIntegrationPageEnabled`
 | Shows the _Niord Integration_ page in the *Sysadmin* menu (see <<integration,Integration>>).

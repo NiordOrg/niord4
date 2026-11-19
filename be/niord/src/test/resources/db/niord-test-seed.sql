@@ -2226,7 +2226,9 @@ CREATE TABLE public."ScheduledMail" (
     sender character varying(255),
     status character varying(255) NOT NULL,
     subject character varying(255) NOT NULL,
-    CONSTRAINT "ScheduledMail_status_check" CHECK (((status)::text = ANY (ARRAY[('PENDING'::character varying)::text, ('SENT'::character varying)::text, ('ERROR'::character varying)::text])))
+    "sentAgainAt" timestamp(6) without time zone,
+    "sentAgainBy" character varying(255),
+    CONSTRAINT "ScheduledMail_status_check" CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'SENT'::character varying, 'HELD'::character varying, 'ERROR'::character varying])::text[])))
 );
 
 
@@ -5786,7 +5788,7 @@ COPY public."SafetyNetMessagePromulgation" (priority, "safetyNetId", text, id, a
 -- Data for Name: ScheduledMail; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public."ScheduledMail" (id, attempts, contents, created, "lastError", "sendDate", sender, status, subject) FROM stdin;
+COPY public."ScheduledMail" (id, attempts, contents, created, "lastError", "sendDate", sender, status, subject, "sentAgainAt", "sentAgainBy") FROM stdin;
 \.
 
 

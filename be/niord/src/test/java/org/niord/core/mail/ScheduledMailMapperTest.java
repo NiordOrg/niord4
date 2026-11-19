@@ -47,6 +47,8 @@ public class ScheduledMailMapperTest {
         mail.setSubject("The subject");
         mail.setAttempts(3);
         mail.setLastError("boom");
+        mail.setSentAgainAt(new Date(1_700_000_000_000L));
+        mail.setSentAgainBy("a-sysadmin");
         mail.setHtmlContents("<p>secret body</p>");
         mail.addRecipient(new ScheduledMailRecipient(RecipientType.TO, "to@example.com"));
         mail.addRecipient(new ScheduledMailRecipient(RecipientType.CC, "cc@example.com"));
@@ -65,6 +67,8 @@ public class ScheduledMailMapperTest {
         assertEquals("The subject", vo.getSubject());
         assertEquals(3, vo.getAttempts());
         assertEquals("boom", vo.getLastError());
+        assertEquals(new Date(1_700_000_000_000L), vo.getSentAgainAt());
+        assertEquals("a-sysadmin", vo.getSentAgainBy());
         assertEquals("<p>secret body</p>", vo.getContents(), "ALL filter includes DETAILS => decompressed contents");
 
         assertNotNull(vo.getRecipients());
@@ -128,6 +132,8 @@ public class ScheduledMailMapperTest {
         vo.setSubject("Round trip");
         vo.setAttempts(7);
         vo.setLastError("prev error");
+        vo.setSentAgainAt(new Date(3_333_333_333_000L));
+        vo.setSentAgainBy("another-sysadmin");
         vo.setContents("<p>round-trip body</p>");
 
         ScheduledMailRecipientVo r1 = new ScheduledMailRecipientVo();
@@ -145,6 +151,8 @@ public class ScheduledMailMapperTest {
         assertEquals("Round trip", mail.getSubject());
         assertEquals(7, mail.getAttempts());
         assertEquals("prev error", mail.getLastError());
+        assertEquals(new Date(3_333_333_333_000L), mail.getSentAgainAt());
+        assertEquals("another-sysadmin", mail.getSentAgainBy());
         // contents was stored compressed; decompressing yields the original HTML
         assertEquals("<p>round-trip body</p>", mail.getHtmlContents());
 
@@ -179,6 +187,8 @@ public class ScheduledMailMapperTest {
         assertEquals(original.getStatus(), copy.getStatus());
         assertEquals(original.getAttempts(), copy.getAttempts());
         assertEquals(original.getLastError(), copy.getLastError());
+        assertEquals(original.getSentAgainAt(), copy.getSentAgainAt());
+        assertEquals(original.getSentAgainBy(), copy.getSentAgainBy());
         assertEquals(original.getHtmlContents(), copy.getHtmlContents());
         assertEquals(original.getRecipients().size(), copy.getRecipients().size());
         assertEquals("to@example.com", copy.getRecipients().get(0).getAddress());

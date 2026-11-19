@@ -479,10 +479,15 @@ report id and the name.
 
 ## Mail queue (`/sysadmin/mails`)
 
-Strictly read-only: no create, edit, delete, retry or cancel. Mails are produced elsewhere — mailing-
-list triggers, the messages mail action, and promulgation — and this page is where delivery is
-verified and failures diagnosed. The lifecycle (`PENDING` → `SENT` or `ERROR`, with server-side retry
-back-off) is entirely backend-driven.
+Read-only but for one action, Send again: no create, edit, delete or cancel. Mails are produced
+elsewhere — mailing-list triggers, the messages mail action, and promulgation — and this page is
+where delivery is verified, failures diagnosed and a held or failed mail sent again. The lifecycle (`PENDING` → `SENT`, `HELD` or `ERROR`, with
+server-side retry back-off) is entirely backend-driven. A mail is `HELD` when, as the sender job
+handled it, the mail filter (`mailValidRecipients`) kept it from reaching all of its recipients: at
+`LOG` nothing left the server; under a list of addresses a recipient not on the list was redirected
+to the first listed address (a mail is `SENT` under a list only when every recipient was on it).
+The status filter offers _Held_ between _Sent_ and _Error_, and its pill is pending's amber with a dashed
+border.
 
 - The search is **server-paged**, ordered newest-created first. Filters are recipient / sender /
   subject (substring), status (equality) and a from/to range. An empty filter value is **omitted from
@@ -496,9 +501,11 @@ back-off) is entirely backend-driven.
   dialog.
 - In the details dialog the date row shows the mail's `sendDate`, the time it is or was due,
   labelled by status: _Due_ for a pending mail (after a failed attempt, the time of the next
-  attempt), _Sent_ for a sent one, _Last attempt_ for one that failed for good; it is left out when
-  the mail has no send date. Error text and attempt count show only when an error was
-  recorded. Recipients are partitioned into TO / CC / BCC client-side and empty groups are hidden.
+  attempt) and for a held one, _Sent_ for a sent one, _Last attempt_ for one that failed for good;
+  it is left out when the mail has no send date. Error text and attempt count show only when an
+  error was recorded. A _Sent again_ row gives the time and the user name of the last Send again
+  (`sentAgainAt`, `sentAgainBy`) when there was one. Recipients are partitioned into TO / CC / BCC
+  client-side and empty groups are hidden.
 - Mail bodies are full, style-laden HTML documents. They render in the sandboxed-iframe primitive
   (`<app-sandboxed-html>`, empty `sandbox` attribute, an injected stylesheet because linked
   stylesheets cannot resolve inside an opaque origin). The body is never bound to live DOM: the
@@ -508,6 +515,38 @@ back-off) is entirely backend-driven.
   value means mails are never deleted, so the note is hidden; so is a failed or absent read.
 - The toolbar has a manual refresh; there is no polling. Filter, page and dialog state are page-local
   and never reflected in the URL.
+- **Send again** puts a mail back to `PENDING` exactly as it was made (subject, HTML text and
+  recipients); the sender job sends it within a minute or two under the mail filter in force then.
+  A row offers it (the paper-plane button before the envelope) for a `HELD`, `SENT` or `ERROR` mail
+  with attempts; a `PENDING` mail is on its way, and an `ERROR` mail with no attempt is a mailing-list
+  trigger's failure record, never a mail (`canSendAgain` in `send-again.ts`). The toolbar's _Send all
+  matching again…_ shows only while the status filter is _Held_ or _Error_: it reads the search
+  again with the committed filter as one page of 500 (`SEND_AGAIN_MAX`), sends nothing and says so
+  when more match, leaves the records (and any sent mail: those go one at a time) out, and says so
+  when none is left. The confirmation is the page's own (`ConfirmService` provided by the page,
+  `<app-confirm width="44rem">`): a message for one mail, one sent mail or many, and one line per
+  group of mails with the same subject, status and creation minute, oldest first, with the count,
+  the subject, the creation time in the domain's zone, the status and the recipients — every one for
+  a single mail, the first 10 distinct addresses and how many more for a group.
+- Accept posts `POST /rest/scheduled-mails/send-again` (sysadmin only) with
+  `{"mails":[{"id","status","sentAgainAt"}]}`, the status and `sentAgainAt` (epoch millis or null)
+  the page showed (the endpoints write a mail's dates as ISO text, and the API service turns them
+  into epoch millis as it reads them: see _Dates on the wire_ in `backend-api-notes.md`); the backend locks each row and refuses it as `CHANGED` when either differs, as
+  `GONE` when the row was deleted, as `RECORD` for a failure record and as `FILTER` for a `SENT`
+  mail while the mail filter is a list that would redirect one of its recipients (it would end
+  `HELD`, and a later Send again of the held mails would deliver it to them twice), and queues the
+  rest: `{"queued":[ids],"refused":[{"id","reason"}]}`. A refusal leaves the others queued, and the
+  toast says how many were left; a `FILTER` refusal (only a sent mail, so only from a row) says
+  instead that the filter would keep the mail from its recipients and is to be opened first. A 409 (the mail filter is `LOG` or empty) and a 400 (an empty list, more
+  than 500, a duplicate id or a status it cannot send again from) change nothing and carry a problem
+  document whose `detail` the toast shows; any other failure shows a fixed text, never the raw
+  error. The page reads the list again after a success, and after any failure other than a 400 or
+  409 (a lost answer, status 0 or a proxy's 502 or 504, may hide mails the server queued), and
+  blocks a second request while one runs: its buttons stay enabled and say so with `aria-disabled`,
+  since a disabled opener cannot take the focus back from the confirmation, and whenever the list is
+  read again the focus moves to _Refresh_, as the list (with the row's button) leaves while it loads.
+  No role gate is in the component: the sysadmin route and the endpoint's guard keep it to a system
+  administrator, so `role-offers.json` has no item for it.
 
 ---
 

@@ -51,6 +51,23 @@ describe('MyMailsApiService', () => {
     ]);
   });
 
+  it('reads the dates the backend writes as ISO text as epoch millis', () => {
+    let result: readonly MyMail[] | undefined;
+    s.api.mine(1).subscribe((mails) => (result = mails));
+    s.httpTesting.expectOne('/rest/scheduled-mails/mine?days=1').flush([
+      {
+        id: 1,
+        status: 'HELD',
+        subject: 'A',
+        attempts: 1,
+        created: '2026-11-19T09:27:20.142+00:00',
+        sendDate: '2026-11-19T09:28:24.000+00:00',
+      },
+    ]);
+    expect(result?.[0].created).toBe(Date.UTC(2026, 10, 19, 9, 27, 20, 142));
+    expect(result?.[0].sendDate).toBe(Date.UTC(2026, 10, 19, 9, 28, 24));
+  });
+
   it('reads an empty answer as no mail', () => {
     let result: readonly MyMail[] | undefined;
     s.api.mine(1).subscribe((mails) => (result = mails));

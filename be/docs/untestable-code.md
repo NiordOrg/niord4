@@ -4,12 +4,13 @@ Code that cannot reasonably be unit- or integration-tested as it stands, with th
 make it testable later. **No production code was changed to accommodate testing** — an entry here is a
 deliberate "not covered, and here is why", not a TODO.
 
-One latent risk is worth keeping in view even though it is not an entry in its own right: the
-scheduled mail writers (`ScheduledMailService.sendPendingMails()` and `deleteExpiredMails()`) have no
-serialization guard between them. Since SCHED3 every `@Scheduled` job shares Boot's scheduler of four threads
-(`spring.task.scheduling.pool.size` in `niord-core-defaults.yml`, pinned by `SchedulerPoolSizeITTest`), so the
-two can run at the same time; a cron job is still never started again while its own last run is running. No
-test pins what happens when they overlap. Two paths this paragraph once named as unpinned are
+Since SCHED3 every `@Scheduled` job shares Boot's scheduler of four threads
+(`spring.task.scheduling.pool.size` in `niord-core-defaults.yml`, pinned by `SchedulerPoolSizeITTest`), so two
+different jobs can run at the same time; a cron job is still never started again while its own last run is
+running. The scheduled mail writers (`ScheduledMailService.sendPendingMails()` and `deleteExpiredMails()`) no
+longer act on the same rows: the sender takes pending mails only, and the clean-up never deletes a pending one and
+loads each row with the sender's lock (item 2 under "Scheduled (`@Scheduled`) jobs" below); no test runs the two at
+the same time. Two paths this paragraph once named as unpinned are
 covered: `NiordIntegrationExecutionService` now re-imports before it cancels, and
 `NiordIntegrationExecutionGapITTest.failedReimportLeavesOldCopyPublishedAndImportsNoReplacement` pins that a
 failed re-import leaves the old copy published; `TwitterPromulgationService`'s `@Async` posting path is
@@ -917,7 +918,10 @@ year-sized margins, robust to JVM/DB timezone skew) rather than by controlling t
 2. **Concurrent runs of different jobs.** No `@Lock` annotation exists in the code. A cron job is never
    started again while its own last run is running, but since SCHED3 two different jobs can run at the same
    time on the scheduler's four threads; `SchedulerPoolSizeITTest` asserts the four threads and that four tasks run side by side. `ScheduledMailService.sendPendingMails()` and
-   `deleteExpiredMails()` have no guard between them, and no test runs them at the same time.
+   `deleteExpiredMails()` no longer act on the same rows: the sender takes pending mails only, the clean-up
+   never deletes a pending one and loads each row with the sender's lock, so a mail sent again in between is
+   skipped (`ScheduledMailServiceITTest.deleteExpiredMailsKeepsAnOldPendingMailAndDeletesAnOldHeldOne`); no
+   test runs the two at the same time.
    `MessageLuceneIndex.updateLuceneIndex()` writes under a `ReentrantLock`, one per index folder for the whole JVM:
    `MessageLuceneIndexWriterLockTest` holds one instance inside its writer (a latch, no clock) and asserts that a
    second instance's `recreateIndex()` waits for it.

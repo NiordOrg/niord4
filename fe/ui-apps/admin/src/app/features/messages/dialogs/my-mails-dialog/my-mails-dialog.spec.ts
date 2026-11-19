@@ -115,6 +115,15 @@ describe('MyMailsDialog', () => {
     expect(rows[3].textContent).toContain('messages.myMails.lastError');
   });
 
+  it('says a held mail was not delivered, with the held pill and no error line', async () => {
+    await openWith([mail({ id: 5, status: 'HELD', attempts: 1 })]);
+    const row = document.querySelector('.dialog-panel tbody tr');
+    const pill = row?.querySelector('.status-badge');
+    expect(pill?.textContent?.trim()).toBe('messages.myMails.status.held');
+    expect(pill?.classList.contains('is-mail-held')).toBe(true);
+    expect(row?.textContent).not.toContain('messages.myMails.lastError');
+  });
+
   it('shows the subject, the recipients and the creation time in the domain zone', async () => {
     const { formatDateTime } = await openWith([
       mail({
@@ -133,6 +142,15 @@ describe('MyMailsDialog', () => {
     expect(row).toContain('zoned:1710000000000');
     expect(row).toContain('Firing exercise');
     expect(row).toContain('a@example.org, b@example.org');
+  });
+
+  it('reads the creation time the backend writes as ISO text as epoch millis', async () => {
+    const { formatDateTime } = await openWith([
+      mail({ id: 8, status: 'HELD', attempts: 1, created: '2026-11-19T09:27:20.142+00:00' }),
+    ]);
+    const created = Date.UTC(2026, 10, 19, 9, 27, 20, 142);
+    expect(formatDateTime).toHaveBeenCalledWith(created);
+    expect(text()).toContain(`zoned:${created}`);
   });
 
   it('takes a mail without recipients or attempts on the wire', async () => {

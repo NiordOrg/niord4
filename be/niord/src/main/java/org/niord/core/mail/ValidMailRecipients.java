@@ -101,11 +101,7 @@ class ValidMailRecipients {
 
         addr.validate();
 
-        // Production mode
-        if (allValid) {
-            return addr;
-
-        } else if (validAddresses.contains(addr.getAddress().toLowerCase())) {
+        if (reachesItself(addr)) {
             return addr;
 
         } else {
@@ -116,5 +112,30 @@ class ValidMailRecipients {
                 throw new AddressException("Invalid recipient with no substitute address: " + addr);
             }
         }
+    }
+
+    /**
+     * Whether {@link #filter(InternetAddress)} redirects the address to the first listed address: a valid address that
+     * a list of addresses does not name. Under ALL and LOG no address is redirected, and an address that is not valid
+     * is not redirected either: the filter refuses it. The filter decides by the same rule.
+     *
+     * @param addr the address to check
+     * @return whether the filter redirects the address
+     */
+    public boolean redirects(InternetAddress addr) {
+        if (addr == null) {
+            return false;
+        }
+        try {
+            addr.validate();
+        } catch (AddressException e) {
+            return false;
+        }
+        return !reachesItself(addr);
+    }
+
+    /** Whether a valid address is let through as it is: always under ALL and LOG, and under a list when it is listed */
+    private boolean reachesItself(InternetAddress addr) {
+        return allValid || validAddresses.contains(addr.getAddress().toLowerCase());
     }
 }

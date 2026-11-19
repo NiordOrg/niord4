@@ -38,8 +38,12 @@ import jakarta.validation.constraints.NotNull;
  */
 @Entity
 @NamedQueries({
-        @NamedQuery(name = "ScheduledMailRecipient.findPendingByAddress",
-                query = "SELECT r FROM ScheduledMailRecipient r where r.mail.status = 'PENDING' and r.address = :address")
+        // The recipients of the mails that did not reach them and may still be sent: the pending ones, and the held
+        // and the failed ones, which a system administrator may send again. A record of a failure (ERROR with no
+        // attempt, ScheduledMail.isRecord) is never sent, and a sent mail is history: neither is taken
+        @NamedQuery(name = "ScheduledMailRecipient.findUnsentByAddress",
+                query = "SELECT r FROM ScheduledMailRecipient r where (r.mail.status in ('PENDING', 'HELD') "
+                        + "or (r.mail.status = 'ERROR' and r.mail.attempts > 0)) and r.address = :address")
 })
 @SuppressWarnings("unused")
 public class ScheduledMailRecipient extends BaseEntity<Integer> {

@@ -122,8 +122,15 @@ system keeps for itself, such as the time the areas were last changed, are not l
 an older version, which no code reads, stays in the database but is neither listed nor exported. A
 few settings worth knowing: `documentationUrl` decides where every _Help_ link goes,
 `adminIntegrationPageEnabled` shows the _Niord Integration_ page, and `mailValidRecipients` decides
-whether mails are really sent. See link:../sysadmin-manual/manual.html#settings[Settings] in the
-system administrator manual.
+whether mails are really sent, for every mail when it is sent. See
+link:../sysadmin-manual/manual.html#settings[Settings] in the system administrator manual.
+
+A mail that `mailValidRecipients` kept from its recipients now reads _Held_ in the _Mail Queue_,
+not _Sent_: every mail while the setting is `LOG`, and, while it is a list of addresses, a mail with
+a recipient who is not on the list, although a copy went to the list's first address. A system
+administrator can send a held, sent or failed mail again, one at a time or every mail of a
+search. See link:../sysadmin-manual/manual.html#send-again[Sending a Mail Again] in the system
+administrator manual.
 
 [#sysadmin-message-series]
 ==== Message series

@@ -47,7 +47,9 @@ public class UserDeletionService extends BaseService {
     private static final Logger log = LoggerFactory.getLogger(UserDeletionService.class);
 
     /**
-     * Takes the user off every mailing list, removes the user from the mails queued for the user and not yet sent, and
+     * Takes the user off every mailing list, removes the user from the mails queued for the user and not yet sent
+     * (pending; held by the mail filter, LOG or a list that did not name every recipient; or failed after its last
+     * attempt: a system administrator may still send a held or a failed mail again), and
      * clears the address of the user's record; and, on return, commits. The record itself stays, with the user's name,
      * for the messages, comments and history the user made. Does nothing for a user without a record.
      *
@@ -70,11 +72,12 @@ public class UserDeletionService extends BaseService {
         mailingLists.forEach(mailingList -> mailingList.getUsers().removeIf(u -> u.getId().equals(user.getId())));
 
         // A mailing list queues one mail per recipient, addressed with the address the user's record computes. A mail
-        // left with no recipient is removed: it was never sent, and there is no one left to send it to.
+        // left with no recipient is removed: it was never sent (pending, held or failed), and no one is left to send
+        // it to. A record of a failure and a sent mail keep the address: neither is ever sent.
         int queuedMails = 0;
         if (StringUtils.isNotBlank(user.getEmail())) {
             List<ScheduledMailRecipient> queued = em
-                    .createNamedQuery("ScheduledMailRecipient.findPendingByAddress", ScheduledMailRecipient.class)
+                    .createNamedQuery("ScheduledMailRecipient.findUnsentByAddress", ScheduledMailRecipient.class)
                     .setParameter("address", user.computeInternetAddress())
                     .getResultList();
             for (ScheduledMailRecipient recipient : queued) {

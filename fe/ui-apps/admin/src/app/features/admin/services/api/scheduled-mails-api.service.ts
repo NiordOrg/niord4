@@ -3,8 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
+import { epochMillisOf } from '../../../../shared/utils/epoch-dates';
 
-export type ScheduledMailStatus = 'PENDING' | 'SENT' | 'ERROR';
+/**
+ * A mail's state in the queue. HELD: when the sender job handled it, the mail filter
+ * (`mailValidRecipients`) kept it from reaching all of its recipients: the filter was LOG, so
+ * nothing left the server, or a list that redirected a recipient to its first listed address.
+ */
+export type ScheduledMailStatus = 'PENDING' | 'SENT' | 'HELD' | 'ERROR';
 
 export interface ScheduledMailRecipient {
   readonly recipientType: 'TO' | 'CC' | 'BCC';
@@ -13,7 +19,9 @@ export interface ScheduledMailRecipient {
 
 export interface ScheduledMail {
   readonly id: number;
+  /** Epoch millis (ISO text on the wire, converted by the service). */
   readonly created?: number;
+  /** Epoch millis: when the mail is, or was, due to be sent. */
   readonly sendDate?: number;
   readonly status: string;
   readonly sender: string;
@@ -22,6 +30,52 @@ export interface ScheduledMail {
   readonly contents?: string;
   readonly lastError?: string;
   readonly attempts?: number;
+  /** Epoch millis of the last Send again; absent when the mail was never sent again. */
+  readonly sentAgainAt?: number;
+  /** The user name of the system administrator who last sent the mail again. */
+  readonly sentAgainBy?: string;
+}
+
+/** The most mails one Send again request may name (the backend refuses more with a 400). */
+export const SEND_AGAIN_MAX = 500;
+
+/** The statuses a mail can be sent again from; a PENDING mail is on its way already. */
+export type SendAgainStatus = Extract<ScheduledMailStatus, 'HELD' | 'SENT' | 'ERROR'>;
+
+/**
+ * One mail to send again, with the status and `sentAgainAt` the page showed: the backend refuses
+ * the mail as CHANGED when either differs from the row it locks, so a stale page, a double click or
+ * a second administrator never sends a mail twice.
+ */
+export interface SendAgainItem {
+  readonly id: number;
+  readonly status: SendAgainStatus;
+  /** Epoch millis, or null when the mail was never sent again. */
+  readonly sentAgainAt: number | null;
+}
+
+/**
+ * Why the backend left a mail as it was: GONE, deleted since the list was read; CHANGED, its status
+ * or `sentAgainAt` is no longer what the page showed; RECORD, a failure record, not a mail; FILTER,
+ * a SENT mail while the mail filter is a list that would redirect one of its recipients (it would
+ * end HELD, and a later Send again of the held mails would deliver it to them a second time).
+ */
+export type SendAgainRefusalReason = 'GONE' | 'CHANGED' | 'RECORD' | 'FILTER';
+
+export interface SendAgainRefusal {
+  readonly id: number;
+  readonly reason: SendAgainRefusalReason;
+}
+
+export interface SendAgainResult {
+  /** The ids put back to PENDING; the sender job sends them within a minute or two. */
+  readonly queued: readonly number[];
+  readonly refused: readonly SendAgainRefusal[];
+}
+
+interface SendAgainResultVo {
+  queued?: number[] | null;
+  refused?: SendAgainRefusal[] | null;
 }
 
 export interface ScheduledMailSearchParams {
@@ -41,8 +95,19 @@ export interface ScheduledMailSearchResult {
   readonly total: number;
 }
 
-interface ScheduledMailVo extends Omit<ScheduledMail, 'recipients'> {
+/**
+ * The wire shape. The endpoints write a mail's dates (`java.util.Date`) as ISO 8601 text with an
+ * offset, `"2026-11-19T09:27:20.142+00:00"`; {@link fromVo} turns them into the epoch millis the
+ * model declares, so the page can count with them and posts `sentAgainAt` back as a number.
+ */
+interface ScheduledMailVo extends Omit<
+  ScheduledMail,
+  'recipients' | 'created' | 'sendDate' | 'sentAgainAt'
+> {
   recipients?: ScheduledMailRecipient[] | null;
+  created?: string | number | null;
+  sendDate?: string | number | null;
+  sentAgainAt?: string | number | null;
 }
 
 interface SearchResultVo {
@@ -54,12 +119,16 @@ interface SearchResultVo {
 const fromVo = (vo: ScheduledMailVo): ScheduledMail => ({
   ...vo,
   recipients: vo.recipients ?? [],
+  created: epochMillisOf(vo.created),
+  sendDate: epochMillisOf(vo.sendDate),
+  sentAgainAt: epochMillisOf(vo.sentAgainAt),
 });
 
 /**
- * Scheduled-mails (mail queue) search + details. Wire contract: the backend
+ * Scheduled-mails (mail queue) search, details and Send again. Wire contract: the backend
  * page param is 0-BASED; text params and status are emitted only when
- * non-empty; dates go as epoch millis `from`/`to`.
+ * non-empty; dates go as epoch millis `from`/`to`, and the mails' dates, which
+ * come back as ISO text, are epoch millis from here on.
  */
 @Injectable({ providedIn: 'root' })
 export class ScheduledMailsApiService {
@@ -105,5 +174,25 @@ export class ScheduledMailsApiService {
     return this.http
       .get<ScheduledMailVo>(`${this.apiBaseUrl}/scheduled-mails/scheduled-mail/${id}`)
       .pipe(map(fromVo));
+  }
+
+  /**
+   * Puts the given mails back to PENDING (`POST /rest/scheduled-mails/send-again`, sysadmin only).
+   * The backend refuses the whole request with a 409 while the mail filter is LOG or empty, and with
+   * a 400 for an empty list, more than {@link SEND_AGAIN_MAX} mails, a duplicate id or a status it
+   * cannot send again from; both carry a problem document whose `detail` says why. Otherwise each
+   * mail is queued or refused on its own, and a refusal leaves the others queued.
+   */
+  sendAgain(items: readonly SendAgainItem[]): Observable<SendAgainResult> {
+    return this.http
+      .post<SendAgainResultVo | null>(`${this.apiBaseUrl}/scheduled-mails/send-again`, {
+        mails: items.map(({ id, status, sentAgainAt }) => ({ id, status, sentAgainAt })),
+      })
+      .pipe(
+        map((vo) => ({
+          queued: vo?.queued ?? [],
+          refused: vo?.refused ?? [],
+        })),
+      );
   }
 }

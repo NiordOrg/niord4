@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Translation, TranslocoService } from '@jsverse/transloco';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { provideNiordIcons } from '../../../../../shared/icons/niord-icons';
@@ -12,12 +13,14 @@ import { MailDetailsDialog } from './mail-details-dialog';
   template: `<app-mail-details-dialog
     [mail]="mail()"
     [sendDateLabel]="sendDateLabel()"
+    [sentAgainLabel]="sentAgainLabel()"
     (closed)="closedCount = closedCount + 1"
   />`,
 })
 class Host {
   readonly mail = signal<ScheduledMail | undefined>(undefined);
   readonly sendDateLabel = signal('2026-06-11 10:00');
+  readonly sentAgainLabel = signal('');
   closedCount = 0;
 }
 
@@ -34,13 +37,22 @@ const baseMail: ScheduledMail = {
   contents: '<p>Hello</p>',
 };
 
-async function setup(mail: ScheduledMail, sendDateLabel = '2026-06-11 10:00') {
+async function setup(
+  mail: ScheduledMail,
+  sendDateLabel = '2026-06-11 10:00',
+  sentAgainLabel = '',
+  texts?: Translation,
+) {
   TestBed.configureTestingModule({
     providers: [provideTestTransloco(), provideNiordIcons()],
   });
+  if (texts) {
+    TestBed.inject(TranslocoService).setTranslation(texts, 'en');
+  }
   const fixture = TestBed.createComponent(Host);
   fixture.componentInstance.mail.set(mail);
   fixture.componentInstance.sendDateLabel.set(sendDateLabel);
+  fixture.componentInstance.sentAgainLabel.set(sentAgainLabel);
   fixture.autoDetectChanges();
   await fixture.whenStable();
   return { fixture, doc: fixture.nativeElement.ownerDocument as Document };
@@ -76,6 +88,36 @@ describe('MailDetailsDialog', () => {
     expect(text).toContain('admin.mails.details.sent');
     expect(text).not.toContain('admin.mails.details.due');
     expect(text).toContain('2026-06-11 10:00');
+  });
+
+  it('labels the send date Due for a held mail, the time it was due when it was held', async () => {
+    const { doc } = await setup({ ...baseMail, status: 'HELD', attempts: 1 });
+    const text = doc.body.textContent ?? '';
+    expect(text).toContain('admin.mails.details.due');
+    expect(text).not.toContain('admin.mails.details.sent');
+    expect(text).toContain('2026-06-11 10:00');
+  });
+
+  it('shows when and by whom a mail was last sent again', async () => {
+    const { doc } = await setup(
+      { ...baseMail, sentAgainAt: 1_781_172_000_000, sentAgainBy: 'sysadmin' },
+      '2026-06-11 10:00',
+      '2026-06-11 12:00',
+      {
+        admin: {
+          mails: { details: { sentAgain: 'Sent again', sentAgainBy: '{{time}} by {{user}}' } },
+        },
+      },
+    );
+    const row = Array.from(doc.querySelectorAll('.dialog-panel tr')).find((tr) =>
+      tr.textContent?.includes('Sent again'),
+    );
+    expect(row?.textContent).toContain('2026-06-11 12:00 by sysadmin');
+  });
+
+  it('leaves the Sent again row out for a mail never sent again', async () => {
+    const { doc } = await setup(baseMail);
+    expect(doc.body.textContent).not.toContain('admin.mails.details.sentAgain');
   });
 
   it('labels the send date Last attempt for a mail that failed for good', async () => {

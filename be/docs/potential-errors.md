@@ -2698,20 +2698,6 @@ they say otherwise; every other path is from the repository root.
 - **Severity:** Low. Fix: serve the default in `getWebSettings` for a row with no value, as the backend's read
   does.
 
-## MAIL13. The daily delete of old mails can run while mails are being sent
-
-- **Location:** `org/niord/core/mail/ScheduledMailService.java` `deleteExpiredMails` (233-269, daily at 05:28:48)
-  with `ScheduledMail.findExpiredMails` (`ScheduledMail.java` 71-72: every mail created before the expiry date,
-  whatever its status), and `sendPendingMails` (196-224, every minute at second 24).
-- **Description:** since the scheduler has four threads (`spring.task.scheduling.pool.size` in
-  `niord-core-defaults.yml`), the two jobs can run at the same time. A mail still pending when it is older than
-  `mailDeleteAfterDays` days can then be deleted while a sending pass holds it or is about to read it. What a
-  sender task does with a mail deleted under it was not read, and no test covers the overlap.
-- **Why it looks wrong:** a clean-up job and a sending job act on the same rows with no order between them.
-- **Exposed by:** the error hunt's phase 2 fix stage, 2026-11-16, cluster P4-12b (read in the code; not run).
-- **Severity:** Low — only a mail still pending after that many days. Fix: delete only mails that are no longer
-  pending, or take each mail's row lock as the sender does.
-
 ## SERIES-RESET. A reset of the next message number to 0 is accepted where 0 is the only number used
 
 - **Location:** `org/niord/core/message/MessageSeriesService.java` `setNextMessageNumber` (the exemption "Compute gives

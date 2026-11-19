@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { withEpochDates } from './epoch-dates';
+import { epochMillisOf, withEpochDates } from './epoch-dates';
 
 /** The exact string the backend sends for the end of 2019 in Copenhagen. */
 const ISO_END_OF_2019 = '2019-12-31T22:59:59.999+00:00';
@@ -110,5 +110,23 @@ describe('withEpochDates', () => {
     const date = new Date(EPOCH_END_OF_2019);
 
     expect(withEpochDates({ viewedAt: date }).viewedAt).toBe(date);
+  });
+});
+
+describe('epochMillisOf', () => {
+  it('reads an ISO instant with an offset to the millisecond, and a number as it came', () => {
+    expect(epochMillisOf(ISO_END_OF_2019)).toBe(EPOCH_END_OF_2019);
+    expect(epochMillisOf('2026-11-19T09:27:20.142+00:00')).toBe(
+      Date.UTC(2026, 10, 19, 9, 27, 20, 142),
+    );
+    expect(epochMillisOf(EPOCH_END_OF_2019)).toBe(EPOCH_END_OF_2019);
+  });
+
+  it('gives undefined for no value, a wall clock without an offset and an impossible date', () => {
+    expect(epochMillisOf(undefined)).toBeUndefined();
+    expect(epochMillisOf(null)).toBeUndefined();
+    expect(epochMillisOf(Number.NaN)).toBeUndefined();
+    expect(epochMillisOf('2019-12-31T22:59:59.999')).toBeUndefined();
+    expect(epochMillisOf('2019-13-45T22:59:59.999+00:00')).toBeUndefined();
   });
 });

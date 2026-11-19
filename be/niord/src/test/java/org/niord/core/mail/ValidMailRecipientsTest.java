@@ -135,6 +135,24 @@ public class ValidMailRecipientsTest {
         assertEquals("KEEP@ME.com", ((InternetAddress) result).getAddress());
     }
 
+    // ----- redirects(): what makes a mail held under a list --------------------
+
+    @Test
+    public void redirects_onlyAValidAddressAListDoesNotName() throws Exception {
+        ValidMailRecipients list = new ValidMailRecipients("keep@example.org, other@example.org");
+        assertFalse(list.redirects(new InternetAddress("keep@example.org")), "a listed address");
+        assertFalse(list.redirects(new InternetAddress("OTHER@example.org")), "a listed address, in another case");
+        assertTrue(list.redirects(new InternetAddress("stranger@example.com")), "an address the list does not name");
+        assertFalse(list.redirects(new InternetAddress("plainaddress", false)), "an invalid address is refused, "
+                + "not redirected");
+        assertFalse(list.redirects(null));
+
+        InternetAddress stranger = new InternetAddress("stranger@example.com");
+        for (String token : new String[] {"ALL", "LOG"}) {
+            assertFalse(new ValidMailRecipients(token).redirects(stranger), token + " redirects nothing");
+        }
+    }
+
     // ----- filter(String) overload -----------------------------------------
 
     @Test

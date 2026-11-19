@@ -400,9 +400,11 @@ unlisted. A password value is never shown. **Import...** and **Export...** take 
 
 Check at least the addresses (`baseUri`, `adminAppUrl`, `authServerUrl`), the mail sender
 (`mailSender`), who mail really goes to (`mailValidRecipients`: `LOG`, the shipped value, only logs a
-mail; `ALL` sends it to its recipients, and a list of addresses sends it only to those, any other
-recipient replaced by the first), the deployment ribbon (`mode`: anything but `production` shows a
-ribbon in both applications; the shipped settings file says `test`), and `documentationUrl`, which
+mail and marks it Held in the Mail Queue, from where a sysadmin can send it again once the setting is
+open; `ALL` sends it to its recipients, and a list of addresses sends it only to those, any other
+recipient replaced by the first and the mail marked Held, so under a list most mails show as Held),
+the deployment ribbon (`mode`: anything but `production` shows a ribbon in both applications; the
+shipped settings file says `test`), and `documentationUrl`, which
 the Help links open. A copy of production's data carries production's values of these two, so give
 each environment its own at the server's start (below). The language keys are in
 [A new language in a running deployment](#a-new-language-in-a-running-deployment).
@@ -546,6 +548,11 @@ version needs and the old database never had is missing until you import it.
   ```
 
   `mailValidRecipients` given as `LOG` at the start (step 15) keeps the mail from leaving, but the
-  jobs would still change the data.
+  jobs would still change the data. With the filter at `LOG` and the mail job running, the copy's
+  due pending mails become Held, at most `mailMaxPerMinute` of them a minute, so the filter is opened
+  only when no due mail is left Pending, and a sysadmin chooses which to send again (the sysadmin manual's
+  "Sending a Mail Again"); with `-Dniord.schedule.mail-send-cron=-` they stay Pending instead, and
+  all go out by themselves once the job runs with the filter open. To get the choice, let the mail
+  job run while the filter is `LOG`.
 
 Every part on a real volume is verified at the deploy step.

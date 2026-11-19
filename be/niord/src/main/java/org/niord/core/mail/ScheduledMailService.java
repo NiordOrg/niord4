@@ -21,23 +21,34 @@ import org.springframework.stereotype.Service;
 
 import org.apache.commons.lang3.StringUtils;
 import org.niord.core.db.CriteriaHelper;
+import org.niord.core.mail.vo.SendAgainRequestVo;
+import org.niord.core.mail.vo.SendAgainResultVo;
 import org.niord.core.model.BaseEntity;
 import org.niord.core.service.BaseService;
 import org.niord.core.settings.SettingsService;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.core.util.MdcContext;
 import org.niord.core.util.TimeUtils;
+import org.niord.core.web.NiordWebException;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
 
+import jakarta.mail.internet.InternetAddress;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,6 +68,17 @@ public class ScheduledMailService extends BaseService {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(ScheduledMailService.class);
 
     static final String DELETE_AFTER_DAYS_KEY = "mailDeleteAfterDays";
+
+    /** The most mails one Send again may name */
+    public static final int SEND_AGAIN_MAX = 500;
+
+    /** The answer (409) to a Send again while the mail filter is LOG */
+    static final String SEND_AGAIN_REFUSED_LOG = "The mail filter (the setting " + MailService.VALID_RECIPIENTS_KEY
+            + ") is LOG, so the mails would only be held again. Set it to ALL on the Settings page first.";
+
+    /** The answer (409) to a Send again while the mail filter is empty */
+    static final String SEND_AGAIN_REFUSED_EMPTY = "The mail filter (the setting " + MailService.VALID_RECIPIENTS_KEY
+            + ") is empty, so no mail can be sent. Set it on the Settings page first.";
 
     private final MailService mailService;
 
@@ -220,6 +242,117 @@ public class ScheduledMailService extends BaseService {
     }
 
     /**
+     * Sends the given mails again, as a system administrator's Send again of the Mail Queue: each held, sent or
+     * failed mail is put back in the queue as it is ({@link ScheduledMail#sendAgain(Date, String)}), and the sender
+     * job sends it within a minute or two, after the mails the system made, under the mail filter in force then.
+     * <p>
+     * Refused as a whole (400) for a request that is not well formed, and (409) while the mail filter
+     * ({@code mailValidRecipients}) is LOG or empty, so no mail is held or failed again by it. Otherwise each mail is
+     * claimed in ascending id order with the lock the sender takes, and refused alone, with its reason, when it is
+     * gone, is a record of a failure, or no longer has the status and the last Send again the page showed (a double
+     * click, a second administrator, a stale page, or a mail the sender has handled since). While the filter is a list
+     * of addresses, a sent mail with a recipient the list does not name is refused too (FILTER): the list would
+     * redirect that recipient, the mail would end held, and a later Send again of the held mails would reach its
+     * recipients a second time. A held or failed mail is accepted under a list, and ends sent or held again by what
+     * the list lets through when it is sent. A refusal leaves the others queued; an exception rolls the whole request
+     * back.
+     *
+     * @param items the mails to send again, as the page showed them
+     * @param username the user name of the system administrator, recorded on each mail
+     * @return the ids of the mails queued, and the mails refused with their reasons
+     */
+    public SendAgainResultVo sendAgain(List<SendAgainRequestVo.Item> items, String username) {
+        checkSendAgainRequest(items);
+
+        // The filter as the sender reads it for every mail (MailService.deliver)
+        String filter = settingsService.getString(MailService.VALID_RECIPIENTS_KEY);
+        if (StringUtils.isBlank(filter)) {
+            throw new NiordWebException(SEND_AGAIN_REFUSED_EMPTY, 409);
+        }
+        ValidMailRecipients validRecipients = new ValidMailRecipients(filter);
+        if (validRecipients.simulate()) {
+            throw new NiordWebException(SEND_AGAIN_REFUSED_LOG, 409);
+        }
+
+        Date now = new Date();
+        SendAgainResultVo result = new SendAgainResultVo();
+        Map<ScheduledMail.Status, java.lang.Integer> wereBefore = new EnumMap<>(ScheduledMail.Status.class);
+        List<SendAgainRequestVo.Item> inIdOrder = items.stream()
+                .sorted(Comparator.comparing(SendAgainRequestVo.Item::getId))
+                .toList();
+        for (SendAgainRequestVo.Item item : inIdOrder) {
+            // The claim the sender takes (MailService.sendScheduledMail), so a mail being sent is not changed under it
+            ScheduledMail mail = em.find(ScheduledMail.class, item.getId(), LockModeType.PESSIMISTIC_WRITE);
+            SendAgainResultVo.Reason refusal = null;
+            if (mail == null) {
+                refusal = SendAgainResultVo.Reason.GONE;
+            } else if (mail.isRecord()) {
+                refusal = SendAgainResultVo.Reason.RECORD;
+            } else if (mail.getStatus() != item.getStatus()
+                    || !Objects.equals(millis(mail.getSentAgainAt()), millis(item.getSentAgainAt()))) {
+                refusal = SendAgainResultVo.Reason.CHANGED;
+            } else if (mail.getStatus() == ScheduledMail.Status.SENT && redirectsARecipient(mail, validRecipients)) {
+                refusal = SendAgainResultVo.Reason.FILTER;
+            }
+            if (refusal != null) {
+                result.getRefused().add(new SendAgainResultVo.Refusal(item.getId(), refusal));
+                continue;
+            }
+            wereBefore.merge(mail.getStatus(), 1, java.lang.Integer::sum);
+            mail.sendAgain(now, username);
+            result.getQueued().add(mail.getId());
+        }
+
+        log.info("Send again by " + username + ": queued " + result.getQueued().size() + " mails "
+                + result.getQueued() + " (were HELD " + wereBefore.getOrDefault(ScheduledMail.Status.HELD, 0)
+                + ", SENT " + wereBefore.getOrDefault(ScheduledMail.Status.SENT, 0)
+                + ", ERROR " + wereBefore.getOrDefault(ScheduledMail.Status.ERROR, 0) + "); refused "
+                + result.getRefused().stream().map(r -> r.getId() + "=" + r.getReason())
+                        .collect(Collectors.joining(", ", "[", "]")));
+        return result;
+    }
+
+    /** Refuses (400) a Send again that names no mail, too many, a mail without its id or status, or one twice */
+    private static void checkSendAgainRequest(List<SendAgainRequestVo.Item> items) {
+        if (items == null || items.isEmpty()) {
+            throw new NiordWebException("No mail to send again", 400);
+        }
+        if (items.size() > SEND_AGAIN_MAX) {
+            throw new NiordWebException("At most " + SEND_AGAIN_MAX + " mails can be sent again at a time, not "
+                    + items.size(), 400);
+        }
+        Set<java.lang.Integer> ids = new HashSet<>();
+        for (SendAgainRequestVo.Item item : items) {
+            if (item == null || item.getId() == null || item.getStatus() == null) {
+                throw new NiordWebException("Every mail to send again needs its id and its status", 400);
+            }
+            if (item.getStatus() == ScheduledMail.Status.PENDING) {
+                throw new NiordWebException("Only a held, sent or failed mail can be sent again, not the pending mail "
+                        + item.getId(), 400);
+            }
+            if (!ids.add(item.getId())) {
+                throw new NiordWebException("The mail " + item.getId() + " is named twice", 400);
+            }
+        }
+    }
+
+    /**
+     * Whether the mail filter would redirect one of the mail's stored recipients to the first listed address, by the
+     * rule the sender applies ({@link ValidMailRecipients#redirects}, as {@link Mail#filterRecipients} asks it)
+     */
+    private static boolean redirectsARecipient(ScheduledMail mail, ValidMailRecipients validRecipients) {
+        return mail.getRecipients().stream()
+                .map(ScheduledMailRecipient::toMailRecipient)
+                .filter(Objects::nonNull)
+                .anyMatch(r -> r.getAddress() instanceof InternetAddress address && validRecipients.redirects(address));
+    }
+
+    /** The date as epoch milliseconds, or null */
+    private static Long millis(Date date) {
+        return date == null ? null : date.getTime();
+    }
+
+    /**
      * Called every minute to process scheduled mails
      * <p>
      * The job reads the pending ids and hands them to the sender threads without a transaction of its own, so the
@@ -294,7 +427,9 @@ public class ScheduledMailService extends BaseService {
     }
 
     /**
-     * Called every day to delete old scheduled mails.
+     * Called every day to delete old scheduled mails: those created more than {@code mailDeleteAfterDays} days ago,
+     * whatever their status, but for a pending mail, which is never deleted (it may have been sent again and wait to
+     * be sent). Each mail is loaded with the lock the sender and Send again take, and skipped if it is pending then.
      *
      * Note to self: It would have been faster to execute a "delete from ScheduledMail where..." statement.
      * However, this will fail because of a missing mail - recipient "delete on cascade" FK constraint.
@@ -319,17 +454,19 @@ public class ScheduledMailService extends BaseService {
         if (!ids.isEmpty()) {
             long t0 = System.currentTimeMillis();
             try {
+                int deleted = 0;
                 for (int x = 0; x < ids.size(); x++) {
-                    ScheduledMail mail = getScheduledMail(ids.get(x));
-                    if (mail != null) {
+                    ScheduledMail mail = em.find(ScheduledMail.class, ids.get(x), LockModeType.PESSIMISTIC_WRITE);
+                    if (mail != null && mail.getStatus() != ScheduledMail.Status.PENDING) {
                         em.remove(mail);
+                        deleted++;
                         if ((x % 50) == 0) {
                             em.flush();
                         }
                     }
                 }
 
-                log.info("Deleted " + ids.size() + " scheduled mails older than " + expiryDate
+                log.info("Deleted " + deleted + " scheduled mails older than " + expiryDate
                             + " in " + (System.currentTimeMillis() - t0) + " ms");
 
             } catch (Exception e) {

@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Wire-level confirmation of the <em>default</em> {@code MailService} behaviour: with
  * {@code mailValidRecipients = "LOG"} (the production default, and the configuration the rest of the
  * integration suite runs under) a "send" is only <em>simulated</em> — the scheduled mail is marked
- * {@code SENT}, but nothing is handed to {@code Transport.send(...)} and nothing reaches the SMTP
+ * {@code HELD}, nothing is handed to {@code Transport.send(...)} and nothing reaches the SMTP
  * server.
  *
  * <p>This class deliberately uses only {@link NiordContainersResource} (no {@code mailValidRecipients}
@@ -94,7 +94,7 @@ class MailSimulationModeITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // sendScheduledMail: SENT in the DB, but never delivered over SMTP
+    // sendScheduledMail: HELD in the DB, never delivered over SMTP
     // ------------------------------------------------------------------------------------------- //
 
     @Test
@@ -120,20 +120,20 @@ class MailSimulationModeITTest extends ITTest {
 
         ScheduledMail returned = mailService.sendScheduledMail(id);
         assertNotNull(returned);
-        assertEquals(Status.SENT, returned.getStatus(),
-                "in simulation mode the mail is still marked SENT");
+        assertEquals(Status.HELD, returned.getStatus(),
+                "in simulation mode the mail is held, not marked SENT");
 
         ScheduledMail reloaded = Tx.requiringNew()
                 .call(() -> em.find(ScheduledMail.class, id));
         assertNotNull(reloaded);
-        assertEquals(Status.SENT, reloaded.getStatus());
+        assertEquals(Status.HELD, reloaded.getStatus());
         assertEquals(1, reloaded.getAttempts());
         assertNull(reloaded.getLastError());
 
-        // The defining assertion: sendScheduledMail returns synchronously after marking SENT, and in
+        // The defining assertion: sendScheduledMail returns synchronously after marking HELD, and in
         // simulation mode Transport.send(...) is never invoked, so nothing reaches the SMTP server.
         assertTrue(MailHog.messagesWithSubject(subject).isEmpty(),
-                "LOG/simulation mode must mark the mail SENT WITHOUT delivering it over SMTP");
+                "LOG/simulation mode must hold the mail WITHOUT delivering it over SMTP");
     }
 
     // ------------------------------------------------------------------------------------------- //

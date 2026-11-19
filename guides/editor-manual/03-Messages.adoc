@@ -511,6 +511,8 @@ recipients and its status:
 * _Waiting_: the mail is queued and will be sent within a minute or two.
 * _Retrying_: an attempt failed, and Niord tries again, at longer and longer intervals, for about
   an hour and twenty minutes. The last error is shown below the status.
+* _Held, not delivered_: the mail filter of this deployment kept the mail from its recipients, so
+  it did not reach them, or not all of them. A system administrator can send it again.
 * _Not sent_: the last attempt failed too, and Niord gives up. The last error is shown below the
   status; reach the recipients another way.
 

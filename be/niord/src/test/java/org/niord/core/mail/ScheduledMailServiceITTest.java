@@ -60,7 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>No real SMTP traffic is generated: the default {@code mailValidRecipients} setting is
  * {@code "LOG"}, which puts {@link MailService} in simulation mode, so a "send" merely sleeps and
- * marks the scheduled mail as SENT without contacting a mail server.
+ * marks the scheduled mail as HELD without contacting a mail server.
  *
  * <p>This is a framework-coupled test — see docs/framework-coupled-tests.md.
  */
@@ -455,7 +455,7 @@ class ScheduledMailServiceITTest extends ITTest {
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void sendScheduledMailMarksPendingMailAsSentInSimulationMode() {
+    void sendScheduledMailMarksPendingMailAsHeldUnderTheLogFilter() {
         String subject = "IT-MAIL-send-" + System.nanoTime();
 
         // Commit a PENDING mail with valid contents + a TO recipient in its own transaction, so the
@@ -470,21 +470,21 @@ class ScheduledMailServiceITTest extends ITTest {
         assertNotNull(id, "precondition: committed mail must have a generated id");
         committedMailIds.add(id);
 
-        // Simulation mode ("LOG"): no SMTP contact; the mail is marked SENT.
+        // Simulation mode ("LOG"): no SMTP contact; the mail is held, not marked SENT.
         ScheduledMail returned = mailService.sendScheduledMail(id);
         assertNotNull(returned, "sendScheduledMail must return the processed entity");
-        assertEquals(Status.SENT, returned.getStatus());
+        assertEquals(Status.HELD, returned.getStatus());
 
         // Verify the COMMITTED database state from a fresh transaction.
         ScheduledMail reloaded = Tx.requiringNew()
                 .call(() -> em.find(ScheduledMail.class, id));
         assertNotNull(reloaded, "the committed mail row must still exist");
-        assertEquals(Status.SENT, reloaded.getStatus(),
-                "a successfully (simulated) sent mail must be persisted with status SENT");
+        assertEquals(Status.HELD, reloaded.getStatus(),
+                "a mail handled under the LOG filter must be persisted with status HELD");
         assertEquals(1, reloaded.getAttempts(),
-                "registerMailSent must record exactly one attempt");
+                "registerMailHeld must record exactly one attempt");
         assertNull(reloaded.getLastError(),
-                "a successful send must clear lastError");
+                "a held mail carries no error");
     }
 
     // ------------------------------------------------------------------------------------------- //
@@ -493,14 +493,14 @@ class ScheduledMailServiceITTest extends ITTest {
     // sendPendingMails fetches up to mailMaxPerMinute (default 10) mails that are PENDING with a sendDate
     // in the past, and submits each to MailService.sendScheduledMail (@Transactional REQUIRES_NEW, which
     // COMMITS). The fixtures must therefore be committed so the REQUIRES_NEW send path can re-read them; in
-    // the default "LOG" simulation mode no SMTP traffic is generated, the mail is simply marked SENT. The
+    // the default "LOG" simulation mode no SMTP traffic is generated, the mail is simply marked HELD. The
     // package-private method is reachable from this same-package test. Only the cron firing *time* and the
     // @Lock(WRITE) concurrency guard are not asserted (the Quarkus scheduler is not driven; a single test
     // thread cannot exercise the lock). See docs/untestable-code.md / docs/framework-coupled-tests.md.
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void sendPendingMailsMarksDuePendingMailsAsSentButLeavesFutureOnesPending() {
+    void sendPendingMailsHandlesDuePendingMailsButLeavesFutureOnesPending() {
         long n = System.nanoTime();
 
         // A due PENDING mail (sendDate one day in the past) and a not-yet-due PENDING mail (one day ahead),
@@ -528,8 +528,8 @@ class ScheduledMailServiceITTest extends ITTest {
 
         ScheduledMail due = Tx.requiringNew().call(() -> em.find(ScheduledMail.class, dueId));
         ScheduledMail future = Tx.requiringNew().call(() -> em.find(ScheduledMail.class, futureId));
-        assertEquals(Status.SENT, due.getStatus(),
-                "a PENDING mail whose sendDate has passed must be sent (marked SENT) by sendPendingMails");
+        assertEquals(Status.HELD, due.getStatus(),
+                "a PENDING mail whose sendDate has passed must be handled (held, under LOG) by sendPendingMails");
         assertEquals(1, due.getAttempts(),
                 "the dispatched mail must record exactly one send attempt");
         assertEquals(Status.PENDING, future.getStatus(),
@@ -539,8 +539,8 @@ class ScheduledMailServiceITTest extends ITTest {
     // ------------------------------------------------------------------------------------------- //
     // deleteExpiredMails() - the @Scheduled(cron="48 28 5 * * ?") cleanup, invoked directly
     //
-    // deleteExpiredMails removes every ScheduledMail created before (now - mailDeleteAfterDays); the
-    // setting defaults to 30. It is @Transactional(REQUIRES_NEW) so it COMMITS its deletions, hence the
+    // deleteExpiredMails removes every ScheduledMail created before (now - mailDeleteAfterDays) that is not
+    // PENDING; the setting defaults to 30. It is @Transactional(REQUIRES_NEW) so it COMMITS its deletions, hence the
     // fixtures are committed and asserted from a fresh transaction. Only the cron firing time and the
     // @Lock(WRITE) guard are not asserted. See docs/untestable-code.md / docs/framework-coupled-tests.md.
     // ------------------------------------------------------------------------------------------- //
@@ -553,6 +553,7 @@ class ScheduledMailServiceITTest extends ITTest {
         // (kept). The year-sized margin beats any JVM/MySQL timezone skew on the created<=expiryDate query.
         Integer oldId = Tx.requiringNew().call(() -> {
             ScheduledMail m = newMail("IT-MAIL-old-" + n, "a@b.com");
+            m.setStatus(Status.SENT); // a pending mail is never deleted
             m.setCreated(new Date(System.currentTimeMillis() - 365L * 24 * 60 * 60 * 1000L));
             em.persist(m);
             em.flush();
@@ -590,6 +591,7 @@ class ScheduledMailServiceITTest extends ITTest {
         // Twenty days old: kept by the default of 30 days, deleted by a retention of 10
         Integer twentyDaysId = Tx.requiringNew().call(() -> {
             ScheduledMail m = newMail("IT-MAIL-twenty-days-" + n, "a@b.com");
+            m.setStatus(Status.SENT); // a pending mail is never deleted
             m.setCreated(new Date(System.currentTimeMillis() - 20 * day));
             em.persist(m);
             em.flush();
@@ -598,6 +600,7 @@ class ScheduledMailServiceITTest extends ITTest {
         // A year old: deleted by any retention, kept when the purge is off
         Integer yearId = Tx.requiringNew().call(() -> {
             ScheduledMail m = newMail("IT-MAIL-year-" + n, "a@b.com");
+            m.setStatus(Status.SENT); // a pending mail is never deleted
             m.setCreated(new Date(System.currentTimeMillis() - 365 * day));
             em.persist(m);
             em.flush();
@@ -622,5 +625,132 @@ class ScheduledMailServiceITTest extends ITTest {
             settingsService.set(DELETE_AFTER_DAYS, original);
             settingsService.evictFromCache(DELETE_AFTER_DAYS);
         }
+    }
+
+    /**
+     * A pending mail is never deleted, however old: it may have been sent again and wait to be sent (before, the
+     * clean-up deleted every old mail, whatever its status). A held mail is deleted by age as the others are.
+     */
+    @Test
+    void deleteExpiredMailsKeepsAnOldPendingMailAndDeletesAnOldHeldOne() {
+        long n = System.nanoTime();
+        long yearAgo = System.currentTimeMillis() - 365L * 24 * 60 * 60 * 1000L;
+        // Due tomorrow, so the minute sender leaves the pending mail alone
+        Date tomorrow = new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000L);
+        Integer pendingId = Tx.requiringNew().call(() -> {
+            ScheduledMail m = newMail("IT-MAIL-old-pending-" + n, "a@example.com");
+            m.setStatus(Status.PENDING);
+            m.setCreated(new Date(yearAgo));
+            m.setSendDate(tomorrow);
+            em.persist(m);
+            em.flush();
+            return m.getId();
+        });
+        Integer heldId = Tx.requiringNew().call(() -> {
+            ScheduledMail m = newMail("IT-MAIL-old-held-" + n, "a@example.com");
+            m.setStatus(Status.HELD);
+            m.setCreated(new Date(yearAgo));
+            em.persist(m);
+            em.flush();
+            return m.getId();
+        });
+        committedMailIds.add(pendingId);
+        committedMailIds.add(heldId);
+
+        scheduledMailService.deleteExpiredMails();
+
+        assertNotNull(Tx.requiringNew().call(() -> em.find(ScheduledMail.class, pendingId)),
+                "a pending mail is kept, however old");
+        assertNull(Tx.requiringNew().call(() -> em.find(ScheduledMail.class, heldId)),
+                "a held mail older than the retention is deleted");
+    }
+
+    /**
+     * The clean-up reads the old mails in ascending id order, the order Send again locks them in, so the two never wait
+     * for each other's rows in a cycle. The first mail is changed after the second is made, which writes its row
+     * behind the second's in the table: the order a query without an order returns them in. Read in the test's
+     * transaction; the mails were made long before any other.
+     */
+    @Test
+    @Transactional
+    void findExpiredMailsReadsTheMailsInIdOrder() {
+        long n = System.nanoTime();
+        long day = 24L * 60 * 60 * 1000L;
+        ScheduledMail first = newMail("IT-MAIL-expired-first-" + n, "a@example.com");
+        first.setStatus(Status.HELD);
+        first.setCreated(new Date(day));
+        persist(first);
+        ScheduledMail second = newMail("IT-MAIL-expired-second-" + n, "a@example.com");
+        second.setStatus(Status.SENT);
+        second.setCreated(new Date(day));
+        persist(second);
+        first.setStatus(Status.SENT);
+        em.flush();
+
+        List<Integer> ids = em.createNamedQuery("ScheduledMail.findExpiredMails", Integer.class)
+                .setParameter("expiryDate", new Date(2 * day))
+                .getResultList();
+        assertEquals(List.of(first.getId(), second.getId()), ids, "in id order");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // sendAgain() and the sender's order
+    // ------------------------------------------------------------------------------------------- //
+
+    /** Under the suite's LOG filter Send again is refused (409) as a whole, and no row is touched */
+    @Test
+    void sendAgainIsRefusedUnderTheLogFilterAndChangesNoRow() {
+        assertEquals("LOG", settingsService.getString(MailService.VALID_RECIPIENTS_KEY),
+                "the shared test application simulates every send");
+        String subject = "IT-MAIL-send-again-log-" + System.nanoTime();
+        Integer id = Tx.requiringNew().call(() -> {
+            ScheduledMail m = newMail(subject, "a@example.com");
+            m.setStatus(Status.HELD);
+            m.setAttempts(1);
+            em.persist(m);
+            em.flush();
+            return m.getId();
+        });
+        committedMailIds.add(id);
+
+        org.niord.core.web.NiordWebException refused = assertThrows(org.niord.core.web.NiordWebException.class,
+                () -> scheduledMailService.sendAgain(
+                        List.of(new org.niord.core.mail.vo.SendAgainRequestVo.Item(id, Status.HELD, null)),
+                        "it-sysadmin"));
+        assertEquals(409, refused.getStatusCode().value());
+        assertEquals(ScheduledMailService.SEND_AGAIN_REFUSED_LOG, refused.getReason());
+
+        ScheduledMail after = Tx.requiringNew().call(() -> em.find(ScheduledMail.class, id));
+        assertEquals(Status.HELD, after.getStatus(), "the mail is still held");
+        assertEquals(1, after.getAttempts());
+        assertNull(after.getSentAgainAt(), "and was not sent again");
+        assertNull(after.getSentAgainBy());
+    }
+
+    /**
+     * The sender job takes the mails the system makes before the mails sent again, so with mailMaxPerMinute at 1 a new
+     * pending mail is sent before an older one that was sent again; among mails sent again the oldest due goes first.
+     * Read through getPendingMails, the list sendPendingMails cuts at mailMaxPerMinute, in the test's transaction (the
+     * minute sender does not see the rows). The send dates are far in the past, before any other due row.
+     */
+    @Test
+    @Transactional
+    void aNewPendingMailGoesBeforeAnOlderOneThatWasSentAgain() {
+        long n = System.nanoTime();
+        ScheduledMail sentAgain = newMail("IT-MAIL-order-sent-again-" + n, "a@example.com");
+        sentAgain.setStatus(Status.HELD);
+        sentAgain.sendAgain(new Date(1_000L), "it-sysadmin");
+        persist(sentAgain);
+        ScheduledMail fresh = newMail("IT-MAIL-order-new-" + n, "a@example.com");
+        fresh.setStatus(Status.PENDING);
+        fresh.setSendDate(new Date(2_000L));
+        persist(fresh);
+
+        List<Integer> pending = scheduledMailService.getPendingMails().stream()
+                .map(ScheduledMail::getId)
+                .collect(Collectors.toList());
+        assertTrue(pending.contains(sentAgain.getId()) && pending.contains(fresh.getId()), "both are due");
+        assertTrue(pending.indexOf(fresh.getId()) < pending.indexOf(sentAgain.getId()),
+                "the new mail goes first, though the mail sent again is due earlier");
     }
 }

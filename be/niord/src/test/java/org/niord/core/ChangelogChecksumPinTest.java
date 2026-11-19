@@ -80,6 +80,7 @@ class ChangelogChecksumPinTest {
         PINNED.put("niord:011-message-filter-parameters-text", "9:84ef76d49e0b274e2dd56ca63cb46c1f");
         PINNED.put("niord:012-mailing-list-status-change", "9:1fd941c7102b24181f7060ec51a7ed91");
         PINNED.put("niord:013-user-username-case-insensitive", "9:68383fffda166c10e98df269e234d6c0");
+        PINNED.put("niord:014-scheduled-mail-held", "9:90435fafb1ae28b9b657aaeb95ef06ba");
     }
 
     private DatabaseChangeLog master() throws Exception {

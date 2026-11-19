@@ -89,6 +89,13 @@ describe('MyMailsNoticeService', () => {
     });
   });
 
+  it('does not announce a held mail: the mail filter held it, nothing failed', () => {
+    const { service, notify } = setup([of([mail(1, 'HELD'), mail(2, 'HELD')])]);
+    service.start(shellRef().ref);
+    expect(notify).not.toHaveBeenCalled();
+    expect(localStorage.getItem(MY_MAILS_ANNOUNCED_STORAGE_KEY)).toBeNull();
+  });
+
   it('looks again after five minutes, not at every check, and does not announce a mail twice', () => {
     const { service, mine, notify } = setup([of([mail(1, 'ERROR')])]);
     service.start(shellRef().ref);
