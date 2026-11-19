@@ -3,7 +3,11 @@
  * static test snapshot, and writes them as byte-reproducible JSON.
  *
  * Run explicitly, never from CI:
- *     node scripts/capture-publication-fixtures.mjs [--out <dir>] [--only <tag>]
+ *     node scripts/capture-publication-fixtures.mjs --host <url> [--out <dir>] [--only <tag>]
+ *
+ *   --host  the backend's address, without /rest, for example
+ *           https://niord.staging.brs2.dk. There is no default: the script reads
+ *           whichever system it is pointed at, and that choice is the caller's.
  *
  * The oracle is a live system. An automatic refresh would let a regression
  * rewrite its own expectations and report itself green, so re-running this and
@@ -14,7 +18,15 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const HOST = 'https://niord.t-dma.dk';
+/* No default for the target: a capture against a system nobody chose is one
+ * accident away from rewriting the oracle with the wrong data. */
+const hostAt = process.argv.indexOf('--host');
+const HOST = (hostAt > -1 ? process.argv[hostAt + 1] ?? '' : '').replace(/\/+$/, '');
+if (!/^https?:\/\//.test(HOST)) {
+  console.error('capture-publication-fixtures: give the backend to capture from with --host <url> '
+    + '(its address without /rest, for example https://niord.staging.brs2.dk); there is no default');
+  process.exit(2);
+}
 const DOMAIN = 'niord-nm';
 
 /* The weekly tags. Positive controls first: these two are the validated pair

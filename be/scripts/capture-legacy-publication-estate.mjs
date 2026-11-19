@@ -8,8 +8,9 @@
  * to. The corpus has to be a FROZEN copy -- an importer verified against a
  * moving target is verified against nothing.
  *
- * WHY THE TEST ENVIRONMENT AND NOT PRODUCTION. niord.t-dma.dk is a static full
- * production snapshot taken 17.08.2026. Production moves; a re-capture from it
+ * WHY A TEST ENVIRONMENT AND NOT PRODUCTION. The capture is taken from a test
+ * environment that holds a static full production snapshot (the committed one's
+ * was taken 17.08.2026). Production moves; a re-capture from it
  * would silently change expectations under a passing test, which is the failure
  * mode fixtures exist to prevent.
  *

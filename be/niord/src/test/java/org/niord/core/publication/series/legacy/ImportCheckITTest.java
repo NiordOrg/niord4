@@ -204,7 +204,7 @@ public class ImportCheckITTest extends ITTest {
      * The audit reads messageFilter, not only messageQuery.
      *
      * This is the hole the live estate exposed: TWELVE of the fifteen triggers on
-     * niord.t-dma.dk carry no messageQuery at all and put their logic in
+     * the old test environment carry no messageQuery at all and put their logic in
      * messageFilter. The first version of this audit scanned messageQuery alone
      * and reported a clean result having read a fifth of the triggers -- silence
      * that reads as success, which is exactly what the committed report exists to

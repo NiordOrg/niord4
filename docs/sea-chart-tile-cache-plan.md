@@ -41,7 +41,7 @@ This plan replaces D10's "on the proxies' disks" and phase R5 of
   mounts its ConfigMap only and is limited to 128Mi.
 - **No deployed administration app is configured to draw the sea chart.** DK's
   `environment.production.ts` sets no `wmsUrl`, and its test and development files name the
-  previous production's proxy, `https://niord.t-dma.dk/wms/`. GL has no environment file. Both
+  old test environment's proxy, `/wms/` on that environment's host. GL has no environment file. Both
   countries' settings files switch the layer on and name `http://kortforsyningen.kms.dk/` as the
   provider, with an empty token. (Read from the files; not checked on the stagings.)
 - **The public site draws no sea chart.** `wmsLayer` is `false` in both countries; the site's own

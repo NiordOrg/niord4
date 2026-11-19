@@ -859,10 +859,10 @@ browser upgrades a mixed-content image, and counted.
 Measured on 2026-09-28, 12:54 to 12:58 UTC, from a developer workstation on the office network (Windows 11,
 Node 24.15; the times include the network path to the test environment).
 
-**The environment.** `https://niord.t-dma.dk`: the previous Niord (the Quarkus backend on MySQL) behind the
+**The environment.** The old test environment: the previous Niord (the Quarkus backend on MySQL) behind the
 test ingress, with a copy of the production data (the snapshot of 17 August 2026, plus test activity since).
 Its map images come from an internal static-map server on the test network (the `mapImageSize` setting is
-256). Keycloak at `https://login.t-dma.dk/auth`, realm `niord`; logged in as the test sysadmin with
+256). Keycloak on that environment's own login host, realm `niord`; logged in as the test sysadmin with
 `NiordDomain: niord-nm`.
 
 **The set.** `--filter 'domain=niord-nm&status=PUBLISHED&area=529&area=466&area=504'` (the NM domain's
@@ -907,7 +907,7 @@ gave 771.1 ms (median page makespan) and 86.4 / 111.4 ms (median / p95 per reque
   browser does not hold itself to 6 connections, would show broken images for most of a page behind such a
   limit.
 - **The 307 names `http://`.** Every Location the test environment sent for an image points at
-  `http://niord.t-dma.dk/...` although the site is https. A browser upgrades such an image request; a client
+  `http://` on the site's own host although the site is https. A browser upgrades such an image request; a client
   that follows it literally gets one more redirect (a 302 to https) per image.
 - R1's first round was as fast as the cached rounds (81.1 against 78.3 ms median), so the images of the set were
   already there: the table has no cold image over the real network.

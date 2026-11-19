@@ -29,7 +29,14 @@
  * switched on for it to be there.
  *
  * Usage:
- *   node scripts/seed-publication-series.mjs [--no-publish] [--base <url>]
+ *   node scripts/seed-publication-series.mjs --base <url> [--no-publish]
+ *
+ *   --base        the target's API, ending in /rest, for example
+ *                 https://niord.staging.brs2.dk/rest. There is no default.
+ *   NIORD_KEYCLOAK  (environment) the target's token endpoint on its login
+ *                 server, .../realms/niord/protocol/openid-connect/token. The
+ *                 caller gives it; there is no default.
+ *   NIORD_USER, NIORD_PASS  (environment) the login.
  *
  *   --no-publish  stop after the issue is created. Everything up to that point
  *                 is reversible, so this run cleans up completely and can be
@@ -42,14 +49,25 @@
  */
 
 const args = process.argv.slice(2);
-const BASE = args.includes('--base') ? args[args.indexOf('--base') + 1] : 'https://niord.t-dma.dk/rest';
+// No default target and no default login server. A run that can publish -- which
+// cannot be undone -- must be pointed at a system on purpose.
+const BASE = (args.includes('--base') ? args[args.indexOf('--base') + 1] ?? '' : '').replace(/\/+$/, '');
+if (!/^https?:\/\//.test(BASE)) {
+  console.error('seed-publication-series: give the target\'s API with --base <url> '
+    + '(ending in /rest, for example https://niord.staging.brs2.dk/rest); there is no default');
+  process.exit(2);
+}
 // Publishing is the one step this script cannot take back. --no-publish stops
 // after the issue is created, which leaves nothing behind: an OPEN, unstamped
 // issue is deletable, and so is its series once the issue is gone. Use it to
 // smoke-test create and activate as often as you like.
 const PUBLISH = !args.includes('--no-publish');
-const KEYCLOAK = (process.env.NIORD_KEYCLOAK
-    || 'https://login.t-dma.dk/auth/realms/niord/protocol/openid-connect/token');
+const KEYCLOAK = process.env.NIORD_KEYCLOAK;
+if (!KEYCLOAK) {
+  console.error('set NIORD_KEYCLOAK in the environment: the token endpoint of the target\'s login server, '
+    + 'ending in /realms/niord/protocol/openid-connect/token; there is no default');
+  process.exit(2);
+}
 // No default login. A run that can publish -- which cannot be undone -- must
 // be one somebody deliberately authenticated, and a password in a file is a
 // password in every clone.
