@@ -595,10 +595,10 @@ function mapProblems(page, pinned) {
  * credits. The fixture's messages carry no position, so the panel is always there; a run that
  * finds none says so rather than holding by default.
  *
- * A credit's link can wrap onto a second line at 320 px, as "Danish Emergency Management Agency"
- * does after the accessibility link. The centre of its bounding box then lies between the two
- * lines, where the list around them is the topmost element, although nothing covers the link. So
- * each line of a control is tested at its own centre, and the first line that fails is named.
+ * A credit's link can wrap onto a second line at 320 px, as a long agency name does after the
+ * accessibility link. The centre of its bounding box then lies between the two lines, where the
+ * list around them is the topmost element, although nothing covers the link. So each line of a
+ * control is tested at its own centre, and the first line that fails is named.
  */
 async function mapControlsCovered(page) {
   // Where the bars are not pinned the chart is as tall as the viewport and starts below them.
