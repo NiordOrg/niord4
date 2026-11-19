@@ -196,38 +196,38 @@ public class MailComposeTest {
     public void filterRecipients_restrictedMode_substitutesStrangerWithFirstValidAddress() {
         Mail mail = new Mail();
         try {
-            mail.recipient(Message.RecipientType.TO, addr("keep@me.com"))
-                .recipient(Message.RecipientType.TO, addr("stranger@x.com"));
+            mail.recipient(Message.RecipientType.TO, addr("keep@example.org"))
+                .recipient(Message.RecipientType.TO, addr("stranger@example.com"));
         } catch (AddressException e) {
             fail("Setup addresses should be valid: " + e.getMessage());
         }
 
-        // Only "keep@me.com" is a valid recipient. The stranger must be substituted.
-        List<Address> redirected = mail.filterRecipients(new ValidMailRecipients("keep@me.com"));
+        // Only "keep@example.org" is a valid recipient. The stranger must be substituted.
+        List<Address> redirected = mail.filterRecipients(new ValidMailRecipients("keep@example.org"));
 
         // The stranger, as it was addressed, is the one recipient the filter redirected
-        assertEquals(List.of("stranger@x.com"),
+        assertEquals(List.of("stranger@example.com"),
                 redirected.stream().map(a -> ((InternetAddress) a).getAddress()).toList());
 
         // Both recipients survive (the list stays the same size), but every resolved address
         // is the single valid address: the known one passes through, the stranger is rewritten
-        // to "keep@me.com" (with the original address kept only as the personal name).
+        // to "keep@example.org" (with the original address kept only as the personal name).
         assertEquals(2, mail.getRecipients().size());
         for (Mail.MailRecipient r : mail.getRecipients()) {
             Address a = r.getAddress();
             assertTrue(a instanceof InternetAddress, "Recipient should be an InternetAddress");
-            assertEquals("keep@me.com", ((InternetAddress) a).getAddress());
+            assertEquals("keep@example.org", ((InternetAddress) a).getAddress());
         }
     }
 
     @Test
     public void filterRecipients_redirectsNothingWhenEveryRecipientIsListedOrUnderAll() throws Exception {
         Mail listed = new Mail()
-                .recipient(Message.RecipientType.TO, addr("keep@me.com"))
-                .recipient(Message.RecipientType.CC, addr("Other@ok.com"));
-        assertTrue(listed.filterRecipients(new ValidMailRecipients("keep@me.com, other@ok.com")).isEmpty());
+                .recipient(Message.RecipientType.TO, addr("keep@example.org"))
+                .recipient(Message.RecipientType.CC, addr("Other@example.org"));
+        assertTrue(listed.filterRecipients(new ValidMailRecipients("keep@example.org, other@example.org")).isEmpty());
 
-        Mail all = new Mail().recipient(Message.RecipientType.TO, addr("stranger@x.com"));
+        Mail all = new Mail().recipient(Message.RecipientType.TO, addr("stranger@example.com"));
         assertTrue(all.filterRecipients(new ValidMailRecipients("ALL")).isEmpty());
     }
 }

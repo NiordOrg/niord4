@@ -638,7 +638,7 @@ class ScheduledMailServiceITTest extends ITTest {
         // Due tomorrow, so the minute sender leaves the pending mail alone
         Date tomorrow = new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000L);
         Integer pendingId = Tx.requiringNew().call(() -> {
-            ScheduledMail m = newMail("IT-MAIL-old-pending-" + n, "a@b.com");
+            ScheduledMail m = newMail("IT-MAIL-old-pending-" + n, "a@example.com");
             m.setStatus(Status.PENDING);
             m.setCreated(new Date(yearAgo));
             m.setSendDate(tomorrow);
@@ -647,7 +647,7 @@ class ScheduledMailServiceITTest extends ITTest {
             return m.getId();
         });
         Integer heldId = Tx.requiringNew().call(() -> {
-            ScheduledMail m = newMail("IT-MAIL-old-held-" + n, "a@b.com");
+            ScheduledMail m = newMail("IT-MAIL-old-held-" + n, "a@example.com");
             m.setStatus(Status.HELD);
             m.setCreated(new Date(yearAgo));
             em.persist(m);
@@ -676,11 +676,11 @@ class ScheduledMailServiceITTest extends ITTest {
     void findExpiredMailsReadsTheMailsInIdOrder() {
         long n = System.nanoTime();
         long day = 24L * 60 * 60 * 1000L;
-        ScheduledMail first = newMail("IT-MAIL-expired-first-" + n, "a@b.com");
+        ScheduledMail first = newMail("IT-MAIL-expired-first-" + n, "a@example.com");
         first.setStatus(Status.HELD);
         first.setCreated(new Date(day));
         persist(first);
-        ScheduledMail second = newMail("IT-MAIL-expired-second-" + n, "a@b.com");
+        ScheduledMail second = newMail("IT-MAIL-expired-second-" + n, "a@example.com");
         second.setStatus(Status.SENT);
         second.setCreated(new Date(day));
         persist(second);
@@ -704,7 +704,7 @@ class ScheduledMailServiceITTest extends ITTest {
                 "the shared test application simulates every send");
         String subject = "IT-MAIL-send-again-log-" + System.nanoTime();
         Integer id = Tx.requiringNew().call(() -> {
-            ScheduledMail m = newMail(subject, "a@b.com");
+            ScheduledMail m = newMail(subject, "a@example.com");
             m.setStatus(Status.HELD);
             m.setAttempts(1);
             em.persist(m);
@@ -737,11 +737,11 @@ class ScheduledMailServiceITTest extends ITTest {
     @Transactional
     void aNewPendingMailGoesBeforeAnOlderOneThatWasSentAgain() {
         long n = System.nanoTime();
-        ScheduledMail sentAgain = newMail("IT-MAIL-order-sent-again-" + n, "a@b.com");
+        ScheduledMail sentAgain = newMail("IT-MAIL-order-sent-again-" + n, "a@example.com");
         sentAgain.setStatus(Status.HELD);
         sentAgain.sendAgain(new Date(1_000L), "it-sysadmin");
         persist(sentAgain);
-        ScheduledMail fresh = newMail("IT-MAIL-order-new-" + n, "a@b.com");
+        ScheduledMail fresh = newMail("IT-MAIL-order-new-" + n, "a@example.com");
         fresh.setStatus(Status.PENDING);
         fresh.setSendDate(new Date(2_000L));
         persist(fresh);
