@@ -38,7 +38,8 @@ name: Retract version
 #
 # For a version that must not be consumed any more (a bad build, a proof run from a branch). It
 # does not touch the deploy repo: if an environment already pins the version, the next
-# staging-bump.py pin or a manual revert there is the way out, and Argo CD keeps running the pods
+# staging bump there (the promote job, TARGET=staging, which only takes a base that still has its
+# v4.0.<run> tag) or a manual revert is the way out, and Argo CD keeps running the pods
 # it has. Nor does it reach a country repository already pinned to the version: its builds go on
 # from Maven's local cache and from the base product it unpacked (the zip's hash still matches its
 # pin), as its backend does for the same version, so the summary tells DK and GL to bump.

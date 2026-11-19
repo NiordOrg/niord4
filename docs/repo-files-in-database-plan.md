@@ -518,7 +518,7 @@ follows is its design, and where the runbook simplified it, that is said. Both s
 sync paused in the UI, so every step that changes the deployment is a merge request. Announce the window
 and ask the editors to stay out of it; merge the release (the chart pin and `app.image.tag` of the country
 image that carries the store, as the staging bump writes them: devops-niord's promote job with `TARGET=staging`
-since 2026-11-19, `scripts/staging-bump.py` before) with `app.replicaCount: 0` in the
+since 2026-11-19, a script run from a workstation before) with `app.replicaCount: 0` in the
 same merge request, so the old application stops and the new one cannot start yet; take the rollback point;
 merge `replicaCount` back to 1, which the `Recreate` strategy starts with the volume still mounted. The
 rollback point was first a `pg_dump -Fc` of the database and a CSI snapshot of the application's volume; the
@@ -788,7 +788,7 @@ boots from the bare master, and the volume the chart mounts holds no durable fil
 **State (2026-11-10): done on both stagings, with nothing to import.** `SIFA-DK/niord-dk` and
 `SIFA-DK/niord-gl` moved to base 4.0.147 (4.0.146 and the LUCENE-2 fix; the base bump
 app moved both pull requests from 4.0.146 to 4.0.147 while their CI ran, so the hand pin was made twice), and
-`scripts/staging-bump.py` built `niord-app-dk`/`-gl:4.0.147.9`. The check before the window found the same on
+the staging bump (then a script run from a workstation) built `niord-app-dk`/`-gl:4.0.147.9`. The check before the window found the same on
 both stacks: the volume's `repo/` held `temp/` only, no `messages/` and no `publications/`;
 `publication-archive/` was empty; the database (24 MB) referred to no file (`Attachment.path`,
 `Message.thumbnailPath`, `PublicationIssueDesc.filePath`, `IssueAuditEntry.archivePath` and `/rest/repo/file/`
@@ -810,7 +810,7 @@ import (R4) has no staging number to size it by.
 
 The rest of this section is the plan as written before the cutover, kept for the runbook's design. R2 was
 to wait for each country's base bump to 4.0.146 or later. Then, per country, DK first, the runbook:
-`scripts/staging-bump.py --country <cc>` opens the release merge request (the chart pin and `app.image.tag`,
+the staging bump for that one country opens the release merge request (the chart pin and `app.image.tag`,
 the two-pin model), to which `app.replicaCount: 0` is added; a check on the jump server (the trees' folders and
 sizes against the free space of the Postgres volume); its merge starts the window and stops the application;
 the copy of the database; a second merge request removes the line, starts the application on the store and

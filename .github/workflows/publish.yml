@@ -78,16 +78,17 @@ name: Publish
 # repositories build their deployables and images in their own workflows against the published
 # niord-parent/niord-base; this workflow builds niord-app's image from exactly the jars CI tested.
 #
-# Deployment is NOT here: a staging deploy is devops-niord's scripts/staging-bump.py, run by hand,
-# which pins the version in the deploy repo, and Argo CD applies it (docs/pipeline-latency-plan.md
-# item 17; a self-hosted Renovate on GitLab was decided against on 2026-10-03,
-# docs/renovate-plan.md). This workflow never talks to the deploy repo, Argo CD or a cluster.
+# Deployment is NOT here: a staging deploy is devops-niord's promote job with TARGET=staging, which
+# reads the country images in Harbor and opens the merge request that pins them; a person merges
+# it and Argo CD applies it (docs/pipeline-latency-plan.md item 17; a self-hosted Renovate on
+# GitLab was decided against on 2026-10-03, docs/renovate-plan.md). This workflow never talks to
+# the deploy repo, Argo CD or a cluster.
 #
 # ---------------------------------------------------------------------------------------------
 # Version and tag
 # ---------------------------------------------------------------------------------------------
 # `4.0.<run number of THIS workflow + 181>` (design §3) — monotonic and sortable, which is all a
-# pin needs (staging-bump.py and a country's <parent>). The 181: this repository, NiordOrg/niord4,
+# pin needs (devops-niord's staging bump and a country's <parent>). The 181: this repository, NiordOrg/niord4,
 # started on 2026-11-17 with no history and its run numbers at 1, and SIFA-DK/niord-ng, where this
 # workflow ran before, published up to 4.0.181; so run 1 is 4.0.182 and the sequence goes on. An
 # expression cannot add, so the run's name shows the run number; the gate's summary, the tag and

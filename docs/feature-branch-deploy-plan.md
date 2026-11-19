@@ -386,7 +386,7 @@ repository's.
 
 - 2026-10-23: the rulings R1–R5 given by the owner; this plan written; a link from `be/docs/cicd/design.md` §7.
 - 2026-10-23: a fact-check applied: previews publish to a Packages repository of their own; the gate refuses a
-  draft's skipped runs; release publishing stays `main`-only beside the preview path; `staging-bump.py` ignores
+  draft's skipped runs; release publishing stays `main`-only beside the preview path; the staging bump ignores
   previews; the consequences on staging of a branch's keys and changesets; the promote's "has run" read from
   staging's pin history.
 - 2026-10-24 (a review): the references into the two plans cite sections and rules instead of
