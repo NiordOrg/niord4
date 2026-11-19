@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
@@ -40,7 +41,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * dev-mode Keycloak imports and production mode derives its realm from) is the integration tests' realm byte for
  * byte, and its domain clients carry the domain ids of the base bootstrap and the sample: the backend reads a
  * domain's roles only from the client whose id is the domain's ({@code NiordDomainFilter}), so a client named
- * otherwise gives nobody a role in any domain. {@code be/k8s/scripts/deploy.sh} stops on a difference between the
+ * otherwise gives nobody a role in any domain. In those two realms and the local one the base client
+ * {@code niord-client-master} has the same role ladder as a domain client, {@code user} included.
+ * {@code be/k8s/scripts/deploy.sh} stops on a difference between the
  * two files instead of copying one over the other. Its run is skipped where no bash is found, as
  * {@link LoadSampleScriptTest} is.
  */
@@ -49,6 +52,7 @@ class RealmFilesTest {
     /** The tests run in the module's folder, be/niord */
     static final Path TEST_REALM = Path.of("src/test/resources/keycloak/niord-realm.json");
     static final Path CHART_REALM = Path.of("../k8s/helm/niord/files/niord-realm.json");
+    static final Path LOCAL_REALM = Path.of("../keycloak/niord-realm-local.json");
     static final Path DEPLOY = Path.of("../k8s/scripts/deploy.sh");
     static final Path BOOTSTRAP_DOMAINS = Path.of("bootstrap/domains.json");
     static final Path SAMPLE_DOMAINS = Path.of("sample/archive/domains.json");
@@ -80,6 +84,25 @@ class RealmFilesTest {
             clients.removeAll(NOT_DOMAINS);
             assertEquals(domains, clients, realm + ": a client per domain of the base bootstrap and the sample, "
                     + "named with the domain's id, and no other");
+        }
+    }
+
+    /**
+     * The base client's roles count in every domain and are the only base roles the backend maps (no role
+     * hierarchy), so its ladder must hold {@code user} the way every domain client's does: an editor, admin or
+     * sysadmin there is a user too. Without it a person whose roles are on the base client alone is refused by the
+     * endpoints gated on {@code user} in any domain where that person holds no role of the domain's client.
+     */
+    @Test
+    void theBaseClientsLadderHoldsUser() throws Exception {
+        for (Path realm : List.of(TEST_REALM, CHART_REALM, LOCAL_REALM)) {
+            Map<String, Object> roles = clientRoles(read(realm), "niord-client-master");
+            assertTrue(roles.containsKey("user"), realm + ": niord-client-master has a user role");
+            assertEquals(Set.of("editor", "user"), expand(roles, "editor"), realm + ": editor");
+            assertEquals(Set.of("admin", "editor", "user", "publication-curate"), expand(roles, "admin"),
+                    realm + ": admin");
+            assertEquals(Set.of("sysadmin", "admin", "editor", "user", "publication-curate"),
+                    expand(roles, "sysadmin"), realm + ": sysadmin");
         }
     }
 
@@ -134,6 +157,37 @@ class RealmFilesTest {
     @SuppressWarnings("unchecked")
     static List<Map<String, Object>> list(Object value) {
         return (List<Map<String, Object>>) value;
+    }
+
+    /** The roles of one client, by name */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> clientRoles(Map<String, Object> realm, String client) {
+        Map<String, Object> byClient = (Map<String, Object>) ((Map<String, Object>) realm.get("roles")).get("client");
+        Map<String, Object> roles = new TreeMap<>();
+        for (Map<String, Object> role : list(byClient.get(client))) {
+            roles.put((String) role.get("name"), role);
+        }
+        return roles;
+    }
+
+    /** A role and every role of the same client it holds, composites followed, as Keycloak puts them in a token */
+    @SuppressWarnings("unchecked")
+    static Set<String> expand(Map<String, Object> roles, String name) {
+        Set<String> out = new TreeSet<>();
+        List<String> todo = new ArrayList<>(List.of(name));
+        while (!todo.isEmpty()) {
+            String next = todo.removeFirst();
+            Map<String, Object> role = (Map<String, Object>) roles.get(next);
+            if (role == null || !out.add(next)) {
+                continue;
+            }
+            Map<String, Object> composites = (Map<String, Object>) role.get("composites");
+            Map<String, Object> client = composites == null ? null : (Map<String, Object>) composites.get("client");
+            if (client != null && client.get("niord-client-master") instanceof List<?> held) {
+                held.forEach(r -> todo.add((String) r));
+            }
+        }
+        return out;
     }
 
     static Set<String> domainIds(Path file) throws Exception {

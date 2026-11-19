@@ -49,8 +49,8 @@ import java.util.regex.Pattern;
  *         {@code resource_access.&lt;domain&gt;.roles} claim — to the caller's authentication (the
  *         former {@code NiordDomainSecurityIdentityAugmentor}, originally a Quarkus
  *         {@code SecurityIdentityAugmentor}). The base token only maps the OIDC base client's roles
- *         (see {@code SecurityConfig.jwtAuthConverter()}); this is the only source of e.g. the
- *         {@code user} role, which {@code niord-client-master} does not define.</li>
+ *         (see {@code SecurityConfig.jwtAuthConverter()}); this is the only source of a role a caller
+ *         holds on a domain's client alone, e.g. the {@code user} role of a plain domain user.</li>
  * </ol>
  *
  * <p>Wired into the Spring Security filter chain after {@code BearerTokenAuthenticationFilter} by

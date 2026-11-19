@@ -52,10 +52,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       {@code /kc-user/...} mutators require {@code admin}.</li>
  * </ul>
  *
- * <p>The cached sysadmin token carries {editor, admin, sysadmin} but <em>not</em> {@code user}, so the
- * USER-protected endpoints are rejected (403) with the bare token and only succeed once a {@code NiordDomain}
- * header lets the augmentor grant the full role chain. The ADMIN-protected endpoints are reachable with the
- * bare token directly.
+ * <p>The bare testuser token carries no base role (its {@code user} is on {@code niord-nw}'s client), so the
+ * USER-protected endpoints reject it (403) until a {@code NiordDomain} header lets the augmentor grant that
+ * domain's roles. The sysadmin token's base roles ({@code sysadmin, admin, editor, user}) reach the USER- and
+ * ADMIN-protected endpoints with the bare token directly.
  *
  * <p>The {@code search-emails} endpoint echoes the {@code name} query parameter back as the first entry when
  * it matches {@code UserService.EMAIL_PATTERN}, before appending any matched users. No users are seeded, so
@@ -129,7 +129,7 @@ class UserRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // USER endpoints — authenticated-but-insufficient-role (bare sysadmin token, no 'user') -> 403
+    // USER endpoints — authenticated-but-insufficient-role -> 403
     // ------------------------------------------------------------------------------------------- //
 
     @Test
@@ -162,10 +162,10 @@ class UserRestServiceITTest extends ITTest {
 
     @Test
     void searchEmailsWithBareTokenButNoDomainIsForbidden() {
-        // search-emails is @RolesAllowed("user"). The bare sysadmin token carries {editor, admin, sysadmin}
-        // but NOT 'user', so without a NiordDomain header to trigger the role-chain augmentor the
-        // authenticated request is rejected as forbidden.
-        given().auth().oauth2(accessToken())
+        // search-emails is @RolesAllowed("user"). testuser holds 'user' only on niord-nw's client, so
+        // without a NiordDomain header to trigger the role-chain augmentor its bare token holds no role
+        // and the authenticated request is rejected as forbidden.
+        given().auth().oauth2(accessToken("user"))
                 .queryParam("name", "it-rest-forbidden@example.com")
                 .when().get("/rest/users/search-emails")
                 .then().statusCode(403);

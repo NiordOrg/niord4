@@ -43,7 +43,7 @@ class TicketServletFilterITTest extends ITTest {
 
     /**
      * Mints a one-time ticket for the given roles as the authenticated sysadmin — who holds
-     * {@code {editor, admin, sysadmin}} on the bare token. Passing no roles takes
+     * {@code {sysadmin, admin, editor, user}} on the bare token. Passing no roles takes
      * {@code TicketRestService}'s role-less path, the one the publication-report self-call uses.
      */
     private String issueTicket(String... roles) {

@@ -57,10 +57,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>The read endpoints ({@code /search}, {@code /message/{uid}}, {@code /tag/{ids}}) are
  * {@code @PermitAll}; the create/update/delete/temp-tag/message-membership endpoints require the
- * {@code user} role; {@code /unlock-tag/{id}} requires {@code admin}. The cached sysadmin token
- * carries {editor, admin, sysadmin} but <em>not</em> {@code user}, so the USER endpoints are
- * rejected (403) with the bare token and only succeed once a {@code NiordDomain} header lets the
- * augmentor grant the full role chain. The ADMIN-protected {@code /unlock-tag} passes the role check
+ * {@code user} role; {@code /unlock-tag/{id}} requires {@code admin}. The bare testuser token carries
+ * no base role (its {@code user} is on {@code niord-nw}'s client), so the USER endpoints reject it (403)
+ * until a {@code NiordDomain} header lets the augmentor grant that domain's roles; the sysadmin token's
+ * base roles hold {@code user} with or without the header. The ADMIN-protected {@code /unlock-tag} passes the role check
  * with the bare token, but a PUBLIC tag that records a domain is unlocked from that domain only, and an
  * unknown or invisible tag answers 404.
  *
@@ -231,15 +231,15 @@ class MessageTagRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // Negative security — authenticated-but-insufficient-role (bare sysadmin token, no 'user')
+    // Negative security — authenticated-but-insufficient-role (bare testuser token, no 'user')
     // ------------------------------------------------------------------------------------------- //
 
     @Test
     void createTagWithBareTokenButNoDomainIsForbidden() {
-        // The bare sysadmin token carries {editor, admin, sysadmin} but NOT 'user'. createTag is
+        // testuser holds 'user' only on niord-nw's client, so its bare token carries no role. createTag is
         // @RolesAllowed("user"), so without a NiordDomain header to trigger the role-chain augmentor
         // the authenticated request is rejected as forbidden.
-        given().auth().oauth2(accessToken())
+        given().auth().oauth2(accessToken("user"))
                 .contentType(ContentType.JSON)
                 .body(Map.of("name", uniqueName("bare-forbidden"), "type", "PUBLIC", "locked", false))
                 .when().post("/rest/tags/tag/")
@@ -248,7 +248,7 @@ class MessageTagRestServiceITTest extends ITTest {
 
     @Test
     void createTempTagWithBareTokenButNoDomainIsForbidden() {
-        given().auth().oauth2(accessToken())
+        given().auth().oauth2(accessToken("user"))
                 .contentType(ContentType.JSON)
                 .body(List.of())
                 .when().post("/rest/tags/temp-tag/?ttl=10")

@@ -38,10 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * programmatically — {@code 401} for a caller presenting no credentials at all, {@code 403} for an
  * authenticated caller lacking a requested role.
  *
- * <p>The authorization matrix mirrors the rest of the suite (see {@code DictionaryRestServiceITTest}):
- * the bare {@code sysadmin} token carries {@code {editor, admin, sysadmin}} but <em>not</em> {@code user},
- * so a ticket scoped to {@code role=user} only succeeds once a {@code NiordDomain} header lets the
- * Niord augmentor grant the full role chain. Tickets are short-lived, in-memory cache entries (1 minute
+ * <p>The authorization matrix mirrors the rest of the suite (see {@code KeycloakTestTokens}): the bare
+ * {@code sysadmin} token carries its base-client ladder {@code {sysadmin, admin, editor, user}}, while the bare
+ * {@code testuser} token carries no base role, so its ticket scoped to {@code role=user} only succeeds once a
+ * {@code NiordDomain} header lets the Niord augmentor grant the domain's roles. Tickets are short-lived, in-memory cache entries (1 minute
  * expiry) with no database rows, so no cleanup is required.
  *
  * <p>This is a framework-coupled test — see docs/framework-coupled-tests.md.
@@ -173,19 +173,32 @@ class TicketRestServiceITTest extends ITTest {
 
     @Test
     void getTicketForUserRoleWithBareTokenIsForbidden() {
-        // The bare sysadmin token does NOT carry the 'user' role (no NiordDomain header to trigger the
-        // role-chain augmentation), so the authenticated caller is rejected programmatically with 403.
-        given().auth().oauth2(accessToken())
+        // testuser holds 'user' only on niord-nw's client: without a NiordDomain header to trigger the
+        // augmentation its bare token carries no role, so it is rejected programmatically with 403.
+        given().auth().oauth2(accessToken("user"))
                 .queryParam("role", "user")
                 .when().get("/rest/tickets/ticket")
                 .then().statusCode(403);
     }
 
     @Test
-    void getTicketForUserRoleWithDomainHeaderReturnsTicket() {
-        // With a NiordDomain header the augmentor grants the full {user,editor,admin,sysadmin} chain for
-        // that domain, so the user-scoped ticket request now succeeds.
+    void getTicketForUserRoleWithBareSysadminTokenReturnsTicket() {
+        // The base client's ladder holds 'user' (sysadmin > admin > editor > user), so the bare sysadmin
+        // token is a user without any NiordDomain header.
         String ticket = given().auth().oauth2(accessToken())
+                .queryParam("role", "user")
+                .when().get("/rest/tickets/ticket")
+                .then().statusCode(200)
+                .extract().asString().trim();
+
+        assertFalse(ticket.isEmpty(), "a user-scoped ticket must be issued for a base sysadmin");
+    }
+
+    @Test
+    void getTicketForUserRoleWithDomainHeaderReturnsTicket() {
+        // With a NiordDomain header the augmentor grants testuser the 'user' role of that domain, so the
+        // user-scoped ticket request now succeeds.
+        String ticket = given().auth().oauth2(accessToken("user"))
                 .header("NiordDomain", NW_DOMAIN)
                 .queryParam("role", "user")
                 .when().get("/rest/tickets/ticket")
@@ -206,11 +219,11 @@ class TicketRestServiceITTest extends ITTest {
 
     @Test
     void getTicketForMixedHeldAndUnheldRolesIsForbidden() {
-        // 'editor' is held but 'user' is not (bare token), and the endpoint requires ALL requested roles,
-        // so the whole request is rejected with 403.
-        given().auth().oauth2(accessToken())
+        // The bare testeditor token holds 'editor' but not 'admin', and the endpoint requires ALL requested
+        // roles, so the whole request is rejected with 403.
+        given().auth().oauth2(accessToken("editor"))
                 .queryParam("role", "editor")
-                .queryParam("role", "user")
+                .queryParam("role", "admin")
                 .when().get("/rest/tickets/ticket")
                 .then().statusCode(403);
     }

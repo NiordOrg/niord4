@@ -309,6 +309,16 @@ the test realm and `admin`/`admin`.
   role mappings stay with it, and the next token carries them under the new id. A domain a restored
   database holds that has no client yet gets one from the Domains page of the administration app,
   or in the admin console.
+- **A realm imported before November 2026 gives the base client `niord-client-master` no `user`
+  role, and its `editor` holds none.** A role on that client counts in every domain, but there
+  `editor`, `admin` and `sysadmin` did not make a person a user, so someone whose roles are on it
+  alone was refused the actions that ask for `user` (comments, tags, the user search and others)
+  in any domain where they hold no role of the domain's own client. The realm file now has the
+  ladder every domain client has. A dev-mode Keycloak gets it at its next start, as above. A
+  production-mode realm and a realm on a shared Keycloak keep the old one until it is added in the
+  admin console: Clients, `niord-client-master`, Roles, Create role `user`; then the role
+  `editor`, Associated roles, Assign role, the client role `user` of `niord-client-master`. The
+  next token of each person with `editor`, `admin` or `sysadmin` there carries `user`.
 
 The production-mode realm holds no test user: their passwords are in this repository, which is
 public. `keycloak.testUsers: true` keeps them, for a staging with no real data on a closed network
