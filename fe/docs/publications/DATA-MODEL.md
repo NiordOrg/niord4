@@ -2051,7 +2051,7 @@ It also does not absorb `API-CONTRACT.md` §11: that list carries contract-side 
 - **Chaining is per destination series**, not per legacy template, so orphan double-week issues and the dont-use clones sit between their real neighbours. Rows released within five minutes of each other (a withdrawal and its replacement) are **siblings**: both open where the row before the pair closed; the chain continues from the PUBLISHED sibling's close.
 - **§7.11 audit vocabulary** gains `VISIBILITY_CAPPED`; `IMPORTED` is now actually written, once per imported issue.
 - **Gap detection** (`GapDetection.uncovered`) is coverage-based; the release-slot arithmetic is used only when an issue's interval start is unknown. An OPEN newest issue suppresses forward pseudo-rows.
-- **Weekly naming** (§ `week`/`weekTo`): `weekTo` only when the window spans more than one cadence period; an ordinary Wednesday-to-Wednesday window names the cut-off week alone.
+- **Weekly naming** (§ `week`/`weekTo`): `weekTo` only when the window spans more than one cadence period; an ordinary Wednesday-to-Wednesday window names the cut-off week alone. A window that does span more is named for every ISO week after the one the previous cut-off fell in, up to the cut-off week, counted in weeks rather than in days (`IssueNaming.derive`, since 2026-11-19: nineteen days from week 35 into week 38 had been named `37+38`).
 - The "165 → 47" NULL-unsafe figure quoted in `MembershipPredicate` is **42**, measured against the recovered cut-off.
 
 ## Amendments — 2026-08-28 (Stages B/C and the verification pass)

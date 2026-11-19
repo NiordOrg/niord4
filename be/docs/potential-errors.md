@@ -1391,20 +1391,6 @@ was changed in production code.
   let a released document be verified against its record, or tell two generations apart without reading the archive,
   are permanently NULL.
 
-## NAMING-1. A release more than two periods late names its issue for the closing weeks and drops a fully covered week
-
-- **Location:** `org/niord/core/publication/series/resolve/IssueNaming.java` (`periods = floor(days / 7.0 + 0.25)`,
-  `week = end.minusWeeks(periods - 1)`).
-- **Description:** on the local rehearsal (2026-09-15) the open `weekly-ntm` issue whose window ran from
-  2026-08-26 10:21 to its release at 2026-09-15 06:51 (19 days, ISO weeks 36, 37 and part of 38) was labelled
-  `37+38`. `days` is an integer 19, so `19 / 7 + 0.25 = 2.96` yields two periods, and the label counts
-  backwards from the closing week: week 36, fully inside the window, is named by no issue.
-- **Why it looks wrong:** `domain-rules.md` says a multi-week issue "is named for the weeks it closed: the
-  cut-off week and the ones before it that no issue closed"; the quarter-period tolerance was meant for a
-  single week released a few days late, not for deciding which of three covered weeks to drop. Behaviour is
-  identical in the Quarkus source (`IssueNamingTest` passes as ported).
-- **Exposed by:** the local rehearsal's extra release step; not by any test.
-
 # Potential errors — security review and fix sweep (2026-09)
 
 Residues of the fixes made after the security review of September 2026, recorded rather than fixed there. The

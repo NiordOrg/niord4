@@ -19,8 +19,11 @@ package org.niord.core.publication.series.resolve;
 import org.niord.core.publication.series.PublicationException;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -218,13 +221,28 @@ public final class IssueNaming {
             // genuinely swallowed most of a second one is named for two.
             long periods = (long) Math.floor(days / 7.0 + 0.25);
             if (periods >= 2) {
-                ZonedDateTime firstClosed = end.minusWeeks(periods - 1);
-                weekTo = week;
-                week = firstClosed.get(iso.weekOfWeekBasedYear());
+                // Which weeks, though, is counted in ISO weeks, not in days: the
+                // previous issue closed the week its cut-off fell in, so this one
+                // closed every week after that one up to its own. Counting the
+                // span from the day count instead dropped a fully covered week
+                // whenever a release came a few days early or late: nineteen days
+                // across weeks 35 to 38 floored to two periods and named the issue
+                // 37+38, leaving week 36 named by no issue.
+                ZonedDateTime start = Instant.ofEpochMilli(intervalFrom.getTime()).atZone(z);
+                long closed = ChronoUnit.WEEKS.between(mondayOf(start), mondayOf(end));
+                if (closed >= 2) {
+                    weekTo = week;
+                    week = end.minusWeeks(closed - 1).get(iso.weekOfWeekBasedYear());
+                }
             }
         }
 
         return new Numbers(week, weekTo, year, end.getMonthValue(), end.getDayOfMonth(), edition);
+    }
+
+    /** The Monday of the ISO week the instant falls in, in the instant's own zone. */
+    private static LocalDate mondayOf(ZonedDateTime at) {
+        return at.toLocalDate().with(ChronoField.DAY_OF_WEEK, 1);
     }
 
     /** The values each token expands to, for a given set of numbers. */

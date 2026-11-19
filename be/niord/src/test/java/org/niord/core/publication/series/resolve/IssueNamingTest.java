@@ -274,6 +274,61 @@ public class IssueNamingTest {
         assertEquals(30, two.weekTo());
     }
 
+    // ------------------------------------------- NAMING-1: the weeks a gap closed
+
+    /** A gap of one week, released a few hours early: the cut-off week alone. */
+    @Test
+    public void aGapOfOneWeekNamesTheCutoffWeek() {
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 16, 6, 51), at(2026, 9, 9, 10, 21), DK, null, ISO);
+        assertEquals(38, n.week());
+        assertNull(n.weekTo());
+    }
+
+    /** A gap of two weeks, released a few hours early: both weeks after the previous cut-off's. */
+    @Test
+    public void aGapOfTwoWeeksNamesBothWeeks() {
+        // The previous cut-off in week 35, this one in week 37, 13.85 days apart.
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 9, 6, 51), at(2026, 8, 26, 10, 21), DK, null, ISO);
+        assertEquals(36, n.week());
+        assertEquals(37, n.weekTo());
+    }
+
+    /**
+     * A gap of three weeks released a few hours early, as on the local rehearsal:
+     * the window runs from week 35 into week 38, and weeks 36 and 37 lie wholly
+     * inside it. Nineteen whole days floored to two periods and named the issue
+     * 37+38, so week 36 was named by no issue.
+     */
+    @Test
+    public void aGapOfThreeWeeksNamesEveryWeekItClosed() {
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 15, 6, 51), at(2026, 8, 26, 10, 21), DK, null, ISO);
+        assertEquals(36, n.week(), "week 36 lies wholly inside the window and no other issue closed it");
+        assertEquals(38, n.weekTo());
+
+        IssueNaming.Numbers onTime = IssueNaming.derive(at(2026, 9, 16, 10, 21), at(2026, 8, 26, 10, 21), DK,
+                null, ISO);
+        assertEquals(36, onTime.week());
+        assertEquals(38, onTime.weekTo());
+    }
+
+    /**
+     * Across a year's end: 2026 has 53 ISO weeks. From week 52 of 2026 into week 2
+     * of 2027 the issue closed weeks 53, 1 and 2, and takes the cut-off's week-year.
+     */
+    @Test
+    public void aGapAcrossTheYearsEndNamesTheWeeksOfBothYears() {
+        IssueNaming.Numbers three = IssueNaming.derive(at(2027, 1, 12, 6, 0), at(2026, 12, 23, 10, 0), DK, null,
+                ISO);
+        assertEquals(53, three.week(), "week 53 of 2026 lies wholly inside the window");
+        assertEquals(2, three.weekTo());
+        assertEquals(2027, three.year());
+
+        IssueNaming.Numbers two = IssueNaming.derive(at(2027, 1, 6, 10, 0), at(2026, 12, 23, 10, 0), DK, null, ISO);
+        assertEquals(53, two.week());
+        assertEquals(1, two.weekTo());
+        assertEquals(2027, two.year());
+    }
+
     // ------------------------------------------------------------- ${year}
 
     /**
