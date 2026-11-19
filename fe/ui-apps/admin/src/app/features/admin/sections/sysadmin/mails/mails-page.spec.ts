@@ -581,13 +581,73 @@ describe('MailsPage', () => {
       sendAgainButtons(s.fixture)[0].click();
       accept(s.fixture);
       s.fixture.detectChanges();
-      expect(sendAgainButtons(s.fixture)[0].disabled).toBe(true);
-      sendAgainButtons(s.fixture)[0].click(); // a disabled button: no second confirmation
+      const button = sendAgainButtons(s.fixture)[0];
+      // Not disabled, so the confirmation can give it the focus back; it says it is unavailable.
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      button.click(); // the guard refuses it: no second confirmation
       expect(activeConfirm(s.fixture)).toBeUndefined();
       s.httpTesting
         .expectOne('/rest/scheduled-mails/send-again')
         .flush({ queued: [1], refused: [] });
       answerSearch(s, []);
+    });
+
+    it('moves the focus to Refresh when the row button it went back to leaves with the list', () => {
+      const s = setup();
+      showRows(s, [mail(1, 'HELD')]);
+      const button = sendAgainButtons(s.fixture)[0];
+      button.focus();
+      button.click();
+      accept(s.fixture);
+      s.fixture.detectChanges();
+      expect(document.activeElement).toBe(button); // the opener keeps the focus while it runs
+      s.httpTesting
+        .expectOne('/rest/scheduled-mails/send-again')
+        .flush({ queued: [1], refused: [] });
+      s.fixture.detectChanges();
+      const refresh = (s.fixture.nativeElement as HTMLElement).querySelector(
+        'button[aria-label="admin.mails.refresh"]',
+      );
+      expect(refresh).not.toBeNull();
+      expect(document.activeElement).toBe(refresh);
+      answerSearch(s, []);
+    });
+
+    it('moves the focus from the bulk button to Refresh, as the list loads again', () => {
+      const s = setup();
+      filterStatus(s, 'HELD', [mail(1, 'HELD')]);
+      const bulk = sendAllButton(s.fixture)!;
+      bulk.focus();
+      bulk.click();
+      answerBulkRead(s, 'HELD', [mail(1, 'HELD')]);
+      accept(s.fixture);
+      s.fixture.detectChanges();
+      expect(bulk.disabled).toBe(false);
+      expect(bulk.getAttribute('aria-disabled')).toBe('true');
+      s.httpTesting
+        .expectOne('/rest/scheduled-mails/send-again')
+        .flush({ queued: [1], refused: [] });
+      s.fixture.detectChanges();
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('admin.mails.refresh');
+      answerSearch(s, [], 'HELD');
+    });
+
+    it('leaves the focus on the row button when the request is refused', () => {
+      const s = setup();
+      showRows(s, [mail(1, 'HELD')]);
+      const button = sendAgainButtons(s.fixture)[0];
+      button.focus();
+      button.click();
+      accept(s.fixture);
+      s.httpTesting
+        .expectOne('/rest/scheduled-mails/send-again')
+        .flush(
+          { status: 409, detail: 'The mail filter is LOG.' },
+          { status: 409, statusText: 'Conflict' },
+        );
+      s.fixture.detectChanges();
+      expect(document.activeElement).toBe(button);
     });
   });
 });

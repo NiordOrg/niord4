@@ -79,10 +79,14 @@
       />
       <span class="admin-toolbar-spacer"></span>
       @if (sendAllAgainOffered()) {
+        <!-- While Send again runs the button stays enabled (aria-disabled), so the confirmation
+             can give it the focus back; the page's own guard refuses a second request. -->
         <button
+          #sendAllButton
           type="button"
           class="btn-secondary"
-          [disabled]="facade.loading() || facade.result().total === 0 || sendingAgain()"
+          [disabled]="facade.loading() || facade.result().total === 0"
+          [attr.aria-disabled]="sendingAgain() ? 'true' : null"
           (click)="sendAllMatchingAgain()"
         >
           {{ 'admin.mails.sendAgain.all' | transloco }}
@@ -90,6 +94,7 @@
       }
       <!-- Re-runs the current search with unchanged filters and page. -->
       <button
+        #refreshButton
         type="button"
         class="icon-button"
         [attr.aria-label]="'admin.mails.refresh' | transloco"
@@ -111,7 +116,7 @@
   } @else if (!facade.loading() && facade.result().total === 0) {
     <app-empty-state icon="lucideInbox" [title]="'admin.mails.empty' | transloco" />
   } @else if (!facade.loading()) {
-    <div class="admin-card">
+    <div #mailList class="admin-card">
       <table class="niord-table">
         <thead>
           <tr>
@@ -152,7 +157,7 @@
                     class="icon-button text-xs"
                     [attr.aria-label]="'admin.mails.sendAgain.title' | transloco"
                     [title]="'admin.mails.sendAgain.title' | transloco"
-                    [disabled]="sendingAgain()"
+                    [attr.aria-disabled]="sendingAgain() ? 'true' : null"
                     (click)="sendAgain(mail)"
                   >
                     <app-icon name="lucideSend" />

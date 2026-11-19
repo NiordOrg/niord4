@@ -1,5 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { Icon } from '../../../../../shared/icons/icon';
@@ -95,8 +103,15 @@ export class MailsPage {
   protected readonly detailsMail = signal<ScheduledMail | undefined>(undefined);
   protected readonly detailsLoading = signal(false);
 
-  /** Blocks re-entry while Send again reads the search or posts its request. */
+  /**
+   * Blocks re-entry while Send again reads the search or posts its request. The buttons only say
+   * so (aria-disabled): a disabled opener could not take the focus back from the confirmation.
+   */
   protected readonly sendingAgain = signal(false);
+
+  private readonly mailList = viewChild<ElementRef<HTMLElement>>('mailList');
+  private readonly sendAllButton = viewChild<ElementRef<HTMLButtonElement>>('sendAllButton');
+  private readonly refreshButton = viewChild<ElementRef<HTMLButtonElement>>('refreshButton');
 
   /** "Send all matching again…" is offered only while the status filter is Held or Error. */
   protected readonly sendAllAgainOffered = computed(() => {
@@ -296,6 +311,7 @@ export class MailsPage {
             refused: result.refused.length,
           });
         }
+        this.keepFocusOnRefresh();
         this.facade.refresh();
       },
       error: (err: unknown) => {
@@ -312,6 +328,23 @@ export class MailsPage {
         this.notifications.error('admin.mails.sendAgain.refused', { detail });
       },
     });
+  }
+
+  /**
+   * The list is read again after a Send again: the table, and the row button the focus went back
+   * to, leave while it loads, and the bulk button is disabled, so a keyboard user would be left on
+   * the page's body. The focus moves to Refresh, beside the bulk button and never disabled.
+   */
+  private keepFocusOnRefresh(): void {
+    const focused = document.activeElement;
+    if (!(focused instanceof HTMLElement)) {
+      return;
+    }
+    const inList = this.mailList()?.nativeElement.contains(focused) ?? false;
+    const onSendAll = focused === this.sendAllButton()?.nativeElement;
+    if (inList || onSendAll) {
+      this.refreshButton()?.nativeElement.focus();
+    }
   }
 
   protected openMail(mail: ScheduledMail): void {

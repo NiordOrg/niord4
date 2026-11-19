@@ -539,7 +539,10 @@ border.
   instead that the filter would keep the mail from its recipients and is to be opened first. A 409 (the mail filter is `LOG` or empty) and a 400 (an empty list, more
   than 500, a duplicate id or a status it cannot send again from) change nothing and carry a problem
   document whose `detail` the toast shows; any other failure shows a fixed text, never the raw
-  error. The page reads the list again after a success, and blocks a second request while one runs.
+  error. The page reads the list again after a success, and blocks a second request while one runs:
+  its buttons stay enabled and say so with `aria-disabled`, since a disabled opener cannot take the
+  focus back from the confirmation, and after a success the focus moves to _Refresh_, as the list
+  (with the row's button) leaves while it loads.
   No role gate is in the component: the sysadmin route and the endpoint's guard keep it to a system
   administrator, so `role-offers.json` has no item for it.
 
