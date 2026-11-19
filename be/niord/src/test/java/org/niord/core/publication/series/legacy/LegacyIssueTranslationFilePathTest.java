@@ -86,6 +86,28 @@ class LegacyIssueTranslationFilePathTest {
     }
 
     @Test
+    void aPlusInTheNameStaysAPlus() {
+        // The repository endpoint decodes a request path as a path, where '+' stays '+'; a form decoder would read
+        // it as a space and name a file the store does not hold
+        assertEquals(REPO + "/2/NtM 1+2.pdf", importedFilePath(legacy(2, "NtM 1+2.pdf",
+                        "/rest/repo/file/" + REPO + "/2/NtM%201+2.pdf")),
+                "the current revision's folder");
+        assertEquals(REPO + "/1/NtM 1+2.pdf", importedFilePath(legacy(3, "NtM 1+2.pdf",
+                        "/rest/repo/file/" + REPO + "/1/NtM%201+2.pdf")),
+                "an older revision's folder");
+        assertEquals(REPO + "/1/NtM 1 2.pdf", importedFilePath(legacy(3, "NtM 1 2.pdf",
+                        "/rest/repo/file/" + REPO + "/1/NtM+1+2.pdf")),
+                "a link written with '+' for a space still gives the folder; the name is the descriptor's");
+    }
+
+    @Test
+    void aLinkNamingAnotherFileKeepsTheCurrentRevision() {
+        assertEquals(REPO + "/3/notice.pdf", importedFilePath(legacy(3, "notice.pdf",
+                        "/rest/repo/file/" + REPO + "/1/other.pdf")),
+                "the name is the descriptor's; a link to another name is counted by the import check, not guessed");
+    }
+
+    @Test
     void aLinkThatAgreesWithTheCurrentRevisionChangesNothing() {
         Publication p = legacy(2, "notice.pdf", "/rest/repo/file/" + REPO + "/2/notice.pdf");
 
@@ -117,6 +139,12 @@ class LegacyIssueTranslationFilePathTest {
         assertFalse(ImportCheckService.linkNamesAnotherFile(
                         "/rest/repo/file/" + REPO + "/1/Notice%20%24%7Byear%7D.pdf", REPO + "/1/Notice ${year}.pdf"),
                 "an encoded link names the file its decoded path is");
+        assertFalse(ImportCheckService.linkNamesAnotherFile(
+                        "/rest/repo/file/" + REPO + "/1/NtM%201+2.pdf", REPO + "/1/NtM 1+2.pdf"),
+                "a '+' in a link's path is a '+' in the file it serves");
+        assertTrue(ImportCheckService.linkNamesAnotherFile(
+                        "/rest/repo/file/" + REPO + "/1/other.pdf", REPO + "/3/notice.pdf"),
+                "a link to another name");
         assertFalse(ImportCheckService.linkNamesAnotherFile("https://example.org/notice.pdf", REPO + "/1/notice.pdf"),
                 "a link outside the repository names no stored file");
         assertFalse(ImportCheckService.linkNamesAnotherFile(null, REPO + "/1/notice.pdf"));

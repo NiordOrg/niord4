@@ -474,8 +474,9 @@ public class ImportCheckService extends BaseService {
     /**
      * Whether a descriptor's link is a repository link that serves another file
      * than its filePath names: no spelling of the link's path, as written or
-     * decoded, is the filePath. A link that is no repository link (an external
-     * address, or none) names no stored file, and is not counted.
+     * decoded ({@link LegacyIssueTranslation#linkSpellings}, the rule the import
+     * takes filePath by), is the filePath. A link that is no repository link (an
+     * external address, or none) names no stored file, and is not counted.
      */
     // Package-visible so the rule can be asserted on values: the import now aligns
     // the two, so the real pass over a fresh import has little to find.
@@ -485,7 +486,7 @@ public class ImportCheckService extends BaseService {
         }
         String path = RepoPaths.normalize(filePath);
         for (String linked : RepoPaths.fileLinkPaths(link)) {
-            if (path == null || !RepoPaths.candidates(linked).contains(path)) {
+            if (path == null || !LegacyIssueTranslation.linkSpellings(linked).contains(path)) {
                 return true;
             }
         }
