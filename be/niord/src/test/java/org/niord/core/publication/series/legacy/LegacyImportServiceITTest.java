@@ -615,7 +615,7 @@ public class LegacyImportServiceITTest extends ITTest {
      */
     @Test
     @Transactional
-    public void aplanRefusesWhenTheReportACompilationRulingAssignsDoesNotExist() {
+    public void aPlanRefusesWhenTheReportACompilationRulingAssignsDoesNotExist() {
         ensureDomain("niord-nm");
         ensureDomain(LegacyTemplateRulings.DEFAULT_DOMAIN);
 
