@@ -59,9 +59,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Set up as {@code MailDeliveryITTest}: {@code mailValidRecipients = "ALL"} before the context, so a send reaches
  * the test's MailHog, in a context of its own that is evicted after the class. The minute sender is switched off in
- * that context ({@code niord.schedule.mail-send-cron = -}), so a mail sent again stays PENDING until the test sends it
- * as the sender does ({@link MailService#sendScheduledMail(Integer)}). Every row is committed, as Send again and the
- * send run in transactions of their own, and removed afterwards.
+ * that context ({@code niord.schedule.mail-send-cron = -}), and the test sends a mail sent again as the sender does
+ * ({@link MailService#sendScheduledMail(Integer)}). Another cached context's minute sender may still send it first, as
+ * the mail is due at once and the filter is set for the whole JVM, so a test reads a queued mail as pending or as sent
+ * once since ({@code assertQueuedAgain}). Every row is committed, as Send again and the send run in transactions of
+ * their own, and removed afterwards.
  *
  * <p>This is a framework-coupled test — see docs/framework-coupled-tests.md.
  */
@@ -160,6 +162,19 @@ class ScheduledMailSendAgainITTest extends ITTest {
         return mail.getRecipients().stream().map(ScheduledMailRecipient::getAddress).sorted().toList();
     }
 
+    /**
+     * The mail was put back in the queue with the full ladder of retries: still pending with no attempt, or already
+     * sent once. A mail sent again is due at once, and the minute sender of another cached test context (this class
+     * switches off only its own) may send it, under the filter ALL this class sets for the whole JVM, between the
+     * request and the test's read.
+     */
+    private static void assertQueuedAgain(ScheduledMail mail, String what) {
+        boolean pending = mail.getStatus() == Status.PENDING && mail.getAttempts() == 0;
+        boolean sentSince = mail.getStatus() == Status.SENT && mail.getAttempts() == 1;
+        assertTrue(pending || sentSince, what + " is pending again with no attempt, or sent once since; is "
+                + mail.getStatus() + " after " + mail.getAttempts() + " attempts");
+    }
+
     private static Map<Integer, Reason> refusals(SendAgainResultVo result) {
         return result.getRefused().stream()
                 .collect(Collectors.toMap(SendAgainResultVo.Refusal::getId, SendAgainResultVo.Refusal::getReason));
@@ -182,8 +197,7 @@ class ScheduledMailSendAgainITTest extends ITTest {
         for (ScheduledMail was : before) {
             ScheduledMail now = reload(was.getId());
             String what = was.getStatus() + " mail";
-            assertEquals(Status.PENDING, now.getStatus(), what + " is pending again");
-            assertEquals(0, now.getAttempts(), what + ": the full ladder of retries again");
+            assertQueuedAgain(now, what);
             assertNull(now.getLastError(), what);
             assertNotNull(now.getSentAgainAt(), what + ": when it was sent again");
             assertTrue(now.getSentAgainAt().getTime() >= t0 - 1000, what);
@@ -220,7 +234,7 @@ class ScheduledMailSendAgainITTest extends ITTest {
         assertEquals(List.of(held), result.getQueued());
         assertEquals(Map.of(gone, Reason.GONE, record, Reason.RECORD, staleStatus, Reason.CHANGED,
                 staleSentAgain, Reason.CHANGED, pending, Reason.CHANGED), refusals(result));
-        assertEquals(Status.PENDING, reload(held).getStatus(), "the accepted mail is committed");
+        assertQueuedAgain(reload(held), "the accepted mail is committed");
         assertEquals(SYSADMIN, reload(held).getSentAgainBy());
         assertEquals(Status.ERROR, reload(record).getStatus(), "the record is as it was");
         assertEquals(0, reload(record).getAttempts());
@@ -289,7 +303,7 @@ class ScheduledMailSendAgainITTest extends ITTest {
                 .map(r -> r.getQueued() + " " + refusals(r)).toArray()));
         assertEquals(1, changed, "the other finds it changed");
         ScheduledMail after = reload(id);
-        assertEquals(Status.PENDING, after.getStatus());
+        assertQueuedAgain(after, "the mail");
         assertTrue(after.getSentAgainBy().startsWith(SYSADMIN), after.getSentAgainBy());
     }
 }
