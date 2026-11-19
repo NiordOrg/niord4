@@ -15,6 +15,7 @@
  */
 package org.niord.core.message;
 
+import org.apache.lucene.store.AlreadyClosedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -101,20 +102,47 @@ class MessageLuceneIndexStartWindowTest {
     }
 
     /**
-     * A pass that fails before its commit (here a message whose series cannot be read) leaves the index marked as
-     * not complete. The mark used to be set when the pass had found its messages, before it indexed them, so a
-     * search in between, or after a failed pass, was taken for one over a complete index.
+     * A pass that fails before its commit (here its writer is closed under it, as after a disk failure, while it
+     * indexes a message) leaves the index marked as not complete. The mark used to be set when the pass had found its
+     * messages, before it indexed them, so a search in between, or after a failed pass, was taken for one over a
+     * complete index.
      */
     @Test
     void aPassThatFailsBeforeItsCommitLeavesTheIndexMarkedIncomplete() throws Exception {
         Path folder = tmp.resolve("message-index");
-        Message unreadable = message(23, "zzunreadable");
-        unreadable.setMessageSeries(null);
-        MessageLuceneIndex after = restarted(folder, unreadable);
+        Message closedUnderIt = new Message() {
+            @Override
+            public MessageSeries getMessageSeries() {
+                throw new AlreadyClosedException("the writer is closed");
+            }
+        };
+        closedUnderIt.setId(23);
+        closedUnderIt.setStatus(Status.PUBLISHED);
+        closedUnderIt.setUpdated(new Date());
+        closedUnderIt.createDesc("en").setTitle("Wreck zzclosed");
+        MessageLuceneIndex after = restarted(folder, closedUnderIt);
 
         assertEquals(0, after.updateLuceneIndex(MessageLuceneIndex.LUCENE_MAX_INDEX_COUNT), "the pass fails");
 
         assertFalse(after.allMessagesIndexed(), "and the index is still not complete");
+    }
+
+    /**
+     * A message that cannot be indexed (here its series cannot be read) does not fail the pass: it is logged and
+     * skipped (LUCENE-5), the pass commits, and the refill after the start ends as it would without it. The skipped
+     * message is not searchable until it is saved again; the ERROR in the log says so, not the editors' list.
+     */
+    @Test
+    void aSkippedMessageDoesNotHoldTheIndexIncomplete() throws Exception {
+        Path folder = tmp.resolve("message-index");
+        Message unreadable = message(24, "zzunreadable");
+        unreadable.setMessageSeries(null);
+        MessageLuceneIndex after = restarted(folder, unreadable);
+
+        assertEquals(0, after.updateLuceneIndex(MessageLuceneIndex.LUCENE_MAX_INDEX_COUNT), "nothing is indexed");
+
+        assertTrue(after.allMessagesIndexed(), "the refill ends, the skipped message aside");
+        assertEquals(List.of(), after.searchIndex("zzunreadable", "en", 10));
     }
 
     /** The restarted application: a new instance on the folder, started, whose deferred pass reaches a mock */

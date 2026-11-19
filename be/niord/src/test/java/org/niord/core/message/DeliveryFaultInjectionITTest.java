@@ -86,7 +86,7 @@ import static org.niord.test.DeliveryFixtures.uniq;
  * {@link ScheduledMessageService}, the hourly {@link FiringExerciseService} run and the per-minute free-text index
  * pass of {@link MessageLuceneIndex}. Each test makes one dependency fail the way a real fault would and asserts what
  * the system then does to the other messages of the same run: a sweep's message that cannot be changed, the firing
- * run's exercise that cannot be created or replaced, and the index pass of LUCENE-5 in be/docs/potential-errors.md.
+ * run's exercise that cannot be created or replaced, and the index pass's message that cannot be indexed (LUCENE-5).
  * The editor's own status changes over REST, which roll back as a whole for any exception, are here too, since they
  * share the promulgation spy.
  *
@@ -1010,36 +1010,30 @@ class DeliveryFaultInjectionITTest extends ITTest {
 
     /**
      * LUCENE-5. Three committed messages carry a token each; the first of them throws while it is indexed (its
-     * references cannot be read). The index pass runs in an empty index folder of its own, so other contexts'
-     * passes on the shared folder do not interfere. The pass indexes the changed messages in one try: the failure
-     * returns 0 before the marker and the reader refresh, so the next pass (every minute) starts from the same
-     * marker and fails on the same message, and a re-index from the admin page ({@code recreateIndex}) first deletes
-     * the index and then fails the same way. M2 and M3 are never searchable, and nothing but an ERROR line says so.
-     *
-     * <p>What is wrong: one message that cannot be indexed hides every later change from free-text search (the
-     * admin app's, and mailing-list triggers with a query). The right assertions: M2 and M3 are found after the
-     * pass, and M1's failure is recorded.
+     * references cannot be read). The index pass runs in an empty index folder of its own, whose writer lock the
+     * test holds, so other contexts' passes on the shared folder and the scheduled pass do not interfere. The pass
+     * logs an ERROR naming M1, skips it and indexes M2 and M3, and the marker moves to M3. A re-index from the admin
+     * page ({@code recreateIndex}) runs the same pass and skips M1 the same way. Once M1 can be read, the next pass
+     * still leaves it out (it was skipped, not left for later), and M1 is indexed when it is saved again.
      */
     @Test
-    void oneMessageThatCannotBeIndexedHidesEveryLaterMessageFromFreeTextSearch_documentsBug() throws Exception {
+    void aMessageThatCannotBeIndexedIsSkippedAndTheLaterMessagesAreFound() throws Exception {
         String n = uniq();
         String[] tokens = {"zzfault" + n + "a", "zzfault" + n + "b", "zzfault" + n + "c"};
-        List<String> uids = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
         for (String token : tokens) {
-            uids.add(Tx.requiringNew().call(() ->
-                    messageService.createMessage(newDraft("dma-nw", Type.COASTAL_WARNING, token, null)).getUid()));
+            messages.add(Tx.requiringNew().call(() ->
+                    messageService.createMessage(newDraft("dma-nw", Type.COASTAL_WARNING, token, null))));
             Thread.sleep(5); // distinct updated times, in creation order
         }
-        String failing = uids.get(0);
-        // The read the index pass makes. Since the LUCENE-4 fix (2026-11-12) that is findUpdatedMessagesAfter; the
-        // stub was on findUpdatedMessages, which the pass no longer called, so nothing threw and this pin read as
-        // flipped. The counter below shows that the fault reached the pass.
+        Message failing = messages.get(0);
+        // The read the index pass makes. The counter shows that the fault reached the pass
         java.util.concurrent.atomic.AtomicInteger injected = new java.util.concurrent.atomic.AtomicInteger();
         doAnswer(inv -> {
             @SuppressWarnings("unchecked")
             List<Message> real = (List<Message>) inv.callRealMethod();
             return real.stream().map(m -> {
-                if (failing.equals(m.getUid())) {
+                if (failing.getUid().equals(m.getUid())) {
                     injected.incrementAndGet();
                     return unindexable(m);
                 }
@@ -1053,36 +1047,53 @@ class DeliveryFaultInjectionITTest extends ITTest {
         Path ownFolder = Files.createTempDirectory("niord-it-lucene-fault");
         index.indexFolder = ownFolder;
         index.reader = null;
+        java.util.concurrent.locks.ReentrantLock lock = MessageLuceneIndex.writerLock(ownFolder);
+        lock.lock();
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(MessageLuceneIndex.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
         try {
             messageLuceneIndex.updateLuceneIndex();
             assertTrue(injected.get() > 0, "the pass read M1 through the stub, so the fault was injected");
-            assertNotFound(tokens[1], "M2 is not searchable after the pass that failed on M1");
-            assertNotFound(tokens[2], "M3 is not searchable after the pass that failed on M1");
-
-            messageLuceneIndex.updateLuceneIndex();
-            assertNotFound(tokens[2], "the next pass fails on M1 again");
+            assertFound(tokens[1], "M2 is searchable after the pass that skipped M1");
+            assertFound(tokens[2], "M3 is searchable after the pass that skipped M1");
+            assertNotFound(tokens[0], "M1, which throws, is left out");
+            assertEquals(messages.get(2).getId(), index.getMarker().messageId(), "the marker moves past M1 to M3");
+            assertTrue(appender.list.stream().anyMatch(e -> e.getLevel() == ch.qos.logback.classic.Level.ERROR
+                            && e.getFormattedMessage().contains("message " + failing.getId())),
+                    "an ERROR names M1: " + appender.list);
 
             messageLuceneIndex.recreateIndex();
-            assertNotFound(tokens[1], "a re-index from the admin page fails on M1 too");
-            assertNotFound(tokens[2], "a re-index from the admin page fails on M1 too");
+            assertFound(tokens[1], "a re-index from the admin page skips M1 and indexes M2");
+            assertFound(tokens[2], "a re-index from the admin page skips M1 and indexes M3");
+            assertNotFound(tokens[0], "the re-index leaves M1 out");
 
-            // Control: once M1 can be read again, the same re-index finds all three tokens in this folder, so the
-            // "not found" above is the fault and not a search that could never find them (an IOException read as
-            // "not found", a token the analyser splits). Without it a fix could leave this pin green (detector
-            // check MC).
             org.mockito.Mockito.doCallRealMethod().when(messageQueryService)
                     .findUpdatedMessagesAfter(any(Date.class), anyInt(), anyInt());
-            messageLuceneIndex.recreateIndex();
-            for (String token : tokens) {
-                assertFalse(messageLuceneIndex.searchIndex(token, "en", 10).isEmpty(),
-                        "control: " + token + " is found once nothing throws");
-            }
+            messageLuceneIndex.updateLuceneIndex();
+            assertNotFound(tokens[0], "a skipped message is not tried again by the next pass");
+
+            // M1 saved again: a later updated time puts it after the marker
+            Tx.requiringNew().run(() -> em.createQuery("update Message m set m.updated = :t where m.id = :id")
+                    .setParameter("t", java.sql.Timestamp.from(java.time.Instant.now()))
+                    .setParameter("id", failing.getId())
+                    .executeUpdate());
+            messageLuceneIndex.updateLuceneIndex();
+            assertFound(tokens[0], "M1 is indexed once it is saved again");
         } finally {
+            // Everything put back before the lock is let go, so a waiting scheduled pass runs on the shared folder
+            logger.detachAppender(appender);
+            org.mockito.Mockito.doCallRealMethod().when(messageQueryService)
+                    .findUpdatedMessagesAfter(any(Date.class), anyInt(), anyInt());
             if (index.reader != null) {
                 index.reader.close();
             }
             index.indexFolder = sharedFolder;
             index.reader = sharedReader;
+            lock.unlock();
         }
     }
 
@@ -1167,6 +1178,10 @@ class DeliveryFaultInjectionITTest extends ITTest {
         Message spy = org.mockito.Mockito.spy(m);
         doThrow(new IllegalStateException("IT: this message cannot be indexed")).when(spy).getReferences();
         return spy;
+    }
+
+    private void assertFound(String token, String message) throws Exception {
+        assertFalse(messageLuceneIndex.searchIndex(token, "en", 10).isEmpty(), message);
     }
 
     private void assertNotFound(String token, String message) throws Exception {

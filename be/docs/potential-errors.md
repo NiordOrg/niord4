@@ -1895,7 +1895,7 @@ outside the repository.
 The fix stage of 2026-11-13 fixed every entry of the hunt that is no longer listed: each fix came with a regression
 test, most of them the entry's `_documentsBug` pin turned round, and git history keeps the entries it removed. The
 entries still listed are of three kinds: those the fix stage left on purpose, each saying why and what is
-recommended, for the owner to decide (MAILLIST1, SERIES7, SCRIPT10, LUCENE-5, API3, SETTINGS-7, MSG6); the part of
+recommended, for the owner to decide (MAILLIST1, SERIES7, SCRIPT10, API3, SETTINGS-7, MSG6); the part of
 an entry the fix stage fixed only in part (DOMAIN2); and, under a line of their own at the end
 of the section, the faults the fix stage met on its way and did not fix. Paths are under `niord/src/main/java/`
 unless they say otherwise.
@@ -1957,34 +1957,6 @@ unless they say otherwise.
   needs a choice the entry leaves open (what 0 decimals prints, and how a refusal is shown when the directive
   turns its exceptions into an empty output and a warning in the log); recommended to decide with the next template
   that wants another precision.
-
-## LUCENE-5. One message that throws stalls the free-text index for every later message
-
-- **Location:** `org/niord/core/message/MessageLuceneIndex.java` `updateLuceneIndex(int)` (its one try around the
-  whole batch and the outer catch), with `Message.findUpdatedMessagesAfter` ordered by `updated` and id. The
-  LUCENE-4 fix of 2026-11-12 changed the marker and the read, not this: the batch is still one try.
-- **Description:** the batch is indexed inside one try. A RuntimeException for one message returns 0 before the
-  marker and the commit, so the next pass (every minute) reads the same messages from the same marker, and that
-  message blocks every later one while it is among the first 5,000. (A message of the look-back window behind the
-  marker that throws is logged and tried again by the next pass, 591-601, and holds up nothing; one after the
-  marker still stalls the index.) An IOException from `addDocument` (707) or
-  `deleteDocuments` (675) is normally a disk failure after which Lucene closes the writer, so the commit throws
-  into the same catch. The re-index of the admin page does not recover either: `recreateIndex` deletes the index
-  first and then fails on the same message, so after it no later message is searchable at all.
-- **Why it looks wrong:** free-text search (the admin app's, and triggers with a query) answers "no match" for
-  messages that exist, and only the log shows it.
-- **Exposed by:** the error hunt of 2026-11-12, track C, read in the delivery path, then reproduced by track CT in
-  an index folder of its own,
-  `DeliveryFaultInjectionITTest#oneMessageThatCannotBeIndexedHidesEveryLaterMessageFromFreeTextSearch_documentsBug`
-  (M1 throws while indexed; M2 and M3 are not searchable after a pass, a second pass or the re-index). What could
-  throw for a real message was not found. LUCENE-4 is another fault.
-- **Severity:** Low — no real message is known to throw; when one does, the re-index makes it worse. Fix: a
-  per-message catch that records and skips, without moving the marker past a failed add, in the pass and in
-  `recreateIndex`.
-- **Left by the fix stage (2026-11-13):** no real message is known to throw while indexed, and the fix needs a
-  choice the entry leaves open (a failed message skipped past the marker is unsearchable until it is saved again;
-  one that holds the marker back makes every pass index the messages after it again); recommended as a Low
-  follow-up once that choice is made, the pin in `DeliveryFaultInjectionITTest` staying until then.
 
 ## API3. The public API ignores a malformed `wkt` and answers every message
 
