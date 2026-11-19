@@ -26,6 +26,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.niord.core.area.Area;
 import org.niord.core.domain.Domain;
+import org.niord.core.mailinglist.MailingListExecutionService;
+import org.niord.core.mailinglist.MailingListTrigger;
 import org.niord.core.message.vo.MessageTagVo.MessageTagType;
 import org.niord.core.message.vo.SystemMessageSeriesVo.NumberSequenceType;
 import org.niord.core.promulgation.PromulgationException;
@@ -133,6 +135,9 @@ class DeliveryFaultInjectionITTest extends ITTest {
 
     @Autowired
     MessageTagService messageTagService;
+
+    @Autowired
+    MailingListExecutionService mailingListExecutionService;
 
     @Autowired
     ApplicationContext context;
@@ -953,6 +958,50 @@ class DeliveryFaultInjectionITTest extends ITTest {
                 }
             });
         }
+    }
+
+    /**
+     * The sample's firing-exercise mail. The scheduled trigger of the sample's audio-broadcast list runs
+     * {@code templates/mailinglist/fetch-firing-exercises.js}, which looks up tomorrow's firing exercises, then
+     * {@code audio-broadcast.ftl}, which lists them under a heading (both rows of the fixture). When that look-up
+     * fails, the run fails, so the scheduler postpones the trigger and no mail is made. The control before the failure
+     * renders the heading.
+     *
+     * <p>Before the fix the script called the lenient {@code MessageSearchService.search}, which answered the failure
+     * with an empty list: the mail was made with the heading and no exercise under it, which its readers could not tell
+     * from a day without firing exercises.
+     */
+    @Test
+    void theSamplesFiringExerciseMailFailsWhenItsSearchFails() throws Exception {
+        Integer triggerId = Tx.requiringNew().call(() -> em.createQuery(
+                        "select t.id from MailingListTrigger t join t.scriptResourcePaths p where p = :path",
+                        Integer.class)
+                .setParameter("path", "templates/mailinglist/fetch-firing-exercises.js")
+                .getSingleResult());
+
+        String control = renderScheduledMail(triggerId);
+        assertTrue(control.contains("Der afholdes i morgen"),
+                "control: the mail prints the heading of tomorrow's firing exercises: " + control);
+
+        doThrow(new PersistenceException("IT: the firing-exercise search failed"))
+                .when(messageSearchService)
+                .searchOrFail(argThat((MessageSearchParams p) -> p != null && p.getSeriesIds() != null
+                        && p.getSeriesIds().contains("dma-fe")));
+
+        RuntimeException failure = assertThrows(RuntimeException.class, () -> renderScheduledMail(triggerId),
+                "the run fails rather than make a mail with an empty schedule");
+        StringBuilder causes = new StringBuilder();
+        for (Throwable t = failure; t != null; t = t.getCause()) {
+            causes.append(t).append('\n');
+        }
+        assertTrue(causes.toString().contains("IT: the firing-exercise search failed"),
+                "the failure is the search's: " + causes);
+    }
+
+    /** The HTML the scripts of the given scheduled trigger make, in Danish, its one language */
+    private String renderScheduledMail(Integer triggerId) {
+        return Tx.requiringNew().call(() -> mailingListExecutionService.executeScriptResources(
+                em.find(MailingListTrigger.class, triggerId), List.of(), "da"));
     }
 
     // ------------------------------------------------------------------------------------------- //

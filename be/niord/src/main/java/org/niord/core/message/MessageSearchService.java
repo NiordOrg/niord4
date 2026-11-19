@@ -177,9 +177,8 @@ public class MessageSearchService extends BaseService {
      * A failed search is logged and answered with an empty result, which a caller cannot tell from a real answer of
      * zero messages. It remains for the publish and expire sweeps, which try again the next minute, and for the
      * deployments' scripts. A caller that answers the public, mails people or acts on "nothing found", by cancelling
-     * or creating messages, uses {@link #searchOrFail(MessageSearchParams)} instead, and so should a script that does:
-     * the mailing lists' firing-exercise script (the sample's {@code fetch-firing-exercises.js}) still calls this
-     * method, so a failed search mails its list an empty schedule ({@code be/docs/potential-errors.md}, SCRIPT11).
+     * or creating messages, uses {@link #searchOrFail(MessageSearchParams)} instead, and so does a script that does,
+     * such as the sample's firing-exercise mail script ({@code templates/mailinglist/fetch-firing-exercises.js}).
      * Two failures are thrown here too: an unresolvable publication id ({@link TransitionRefusedException}) and a
      * free-text query the index cannot parse ({@link InvalidFreeTextQueryException}).
      *

@@ -16,8 +16,10 @@
 package org.niord.core.script;
 
 import org.junit.jupiter.api.Test;
+import org.niord.core.message.MessageSearchService;
 
 import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -34,12 +36,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code bootstrap/templates/}, a variable assigned {@code CdiUtils.getBean(<class>.class)} is followed to each
  * {@code <variable>.<method>(} call, and the class must have a public method of that name. A script is compiled only
  * when it runs, so a call of a method no class has fails only when a deployment's own script calls the function that
- * holds it. The release folders are past imports, kept as they were, and are not read.
+ * holds it. The release folders are past imports, kept as they were, and are not read. Beside it, no script of the
+ * bootstrap or of the sample calls the lenient {@code MessageSearchService.search}.
  */
 class BootstrapScriptBeanCallsTest {
 
     private static final Pattern BEAN = Pattern.compile(
             "\\bvar\\s+(\\w+)\\s*=\\s*CdiUtils\\.getBean\\(\\s*([\\w.$]+)\\.class\\s*\\)");
+
+    /** The sample's templates folder, relative to the module */
+    private static final Path SAMPLE_TEMPLATES = Path.of("sample/archive/templates");
 
     @Test
     void everyMethodTheBaseScriptsCallOnALookedUpBeanExists() {
@@ -65,6 +71,49 @@ class BootstrapScriptBeanCallsTest {
                 check("missing.js", lookup + "function f() { m.noSuchMethod(message); }"));
         assertEquals(List.of("class.js: no class org.niord.core.message.NoSuchService"),
                 check("class.js", "var s = CdiUtils.getBean(org.niord.core.message.NoSuchService.class);"));
+    }
+
+    /**
+     * No script of the base product's bootstrap or of the sample calls the lenient {@code MessageSearchService.search},
+     * which answers a failed search with an empty list: a script that mails or publishes what it finds would hand that
+     * on as "nothing found". The sample's firing-exercise mail script did, and so mailed an empty schedule when its
+     * search failed; it calls {@code searchOrFail} now, which fails the trigger instead.
+     */
+    @Test
+    void noScriptOfTheBootstrapOrTheSampleCallsTheLenientMessageSearch() {
+        Map<String, String> scripts = new LinkedHashMap<>();
+        BootstrapTemplates.read(BootstrapTemplates.FOLDER)
+                .forEach((path, content) -> scripts.put("bootstrap/" + path, content));
+        BootstrapTemplates.read(SAMPLE_TEMPLATES)
+                .forEach((path, content) -> scripts.put("sample/" + path, content));
+        scripts.keySet().removeIf(path -> !path.endsWith(".js"));
+        assertTrue(scripts.containsKey("sample/templates/mailinglist/fetch-firing-exercises.js"),
+                "the sample's scripts are read: " + scripts.keySet());
+
+        List<String> problems = new ArrayList<>();
+        scripts.forEach((path, content) -> problems.addAll(lenientSearchCalls(path, content)));
+        assertEquals(List.of(), problems, "scripts that call the lenient MessageSearchService.search");
+
+        String lookup = "var s = CdiUtils.getBean(org.niord.core.message.MessageSearchService.class);\n";
+        assertEquals(List.of("lenient.js: s.search"), lenientSearchCalls("lenient.js", lookup + "var r = s.search(p);"));
+        assertEquals(List.of(), lenientSearchCalls("strict.js", lookup + "var r = s.searchOrFail(p);"));
+    }
+
+    /** The calls of one script on a looked-up {@code MessageSearchService} of its lenient {@code search} */
+    static List<String> lenientSearchCalls(String name, String content) {
+        List<String> calls = new ArrayList<>();
+        Matcher bean = BEAN.matcher(content);
+        while (bean.find()) {
+            if (!MessageSearchService.class.getName().equals(bean.group(2))) {
+                continue;
+            }
+            Matcher call = Pattern.compile("(?<![\\w.$])" + Pattern.quote(bean.group(1)) + "\\.search\\s*\\(")
+                    .matcher(content);
+            while (call.find()) {
+                calls.add(name + ": " + bean.group(1) + ".search");
+            }
+        }
+        return calls;
     }
 
     /** The calls of one script on the beans it looks up that do not resolve, each naming the script */

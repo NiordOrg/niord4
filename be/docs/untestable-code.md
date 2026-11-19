@@ -649,7 +649,7 @@ and reading the job's log files); each entry below says what is still left. No p
   drive it with committed pending triggers whose `nextScheduledExecution` is in the past. Only the cron firing
   time stays the scheduler's (residue item 1 below).
 
-## Real seeded Freemarker/JavaScript template rendering — the base product's templates are covered, the sample's `audio-broadcast.ftl` and `fetch-firing-exercises.js` are not
+## Real seeded Freemarker/JavaScript template rendering — the base product's templates are covered, the sample's `audio-broadcast.ftl` and `fetch-firing-exercises.js` with no firing exercise only
 
 - **Location:** referenced by the fixture's `MailingListTrigger.scriptResourcePaths` (the sample's mailing
   lists). Since C4b the fixture holds them as `ScriptResource` rows: the base product's mailing-list templates
@@ -661,8 +661,12 @@ and reading the job's log files); each entry below says what is still left. No p
   sysadmin's trigger test by `BootstrapReportRenderITTest`, which asserts one mail per contact and that nothing
   is left unresolved in it (no `null`, `${`, FreeMarker error or `???`), and reads named parts of the NAVTEX,
   SafetyNET and NAVWARN mails.
-- **What stays untested:** the sample's `audio-broadcast.ftl` and `fetch-firing-exercises.js`, which no test
-  renders or runs.
+  The sample's audio-broadcast trigger, `fetch-firing-exercises.js` then `audio-broadcast.ftl`, is run by
+  `DeliveryFaultInjectionITTest.theSamplesFiringExerciseMailFailsWhenItsSearchFails`: with no firing exercise
+  found it renders the heading of tomorrow's exercises, and a failed search fails the run.
+- **What stays untested:** the sample's `audio-broadcast.ftl` and `fetch-firing-exercises.js` with a firing
+  exercise to list (the fixture has no message series `dma-fe`, which the script searches), and with warnings to
+  read out (the test passes the templates none).
 
 ## `MailingListRestService.testExecuteTrigger` (POST `/test-execute-trigger`) happy path — covered
 
