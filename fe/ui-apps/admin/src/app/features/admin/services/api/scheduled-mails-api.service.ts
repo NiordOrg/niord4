@@ -53,9 +53,11 @@ export interface SendAgainItem {
 
 /**
  * Why the backend left a mail as it was: GONE, deleted since the list was read; CHANGED, its status
- * or `sentAgainAt` is no longer what the page showed; RECORD, a failure record, not a mail.
+ * or `sentAgainAt` is no longer what the page showed; RECORD, a failure record, not a mail; FILTER,
+ * a SENT mail while the mail filter is a list that would redirect one of its recipients (it would
+ * end HELD, and a later Send again of the held mails would deliver it to them a second time).
  */
-export type SendAgainRefusalReason = 'GONE' | 'CHANGED' | 'RECORD';
+export type SendAgainRefusalReason = 'GONE' | 'CHANGED' | 'RECORD' | 'FILTER';
 
 export interface SendAgainRefusal {
   readonly id: number;

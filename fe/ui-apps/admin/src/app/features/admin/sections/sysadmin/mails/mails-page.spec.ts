@@ -529,6 +529,19 @@ describe('MailsPage', () => {
       answerSearch(s, [], 'HELD');
     });
 
+    it('says to open the filter first when a list would keep a sent mail from its recipients', () => {
+      const s = setup();
+      showRows(s, [mail(7, 'SENT')]);
+      sendAgainButtons(s.fixture)[0].click();
+      accept(s.fixture);
+      s.httpTesting
+        .expectOne('/rest/scheduled-mails/send-again')
+        .flush({ queued: [], refused: [{ id: 7, reason: 'FILTER' }] });
+      expect(s.notifications.warn).toHaveBeenCalledExactlyOnceWith('admin.mails.sendAgain.filter');
+      expect(s.notifications.success).not.toHaveBeenCalled();
+      answerSearch(s, [mail(7, 'SENT')]);
+    });
+
     it("shows the backend's reason when it refuses the request while the filter is LOG", () => {
       const s = setup();
       showRows(s, [mail(1, 'HELD')]);

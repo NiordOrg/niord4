@@ -282,7 +282,11 @@ export class MailsPage {
     this.api.sendAgain(mails.map(sendAgainItem)).subscribe({
       next: (result) => {
         this.sendingAgain.set(false);
-        if (result.refused.length === 0) {
+        if (result.refused.some((refusal) => refusal.reason === 'FILTER')) {
+          // Only a sent mail is refused for the filter, and a sent mail goes one at a time (the
+          // bulk action leaves sent mails out), so this text speaks of the one mail of the request.
+          this.notifications.warn('admin.mails.sendAgain.filter');
+        } else if (result.refused.length === 0) {
           this.notifications.success('admin.mails.sendAgain.queued', {
             count: result.queued.length,
           });

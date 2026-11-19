@@ -531,9 +531,12 @@ border.
 - Accept posts `POST /rest/scheduled-mails/send-again` (sysadmin only) with
   `{"mails":[{"id","status","sentAgainAt"}]}`, the status and `sentAgainAt` (epoch millis or null)
   the page showed; the backend locks each row and refuses it as `CHANGED` when either differs, as
-  `GONE` when the row was deleted and as `RECORD` for a failure record, and queues the rest:
-  `{"queued":[ids],"refused":[{"id","reason"}]}`. A refusal leaves the others queued, and the toast
-  says how many were left. A 409 (the mail filter is `LOG` or empty) and a 400 (an empty list, more
+  `GONE` when the row was deleted, as `RECORD` for a failure record and as `FILTER` for a `SENT`
+  mail while the mail filter is a list that would redirect one of its recipients (it would end
+  `HELD`, and a later Send again of the held mails would deliver it to them twice), and queues the
+  rest: `{"queued":[ids],"refused":[{"id","reason"}]}`. A refusal leaves the others queued, and the
+  toast says how many were left; a `FILTER` refusal (only a sent mail, so only from a row) says
+  instead that the filter would keep the mail from its recipients and is to be opened first. A 409 (the mail filter is `LOG` or empty) and a 400 (an empty list, more
   than 500, a duplicate id or a status it cannot send again from) change nothing and carry a problem
   document whose `detail` the toast shows; any other failure shows a fixed text, never the raw
   error. The page reads the list again after a success, and blocks a second request while one runs.

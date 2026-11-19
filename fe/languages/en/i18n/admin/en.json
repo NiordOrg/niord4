@@ -1691,6 +1691,7 @@
         "queued": "{{count}} mails are queued to be sent again.",
         "partly": "{{queued}} mails are queued to be sent again. {{refused}} were left as they were: they changed after the list was read, or are not mails.",
         "refused": "Not sent again: {{detail}}",
+        "filter": "The mail filter would keep this mail from its recipients. Open the filter first.",
         "error": "The mails could not be sent again. Nothing was changed."
       },
       "toast": {
