@@ -409,6 +409,7 @@ public class MailingListMessageListenerTest {
         // The database is back by the next take
         executionService.failForTriggerId = null;
         executionService.failRecording = false;
+        outbox.comeDue();
         assertEquals(1, listener.drainOutbox(), "the next take settles it");
         assertEquals(List.of(1), executionService.executedTriggerIds, "its mails are made");
         assertEquals(List.of("51:1"), outbox.settled);
@@ -434,6 +435,7 @@ public class MailingListMessageListenerTest {
 
         executionService.failForTriggerId = null;
         executionService.failRecording = false;
+        outbox.comeDue();
         assertEquals(1, listener.drainOutbox());
         assertEquals(List.of(1, 2, 2), executionService.attemptedTriggerIds,
                 "the retry ran the owed trigger only, not the first again");
@@ -458,6 +460,7 @@ public class MailingListMessageListenerTest {
         assertEquals(List.of(1, 2), executionService.executedTriggerIds);
 
         outbox.failComplete = false;
+        outbox.comeDue();
         assertEquals(1, listener.drainOutbox(), "the next take");
         assertEquals(List.of(1, 2), executionService.attemptedTriggerIds, "runs no trigger again");
         assertEquals(List.of(62L), outbox.completed, "and deletes the row");
@@ -503,12 +506,68 @@ public class MailingListMessageListenerTest {
         assertEquals(1, outbox.failures.size(), "with its error: " + outbox.failures);
 
         executionService.failRecording = false;
+        outbox.comeDue();
         assertEquals(0, listener.drainOutbox());
         assertEquals(1, executionService.recordedFailures.size(), "the next take records it");
         assertTrue(executionService.recordedFailures.get(0).startsWith("1:uid-72:Given up after "
                 + (MailingListStatusChangeOutbox.MAX_ATTEMPTS + 1) + " attempts"), executionService.recordedFailures.get(0));
         assertEquals(List.of(72L), outbox.completed, "and deletes the row");
         assertTrue(executionService.attemptedTriggerIds.isEmpty(), "no trigger ran");
+    }
+
+    /**
+     * A row kept because a trigger stays owed is out of the pass's reach (due again in minutes), so the pass goes on
+     * with the rows after it: the status changes of other lists are mailed at once. FAILS on the code that ended the
+     * pass at every kept row: the second row then waited for the next pass, up to a minute later, and behind a few
+     * such rows the other lists' mails fell further and further behind.
+     */
+    @Test
+    public void aRowThatStaysOwedDoesNotStopThePass() {
+        mailingListService.triggersByStatus.put(Status.PUBLISHED, triggers(1));
+        mailingListService.triggersByStatus.put(Status.CANCELLED, triggers(2));
+        executionService.failForTriggerId = 1;
+        executionService.failRecordingForTriggerId = 1;
+        outbox.due.add(new Claim(81, "uid-81", Status.PUBLISHED));
+        outbox.due.add(new Claim(82, "uid-82", Status.CANCELLED));
+
+        assertEquals(1, listener.drainOutbox(), "the second row is run in the same pass");
+
+        assertEquals(List.of("uid-82"), executionService.executedUids, "its list got its mail");
+        assertEquals(List.of(82L), outbox.completed, "and it is deleted");
+        assertEquals(1, outbox.failures.size(), "the first row is kept with its error: " + outbox.failures);
+        assertTrue(outbox.failures.get(0).startsWith("81:"), outbox.failures.get(0));
+        assertTrue(outbox.due.isEmpty(), "and no due row was left behind");
+    }
+
+    /**
+     * A trigger whose mails AND failure record fail on every take (a recipient the Mail Queue refuses, say) runs on
+     * the first {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS} takes, its "Given up" record is tried on as many
+     * more, and on the last take the row is deleted all the same, with an ERROR in the log as the only record. FAILS
+     * on the code that kept such a row for ever, given up again every few minutes.
+     */
+    @Test
+    public void aRecordThatCanNeverBeSavedEndsItsRowAtTheLastTake() {
+        mailingListService.triggers = triggers(1);
+        executionService.failForTriggerId = 1;
+        executionService.failRecording = true;
+        outbox.dueAgain = true;
+        outbox.due.add(new Claim(91, "uid-91", Status.PUBLISHED));
+
+        listener.drainOutbox();
+        for (int take = 2; take <= MailingListMessageListener.LAST_TAKE; take++) {
+            assertTrue(outbox.completed.isEmpty(), "the row is kept before take " + take);
+            outbox.comeDue();
+            listener.drainOutbox();
+        }
+
+        assertEquals(List.of(91L), outbox.completed, "the last take deletes the row");
+        assertEquals(MailingListStatusChangeOutbox.MAX_ATTEMPTS, executionService.attemptedTriggerIds.size(),
+                "the trigger ran on the first takes only: " + executionService.attemptedTriggerIds);
+        assertEquals(MailingListMessageListener.LAST_TAKE, executionService.recordAttempts.get(),
+                "and its record was tried on every take");
+        outbox.comeDue();
+        assertEquals(0, listener.drainOutbox());
+        assertTrue(outbox.due.isEmpty(), "nothing is left to take");
     }
 
     /**
@@ -687,6 +746,8 @@ public class MailingListMessageListenerTest {
     /** Returns a preset trigger list and records the status it was queried with; can fail the lookup. */
     private static final class RecordingMailingListService extends MailingListService {
         List<MailingListTrigger> triggers = new ArrayList<>();
+        /** When it holds the status looked up, its triggers rather than {@link #triggers} */
+        final java.util.Map<Status, List<MailingListTrigger>> triggersByStatus = new java.util.EnumMap<>(Status.class);
         Status queriedStatus;
         final List<Status> queriedStatuses = new ArrayList<>();
         boolean failLookup;
@@ -709,7 +770,7 @@ public class MailingListMessageListenerTest {
             }
             this.queriedStatus = status;
             this.queriedStatuses.add(status);
-            return triggers;
+            return triggersByStatus.getOrDefault(status, triggers);
         }
     }
 
@@ -739,10 +800,20 @@ public class MailingListMessageListenerTest {
         /** The triggers settled, as "row:trigger", in the order they were settled */
         final List<String> settled = new CopyOnWriteArrayList<>();
         /**
-         * When set, a row kept ({@link #failed}) or whose delete failed is due again at once, taken once more, as the
-         * real outbox makes it due again within minutes or when its lease runs out
+         * When set, a row kept ({@link #failed}) or whose delete failed is due again, as the real outbox makes it due
+         * again within minutes or when its lease runs out: not in the pass that kept it, but once the test calls
+         * {@link #comeDue}, as its next take
          */
         boolean dueAgain;
+        /** The rows {@link #dueAgain} made due again later, which {@link #comeDue} makes due */
+        private final Deque<Claim> later = new ConcurrentLinkedDeque<>();
+
+        /** The minutes pass: the rows kept or whose delete failed are due again */
+        void comeDue() {
+            for (Claim claim = later.poll(); claim != null; claim = later.poll()) {
+                due.add(claim);
+            }
+        }
         /** The rows taken and not yet deleted, by id: what {@link #dueAgain} puts back */
         private final java.util.Map<Long, Claim> taken = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -802,7 +873,7 @@ public class MailingListMessageListenerTest {
         private void putBack(long id) {
             Claim claim = taken.remove(id);
             if (dueAgain && claim != null) {
-                due.add(new Claim(claim.id(), claim.messageUid(), claim.status(), claim.attempts() + 1));
+                later.add(new Claim(claim.id(), claim.messageUid(), claim.status(), claim.attempts() + 1));
             }
         }
     }
@@ -816,6 +887,10 @@ public class MailingListMessageListenerTest {
         Integer failForTriggerId;
         Integer errorForTriggerId;
         boolean failRecording;
+        /** When set, only this trigger's failure record fails */
+        Integer failRecordingForTriggerId;
+        /** How many failure records were tried, saved or not */
+        final AtomicInteger recordAttempts = new AtomicInteger();
         /** When set, each execution counts it down and waits for {@link #release} */
         CountDownLatch entered;
         CountDownLatch release;
@@ -864,7 +939,8 @@ public class MailingListMessageListenerTest {
         @Override
         public void recordStatusChangeTriggerFailure(Integer triggerId, String messageUid, Exception cause,
                                                      long statusChangeId) {
-            if (failRecording) {
+            recordAttempts.incrementAndGet();
+            if (failRecording || triggerId.equals(failRecordingForTriggerId)) {
                 throw new IllegalStateException("simulated record failure for " + triggerId);
             }
             recordedFailures.add(triggerId + ":" + messageUid + ":" + cause.getMessage());

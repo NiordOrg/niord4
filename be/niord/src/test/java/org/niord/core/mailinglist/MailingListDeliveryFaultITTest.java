@@ -549,6 +549,46 @@ class MailingListDeliveryFaultITTest extends ITTest {
     }
 
     /**
+     * A list contact with neither a name nor an e-mail address (a blank one, which the contact services refuse today
+     * but a row written before them or by hand may hold) has no address, which the Mail Queue refuses: the trigger's
+     * own mails fail on that contact (see MAILLIST9 in be/docs/potential-errors.md). Its failure record leaves the
+     * contact out and holds the list's other recipients, so it is saved and the trigger is settled. FAILS on the code
+     * that added every recipient to the record: the record failed for the same reason, on every take.
+     */
+    @Test
+    void theFailureRecordLeavesOutARecipientWithoutAnAddress() throws Exception {
+        String n = Long.toString(System.nanoTime(), 36);
+        Integer list = committedListWithOneContact(n);
+        Tx.requiringNew().run(() -> {
+            // Written past ContactService, which refuses a blank address
+            Contact blank = new Contact();
+            blank.setEmail("");
+            em.persist(blank);
+            em.flush();
+            contactIds.add(blank.getId());
+            em.find(MailingList.class, list).getContacts().add(blank);
+        });
+        String subject = "IT-NO-ADDRESS-" + n;
+        String uid = "it-no-address-" + n;
+        addStatusChangeTrigger(list, subject, IT_TEMPLATE, uid);
+        Integer triggerId = Tx.requiringNew().call(() -> em.createQuery(
+                        "select t.id from MailingListTrigger t where t.mailingList.id = :list", Integer.class)
+                .setParameter("list", list).getSingleResult());
+
+        // No outbox row is needed: the mark on a row that does not exist marks nothing
+        executionService.recordStatusChangeTriggerFailure(triggerId, uid, new IllegalStateException("it-" + n), -1L);
+
+        List<String[]> records = errorRecords(n);
+        assertEquals(1, records.size(), "the record is saved");
+        assertEquals("it-fault-" + n + "@example.com", records.get(0)[3].replaceAll(".*<(.*)>.*", "$1"),
+                "with the list's recipient that has an address");
+        assertEquals(1L, Tx.requiringNew().call(() -> em.createQuery(
+                        "select count(r) from ScheduledMailRecipient r where r.mail.subject like :p", Long.class)
+                .setParameter("p", errorRecordPrefix(n) + "%").getSingleResult()),
+                "and no other");
+    }
+
+    /**
      * The outbox row is written in the status change's own transaction: a publication whose transaction rolls back
      * after the status change (here the test throws) leaves no row, and no drain mails a warning that was never
      * published. Would fail if the row were written in a transaction of its own.

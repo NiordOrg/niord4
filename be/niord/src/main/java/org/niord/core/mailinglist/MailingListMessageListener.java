@@ -73,13 +73,15 @@ import jakarta.jms.ConnectionFactory;
  * The order holds on one node while no row fails. Nodes sharing a database take rows independently (the drain lock is
  * per node), so across nodes two status changes of one message may be mailed at once or in reverse with no failure at
  * all; the chart runs one replica. A row whose triggers could not be looked up, or that still owes a trigger, waits a
- * few minutes (one more for each time it was taken, at most its lease), and the next passes take the rows after it
- * meanwhile: a later status change of the same message (CANCELLED after PUBLISHED) may then be mailed before it. A
+ * few minutes (one more for each time it was taken, at most its lease), and the passes meanwhile take the rows after
+ * it (the pass that kept a row owing a trigger goes straight on to them): a later status change of the same message (CANCELLED after PUBLISHED) may then be mailed before it. A
  * row whose node stopped while running it waits out its lease. Such a row is tried again with an ERROR each time; its
  * {@code attempts} and {@code "lastError"} show how long it has failed. Once the context closes, the drain starts no
  * further trigger and takes no further row. A row taken more than {@link MailingListStatusChangeOutbox#MAX_ATTEMPTS}
  * times (its run failed, hung or stopped the server each time) is given up: each trigger it still owes leaves a "Not
- * sent" ERROR record in the Mail Queue, and the row is deleted once each is recorded.
+ * sent" ERROR record in the Mail Queue, and the row is deleted once each is recorded. A record that cannot be saved is
+ * tried on as many further takes; on the last ({@link #LAST_TAKE}) the row is deleted all the same, with one ERROR in
+ * the server log naming each such trigger, its list and the message.
  * <p>
  * The topic is polled on a single-thread executor, started when the application is ready and stopped when the context
  * closes ({@link JmsTopicLoop}). When the context closes the drain takes no further row; a row it is running then is
@@ -298,10 +300,11 @@ public class MailingListMessageListener implements Runnable {
      * still owes ({@link #checkStatusChangeMailingListExecution}, where a failing trigger leaves an ERROR record in the
      * Mail Queue, an {@link Error} included) and deletes it once every trigger is settled. A row that still owes a
      * trigger (its mails failed and so did its failure record, or the context closed before it ran) is kept with its
-     * error and tried again within minutes, running only the triggers still owed; so is a row whose triggers cannot
-     * even be looked up (the database is down). The pass stops at such a row. A row whose delete fails (the database
-     * lost for a moment) is taken again when its lease runs out, and then only deleted: every trigger is settled. A
-     * row taken too often is given up ({@link #giveUp}). One drain runs at a time on this node.
+     * error and tried again within minutes, running only the triggers still owed, and the pass goes on with the rows
+     * after it. A row whose triggers cannot even be looked up (the database is down) is kept the same way, and the pass
+     * stops there, as it does when a row cannot be kept or deleted. A row whose delete fails (the database lost for a
+     * moment) is taken again when its lease runs out, and then only deleted: every trigger is settled. A row taken too
+     * often is given up ({@link #giveUp}). One drain runs at a time on this node.
      *
      * @return the number of status changes whose triggers were run
      */
@@ -339,8 +342,12 @@ public class MailingListMessageListener implements Runnable {
                     running = null;
                 }
                 if (!owed.isEmpty()) {
-                    keepOwed(claim, owed);
-                    return done;
+                    // The row is out of this pass's reach (made due again in minutes), so the pass goes on with the
+                    // rows after it; it stops only when the row could not even be kept
+                    if (!keepOwed(claim, owed)) {
+                        return done;
+                    }
+                    continue;
                 }
                 try {
                     outbox.complete(claim.id());
@@ -364,8 +371,11 @@ public class MailingListMessageListener implements Runnable {
      * Keeps a row that still owes triggers: writes why on it and makes it due again within minutes
      * ({@link MailingListStatusChangeOutbox#failed}), with one ERROR for this attempt. The attempt counts toward the
      * bound, after which the triggers still owed are given up ({@link #giveUp}).
+     *
+     * @return whether the row was kept so; false when that failed too (the database is lost), and the lease taken
+     *         with the row makes it due again
      */
-    private void keepOwed(Claim claim, List<Integer> owed) {
+    private boolean keepOwed(Claim claim, List<Integer> owed) {
         String error = stopping
                 ? "The server stopped before trigger(s) " + owed + " ran"
                 : "Trigger(s) " + owed + " neither made their mails nor recorded their failure in the Mail Queue";
@@ -375,10 +385,12 @@ public class MailingListMessageListener implements Runnable {
                 + "comes due" + (stopping ? "" : " within minutes (see the errors above)"));
         try {
             outbox.failed(claim.id(), error);
+            return true;
         } catch (Throwable recordFailure) {
             // The lease taken with the row makes it due again all the same
             log.error("Failed recording the owed triggers in the status-change outbox row " + claim.id(),
                     recordFailure);
+            return false;
         }
     }
 
@@ -387,27 +399,50 @@ public class MailingListMessageListener implements Runnable {
      * time, hung, or stopped the server. Its triggers are not run again: each trigger it still owes leaves its "Not
      * sent" ERROR record in the Mail Queue, naming its list, as a failing trigger does; the triggers settled before
      * leave none. A failure to look up the triggers propagates, so the row is kept and the records are made on a later
-     * pass, and so is a trigger whose record cannot be saved: it stays owed.
+     * pass, and so is a trigger whose record cannot be saved: it stays owed, at most until the row's
+     * {@link #LAST_TAKE}. There a record that still cannot be saved is given up too: the row is deleted, and one ERROR
+     * in the server log, naming each such trigger, its list and the message, is all that is left of it.
      *
-     * @return the triggers still owed: those whose record could not be saved
+     * @return the triggers still owed: those whose record could not be saved, none on the last take
      */
     private List<Integer> giveUp(Claim claim) {
         String cause = "Given up after " + (claim.attempts() - 1) + " attempts to make the mails of the status change to "
                 + claim.status() + " (each failed, hung or stopped the server; see the server log)";
-        List<Integer> triggerIds = mailingListService.findStatusChangeTriggers(claim.status()).stream()
-                .map(BaseEntity::getId)
-                .filter(id -> !claim.settledTriggers().contains(id))
-                .collect(Collectors.toList());
+        List<MailingListTrigger> triggers = mailingListService.findStatusChangeTriggers(claim.status()).stream()
+                .filter(trigger -> !claim.settledTriggers().contains(trigger.getId()))
+                .toList();
         log.error("Gave up the status-change outbox row " + claim.id() + " of message " + claim.messageUid()
-                + " in status " + claim.status() + ": " + cause + "; its trigger(s) still owed " + triggerIds
-                + " are recorded as not sent");
-        List<Integer> owed = new ArrayList<>();
-        for (Integer triggerId : triggerIds) {
-            if (!recordTriggerFailure(triggerId, claim, new Exception(cause))) {
-                owed.add(triggerId);
+                + " in status " + claim.status() + ": " + cause + "; its trigger(s) still owed "
+                + triggers.stream().map(BaseEntity::getId).toList() + " are recorded as not sent");
+        List<MailingListTrigger> unrecorded = new ArrayList<>();
+        for (MailingListTrigger trigger : triggers) {
+            if (!recordTriggerFailure(trigger.getId(), claim, new Exception(cause))) {
+                unrecorded.add(trigger);
             }
         }
-        return owed;
+        if (!unrecorded.isEmpty() && claim.attempts() >= LAST_TAKE) {
+            log.error("Deleted the status-change outbox row " + claim.id() + " of message " + claim.messageUid()
+                    + " in status " + claim.status() + " after " + claim.attempts() + " takes: the mails of "
+                    + unrecorded.stream().map(MailingListMessageListener::describe).collect(Collectors.joining(", "))
+                    + " were not made, and the record of that could not be saved in the Mail Queue either "
+                    + "(see the errors above); this line is the only record left");
+            return List.of();
+        }
+        return unrecorded.stream().map(BaseEntity::getId).toList();
+    }
+
+    /**
+     * The take on which a given-up row is deleted even when the record of a trigger still owed cannot be saved: the
+     * records are tried on as many takes as the triggers were ({@link MailingListStatusChangeOutbox#MAX_ATTEMPTS}),
+     * so a record that can never be saved (a list whose recipient the Mail Queue refuses) does not keep its row for
+     * ever
+     */
+    static final int LAST_TAKE = 2 * MailingListStatusChangeOutbox.MAX_ATTEMPTS;
+
+    /** A trigger and its list, for the log */
+    private static String describe(MailingListTrigger trigger) {
+        MailingList list = trigger.getMailingList();
+        return "trigger " + trigger.getId() + (list == null ? "" : " of mailing list " + list.getMailingListId());
     }
 
     /**

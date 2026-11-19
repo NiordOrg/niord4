@@ -292,7 +292,9 @@ public class MailingListExecutionService extends BaseService {
 
     /**
      * Saves the record of a failed trigger: a mail in status ERROR, never sent, to the recipients of the list, with
-     * the given subject, the note (HTML) followed by the cause, and the cause as its last error
+     * the given subject, the note (HTML) followed by the cause, and the cause as its last error. A recipient with
+     * neither a name nor an e-mail address is left out (the Mail Queue holds no recipient without an address): the
+     * record must be saved even when that recipient is why the trigger's own mails failed.
      */
     private void saveFailureRecord(MailingList mailingList, String subject, String noteHtml, String error)
             throws IOException {
@@ -303,7 +305,10 @@ public class MailingListExecutionService extends BaseService {
         List<IMailable> recipients = new ArrayList<>();
         recipients.addAll(mailingList.getUsers());
         recipients.addAll(mailingList.getContacts());
-        recipients.forEach(r -> mail.addRecipient(new ScheduledMailRecipient(TO, r.computeInternetAddress())));
+        recipients.stream()
+                .map(IMailable::computeInternetAddress)
+                .filter(Objects::nonNull)
+                .forEach(address -> mail.addRecipient(new ScheduledMailRecipient(TO, address)));
         mail.setHtmlContents("<html><body>"
                 + noteHtml
                 + "<p>Cause: " + HtmlUtils.htmlEscape(error) + "</p>"
