@@ -44,7 +44,7 @@ Registered in `app.config.ts` in this order:
 | 1     | `AuthService.init()` — silent check-sso                 | 8 s         | Anonymous guest, `authFallback = 'unreachable'`                    |
 | 2     | Transloco `load(selectedLanguage())`                    | 3 s         | Transloco loads the bundle lazily on the first translation instead |
 | 3     | `webSettingsInitializer` — the runtime settings overlay | 5 s         | Environment values stand                                           |
-| 4     | `DomainService.bootstrap(deepLinkDomainId)`             | 5 s         | Empty domain catalogue, no session domain                          |
+| 4     | `DomainService.bootstrap(deepLinkDomainId)`             | 5 s         | No session domain; the shell's notice with a reload on every page  |
 | 5     | Eager `LastMessagesViewService` construction            | —           | —                                                                  |
 
 **Angular calls every initializer in the same tick, in registration order, and boots when all the

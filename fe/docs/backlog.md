@@ -286,8 +286,6 @@ Background: [`angular-conventions.md`](angular-conventions.md), [`ui-apps/info/A
   deep-link-only access with no way in from the header.
 - Deleting or deactivating the domain the current session is on leaves the session on the dead domain until the
   next reload — the refresh only re-points ids that still exist. Documented as a known limit in `domain.service.ts`.
-- A failed domain bootstrap degrades to an empty domain list with no notice. The start-up splash covers the wait;
-  nothing covers the failure.
 - Keycloak `url` / `realm` / `clientId` come from the backend at boot (`GET /rest/settings/keycloak`) or else
   from the build: the runtime settings overlay still excludes the whole `keycloak` block, because it is
   consumed before settings arrive.
@@ -338,8 +336,8 @@ Background: [`country-deployments.md`](country-deployments.md).
   the rule a reference states is the rule. Found by the agent route (2026-10-26).
 - **The administration app's English bundle ships keys that nothing reads.** Confirmed dead:
   `shared.auth.accountManagement` (the account menu reads `shared.auth.editAccount`),
-  `core.domain.bootstrap.errorTitle` and `errorBody` (no notice uses them: a failed domain bootstrap shows none,
-  see _Shell, authentication and domains_),
+  `core.domain.bootstrap.errorBody` (the notice of a failed domain bootstrap shows only the title,
+  `errorTitle`, with _Retry_),
   `editor.parts.moveUp`, `moveDown`, `add` and `remove` (the part cards read `editor.part.*`) and
   `msg.no_pos_messages` (`languages/en/i18n/admin/en.json` 93, 216-217, 3957-3960 and 4538). A count of the keys
   with no literal reference in the application found 36 more candidates outside publications, not checked one by

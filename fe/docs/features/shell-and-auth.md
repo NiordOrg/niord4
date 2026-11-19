@@ -106,8 +106,13 @@ Bootstrap picks the initial session domain in strict order (`DomainService.boots
 2. the id persisted in `localStorage`;
 3. the first domain in the catalogue.
 
-The catalogue fetch is capped at 5 s and degrades to an empty list — a domains outage must not block
-boot. With no domain resolved the switcher hides and no domain header is sent. The two kinds of
+The catalogue fetch is capped at 5 s and a failure or timeout leaves the catalogue empty — a domains
+outage must not block boot. The shell then shows a notice under the header on every page, "Could
+not load domains" with _Retry_ (`DomainBootstrapBanner`, `core.domain.bootstrap.errorTitle`), since
+every list is empty for that reason alone. Retry reloads the app, as a desk change does, and the
+persisted id is kept through the failure, so a reload that reads the catalogue lands on the same
+desk. With no domain resolved the switcher hides and no
+domain header is sent. The two kinds of
 domain-derived gate then behave oppositely: the message-support checks (`supportsMainType`,
 `supportsType`) fall open, so everything is offered, while every capability flag reads `false`, so
 capability-gated affordances disappear — the Schedule nav item among them. A domains outage

@@ -18,6 +18,12 @@ export class DomainService {
   readonly availableDomains = signal<readonly Domain[]>([]);
   readonly sessionDomain = signal<Domain | undefined>(undefined);
   readonly searchDomain = signal<Domain | undefined>(undefined);
+  /**
+   * The start-up read of the domains failed or timed out: the app has no domain, so its lists
+   * would be empty for that reason alone. The shell says so and offers a reload, which starts
+   * the app again, as a desk change does.
+   */
+  readonly bootstrapFailed = signal(false);
 
   constructor() {
     // Domain name/descs are backend-localized (lookup sends ?lang=). bootstrap()
@@ -96,16 +102,25 @@ export class DomainService {
     }
   }
 
+  /**
+   * The start-up read of the domains. A failure or a timeout leaves the app without a domain and
+   * sets {@link bootstrapFailed}; the remembered session domain is kept, so the reload the shell
+   * offers returns the person to it.
+   */
   async bootstrap(deepLinkDomainId?: string): Promise<void> {
     const domains = await firstValueFrom(
       this.api.lookup().pipe(
         timeout(BOOTSTRAP_TIMEOUT_MS),
-        catchError(() => of([] as Domain[])),
+        catchError(() => of(null)),
       ),
     );
+    if (!domains) {
+      this.bootstrapFailed.set(true);
+      return;
+    }
+    this.bootstrapFailed.set(false);
     this.availableDomains.set(domains);
-    const initial = this.resolveInitialSessionDomain(domains, deepLinkDomainId);
-    this.setSessionDomain(initial);
+    this.setSessionDomain(this.resolveInitialSessionDomain(domains, deepLinkDomainId));
   }
 
   setSessionDomain(domain: Domain | undefined): void {
