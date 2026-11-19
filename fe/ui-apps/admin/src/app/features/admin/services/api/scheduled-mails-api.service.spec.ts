@@ -116,16 +116,14 @@ describe('ScheduledMailsApiService', () => {
     const { service, httpTesting } = setup();
     let fetched: ScheduledMail | undefined;
     service.getMailDetails(6).subscribe((mail) => (fetched = mail));
-    httpTesting
-      .expectOne('/rest/scheduled-mails/scheduled-mail/6')
-      .flush({
-        id: 6,
-        status: 'SENT',
-        sender: 's',
-        subject: 'x',
-        recipients: [],
-        sentAgainAt: null,
-      });
+    httpTesting.expectOne('/rest/scheduled-mails/scheduled-mail/6').flush({
+      id: 6,
+      status: 'SENT',
+      sender: 's',
+      subject: 'x',
+      recipients: [],
+      sentAgainAt: null,
+    });
     expect(fetched?.sentAgainAt).toBeUndefined();
   });
 
