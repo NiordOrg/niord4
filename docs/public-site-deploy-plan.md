@@ -25,9 +25,9 @@ does not fit a hardened pod_) and as F-X99 in
   runs, on base 4.0.147, were green in both country repositories on 2026-11-10. The push job
   refuses to push unless the site's image carries the same version as the backend's, so the two
   images of a country always share one tag.
-- **The Image workflow runs only when `staging-bump.py` starts it.** It is disabled in both
+- **The Image workflow runs only when the staging bump starts it.** It is disabled in both
   country repositories while Actions minutes are short. The script enables it for one run and
-  disables it again (devops-niord, `scripts/staging-bump.py`). *Until 2026-11-19. Since then
+  disables it again (devops-niord's staging bump, then a script run from a workstation). *Until 2026-11-19. Since then
   Image runs after every green CI run on `main`, and the staging bump is devops-niord's promote
   job with `TARGET=staging`, which reads the images in Harbor.*
 - **Nothing runs the image.** The chart (`be/k8s/helm/niord`) has five components and none for
@@ -206,7 +206,7 @@ the three `proxy_cache_valid` directives that do nothing, and the `/wms/` proxy.
 | 2 | niord | The merge publishes base version 4.0.N: the chart, the source zip and the kit | the publish run |
 | 3 | devops-shared, one merge request | The Ingress rule of section 4 (decision 3) | its validator; then step 6's sync |
 | 4 | niord-dk, niord-gl | Merge the bump pull request the Niord base bump app opens. While the base product's repository is private, each needs the hand pin its comment describes first | the country's CI |
-| 5 | devops-niord, one merge request | `scripts/staging-bump.py`: it starts each country's Image run, which builds and container-tests the hardened image for the first time and pushes both images on 4.0.N, and opens the merge request that moves staging. Merge it and wait until both stacks are Healthy | the Image runs; Argo CD |
+| 5 | devops-niord, one merge request | The staging bump (then a script run from a workstation): it starts each country's Image run, which builds and container-tests the hardened image for the first time and pushes both images on 4.0.N, and opens the merge request that moves staging. Merge it and wait until both stacks are Healthy | the Image runs; Argo CD |
 | 6 | devops-niord, a merge request of its own | The `info` block in both staging values files (`enabled`, `image.repository`, the Ingress and its host) and in `envs/_template/values.yaml` (decision 2); the validator's refusal of an environment name ending in `-info` | Argo CD; the checks of section 7 |
 | 7 | niord, devops-niord, devops-shared | The remaining records of section 9 | — |
 
@@ -323,7 +323,7 @@ The first version of this plan was reviewed the day it was written. What changed
 | Finding | Change |
 |---|---|
 | The cluster's Ingress rule refuses the site's host; the plan had checked DNS and the certificate only | section 4, step 3, decision 3; devops-shared joins the repositories |
-| CI on `main` does not start a country's Image run: the workflow is disabled, and `staging-bump.py` starts it. A bump pull request needs the hand pin while the base product's repository is private | section 1; steps 4 and 5 |
+| CI on `main` does not start a country's Image run: the workflow is disabled, and the staging bump starts it. A bump pull request needs the hand pin while the base product's repository is private | section 1; steps 4 and 5 |
 | The `info` block does not belong in the bump's merge request, whose branch is rebuilt and force-pushed | step 6, and the rollback |
 | Nothing renders the chart before staging; `niord.image` refuses an empty tag | the renders of step 1; section 3 |
 | Moving nginx's files to `/tmp` can reach into the kit's fixed list of five files | section 5 names the way that does not, and the fallback |

@@ -47,7 +47,7 @@ backend path.
 | 3. A country image follows a green pin bump on its `main` | niord-dk #1, niord-gl #1, `ci.yml` + `image.yml` | 2026-10-08 |
 | 4a. Both Argo CD controllers poll GitLab every minute | devops-shared, `argocd/test/` | 2026-10-08, on the test cluster |
 | 5. The integration job runs Failsafe only and pulls its container images while Maven compiles | niord, `be-ci.yml`, `be/test-it`, `be/scripts/it-images.sh` | 4.0.64 |
-| 17. A staging deploy in one command (one button since 2026-11-19) | devops-niord, `scripts/staging-bump.py`; since 2026-11-19 the promote job, `TARGET=staging` | 2026-10-08 |
+| 17. A staging deploy in one command (one button since 2026-11-19) | devops-niord: a script run from a workstation; since 2026-11-19 the promote job, `TARGET=staging` | 2026-10-08 |
 
 **Step 1.** `be-ci.yml`'s `push` filter excludes `be/docs/**` and Markdown under `be/`
 (re-including `src/test/resources`, where one fixture lives) and includes `publish.yml`;
@@ -89,7 +89,7 @@ from `NiordTestContainers.java` by `be/scripts/it-images.sh`, are pulled in a ba
 subshell of the same step before `./test-it`; the first IT class then starts its
 containers from local images. One-class run: `./test-it --its-only -pl niord -Dit.test=<Class>`.
 
-**Item 17.** `scripts/staging-bump.py` in devops-niord, run from a workstation with the
+**Item 17.** A staging bump script in devops-niord, run from a workstation with the
 person's own `gh` and `glab` logins: takes a base (default the base product's newest `v4.0.N`
 tag), commits the pin in each country repository under the person's identity, waits for
 CI and the Image run, reads the tags, writes the four pins into a branch with
@@ -169,5 +169,5 @@ for a private repository), Renovate and per-publish country pipelines (decided
 - `.github/workflows/be-ci.yml` (its header explains steps 1, 2 and 5), `publish.yml`.
 - `SIFA-DK/niord-dk`, `SIFA-DK/niord-gl`: `.github/workflows/ci.yml`, `image.yml`.
 - `devops-shared/argocd/test/` (`argocd-cm.yaml`, the two ApplicationSets), `runbooks/bootstrap.md`; the closed draft for the webhooks that were not built.
-- `devops-niord`: the promote job in `.gitlab-ci.yml` and `scripts/staging_bump.py` (`scripts/staging-bump.py` until 2026-11-19), `tests/test_staging_bump.py`, README "Moving staging to a new base: one button".
+- `devops-niord`: the promote job in `.gitlab-ci.yml` and `scripts/staging_bump.py` (a script run from a workstation until 2026-11-19), `tests/test_staging_bump.py`, README "Moving staging to a new base: one button".
 - `be/docs/cicd/design.md` §3–§7, `implementation-plan.md` *The order of work*; `docs/renovate-plan.md`.
