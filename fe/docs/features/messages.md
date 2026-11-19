@@ -232,8 +232,9 @@ and refresh.
   was still being built after a restart) is shown as it came, and `MessageListStatus` shows a warning
   (`messages.list.indexIncomplete`) above the result in every view that holds it, Table, Grid,
   Details and the map's result list, inside a `role="status"` region that stays in the page. Each
-  answer sets the facade's `indexIncomplete` anew, so the warning goes with the next answer without
-  the mark; a failed search leaves it as it was. The other searches of the same endpoint show no
+  answer of page 0 sets the facade's `indexIncomplete` anew, so the warning goes with the next answer
+  without the mark; an appended page (load more) keeps it while any page on screen carried it; a
+  failed search leaves it as it was. The other searches of the same endpoint show no
   warning: the publication include dialog's message lookup (free text on the message id), and the
   area-sort dialog and the home page (no free text). The print, export and mail of the list search on
   the server and do not carry the mark.

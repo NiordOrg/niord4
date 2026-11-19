@@ -65,8 +65,9 @@ export class MessageListFacade {
 
   /**
    * Whether the last answer was a free-text search the backend ran while its search index was still
-   * being filled after a restart, so messages may be missing from the list. Each answer sets it
-   * anew; a failed search leaves it as the rows on screen left it.
+   * being filled after a restart, so messages may be missing from the list. Each answer of page 0
+   * sets it anew; an appended page keeps it set when an earlier page set it; a failed search
+   * leaves it as the rows on screen left it.
    */
   readonly indexIncomplete = this._indexIncomplete.asReadonly();
 
@@ -273,7 +274,10 @@ export class MessageListFacade {
       this._messages.set(rows);
     }
     this._total.set(result.total);
-    this._indexIncomplete.set(result.indexIncomplete === true);
+    // An appended page keeps the mark of the pages before it: their rows are still on screen and
+    // may still miss messages, even when this page came from a complete index.
+    const marked = result.indexIncomplete === true;
+    this._indexIncomplete.set(req.append ? this._indexIncomplete() || marked : marked);
     this.selection.refreshSnapshotsFromSearchResults(rows);
   }
 }
