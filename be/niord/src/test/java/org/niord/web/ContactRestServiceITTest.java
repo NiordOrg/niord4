@@ -17,9 +17,13 @@ package org.niord.web;
 
 import org.springframework.transaction.annotation.Transactional;
 import io.restassured.http.ContentType;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.niord.core.user.User;
 import org.niord.test.ITTest;
+import org.niord.test.Tx;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,6 +59,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ContactRestServiceITTest extends ITTest {
 
     private final List<Integer> createdContactIds = new ArrayList<>();
+
+    @PersistenceContext
+    EntityManager em;
 
     @AfterEach
     void cleanup() {
@@ -522,6 +529,38 @@ class ContactRestServiceITTest extends ITTest {
     }
 
     @Test
+    void importEmailsSkipsAnAddressTwoUsersShareAndImportsTheRest() {
+        // The users' email column is not unique, so an address may belong to two users. Such an address
+        // is a user's address and is not imported; it must not fail the import of the others.
+        List<Integer> userIds = Tx.requiringNew().call(() -> List.of(
+                persistUser("it-rest-shared-a", "it-rest-shared-user@example.com"),
+                persistUser("it-rest-shared-b", "IT-REST-Shared-User@example.com")));
+        try {
+            given().auth().oauth2(accessToken())
+                    .contentType(ContentType.JSON)
+                    .body(Map.of("emails", "it-rest-shared-user@example.com, it-rest-shared-new@example.com"))
+                    .when().post("/rest/contacts/import-emails")
+                    .then().statusCode(200)
+                    .body(containsString("Imported 1 new contacts"));
+            trackImported("it-rest-shared-new@example.com");
+
+            // The shared address stays a user's address only: no contact was made for it.
+            given().auth().oauth2(accessToken())
+                    .queryParam("name", "it-rest-shared-user@example.com")
+                    .when().get("/rest/contacts/search")
+                    .then().statusCode(200)
+                    .body("total", is(0));
+        } finally {
+            Tx.requiringNew().run(() -> userIds.forEach(id -> {
+                User user = em.find(User.class, id);
+                if (user != null) {
+                    em.remove(user);
+                }
+            }));
+        }
+    }
+
+    @Test
     void importEmailsWithOnlyInvalidAddressesImportsNothing() {
         given().auth().oauth2(accessToken())
                 .contentType(ContentType.JSON)
@@ -541,6 +580,16 @@ class ContactRestServiceITTest extends ITTest {
     // ------------------------------------------------------------------------------------------- //
     // Helpers
     // ------------------------------------------------------------------------------------------- //
+
+    /** Persists a user with the given username and email (inside the caller's transaction) and returns its id. */
+    private Integer persistUser(String username, String email) {
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        em.persist(user);
+        em.flush();
+        return user.getId();
+    }
 
     /** Resolves the generated id of an imported contact via search and tracks it for cleanup. */
     private void trackImported(String email) {

@@ -37,7 +37,7 @@ import jakarta.persistence.*;
         @NamedQuery(name="User.findByUsernames",
                 query="SELECT u FROM User u where lower(u.username) in (:usernames)"),
         @NamedQuery(name="User.findByEmail",
-                query="SELECT u FROM User u where lower(u.email) = lower(:email)"),
+                query="SELECT u FROM User u where lower(u.email) = lower(:email) order by u.id"),
         @NamedQuery(name="User.searchUsers",
                 query="SELECT u FROM User u where lower(u.username) like :term escape '!' " +
                       " or lower(u.email) like :term escape '!' " +

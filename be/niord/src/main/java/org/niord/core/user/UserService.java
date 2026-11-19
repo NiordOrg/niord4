@@ -193,22 +193,24 @@ public class UserService extends BaseService {
     }
 
     /**
-     * Looks up the {@code User} with the email
+     * Looks up a {@code User} with the email.
+     * <p>
+     * An address is not unique among users (the column has no unique constraint, and data carried over from
+     * the earlier product holds addresses that two users share), so one user or several mean "a user has this
+     * address", never an error; of several, the one created first (the lowest id) is returned.
      *
      * @param email the user email
-     * @return the user or null
+     * @return the user with the lowest id that has the email, or null if no user has it
      */
     public User findByEmail(String email) {
         if (StringUtils.isBlank(email)) {
             return null;
         }
-        try {
-            return em.createNamedQuery("User.findByEmail", User.class)
-                    .setParameter("email", email)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
+        List<User> users = em.createNamedQuery("User.findByEmail", User.class)
+                .setParameter("email", email)
+                .setMaxResults(1)
+                .getResultList();
+        return users.isEmpty() ? null : users.getFirst();
     }
 
     /**

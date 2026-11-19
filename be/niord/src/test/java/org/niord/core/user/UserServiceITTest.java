@@ -143,6 +143,21 @@ class UserServiceITTest extends ITTest {
 
     @Test
     @Transactional
+    void findByEmailOfAnAddressTwoUsersShareReturnsTheFirstUser() {
+        // The email column is not unique: two users may share an address, in any casing. That is
+        // still "a user has this address", answered with the user created first, never an error.
+        User first = persistUser("it-user-shared-a", "it-user-shared@example.com", "Shared", "A", "en");
+        persistUser("it-user-shared-b", "IT-User-Shared@example.com", "Shared", "B", "en");
+        em.flush();
+        em.clear();
+
+        User found = userService.findByEmail("it-user-shared@example.com");
+        assertNotNull(found, "findByEmail must find a user when two users share the address");
+        assertEquals(first.getId(), found.getId(), "of several users, the one created first is returned");
+    }
+
+    @Test
+    @Transactional
     void findByEmailReturnsNullForUnknownEmail() {
         assertNull(userService.findByEmail("it-user-nobody@example.com"),
                 "findByEmail must return null for an unknown email");
