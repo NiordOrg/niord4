@@ -142,10 +142,10 @@ class MailingListDeliveryFaultTest {
 
     /**
      * A status change committed just before a restart was announced on the topic while no listener was subscribed: its
-     * outbox row is all that is left of it. {@code onStart} drains the outbox once before it starts the poll loop, so
-     * the row is mailed at start; with the per-minute sweep switched off ({@code -}, as in the integration suite) this
-     * pass is the only one that reaches it before the next status change. Would fail if the start's drain were left
-     * out, or submitted after the loop, which never returns and so holds the listener's single thread for ever.
+     * outbox row is all that is left of it. {@code onStart} hands a drain to the listener's drain worker as it starts
+     * the poll loop, so the row is mailed at start; with the per-minute sweep switched off ({@code -}, as in the
+     * integration suite) this pass is the only one that reaches it before the next status change. Would fail if the
+     * start's drain were left out, or queued behind the poll loop, which never returns.
      */
     @Test
     void theStartDrainsTheStatusChangesCommittedBeforeIt() throws Exception {

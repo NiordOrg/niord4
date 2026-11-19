@@ -275,7 +275,8 @@ Behaviour that was deliberately left out of the service/REST `*ITTest`s added fo
   (`onMessage`).
 - **Why the *live async path* is hard to test:** `MailingListMessageListener` subscribes from
   `ApplicationReadyEvent` on a single-threaded executor and blocks in `consumer.receive()`; each received
-  message prompts a drain of the mailing lists' status-change outbox on that background thread. (The former
+  message hands a drain of the mailing lists' status-change outbox to the listener's own drain worker (one thread,
+  `niord-mailinglist-drain`, on which the start's drain and the per-minute sweep's run too). (The former
   unconditional `Thread.sleep(10000)` XA-workaround hack is **gone** — the broadcast is now deferred to after
   commit, see potential-errors.md JMS3.) The end-to-end path — publish → background thread wakes →
   `executeStatusChangeTrigger` side effects — can be asserted only by polling with Awaitility, on a committed
@@ -284,7 +285,8 @@ Behaviour that was deliberately left out of the service/REST `*ITTest`s added fo
   broadcasts, but its live path has no such test.
 - **What IS tested instead:** the *dispatch logic* of both listeners is unit-tested directly and
   framework-neutrally — `MailingListMessageListenerTest` drains a recording outbox through `onMessage(...)`,
-  `drainOutbox()` and `sweep()` (which returns at once while a drain runs), `MailingListDeliveryFaultTest` through
+  `drainOutbox()` and `sweep()` (which only hands the drain to the worker and returns at once, also while a trigger
+  hangs, with at most one drain waiting behind the running one), `MailingListDeliveryFaultTest` through
   `onStart()` before its poll loop, and `MailingListMessageListenerTest` calls
   `checkStatusChangeMailingListExecution(...)` with recording service doubles (every due outbox row taken in order and deleted after its triggers; a row whose triggers cannot be looked
   up kept for the next pass; each trigger executed once for the message UID; a failing trigger does not abort the

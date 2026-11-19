@@ -21,11 +21,19 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.niord.core.mailinglist.MailingListStatusChangeOutbox.Claim;
 import org.niord.core.model.BaseEntity;
@@ -52,6 +60,13 @@ import jakarta.jms.ConnectionFactory;
  * mailed. One drain runs at a time on a node; nodes sharing a database take different rows (see
  * {@link MailingListStatusChangeOutbox#claimNextDue}).
  * <p>
+ * Every drain runs on the listener's own worker thread ({@code niord-mailinglist-drain}), never on the thread that asks
+ * for it: the JMS poll loop and the shared scheduler (the thread pool every {@code @Scheduled} job runs on, among them
+ * the publication and expiry of messages and the mail sender) only hand the drain to the worker and return at once. A
+ * trigger that hangs, or a long backlog, therefore holds back only the status-change mails after it, on this node. At
+ * most one drain waits behind the running one, however often it is asked for ({@link #requestDrain}), and the sweep
+ * asks for none while a drain runs or waits.
+ * <p>
  * The order holds on one node while no row fails. Nodes sharing a database take rows independently (the drain lock is
  * per node), so across nodes two status changes of one message may be mailed at once or in reverse with no failure at
  * all; the chart runs one replica. A row whose triggers could not be looked up waits a few minutes (one more for
@@ -64,7 +79,9 @@ import jakarta.jms.ConnectionFactory;
  * so the mails its run made before the fault are not made again and again.
  * <p>
  * The topic is polled on a single-thread executor, started when the application is ready and stopped when the context
- * closes ({@link JmsTopicLoop}).
+ * closes ({@link JmsTopicLoop}). When the context closes the drain takes no further row; a row it is running then is
+ * finished if it ends within {@link #stopWaitMillis}, and otherwise keeps its lease and is taken again once that runs
+ * out, by this node's next start or by another node.
  */
 @SuppressWarnings("unused")
 @Component
@@ -93,12 +110,52 @@ public class MailingListMessageListener implements Runnable {
     /** How long one row may run before the sweep warns that it holds the drain (tests set it low) */
     long stuckAfterMillis = Duration.ofMinutes(2).toMillis();
 
+    /** The name of the drain worker's thread */
+    static final String DRAIN_THREAD_NAME = "niord-mailinglist-drain";
+
+    /**
+     * Where the drains run: by default a worker of the listener's own, one daemon thread named
+     * {@value #DRAIN_THREAD_NAME}, shared with nothing else
+     */
+    private final Executor drainWorker;
+
+    /** A drain was handed to the worker and has not started yet: no further one is handed over meanwhile */
+    private final AtomicBoolean drainQueued = new AtomicBoolean();
+
+    /** The context is closing: the drain takes no further row, and no drain is handed over */
+    private volatile boolean stopping;
+
+    /** How long the close waits for a drain in flight to end its row (tests set it low) */
+    long stopWaitMillis = Duration.ofSeconds(10).toMillis();
+
+    @Autowired
     MailingListMessageListener(MailingListService mailingListService, MailingListExecutionService mailingListExecutionService,
                                MailingListStatusChangeOutbox outbox, ConnectionFactory connectionFactory) {
+        this(mailingListService, mailingListExecutionService, outbox, connectionFactory, newDrainWorker());
+    }
+
+    /** With the given worker for the drains (tests pass one that runs them on the caller's thread) */
+    MailingListMessageListener(MailingListService mailingListService, MailingListExecutionService mailingListExecutionService,
+                               MailingListStatusChangeOutbox outbox, ConnectionFactory connectionFactory,
+                               Executor drainWorker) {
         this.mailingListService = mailingListService;
         this.mailingListExecutionService = mailingListExecutionService;
         this.outbox = outbox;
         this.connectionFactory = connectionFactory;
+        this.drainWorker = drainWorker;
+    }
+
+    /**
+     * One daemon thread, so a drain that hangs never holds the JVM, with a queue of one: {@link #requestDrain} hands
+     * over at most one drain while another runs, and the queue refuses a second rather than grow
+     */
+    private static ExecutorService newDrainWorker() {
+        ThreadFactory threads = runnable -> {
+            Thread thread = new Thread(runnable, DRAIN_THREAD_NAME);
+            thread.setDaemon(true);
+            return thread;
+        };
+        return new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(1), threads);
     }
 
     @Value("${niord.jms.topic.messagestatustopic:messageStatus}")
@@ -116,19 +173,38 @@ public class MailingListMessageListener implements Runnable {
 
     /**
      * Takes the rows committed before the start (a status change just before a restart, whose topic message no
-     * listener received) at once, then polls the topic. A row committed between this pass and the subscription waits
-     * for the next {@link #sweep}.
+     * listener received) at once, on the drain worker, and polls the topic. A row committed between this pass and the
+     * subscription waits for the next {@link #sweep}.
      */
     @EventListener(ApplicationReadyEvent.class)
     void onStart() {
-        scheduler.submit(() -> drainLogged("at start"));
+        requestDrain("at start");
         scheduler.submit(this);
     }
 
+    /**
+     * Stops the poll loop and the drain worker. The drain takes no further row; the one it runs, if any, is not
+     * interrupted (an interrupted trigger would be recorded in the Mail Queue as failed) and is waited for up to
+     * {@link #stopWaitMillis}. A row still running after that keeps its lease and is taken again once it runs out.
+     */
     @EventListener(ContextClosedEvent.class)
     void onStop() {
+        stopping = true;
         // shutdownNow interrupts the loop, also while it waits to subscribe again
         scheduler.shutdownNow();
+        if (drainWorker instanceof ExecutorService worker) {
+            worker.shutdown();
+            try {
+                if (!worker.awaitTermination(stopWaitMillis, TimeUnit.MILLISECONDS)) {
+                    Running current = running;
+                    log.warn("The status-change mail drain did not end within {} ms of the stop{}", stopWaitMillis,
+                            current == null ? "" : "; the outbox row " + current.claim().id() + " of message "
+                                    + current.claim().messageUid() + " is taken again when its lease runs out");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     @Override
@@ -138,43 +214,75 @@ public class MailingListMessageListener implements Runnable {
     }
 
     /**
-     * A status change was committed: its outbox row is due, so the outbox is drained now. The topic's message is only
-     * the prompt; what is mailed comes from the rows. It is broadcast after the producing transaction commits (see
-     * {@code MessageService.sendStatusUpdate}), so the row and the message are visible here.
+     * A status change was committed: its outbox row is due, so a drain is handed to the worker now, and the poll loop
+     * goes back to the topic at once. The topic's message is only the prompt; what is mailed comes from the rows. It is
+     * broadcast after the producing transaction commits (see {@code MessageService.sendStatusUpdate}), so the row is
+     * visible to the drain. While a drain runs, one more is handed over, which takes the rows committed after the
+     * running one last looked.
      */
     public void onMessage(jakarta.jms.Message message) {
-        try {
-            log.debug("Received a message status update, draining the status-change outbox");
-            drainOutbox();
-        } catch (Throwable e) {
-            log.error("Failed draining the status-change outbox, prompted by a status change on the topic", e);
-        }
+        log.debug("Received a message status update, draining the status-change outbox");
+        requestDrain(PROMPT);
     }
+
+    /** What asks for the drain on the topic's prompt: its drains are logged at DEBUG, one comes with every status change */
+    private static final String PROMPT = "on the status topic's prompt";
 
     /**
      * Once a minute (second 23, before the mail sender's run at second 24 and clear of the scheduled triggers' run
-     * at second 37): takes the rows the topic did not prompt for, and the rows whose lease ran out. When a drain is
-     * already running on this node it returns at once: that drain takes every due row. It warns when that drain has
-     * run one row for a long time ({@link #warnIfStuck}).
+     * at second 37): takes the rows the topic did not prompt for, and the rows whose lease ran out. It runs on the
+     * shared scheduler, so it only hands the drain to the worker and returns at once. When a drain is already running
+     * or waiting on this node it hands over none (that drain takes every due row, and the next minute's sweep the rows
+     * that come due after it), and warns when the running drain has run one row for a long time
+     * ({@link #warnIfStuck}).
      */
     @Scheduled(cron = "${niord.mailinglist.status-change-sweep-cron:23 * * * * ?}")
     void sweep() {
-        if (!drainLock.tryLock()) {
+        if (drainLock.isLocked() || drainQueued.get()) {
             warnIfStuck();
             return;
         }
+        requestDrain("by the sweep");
+    }
+
+    /**
+     * Hands a drain to the worker, unless one is already waiting there: that one has not started, so it will take
+     * every row committed before this call. So at most one drain waits behind the running one, however often a drain
+     * is asked for. Returns at once.
+     *
+     * @param when for the log: what asked for the drain
+     */
+    void requestDrain(String when) {
+        if (stopping || !drainQueued.compareAndSet(false, true)) {
+            return;
+        }
         try {
-            drainLogged("by the sweep");
-        } finally {
-            drainLock.unlock();
+            drainWorker.execute(() -> {
+                drainQueued.set(false);
+                drainLogged(when);
+            });
+        } catch (RejectedExecutionException e) {
+            // The worker has stopped (the context is closing); the rows stay for the next start
+            drainQueued.set(false);
+            log.debug("No status-change outbox drain {}: the drain worker has stopped", when);
         }
     }
 
-    /** {@link #drainOutbox}, with a failure logged rather than thrown (the start and the sweep) */
+    /** Whether a drain waits on the worker and has not started yet (for the tests) */
+    boolean drainQueued() {
+        return drainQueued.get();
+    }
+
+    /**
+     * {@link #drainOutbox}, with a failure logged rather than thrown: it runs on the worker, which a failure never
+     * stops
+     */
     private void drainLogged(String when) {
         try {
             int done = drainOutbox();
-            if (done > 0) {
+            if (done > 0 && PROMPT.equals(when)) {
+                log.debug("Made the mailing lists' mails of {} status change(s) {}", done, when);
+            } else if (done > 0) {
                 log.info("Made the mailing lists' mails of {} status change(s) {}", done, when);
             }
         } catch (Throwable e) {
@@ -197,7 +305,7 @@ public class MailingListMessageListener implements Runnable {
         drainLock.lock();
         try {
             int done = 0;
-            while (!scheduler.isShutdown()) {
+            while (!stopping) {
                 // Once the context closes no further row is taken: a row taken now would wait out its lease after the
                 // stop, rather than be taken by the next start's pass
                 Optional<Claim> next = outbox.claimNextDue();

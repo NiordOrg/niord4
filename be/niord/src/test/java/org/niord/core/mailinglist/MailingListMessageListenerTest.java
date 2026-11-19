@@ -49,7 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * when an individual trigger execution fails (the per-trigger error is logged and recorded in the Mail Queue, so one
  * bad trigger cannot block the rest, an {@link Error} included), and the row is then deleted all the same; a row taken
  * more often than the outbox's bound is given up with a record per trigger; the sweep warns while one row holds the
- * drain.
+ * drain; the sweep and the JMS prompt only hand the drain to the listener's own worker, and return while a trigger
+ * hangs, with at most one drain waiting behind the running one.
  *
  * <p>No broker or database is involved: the listener is exercised as a plain object with hand-written recording
  * {@link MailingListService} / {@link MailingListExecutionService} / {@link MailingListStatusChangeOutbox} doubles.
@@ -70,8 +71,10 @@ public class MailingListMessageListenerTest {
         executionService = new RecordingMailingListExecutionService();
         outbox = new RecordingOutbox();
         // The listener's collaborators are wired via a package-private constructor. We pass the recording doubles
-        // and `null` for the ConnectionFactory, which only the JMS consumer loop uses (out of scope here).
-        listener = new MailingListMessageListener(mailingListService, executionService, outbox, null);
+        // and `null` for the ConnectionFactory, which only the JMS consumer loop uses (out of scope here). The drains
+        // the prompt and the sweep hand over run on the caller's thread here, so a test sees their outcome when the
+        // call returns; the tests of the listener's own worker build a listener with it (newWithItsOwnWorker).
+        listener = new MailingListMessageListener(mailingListService, executionService, outbox, null, Runnable::run);
         // PORT: the listener's `log` is now `private static final` (Spring port) and can no longer
         // be replaced with a test logger. The per-trigger error is swallowed and only logged, so the
         // logger has no observable effect on the dispatch contract under test; we let the real logger
@@ -377,6 +380,140 @@ public class MailingListMessageListenerTest {
     }
 
     // --------------------------------------------------------------------------------------------- //
+    // The listener's own drain worker
+    // --------------------------------------------------------------------------------------------- //
+
+    /** A listener on the recording doubles with its real drain worker, which every test stops at its end */
+    private MailingListMessageListener newWithItsOwnWorker() {
+        return new MailingListMessageListener(mailingListService, executionService, outbox, null);
+    }
+
+    /**
+     * The sweep runs on the scheduler every {@code @Scheduled} job shares (the publication and expiry of messages, the
+     * mail sender): it hands the drain to the listener's own worker and returns at once, also while a trigger of that
+     * drain hangs, and sweeps meanwhile hand over no further drain. FAILS on the code that ran the drain in the sweep
+     * itself: the first sweep then waits for the hanging trigger.
+     */
+    @Test
+    public void theSweepReturnsAtOnceWhileATriggerOfItsDrainHangsAndQueuesNoFurtherDrain() throws Exception {
+        mailingListService.triggers = triggers(1);
+        executionService.entered = new CountDownLatch(1);
+        executionService.release = new CountDownLatch(1);
+        outbox.drainEnded = new CountDownLatch(1);
+        outbox.due.add(new Claim(21, "uid-21", Status.PUBLISHED));
+        MailingListMessageListener own = newWithItsOwnWorker();
+        try {
+            assertTimeoutPreemptively(Duration.ofSeconds(2), own::sweep, "the sweep returns while the trigger hangs");
+            assertTrue(executionService.entered.await(10, TimeUnit.SECONDS), "the trigger runs");
+            assertEquals(List.of(MailingListMessageListener.DRAIN_THREAD_NAME), executionService.threadNames,
+                    "on the listener's own worker, not on the caller's thread");
+
+            assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
+                own.sweep();
+                own.sweep();
+            }, "later sweeps return at once too");
+            assertFalse(own.drainQueued(), "and hand over no further drain while one runs");
+            assertEquals(0, outbox.emptyClaims.get(), "the running drain has not ended");
+
+            executionService.release.countDown();
+            assertTrue(outbox.drainEnded.await(10, TimeUnit.SECONDS), "the drain ends once the trigger does");
+            assertEquals(List.of(21L), outbox.completed, "and deletes its row");
+        } finally {
+            executionService.release.countDown();
+            own.onStop();
+        }
+        assertEquals(1, outbox.emptyClaims.get(), "one drain ran: the sweeps during it piled up no work");
+        assertFalse(executionService.interrupted, "the trigger was not interrupted");
+    }
+
+    /**
+     * The JMS poll loop hands its drains to the worker too, and is back at the topic at once while a trigger hangs.
+     * However many status changes are announced meanwhile, ONE drain waits behind the running one (it takes the rows
+     * committed after the running drain last looked), not one per prompt.
+     */
+    @Test
+    public void promptsWhileADrainRunsQueueExactlyOneFurtherDrain() throws Exception {
+        mailingListService.triggers = triggers(1);
+        executionService.entered = new CountDownLatch(1);
+        executionService.release = new CountDownLatch(1);
+        outbox.drainEnded = new CountDownLatch(2);
+        outbox.due.add(new Claim(22, "uid-22", Status.PUBLISHED));
+        MailingListMessageListener own = newWithItsOwnWorker();
+        try {
+            own.onMessage(null);
+            assertTrue(executionService.entered.await(10, TimeUnit.SECONDS), "the prompt's drain runs");
+
+            assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
+                own.onMessage(null);
+                own.onMessage(null);
+                own.onMessage(null);
+            }, "the poll loop is not held by the hanging trigger");
+            assertTrue(own.drainQueued(), "one further drain waits");
+            assertTimeoutPreemptively(Duration.ofSeconds(2), own::sweep, "and the sweep adds none beside it");
+
+            executionService.release.countDown();
+            assertTrue(outbox.drainEnded.await(10, TimeUnit.SECONDS), "the running drain and the waiting one end");
+            assertFalse(own.drainQueued());
+        } finally {
+            executionService.release.countDown();
+            own.onStop();
+        }
+        assertEquals(2, outbox.emptyClaims.get(), "two drains ran, not one per prompt");
+        assertEquals(List.of(22L), outbox.completed);
+    }
+
+    /** A drain that fails (here the outbox cannot be read) is logged and leaves the worker able to run the next one */
+    @Test
+    public void aDrainThatFailsLeavesTheWorkerRunning() throws Exception {
+        mailingListService.triggers = triggers(1);
+        outbox.failNextClaims.set(1);
+        outbox.claimFailed = new CountDownLatch(1);
+        outbox.drainEnded = new CountDownLatch(1);
+        outbox.due.add(new Claim(23, "uid-23", Status.PUBLISHED));
+        MailingListMessageListener own = newWithItsOwnWorker();
+        try {
+            own.sweep();
+            assertTrue(outbox.claimFailed.await(10, TimeUnit.SECONDS), "the first drain fails");
+            own.onMessage(null);
+            assertTrue(outbox.drainEnded.await(10, TimeUnit.SECONDS), "the next drain runs");
+        } finally {
+            own.onStop();
+        }
+        assertEquals(List.of(23L), outbox.completed, "and takes the row");
+        assertEquals(List.of(MailingListMessageListener.DRAIN_THREAD_NAME), executionService.threadNames);
+    }
+
+    /**
+     * The close does not interrupt a drain in flight (an interrupted trigger would be recorded as failed) and waits
+     * for it only a short while; the drain takes no further row after it, so that row is left for the next start.
+     */
+    @Test
+    public void theCloseNeitherInterruptsADrainInFlightNorLetsItTakeAFurtherRow() throws Exception {
+        mailingListService.triggers = triggers(1);
+        executionService.entered = new CountDownLatch(1);
+        executionService.release = new CountDownLatch(1);
+        outbox.due.add(new Claim(24, "uid-24", Status.PUBLISHED));
+        outbox.due.add(new Claim(25, "uid-25", Status.PUBLISHED));
+        MailingListMessageListener own = newWithItsOwnWorker();
+        own.stopWaitMillis = 50;
+        try {
+            own.sweep();
+            assertTrue(executionService.entered.await(10, TimeUnit.SECONDS), "the trigger runs");
+            assertTimeoutPreemptively(Duration.ofSeconds(2), own::onStop, "the close waits only a short while");
+            assertFalse(executionService.interrupted, "and does not interrupt the trigger");
+            own.requestDrain("after the close");
+            assertFalse(own.drainQueued(), "no drain is handed over after the close");
+        } finally {
+            executionService.release.countDown();
+            own.stopWaitMillis = 10_000;
+            own.onStop(); // waits for the drain in flight to end
+        }
+        assertEquals(List.of(24L), outbox.completed, "the row in flight ran to its end");
+        assertEquals(List.of(25L), outbox.due.stream().map(Claim::id).toList(),
+                "and the next row was left for the next start");
+    }
+
+    // --------------------------------------------------------------------------------------------- //
 
     private static List<MailingListTrigger> triggers(Integer... ids) {
         List<MailingListTrigger> list = new ArrayList<>();
@@ -431,9 +568,31 @@ public class MailingListMessageListenerTest {
             throw new UnsupportedOperationException("the listener never writes a row");
         }
 
+        /** How many claims found no due row: one at the end of every drain that ran to its end */
+        final AtomicInteger emptyClaims = new AtomicInteger();
+        /** When set, counted down at every claim that finds no due row */
+        volatile CountDownLatch drainEnded;
+        /** How many of the next claims throw */
+        final AtomicInteger failNextClaims = new AtomicInteger();
+        /** When set, counted down at every claim that throws */
+        volatile CountDownLatch claimFailed;
+
         @Override
         public Optional<Claim> claimNextDue() {
-            return Optional.ofNullable(due.poll());
+            if (failNextClaims.getAndUpdate(n -> Math.max(0, n - 1)) > 0) {
+                if (claimFailed != null) {
+                    claimFailed.countDown();
+                }
+                throw new IllegalStateException("simulated outbox read failure");
+            }
+            Optional<Claim> next = Optional.ofNullable(due.poll());
+            if (next.isEmpty()) {
+                emptyClaims.incrementAndGet();
+                if (drainEnded != null) {
+                    drainEnded.countDown();
+                }
+            }
+            return next;
         }
 
         boolean failComplete;
@@ -464,6 +623,10 @@ public class MailingListMessageListenerTest {
         /** When set, each execution counts it down and waits for {@link #release} */
         CountDownLatch entered;
         CountDownLatch release;
+        /** The threads the executions ran on */
+        final List<String> threadNames = new CopyOnWriteArrayList<>();
+        /** Whether an execution was interrupted while it waited for {@link #release} */
+        volatile boolean interrupted;
 
         // PORT: MailingListExecutionService now has only a constructor-injection constructor
         // (NiordApp, MessageSearchService, MessageQueryService, FmTemplateService, JsResourceService,
@@ -476,9 +639,15 @@ public class MailingListMessageListenerTest {
         @Override
         public void executeStatusChangeTrigger(Integer triggerId, String messageUid) throws Exception {
             attemptedTriggerIds.add(triggerId);
+            threadNames.add(Thread.currentThread().getName());
             if (entered != null) {
                 entered.countDown();
-                release.await(10, TimeUnit.SECONDS);
+                try {
+                    release.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                    throw e;
+                }
             }
             if (failForTriggerId != null && failForTriggerId.equals(triggerId)) {
                 throw new Exception("simulated trigger failure for " + triggerId);
