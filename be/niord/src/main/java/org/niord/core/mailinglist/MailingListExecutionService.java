@@ -103,7 +103,9 @@ public class MailingListExecutionService extends BaseService {
 
     private final MessageSeriesService messageSeriesService;
 
-    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService) {
+    private final MailingListStatusChangeOutbox statusChangeOutbox;
+
+    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService, MailingListStatusChangeOutbox statusChangeOutbox) {
         this.app = app;
         this.messageSearchService = messageSearchService;
         this.messageQueryService = messageQueryService;
@@ -111,6 +113,7 @@ public class MailingListExecutionService extends BaseService {
         this.javaScriptService = javaScriptService;
         this.dictionaryService = dictionaryService;
         this.messageSeriesService = messageSeriesService;
+        this.statusChangeOutbox = statusChangeOutbox;
     }
 
     /***************************************/
@@ -118,13 +121,17 @@ public class MailingListExecutionService extends BaseService {
     /***************************************/
 
     /**
-     * Executes the status change mailing list trigger for the given message
+     * Executes the status change mailing list trigger for the given message, for a row of the mailing lists' outbox of
+     * status changes: its mails are queued and the trigger is marked settled on the row
+     * ({@link MailingListStatusChangeOutbox#settle}) in this one transaction, so the row knows exactly when the mails
+     * were committed. Any failure rolls back both.
      *
      * @param triggerId the ID of the status change mailing list trigger to execute
      * @param messageUid the message UID to execute the trigger for
+     * @param statusChangeId the id of the outbox row the trigger is executed for
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void executeStatusChangeTrigger(Integer triggerId, String messageUid) throws Exception {
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public void executeStatusChangeTrigger(Integer triggerId, String messageUid, long statusChangeId) throws Exception {
 
         // Look up the trigger
         MailingListTrigger trigger = getByPrimaryKey(MailingListTrigger.class, triggerId);
@@ -139,26 +146,37 @@ public class MailingListExecutionService extends BaseService {
         }
 
         executeStatusChangeTrigger(trigger, message, true);
+
+        // Last, in the transaction of the mails: the trigger is settled exactly when its mails are committed
+        statusChangeOutbox.settle(statusChangeId, triggerId);
     }
 
     /**
-     * Records that a status-change trigger failed for a message, as one mail in the Mail Queue in status ERROR.
+     * Records that a status-change trigger failed for a message, as one mail in the Mail Queue in status ERROR, and
+     * marks the trigger settled on the outbox row ({@link MailingListStatusChangeOutbox#settle}) in the same
+     * transaction: a record that cannot be saved leaves the trigger owed, and the row is kept and run again.
      * <p>
      * The mail is never sent: only PENDING mails are sent, and nothing turns an ERROR mail PENDING. It holds the
      * recipients of the trigger's mailing list, a subject naming the list and the message, a short note naming the
      * trigger, the message and the cause, and the cause as its last error, so the Mail Queue shows the mail that was
-     * due and why it was not made. The daily expiry of old mails removes it like any other mail.
+     * due and why it was not made. The daily expiry of old mails removes it like any other mail. A trigger or list that
+     * is gone gets no record, and is settled: there is nothing left to make.
      *
      * @param triggerId the ID of the status-change trigger that failed
      * @param messageUid the UID of the message the trigger was executed for
      * @param cause the failure
+     * @param statusChangeId the id of the outbox row the trigger was executed for
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordStatusChangeTriggerFailure(Integer triggerId, String messageUid, Exception cause) throws IOException {
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public void recordStatusChangeTriggerFailure(Integer triggerId, String messageUid, Exception cause,
+                                                 long statusChangeId) throws IOException {
 
         MailingListTrigger trigger = triggerId == null ? null : getByPrimaryKey(MailingListTrigger.class, triggerId);
         if (trigger == null || trigger.getMailingList() == null) {
             log.warn("No failure record for status-change trigger " + triggerId + ": the trigger or its list is gone");
+            if (triggerId != null) {
+                statusChangeOutbox.settle(statusChangeId, triggerId);
+            }
             return;
         }
         MailingList mailingList = trigger.getMailingList();
@@ -178,6 +196,9 @@ public class MailingListExecutionService extends BaseService {
                                 ? " (" + HtmlUtils.htmlEscape(messageUid) + ")" : "")
                         + ", so its mail was not made and is not sent.</p>",
                 error);
+
+        // Last, in the transaction of the record: the trigger is settled exactly when its record is committed
+        statusChangeOutbox.settle(statusChangeId, triggerId);
     }
 
     /**

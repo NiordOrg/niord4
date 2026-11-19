@@ -754,7 +754,7 @@ class MailingListExecutionServiceITTest extends ITTest {
     @Transactional
     void executeStatusChangeTriggerByUnknownIdThrows() {
         assertThrows(IllegalArgumentException.class,
-                () -> executionService.executeStatusChangeTrigger(Integer.MAX_VALUE, "nope"),
+                () -> executionService.executeStatusChangeTrigger(Integer.MAX_VALUE, "nope", 0L),
                 "an unknown status-change-trigger id must be rejected");
     }
 

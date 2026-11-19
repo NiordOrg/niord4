@@ -8,9 +8,12 @@
 -- so the table is empty but for the moments in between.
 --
 -- dueAt is when the row may next be taken: at first the status change's time; while a node runs the row's triggers,
--- the end of that node's lease, so no other node takes it; after a failure, the same lease end, when it is tried
--- again. attempts counts the takes, lastError holds the last failure. Times are with time zone, so no node's JVM zone
--- reads them. The identity id is the order the rows are taken in; the table never holds sample rows.
+-- the end of that node's lease, so no other node takes it; after a failure, a few minutes on, when it is tried
+-- again. attempts counts the takes, lastError holds the last failure. settledTriggers holds the ids of the row's
+-- triggers that are settled (their mails queued, or their failure recorded in the Mail Queue), each written in the
+-- transaction of those mails or that record: a row is deleted only when every trigger is settled, and a later take
+-- runs only the triggers still owed. Times are with time zone, so no node's JVM zone reads them. The identity id is
+-- the order the rows are taken in; the table never holds sample rows.
 --
 -- Schema only, no data (D2). Once applied this changeset is never edited, its comments included: every database
 -- records its checksum, which ChangelogChecksumPinTest pins.
@@ -22,6 +25,7 @@ CREATE TABLE public."MailingListStatusChange" (
     "dueAt" timestamp(6) with time zone NOT NULL,
     attempts integer DEFAULT 0 NOT NULL,
     "lastError" text,
+    "settledTriggers" integer[] DEFAULT '{}'::integer[] NOT NULL,
     CONSTRAINT "MailingListStatusChange_pkey" PRIMARY KEY (id)
 );
 CREATE INDEX "MailingListStatusChange_due_idx" ON public."MailingListStatusChange" ("dueAt", id);

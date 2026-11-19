@@ -69,6 +69,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -489,6 +490,59 @@ class MailingListDeliveryFaultITTest extends ITTest {
 
             listener.drainOutbox();
             assertEquals(1, mailsWithSubject(subject), "a second drain makes no second mail");
+        } finally {
+            drains.unlock();
+        }
+    }
+
+    /**
+     * A node that stops after a trigger's mails are committed and before the row is deleted (here the test runs the
+     * trigger for the row itself and leaves the row, then makes it due again, as when its lease runs out). The trigger
+     * is marked settled on the row in the transaction of its mails, so the next take reads it as settled, runs nothing
+     * and deletes the row: the list gets one mail. FAILS on the code that ran every trigger of a row taken again (the
+     * mail was made twice).
+     */
+    @Test
+    void aTriggerWhoseMailsWereCommittedIsNotRunAgainWhenItsRowIsTakenAgain() {
+        String n = Long.toString(System.nanoTime(), 36);
+        String uid = committedDraft("IT settled " + n);
+        Integer list = committedListWithOneContact(n);
+        String subject = "IT-SETTLED-" + n;
+        addStatusChangeTrigger(list, subject, IT_TEMPLATE, uid);
+        Integer triggerId = Tx.requiringNew().call(() -> em.createQuery(
+                        "select t.id from MailingListTrigger t where t.mailingList.id = :list", Integer.class)
+                .setParameter("list", list).getSingleResult());
+
+        ReentrantLock drains = drainLock();
+        drains.lock();
+        try {
+            publish(uid);
+            long id = Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
+                            "SELECT id FROM public.\"MailingListStatusChange\" WHERE \"messageUid\" = :uid "
+                                    + "AND status = 'PUBLISHED'")
+                    .setParameter("uid", uid).getSingleResult()).longValue());
+            MailingListStatusChangeOutbox.Claim first = claimOwn(id).orElseThrow();
+            assertEquals(Set.of(), first.settledTriggers(), "nothing is settled at the first take");
+
+            // The run's one trigger commits its mail, and the node stops before the row is deleted
+            assertDoesNotThrow(() -> executionService.executeStatusChangeTrigger(triggerId, uid, id));
+            assertEquals(1, mailsWithSubject(subject), "the mail is queued");
+
+            // The lease runs out
+            Tx.requiringNew().run(() -> em.createNativeQuery(
+                            "UPDATE public.\"MailingListStatusChange\" SET \"dueAt\" = now() WHERE id = :id")
+                    .setParameter("id", id).executeUpdate());
+            MailingListStatusChangeOutbox.Claim again = claimOwn(id).orElseThrow();
+            assertEquals(Set.of(triggerId), again.settledTriggers(), "the next take reads the trigger as settled");
+            assertEquals(2, again.attempts());
+            // Both rows of the publication due again (the take above may have leased the VERIFIED one on its way)
+            Tx.requiringNew().run(() -> em.createNativeQuery(
+                            "UPDATE public.\"MailingListStatusChange\" SET \"dueAt\" = now() WHERE \"messageUid\" = :uid")
+                    .setParameter("uid", uid).executeUpdate());
+
+            listener.drainOutbox();
+            assertEquals(1, mailsWithSubject(subject), "and the drain makes no second mail");
+            assertEquals(List.of(), outboxRows(uid), "it deletes the row");
         } finally {
             drains.unlock();
         }

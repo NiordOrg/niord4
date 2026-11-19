@@ -288,13 +288,15 @@ Behaviour that was deliberately left out of the service/REST `*ITTest`s added fo
   `drainOutbox()` and `sweep()` (which only hands the drain to the worker and returns at once, also while a trigger
   hangs, with at most one drain waiting behind the running one), `MailingListDeliveryFaultTest` through
   `onStart()` before its poll loop, and `MailingListMessageListenerTest` calls
-  `checkStatusChangeMailingListExecution(...)` with recording service doubles (every due outbox row taken in order and deleted after its triggers; a row whose triggers cannot be looked
+  `checkStatusChangeMailingListExecution(...)` with recording service doubles (every due outbox row taken in order and deleted once each trigger is settled; a row whose triggers cannot be looked
   up kept for the next pass; each trigger executed once for the message UID; a failing trigger does not abort the
-  rest), and `TwitterMessageListenerTest` calls `onMessage(...)` with a `FakeMapMessage` (only `PUBLISHED`
+  rest; a trigger whose mails and failure record both fail keeps the row, and the next take runs only the triggers
+  still owed), and `TwitterMessageListenerTest` calls `onMessage(...)` with a `FakeMapMessage` (only `PUBLISHED`
   promulgates; the UID is forwarded; malformed/non-`MapMessage` payloads are swallowed). The broker delivery
   these methods consume is exercised separately (`MessageStatusTopicITTest`, `MessageStatusPublishITTest`), and
   the mailing lists' outbox on the database (`MailingListStatusChangeOutbox`: the row written with the status
-  change, mailed by a drain when the broker was down, gone with a rolled-back status change, held by its lease) by
+  change, mailed by a drain when the broker was down, gone with a rolled-back status change, held by its lease, a
+  trigger whose mails were committed read as settled when its row is taken again) by
   `MailingListDeliveryFaultITTest`, whose status-change cases also run the live path end to end with Awaitility.
 - **What is still open:** migrating the ad-hoc consumer loops to Spring `@JmsListener` would remove the
   remaining hand-rolled executor plumbing. Since 2026-11-13 the three loops' subscribe, receive and reconnect

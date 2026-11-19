@@ -53,13 +53,17 @@ trigger, since the mail may list too few messages.
 
 Niord notes every status change of a message in its database, together with the change, until the mails of the
 status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts
-just after the change: at once when the server is up again, or within a minute. When the server stops while it is
-putting a status change's mails in the queue, that status change is taken again ten minutes later, and some of its
-mails may then be put in twice. A status change taken again is mailed for the status it had, so its mail can arrive
-after the mail of a later status change of the same message, for example a cancellation. A status change that could
-not be finished in five attempts (the server stopped, a trigger hung, or the database could not be reached, each
-time) is given up: each of its status change triggers leaves a mail with the status _Error_, as above, whose last
-error says it was given up, and the server log has an ERROR naming the message.
+just after the change: at once when the server is up again, or within a minute. Niord also notes, for each status
+change, which of its triggers are done: their mails are in the queue, or their failure is (the mail with the status
+_Error_ above). When a trigger is neither, for example because the database could not be reached for a moment, the
+status change is kept and tried again a few minutes later, and only the triggers not yet done are run again: the
+mailing lists that got their mail do not get it twice. When the server stops while it is putting a status change's
+mails in the queue, that status change is taken again ten minutes later, in the same way. A status change taken
+again is mailed for the status it had, so its mail can arrive after the mail of a later status change of the same
+message, for example a cancellation. A status change that could not be finished in five attempts (the server
+stopped, a trigger hung, or the database could not be reached, each time) is given up: each of its status change
+triggers not yet done leaves a mail with the status _Error_, as above, whose subject names its mailing list and whose
+last error says it was given up, and the server log has an ERROR naming the message.
 
 The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>):
 

@@ -26,8 +26,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The mailing lists' outbox of status changes (table {@code "MailingListStatusChange"}, changeset V012): the durable
@@ -40,12 +42,16 @@ import java.util.Optional;
  * takes the due rows one at a time ({@link #claimNextDue}), runs their triggers and deletes them ({@link #complete}),
  * when the topic prompts it, once a minute and once at start.
  * <p>
- * Delivery is at least once: a node stopped after some of a row's triggers made their mails, and before the row was
- * deleted, makes those mails again when the row's lease runs out; so does a failure to delete the row after its
- * triggers ran ({@link #complete}, the database lost for a moment). A duplicate mail is rare and far safer for a
- * navigational warning than a lost one. A row is run at most {@link #MAX_ATTEMPTS} times: a row whose run keeps
- * failing, hangs or stops the server is then given up, with a record in the Mail Queue, so its mails are not made
- * again and again. A row whose status is not a {@link Status} has no such bound (its triggers never run).
+ * Each row records which of its status's triggers are settled ({@code "settledTriggers"}): a trigger is settled when its
+ * mails are queued, or when its failure is recorded in the Mail Queue, and {@link #settle} writes the mark in that
+ * same transaction, so the mark commits exactly when the mails or the record do. A row is deleted only once every
+ * trigger is settled; a run that leaves a trigger owed (its mails failed and so did its failure record) keeps the row,
+ * and a later run runs only the triggers still owed. So a node stopped in the middle of a row, or a failed delete,
+ * makes no trigger's mails twice, and no trigger is dropped unsettled. One duplicate is left: two nodes running the
+ * same trigger of a row at once, which takes a trigger that runs longer than the row's {@link #claimLease lease} (the
+ * other node then takes the row again); the chart runs one node. A row is run at most {@link #MAX_ATTEMPTS} times: a
+ * row whose run keeps failing, hangs or stops the server is then given up, and each trigger still owed leaves a record
+ * in the Mail Queue. A row whose status is not a {@link Status} has no such bound (its triggers never run).
  * <p>
  * Native SQL only, like {@code DefaultsLedger}: the table has no entity, and its identity id draws on no shared
  * sequence. It depends on nothing in {@code org.niord.core.message}, so {@code MessageService} uses it without a cycle.
@@ -54,10 +60,19 @@ import java.util.Optional;
 public class MailingListStatusChangeOutbox {
 
     /**
-     * A row taken for its triggers: its id, the message and status of the status change, and how many times the row
-     * has been taken, this time included
+     * A row taken for its triggers: its id, the message and status of the status change, how many times the row has
+     * been taken, this time included, and the ids of the triggers already settled by an earlier take
      */
-    public record Claim(long id, String messageUid, Status status, int attempts) {
+    public record Claim(long id, String messageUid, Status status, int attempts, Set<Integer> settledTriggers) {
+
+        public Claim {
+            settledTriggers = Set.copyOf(settledTriggers);
+        }
+
+        /** A row taken for the given time, no trigger settled */
+        public Claim(long id, String messageUid, Status status, int attempts) {
+            this(id, messageUid, status, attempts, Set.of());
+        }
 
         /** A row taken for the first time */
         public Claim(long id, String messageUid, Status status) {
@@ -67,8 +82,8 @@ public class MailingListStatusChangeOutbox {
 
     /**
      * How many times a row's triggers are run at most. A row taken more often than this (its run failed every time,
-     * hung, or stopped the server) is given up: {@code MailingListMessageListener} records it in the Mail Queue and
-     * deletes it, without running its triggers again.
+     * hung, or stopped the server) is given up: {@code MailingListMessageListener} records each trigger still owed in
+     * the Mail Queue and deletes it, without running its triggers again.
      */
     public static final int MAX_ATTEMPTS = 5;
 
@@ -126,7 +141,8 @@ public class MailingListStatusChangeOutbox {
     public Optional<Claim> claimNextDue() {
         while (true) {
             @SuppressWarnings("unchecked")
-            List<Object[]> rows = em.createNativeQuery("SELECT id, \"messageUid\", status, attempts "
+            List<Object[]> rows = em.createNativeQuery("SELECT id, \"messageUid\", status, attempts, "
+                            + "array_to_string(\"settledTriggers\", ',') "
                             + "FROM public.\"MailingListStatusChange\" WHERE \"dueAt\" <= now() "
                             + "ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED")
                     .getResultList();
@@ -138,6 +154,7 @@ public class MailingListStatusChangeOutbox {
             String messageUid = (String) row[1];
             String status = (String) row[2];
             int attempts = ((Number) row[3]).intValue() + 1;
+            Set<Integer> settled = parseTriggerIds((String) row[4]);
             // The lease first: a row whose status cannot be read is then no longer due, and the next pass of this
             // loop takes the row after it
             write("UPDATE public.\"MailingListStatusChange\" "
@@ -148,13 +165,44 @@ public class MailingListStatusChangeOutbox {
                     .executeUpdate();
             Optional<Status> known = knownStatus(status);
             if (known.isPresent()) {
-                return Optional.of(new Claim(id, messageUid, known.get(), attempts));
+                return Optional.of(new Claim(id, messageUid, known.get(), attempts, settled));
             }
             String error = "Unknown message status '" + status + "'";
             log.error("Skipped the status-change outbox row {} of message {}: {}; tried again when its lease runs out",
                     id, messageUid, error);
             recordError(id, error);
         }
+    }
+
+    /** The trigger ids of {@code array_to_string("settledTriggers", ',')}: none for an empty or null text */
+    private static Set<Integer> parseTriggerIds(String ids) {
+        Set<Integer> parsed = new LinkedHashSet<>();
+        if (ids != null && !ids.isBlank()) {
+            for (String id : ids.split(",")) {
+                parsed.add(Integer.valueOf(id.trim()));
+            }
+        }
+        return parsed;
+    }
+
+    /**
+     * Marks a trigger of the row as settled: its mails are queued, or its failure is recorded in the Mail Queue (or
+     * the trigger is gone, and there is nothing to make). It MUST run in the transaction that queues those mails or
+     * saves that record ({@code MailingListExecutionService.executeStatusChangeTrigger} and
+     * {@code recordStatusChangeTriggerFailure}), so the mark commits or rolls back with them: a later take of the row
+     * then runs this trigger again exactly when its mails or its record were not committed.
+     *
+     * @param id the id of the row taken
+     * @param triggerId the id of the trigger settled
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void settle(long id, int triggerId) {
+        write("UPDATE public.\"MailingListStatusChange\" "
+                        + "SET \"settledTriggers\" = array_append(\"settledTriggers\", :trigger) "
+                        + "WHERE id = :id AND NOT (:trigger = ANY (\"settledTriggers\"))")
+                .setParameter("trigger", triggerId)
+                .setParameter("id", id)
+                .executeUpdate();
     }
 
     /** The status of the given name, or nothing when no status has it */
@@ -168,8 +216,8 @@ public class MailingListStatusChangeOutbox {
     }
 
     /**
-     * Deletes the row once its triggers have run, each of them made its mails or recorded its failure in the Mail
-     * Queue.
+     * Deletes the row once every one of its triggers is settled ({@link #settle}): each made its mails or recorded its
+     * failure in the Mail Queue.
      *
      * @param id the id of the row taken
      */
@@ -181,9 +229,10 @@ public class MailingListStatusChangeOutbox {
     }
 
     /**
-     * Records why the row's triggers could not be run (the triggers could not be looked up, the database was down).
-     * Nothing runs the row any more, so it does not wait out the lease it was taken with: it is due again after as
-     * many minutes as it has been taken (at most the ten of the lease), and the next sweep takes it then.
+     * Records why the row is kept: its triggers could not be looked up (the database was down), or some of them are
+     * still owed (neither their mails nor their failure record could be saved), or the server stopped before it ran
+     * them all. Nothing runs the row any more, so it does not wait out the lease it was taken with: it is due again
+     * after as many minutes as it has been taken (at most the ten of the lease), and the next sweep takes it then.
      *
      * @param id the id of the row taken
      * @param error what failed
