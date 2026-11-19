@@ -14,6 +14,12 @@ import {
   provideTestNiordConfig,
 } from '../../../../testing/test-config';
 
+/**
+ * The dialog and the CDK's overlay are fetched on demand, and the first fetch in a run compiles
+ * them: on a busy machine that takes longer than waitFor's default second.
+ */
+const DIALOG_FETCH = { timeout: 5000 };
+
 describe('MessageDetailsViewComponent', () => {
   function setUp(routeParams: Record<string, string>, address = '/messages/details') {
     const store = fakeMessagesStore({
@@ -53,7 +59,7 @@ describe('MessageDetailsViewComponent', () => {
     const { dialogSpy } = setUp({ messageId: 'msg-2' }, '/messages/details/message/msg-2');
 
     // The dialog and the CDK's overlay are fetched on demand, so the open lands a tick later.
-    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled());
+    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled(), DIALOG_FETCH);
     const config = (dialogSpy.open.mock.calls[0] as unknown[])[1] as {
       data: { messageId: string; messageIds: () => string[] };
     };
@@ -66,7 +72,7 @@ describe('MessageDetailsViewComponent', () => {
   it('hands the dialog the list itself, which fills in after the dialog has opened', async () => {
     const { dialogSpy, store } = setUp({ messageId: 'msg-2' }, '/messages/details/message/msg-2');
     store.messages.set([]);
-    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled());
+    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled(), DIALOG_FETCH);
     const config = (dialogSpy.open.mock.calls[0] as unknown[])[1] as {
       data: { messageIds: () => string[] };
     };
@@ -85,7 +91,7 @@ describe('MessageDetailsViewComponent', () => {
       { messageId: 'msg-2' },
       '/messages/details/message/msg-2?publicationId=p-1',
     );
-    await vi.waitFor(() => expect(closed.observed).toBe(true));
+    await vi.waitFor(() => expect(closed.observed).toBe(true), DIALOG_FETCH);
 
     closed.next();
     expect(navigate).toHaveBeenCalledWith(['/messages/details'], {
@@ -101,7 +107,7 @@ describe('MessageDetailsViewComponent', () => {
       { messageId: 'msg-2' },
       '/messages/details/message/msg-2',
     );
-    await vi.waitFor(() => expect(closed.observed).toBe(true));
+    await vi.waitFor(() => expect(closed.observed).toBe(true), DIALOG_FETCH);
 
     location.go('/publications');
     closed.next();
@@ -110,7 +116,7 @@ describe('MessageDetailsViewComponent', () => {
 
   /** What the view handed the dialog it opened, once the open has landed. */
   async function openedData(dialogSpy: { open: ReturnType<typeof vi.fn> }) {
-    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled());
+    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled(), DIALOG_FETCH);
     return ((dialogSpy.open.mock.calls[0] as unknown[])[1] as { data: MessageDetailsDialogData })
       .data;
   }
