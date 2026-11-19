@@ -377,15 +377,19 @@ public class BatchRestService {
      * <p>
      * Both folders must lie below the home ({@code niord.home}), where the volume of the days the repository was on
      * disk is mounted; any other folder is refused, since the job reads what it is given into the database.
+     * <p>
+     * The answer names the job it started, so that a script can follow it: its execution id (for
+     * {@code /execution/{id}/...}) and its instance id (for {@code /instance/{id}/logs} and the instance in
+     * {@code /repo-import/instances}), beside the status line the endpoint answered before as {@code message}.
      *
      * @param params the folders, and whether to compare the files that already have a row
-     * @return a status line
+     * @return the job started, and a status line
      */
     @PostMapping(value = "/repo-import",
             consumes = "application/json;charset=UTF-8",
-            produces = "text/plain")
+            produces = "application/json;charset=UTF-8")
     @RolesAllowed(Roles.SYSADMIN)
-    public String repoImport(@RequestBody RepoImportParams params) throws Exception {
+    public BatchJobStarted repoImport(@RequestBody RepoImportParams params) throws Exception {
         if (params == null || StringUtils.isBlank(params.getDir())) {
             throw new NiordWebException("The folder to import, dir, is missing", 400);
         }
@@ -407,10 +411,24 @@ public class BatchRestService {
         log.warn("User " + userService.currentUser().getName() + " started the repository import of " + dir
                 + (archiveDir != null ? " and the archive " + archiveDir : "") + (params.isVerify() ? ", verifying" : ""));
 
-        batchService.startBatchJobWithJsonData(RepoImportService.JOB_NAME, params, "repo-import.json", properties);
+        long executionId = batchService.startBatchJobWithJsonData(
+                RepoImportService.JOB_NAME, params, "repo-import.json", properties);
 
-        return "Started batch job '" + RepoImportService.JOB_NAME + "' of " + dir
-                + (archiveDir != null ? " and " + archiveDir : "");
+        return new BatchJobStarted(RepoImportService.JOB_NAME, executionId, batchService.getInstanceId(executionId),
+                "Started batch job '" + RepoImportService.JOB_NAME + "' of " + dir
+                        + (archiveDir != null ? " and " + archiveDir : ""));
+    }
+
+    /**
+     * The answer of an endpoint that starts a batch job: the job, the ids to follow it by, and a status line
+     *
+     * @param jobName the job's name
+     * @param executionId the id of the execution started
+     * @param instanceId the id of its job instance
+     * @param message the status line
+     */
+    public record BatchJobStarted(String jobName, long executionId, long instanceId, String message)
+            implements IJsonSerializable {
     }
 
     /**

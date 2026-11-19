@@ -355,17 +355,36 @@ class BatchRestServiceITTest extends ITTest {
                 .then().statusCode(400);
     }
 
-    /** An empty folder below the home starts the job, which has nothing to import and verifies the references */
+    /**
+     * An empty folder below the home starts the job, which has nothing to import and verifies the references. The
+     * answer names the job it started, so that a script can follow it to its end and read its log, and still holds
+     * the status line it answered before.
+     */
     @Test
-    void repoImportOfAFolderBelowTheHomeStartsTheJob() throws Exception {
+    void repoImportOfAFolderBelowTheHomeStartsTheJobAndAnswersItsIds() throws Exception {
         Path dir = Files.createDirectories(repoCache.home().resolve("it-repo-import-empty-" + System.nanoTime()));
         try {
-            given().auth().oauth2(accessToken())
+            Response answer = given().auth().oauth2(accessToken())
                     .contentType(ContentType.JSON)
                     .body(Map.of("dir", dir.toString(), "verify", true))
                     .when().post("/rest/batch/repo-import")
                     .then().statusCode(200)
-                    .body(containsString("Started batch job 'repo-import' of " + dir));
+                    .contentType(ContentType.JSON)
+                    .body(containsString("Started batch job 'repo-import' of "))
+                    .extract().response();
+            assertEquals("repo-import", answer.path("jobName"));
+            assertEquals("Started batch job 'repo-import' of " + dir, answer.path("message"));
+            long executionId = answer.jsonPath().getLong("executionId");
+            long instanceId = answer.jsonPath().getLong("instanceId");
+
+            assertEquals(instanceId, jobOperator.getJobInstance(executionId).getInstanceId(),
+                    "the instance id is the started execution's");
+            assertEquals(BatchStatus.COMPLETED, BatchJobs.awaitCompletion(jobOperator, executionId),
+                    "the execution id follows the job to its end");
+            given().auth().oauth2(accessToken())
+                    .when().get("/rest/batch/instance/" + instanceId + "/logs")
+                    .then().statusCode(200)
+                    .body("size()", greaterThanOrEqualTo(1));
         } finally {
             Files.deleteIfExists(dir);
         }

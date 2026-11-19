@@ -455,7 +455,10 @@ A JBeret job `repo-import`, started by a SYSADMIN through a new `POST /rest/batc
 adds (jobs start today from an upload, a batch set, the bootstrap command, or a JSON body for
 `execute-javascript`, `BatchRestService.java:344-358`, which is the shape R1e follows; none from parameters
 alone), so that `BatchData` records who ran it and the admin app's Batch page shows its progress. The runbook says how a
-sysadmin calls it (a `curl` with a token). Its parameters:
+sysadmin calls it (a `curl` with a token). Since 2026-11-19 it answers JSON naming the job it started,
+`{"jobName", "executionId", "instanceId", "message"}` (`message` is the status line it answered before as
+text), so that a script follows its own job to the end by the execution id and reads its log by the instance
+id. Its parameters:
 
 - `dir`: the old repository root, readable by the pod (on staging the PVC, still mounted at
   `/niord-home/repo` during the window; for a tree copied from another installation, a mount under the
