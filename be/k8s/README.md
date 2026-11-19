@@ -98,8 +98,12 @@ curl -s http://localhost:18888/rest/actuator/health
 #         one infra release serving the app releases) is recreated by the databases Job at the next
 #         sync, here at the next ./scripts/deploy.sh (helm/niord/templates/postgres/databases-job.yaml:
 #         after every install and upgrade it creates each listed database that is missing, and it
-#         never drops one; it renders only when the list is not empty). A release whose app database
-#         is postgres.database on its own Postgres (this quick start's niord) needs nothing here:
+#         never drops one; it renders only when the list is not empty). The Job's database is the
+#         superuser's, and an app release on it (postgres.host) has no init container that hands it
+#         over: before step c the superuser hands it to the app's user (psql in the db pod: ALTER
+#         DATABASE <name> OWNER TO <the app's user>; "A database of someone else's", below). A
+#         release whose app database is postgres.database on its own Postgres (this quick start's
+#         niord) needs nothing here:
 #         the app pod's database-user init container creates a missing postgres.database from
 #         template_postgis, owned by the app's database user, before the backend starts in step c
 #         ("The database users", below). A database of someone else's (postgres.host) is recreated
@@ -309,7 +313,11 @@ the test realm and `admin`/`admin`.
   in its console since its last start. A production-mode realm, and a realm made by hand on a
   shared Keycloak, are not imported again and keep the old clients: in the admin console rename
   each (Clients, the client, Settings, *Client ID*, Save). Its roles and every user's and group's
-  role mappings stay with it, and the next token carries them under the new id. A domain a restored
+  role mappings stay with it, and the next token carries them under the new id. Keycloak refuses
+  the rename where a client with the domain's id exists already (made with the Domains page's
+  *Create in Keycloak*, or by hand): keep that client, give each user and group with a role on the
+  old `niord-client-*` client the same role on it (Users or Groups, the user or group, Role
+  mapping), then delete the old client. A domain a restored
   database holds that has no client yet gets one from the Domains page of the administration app,
   or in the admin console.
 - **A realm imported before November 2026 gives the base client `niord-client-master` no `user`
