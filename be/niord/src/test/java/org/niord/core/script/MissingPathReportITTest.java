@@ -24,6 +24,20 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.niord.core.bootstrap.BootstrapMarker;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.TestIds;
+import org.niord.core.publication.series.ContentMode;
+import org.niord.core.publication.series.IssueStatus;
+import org.niord.core.publication.series.NextIssueCreation;
+import org.niord.core.publication.series.NumberingScheme;
+import org.niord.core.publication.series.PublicationIssue;
+import org.niord.core.publication.series.PublicationSeries;
+import org.niord.core.publication.series.ReleaseMode;
+import org.niord.core.publication.series.SeriesCadence;
+import org.niord.core.publication.series.SeriesStatus;
+import org.niord.core.publication.series.TestOwnerDomain;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.vo.MessagePublication;
 import org.niord.core.script.MissingPathReport.Entry;
 import org.niord.core.script.MissingPathReport.Kind;
 import org.niord.test.ITTest;
@@ -38,6 +52,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -149,6 +164,78 @@ class MissingPathReportITTest extends ITTest {
 
         // The release notes' SQL gives the same answer, in the same order
         assertEquals(asRows(report), runSql(expected));
+    }
+
+    /**
+     * A report id a publication series or issue names is a missing entry when it has no row, as a built-in one is: a
+     * database restored from another system can name a report it lacks, and a release of that series fails.
+     */
+    @Test
+    @Transactional
+    void aReportASeriesOrIssueNamesIsReportedWhenItHasNoRow() {
+        PublicationSeries series = series("it-mpr-series-report");
+        PublicationIssue issue = issue(series, "it-mpr-issue-report");
+        // Named twice: by an issue of its own and by a series; one entry lists both
+        PublicationSeries other = series("it-mpr-issue-report");
+        // A report that has its row is not reported
+        series("standard");
+        em.flush();
+
+        List<String> expected = MissingPathReport.expectedPaths();
+        List<Entry> report = missingPathReport.report(expected);
+        Map<String, Entry> missing = byPath(report);
+
+        Entry bySeries = missing.get("it-mpr-series-report");
+        assertNotNull(bySeries, "a report a series names: " + missing.keySet());
+        assertEquals(Kind.REPORT, bySeries.kind());
+        assertEquals(List.of(MissingPathReport.SERIES + " " + series.getSeriesId()), bySeries.namedBy());
+        Entry byIssue = missing.get("it-mpr-issue-report");
+        assertNotNull(byIssue, "a report an issue names: " + missing.keySet());
+        assertEquals(Kind.REPORT, byIssue.kind());
+        assertEquals(List.of(MissingPathReport.ISSUE + " " + issue.getPublicId(),
+                MissingPathReport.SERIES + " " + other.getSeriesId()), byIssue.namedBy());
+        assertNull(missing.get("standard"), "a named report with a row");
+
+        // The release notes' SQL gives the same answer, in the same order
+        assertEquals(asRows(report), runSql(expected));
+    }
+
+    private PublicationSeries series(String reportId) {
+        PublicationCategory c = new PublicationCategory();
+        c.setCategoryId(TestIds.category());
+        c.setPriority(100);
+        c.setPublish(true);
+        em.persist(c);
+
+        PublicationSeries s = new PublicationSeries();
+        s.setSeriesId(TestIds.series());
+        s.setStatus(SeriesStatus.DRAFT);
+        s.setContentMode(ContentMode.GENERATED_FROM_QUERY);
+        s.setReportId(reportId);
+        s.setCadence(SeriesCadence.WEEKLY);
+        s.setNumberingScheme(NumberingScheme.ISO_WEEK_YEAR);
+        s.setTimeRelation(TimeRelation.PUBLISHED_IN_INTERVAL);
+        s.setMessagePublication(MessagePublication.NONE);
+        s.setReleaseMode(ReleaseMode.MANUAL_GATE);
+        s.setNextIssueCreation(NextIssueCreation.MANUAL);
+        s.setCategory(c);
+        s.setDomain(TestOwnerDomain.of(em));
+        s.getLanguages().add("en");
+        s.createDesc("en").setName("Missing-path report series");
+        em.persist(s);
+        return s;
+    }
+
+    private PublicationIssue issue(PublicationSeries s, String reportId) {
+        PublicationIssue i = new PublicationIssue();
+        i.setSeries(s);
+        i.setPublicId(UUID.randomUUID().toString());
+        i.setRepoPath("publications/" + i.getPublicId());
+        i.setStatus(IssueStatus.OPEN);
+        i.setReportId(reportId);
+        i.createDesc("en").setName("Missing-path report issue");
+        em.persist(i);
+        return i;
     }
 
     @Test

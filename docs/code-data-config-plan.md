@@ -982,8 +982,9 @@ Without copy-on-use, a template path that was never rendered on a running deploy
 has no row and resolves nowhere. This includes a localized variant the old jar supplied (`x_da.ftl`),
 whose absence silently falls back to `x.ftl`.
 - **The missing-path report** (`MissingPathReport`, `org.niord.core.script`). The backend lists
-  every path that data names or the code names (`RequiredTemplates`), and every built-in report id
-  (`FmReportService.BUILT_IN_REPORT_IDS`), that has no row. The report only reads. It is logged at every start
+  every path that data names or the code names (`RequiredTemplates`), and every report id that is built in
+  (`FmReportService.BUILT_IN_REPORT_IDS`) or that a publication series or issue names
+  (`PublicationSeries.reportId`, `PublicationIssue.reportId`), that has no row. The report only reads. It is logged at every start
   where the bootstrap marker reads `existing` or `applied` (a warning with one line per entry, else "no
   missing path"), after the marker's own listener, and is silent on `pending`, `in-progress` and `failed`,
   where the bootstrap brings the rows. It is logged at every such start rather than only at the first start
@@ -992,7 +993,7 @@ whose absence silently falls back to `x.ftl`.
   a list of entries: kind (`TEMPLATE` or `REPORT`), path or report id, and what names it (`code:
   RequiredTemplates`, `Category <id>`, `MailingListTrigger <id>`, `PromulgationType <id>`, `FmReport
   <reportId>`, `include in <path>`, `load in <path>`, `variant of <path>`, and for a report id `code:
-  FmReportService.BUILT_IN_REPORT_IDS`).
+  FmReportService.BUILT_IN_REPORT_IDS`, `PublicationSeries <seriesId>` or `PublicationIssue <publicId>`).
 - **What it reads.** The named paths are `RequiredTemplates.PATHS`; the `Category`, `MailingListTrigger` and
   `PromulgationType` script paths; `FmReport.templatePath`; every literal `<#include "…">` or `<#import "…">`
   in a FreeMarker row, resolved as FreeMarker resolves it (a leading `/` from the root, otherwise against the

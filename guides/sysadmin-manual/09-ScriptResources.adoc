@@ -75,7 +75,8 @@ not work. The _missing-path report_ lists every path that something names but th
 a category, a mailing list trigger, a promulgation type or a print report, a path included or loaded by another
 script resource, a path the Niord program itself needs, and a language variant of a path that is named (see
 <<language-specific-freemarker-templates,Language-Specific Freemarker Templates>>). It also lists a built-in print
-report (`standard`, `draft` or `public`) that the deployment lacks. Niord writes the report to its log every time
+report (`standard`, `draft` or `public`), and a print report a publication series or issue names, that the
+deployment lacks. Niord writes the report to its log every time
 it starts, except on a new database whose bootstrap has not been applied (while it waits, runs or has failed), and a
 system administrator can ask for it at any time at the address `/rest/script-resources/missing-paths` of the
 server; it only reads. When you import a release file, its preview marks the paths the report lists (see

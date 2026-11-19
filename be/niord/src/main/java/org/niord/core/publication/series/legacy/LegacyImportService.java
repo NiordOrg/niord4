@@ -563,6 +563,10 @@ public class LegacyImportService extends BaseService {
         // translated at, so a run that straddles midnight on New Year's Eve does
         // not open a year the rest of the plan knows nothing about.
         planCompilationAnnuals(plan, frozenAt);
+        // The report a compilation ruling assigns arrives only at apply time, after
+        // every other check, so it is checked here against the same rule as the
+        // report a series carries from legacy.
+        assertCompilationReportsResolve(plan);
         long t6 = System.nanoTime();
         assertSeriesIdsAreUnique(plan);
         log.info("plan over {} templates and {} publications: categories {} ms, series {} ms, "
@@ -2192,6 +2196,37 @@ public class LegacyImportService extends BaseService {
                             "message series '" + ms.getSeriesId() + "' does not exist.");
                 }
             });
+        }
+    }
+
+    /**
+     * The report a compilation ruling assigns must exist, for every ruling that will apply.
+     *
+     * convertCompilations() replaces the series' report at apply time, after
+     * assertReferencesResolve() has checked the one legacy carried. Neither the
+     * activation nor the publish checklist asks whether a named report exists, so
+     * without this a database that lacks the ruled report imports and activates
+     * cleanly, and the series' first release has no report to render. A ruling
+     * whose source series this estate does not carry does not apply (the series
+     * imports unconverted), so its report is not asked for.
+     */
+    private void assertCompilationReportsResolve(Plan plan) {
+        Set<String> planned = new LinkedHashSet<>();
+        plan.series().forEach(s -> planned.add(s.getSeriesId()));
+        for (PublicationSeries series : plan.series()) {
+            LegacyTemplateRulings.CompilationShape shape =
+                    LegacyTemplateRulings.compilationFor(series.getSeriesId());
+            if (shape == null || !planned.contains(shape.sourceSeriesId())
+                    || shape.reportId() == null) {
+                continue;
+            }
+            if (reportService.findByReportId(shape.reportId()) == null) {
+                problem(plan, "REPORT_NOT_FOUND", series.getLegacyTemplateId(), series.getSeriesId(),
+                        "'" + series.getSeriesId() + "' is ruled to compile '"
+                                + shape.sourceSeriesId() + "' with report '" + shape.reportId()
+                                + "', which does not exist, so the series could never generate "
+                                + "its PDF. Add the report before the import.");
+            }
         }
     }
 

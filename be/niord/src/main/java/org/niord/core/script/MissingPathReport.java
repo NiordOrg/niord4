@@ -46,8 +46,10 @@ import java.util.stream.Collectors;
 
 /**
  * The missing-path report (docs/code-data-config-plan.md §6.6): every template or script path that data or the code
- * names and that has no {@code ScriptResource} row, and every built-in report id that has no {@code FmReport} row.
- * Since C4.2a the code reads no template from the jar, so such a path resolves to nothing on a running deployment.
+ * names and that has no {@code ScriptResource} row, and every report id that has no {@code FmReport} row: a built-in
+ * one, or one a publication series or issue names ({@code PublicationSeries.reportId},
+ * {@code PublicationIssue.reportId}). Since C4.2a the code reads no template from the jar, so such a path resolves to
+ * nothing on a running deployment; a release whose report has no row fails.
  *
  * <p>The named paths are {@link RequiredTemplates#PATHS}, the script paths of {@code Category},
  * {@code MailingListTrigger} and {@code PromulgationType}, {@code FmReport.templatePath}, every literal
@@ -90,6 +92,8 @@ public class MissingPathReport extends BaseService {
 
     static final String CODE = "code: RequiredTemplates";
     static final String BUILT_IN_REPORT = "code: FmReportService.BUILT_IN_REPORT_IDS";
+    static final String SERIES = "PublicationSeries";
+    static final String ISSUE = "PublicationIssue";
 
     private final BootstrapMarker marker;
 
@@ -101,7 +105,7 @@ public class MissingPathReport extends BaseService {
     public enum Kind {
         /** a template or script path with no ScriptResource row */
         TEMPLATE,
-        /** a built-in report id with no FmReport row */
+        /** a built-in report id, or one a publication series or issue names, with no FmReport row */
         REPORT
     }
 
@@ -139,8 +143,8 @@ public class MissingPathReport extends BaseService {
                 return;
             }
             StringBuilder text = new StringBuilder("Missing-path report: " + missing.size()
-                    + " named template, script or built-in report path(s) without a row; a sysadmin imports them "
-                    + "from a release file (GET /rest/script-resources/missing-paths):");
+                    + " named template or script path(s) or report id(s) without a row; a sysadmin imports them "
+                    + "from a release file or adds the report (GET /rest/script-resources/missing-paths):");
             missing.forEach(e -> text.append("\n  ").append(e.kind()).append(' ').append(e.path())
                     .append(" (named by ").append(String.join("; ", e.namedBy())).append(')'));
             log.warn(text.toString());
@@ -211,15 +215,32 @@ public class MissingPathReport extends BaseService {
         });
         Set<String> reportIds = new HashSet<>(em.createNativeQuery("SELECT \"reportId\" FROM public.\"FmReport\"",
                 String.class).getResultList());
-        FmReportService.BUILT_IN_REPORT_IDS.stream().sorted()
-                .filter(id -> !reportIds.contains(id))
-                .forEach(id -> missing.add(new Entry(Kind.REPORT, id, List.of(BUILT_IN_REPORT))));
+        Map<String, Set<String>> namedReports = new TreeMap<>();
+        FmReportService.BUILT_IN_REPORT_IDS.forEach(id -> nameReport(namedReports, id, BUILT_IN_REPORT));
+        for (Object[] r : rows("SELECT \"seriesId\", \"reportId\" FROM public.\"PublicationSeries\" "
+                + "WHERE \"reportId\" <> ''")) {
+            nameReport(namedReports, (String) r[1], SERIES + " " + r[0]);
+        }
+        for (Object[] r : rows("SELECT \"publicId\", \"reportId\" FROM public.\"PublicationIssue\" "
+                + "WHERE \"reportId\" <> ''")) {
+            nameReport(namedReports, (String) r[1], ISSUE + " " + r[0]);
+        }
+        namedReports.forEach((id, by) -> {
+            if (!reportIds.contains(id)) {
+                missing.add(new Entry(Kind.REPORT, id, List.copyOf(by)));
+            }
+        });
         return missing;
     }
 
     @SuppressWarnings("unchecked")
     private List<Object[]> rows(String sql) {
         return em.createNativeQuery(sql).getResultList();
+    }
+
+    /** Adds a named report id */
+    private static void nameReport(Map<String, Set<String>> named, String reportId, String by) {
+        named.computeIfAbsent(reportId, k -> new TreeSet<>()).add(by);
     }
 
     /** Adds a named path, without one leading '/'; an empty path names nothing */
@@ -286,7 +307,8 @@ public class MissingPathReport extends BaseService {
         return """
                 -- The missing-path report (docs/code-data-config-plan.md §6.6), generated from MissingPathReport.sql():
                 -- every template or script path that data or the code names and that has no ScriptResource row, and
-                -- every built-in report id with no FmReport row. It only reads; run it before an upgrade with
+                -- every report id with no FmReport row, built-in or named by a publication series or issue. It only
+                -- reads; run it before an upgrade with
                 --   psql -d <database> -f missing-paths.sql
                 WITH RECURSIVE
                 required(path) AS (SELECT unnest(CAST(ARRAY[%s] AS text[]))),
@@ -336,6 +358,13 @@ public class MissingPathReport extends BaseService {
                     FROM expected e
                     WHERE e.path ~ '%s'
                       AND EXISTS (SELECT 1 FROM normalized n WHERE n.path = regexp_replace(e.path, '%s', '\\1.ftl'))
+                ),
+                report_names(id, named_by) AS (
+                    SELECT id, '%s' FROM report_ids
+                    UNION ALL
+                    SELECT "reportId", '%s ' || "seriesId" FROM public."PublicationSeries" WHERE "reportId" <> ''
+                    UNION ALL
+                    SELECT "reportId", '%s ' || "publicId" FROM public."PublicationIssue" WHERE "reportId" <> ''
                 )
                 SELECT kind, path, named_by FROM (
                     SELECT 'TEMPLATE' AS kind, w.path,
@@ -344,9 +373,10 @@ public class MissingPathReport extends BaseService {
                     WHERE NOT EXISTS (SELECT 1 FROM public."ScriptResource" s WHERE s.path = w.path)
                     GROUP BY w.path
                     UNION ALL
-                    SELECT 'REPORT', id, '%s'
-                    FROM report_ids
-                    WHERE NOT EXISTS (SELECT 1 FROM public."FmReport" f WHERE f."reportId" = report_ids.id)
+                    SELECT 'REPORT', r.id, string_agg(DISTINCT r.named_by%s, '; ' ORDER BY r.named_by%s)
+                    FROM report_names r
+                    WHERE NOT EXISTS (SELECT 1 FROM public."FmReport" f WHERE f."reportId" = r.id)
+                    GROUP BY r.id
                 ) missing
                 ORDER BY CASE kind WHEN 'TEMPLATE' THEN 0 ELSE 1 END, path%s;
                 """.formatted(
@@ -359,8 +389,9 @@ public class MissingPathReport extends BaseService {
                 quote(DOT_DOT_REGEX),
                 quote(LOAD_REGEX),
                 quote(VARIANT_REGEX), quote(VARIANT_REGEX), quote(VARIANT_REGEX),
+                BUILT_IN_REPORT, SERIES, ISSUE,
                 c, c,
-                BUILT_IN_REPORT,
+                c, c,
                 c);
     }
 
