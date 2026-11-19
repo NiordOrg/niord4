@@ -17,6 +17,7 @@ package org.niord.core.report;
 
 import org.springframework.stereotype.Service;
 
+import jakarta.persistence.NoResultException;
 import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.niord.core.bootstrap.BootstrapRun;
@@ -121,13 +122,14 @@ public class FmReportService extends BaseService {
      * Returns the report with the given report ID, or null if not found
      * @param reportId the report ID
      * @return the report with the given report ID, or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public FmReport findByReportId(String reportId) {
         try {
             return em.createNamedQuery("FmReport.findByReportId", FmReport.class)
                     .setParameter("reportId", reportId)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             return null;
         }
     }

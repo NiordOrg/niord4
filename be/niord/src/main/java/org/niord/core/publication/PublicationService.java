@@ -32,6 +32,7 @@ import org.niord.model.message.Status;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NoResultException;
 import jakarta.inject.Inject;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.*;
@@ -89,15 +90,16 @@ public class PublicationService extends BaseService {
      *
      * @param publicationId the publication ID
      * @return the publication with the given publication ID or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Publication findByPublicationId(String publicationId) {
         try {
             return em.createNamedQuery("Publication.findByPublicationId", Publication.class)
                     .setParameter("publicationId", publicationId)
                     .getSingleResult();
-        } catch (Exception ignored) {
+        } catch (NoResultException e) {
+            return null;
         }
-        return null;
     }
 
     /**

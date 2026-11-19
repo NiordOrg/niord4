@@ -25,6 +25,8 @@ import org.niord.core.service.BaseService;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NonUniqueResultException;
+import jakarta.persistence.NoResultException;
 import jakarta.inject.Inject;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -129,15 +131,25 @@ public class ContactService extends BaseService {
 
     /**
      * Returns the contact with the given email address, or null if not found.
+     * <p>
+     * The address is compared ignoring case, while the schema holds it unique with case: when several contacts have
+     * the address in different case (restored data), none is returned, as when there is none, and a WARN names the
+     * address.
+     *
      * @param email the email address of the contact
      * @return the contact with the given email address
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Contact findByEmail(String email) {
         try {
             return em.createNamedQuery("Contact.findByEmail", Contact.class)
                     .setParameter("email", email)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
+            return null;
+        } catch (NonUniqueResultException e) {
+            log.warn("Several contacts have the e-mail address '{}' in different case; the look-up by address "
+                    + "answers none of them", email);
             return null;
         }
     }

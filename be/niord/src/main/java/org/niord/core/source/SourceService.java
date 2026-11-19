@@ -22,6 +22,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.niord.core.service.BaseService;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NonUniqueResultException;
+import jakarta.persistence.NoResultException;
 import jakarta.inject.Inject;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
@@ -96,27 +98,36 @@ public class SourceService extends BaseService {
 
     /**
      * Returns the source with the given name or null if not found
+     * <p>
+     * A source's name is not unique in the schema: when several sources have the name in the language, compared
+     * ignoring case (restored data), none is returned, as when there is none, and a WARN names the name.
      *
      * @param lang the search language
      * @param name the search name
      * @return the source with the given name or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Source findByName(String lang, String name) {
 
         if (StringUtils.isNotBlank(name)) {
+            Source source;
             try {
-                Source source = em
+                source = em
                         .createNamedQuery("Source.findByName", Source.class)
                         .setParameter("lang", lang)
                         .setParameter("name", name.toLowerCase())
                         .getSingleResult();
-                // Load the descs while this method's transaction is open: the source import
-                // (BatchSourceImportProcessor) updates the found source on the batch thread,
-                // after the transaction has ended, and the update reads the descs.
-                source.getDescs().size();
-                return source;
-            } catch (Exception ignored) {
+            } catch (NoResultException e) {
+                return null;
+            } catch (NonUniqueResultException e) {
+                log.warn("Several sources have the {} name '{}'; the look-up by name answers none of them", lang, name);
+                return null;
             }
+            // Load the descs while this method's transaction is open: the source import
+            // (BatchSourceImportProcessor) updates the found source on the batch thread,
+            // after the transaction has ended, and the update reads the descs.
+            source.getDescs().size();
+            return source;
         }
         return null;
     }

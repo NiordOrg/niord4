@@ -217,7 +217,8 @@ public class UserService extends BaseService {
      * Looks up the {@code User}s with the given usernames
      *
      * @param usernames the user names
-     * @return the user or null
+     * @return the users with the names, an empty list for none
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "none found"
      */
     public List<User> findByUsernames(Set<String> usernames) {
         if (usernames != null && !usernames.isEmpty()) {
@@ -227,12 +228,9 @@ public class UserService extends BaseService {
             usernames = usernames.stream()
                     .map(String::toLowerCase)
                     .collect(Collectors.toSet());
-            try {
-                return em.createNamedQuery("User.findByUsernames", User.class)
-                        .setParameter("usernames", usernames)
-                        .getResultList();
-            } catch (Exception ignored) {
-            }
+            return em.createNamedQuery("User.findByUsernames", User.class)
+                    .setParameter("usernames", usernames)
+                    .getResultList();
         }
         return Collections.emptyList();
     }

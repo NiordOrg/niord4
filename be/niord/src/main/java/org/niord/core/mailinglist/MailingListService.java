@@ -27,6 +27,7 @@ import org.niord.core.user.UserService;
 import org.niord.model.message.Status;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.criteria.*;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,13 +60,14 @@ public class MailingListService extends BaseService {
      *
      * @param mailingListId the mailing list id of the mailingList
      * @return the mailing list with the given id or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public MailingList findByMailingListId(String mailingListId) {
         try {
             return em.createNamedQuery("MailingList.findByMailingListId", MailingList.class)
                     .setParameter("mailingListId", mailingListId)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             return null;
         }
     }

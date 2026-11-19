@@ -1344,28 +1344,6 @@ was changed in production code.
   publication sweep and the hourly firing run had the same mechanism (the error hunt of 2026-11-12); their fix of
   2026-11-13 (a transaction of its own per message or per area, `MessageTxRunner`) does not reach this method.
 
-## PORT-14. `findByMrn`/`findByDomainId` report every infrastructure failure as "row does not exist"
-
-- **Location:** `org/niord/core/area/AreaService.findByMrn`, `org/niord/core/category/CategoryService.findByMrn` —
-  each ends in `catch (Exception e) { return null; }`.
-- **Why it looks wrong:** a NOT NULL violation on an unrelated flush surfaced during the port as the publications
-  criteria code `C-4 operand does not resolve` on a category that had just been inserted. Pre-existing; the
-  publications operand resolver now sits on top of it.
-- **The same ending elsewhere (2026-11-12):** about two dozen single-row lookups end `getSingleResult()` in
-  `catch (Exception e) { return null; }`, in `AreaService`, `CategoryService`, `ChartService`, `ContactService`,
-  `SourceService`, `MailingListService`, `DictionaryService`, `MessageSeriesService`, `MessageService` and others
-  (`grep -A4 "getSingleResult()"` for `catch (Exception`). PROM9 narrowed `PromulgationTypeService.getPromulgationType`
-  alone, to `NoResultException`. `MessageSeriesService.findBySeriesId` is on the message-save path
-  (`MessageService.createMessage` and `updateMessage`), runs after the managed message has been changed, and its
-  null is dereferenced on the next line: a failed flush there still ends in a `NullPointerException` with no
-  cause in the log.
-- **Narrowed on 2026-11-13** (the error hunt's fix stage): `DomainLookupService.findByDomainId`,
-  `NavtexPromulgationService.findTransmitterByName`, `SafetyNetPromulgationService.findAreaByName` and
-  `MessageQueryService.findByUid` catch `NoResultException` only, and
-  `MessageLookupFaultITTest#aFailedLookupOfAnExistingWarningPropagatesTheFailure` guards the last. Every other site
-  named above still catches every exception, `TwitterPromulgationService.getSettings` included (PROM7). One change
-  that narrows every such lookup to `NoResultException` would close this entry.
-
 ## RENDER4. `PublicationIssueDesc.fileSize`, `fileHash` and `fileGeneratedAt` are never written
 
 - **Location:** `org/niord/core/publication/series/PublicationIssueDesc.java` (the three fields and their setters); no
@@ -1745,8 +1723,9 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `PromulgationRoundTripITTest#twitterSettingsAreStoredButTheirWritesAndReadAnswer500_documentsBug` (the POST, the
   GET and the PUT each answer 500; the create and the update are stored, one row, checked in SQL); TESTQ6's
   `TwitterSettingsRestServiceITTest` 76 accepts the same 500. Also of this entry, handed over by the error hunt:
-  `TwitterPromulgationService.getSettings` (139-147) ends `catch (Exception e) { return null; }` (PORT-14's
-  pattern), so a failed read lets `createSettings` (155) try a second row, `updateSettings` (171) answer "No Settings
+  `TwitterPromulgationService.getSettings` (139-147) ends `catch (Exception e) { return null; }`, the one
+  single-row look-up left out when the others were narrowed to `NoResultException`, since Twitter is to go, so a
+  failed read lets `createSettings` (155) try a second row, `updateSettings` (171) answer "No Settings
   exists" and the tweet path (218) send nothing; it goes with the rest of this entry.
 - **Severity:** Medium where Twitter promulgation is used; the owner plans to remove Twitter promulgation
   (2026-11-12), and the entry goes with it. Fix, should it stay: a transaction around the handlers, as the NAVTEX
