@@ -36,7 +36,8 @@ const HELP_URLS = path.resolve(
 
 // Never on a published page. The hosts are the operator's internal network and the addresses the
 // guides replaced (the old production, test and public-site hosts); the paths are a person's home
-// folder, by drive or by Git Bash's /c/, and a staff account's user id.
+// folder, by drive or by Git Bash's /c/, and a staff account's user id. The old test environment's
+// rule spells that environment's domain on purpose: a rule that keeps a name out has to name it.
 const FORBIDDEN = [
   [/\b(?:[a-z0-9-]+\.)*sitcloud\.dk\b/gi, 'an internal host'],
   [/\b(?:[a-z0-9-]+\.)*t-dma\.dk\b/gi, 'the old test environment, now niord.staging.brs2.dk'],

@@ -60,7 +60,7 @@ What the build does, in order:
    application's help map must exist (see the anchor rule below). External addresses are not
    fetched. The archived development guides only warn.
 7. **Checks what may be published.** No page, the archive's included, may name an internal host
-   (anything under `sitcloud.dk`, the old `t-dma.dk` test hosts, the old `niord.dma.dk` and
+   (anything under `sitcloud.dk`, the old test environment's hosts, the old `niord.dma.dk` and
    `nautiskinformation.soefartsstyrelsen.dk` addresses), a person's home folder (`C:\Users\...`,
    `/c/Users/...`) or a staff account's user id (`FORBIDDEN` in `check-links.mjs`); a hit fails
    the build on any page. Outside the archived development guides, no page may name SECOM or

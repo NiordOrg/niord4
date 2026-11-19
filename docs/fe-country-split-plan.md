@@ -1030,10 +1030,10 @@ as its own package, `org.niord:niord-country-kit`, beside the source zip, which 
   sets them, and the push job logs in to that `REGISTRY` alone (§4.11 rule 1).
 - **The base product's own guard:** `fe/` outside `country-kit/example/` holds no country tree, no pack but `en`,
   no configuration but the base product's, and none of an allow-listed set of country words (authority names
-  and domains — `Beredskab`, `Søfart`, `brs.dk`, `dma.dk`, `t-dma` — `kl-GL`, `da-DK`, `Nuuk`, …), with a
+  and domains — `Beredskab`, `Søfart`, `brs.dk`, `dma.dk` — `kl-GL`, `da-DK`, `Nuuk`, …), with a
   reason per allow-list entry. The words and their allow-list are `country-kit/country-words.json`
-  (read by `country-kit/lib/country-words.mjs`): the eight words above, `Soefart` and the two authorities'
-  English names, `Danish Emergency Management` and `Danish Maritime Authority`, 11 words, each matched
+  (read by `country-kit/lib/country-words.mjs`): the seven words above, `Soefart` and the two authorities'
+  English names, `Danish Emergency Management` and `Danish Maritime Authority`, 10 words, each matched
   case-insensitively as a literal
   substring of every path and of the NFC text line by line (so `Beredskab` also catches the longer name, `Nuuk`
   the IANA zone); language names (`Dansk`, `Kalaallisut`) are not words — a language is a pack (R3), and the base
@@ -1521,7 +1521,7 @@ country — hence split tokens, hash pins and, later, attestations.
      workspace's `e2e` script, and the suite names no country's test environment: `keycloak-login.ts` requires
      `KEYCLOAK_URL`, the unreachable-Keycloak spec blocks any `/realms/` path,
      and `app-breadth.spec.ts` reads the served backend; `zip.test.mjs` fails any file of the suite naming one
-     (`t-dma`, `dma.dk`, `brs.dk`, a `login.<host>` default). Its README stays out with every README under
+     (`dma.dk`, `brs.dk`, a `login.<host>` default). Its README stays out with every README under
      `ui-apps/`. `publish.yml` fails on any path outside it and runs the
      country-word guard over the zip. As built: its build job builds the zip
      with the kit's own code (`source-zip.mjs build`, Node built-ins only, no npm) right after the checkout and

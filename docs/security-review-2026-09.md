@@ -96,8 +96,8 @@ so a comment is mailed to at most 20 mailboxes. The e-mail suggestions the comme
 (`GET /rest/users/search-emails`) now quote a display name that holds a comma or another special character, so
 every suggestion still parses as exactly one mailbox.
 
-**The live test realm.** Checked on 2026-09-25 (`login.t-dma.dk`): no Niord role is granted as a
-Keycloak realm role, and tokens are issued to `niord-web`. The sweep's realm-role and authorized-party
+**The live test realm.** Checked on 2026-09-25 (the old test environment's login server): no Niord
+role is granted as a Keycloak realm role, and tokens are issued to `niord-web`. The sweep's realm-role and authorized-party
 changes (F-X37) therefore lock nobody out there. A production realm must follow the same pattern:
 Niord roles as client roles, and logins through `niord-web` or a client listed in
 `niord.oidc.allowed-clients`.

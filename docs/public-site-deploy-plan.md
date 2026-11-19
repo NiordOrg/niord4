@@ -250,9 +250,9 @@ the jump server. For each country:
   and the teaser at `/teaser`;
 - **the two checks the repository-files cutover left open:** a publication issue's PDF, and the
   list PDF from the print button;
-- an attachment in a message. DK's `info.config.ts` lists `niord.dma.dk` and `niord.t-dma.dk` as
-  the backend's public hosts and not the staging host, so look at which address an attachment is
-  loaded from on staging;
+- an attachment in a message. DK's `info.config.ts` lists `niord.dma.dk` and the old test
+  environment's host as the backend's public hosts and not the staging host, so look at which
+  address an attachment is loaded from on staging;
 - the ribbon shows the deployment's `mode`.
 
 ## 8. Decisions
