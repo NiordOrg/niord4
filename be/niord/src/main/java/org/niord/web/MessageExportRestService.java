@@ -88,7 +88,8 @@ public class MessageExportRestService extends AbstractBatchableRestService {
     @GetMapping("/export.zip")
     public ResponseEntity<StreamingResponseBody> generateZipArchiveForSearch(HttpServletRequest request) throws Exception {
 
-        // Perform a search for at most 1000 messages
+        // Perform a search for at most 1000 messages. The administration app tells the person when a search holds
+        // more (MESSAGE_EXPORT_LIMIT in message-export.service.ts): keep the two numbers equal
         MessageSearchParams params = MessageSearchParams.instantiate(domainService.currentDomain(), request);
         params.language(null)
                 .maxSize(1000)

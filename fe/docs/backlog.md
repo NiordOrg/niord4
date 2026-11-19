@@ -373,9 +373,7 @@ Background: [`features/messages.md`](features/messages.md).
 - Saved filters can only be created, applied and deleted — no rename, reorder, share or preview. One that stores
   ids belonging to another domain silently returns nothing.
 - Messages carry `unackComments`, but no list row or grid card shows a comment count or an unacknowledged marker.
-- The landing map asks for at most 1000 published messages and gives no sign when a deployment has more. The ZIP
-  export has the same silent ceiling from the other side: the server caps a search export at 1000 messages and
-  `message-export.service.ts` neither counts nor warns, so a larger search downloads a truncated archive.
+- The landing map asks for at most 1000 published messages and gives no sign when a deployment has more.
 - The table view keeps its date-column choice in the un-namespaced browser-storage key `dateColumnType`, while
   the rest of the application's keys carry the `niord.` prefix.
 - There are no skeleton placeholders anywhere; lists signal loading with the thin progress strip only.

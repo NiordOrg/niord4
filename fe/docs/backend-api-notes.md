@@ -549,6 +549,10 @@ Two distinct caps, easily confused:
 - The interactive print and mail endpoints (`/message-reports/report.pdf`, `/message-mail/send`)
   **truncate silently at 1000 messages**. Nothing in the response says the list was cut, so anything
   that must be complete cannot go through them.
+- The export (`/message-io/export.zip`) takes the first 1000 messages of the search in the same way,
+  and its answer, a download, says nothing either. The admin app compares the search's total (or
+  the selection's size) with `MESSAGE_EXPORT_LIMIT` (`message-export.service.ts`, kept equal to the
+  backend's `maxSize`) and shows a notice with the download that stays until it is closed.
 - Publishing a publication issue **refuses** above 1000 resolved members with `409 MEMBER_LIMIT_EXCEEDED`
   naming the issue and the count, and the publish checklist carries a `MEMBER_LIMIT` row reporting
   "_n_ of 1000" before it gets that far. A publication is rendered in-process from its frozen member

@@ -584,7 +584,9 @@ image::ComparisonDialogData.png[Message Comparison Data, 560]
 
 _Export..._ downloads the messages the filter has found as a zip archive. The archive holds the
 messages, a page that shows them, and the files attached to them, such as the pictures of a Notice
-to Mariners. It can be read back into Niord with the <<import-action,Import Action>>.
+to Mariners. It can be read back into Niord with the <<import-action,Import Action>>. An archive holds at
+most 1,000 messages: when the filter has found more, Niord says so as the download starts, and the archive
+holds the first 1,000 in the order of the list.
 
 [#export-selection-action]
 ==== Export Selection Action

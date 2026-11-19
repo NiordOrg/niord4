@@ -12,7 +12,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
 import type { MessageTag } from '../../../shared/models/message-tag.model';
 import { provideFakeAuthFacade } from '../../../shared/testing/fake-auth';
 import { TagsApiService } from './api/tags-api.service';
-import { MessageExportService } from './message-export.service';
+import { MESSAGE_EXPORT_LIMIT, MessageExportService } from './message-export.service';
 
 function tag(): MessageTag {
   return { tagId: 'temp-1', name: 'temp-1', type: 'PRIVATE', messageCount: 0, locked: false };
@@ -27,6 +27,7 @@ function setup(opts: { tempTagError?: boolean; domainUserRole?: boolean } = {}) 
     opts.tempTagError ? throwError(() => new Error('boom')) : of(tag()),
   );
   const error = vi.fn();
+  const notify = vi.fn();
   const fetch = vi.fn<(role?: TicketRole) => Observable<string>>(() => of('TICKET-XYZ'));
   TestBed.configureTestingModule({
     providers: [
@@ -38,7 +39,7 @@ function setup(opts: { tempTagError?: boolean; domainUserRole?: boolean } = {}) 
       { provide: LanguageService, useValue: { selectedLanguage: () => 'en' } },
       {
         provide: NotificationService,
-        useValue: { error, success: vi.fn(), info: vi.fn(), warn: vi.fn() },
+        useValue: { error, notify, success: vi.fn(), info: vi.fn(), warn: vi.fn() },
       },
     ],
   });
@@ -47,6 +48,7 @@ function setup(opts: { tempTagError?: boolean; domainUserRole?: boolean } = {}) 
     navigate,
     createTempMessageTag,
     error,
+    notify,
     fetch,
   };
 }
@@ -86,6 +88,35 @@ describe('MessageExportService', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch.mock.calls[0]?.[0]).toBeUndefined();
     expect(navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it('a search that holds more than the archive takes says so with the download, until closed', () => {
+    const { service, navigate, notify } = setup();
+    service.export({ filterParams: 'status=PUBLISHED', total: 1234 }).subscribe();
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith({
+      severity: 'warn',
+      summaryKey: 'messages.export.truncated',
+      summaryParams: { limit: 1000, total: 1234 },
+      life: 0,
+    });
+  });
+
+  it('a search the archive holds whole says nothing', () => {
+    const { service, navigate, notify } = setup();
+    service.export({ filterParams: '', total: MESSAGE_EXPORT_LIMIT }).subscribe();
+    service.export({ filterParams: '' }).subscribe();
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('a selection of more messages than the archive takes says so too', () => {
+    const { service, notify } = setup();
+    const ids = Array.from({ length: MESSAGE_EXPORT_LIMIT + 1 }, (_, i) => `m${i}`);
+    service.exportSelection(ids).subscribe();
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ summaryParams: { limit: 1000, total: 1001 } }),
+    );
   });
 
   it('temp-tag failure → error toast, no navigation', () => {

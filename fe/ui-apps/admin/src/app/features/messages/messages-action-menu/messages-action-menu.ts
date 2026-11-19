@@ -304,7 +304,9 @@ export class MessagesActionMenu {
 
   private runExport(): void {
     this.afterIndexWarning(this.t.export(), () =>
-      this.exportService.export({ filterParams: this.filter.requestParams() }).subscribe(),
+      this.exportService
+        .export({ filterParams: this.filter.requestParams(), total: this.list.total() })
+        .subscribe(),
     );
   }
 
