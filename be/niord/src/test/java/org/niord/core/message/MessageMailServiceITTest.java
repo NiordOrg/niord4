@@ -27,6 +27,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.niord.core.NiordApp;
+import org.niord.core.mail.HtmlMail;
+import org.niord.core.mail.Mail;
 import org.niord.core.mail.Mail.MailRecipient;
 import org.niord.core.mail.ScheduledMail;
 import org.niord.core.message.MessageMailService.MessageMailTemplate;
@@ -221,6 +223,46 @@ class MessageMailServiceITTest extends ITTest {
         assertEquals(1, mail.getRecipients().size(), "the mail must carry exactly one recipient");
         assertEquals("rcpt@example.com", mail.getRecipients().get(0).getAddress(),
                 "the persisted recipient address must equal the recipient's address");
+    }
+
+    /**
+     * A staff member whose login has no e-mail address sends a mail: the stored sender is the bare name, which the
+     * sender's own list of mails matches on, and the mail made from it to be sent goes to its recipient without a
+     * Reply-To. FAILS on the code that parsed the sender strictly as the Reply-To: the name of two words was refused,
+     * so the mail could not be made and ended in Error after its retries, and nobody got it.
+     */
+    @Test
+    @Transactional
+    void aMailFromAUserWithoutAnAddressIsMadeWithoutAReplyTo() throws Exception {
+        User user = new User();
+        user.setUsername("u-" + UUID.randomUUID());
+        user.setFirstName("Test");
+        user.setLastName("Editor");
+        em.persist(user);
+        em.flush();
+        loginAs(user);
+
+        String subject = "MSG-MAIL-NO-SENDER-ADDRESS-" + UUID.randomUUID();
+        MessageMailTemplate t = new MessageMailTemplate()
+                .subject(subject)
+                .mailMessage("body")
+                .messages(Collections.emptyList())
+                .recipients(List.of(toRecipient("no-sender-address@example.com")))
+                .language("en")
+                .templatePath(IT_TEMPLATE);
+
+        messageMailService.sendMessageMail(t);
+
+        List<ScheduledMail> mails = mailsBySubject(subject);
+        assertEquals(1, mails.size(), "exactly one mail must be persisted");
+        ScheduledMail mail = mails.get(0);
+        assertEquals("Test Editor", mail.getSender(), "the sender is the user's name, as the sender's list matches it");
+
+        Mail sent = mail.toMail(app.getBaseUri(), HtmlMail.StyleHandling.INLINE_STYLES, false);
+        assertTrue(sent.getReplyTo().isEmpty(), "the mail has no Reply-To");
+        assertEquals(1, sent.getRecipients().size(), "and goes to its recipient");
+        assertEquals("no-sender-address@example.com",
+                ((InternetAddress) sent.getRecipients().get(0).getAddress()).getAddress());
     }
 
     /** A blank/null subject is defaulted to "No subject" before persistence. */

@@ -288,25 +288,6 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   `inlineStylesRemovesStyleBlock`).
 - **Severity:** Low — design asymmetry, may surprise callers.
 
-## MAIL14. Every mail of a user without an e-mail address and with a name of two words ends in _Error_
-
-- **Location:** `niord/src/main/java/org/niord/core/mail/IMailable.java` (`computeInternetAddress`),
-  `niord/src/main/java/org/niord/core/message/MessageMailService.java` (records it as the mail's sender) and
-  `niord/src/main/java/org/niord/core/mail/ScheduledMail.java` (`toMail`: `mail.replyTo(new InternetAddress(sender))`).
-- **Description:** for a user whose mirror row has no e-mail address, `computeInternetAddress` returns the bare name.
-  `toMail` parses the sender strictly as the mail's Reply-To, and a name with a space is refused
-  (`AddressException: Local address contains control or whitespace in string ``Test Editor''`, run against the
-  Jakarta Mail of the build). `MailService.sendScheduledMail` records each refusal as a failed attempt, so every mail
-  such a user sends from the mail dialog or with a comment ends in _Error_ after its retries, and nothing reaches the
-  recipients. A one-word name parses and is sent with that word as its Reply-To.
-- **Why it looks wrong:** the Reply-To is a convenience; a sender without an address should give the mail no Reply-To,
-  not stop it.
-- **Exposed by:** the sender's own list of mails (`GET /rest/scheduled-mails/mine`, the admin app's _My mails..._),
-  which matches mails on that sender value and now shows such a user the failure (2026-11-18); pinned by
-  `ScheduledMailTest.toMailWithABareTwoWordSenderIsRefused_documentsBug`.
-- **Severity:** Low: a Keycloak user without an e-mail address is rare among staff who send mail. Fix: set the
-  Reply-To only when the sender holds an address (or parse it leniently and skip it on a refusal).
-
 ## REPOFILTER1 — `RepositoryServletFilter` catches a RESTEasy exception the MVC stack never throws
 
 - **Location:** `niord/src/main/java/org/niord/core/repo/RepositoryServletFilter.java:64-66` —

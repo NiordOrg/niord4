@@ -31,6 +31,7 @@ import org.niord.core.util.GzipUtils;
 import org.niord.core.util.TimeUtils;
 import org.niord.model.DataFilter;
 
+import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -281,13 +282,34 @@ public class ScheduledMail extends BaseEntity<Integer> {
                 .subject(subject)
                 .recipients(mailRecipients);
 
-        if (StringUtils.isNotBlank(sender)) {
-            // TODO: Figure out how to handle sender/from addresses ... depends on SMTP service
-            //mail.from(new InternetAddress(user.getEmail()))
-            mail.replyTo(new InternetAddress(sender));
+        // TODO: Figure out how to handle sender/from addresses ... depends on SMTP service
+        //mail.from(new InternetAddress(user.getEmail()))
+        InternetAddress replyTo = replyTo(sender);
+        if (replyTo != null) {
+            mail.replyTo(replyTo);
         }
 
         return mail;
+    }
+
+    /**
+     * The mail's Reply-To: the sender, when it holds an e-mail address. A sender without one (the bare name of a user
+     * whose login has no e-mail address) or one that cannot be read as an address gives the mail no Reply-To: the
+     * Reply-To is a convenience, and the mail is sent without it rather than not at all.
+     *
+     * @param sender the sender of the mail, as stored
+     * @return the Reply-To address, or null for none
+     */
+    static InternetAddress replyTo(String sender) {
+        if (StringUtils.isBlank(sender) || !sender.contains("@")) {
+            return null;
+        }
+        try {
+            InternetAddress address = new InternetAddress(sender);
+            return StringUtils.contains(address.getAddress(), '@') ? address : null;
+        } catch (AddressException e) {
+            return null;
+        }
     }
 
     /** Adds a new recipient to the list **/
