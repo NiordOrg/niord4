@@ -517,7 +517,8 @@ follows is its design, and where the runbook simplified it, that is said. Both s
 `prune` and `selfHeal` (`envs/staging/{dk,gl}/config.yaml:11-15`), which revert a `kubectl scale` and a
 sync paused in the UI, so every step that changes the deployment is a merge request. Announce the window
 and ask the editors to stay out of it; merge the release (the chart pin and `app.image.tag` of the country
-image that carries the store, as `scripts/staging-bump.py` writes them) with `app.replicaCount: 0` in the
+image that carries the store, as the staging bump writes them: devops-niord's promote job with `TARGET=staging`
+since 2026-11-19, `scripts/staging-bump.py` before) with `app.replicaCount: 0` in the
 same merge request, so the old application stops and the new one cannot start yet; take the rollback point;
 merge `replicaCount` back to 1, which the `Recreate` strategy starts with the volume still mounted. The
 rollback point was first a `pg_dump -Fc` of the database and a CSI snapshot of the application's volume; the

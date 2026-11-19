@@ -11,11 +11,12 @@ of its own, preview inputs in the country kit's image template, a deploy command
 `devops-niord`.
 **Does not change:** `publish.yml` and its `main`-only `publish` and `harbor` environments, so release publishing
 stays `main`-only (the preview path of §3.1 is a new, separately fenced path beside it); the release version
-`4.0.<run>` and its tag `v4.0.<run>`; `staging-bump.py`'s pins and flow (it gains the checksum refusal of §3.3 and
-ignores previews, §3.3); the two-pin deploy repo (`be/docs/cicd/design.md` §3); the roll-forward-only migration
-policy (design §7); the rules of `docs/code-data-config-plan.md` (a repository change only adds inert keys; data
-arrives by bootstrap or a sysadmin's import); the sample's safety rules; and the rule that production is touched
-only on request (`AGENTS.md:52-55`). Prod never runs a branch.
+`4.0.<run>` and its tag `v4.0.<run>`; the staging bump's pins and flow (`devops-niord`'s promote job with
+`TARGET=staging`, `scripts/staging_bump.py` since 2026-11-19; it gains the checksum refusal of §3.3 and ignores
+previews, §3.3); the two-pin deploy repo (`be/docs/cicd/design.md` §3); the roll-forward-only migration policy
+(design §7); the rules of `docs/code-data-config-plan.md` (a repository change only adds inert keys; data arrives
+by bootstrap or a sysadmin's import); the sample's safety rules; and the rule that production is touched only on
+request (`AGENTS.md:52-55`). Prod never runs a branch.
 
 ---
 
@@ -70,11 +71,13 @@ CI run of a pin bump pushed to its `main`, tagged `<base>.<run>` (`docs/pipeline
 kit's template pushes only from `main` (`country-kit/templates/image.yml:41`) in the `harbor` environment
 (`:44`) and only a tag of digits and dots (`:79`).
 
-**Staging pins published builds.** A staging deploy is `devops-niord`'s `scripts/staging-bump.py`: it takes a
-base (by default the newest `v4.0.N` tag), commits the pin in each country repository, waits for the images and
-opens a merge request with the four pins; the merge is by hand and Argo CD applies it
-(`docs/pipeline-latency-plan.md:91-98`; `publish.yml:57-60`). An environment pins two numbers per country, the
-chart version (the base version) and `app.image.tag` (design §3, `be/docs/cicd/design.md:89`).
+**Staging pins published builds.** A staging deploy is `devops-niord`'s promote job with `TARGET=staging`
+(`scripts/staging_bump.py`, since 2026-11-19): it reads the country images in Harbor's release project, takes the
+highest base that is a `v4.0.N` tag here and that both countries have an image of, and the newest image of each on
+it, and opens a merge request with the four pins; the merge is by hand and Argo CD applies it
+(`docs/pipeline-latency-plan.md`, item 17; `publish.yml`'s header, *Deployment is NOT here*). An environment pins
+two numbers per country, the chart version (the base version) and `app.image.tag` (design §3,
+`be/docs/cicd/design.md:89`).
 
 **Test environments.** A `test-<name>` environment is one merge request that copies `envs/_template/`, pinned to
 a specific build; it gets its own Postgres and Keycloak, starts with a usable schema (Liquibase is always on) and
@@ -135,7 +138,7 @@ run its commit.
   §5 checks the refusal.
 - *It is never a release tag.* No `v4.0.*` tag is made for a preview: `publish.yml`'s gate takes any
   `v4.0.`-prefixed tag on a commit as "already published" and would skip that commit's publish when it is merged
-  (`publish.yml:304-310`), `staging-bump.py` defaults to the newest `v4.0.N`, and `retract-version.yml` removes
+  (`publish.yml:304-310`), the staging bump counts only a base that is a `v4.0.N` tag, and `retract-version.yml` removes
   only `v4.0.<run>` (`retract-version.yml:172`).
 
 **Where it publishes.** Nowhere a release lives. A GitHub environment of its own, `preview`, with no
@@ -207,9 +210,9 @@ and the country's `ci.yml` on `main` fails a `<parent>` version that is not `4.0
 
 ### 3.3 Deploying
 
-**The command.** `devops-niord` gets `scripts/preview-deploy.py` beside `staging-bump.py`, run from a
-workstation with the person's own `gh` and `glab` logins as `staging-bump.py` is
-(`docs/pipeline-latency-plan.md:91-93`):
+**The command.** `devops-niord` gets `scripts/preview-deploy.py` beside `scripts/staging_bump.py`, run from a
+workstation with the person's own `gh` and `glab` logins. (The staging bump ran that way until 2026-11-19; it is a
+target of the promote job since then. Whether the preview deploy becomes one too is open.)
 
 ```
 preview-deploy.py --env staging|test-<name> --country dk|gl --base <version> --image <tag> [--schema-final]
@@ -242,12 +245,14 @@ nor reshapes. A changeset that reshapes existing values, which D2 allows in `mai
 (`docs/code-data-config-plan.md` §13 D2; §7.4's Liquibase bullet), is not expand-only, so under R3 it reaches staging from `main` only.
 For `--env test-<name>` the list is shown and nothing is refused.
 
-**Going back.** Back to a release is `staging-bump.py`, as today. It, and `preview-deploy.py`, refuse a build
+**Going back.** Back to a release is the staging bump, as today. It, and `preview-deploy.py`, refuse a build
 whose changeset pins (`ChangelogChecksumPinTest`'s map) give another checksum for an id the environment has
 already run, reading the pins of every build the environment has had in the deploy repository's history.
-`staging-bump.py` reuses a country's newest green image or dispatches `image.yml`
-(`docs/pipeline-latency-plan.md:96-97`); it ignores preview runs of `image.yml` and accepts only a tag of digits
-and dots, so a preview is never its "newest green image".
+The staging bump lists only the release project's image repositories that the environment's values name, and
+accepts only a tag `<base>.<run>` of digits on a base that is a `v4.0.N` tag, so a preview image is never its
+newest image. Going back also has to set the chart's registry and `app.image.registry` (and `info.image.registry`)
+back to the release project, which `preview-deploy.py` changed: the staging bump writes only the chart version and
+`app.image.tag` today, so step 5 teaches it that.
 
 ### 3.4 Data (R2)
 
@@ -352,9 +357,9 @@ repository's.
 |---|---|---|---|
 | 1 | owner | The Harbor project for previews, a push robot each for `niord`, `niord-dk` and `niord-gl`, a pull credential sealed for the test cluster only, a retention rule; the preview Packages repository and its machine user, with write access to that repository only | the preview robot pushes a scratch tag there and is refused by `cu3504-mssb-brs`; the release robot is refused by the preview project; a `test-<name>` namespace pulls the tag; the preview token is refused by `NiordOrg/niord`'s registry |
 | 2 | owner | The `preview` environment in the base product's repository (no branch rule) with the preview Packages token and robot; the same in each country repository, with the countries' read access to the preview repository | a branch's dispatch reaches the secrets; the next `main` publish passes its gate with `publish` and `harbor` unchanged |
-| 3 | repo | `preview.yml` and `preview-prune.yml` on `main`; the docs (design §7, Phase 6's `pr-<n>` item and the order of work in `implementation-plan.md`, `:16` and `:22`, a line on the preview path in `docs/security-review-2026-09.md` §7, the README) | a dispatch from a branch publishes the preview set and no tag or release; a dispatch on a draft's skipped runs is refused; the next release is `4.0.N`, `staging-bump.py` still picks it, Frontend CI's upgrade test still finds it; the bump script refuses a preview version (its unit test); the prune deletes a scratch preview and nothing else |
+| 3 | repo | `preview.yml` and `preview-prune.yml` on `main`; the docs (design §7, Phase 6's `pr-<n>` item and the order of work in `implementation-plan.md`, `:16` and `:22`, a line on the preview path in `docs/security-review-2026-09.md` §7, the README) | a dispatch from a branch publishes the preview set and no tag or release; a dispatch on a draft's skipped runs is refused; the next release is `4.0.N`, the staging bump still picks it, Frontend CI's upgrade test still finds it; the bump script refuses a preview version (its unit test); the prune deletes a scratch preview and nothing else |
 | 4 | repo | The kit's `templates/image.yml` inputs, the preview push job and the `main` job's pre-release refusal; then each country's `image.yml` and `ci.yml` | a country preview of each row of §3.2's table; the `main` job and `ci.yml` shown red once on a preview base |
-| 5 | owner | `preview-deploy.py` with its tests, the changeset list and the checksum refusal in it and in `staging-bump.py`, and `staging-bump.py`'s refusal of preview runs and tags; the preview chart source and pull credential in the test cluster's AppProject | a `test-<name>` environment from a preview with a changeset, bootstrapped, used, deleted with its volumes; a staging merge request refused without `--schema-final` and opened with it; back to a release with `staging-bump.py`, which passes over a newer preview image |
+| 5 | owner | `preview-deploy.py` with its tests, the changeset list and the checksum refusal in it and in the staging bump (`scripts/staging_bump.py`), and the staging bump's return of the registries to the release project (§3.3, *Going back*); the preview chart source and pull credential in the test cluster's AppProject | a `test-<name>` environment from a preview with a changeset, bootstrapped, used, deleted with its volumes; a staging merge request refused without `--schema-final` and opened with it; back to a release with the staging bump, which passes over a newer preview image |
 | 6 | owner, on request | The promote's named-version input, its refusals and the staging-history check; prod's AppProject and pull credential without the preview project | the promote's own tests and a dry run; nothing is done to prod for this plan |
 
 ---
