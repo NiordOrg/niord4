@@ -67,8 +67,8 @@ that the forward-looking vocabulary holds. In a document the kit package carries
 inside the kit, and a `.niord/kit/` or `.niord/base/` path names a file of the kit package or the
 source zip. In one the source zip carries, a link stays inside it. The kit's guides may name only a
 country workspace's npm scripts. The agent template is checked for its `.niord/kit/` and
-`.niord/base/` paths. The publications specifications and
-the go-live runbooks are excluded on purpose — they stay verbatim.
+`.niord/base/` paths. The publications specifications are
+excluded on purpose — they stay verbatim.
 
 `npm run format` rewrites **every** file in the repository. Do not run it: format only what you
 changed. The pre-commit hook (husky + lint-staged) already formats and lints staged files.

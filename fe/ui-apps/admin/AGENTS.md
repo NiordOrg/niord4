@@ -108,8 +108,7 @@ behaviour and `@ng-icons/lucide` for icons, wrapped once by the shared component
 Read [docs/publications/domain-rules.md](../../docs/publications/domain-rules.md) before touching
 anything under `features/admin/sections/admin/publications/`. The specifications
 ([DATA-MODEL.md](../../docs/publications/DATA-MODEL.md), [API-CONTRACT.md](../../docs/publications/API-CONTRACT.md))
-are guarded by `node scripts/publications/spec-check.js`; the go-live set under
-`docs/publications/go-live/` is kept verbatim until go-live — do not reformat or reword it.
+are guarded by `node scripts/publications/spec-check.js`.
 
 ## Guards
 

@@ -965,13 +965,11 @@ Once deployed, **the public site serves this model and there is no way back thro
 There is no per-series switch, no estate-wide switch and no readiness gate; undoing a deployment is a
 full database restore, which is a decision taken outside these screens.
 
-**Until go-live, the process documents in [`go-live/`](go-live/) are binding and are kept verbatim**:
-[`go-live/GO-LIVE-PROCESS.md`](go-live/GO-LIVE-PROCESS.md) is the ruled process,
-[`go-live/PRODUCTION-CUTOVER-RUNBOOK.md`](go-live/PRODUCTION-CUTOVER-RUNBOOK.md) the mechanics,
-[`go-live/RE-RUNNABILITY.md`](go-live/RE-RUNNABILITY.md) the re-run rules and
-[`go-live/GO-LIVE-TASKS.md`](go-live/GO-LIVE-TASKS.md) the outstanding list. Production is **one window**,
-not a passive period: import, verify and activate happen together, rehearsed identically on test from a
-fresh production restore, with the restore rehearsed and the image frozen after the final rehearsal.
+**Until go-live, the go-live process documents are binding**: the ruled process, the mechanics underneath
+it, the re-run rules and the outstanding task list, all kept outside this repository. Production is
+**one window**, not a passive period: import, verify and activate happen together, rehearsed identically
+on test from a fresh production restore, with the restore rehearsed and the image frozen after the final
+rehearsal.
 
 ---
 
