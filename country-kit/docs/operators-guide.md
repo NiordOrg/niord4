@@ -402,8 +402,9 @@ Check at least the addresses (`baseUri`, `adminAppUrl`, `authServerUrl`), the ma
 (`mailSender`), who mail really goes to (`mailValidRecipients`: `LOG`, the shipped value, only logs a
 mail and marks it Held in the Mail Queue, from where a sysadmin can send it again once the setting is
 open; `ALL` sends it to its recipients, and a list of addresses sends it only to those, any other
-recipient replaced by the first), the deployment ribbon (`mode`: anything but `production` shows a
-ribbon in both applications; the shipped settings file says `test`), and `documentationUrl`, which
+recipient replaced by the first and the mail marked Held, so under a list most mails show as Held),
+the deployment ribbon (`mode`: anything but `production` shows a ribbon in both applications; the
+shipped settings file says `test`), and `documentationUrl`, which
 the Help links open. A copy of production's data carries production's values of these two, so give
 each environment its own at the server's start (below). The language keys are in
 [A new language in a running deployment](#a-new-language-in-a-running-deployment).

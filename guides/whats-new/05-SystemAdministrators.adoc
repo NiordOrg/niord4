@@ -125,8 +125,10 @@ few settings worth knowing: `documentationUrl` decides where every _Help_ link g
 whether mails are really sent, for every mail when it is sent. See
 link:../sysadmin-manual/manual.html#settings[Settings] in the system administrator manual.
 
-While `mailValidRecipients` is `LOG`, a mail now reads _Held_ in the _Mail Queue_, not _Sent_, and
-a system administrator can send a held, sent or failed mail again, one at a time or every mail of a
+A mail that `mailValidRecipients` kept from its recipients now reads _Held_ in the _Mail Queue_,
+not _Sent_: every mail while the setting is `LOG`, and, while it is a list of addresses, a mail with
+a recipient who is not on the list, although a copy went to the list's first address. A system
+administrator can send a held, sent or failed mail again, one at a time or every mail of a
 search. See link:../sysadmin-manual/manual.html#send-again[Sending a Mail Again] in the system
 administrator manual.
 
