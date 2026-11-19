@@ -48,7 +48,8 @@ public class UserDeletionService extends BaseService {
 
     /**
      * Takes the user off every mailing list, removes the user from the mails queued for the user and not yet sent
-     * (pending, or held under the LOG mail filter, which a system administrator may still send again), and
+     * (pending, or held by the mail filter, LOG or a list that did not name every recipient, which a system
+     * administrator may still send again), and
      * clears the address of the user's record; and, on return, commits. The record itself stays, with the user's name,
      * for the messages, comments and history the user made. Does nothing for a user without a record.
      *
