@@ -99,10 +99,13 @@ curl -s http://localhost:18888/rest/actuator/health
 #         sync, here at the next ./scripts/deploy.sh (helm/niord/templates/postgres/databases-job.yaml:
 #         after every install and upgrade it creates each listed database that is missing, and it
 #         never drops one; it renders only when the list is not empty). A release whose app database
-#         is postgres.database (this quick start's niord, which the Postgres image creates only on an
-#         empty volume) is not recreated by it: the operator recreates it in the db pod, as the
-#         superuser (CREATE DATABASE niord TEMPLATE template_postgis), and the app's next start
-#         hands it to the app's database user ("The database users", below);
+#         is postgres.database on its own Postgres (this quick start's niord) needs nothing here:
+#         the app pod's database-user init container creates a missing postgres.database from
+#         template_postgis, owned by the app's database user, before the backend starts in step c
+#         ("The database users", below). A database of someone else's (postgres.host) is recreated
+#         by whoever runs it. A database that is to hold a restored dump is the exception: create
+#         and load it before the app starts, or the init container makes an empty one first and the
+#         backend builds its schema in it;
 #      c. the backend is started again (scaled back up), and its first start writes pending;
 #      d. the same bootstrap command is run with the same archives.
 #    A queued alert mail (a SECOM certificate near expiry, or a store that fails to load) does not
@@ -521,7 +524,15 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   key with a dot or one starting `spring_`, `server_`, `management_`, `logging_` or `niord_`
   (Spring reads such a variable as a property and lets it outrank the chart's, and `niord.home`
   is the chart's `NIORD_HOME`), `authServerUrl` (the chart sets it) and a key also set in
-  `secom.settings`.
+  `secom.settings`. A `-D<settingKey>=<value>` in `app.javaOpts` pins a setting too, and wins
+  over `app.settings` (the app reads a system property before an environment variable), but no
+  render checks it, and `app.javaOpts` is one string that replaces the chart's default whole: a
+  values file that sets it for a `-D` must repeat `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC`, or
+  the JVM sizes its heap and chooses its collector itself. `app.settings` is the supported way. A
+  setting whose value is a secret (`pdfEncryptionPassword`, `wmsPassword`) can be pinned neither
+  way: the values are no place for a secret, and the chart has no value that passes a Secret's
+  key to the app as a setting (K8S2 in [`be/docs/potential-errors.md`](../docs/potential-errors.md)),
+  so such a setting is the stored row, and a restored database brings the other system's.
 - **Map images and their tiles** — the backend draws a message's map image itself, on
   OpenStreetMap tiles it fetches from the host in the `osmUrl` setting (by default
   `https://tile.openstreetmap.org`), so the app pod needs egress to that host over https. Where
@@ -593,7 +604,7 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
 | `keycloak.database` | `keycloak` | Production mode: the database on this release's Postgres (or `postgres.host`) that Keycloak keeps its data in, created by an init container when missing. |
 | `postgres.databases` | `[]` | Further databases this release's Postgres holds, next to `postgres.database`. An infra release serving several app releases lists one per app (`[niord_dk, niord_gl]`), and each app release names its own in `postgres.database`. A post-install/post-upgrade Job creates any that is missing (from `template_postgis`, owned by the superuser, `postgres.admin`) and never drops one. An app release on such a database needs it handed to its user ("A database of someone else's", above). |
 | `app.persistence` / `postgres.persistence` | `enabled: true` | PVCs for NIORD_HOME and the DB. The repository files (attachments, publication files, the archive) are rows of the DB; NIORD_HOME is a cache (thumbnails and map images under `cache/`, the map tile cache of at most 200 MB, the AtoN tiles, the Lucene index) and the batch jobs' files, and nothing on it is backed up. |
-| `app.javaOpts` | `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC` | Handed to the JVM as `JAVA_TOOL_OPTIONS`. Add the `-Dhttps.proxyHost`/`-Dhttps.proxyPort`/`-Dhttp.nonProxyHosts` flags when the tile host is reached through a proxy. The pod's JVM runs in UTC (`TZ=UTC`, set by the image and the chart, not by this value, so a value that replaces it keeps UTC); do not add `-Duser.timezone`. |
+| `app.javaOpts` | `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC` | Handed to the JVM as `JAVA_TOOL_OPTIONS`. One string that replaces the default whole, so a value that adds a flag repeats the two above. A `-D<settingKey>=<value>` here pins a setting ahead of `app.settings` and the stored row; pin settings with `app.settings` instead (see "Pinned settings"). Add the `-Dhttps.proxyHost`/`-Dhttps.proxyPort`/`-Dhttp.nonProxyHosts` flags when the tile host is reached through a proxy. The pod's JVM runs in UTC (`TZ=UTC`, set by the image and the chart, not by this value, so a value that replaces it keeps UTC); do not add `-Duser.timezone`. |
 | `app.resources.limits.memory` | `2Gi` | Heap is `MaxRAMPercentage=70`. |
 | `app.settings` | `{}` | Settings of the Settings page this environment pins, as environment variables named like the key (`baseUri`, `mode`, `mailValidRecipients`, `mailSender`); a pinned value wins over the stored row. An empty value is not rendered. Never a secret: the render refuses a key that names a password, secret or token. See "Pinned settings" above. |
 | `app.oidc.allowedClients` | `""` | The Keycloak clients whose tokens the API accepts (the token's `azp` claim); any other client's token is answered 401. `""` = the application default, `niord-web` and the base client `niord-client-master`. A value replaces the default, so it names `niord-web` too, e.g. `niord-web,niord-client-master,<script-client>` for a script with a client of its own. Rendered as `niord.oidc.allowed-clients`. |

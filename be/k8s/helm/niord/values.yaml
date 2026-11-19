@@ -138,7 +138,11 @@ app:
   # images (the osmUrl setting's host, tile.openstreetmap.org by default): where the pod
   # reaches the internet through a proxy, add -Dhttps.proxyHost=<host> -Dhttps.proxyPort=<port>
   # and -Dhttp.nonProxyHosts=<in-cluster hosts>. The pod runs in UTC (the image and the chart
-  # set TZ, outside this value); do not add -Duser.timezone.
+  # set TZ, outside this value); do not add -Duser.timezone. One string that replaces this
+  # default whole: a value that adds a flag repeats -XX:MaxRAMPercentage=70.0 -XX:+UseG1GC, or
+  # the JVM sizes its heap and chooses its collector itself. A -D<settingKey>=<value> here also
+  # pins a setting of the Settings page, ahead of app.settings and the stored row, unchecked by
+  # the render: pin settings with app.settings below instead (README, "Pinned settings").
   javaOpts: "-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC"
   logLevel: "INFO"
   # The Keycloak clients whose access tokens the API accepts: a token's azp claim (the client it

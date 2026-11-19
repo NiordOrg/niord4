@@ -1673,6 +1673,23 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   §5), `curl -s http://localhost:4200/rest/domains/all` against a local country.
 - **Severity:** Low — log noise only. Fix: skip the Keycloak states, or log at DEBUG, when no user is authenticated.
 
+## K8S2. The chart cannot pin a setting whose value is a secret
+
+- **Location:** `be/k8s/helm/niord/templates/app/deployment.yaml` (the app container's environment) and
+  `templates/validate.yaml` (`app.settings`).
+- **Description:** a setting is pinned per environment, over its stored row, by `app.settings` (an environment
+  variable named like the key, which `SettingsService` reads before the row) or by `-D<key>=<value>` in
+  `app.javaOpts`. Both are plain values: the render refuses an `app.settings` key that names a password, secret or
+  token, and the chart has no value that passes a key of a Secret to the app container under a setting's name.
+  The two settings of type `Password`, `pdfEncryptionPassword` and `wmsPassword`, can therefore only be the stored
+  row, and a database restored from another system brings that system's values for them.
+- **Why it looks wrong:** every other setting a restore must override can be pinned outside the database; these
+  two cannot be without writing the secret into the values.
+- **Exposed by:** a reading of the chart's pinned settings against what a restored database brings (2026-11-19).
+- **Severity:** Low — both are empty by default and are changed on the Settings page after a restore. Fix: a value
+  that maps a setting key to a Secret and its key, rendered as an environment variable from `secretKeyRef`, held to
+  the key rules of `app.settings`.
+
 ## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
 
 - **Location:** `org.niord.web.wms.WmsProxyServlet.doGet`: `WebUtils.cache(response, CACHE_TIMEOUT)` runs before
