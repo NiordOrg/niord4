@@ -80,7 +80,12 @@ public class ScheduledMail extends BaseEntity<Integer> {
     /** In case of an error, how many minutes should the system wait before attempting to send the mail again **/
     public static final int[] DELAYS = {1, 5, 15, 60};
 
-    public enum Status { PENDING, SENT, ERROR }
+    /**
+     * PENDING: waits for the sender job. SENT: handed to the mail server. HELD: handled while the mail filter
+     * ({@code mailValidRecipients}) was LOG, so nothing left the server. ERROR: given up after the last attempt, or a
+     * record of a failure that is never sent (made with no attempt by {@code MailingListExecutionService}).
+     */
+    public enum Status { PENDING, SENT, HELD, ERROR }
 
     @Temporal(TemporalType.TIMESTAMP)
     Date created;
@@ -112,6 +117,13 @@ public class ScheduledMail extends BaseEntity<Integer> {
     int attempts = 0;
 
     String lastError;
+
+    /** When a system administrator last sent the mail again, or null if never */
+    @Temporal(TemporalType.TIMESTAMP)
+    Date sentAgainAt;
+
+    /** The user name of the system administrator who last sent the mail again, or null if never */
+    String sentAgainBy;
 
     /** Set the created date **/
     @PrePersist
@@ -317,5 +329,21 @@ public class ScheduledMail extends BaseEntity<Integer> {
 
     public void setLastError(String lastError) {
         this.lastError = lastError;
+    }
+
+    public Date getSentAgainAt() {
+        return sentAgainAt;
+    }
+
+    public void setSentAgainAt(Date sentAgainAt) {
+        this.sentAgainAt = sentAgainAt;
+    }
+
+    public String getSentAgainBy() {
+        return sentAgainBy;
+    }
+
+    public void setSentAgainBy(String sentAgainBy) {
+        this.sentAgainBy = sentAgainBy;
     }
 }
