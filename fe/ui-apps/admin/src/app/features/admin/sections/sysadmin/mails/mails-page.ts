@@ -1,17 +1,22 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 import { Icon } from '../../../../../shared/icons/icon';
 import { DomainService } from '../../../../../core/domain/services/domain.service';
 import { LocaleFormatService } from '../../../../../core/main-shell/services/locale-format.service';
 import { NotificationService } from '../../../../../core/notifications/notification.service';
+import { problemDetail } from '../../../../../shared/api/problem-detail';
+import { Confirm } from '../../../../../shared/components/confirm/confirm';
 import { DatePicker } from '../../../../../shared/forms/date-picker/date-picker';
 import { EmptyState } from '../../../../../shared/components/empty-state/empty-state';
 import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
 import { Pager } from '../../../../../shared/components/pager/pager';
 import { ProgressBar } from '../../../../../shared/components/progress-bar/progress-bar';
+import { ConfirmService } from '../../../../../shared/services/confirm.service';
 import { endOfDayInZone } from '../../../../../shared/utils/zoned-date';
 import {
+  SEND_AGAIN_MAX,
   ScheduledMail,
   ScheduledMailStatus,
   ScheduledMailsApiService,
@@ -20,6 +25,13 @@ import { AdminSectionPage } from '../../../shell/admin-section-page';
 import { ADMIN_TEXT_FILTER_DEBOUNCE_MS } from '../../../utils/kit-constants';
 import { MailDetailsDialog } from './mail-details-dialog';
 import { ScheduledMailsFacade } from './scheduled-mails.facade';
+import {
+  SEND_AGAIN_ADDRESSES_SHOWN,
+  SendAgainGroup,
+  canSendAgain,
+  groupForSendAgain,
+  sendAgainItem,
+} from './send-again';
 
 type TextParam = 'recipient' | 'sender' | 'subject';
 
@@ -27,6 +39,12 @@ type TextParam = 'recipient' | 'sender' | 'subject';
  * Mail-queue search: server-paged, with debounced text filters, a status
  * radio, and a from/to date range snapped to day boundaries in the session
  * domain's timezone. Rows open a read-only details dialog.
+ *
+ * Send again puts a held, sent or failed mail back to PENDING, exactly as it was
+ * made: one mail from its row, or every mail of the current search while the
+ * status filter is Held or Error (at most `SEND_AGAIN_MAX`; a sent mail only one
+ * at a time). The page carries no role gate of its own: the sysadmin route and
+ * the backend's guard of the endpoint keep it to a system administrator.
  */
 @Component({
   selector: 'app-mails-page',
@@ -39,9 +57,11 @@ type TextParam = 'recipient' | 'sender' | 'subject';
     EmptyState,
     ErrorBanner,
     MailDetailsDialog,
+    Confirm,
     TranslocoPipe,
   ],
-  providers: [ScheduledMailsFacade],
+  // The confirmation is wider than the root one and lists the mails, so the page mounts its own.
+  providers: [ScheduledMailsFacade, ConfirmService],
   templateUrl: './mails-page.html',
   host: { class: 'flex min-w-0 flex-1 flex-col' },
 })
@@ -51,6 +71,8 @@ export class MailsPage {
   private readonly notifications = inject(NotificationService);
   private readonly localeFormat = inject(LocaleFormatService);
   private readonly domain = inject(DomainService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly transloco = inject(TranslocoService);
 
   /** Instant input echoes — committed to the facade only after the debounce. */
   protected readonly recipientInput = signal('');
@@ -72,6 +94,17 @@ export class MailsPage {
 
   protected readonly detailsMail = signal<ScheduledMail | undefined>(undefined);
   protected readonly detailsLoading = signal(false);
+
+  /** Blocks re-entry while Send again reads the search or posts its request. */
+  protected readonly sendingAgain = signal(false);
+
+  /** "Send all matching again…" is offered only while the status filter is Held or Error. */
+  protected readonly sendAllAgainOffered = computed(() => {
+    const status = this.facade.params().status;
+    return status === 'HELD' || status === 'ERROR';
+  });
+
+  protected readonly canSendAgain = canSendAgain;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -156,6 +189,125 @@ export class MailsPage {
 
   protected statusKey(mail: ScheduledMail): string {
     return `admin.mails.status.${mail.status.toLowerCase()}`;
+  }
+
+  /** The row button: one mail, after the confirmation. */
+  protected sendAgain(mail: ScheduledMail): void {
+    if (this.sendingAgain() || !canSendAgain(mail)) {
+      return;
+    }
+    this.confirmSendAgain([mail]);
+  }
+
+  /**
+   * Every mail of the current search, read again with the committed filter in one page of
+   * `SEND_AGAIN_MAX`: a search that matches more sends nothing, so no mail is left out unseen. Sent
+   * mails are left out (one at a time only), and so are failure records, which are not mails.
+   */
+  protected sendAllMatchingAgain(): void {
+    if (this.sendingAgain()) {
+      return;
+    }
+    this.sendingAgain.set(true);
+    this.api.search(this.facade.params(), 0, SEND_AGAIN_MAX).subscribe({
+      next: (result) => {
+        this.sendingAgain.set(false);
+        if (result.total > SEND_AGAIN_MAX) {
+          this.notifications.warn('admin.mails.sendAgain.tooMany', {
+            total: result.total,
+            max: SEND_AGAIN_MAX,
+          });
+          return;
+        }
+        const mails = result.data.filter((mail) => mail.status !== 'SENT' && canSendAgain(mail));
+        if (mails.length === 0) {
+          this.notifications.info('admin.mails.sendAgain.nothing');
+          return;
+        }
+        this.confirmSendAgain(mails);
+      },
+      error: () => {
+        this.sendingAgain.set(false);
+        this.notifications.error('admin.mails.loadError');
+      },
+    });
+  }
+
+  private confirmSendAgain(mails: readonly ScheduledMail[]): void {
+    const t = (key: string, params?: Record<string, unknown>) =>
+      this.transloco.translate(`admin.mails.sendAgain.${key}`, params);
+    const single = mails.length === 1;
+    let message: string;
+    if (!single) {
+      message = t('messageMany', { count: mails.length });
+    } else if (mails[0].status === 'SENT') {
+      message = t('messageSent');
+    } else {
+      message = t('messageOne');
+    }
+    const details = groupForSendAgain(mails).map((group) =>
+      t('line', {
+        count: group.mails.length,
+        subject: group.subject,
+        created: this.formatDateTime(group.created),
+        status: this.transloco.translate(`admin.mails.status.${group.status.toLowerCase()}`),
+        recipients: this.groupRecipients(group, single),
+      }),
+    );
+    this.confirm.confirmNeutral({
+      header: t('title'),
+      message,
+      details,
+      acceptLabel: t('title'),
+      accept: () => this.postSendAgain(mails),
+    });
+  }
+
+  /** A single mail lists every recipient; a group its first addresses and how many more. */
+  private groupRecipients(group: SendAgainGroup, single: boolean): string {
+    if (single || group.addresses.length <= SEND_AGAIN_ADDRESSES_SHOWN) {
+      return group.addresses.join(', ');
+    }
+    return this.transloco.translate('admin.mails.sendAgain.more', {
+      addresses: group.addresses.slice(0, SEND_AGAIN_ADDRESSES_SHOWN).join(', '),
+      count: group.addresses.length - SEND_AGAIN_ADDRESSES_SHOWN,
+    });
+  }
+
+  private postSendAgain(mails: readonly ScheduledMail[]): void {
+    if (this.sendingAgain()) {
+      return;
+    }
+    this.sendingAgain.set(true);
+    this.api.sendAgain(mails.map(sendAgainItem)).subscribe({
+      next: (result) => {
+        this.sendingAgain.set(false);
+        if (result.refused.length === 0) {
+          this.notifications.success('admin.mails.sendAgain.queued', {
+            count: result.queued.length,
+          });
+        } else {
+          this.notifications.warn('admin.mails.sendAgain.partly', {
+            queued: result.queued.length,
+            refused: result.refused.length,
+          });
+        }
+        this.facade.refresh();
+      },
+      error: (err: unknown) => {
+        this.sendingAgain.set(false);
+        // A 409 (the mail filter is LOG or empty) and a 400 (a request the backend will not take)
+        // carry a problem document whose detail says what to do; nothing was changed either way.
+        // Any other failure's detail may be raw exception text, which is never shown.
+        const status = err instanceof HttpErrorResponse ? err.status : 0;
+        const detail = status === 409 || status === 400 ? problemDetail(err) : undefined;
+        if (detail === undefined) {
+          this.notifications.error('admin.mails.sendAgain.error');
+          return;
+        }
+        this.notifications.error('admin.mails.sendAgain.refused', { detail });
+      },
+    });
   }
 
   protected openMail(mail: ScheduledMail): void {

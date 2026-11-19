@@ -56,6 +56,23 @@
             <td class="py-1">{{ sendDateLabel() }}</td>
           </tr>
         }
+        @if (sentAgainLabel()) {
+          <tr>
+            <th class="py-1 pr-3 text-left font-medium text-fg-muted">
+              {{ 'admin.mails.details.sentAgain' | transloco }}
+            </th>
+            <td class="py-1">
+              @if (m.sentAgainBy) {
+                {{
+                  'admin.mails.details.sentAgainBy'
+                    | transloco: { time: sentAgainLabel(), user: m.sentAgainBy }
+                }}
+              } @else {
+                {{ sentAgainLabel() }}
+              }
+            </td>
+          </tr>
+        }
         @if (m.lastError) {
           <tr>
             <th class="py-1 pr-3 text-left font-medium text-fg-muted">

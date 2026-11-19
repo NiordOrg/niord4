@@ -4,7 +4,11 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
-import { ScheduledMail, ScheduledMailsApiService } from './scheduled-mails-api.service';
+import {
+  ScheduledMail,
+  ScheduledMailsApiService,
+  SendAgainResult,
+} from './scheduled-mails-api.service';
 
 const EMPTY = { recipient: '', sender: '', subject: '', status: '' } as const;
 
@@ -79,5 +83,36 @@ describe('ScheduledMailsApiService', () => {
       .expectOne('/rest/scheduled-mails/scheduled-mail/42')
       .flush({ id: 42, status: 'SENT', sender: 's', subject: 'x', recipients: [] });
     expect((received as ScheduledMail).id).toBe(42);
+  });
+
+  it('posts Send again with each mail as the page showed it, and reads the answer', () => {
+    const { service, httpTesting } = setup();
+    let received: SendAgainResult | undefined;
+    service
+      .sendAgain([
+        { id: 1, status: 'HELD', sentAgainAt: null },
+        { id: 2, status: 'ERROR', sentAgainAt: 1_700_000_000_000 },
+      ])
+      .subscribe((result) => (received = result));
+    const req = httpTesting.expectOne('/rest/scheduled-mails/send-again');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      mails: [
+        { id: 1, status: 'HELD', sentAgainAt: null },
+        { id: 2, status: 'ERROR', sentAgainAt: 1_700_000_000_000 },
+      ],
+    });
+    req.flush({ queued: [1], refused: [{ id: 2, reason: 'CHANGED' }] });
+    expect(received).toEqual({ queued: [1], refused: [{ id: 2, reason: 'CHANGED' }] });
+  });
+
+  it('reads an answer without lists as nothing queued and nothing refused', () => {
+    const { service, httpTesting } = setup();
+    let received: SendAgainResult | undefined;
+    service
+      .sendAgain([{ id: 1, status: 'SENT', sentAgainAt: null }])
+      .subscribe((result) => (received = result));
+    httpTesting.expectOne('/rest/scheduled-mails/send-again').flush({ queued: null });
+    expect(received).toEqual({ queued: [], refused: [] });
   });
 });

@@ -18,7 +18,9 @@ import { MAIL_PREVIEW_CSS } from './mail-preview.css';
  * when the mail filter held it), Sent once sent, Last attempt once it
  * failed for good; it is left out when the value is empty, and for a mail in
  * Error that was never attempted (a mailing-list trigger's failure record, made
- * in Error with 0 attempts, whose send date is only its creation time). The HTML body
+ * in Error with 0 attempts, whose send date is only its creation time). The Sent
+ * again row, when and by whom the mail was last sent again, shows only for a mail
+ * a system administrator has sent again. The HTML body
  * renders in the sandboxed-iframe primitive — full document fidelity, scripts
  * inert.
  */
@@ -34,6 +36,8 @@ export class MailDetailsDialog {
   readonly createdLabel = input<string>('');
   /** The pre-formatted send date: the time the mail is, or was, due to be sent. */
   readonly sendDateLabel = input<string>('');
+  /** The pre-formatted time of the last Send again; empty when the mail was never sent again. */
+  readonly sentAgainLabel = input<string>('');
   readonly closed = output<void>();
 
   /** Inline stylesheet for the sandboxed preview (linked mail CSS can't load). */

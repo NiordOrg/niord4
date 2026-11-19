@@ -1672,9 +1672,26 @@
         "lastAttempt": "Last attempt",
         "error": "Error",
         "attempts": "({{attempts}} attempts)",
+        "sentAgain": "Sent again",
+        "sentAgainBy": "{{time}} by {{user}}",
         "subject": "Subject",
         "details": "Details",
         "close": "Close"
+      },
+      "sendAgain": {
+        "title": "Send again",
+        "all": "Send all matching again…",
+        "messageOne": "Send this mail again, exactly as it was made? The mail filter in force when it is sent decides who gets it.",
+        "messageSent": "This mail has already been sent. Send it again, exactly as it was made? Its recipients get it a second time.",
+        "messageMany": "Send these {{count}} mails again, each exactly as it was made? The mail filter in force when they are sent decides who gets them.",
+        "line": "{{count}} × {{subject}} · made {{created}} · {{status}} · to {{recipients}}",
+        "more": "{{addresses}} and {{count}} more",
+        "tooMany": "{{total}} mails match, more than the {{max}} that can be sent again at a time. Narrow the search, for example by date or subject.",
+        "nothing": "No mail in the search can be sent again.",
+        "queued": "{{count}} mails are queued to be sent again.",
+        "partly": "{{queued}} mails are queued to be sent again. {{refused}} were left as they were: they changed after the list was read, or are not mails.",
+        "refused": "Not sent again: {{detail}}",
+        "error": "The mails could not be sent again. Nothing was changed."
       },
       "toast": {
         "detailsError": "Error loading details for mail"

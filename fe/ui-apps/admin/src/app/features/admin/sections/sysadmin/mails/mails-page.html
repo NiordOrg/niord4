@@ -78,6 +78,16 @@
         (valueChange)="onToDateChange($event)"
       />
       <span class="admin-toolbar-spacer"></span>
+      @if (sendAllAgainOffered()) {
+        <button
+          type="button"
+          class="btn-secondary"
+          [disabled]="facade.loading() || facade.result().total === 0 || sendingAgain()"
+          (click)="sendAllMatchingAgain()"
+        >
+          {{ 'admin.mails.sendAgain.all' | transloco }}
+        </button>
+      }
       <!-- Re-runs the current search with unchanged filters and page. -->
       <button
         type="button"
@@ -110,7 +120,7 @@
             <th>{{ 'admin.mails.column.sender' | transloco }}</th>
             <th>{{ 'admin.mails.column.recipients' | transloco }}</th>
             <th>{{ 'admin.mails.column.subject' | transloco }}</th>
-            <th class="w-12">
+            <th class="w-20">
               <span class="sr-only">{{ 'admin.mails.column.actions' | transloco }}</span>
             </th>
           </tr>
@@ -135,7 +145,19 @@
                 }
               </td>
               <td>{{ mail.subject }}</td>
-              <td class="text-right">
+              <td class="text-right whitespace-nowrap">
+                @if (canSendAgain(mail)) {
+                  <button
+                    type="button"
+                    class="icon-button text-xs"
+                    [attr.aria-label]="'admin.mails.sendAgain.title' | transloco"
+                    [title]="'admin.mails.sendAgain.title' | transloco"
+                    [disabled]="sendingAgain()"
+                    (click)="sendAgain(mail)"
+                  >
+                    <app-icon name="lucideSend" />
+                  </button>
+                }
                 <button
                   type="button"
                   class="icon-button text-xs"
@@ -164,6 +186,9 @@
     [mail]="detailsMail()"
     [createdLabel]="formatDateTime(detailsMail()?.created)"
     [sendDateLabel]="formatDateTime(detailsMail()?.sendDate)"
+    [sentAgainLabel]="formatDateTime(detailsMail()?.sentAgainAt)"
     (closed)="detailsMail.set(undefined)"
   />
+
+  <app-confirm width="44rem" />
 </app-admin-section-page>
