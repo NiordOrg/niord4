@@ -1773,24 +1773,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low. Fix: delete the type's own transmitters, areas and settings with it, and refuse a type that
   messages refer to with that reason.
 
-## PROM11. A promulgation type whose service is not registered fails three manager functions with a `NullPointerException`
-
-- **Location:** `org/niord/core/promulgation/PromulgationManager`: `generateMessagePromulgation`,
-  `messagePromulgationGenerated` and `resetMessagePromulgations` call the result of
-  `instantiatePromulgationService(type.getServiceId())` unchecked; it answers `null` for a service id no
-  registered service has.
-- **Description:** `onCreateMessage`, `onUpdateMessage` and `onUpdateMessageStatus` beside them check that null,
-  log "Unable to instantiate promulgation service for type ..." and go on. These three do not, and
-  `TemplateExecutionService` calls `resetMessagePromulgations` before and `messagePromulgationGenerated` after
-  every template execution, for every promulgation the message carries [read in the code; not run].
-- **Why it looks wrong:** a type row that outlives its service (a type imported from a deployment with a service
-  of its own, or the `twitter` rows once the Twitter service is removed) makes every template execution on a
-  message carrying its promulgation answer 500 with no cause named, while saving the same message works.
-- **Exposed by:** the review of the PROM9 fix (2026-11-12), which gave these three functions a named refusal for a
-  type that does not exist and left the service beside it.
-- **Severity:** Low while every type's service is registered; the first thing to meet when a service is removed.
-  Fix: skip with the warning the three siblings log.
-
 ## PROM12. A promulgation without a type answers 500
 
 - **Location:** `PromulgationManager.persistedPromulgationTypes`, `messagePromulgationGenerated` and
