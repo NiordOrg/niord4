@@ -6,13 +6,14 @@ import { FakeResizeObserver } from '../../testing/fake-resize-observer';
 @Component({
   selector: 'app-scroll-region-host',
   imports: [ScrollRegion],
-  template: `<div class="overflow-x-auto" [appScrollRegion]="name()">
+  template: `<div class="overflow-x-auto" [appScrollRegion]="name()" [scrollsDown]="down()">
     <span [class]="kind()">{{ text() }}</span
     ><img alt="" />
   </div>`,
 })
 class ScrollRegionHost {
   readonly name = signal('Positions');
+  readonly down = signal(false);
   readonly text = signal('55° 41,123′N');
   readonly kind = signal('short');
 }
@@ -180,6 +181,36 @@ describe('ScrollRegion', () => {
     await nextFrame();
 
     expect(reads()).toBe(before);
+  });
+
+  // A box that scrolls only sideways is not made a stop by content taller than itself: the
+  // message parts grow with their content, and only a box that says it scrolls down counts it.
+  it('leaves content taller than the box alone unless the box scrolls down', () => {
+    const { fixture, box, layOut } = render();
+    Object.defineProperty(box, 'scrollHeight', { configurable: true, get: () => 900 });
+    Object.defineProperty(box, 'clientHeight', { configurable: true, get: () => 300 });
+
+    layOut(160, 160);
+    expect(box.hasAttribute('tabindex')).toBe(false);
+
+    fixture.componentInstance.down.set(true);
+    TestBed.tick();
+    layOut(160, 160);
+    expect(box.getAttribute('tabindex')).toBe('0');
+    expect(box.getAttribute('role')).toBe('region');
+    expect(box.getAttribute('aria-label')).toBe('Positions');
+  });
+
+  it('counts a box that scrolls down as fitting while its content is no taller', () => {
+    const { fixture, box, layOut } = render();
+    fixture.componentInstance.down.set(true);
+    TestBed.tick();
+    Object.defineProperty(box, 'scrollHeight', { configurable: true, get: () => 301 });
+    Object.defineProperty(box, 'clientHeight', { configurable: true, get: () => 300 });
+
+    layOut(160, 160);
+
+    expect(box.hasAttribute('tabindex')).toBe(false);
   });
 
   it('renames the region when its label changes', () => {
