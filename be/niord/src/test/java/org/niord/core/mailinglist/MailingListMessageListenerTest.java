@@ -492,7 +492,8 @@ public class MailingListMessageListenerTest {
 
     /**
      * A given-up row whose record cannot be saved for a trigger is not deleted: that trigger stays owed, and the next
-     * take records it. The record would otherwise be lost as the mail was.
+     * take records it. The record would otherwise be lost as the mail was. It counts the attempts that ran the
+     * triggers, not the takes that only tried to save the record (it said "after 6 attempts" here).
      */
     @Test
     public void aGivenUpRowWhoseRecordFailsIsKeptUntilTheRecordIsSaved() {
@@ -510,7 +511,7 @@ public class MailingListMessageListenerTest {
         assertEquals(0, listener.drainOutbox());
         assertEquals(1, executionService.recordedFailures.size(), "the next take records it");
         assertTrue(executionService.recordedFailures.get(0).startsWith("1:uid-72:Given up after "
-                + (MailingListStatusChangeOutbox.MAX_ATTEMPTS + 1) + " attempts"), executionService.recordedFailures.get(0));
+                + MailingListStatusChangeOutbox.MAX_ATTEMPTS + " attempts"), executionService.recordedFailures.get(0));
         assertEquals(List.of(72L), outbox.completed, "and deletes the row");
         assertTrue(executionService.attemptedTriggerIds.isEmpty(), "no trigger ran");
     }

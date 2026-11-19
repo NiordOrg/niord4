@@ -412,8 +412,10 @@ public class MailingListMessageListener implements Runnable {
      * @return the triggers still owed: those whose record could not be saved, none on the last take
      */
     private List<Integer> giveUp(Claim claim) {
-        String cause = "Given up after " + (claim.attempts() - 1) + " attempts to make the mails of the status change to "
-                + claim.status() + " (each failed, hung or stopped the server; see the server log)";
+        // The triggers ran on the first MAX_ATTEMPTS takes; the takes after them only tried to save these records
+        String cause = "Given up after " + MailingListStatusChangeOutbox.MAX_ATTEMPTS
+                + " attempts to make the mails of the status change to " + claim.status()
+                + " (each failed, hung or stopped the server; see the server log)";
         List<MailingListTrigger> triggers = mailingListService.findStatusChangeTriggers(claim.status()).stream()
                 .filter(trigger -> !claim.settledTriggers().contains(trigger.getId()))
                 .toList();
