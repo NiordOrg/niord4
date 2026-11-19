@@ -490,8 +490,9 @@ unreferenced file, kept as the bytes are kept on disk today), and treats as deri
 `<name>_thumb_<32|64|128>.<ext>` (the `IconSize` values) where `<name>.<ext>` lies beside it in the same
 folder, and `map_<n>[_<version>].png` directly in a message folder; a file the heuristic is unsure of is
 an upload. Those it does not insert: it **moves them into the cache tree
-on the same volume with their mtimes kept**, so the first views after the cutover are warm, and leaves a
-file the cache tree already holds, which the window may have drawn (the regenerator draws on request). Without that, the public list PDF (a 180 s proxy timeout) and the publish step,
+on the same volume with their mtimes kept**, so the first views after the cutover are warm (from a tree it may
+not change, a read-only copy kept for another run, it copies them and leaves the tree as it is; they count as
+moved, not failed), and leaves a file the cache tree already holds, which the window may have drawn (the regenerator draws on request). Without that, the public list PDF (a 180 s proxy timeout) and the publish step,
 which embed `/rest/message-map-image/…`, would draw up to a thousand images with no cached tiles.
 
 **Verification is from the rows' side, not `find | wc -l`.** After the run, every reference must resolve

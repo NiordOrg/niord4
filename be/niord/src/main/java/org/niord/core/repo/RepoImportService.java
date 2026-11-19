@@ -52,7 +52,8 @@ import java.util.stream.Stream;
  * <p>
  * A derived file (an image thumbnail beside its source, a generated map image in a message folder) is not
  * imported: it is moved into the cache tree on the same volume, with its modification time kept, so that the
- * first views after the cutover are warm. The rule runs after the references: a file the database names is
+ * first views after the cutover are warm; a tree the job may not change keeps its copy, and the file still counts
+ * as moved. The rule runs after the references: a file the database names is
  * imported whatever its name, since an editor's custom map thumbnail is named like a generated one, and an upload
  * may be named like a thumbnail.
  * <p>
@@ -306,9 +307,30 @@ public class RepoImportService {
         try {
             Files.move(file, target);
         } catch (IOException e) {
-            // Another volume: copied with its attributes, then deleted
-            Files.copy(file, target, StandardCopyOption.COPY_ATTRIBUTES);
+            // Another volume, or a tree the job may not change: copied with its attributes, then deleted
+            return copyIntoCache(file, target);
+        }
+        return Outcome.MOVED;
+    }
+
+    /**
+     * Copies a derived file into the cache tree with its attributes, then deletes it from the tree. A tree that
+     * refuses the deletion (a read-only copy of the old tree, kept so that it can be used again) keeps the file:
+     * the copy in the cache tree is what the move was for, so the file counts as moved. A copy that fails is a
+     * failure of the item.
+     *
+     * @param file the derived file on the tree
+     * @param target its place in the cache tree, which does not exist yet
+     * @return {@link Outcome#MOVED}
+     * @throws IOException when the copy fails
+     */
+    static Outcome copyIntoCache(Path file, Path target) throws IOException {
+        Files.copy(file, target, StandardCopyOption.COPY_ATTRIBUTES);
+        try {
             Files.delete(file);
+        } catch (IOException e) {
+            log.debug("Copied the derived file {} into the cache tree and left it on the tree, which refuses its"
+                    + " deletion: {}", file, e.toString());
         }
         return Outcome.MOVED;
     }
