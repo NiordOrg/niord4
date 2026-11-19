@@ -600,7 +600,7 @@ describe('MailsPage', () => {
       // Nothing changed, so the list is not read again (verify() in afterEach).
     });
 
-    it('says nothing was changed when the request fails otherwise, never the raw error', () => {
+    it('shows a fixed text when the request fails otherwise, never the raw error, and reads the list again', () => {
       const s = setup();
       showRows(s, [mail(1, 'HELD')]);
       sendAgainButtons(s.fixture)[0].click();
@@ -612,6 +612,25 @@ describe('MailsPage', () => {
           { status: 500, statusText: 'Server Error' },
         );
       expect(s.notifications.error).toHaveBeenCalledExactlyOnceWith('admin.mails.sendAgain.error');
+      answerSearch(s, [mail(1, 'HELD')]);
+    });
+
+    it('reads the list again when the answer is lost, since the server may have queued the mails', () => {
+      const s = setup();
+      showRows(s, [mail(1, 'HELD')]);
+      const button = sendAgainButtons(s.fixture)[0];
+      button.focus();
+      button.click();
+      accept(s.fixture);
+      s.httpTesting
+        .expectOne('/rest/scheduled-mails/send-again')
+        .flush('Gateway Timeout', { status: 504, statusText: 'Gateway Timeout' });
+      expect(s.notifications.error).toHaveBeenCalledExactlyOnceWith('admin.mails.sendAgain.error');
+      s.fixture.detectChanges();
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('admin.mails.refresh');
+      // The server had queued it: the row shows the mail pending, with no Send again button.
+      answerSearch(s, [mail(1, 'PENDING')]);
+      expect(sendAgainButtons(s.fixture)).toHaveLength(0);
     });
 
     it('blocks a second request while one runs', () => {

@@ -320,12 +320,20 @@ export class MailsPage {
         // carry a problem document whose detail says what to do; nothing was changed either way.
         // Any other failure's detail may be raw exception text, which is never shown.
         const status = err instanceof HttpErrorResponse ? err.status : 0;
-        const detail = status === 409 || status === 400 ? problemDetail(err) : undefined;
-        if (detail === undefined) {
-          this.notifications.error('admin.mails.sendAgain.error');
-          return;
+        if (status === 409 || status === 400) {
+          const detail = problemDetail(err);
+          if (detail !== undefined) {
+            this.notifications.error('admin.mails.sendAgain.refused', { detail });
+            return;
+          }
         }
-        this.notifications.error('admin.mails.sendAgain.refused', { detail });
+        this.notifications.error('admin.mails.sendAgain.error');
+        if (status !== 409 && status !== 400) {
+          // A lost answer (status 0, or a 502 or 504 from the proxy) may hide a request the
+          // server carried out, so the list is read again to show what the server holds.
+          this.keepFocusOnRefresh();
+          this.facade.refresh();
+        }
       },
     });
   }
