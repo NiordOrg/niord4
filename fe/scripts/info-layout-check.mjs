@@ -15,7 +15,7 @@
  * depends on the width of the screen and on the language: a row of labels that fits in Danish
  * wraps in Kalaallisut. jsdom lays nothing out, so no unit test can see any of it. This script
  * opens the built artefact in Chromium, answers every /rest call from the fixture below, and
- * asserts sixteen things:
+ * asserts seventeen things:
  *
  *   1. At 320, 640, 1024 and 1920 px, in every language the build offers, every control of the
  *      menu bar — the four links and each language flag — lies inside the viewport and is the
@@ -62,6 +62,9 @@
  *  15. The teaser's banner text holds 4.5:1 over a white tile and over the chart's land and water,
  *      in the build's own colours.
  *  16. On the print sheet every control the Tab key reaches shows a focus ring.
+ *  17. At 320 px under the WCAG 1.4.12 text spacing, a dialog whose title and legal document hold
+ *      Kalaallisut's long words keeps its close button inside the panel, and no word runs past
+ *      the body's edge.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -973,6 +976,58 @@ async function printSheetFocusProblems(page) {
 }
 
 /**
+ * A dialog at 320 px under the WCAG 1.4.12 text spacing, with a title and a legal document of
+ * Kalaallisut's long words: the close button stays inside the panel, the title inside the
+ * header, and no word runs past the body's edge (WCAG 1.4.12). The base build has neither a legal
+ * document nor a title that long, so both are written into an open message's dialog here, in the
+ * classes a legal dialog renders them in.
+ */
+async function longWordDialogProblems(page) {
+  await page.locator('.message-details-item button.row-link').first().click();
+  await page.waitForSelector('.dialog-panel .dialog-body');
+  await settle(page);
+  await page.evaluate(() => {
+    const spacing = document.createElement('style');
+    spacing.id = 'layout-check-text-spacing';
+    spacing.textContent = `* { line-height: 1.5 !important; letter-spacing: .12em !important;
+      word-spacing: .16em !important; } p { margin-bottom: 2em !important; }`;
+    document.head.append(spacing);
+    document.querySelector('.dialog-panel .dialog-title').textContent =
+      'Akisussaatitaannginnermik nalunaarut';
+    const legal = document.createElement('div');
+    legal.className = 'legal-document';
+    legal.innerHTML =
+      '<p>Nalunaarutit pissarsiarisinnaaniassammatigit. pissarsiarineqarsinnaagaluartut,</p>' +
+      '<p>ilisimatitsissuteqartariaqarpugut, nalunaarutini.</p>';
+    document.querySelector('.dialog-panel .dialog-body').prepend(legal);
+  });
+  await settle(page);
+  const problems = await page.evaluate(() => {
+    const found = [];
+    const panel = document.querySelector('.dialog-panel').getBoundingClientRect();
+    const inside = (rect) => rect.left >= panel.left - 0.5 && rect.right <= panel.right + 0.5;
+    const close = document.querySelector('.dialog-panel .dialog-header .icon-button');
+    if (!inside(close.getBoundingClientRect())) found.push('the close button is outside the panel');
+    const title = document.querySelector('.dialog-panel .dialog-title');
+    if (!inside(title.getBoundingClientRect())) found.push('the title runs past the panel');
+    const body = document.querySelector('.dialog-panel .dialog-body');
+    if (body.scrollWidth - body.clientWidth > 1) {
+      found.push(`the body scrolls sideways by ${body.scrollWidth - body.clientWidth} px`);
+    }
+    for (const p of body.querySelectorAll('.legal-document p')) {
+      if (p.scrollWidth - p.clientWidth > 1) {
+        found.push(`a word of "${p.textContent.slice(0, 24)}…" runs past its line`);
+      }
+    }
+    return found;
+  });
+  await page.evaluate(() => document.getElementById('layout-check-text-spacing').remove());
+  await page.keyboard.press('Escape');
+  await settle(page);
+  return problems;
+}
+
+/**
  * The publications table fits inside its panel, and no link of it reaches past the panel's edge.
  * A table wider than its panel need not widen the page: an ancestor that clips it cuts the links
  * off instead, which the page's own width does not show.
@@ -1420,6 +1475,14 @@ if (invokedDirectly) {
     await page.waitForSelector('app-message-print-view .message-details-item');
     await settle(page);
     record('focus on the print sheet', await printSheetFocusProblems(page));
+
+    // 17. At 320 px under the text spacing, a dialog's long words wrap and its close button stays.
+    await page.setViewportSize({ width: 320, height: 640 });
+    await open(page, '/messages/details');
+    record(
+      'long words in a dialog at 320 px with text spacing',
+      await longWordDialogProblems(page),
+    );
 
     // 13. The panel of messages without a position leaves every control of the chart uncovered —
     //     on a phone, at 400 % zoom, where the chart is barely taller than the panel's cap, and

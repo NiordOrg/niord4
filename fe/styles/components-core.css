@@ -694,15 +694,22 @@
     box-shadow: var(--niord-shadow-lg);
     overflow: hidden;
   }
+  /* A title wraps rather than widening the header: a flex item keeps the width of its longest
+     word unless it may shrink below it, and a long word (Kalaallisut's, at 320 px, under a
+     reader's own letter spacing) would push the close button out of the panel, which clips it.
+     So the title may shrink, and a word longer than its line breaks. */
   .dialog-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    min-width: 0;
     border-bottom: 1px solid var(--niord-border);
     padding: 0.75rem 1rem;
   }
   .dialog-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--niord-fg);

@@ -110,7 +110,12 @@
 
   /* A legal document is country content: the file supplies the prose and its own markup, so
      the typography is written here rather than in the asset. The definition list is the
-     cookie statement's two-column table of purposes. */
+     cookie statement's two-column table of purposes. A word longer than its line breaks
+     rather than running past the dialog's edge: Kalaallisut's do at 320 px under a reader's own
+     letter spacing. */
+  .legal-document {
+    overflow-wrap: anywhere;
+  }
   .legal-document h3 {
     margin: 1rem 0 0.5rem;
     font-size: 1.125rem;
