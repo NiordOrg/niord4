@@ -181,7 +181,8 @@ would read as that night, so it reads `24 Nov 2026, 10:00 PM - 24 Nov 2026, 2:00
 warning mark. Formatting goes through `LocaleFormatService` — see the dates and time zones
 rules in [coding standards](../coding-standards.md).
 
-A failed save toasts an error and closes the editor; the row keeps the last server state.
+A failed save toasts an error and keeps the editor open with the rows as typed, so Save can be
+pressed again; the view behind it keeps the last server state.
 
 ## Update Firing Exercises
 
