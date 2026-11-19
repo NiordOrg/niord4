@@ -65,10 +65,11 @@ import { initialMapView } from '../../shared/utils/root-area-view';
          nor something a screen reader can announce, so the map's own credit line is left empty and
          this one takes its place, drawn with OpenLayers' attribution classes so it looks like the
          credit of every other map on the site. It opens in a new tab, as the teaser's link does:
-         the teaser lives in a frame on somebody else's page. -->
+         the teaser lives in a frame on somebody else's page. Its words are English on a page in
+         every language, so it says so. -->
     <div class="ol-control ol-attribution ol-uncollapsible z-40">
       <ul>
-        <li>
+        <li lang="en">
           &copy;
           <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener"
             >OpenStreetMap</a
