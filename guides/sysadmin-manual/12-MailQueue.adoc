@@ -100,8 +100,10 @@ it is sent again after the setting is opened, those recipients get it a second t
 recipient of the mails before they are sent. A mail that an earlier version of Niord, before _Held_ existed, marked
 _Sent_ under a list cannot be told apart from a delivered one.
 
-Niord reads `mailValidRecipients` for every mail and `mailDeleteAfterDays` at every clean-up, so a change to either
-takes effect within minutes. `mailMaxPerMinute` and `mailSender` are read when the server starts, so a change to them
+Niord reads `mailValidRecipients` for every mail it sends, so a change to it applies within a minute.
+`mailDeleteAfterDays` is read at the clean-up, which runs once a day early in the morning, so a change to it deletes
+mails from the next clean-up on, though the note above the list shows the new value as soon as the page is opened
+again. `mailMaxPerMinute` and `mailSender` are read when the server starts, so a change to them
 takes effect at the next restart of the server.
 
 [#mail-filtering]
