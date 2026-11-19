@@ -134,8 +134,7 @@ class AdminDataImportRoundTripITTest extends ImportRoundTripSupport {
         JobEnd job = importRows("sysadmin", "/rest/mailing-lists/upload-mailing-lists", "mailing-list-import", List.of(first));
         assertEquals("COMPLETED", job.status(), job.log());
         Map<String, Object> second = exportedList(listId);
-        assertEquals(without(first, List.of("id", "nextScheduledExecution", "recipientNo")),
-                without(second, List.of("id", "nextScheduledExecution", "recipientNo")), "the list after the import");
+        assertEquals(comparableList(first), comparableList(second), "the list after the import");
 
         // Recipients set after the import
         as("admin").body(List.of(contactVo(contactA), contactVo(contactB))).when().put(base + "/contacts").then().statusCode(200);
@@ -143,8 +142,7 @@ class AdminDataImportRoundTripITTest extends ImportRoundTripSupport {
         // (b)
         job = importRows("sysadmin", "/rest/mailing-lists/upload-mailing-lists", "mailing-list-import", List.of(second));
         assertEquals("COMPLETED", job.status(), job.log());
-        assertEquals(without(second, List.of("id", "nextScheduledExecution", "recipientNo")),
-                without(exportedList(listId), List.of("id", "nextScheduledExecution", "recipientNo")));
+        assertEquals(comparableList(second), comparableList(exportedList(listId)));
         assertEquals(Set.of(contactA, contactB), new HashSet<>(fieldOf(getMap("admin", base + "/contacts"),
                 "selectedRecipients", "id").stream().map(v -> ((Number) v).intValue()).toList()),
                 "the recipients the export does not carry are kept");
@@ -164,6 +162,24 @@ class AdminDataImportRoundTripITTest extends ImportRoundTripSupport {
         assertEquals(Set.of("STATUS_CHANGE/null", "SCHEDULED/DAILY"), new HashSet<>(listOf(third, "triggers").stream()
                 .map(t -> t.get("type") + "/" + t.get("scheduleType")).toList()), "the file's triggers replace the list's");
         assertEquals(2, listOf(getMap("admin", base + "/contacts"), "selectedRecipients").size(), "recipients kept");
+    }
+
+    /**
+     * The exported list as it is compared: without the ids and the computed fields, and with its triggers in a fixed
+     * order. A list's triggers have no order column, so two reads of one list may give them in either order.
+     */
+    @SuppressWarnings("unchecked")
+    private static Object comparableList(Map<String, Object> exported) {
+        Object stripped = without(exported, List.of("id", "nextScheduledExecution", "recipientNo"));
+        if (stripped instanceof Map<?, ?> map && map.get("triggers") instanceof List<?> triggers) {
+            Map<String, Object> out = new LinkedHashMap<>((Map<String, Object>) map);
+            List<Object> sorted = new ArrayList<>(triggers);
+            sorted.sort(java.util.Comparator.comparing(
+                    t -> ((Map<?, ?>) t).get("type") + "/" + ((Map<?, ?>) t).get("scheduleType")));
+            out.put("triggers", sorted);
+            return out;
+        }
+        return stripped;
     }
 
     private static Map<String, Object> exportedList(String listId) {
