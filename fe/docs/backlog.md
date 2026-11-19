@@ -136,10 +136,9 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - The print route (`/messages/print`) and the teaser render outside the site's layout, so neither has a main
   landmark and a screen reader's jump to the main content finds nothing there. Wrapping each view's content in
   `<main>` closes it.
-- On the print route (`/messages/print`) every link-styled button in the message cards has its styling removed,
-  focus ring included, and stays in the tab order; the message-reference ids among them do nothing when pressed.
-  A keyboard user's focus disappears on each one. Rendering the references as text on that route, or taking the
-  buttons out of the tab order, closes it.
+- On the print route (`/messages/print`) every link-styled button in the message cards is drawn as plain text and
+  stays in the tab order, with the site's focus ring; the message-reference ids among them do nothing when pressed.
+  Rendering the references as text on that route, or taking the buttons out of the tab order, closes it.
 - **Every first visit carries OpenLayers' stylesheet.** `ol/ol.css` is imported by the global stylesheet, so a
   visit that lands on the message list, which draws no map, transfers about 1.2 kB (brotli) of map chrome in the
   styles group that `bundle:info` measures. Both applications import it globally today; loading it with the map

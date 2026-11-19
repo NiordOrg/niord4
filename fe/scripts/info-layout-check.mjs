@@ -15,7 +15,7 @@
  * depends on the width of the screen and on the language: a row of labels that fits in Danish
  * wraps in Kalaallisut. jsdom lays nothing out, so no unit test can see any of it. This script
  * opens the built artefact in Chromium, answers every /rest call from the fixture below, and
- * asserts fifteen things:
+ * asserts sixteen things:
  *
  *   1. At 320, 640, 1024 and 1920 px, in every language the build offers, every control of the
  *      menu bar — the four links and each language flag — lies inside the viewport and is the
@@ -61,6 +61,7 @@
  *  14. Every link of a chart's credit line is underlined, on the map view and on the teaser.
  *  15. The teaser's banner text holds 4.5:1 over a white tile and over the chart's land and water,
  *      in the build's own colours.
+ *  16. On the print sheet every control the Tab key reaches shows a focus ring.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -940,6 +941,38 @@ function teaserBannerProblems(page) {
 }
 
 /**
+ * On the print sheet, every control the Tab key reaches shows a focus ring: the sheet draws its
+ * link-styled buttons as plain text, which took their ring away (WCAG 2.4.7). There must be one,
+ * or the check proves nothing.
+ */
+async function printSheetFocusProblems(page) {
+  const problems = [];
+  let stops = 0;
+  for (let step = 0; step < 12; step++) {
+    await page.keyboard.press('Tab');
+    const stop = await page.evaluate(() => {
+      const focused = document.activeElement;
+      if (!focused || focused === document.body || !focused.closest('app-message-print-view')) {
+        return null;
+      }
+      // The site's 2 px ring or the browser's own (`auto`), as on every other page of the site.
+      const style = getComputedStyle(focused);
+      return {
+        name: focused.textContent.trim(),
+        ring: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0,
+      };
+    });
+    if (!stop) continue;
+    stops++;
+    if (!stop.ring) problems.push(`"${stop.name}" shows no focus ring`);
+  }
+  if (stops === 0) {
+    problems.push('Tab reached no control on the sheet, so the check proves nothing');
+  }
+  return problems;
+}
+
+/**
  * The publications table fits inside its panel, and no link of it reaches past the panel's edge.
  * A table wider than its panel need not widen the page: an ancestor that clips it cuts the links
  * off instead, which the page's own width does not show.
@@ -1381,6 +1414,12 @@ if (invokedDirectly) {
 
     // 15. The teaser's banner text holds 4.5:1 over a white tile, land and water.
     record("the teaser's banner over the chart", await teaserBannerProblems(page));
+
+    // 16. The print sheet's controls show the site's focus ring.
+    await page.goto(`${ORIGIN}/messages/print`);
+    await page.waitForSelector('app-message-print-view .message-details-item');
+    await settle(page);
+    record('focus on the print sheet', await printSheetFocusProblems(page));
 
     // 13. The panel of messages without a position leaves every control of the chart uncovered —
     //     on a phone, at 400 % zoom, where the chart is barely taller than the panel's cap, and

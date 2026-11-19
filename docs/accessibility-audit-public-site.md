@@ -226,7 +226,7 @@ Pass, fail, not applicable, or needs a person, for the base build. A fail names 
 | 2.4.4 Link purpose (in context) | A | Pass | |
 | 2.4.5 Multiple ways | AA | Pass | Every message is in three views, each one step from the menu |
 | 2.4.6 Headings and labels | AA | Pass | Remark: no page heading (backlog) |
-| 2.4.7 Focus visible | AA | **Fail** | The print sheet's link-styled buttons lose their ring (backlog, the print route's link buttons) |
+| 2.4.7 Focus visible | AA | Pass (2026-11-19) | Fixed: the print sheet's link-styled buttons show the site's 2 px ring; every stop the Tab key reaches on the sheet shows a ring, measured in Chromium on the base build by `npm run layout:info`. The reference ids among them still do nothing when pressed (backlog, the print route's link buttons) |
 | 2.5.1 Pointer gestures | A | Pass | The chart's drag has the zoom buttons beside it; the teaser does not pan |
 | 2.5.2 Pointer cancellation | A | Pass | |
 | 2.5.3 Label in name | A | Pass | |
