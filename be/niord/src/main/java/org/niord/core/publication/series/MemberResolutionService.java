@@ -539,7 +539,8 @@ public class MemberResolutionService extends BaseService {
         }
         List<Object[]> rows = em.createQuery(
                         "SELECT m.uid, a.treeSortOrder, m.areaSortOrder, m.year, m.number, m.id, "
-                                + "m.publishDateFrom, m.eventDateFrom, m.followUpDate "
+                                + "m.publishDateFrom, m.publishDateTo, m.eventDateFrom, m.eventDateTo, "
+                                + "m.followUpDate "
                                 + "FROM Message m LEFT JOIN m.area a WHERE m.uid IN :uids", Object[].class)
                 .setParameter("uids", uids).getResultList();
 
@@ -553,7 +554,9 @@ public class MemberResolutionService extends BaseService {
                     (Integer) r[5],
                     (Date) r[6],
                     (Date) r[7],
-                    (Date) r[8]));
+                    (Date) r[8],
+                    (Date) r[9],
+                    (Date) r[10]));
         }
         return out;
     }

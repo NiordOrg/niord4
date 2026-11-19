@@ -33,7 +33,19 @@ public class IssueOrderingTest {
 
     private static IssueOrdering.Orderable m(String uid, Integer tree, Double areaSort,
                                              Integer year, Integer number, int id) {
-        return new IssueOrdering.Orderable(uid, tree, areaSort, year, number, id, null, null, null);
+        return new IssueOrdering.Orderable(uid, tree, areaSort, year, number, id, null, null, null, null, null);
+    }
+
+    private static IssueOrdering.Orderable dated(String uid, int id, Date publishFrom, Date publishTo,
+                                                 Date eventFrom, Date eventTo) {
+        return new IssueOrdering.Orderable(uid, null, null, 2026, null, id,
+                publishFrom, publishTo, eventFrom, eventTo, null);
+    }
+
+    private static List<String> uids(List<IssueOrdering.Orderable> members, IssueOrdering.SortBy by,
+                                     IssueOrdering.Direction direction) {
+        return IssueOrdering.order(members, new IssueOrdering.SortSpec(by, direction, "test"))
+                .stream().map(IssueOrdering.Orderable::uid).toList();
     }
 
     // -------------------------------------------------------- the fallback chain
@@ -199,14 +211,78 @@ public class IssueOrderingTest {
                         IssueOrdering.SortBy.AREA, IssueOrdering.Direction.DESC, "test")));
     }
 
+    // ------------------------------------------- the search's tuple, per sort
+
+    /**
+     * PORT-9. "By id" is the search's year, number, publish date, id. The rows
+     * here are created out of number order (row id 100 is notice 12), as a notice
+     * drafted early and numbered late is; the issue must print 10, 11, 12.
+     */
+    @Test
+    public void theIdSortIsTheSearchesYearNumberPublishDateId() {
+        Date base = new Date(1_700_000_000_000L);
+        List<IssueOrdering.Orderable> members = new ArrayList<>(List.of(
+                m("2026-12", null, null, 2026, 12, 100),
+                m("2026-10", null, null, 2026, 10, 101),
+                m("2026-11", null, null, 2026, 11, 102),
+                m("2025-30", null, null, 2025, 30, 103),
+                // Two without a number: the publish date decides before the row id.
+                new IssueOrdering.Orderable("unnumbered-later", null, null, 2026, null, 98,
+                        new Date(base.getTime() + 60_000), null, null, null, null),
+                new IssueOrdering.Orderable("unnumbered-earlier", null, null, 2026, null, 99,
+                        base, null, null, null, null)));
+
+        assertEquals(List.of("2025-30", "2026-10", "2026-11", "2026-12", "unnumbered-earlier", "unnumbered-later"),
+                uids(members, IssueOrdering.SortBy.ID, IssueOrdering.Direction.ASC),
+                "the issue printed in row-creation order, not in the order the notices were numbered");
+        assertEquals(List.of("unnumbered-later", "unnumbered-earlier", "2026-12", "2026-11", "2026-10", "2025-30"),
+                uids(members, IssueOrdering.SortBy.ID, IssueOrdering.Direction.DESC),
+                "descending is the search's: nulls first, as PostgreSQL places them");
+    }
+
+    /** The date sorts take the search's second key: the "to" date of the same pair. */
+    @Test
+    public void theDateSortsBreakATieOnTheFromDateByTheToDate() {
+        Date from = new Date(1_700_000_000_000L);
+        Date shortTo = new Date(from.getTime() + 86_400_000L);
+        Date longTo = new Date(from.getTime() + 7 * 86_400_000L);
+        List<IssueOrdering.Orderable> members = new ArrayList<>(List.of(
+                dated("long", 1, from, longTo, from, longTo),
+                dated("short", 2, from, shortTo, from, shortTo),
+                dated("open-ended", 3, from, null, from, null)));
+
+        assertEquals(List.of("short", "long", "open-ended"),
+                uids(members, IssueOrdering.SortBy.PUBLISH_DATE, IssueOrdering.Direction.ASC));
+        assertEquals(List.of("short", "long", "open-ended"),
+                uids(members, IssueOrdering.SortBy.EVENT_DATE, IssueOrdering.Direction.ASC));
+        assertEquals(List.of("open-ended", "long", "short"),
+                uids(members, IssueOrdering.SortBy.PUBLISH_DATE, IssueOrdering.Direction.DESC));
+    }
+
+    /** A descending sort ends on desc(id), as every descending search does. */
+    @Test
+    public void aDescendingSortBreaksAFullTieByTheHigherIdFirst() {
+        Date day = new Date(1_700_000_000_000L);
+        List<IssueOrdering.Orderable> members = new ArrayList<>(List.of(
+                dated("first-row", 1, day, day, day, day),
+                dated("second-row", 2, day, day, day, day)));
+
+        for (IssueOrdering.SortBy by : IssueOrdering.SortBy.values()) {
+            assertEquals(List.of("first-row", "second-row"),
+                    uids(members, by, IssueOrdering.Direction.ASC), by + " ascending");
+            assertEquals(List.of("second-row", "first-row"),
+                    uids(members, by, IssueOrdering.Direction.DESC), by + " descending");
+        }
+    }
+
     @Test
     public void publishDateOrderingUsesTheDateNotTheDay() {
         Date base = new Date(1_700_000_000_000L);
         List<IssueOrdering.Orderable> members = new ArrayList<>(List.of(
                 new IssueOrdering.Orderable("later", null, null, null, null, 1,
-                        new Date(base.getTime() + 1000), null, null),
+                        new Date(base.getTime() + 1000), null, null, null, null),
                 new IssueOrdering.Orderable("earlier", null, null, null, null, 2,
-                        base, null, null)));
+                        base, null, null, null, null)));
 
         List<String> order = IssueOrdering.order(members, new IssueOrdering.SortSpec(
                         IssueOrdering.SortBy.PUBLISH_DATE, IssueOrdering.Direction.ASC, "test"))

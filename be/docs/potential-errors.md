@@ -1310,15 +1310,6 @@ was changed in production code.
 - **Why it looks wrong:** one rule, two wire shapes on two methods of the same class. Kept deliberately
   during the port; worth one ruling once the catalogue advice is the only publications error shape.
 
-## PORT-9. `IssueOrdering`'s id tie-breaker contradicts its own opening claim
-
-- **Location:** `niord/src/main/java/org/niord/core/publication/series/resolve/IssueOrdering.java`
-  (~line 141): the id tie-breaker is appended outside the reversal and is always ascending, while
-  `MessageSearchService` emits `desc(id)` as the last term of every descending sort.
-- **Why it looks wrong:** the file documents this as deliberate ("reproducibility, not stability") yet
-  opens by claiming it reproduces the search's ORDER BY tuples exactly; the prose and the code should
-  be reconciled. The `areaSortOrder` null handling was aligned with PostgreSQL during the port.
-
 ## PORT-10. Two independent literals carry the legacy import's 1800 s budget
 
 - **Location:** `LegacyImportService.IMPORT_TIMEOUT_SECONDS` (reported in the run's log line only)

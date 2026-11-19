@@ -193,6 +193,28 @@ public class LiveMemberListITTest extends ITTest {
     }
 
     /**
+     * PORT-9. A series sorted by id lists its notices in number order, as the
+     * message search does for the same choice, not in the order the rows were
+     * created: a notice drafted early and numbered late must not lead the issue.
+     */
+    @Test
+    @Transactional
+    public void aSeriesSortedByIdListsItsNoticesInNumberOrder() {
+        PublicationSeries s = series();
+        s.setMessageSortBy("ID");
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        // Created out of number order: the first row created is notice 12.
+        message("NM-012").setNumber(12);
+        message("NM-010").setNumber(10);
+        message("NM-011").setNumber(11);
+        em.flush();
+
+        assertEquals(List.of("NM-010", "NM-011", "NM-012"),
+                memberList.members(i).stream().map(IssueMemberVo::getFrozenShortId).toList(),
+                "the issue lists its notices in the order their rows were created");
+    }
+
+    /**
      * A curated row says who put it there, and an exclusion takes it out.
      *
      * Curation is only legal while an issue is OPEN, so the live list is the ONLY
