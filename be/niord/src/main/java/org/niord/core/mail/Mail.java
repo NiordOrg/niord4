@@ -115,18 +115,23 @@ public class Mail implements Serializable {
     }
 
     /**
-     * Filters the list of mail recipients and only include valid ones
+     * Filters the list of mail recipients through the mail filter: a valid recipient is kept, or, under a list of
+     * addresses that does not name it, redirected to the first listed address; an invalid one is left out
      * @param validMailRecipients the valid mail recipients
-     * @return the update mail
+     * @return the recipients the filter redirected, as they were addressed; empty when none was
      */
-    public Mail filterRecipients(ValidMailRecipients validMailRecipients) {
+    public List<Address> filterRecipients(ValidMailRecipients validMailRecipients) {
 
         List<MailRecipient> validRecipients = new ArrayList<>();
+        List<Address> redirected = new ArrayList<>();
         recipients.forEach(r -> {
-            if (r.getAddress() != null && r.getAddress() instanceof InternetAddress) {
+            if (r.getAddress() != null && r.getAddress() instanceof InternetAddress address) {
                 try {
-                    Address addr = validMailRecipients.filter((InternetAddress) r.getAddress());
+                    Address addr = validMailRecipients.filter(address);
                     validRecipients.add(new MailRecipient(r.getType(), addr));
+                    if (validMailRecipients.redirects(address)) {
+                        redirected.add(address);
+                    }
                 } catch (AddressException ignored) {
                     // Skip invalid address
                 }
@@ -134,7 +139,7 @@ public class Mail implements Serializable {
         });
         recipients = validRecipients;
 
-        return this;
+        return redirected;
     }
 
     /**

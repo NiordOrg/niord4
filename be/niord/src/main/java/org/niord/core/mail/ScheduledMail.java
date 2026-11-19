@@ -84,9 +84,11 @@ public class ScheduledMail extends BaseEntity<Integer> {
     public static final int[] DELAYS = {1, 5, 15, 60};
 
     /**
-     * PENDING: waits for the sender job. SENT: handed to the mail server. HELD: handled while the mail filter
-     * ({@code mailValidRecipients}) was LOG, so nothing left the server. ERROR: given up after the last attempt, or a
-     * record of a failure that is never sent ({@link ScheduledMail#isRecord()}).
+     * PENDING: waits for the sender job. SENT: handed to the mail server for all of its own recipients. HELD: the
+     * mail filter ({@code mailValidRecipients}) kept it from its recipients when the sender job handled it: the filter
+     * was LOG, so nothing left the server, or a list of addresses that did not name every recipient, so their copies
+     * went to the first listed address. ERROR: given up after the last attempt, or a record of a failure that is
+     * never sent ({@link ScheduledMail#isRecord()}).
      *
      * <p>A system administrator can send a HELD, SENT or ERROR mail again, except a record: it becomes PENDING again
      * ({@link ScheduledMail#sendAgain(Date, String)}).
@@ -218,8 +220,9 @@ public class ScheduledMail extends BaseEntity<Integer> {
     }
 
     /**
-     * When the sender job handled the mail while the mail filter ({@code mailValidRecipients}) was LOG, call this
-     * method: nothing left the server, and the mail waits as held until a system administrator sends it again
+     * When the mail filter ({@code mailValidRecipients}) kept the mail from its recipients as the sender job handled
+     * it, call this method: the filter was LOG, so nothing left the server, or a list of addresses that redirected a
+     * recipient to the first listed address. The mail waits as held until a system administrator sends it again
      */
     public void registerMailHeld() {
         status = Status.HELD;

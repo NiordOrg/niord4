@@ -26,6 +26,7 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -202,7 +203,11 @@ public class MailComposeTest {
         }
 
         // Only "keep@me.com" is a valid recipient. The stranger must be substituted.
-        mail.filterRecipients(new ValidMailRecipients("keep@me.com"));
+        List<Address> redirected = mail.filterRecipients(new ValidMailRecipients("keep@me.com"));
+
+        // The stranger, as it was addressed, is the one recipient the filter redirected
+        assertEquals(List.of("stranger@x.com"),
+                redirected.stream().map(a -> ((InternetAddress) a).getAddress()).toList());
 
         // Both recipients survive (the list stays the same size), but every resolved address
         // is the single valid address: the known one passes through, the stranger is rewritten
@@ -213,5 +218,16 @@ public class MailComposeTest {
             assertTrue(a instanceof InternetAddress, "Recipient should be an InternetAddress");
             assertEquals("keep@me.com", ((InternetAddress) a).getAddress());
         }
+    }
+
+    @Test
+    public void filterRecipients_redirectsNothingWhenEveryRecipientIsListedOrUnderAll() throws Exception {
+        Mail listed = new Mail()
+                .recipient(Message.RecipientType.TO, addr("keep@me.com"))
+                .recipient(Message.RecipientType.CC, addr("Other@ok.com"));
+        assertTrue(listed.filterRecipients(new ValidMailRecipients("keep@me.com, other@ok.com")).isEmpty());
+
+        Mail all = new Mail().recipient(Message.RecipientType.TO, addr("stranger@x.com"));
+        assertTrue(all.filterRecipients(new ValidMailRecipients("ALL")).isEmpty());
     }
 }

@@ -25,6 +25,7 @@ import org.niord.core.settings.SettingsService;
 import org.niord.core.settings.annotation.Setting;
 import org.slf4j.Logger;
 
+import jakarta.mail.Address;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
@@ -34,6 +35,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 
+import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -114,8 +116,10 @@ public class MailService extends BaseService {
     /**
      * Sends the given mail synchronously, under the mail filter ({@code mailValidRecipients}) as it is now
      * @param mail the mail to send
-     * @return true when the mail was handed to the mail server, false when the filter is LOG and the mail was only
-     *         held: nothing left the server
+     * @return true when the mail reached all of its own recipients: it was handed to the mail server and the filter
+     *         redirected none of them. False when the filter kept it from its recipients: the filter is LOG, so
+     *         nothing left the server, or it is a list of addresses that does not name every recipient, so their
+     *         copies went to the first listed address ({@link ValidMailRecipients#redirects})
      */
     boolean deliver(Mail mail) throws MessagingException {
         try {
@@ -135,7 +139,7 @@ public class MailService extends BaseService {
                 throw new MessagingException("No valid recipient: the setting " + VALID_RECIPIENTS_KEY + " is empty");
             }
             ValidMailRecipients recipientHandling = new ValidMailRecipients(recipientsSetting);
-            mail.filterRecipients(recipientHandling);
+            List<Address> redirected = mail.filterRecipients(recipientHandling);
 
             // Check if any recipients are defined
             if (mail.getRecipients().isEmpty()) {
@@ -143,8 +147,8 @@ public class MailService extends BaseService {
             }
 
             // Check if we only simulate sending emails
-            boolean delivered = !recipientHandling.simulate();
-            if (!delivered) {
+            boolean simulated = recipientHandling.simulate();
+            if (simulated) {
 
                 // Make the simulation realistic - sleep 0.5 - 1 seconds
                 try {
@@ -165,13 +169,18 @@ public class MailService extends BaseService {
                     .filter(r -> r.getAddress() != null)
                     .map(r -> r.getAddress().toString())
                     .collect(Collectors.joining(", "));
-            if (delivered) {
-                log.info("Sent email to " + recipients + " in " + (System.currentTimeMillis() - t0) + " ms");
-            } else {
+            if (simulated) {
                 log.info("Held, not sent (" + VALID_RECIPIENTS_KEY + " is LOG): mail to " + recipients + " in "
                         + (System.currentTimeMillis() - t0) + " ms");
+            } else if (!redirected.isEmpty()) {
+                log.info("Held, sent only to listed addresses (" + VALID_RECIPIENTS_KEY + " redirected "
+                        + redirected.stream().map(Address::toString).collect(Collectors.joining(", "))
+                        + " to the first listed address): mail to " + recipients + " in "
+                        + (System.currentTimeMillis() - t0) + " ms");
+            } else {
+                log.info("Sent email to " + recipients + " in " + (System.currentTimeMillis() - t0) + " ms");
             }
-            return delivered;
+            return !simulated && redirected.isEmpty();
 
         } catch (MessagingException e) {
             log.error("Failed sending mail for " + mail.getFrom(), e);
@@ -208,7 +217,8 @@ public class MailService extends BaseService {
                                 .forEach(r -> mail.replyTo(r.getAddress()));
                     }
 
-                    // Send the mail, and register that it was sent, or held under the LOG filter
+                    // Send the mail, and register that it was sent, or held: the mail filter kept it from its
+                    // recipients (LOG, or a list that redirected one of them)
                     if (deliver(mail)) {
                         scheduledMail.registerMailSent();
                     } else {

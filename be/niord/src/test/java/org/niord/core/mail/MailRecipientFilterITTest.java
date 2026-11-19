@@ -18,20 +18,29 @@ package org.niord.core.mail;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.niord.core.mail.ScheduledMail.Status;
+import org.niord.core.mail.ScheduledMailRecipient.RecipientType;
 import org.niord.test.ITTest;
 import org.niord.test.MailHog;
+import org.niord.test.Tx;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -60,13 +69,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>This closes the gap where the recipient filter could previously only be unit-tested in isolation
  * ({@code ValidMailRecipientsTest}) but never verified end-to-end against a real send.
  *
+ * <p>The list names a second address ({@link #ALSO_ALLOWED}) too. A scheduled mail the sender handles under the list
+ * ends SENT only when the list names every one of its recipients (TO, CC and BCC); when a recipient was redirected,
+ * the filter kept the mail from it, and the mail ends HELD. These mails are committed, as the send runs in a
+ * transaction of its own, and removed after each test.
+ *
  * <p>This is a framework-coupled test — see docs/framework-coupled-tests.md.
  */
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class MailRecipientFilterITTest extends ITTest {
 
-    /** The single allow-listed recipient; everything else is substituted with this at send time. */
+    /** The first allow-listed recipient; every address the list does not name is substituted with this at send time. */
     private static final String ALLOWED = "allowed@niord.test";
+    /** The second allow-listed recipient */
+    private static final String ALSO_ALLOWED = "also-allowed@niord.test";
+    /** The setting: the two listed addresses */
+    private static final String LIST = ALLOWED + ", " + ALSO_ALLOWED;
     private static final String STRANGER = "stranger@example.com";
 
     /**
@@ -76,8 +94,8 @@ class MailRecipientFilterITTest extends ITTest {
      */
     @DynamicPropertySource
     static void allowlistMode(DynamicPropertyRegistry registry) {
-        System.setProperty("mailValidRecipients", ALLOWED);
-        registry.add("niord.test.mailValidRecipients", () -> ALLOWED);
+        System.setProperty("mailValidRecipients", LIST);
+        registry.add("niord.test.mailValidRecipients", () -> LIST);
     }
 
     /** Counterpart of {@code MailRecipientsAllowlistResource.stop()}: never pollute the default-LOG suite. */
@@ -89,9 +107,32 @@ class MailRecipientFilterITTest extends ITTest {
     @Autowired
     MailService mailService;
 
+    @PersistenceContext
+    EntityManager em;
+
+    /** Ids of the scheduled mails the tests committed, removed in {@link #afterEach()} */
+    private final List<Integer> committedMailIds = new ArrayList<>();
+
     @BeforeEach
     void beforeEach() {
         MailHog.clear();
+    }
+
+    @AfterEach
+    void afterEach() {
+        for (Integer id : committedMailIds) {
+            try {
+                Tx.requiringNew().run(() -> {
+                    ScheduledMail m = em.find(ScheduledMail.class, id);
+                    if (m != null) {
+                        em.remove(m);
+                    }
+                });
+            } catch (Exception ignored) {
+                // best-effort cleanup
+            }
+        }
+        committedMailIds.clear();
     }
 
     private static String unique(String tag) {
@@ -161,6 +202,82 @@ class MailRecipientFilterITTest extends ITTest {
                 "the allow-listed address must be an envelope recipient, was " + envelope);
         assertEquals(envelope.size(), envelope.stream().filter(ALLOWED::equals).count(),
                 "every delivered recipient must be the allow-listed address, was " + envelope);
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // A scheduled mail is SENT only when the list names every recipient; otherwise it is HELD
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    void aScheduledMailToListedRecipientsOnlyIsSent() {
+        String subject = unique("all-listed");
+        Integer id = commitMail(subject, Status.PENDING, 0, ALLOWED, ALSO_ALLOWED);
+
+        mailService.sendScheduledMail(id);
+
+        MailHog.Message m = MailHog.waitForOne(subject);
+        assertNotNull(m, "the mail reaches the mail server");
+        assertTrue(m.envelopeRecipients().containsAll(List.of(ALLOWED, ALSO_ALLOWED)),
+                "was " + m.envelopeRecipients());
+        ScheduledMail after = reload(id);
+        assertEquals(Status.SENT, after.getStatus(), "every recipient is listed, so the mail reached them all");
+        assertEquals(1, after.getAttempts());
+    }
+
+    @Test
+    void aScheduledMailWithAnUnlistedRecipientIsHeldAndItsCopyGoesToTheFirstListedAddress() {
+        String subject = unique("one-unlisted");
+        Integer id = commitMail(subject, Status.PENDING, 0, STRANGER, ALSO_ALLOWED);
+
+        mailService.sendScheduledMail(id);
+
+        MailHog.Message m = MailHog.waitForOne(subject);
+        assertNotNull(m, "the mail is still handed to the mail server");
+        List<String> envelope = m.envelopeRecipients();
+        assertTrue(envelope.contains(ALLOWED), "the stranger's copy goes to the first listed address, was " + envelope);
+        assertTrue(envelope.contains(ALSO_ALLOWED), "the listed recipient gets it, was " + envelope);
+        assertFalse(envelope.contains(STRANGER), "was " + envelope);
+        ScheduledMail after = reload(id);
+        assertEquals(Status.HELD, after.getStatus(), "the filter kept the mail from one of its recipients");
+        assertEquals(1, after.getAttempts());
+        assertNull(after.getLastError());
+    }
+
+    @Test
+    void aScheduledMailWithAListedToAndAnUnlistedCcIsHeld() {
+        String subject = unique("unlisted-cc");
+        Integer id = commitMail(subject, Status.PENDING, 0, ALLOWED, STRANGER);
+
+        mailService.sendScheduledMail(id);
+
+        assertNotNull(MailHog.waitForOne(subject), "the mail is handed to the mail server");
+        assertEquals(Status.HELD, reload(id).getStatus(), "the CC was redirected, so the mail is held");
+    }
+
+    /**
+     * Commits a scheduled mail with the given status and attempts, to a TO recipient and a CC recipient. It is due
+     * tomorrow, so no minute sender takes up a pending one before the test sends it.
+     */
+    private Integer commitMail(String subject, Status status, int attempts, String to, String cc) {
+        Integer id = Tx.requiringNew().call(() -> {
+            ScheduledMail mail = new ScheduledMail();
+            mail.setSubject(subject);
+            mail.setHtmlContents("<html><body><p>" + subject + "</p></body></html>");
+            mail.setStatus(status);
+            mail.setAttempts(attempts);
+            mail.setSendDate(new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000L));
+            mail.addRecipient(new ScheduledMailRecipient(RecipientType.TO, to));
+            mail.addRecipient(new ScheduledMailRecipient(RecipientType.CC, cc));
+            em.persist(mail);
+            em.flush();
+            return mail.getId();
+        });
+        committedMailIds.add(id);
+        return id;
+    }
+
+    private ScheduledMail reload(Integer id) {
+        return Tx.requiringNew().call(() -> em.find(ScheduledMail.class, id));
     }
 
     private static InternetAddress internet(String addr) {
