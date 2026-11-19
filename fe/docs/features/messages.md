@@ -229,7 +229,7 @@ and refresh.
 - The empty state distinguishes zero rows with total 0 ("no matches") from zero rows with a non-zero
   total ("N matches").
 - An answer marked `indexIncomplete: true` (a free-text search the backend ran while its text index
-  was still being built after a restart) is shown as it came, and `MessageListStatus` shows a warning
+  was still being built after a restart or a re-index) is shown as it came, and `MessageListStatus` shows a warning
   (`messages.list.indexIncomplete`) above the result in every view that holds it, Table, Grid,
   Details and the map's result list, inside a `role="status"` region that stays in the page. Each
   answer of page 0 sets the facade's `indexIncomplete` anew, so the warning goes with the next answer

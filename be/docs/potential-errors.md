@@ -829,7 +829,8 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   minute, each of at most `LUCENE_MAX_INDEX_COUNT` (5,000) messages, and `allMessagesIndexed()` is false until a pass
   has made every message searchable. `niord/src/main/java/org/niord/core/message/MessageSearchService.java`, the
   free-text branch of `searchPagedMessageIds`, marks a result answered in that window
-  (`PagedSearchResultVo.indexIncomplete`). The callers that hand such a result on without the mark:
+  (`PagedSearchResultVo.indexIncomplete`), reading the index's state before and after the search, so a re-index
+  (`recreateIndex`) that empties the index while a search runs marks that search too. The callers that hand such a result on without the mark:
   `MessageReportRestService` (the print), `MessageExportRestService` (the export, which drops the mark so the
   archive keeps its form), `MessageMailRestService` (the message mail of a search) and `MailingListExecutionService`
   (the mailing-list report, and a scheduled mailing-list mail more than half an hour after the start).

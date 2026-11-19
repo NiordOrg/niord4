@@ -338,13 +338,12 @@ public class MessageSearchService extends BaseService {
             // A failure of the index is let through: answered as "no matching ids", it would
             // read as a real answer of zero messages.
             Set<Long> matches = new LinkedHashSet<>();
-            // After a start the Lucene index is emptied and filled again, and until it holds every message
-            // a search answers from the messages indexed so far. The search still answers, and its result
-            // says so, for the editors' list to show. Read before the search: an index complete then is
-            // complete for it. The PostgreSQL backend keeps its table across a start.
-            if (!disableLucene && !messageLuceneIndex.allMessagesIndexed()) {
-                result.setIndexIncomplete(true);
-            }
+            // After a start (or a re-index) the Lucene index is emptied and filled again, and until it holds
+            // every message a search answers from the messages indexed so far. The search still answers, and
+            // its result says so, for the editors' list to show. Read before the search and again after it:
+            // a re-index that empties the index while the languages are searched is marked too. The
+            // PostgreSQL backend keeps its table across a start.
+            boolean indexCompleteBefore = disableLucene || messageLuceneIndex.allMessagesIndexed();
             // A literal query (a caller without an identity) reaches Lucene as plain words. The
             // PostgreSQL backend needs no flag: websearch_to_tsquery has no wildcard syntax.
             try {
@@ -358,6 +357,9 @@ public class MessageSearchService extends BaseService {
                 // A query the parser cannot read is the caller's error, answered 400
                 log.debug("Unreadable free-text query " + param.getQuery() + ": " + e.getMessage());
                 throw new InvalidFreeTextQueryException(e);
+            }
+            if (!disableLucene && (!indexCompleteBefore || !messageLuceneIndex.allMessagesIndexed())) {
+                result.setIndexIncomplete(true);
             }
             List<Long> ids = new ArrayList<>(matches);
             // Need to convert them to int as per message.id type

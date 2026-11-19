@@ -3707,7 +3707,7 @@
       "loading": "Loading…",
       "error": "Error loading messages",
       "retry": "Retry",
-      "indexIncomplete": "The search index is being rebuilt after a restart of the server. Until it is complete, messages may be missing from this result.",
+      "indexIncomplete": "The search index is being rebuilt, for example after a restart of the server. Until it is complete, messages may be missing from this result.",
       "thumbnail": {
         "alt": "Message map thumbnail"
       },

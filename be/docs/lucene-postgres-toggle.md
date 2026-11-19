@@ -86,8 +86,9 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   the index is deleted, set once a pass that found fewer messages than it may index has committed), a free-text
   search answers from the messages indexed so far. It is not refused (the owner's decision of 2026-11-19):
   `MessageSearchService` marks its result, `PagedSearchResultVo.indexIncomplete` (`true`, and left out of the JSON
-  otherwise), and the administration app's _Messages_ list shows a warning above such a result. The mark is set
-  only by the Lucene branch: a search without free text and a PostgreSQL search are never marked. The public API
+  otherwise), and the administration app's _Messages_ list shows a warning above such a result. It reads the
+  index's state before and after the search, so a re-index that empties the index meanwhile is marked too. The
+  mark is set only by the Lucene branch: a search without free text and a PostgreSQL search are never marked. The public API
   takes no free text and serializes the messages alone, the export drops the mark, a scheduled mailing-list trigger
   waits for the index in the half hour after the start (`MailingListExecutionService.INCOMPLETE_INDEX_WAIT`), and the
   print, the message mail and the mailing-list report pass the answer on without it ([`potential-errors.md`](./potential-errors.md), LUCENE-7).

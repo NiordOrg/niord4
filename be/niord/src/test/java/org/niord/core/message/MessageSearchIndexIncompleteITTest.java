@@ -20,6 +20,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.niord.core.settings.SettingsService;
 import org.niord.model.message.MessagePartType;
 import org.niord.model.message.Status;
@@ -225,6 +226,34 @@ class MessageSearchIndexIncompleteITTest extends ITTest {
             assertNull(result.getIndexIncomplete(), "a search over the complete index is not marked");
             return null;
         });
+    }
+
+    /**
+     * A re-index that empties the index while a search runs: the index was complete when the search began and is not
+     * when its languages have been searched. The search reads the mark again after them and is marked. Made with a
+     * stand-in for the index in this context's search service, put back afterwards. FAILS with one read before the
+     * search: the result carries no mark although it was answered from the emptied index.
+     */
+    @Test
+    void aFreeTextSearchDuringWhichTheIndexIsEmptiedIsMarked() throws Exception {
+        String token = uniqueToken();
+        Message message = createPublished(token);
+        MessageSearchService service = (MessageSearchService) AopTestUtils.getUltimateTargetObject(messageSearchService);
+        MessageLuceneIndex real = service.messageLuceneIndex;
+        MessageLuceneIndex emptiedDuringTheSearch = Mockito.mock(MessageLuceneIndex.class);
+        Mockito.when(emptiedDuringTheSearch.allMessagesIndexed()).thenReturn(true, false);
+        Mockito.when(emptiedDuringTheSearch.searchIndex(Mockito.anyString(), Mockito.anyString(), Mockito.anyInt(),
+                Mockito.anyBoolean())).thenReturn(List.of(message.getId().longValue()));
+        service.messageLuceneIndex = emptiedDuringTheSearch;
+        try {
+            PagedSearchResultVo<Message> result = messageSearchService.searchOrFail(freeText(token));
+            assertEquals(List.of(message.getId()), result.getData().stream().map(Message::getId).toList(),
+                    "the search answers as it does today");
+            assertEquals(Boolean.TRUE, result.getIndexIncomplete(),
+                    "and says that the index was not complete when it was searched");
+        } finally {
+            service.messageLuceneIndex = real;
+        }
     }
 
     /** A search without free text does not read the index, and is not marked during the refill */
