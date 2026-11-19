@@ -2,9 +2,10 @@
 --changeset niord:014-scheduled-mail-held splitStatements:true endDelimiter:;
 -- The Mail Queue's held mails and Send again (org.niord.core.mail.ScheduledMail).
 --
--- A mail the sender job handles while the mail filter (the setting mailValidRecipients) is LOG is not sent, and is
--- now stored as HELD instead of SENT, so the queue tells a mail that left the server from one that did not. The
--- baseline's check on the status column admits PENDING, SENT and ERROR only, and Hibernate's validation does not
+-- A mail the mail filter (the setting mailValidRecipients) kept from its recipients when the sender job handled it is
+-- now stored as HELD instead of SENT: the filter was LOG, so nothing left the server, or a list of addresses that did
+-- not name every recipient, so their copies went to the first listed address. The queue then tells a mail that
+-- reached its recipients from one that did not. The baseline's check on the status column admits PENDING, SENT and ERROR only, and Hibernate's validation does not
 -- read check constraints, so without the wider check the first held mail would fail in the database, not at start.
 -- The constraint is dropped by its name, as every database is built by the baseline: a database where it has another
 -- name fails here, at start.
