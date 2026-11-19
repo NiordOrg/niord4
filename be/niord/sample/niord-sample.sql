@@ -1991,7 +1991,9 @@ searchParams.seriesIds(seriesIds)
     .from(fromDate)
     .to(toDate);
 
-var searchResult = messageService.search(searchParams);
+// searchOrFail, not search: a failed search fails the trigger, which the scheduler postpones, where search would
+// answer it with an empty list and the mail would tell its readers that there are no firing exercises tomorrow
+var searchResult = messageService.searchOrFail(searchParams);
 
 var areaFilter = org.niord.model.DataFilter.get().fields(''DETAILS'').lang(language);
 
