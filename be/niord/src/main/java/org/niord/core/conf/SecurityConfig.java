@@ -99,10 +99,11 @@ public class SecurityConfig {
      * The OIDC base client whose roles form the caller's <em>base</em> identity, mirroring the original
      * {@code quarkus.oidc.client-id=niord-client-master} +
      * {@code quarkus.oidc.roles.role-claim-path=resource_access/niord-client-master/roles}. Roles for any
-     * <em>other</em> client (e.g. {@code niord-client-nw}) must NOT be granted from the bare token — they
-     * are only added per-request by the {@link NiordDomainFilter} for the domain the {@code NiordDomain}
-     * header names. Granting every {@code resource_access.<client>.roles} unconditionally would fail OPEN
-     * (e.g. leak the {@code user} role that lives only on {@code niord-client-nw}).
+     * <em>other</em> client (a domain client, e.g. {@code niord-nw}) must NOT be granted from the bare
+     * token — they are only added per-request by the {@link NiordDomainFilter} for the domain the
+     * {@code NiordDomain} header names. Granting every {@code resource_access.<client>.roles}
+     * unconditionally would fail OPEN: a role held on one domain's client would count in every domain
+     * (e.g. an {@code admin} of {@code niord-nw} would be an admin of every other domain too).
      */
     @Value("${niord.oidc.base-client:niord-client-master}")
     String baseClient;
