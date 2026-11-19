@@ -2,8 +2,12 @@
  * Seeds a developer database with the real message corpus, pulled from the
  * public API.
  *
- *     node scripts/seed-dev-database.mjs [--container niord-db] [--database niord]
+ *     node scripts/seed-dev-database.mjs --host <url> [--container niord-db] [--database niord]
  *                                        [--user niord] [--dry-run]
+ *
+ *   --host  the backend whose public API the corpus is read from, its address
+ *           without /rest, for example https://niord.staging.brs2.dk. There is
+ *           no default: which system is read is the caller's choice.
  *
  * Why this exists: the tests that matter most for the resolver -- the
  * differential test in particular -- need real messages narrowed by real SQL.
@@ -40,7 +44,6 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const HOST = 'https://niord.t-dma.dk';
 /* Every domain that carries a distinct corpus. Seeding only niord-nm was a
  * mistake worth recording: it silently excludes dma-fa, which is where the
  * firing-areas fixtures live AND where shortIds actually collide -- 357
@@ -73,6 +76,13 @@ const arg = (name, fallback) => {
   const i = process.argv.indexOf('--' + name);
   return i > -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 };
+// No default for the system read from: the caller names it.
+const HOST = arg('host', '').replace(/\/+$/, '');
+if (!/^https?:\/\//.test(HOST)) {
+  console.error('seed-dev-database: give the backend to read the corpus from with --host <url> '
+    + '(its address without /rest, for example https://niord.staging.brs2.dk); there is no default');
+  process.exit(2);
+}
 const DB_CONTAINER = arg('container', 'niord-db');
 const DATABASE = arg('database', 'niord');
 if (/^niord_sample(_[a-z]{2})?$/.test(DATABASE)) {
