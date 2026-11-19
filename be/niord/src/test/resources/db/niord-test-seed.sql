@@ -976,7 +976,8 @@ CREATE TABLE public."MailingListStatusChange" (
     created timestamp(6) with time zone NOT NULL,
     "dueAt" timestamp(6) with time zone NOT NULL,
     attempts integer DEFAULT 0 NOT NULL,
-    "lastError" text
+    "lastError" text,
+    "settledTriggers" integer[] DEFAULT '{}'::integer[] NOT NULL
 );
 
 
@@ -4752,7 +4753,7 @@ COPY public."MailingListDesc" (id, lang, description, name, entity_id) FROM stdi
 -- Data for Name: MailingListStatusChange; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public."MailingListStatusChange" (id, "messageUid", status, created, "dueAt", attempts, "lastError") FROM stdin;
+COPY public."MailingListStatusChange" (id, "messageUid", status, created, "dueAt", attempts, "lastError", "settledTriggers") FROM stdin;
 \.
 
 
