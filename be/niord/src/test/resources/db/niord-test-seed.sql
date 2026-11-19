@@ -7929,14 +7929,6 @@ ALTER TABLE ONLY public."Sequence"
 
 
 --
--- Name: User user_username; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."User"
-    ADD CONSTRAINT user_username UNIQUE (username);
-
-
---
 -- Name: MailingListStatusChange_due_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8200,6 +8192,13 @@ CREATE INDEX secom_outbox_status ON public."SecomOutboxEntry" USING btree (statu
 --
 
 CREATE INDEX secom_subscription_node ON public."SecomSubscription" USING btree (node_id);
+
+
+--
+-- Name: user_username_lower; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX user_username_lower ON public."User" USING btree (lower((username)::text));
 
 
 --
