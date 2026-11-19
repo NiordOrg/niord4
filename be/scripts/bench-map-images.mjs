@@ -1469,7 +1469,7 @@ async function apiReads(ctx, uids, listFilter, gets, searches, warmGets, warmSea
 // sends it (messages-api.service.ts and messages-shell.facade.ts of the administration app; messages.store.ts
 // and message-details-dialog.component.ts of the public site).
 
-/** The filter the owner timed: NW and NM, every status the user may see (the backend ignores areaId and language). */
+/** The filter the owner timed: NW and NM; the backend lists the published ones when no status is given (it ignores areaId and language). */
 const READ_FILTER = 'mainType=NW&mainType=NM';
 
 /** The administration app's list search: the default page (100), or the map view's 1,000. */
