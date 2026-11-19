@@ -57,8 +57,9 @@ import java.util.stream.Stream;
  * may be named like a thumbnail.
  * <p>
  * The import ends with the verification from the rows' side: every reference the database holds (an attachment's
- * path, a message's thumbnail, an issue's file, a publication's link, an audit entry's archived locations, and
- * every repository link in the message texts) must resolve to a row, and each one that does not is reported.
+ * path, a message's thumbnail, an issue's file and link, a publication's link, an audit entry's archived locations,
+ * and every repository link in the message texts and in a message's publication texts) must resolve to a row, and
+ * each one that does not is reported.
  */
 @Service
 public class RepoImportService {
@@ -429,6 +430,11 @@ public class RepoImportService {
         for (Object[] row : rows("select d.id, d.lang, d.filePath from PublicationIssueDesc d where d.filePath is not null")) {
             refs.add(Reference.of("The " + row[1] + " file of publication issue desc " + row[0], (String) row[2]));
         }
+        for (Object[] row : rows("select d.id, d.lang, d.link from PublicationIssueDesc d where d.link is not null")) {
+            for (String link : RepoPaths.fileLinkPaths((String) row[2])) {
+                refs.add(Reference.of("The " + row[1] + " link of publication issue desc " + row[0], link));
+            }
+        }
         for (Object[] row : rows("select d.id, d.lang, d.link from PublicationDesc d where d.link is not null")) {
             for (String link : RepoPaths.fileLinkPaths((String) row[2])) {
                 refs.add(Reference.of("The " + row[1] + " link of publication desc " + row[0], link));
@@ -443,6 +449,17 @@ public class RepoImportService {
                 + RepoPaths.FILE_URL_PREFIX + "%'")) {
             for (String link : RepoPaths.fileLinkPaths((String) row[1])) {
                 refs.add(Reference.of("The text of message part desc " + row[0], link));
+            }
+        }
+        // A message's publication texts, the public and the internal one, are HTML that may link a file too
+        for (Object[] row : rows("select d.id, d.lang, d.publication, d.internalPublication from MessageDesc d"
+                + " where d.publication like '%" + RepoPaths.FILE_URL_PREFIX + "%'"
+                + " or d.internalPublication like '%" + RepoPaths.FILE_URL_PREFIX + "%'")) {
+            for (String link : RepoPaths.fileLinkPaths((String) row[2])) {
+                refs.add(Reference.of("The " + row[1] + " publication text of message desc " + row[0], link));
+            }
+            for (String link : RepoPaths.fileLinkPaths((String) row[3])) {
+                refs.add(Reference.of("The " + row[1] + " internal publication text of message desc " + row[0], link));
             }
         }
         return refs;

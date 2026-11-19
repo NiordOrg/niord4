@@ -480,8 +480,9 @@ resumable: a second run after an interruption does the rest.
 pins that), and an editor may upload a file named like a thumbnail or a map image. A rule that skipped
 what the listing hides would lose every custom map thumbnail. So the job first collects every path a
 reference names (`Attachment.path` decoded, `Message.thumbnailPath`, `PublicationIssueDesc.filePath`,
-`PublicationDesc.link`, `IssueAuditEntry.archivePath`, and every `/rest/repo/file/` URL in the message
-HTML), and a referenced path is imported whatever its name (a custom thumbnail is
+`PublicationIssueDesc.link`, `PublicationDesc.link`, `IssueAuditEntry.archivePath`, and every
+`/rest/repo/file/` URL in the message HTML and in a message's publication texts, `MessageDesc.publication`
+and `.internalPublication`), and a referenced path is imported whatever its name (a custom thumbnail is
 `custom_thumb_<mapImageSize>.png`, and `mapImageSize` is a setting, 256 by default; an upload an editor
 named `chart_thumb_64.png` beside `chart.png` is an attachment). Of the rest, it imports every file, under
 a revision folder or not (an issue's folder has no revision level, and a cleared issue's PDF is such an
@@ -494,9 +495,10 @@ file the cache tree already holds, which the window may have drawn (the regenera
 which embed `/rest/message-map-image/…`, would draw up to a thousand images with no cached tiles.
 
 **Verification is from the rows' side, not `find | wc -l`.** After the run, every reference must resolve
-to a row: `Attachment.path` (decoded), `Message.thumbnailPath`, `PublicationIssueDesc.filePath`,
-`PublicationDesc.link`, every `IssueAuditEntry.archivePath` entry, and every `/rest/repo/file/` URL in the
-message HTML. The job reports each reference that does not, which catches an encoding mistake as well as
+to a row: `Attachment.path` (decoded), `Message.thumbnailPath`, `PublicationIssueDesc.filePath` and
+`.link`, `PublicationDesc.link`, every `IssueAuditEntry.archivePath` entry, and every `/rest/repo/file/` URL in
+the message HTML and in a message's publication texts (`MessageDesc.publication`, `.internalPublication`;
+read since 2026-11-19). The job reports each reference that does not, which catches an encoding mistake as well as
 a file the rule missed. An HTML link to a thumbnail or a map image resolves to a row like any other,
 because the reference-first rule above imported that file as one; `/file` has no fallback to consult
 (§4.3), so what the check reports is exact, and a derived file it reports is a file the tree did not hold. The

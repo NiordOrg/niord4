@@ -22,11 +22,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.niord.core.message.Attachment;
 import org.niord.core.message.Message;
+import org.niord.core.message.MessageDesc;
 import org.niord.core.message.MessageService;
+import org.niord.core.publication.PublicationCategory;
+import org.niord.core.publication.TestIds;
 import org.niord.core.publication.series.ActorKind;
 import org.niord.core.publication.series.AuditAction;
+import org.niord.core.publication.series.ContentMode;
+import org.niord.core.publication.series.IntervalBoundSource;
 import org.niord.core.publication.series.IssueArchiveService;
 import org.niord.core.publication.series.IssueAuditEntry;
+import org.niord.core.publication.series.IssueStatus;
+import org.niord.core.publication.series.NextIssueCreation;
+import org.niord.core.publication.series.NumberingScheme;
+import org.niord.core.publication.series.PublicationIssue;
+import org.niord.core.publication.series.PublicationIssueDesc;
+import org.niord.core.publication.series.PublicationSeries;
+import org.niord.core.publication.series.ReleaseMode;
+import org.niord.core.publication.series.SeriesCadence;
+import org.niord.core.publication.series.SeriesStatus;
+import org.niord.core.publication.series.TestOwnerDomain;
+import org.niord.core.publication.series.criteria.IssueCriteriaVo;
+import org.niord.core.publication.series.criteria.MessageSeriesCriterionVo;
+import org.niord.core.publication.series.resolve.TimeRelation;
+import org.niord.core.publication.vo.MessagePublication;
 import org.niord.core.repo.RepoImportService.Item;
 import org.niord.core.repo.RepoImportService.Kind;
 import org.niord.core.repo.RepoImportService.Outcome;
@@ -34,6 +53,7 @@ import org.niord.model.message.Type;
 import org.niord.test.ITTest;
 import org.niord.test.Tx;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.niord.test.RepoRows;
 import org.niord.test.MessageTestFactory;
@@ -45,9 +65,11 @@ import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -219,6 +241,43 @@ class RepoImportServiceITTest extends ITTest {
         assertEquals(Outcome.SKIPPED, importService.apply(changed, false), "without verify a row is never touched");
     }
 
+    /**
+     * A message's publication texts and an issue's link name files as the message texts do: a link to a file is
+     * checked like any other reference, and a file only such a link names is imported whatever its name. In the
+     * test's own transaction, rolled back.
+     */
+    @Test
+    @Transactional
+    void readsTheLinksInAMessagesPublicationTextsAndAnIssuesLink() throws Exception {
+        Message msg = messageService.createMessage(MessageTestFactory.draft(
+                "dma-nw", Type.COASTAL_WARNING, "IT-REPO-IMPORT-publication-" + System.nanoTime()));
+        String repo = msg.getRepoPath();
+        MessageDesc desc = msg.checkCreateDesc("en");
+        desc.setPublication("See <a href=\"" + RepoPaths.FILE_URL_PREFIX + repo + "/1/chart_thumb_64.png\">the chart</a>"
+                + " and <a href=\"" + RepoPaths.FILE_URL_PREFIX + repo + "/1/gone.pdf\">the list</a>.");
+        desc.setInternalPublication("<a href='" + RepoPaths.FILE_URL_PREFIX + repo + "/1/internal-gone.pdf'>x</a>");
+        PublicationIssue issue = issue();
+        PublicationIssueDesc issueDesc = issue.getDescs().get(0);
+        issueDesc.setLink(RepoPaths.FILE_URL_PREFIX + issue.getRepoPath() + "/issue-gone.pdf");
+        em.flush();
+
+        // A file named like a thumbnail, its source beside it: derived, unless a link names it
+        write(repo + "/1/chart.png", "an upload");
+        write(repo + "/1/chart_thumb_64.png", "named like a thumbnail, linked from the publication text");
+        Map<String, Kind> kinds = new LinkedHashMap<>();
+        importService.plan(root, null, line -> { }).forEach(item -> kinds.put(item.repoPath(), item.kind()));
+        assertEquals(Kind.IMPORT, kinds.get(repo + "/1/chart_thumb_64.png"),
+                "a file a publication text links is imported whatever its name: " + kinds);
+
+        List<String> dangling = importService.verifyReferences();
+        assertTrue(dangling.contains("The en publication text of message desc " + desc.getId() + " names '"
+                + repo + "/1/gone.pdf', which has no row"), dangling.toString());
+        assertTrue(dangling.contains("The en internal publication text of message desc " + desc.getId() + " names '"
+                + repo + "/1/internal-gone.pdf', which has no row"), dangling.toString());
+        assertTrue(dangling.contains("The en link of publication issue desc " + issueDesc.getId() + " names '"
+                + issue.getRepoPath() + "/issue-gone.pdf', which has no row"), dangling.toString());
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // The old archive root
     // ------------------------------------------------------------------------------------------- //
@@ -325,6 +384,49 @@ class RepoImportServiceITTest extends ITTest {
                 MessageTestFactory.draft("dma-nw", Type.COASTAL_WARNING, "IT-REPO-IMPORT-" + name + "-" + System.nanoTime()));
         createdMessageIds.add(created.getId());
         return created;
+    }
+
+    /** An open issue of a series of its own, with an English description, persisted in the test's transaction */
+    private PublicationIssue issue() {
+        PublicationCategory category = new PublicationCategory();
+        category.setCategoryId(TestIds.category());
+        category.setPriority(100);
+        category.setPublish(true);
+        em.persist(category);
+
+        PublicationSeries series = new PublicationSeries();
+        series.setSeriesId(TestIds.series());
+        series.setStatus(SeriesStatus.ACTIVE);
+        series.setContentMode(ContentMode.GENERATED_FROM_QUERY);
+        series.setReportId("some-report");
+        series.setCadence(SeriesCadence.WEEKLY);
+        series.setTimeRelation(TimeRelation.PUBLISHED_IN_INTERVAL);
+        series.setAliveAtCutoff(false);
+        series.setReleaseMode(ReleaseMode.MANUAL_GATE);
+        series.setNextIssueCreation(NextIssueCreation.MANUAL);
+        series.setMessagePublication(MessagePublication.NONE);
+        series.setNumberingScheme(NumberingScheme.ISO_WEEK_YEAR);
+        series.setCategory(category);
+        series.setDomain(TestOwnerDomain.of(em));
+        IssueCriteriaVo criteria = new IssueCriteriaVo();
+        MessageSeriesCriterionVo node = new MessageSeriesCriterionVo();
+        node.setValues(new ArrayList<>(List.of("dma-nm")));
+        criteria.getCriteria().add(node);
+        series.setCriteria(criteria);
+        series.getLanguages().add("en");
+        series.createDesc("en").setName("Test series");
+        em.persist(series);
+
+        PublicationIssue issue = new PublicationIssue();
+        issue.setSeries(series);
+        issue.setPublicId(UUID.randomUUID().toString());
+        issue.setRepoPath(RepoPaths.PUBLICATIONS_ROOT + "/" + issue.getPublicId());
+        issue.setStatus(IssueStatus.OPEN);
+        issue.setIntervalFrom(new Date(WRITTEN.toEpochMilli()));
+        issue.setIntervalFromSource(IntervalBoundSource.STAMPED);
+        issue.createDesc("en").setName("Test issue");
+        em.persist(issue);
+        return issue;
     }
 
     private static Attachment attachment(Message message, String path, String fileName) {
