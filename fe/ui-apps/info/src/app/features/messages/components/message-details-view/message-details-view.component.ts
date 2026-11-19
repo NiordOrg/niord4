@@ -1,5 +1,12 @@
-import { afterNextRender, Component, DestroyRef, inject, Injector } from '@angular/core';
-import { Location } from '@angular/common';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  EnvironmentInjector,
+  inject,
+  Injector,
+} from '@angular/core';
+import { DOCUMENT, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import type { DialogRef } from '@angular/cdk/dialog';
@@ -62,6 +69,8 @@ export class MessageDetailsViewComponent {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly environment = inject(EnvironmentInjector);
   private readonly deepLinkedMessageId = inject(ActivatedRoute).snapshot.paramMap.get('messageId');
 
   constructor() {
@@ -106,12 +115,19 @@ export class MessageDetailsViewComponent {
    * Forward already has an address to go to, which the browser has put in place by then, and
    * it is left alone — the check is against the last address written here, and a move inside
    * the dialog after it writes nothing either.
+   *
+   * A dialog opened from the list gives focus back to the row it was opened from. One a link
+   * opened had no control behind it, and focus would fall to the page's body, so the next Tab
+   * started again at the top of the page. Once the address is the list's again, focus goes to
+   * the row of the message last shown, or to the main content when the list does not hold it.
    */
   private async openDeepLinked(messageId: string): Promise<void> {
     let written = this.location.path();
+    let shown = messageId;
     const queryStart = written.indexOf('?');
     const query = queryStart < 0 ? '' : written.slice(queryStart);
     const dialogRef = await this.openDetails(messageId, (shownId) => {
+      shown = shownId;
       if (this.destroyRef.destroyed || this.location.path() !== written) return;
       // One path segment, as the route and the web server read it back: a short id may hold a
       // slash.
@@ -124,10 +140,27 @@ export class MessageDetailsViewComponent {
     });
     dialogRef?.closed.subscribe(() => {
       if (this.destroyRef.destroyed || this.location.path() !== written) return;
-      void this.router.navigate(['/messages/details'], {
-        queryParamsHandling: 'preserve',
-        replaceUrl: true,
-      });
+      void this.router
+        .navigate(['/messages/details'], { queryParamsHandling: 'preserve', replaceUrl: true })
+        .then((moved) => {
+          // The list's own address is another route, so another view draws the list: its rows
+          // are there once it has rendered, and this view is gone by then.
+          if (moved) {
+            afterNextRender(() => this.focusAfterLinkedDialog(shown), {
+              injector: this.environment,
+            });
+          }
+        });
     });
+  }
+
+  /** The row of the message last shown, when the list holds it; otherwise the main content. */
+  private focusAfterLinkedDialog(shownId: string): void {
+    const index = this.store
+      .messages()
+      .findIndex((message) => message.id === shownId || message.shortId === shownId);
+    const rows = this.document.querySelectorAll('.message-details-list .message-details-item');
+    const row = index < 0 ? null : rows[index]?.querySelector<HTMLElement>('button.row-link');
+    (row ?? this.document.getElementById('main-content'))?.focus();
   }
 }

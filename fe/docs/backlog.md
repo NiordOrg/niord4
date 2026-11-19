@@ -201,12 +201,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   4.44:1 where the tile under the banner is white. axe-core cannot measure text over an image and leaves it to a
   person. A fill of 70 % (6.23:1 over white with the default tokens) closes it; a country's own header colour
   changes every figure, so each country's build is measured again. Found by the public site's audit (2026-11-18).
-- **Closing a message's dialog opened by its own address leaves focus nowhere** (WCAG 2.4.3).
-  `/messages/details/message/<id>` opens the message in a dialog over the list; Escape closes it and moves the address to `/messages/details`, but there is no control the dialog was opened from, so focus
-  falls to the page's body and the next Tab starts again at the skip link. A dialog opened from the list returns
-  focus to its row, as it should. Moving focus to the main content (`#main-content`, which takes focus already for
-  the skip link) when the dialog closes without an opener closes it. Found by the public site's audit
-  (2026-11-18).
 
 ### The public site's image, configuration and gates
 

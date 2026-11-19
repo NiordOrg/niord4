@@ -222,7 +222,7 @@ Pass, fail, not applicable, or needs a person, for the base build. A fail names 
 | 2.3.1 Three flashes or below threshold | A | Pass | |
 | 2.4.1 Bypass blocks | A | Pass | The skip link and the landmarks; the print sheet and the teaser repeat no block |
 | 2.4.2 Page titled | A | Pass | Each view titled; one message shares the details view's title |
-| 2.4.3 Focus order | A | **Fail** | Focus falls to the body when a dialog opened by its address closes: _Closing a message's dialog opened by its own address leaves focus nowhere_ |
+| 2.4.3 Focus order | A | Pass (2026-11-19) | Fixed: when a dialog opened by its address closes, focus goes to the row of the message it showed last, or to the main content when the list does not hold it; measured by the details view's unit spec, not yet walked in a browser |
 | 2.4.4 Link purpose (in context) | A | Pass | |
 | 2.4.5 Multiple ways | AA | Pass | Every message is in three views, each one step from the menu |
 | 2.4.6 Headings and labels | AA | Pass | Remark: no page heading (backlog) |
