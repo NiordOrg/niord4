@@ -172,6 +172,42 @@ describe('MailsPage', () => {
     expect(fixture.nativeElement.textContent).not.toContain('SENT');
   });
 
+  it('offers Held between Sent and Error, and its button searches status=HELD', () => {
+    const { fixture, httpTesting } = setup();
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('.seg .seg-btn') as NodeListOf<HTMLButtonElement>,
+    );
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual([
+      'admin.mails.status.all',
+      'admin.mails.status.pending',
+      'admin.mails.status.sent',
+      'admin.mails.status.held',
+      'admin.mails.status.error',
+    ]);
+    buttons[3].click();
+    TestBed.tick();
+    httpTesting
+      .expectOne('/rest/scheduled-mails/search?maxSize=20&page=0&status=HELD')
+      .flush({ data: [], size: 0, total: 0 });
+    fixture.detectChanges();
+    expect(buttons[3].classList.contains('is-active')).toBe(true);
+  });
+
+  it('renders a held mail with the held pill', () => {
+    const { fixture, httpTesting } = setup();
+    (fixture.componentInstance as unknown as { facade: { refresh: () => void } }).facade.refresh();
+    TestBed.tick();
+    httpTesting.expectOne('/rest/scheduled-mails/search?maxSize=20&page=0').flush({
+      data: [{ id: 1, status: 'HELD', sender: 's', subject: 'x', recipients: [], attempts: 1 }],
+      size: 1,
+      total: 1,
+    });
+    fixture.detectChanges();
+    const pill = fixture.nativeElement.querySelector('.status-badge');
+    expect(pill.classList.contains('is-mail-held')).toBe(true);
+    expect(pill.textContent).toContain('admin.mails.status.held');
+  });
+
   it('dedupes the details fetch while one is in flight (no request races)', () => {
     const { page, httpTesting } = setup();
     const open = (page as unknown as { openMail: (mail: { id: number }) => void }).openMail.bind(

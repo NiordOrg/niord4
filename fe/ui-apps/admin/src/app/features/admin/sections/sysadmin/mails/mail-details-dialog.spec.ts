@@ -78,6 +78,14 @@ describe('MailDetailsDialog', () => {
     expect(text).toContain('2026-06-11 10:00');
   });
 
+  it('labels the send date Due for a held mail, the time it was due when it was held', async () => {
+    const { doc } = await setup({ ...baseMail, status: 'HELD', attempts: 1 });
+    const text = doc.body.textContent ?? '';
+    expect(text).toContain('admin.mails.details.due');
+    expect(text).not.toContain('admin.mails.details.sent');
+    expect(text).toContain('2026-06-11 10:00');
+  });
+
   it('labels the send date Last attempt for a mail that failed for good', async () => {
     const { doc } = await setup({ ...baseMail, status: 'ERROR', attempts: 5, lastError: 'x' });
     const text = doc.body.textContent ?? '';

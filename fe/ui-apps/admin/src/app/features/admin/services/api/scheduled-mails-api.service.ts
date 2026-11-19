@@ -4,7 +4,11 @@ import { Observable, map } from 'rxjs';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 
-export type ScheduledMailStatus = 'PENDING' | 'SENT' | 'ERROR';
+/**
+ * A mail's state in the queue. HELD: the sender job handled it while the mail filter
+ * (`mailValidRecipients`) was LOG, so nothing left the server.
+ */
+export type ScheduledMailStatus = 'PENDING' | 'SENT' | 'HELD' | 'ERROR';
 
 export interface ScheduledMailRecipient {
   readonly recipientType: 'TO' | 'CC' | 'BCC';

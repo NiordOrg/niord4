@@ -1647,6 +1647,7 @@
         "all": "All",
         "pending": "Pending",
         "sent": "Sent",
+        "held": "Held",
         "error": "Error"
       },
       "column": {
@@ -3536,6 +3537,7 @@
         "sent": "Sent",
         "waiting": "Waiting",
         "retrying": "Retrying",
+        "held": "Held, not sent",
         "error": "Not sent"
       },
       "lastError": "Last error: {{error}}",

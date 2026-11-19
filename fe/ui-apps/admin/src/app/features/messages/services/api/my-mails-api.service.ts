@@ -8,7 +8,8 @@ import { BACKGROUND_READ } from '../../../../core/interceptors/background-read';
 /** The period the My mails dialog lists, and the failed-mail notice looks at, in days. */
 export const MY_MAILS_DAYS = 7;
 
-export type MyMailStatus = 'PENDING' | 'SENT' | 'ERROR';
+/** HELD: handled while the mail filter was LOG, so nothing left the server. */
+export type MyMailStatus = 'PENDING' | 'SENT' | 'HELD' | 'ERROR';
 
 export interface MyMailRecipient {
   readonly recipientType: 'TO' | 'CC' | 'BCC';

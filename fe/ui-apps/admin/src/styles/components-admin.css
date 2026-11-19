@@ -1060,12 +1060,24 @@
 
 /* Mail-queue statuses extend the status-badge system, reusing the message
    status palette: pending=draft amber, sent=published green, error=cancelled
-   red. Same orthogonal state-class pattern as .is-published etc. */
+   red. Same orthogonal state-class pattern as .is-published etc. Held (the mail
+   filter kept the mail from leaving) is pending's amber with a dashed border:
+   it waits on a person, not on the sender job. The grey palettes would read as
+   error's in the default tokens, so no other palette is taken. */
 @layer components {
   .is-mail-pending {
     --status-bg: var(--niord-status-draft-bg);
     --status-fg: var(--niord-status-draft-fg);
     --status-bd: var(--niord-status-draft-bd);
+  }
+  .is-mail-held {
+    --status-bg: var(--niord-status-draft-bg);
+    --status-fg: var(--niord-status-draft-fg);
+    --status-bd: var(--niord-status-draft-bd);
+  }
+  .status-badge.is-mail-held {
+    border-style: dashed;
+    border-color: var(--status-bd);
   }
   .is-mail-sent {
     --status-bg: var(--niord-status-published-bg);

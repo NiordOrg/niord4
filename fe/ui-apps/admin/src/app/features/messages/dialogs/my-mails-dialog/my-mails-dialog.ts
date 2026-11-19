@@ -16,8 +16,9 @@ import {
 /**
  * "My mails…", opened from the messages Actions menu: the mails the signed-in user queued in the
  * last week (the mail dialog's and the comments' mails), newest first, each with what became of
- * it — sent, waiting, being retried after a failure, or not sent after the last retry, with the
- * mail server's last error. The list is read each time the dialog opens and held only while it is
+ * it — sent, waiting, being retried after a failure, held because mail is switched off on the
+ * deployment (the mail filter is LOG), or not sent after the last retry, with the mail server's
+ * last error. The list is read each time the dialog opens and held only while it is
  * open.
  */
 @Component({
@@ -70,6 +71,8 @@ export class MyMailsDialog {
     switch (mail.status) {
       case 'SENT':
         return 'messages.myMails.status.sent';
+      case 'HELD':
+        return 'messages.myMails.status.held';
       case 'ERROR':
         return 'messages.myMails.status.error';
       case 'PENDING':

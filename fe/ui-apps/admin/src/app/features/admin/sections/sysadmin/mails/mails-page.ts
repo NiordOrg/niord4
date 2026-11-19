@@ -13,6 +13,7 @@ import { ProgressBar } from '../../../../../shared/components/progress-bar/progr
 import { endOfDayInZone } from '../../../../../shared/utils/zoned-date';
 import {
   ScheduledMail,
+  ScheduledMailStatus,
   ScheduledMailsApiService,
 } from '../../../services/api/scheduled-mails-api.service';
 import { AdminSectionPage } from '../../../shell/admin-section-page';
@@ -62,6 +63,7 @@ export class MailsPage {
     { labelKey: 'admin.mails.status.all', value: '' },
     { labelKey: 'admin.mails.status.pending', value: 'PENDING' },
     { labelKey: 'admin.mails.status.sent', value: 'SENT' },
+    { labelKey: 'admin.mails.status.held', value: 'HELD' },
     { labelKey: 'admin.mails.status.error', value: 'ERROR' },
   ]);
 
@@ -108,7 +110,7 @@ export class MailsPage {
     this.commitText(param);
   }
 
-  protected onStatusChange(value: '' | 'PENDING' | 'SENT' | 'ERROR'): void {
+  protected onStatusChange(value: '' | ScheduledMailStatus): void {
     this.facade.setParams({ status: value });
   }
 

@@ -481,8 +481,11 @@ report id and the name.
 
 Strictly read-only: no create, edit, delete, retry or cancel. Mails are produced elsewhere — mailing-
 list triggers, the messages mail action, and promulgation — and this page is where delivery is
-verified and failures diagnosed. The lifecycle (`PENDING` → `SENT` or `ERROR`, with server-side retry
-back-off) is entirely backend-driven.
+verified and failures diagnosed. The lifecycle (`PENDING` → `SENT`, `HELD` or `ERROR`, with
+server-side retry back-off) is entirely backend-driven. A mail is `HELD` when the sender job handled
+it while the mail filter (`mailValidRecipients`) was `LOG`: nothing left the server. The status
+filter offers _Held_ between _Sent_ and _Error_, and its pill is pending's amber with a dashed
+border.
 
 - The search is **server-paged**, ordered newest-created first. Filters are recipient / sender /
   subject (substring), status (equality) and a from/to range. An empty filter value is **omitted from
@@ -496,9 +499,9 @@ back-off) is entirely backend-driven.
   dialog.
 - In the details dialog the date row shows the mail's `sendDate`, the time it is or was due,
   labelled by status: _Due_ for a pending mail (after a failed attempt, the time of the next
-  attempt), _Sent_ for a sent one, _Last attempt_ for one that failed for good; it is left out when
-  the mail has no send date. Error text and attempt count show only when an error was
-  recorded. Recipients are partitioned into TO / CC / BCC client-side and empty groups are hidden.
+  attempt) and for a held one, _Sent_ for a sent one, _Last attempt_ for one that failed for good;
+  it is left out when the mail has no send date. Error text and attempt count show only when an
+  error was recorded. Recipients are partitioned into TO / CC / BCC client-side and empty groups are hidden.
 - Mail bodies are full, style-laden HTML documents. They render in the sandboxed-iframe primitive
   (`<app-sandboxed-html>`, empty `sandbox` attribute, an injected stylesheet because linked
   stylesheets cannot resolve inside an opaque origin). The body is never bound to live DOM: the

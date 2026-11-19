@@ -509,9 +509,9 @@ it gives one (an address that is no mail address).
 the user queued in the last 7 days, from this dialog or with a comment, newest first, read from
 `GET /rest/scheduled-mails/mine` each time it opens: the creation time in the domain's zone, the
 subject, the recipients and the status as the sender reads it — _Sent_, _Waiting_ (pending, not yet
-tried), _Retrying_ (pending after a failed attempt) or _Not sent_ (`ERROR`, after the last retry), the
-last two with the mail server's last error. The backend matches the mails on the sender address it
-recorded when the mail was queued; the mailing lists' mails carry none and are listed for nobody.
+tried), _Retrying_ (pending after a failed attempt), _Held, not sent_ (`HELD`) or _Not sent_
+(`ERROR`, after the last retry), _Retrying_ and _Not sent_ with the mail server's last error. The
+backend matches the mails on the sender address it recorded when the mail was queued; the mailing lists' mails carry none and are listed for nobody.
 `MyMailsNoticeService`, attached by the messages and editor shells while they are mounted, looks at
 the user's mails of the last 7 days (the dialog's period) at most every five minutes, only while a
 shell is mounted and the tab is shown, and raises one warning that stays until it is closed for the
@@ -522,8 +522,11 @@ is a background read (`BACKGROUND_READ` in `core/interceptors/`): the intercepto
 with a token that needs no refresh, never refreshes the token for it and never drops the session
 to guest on its failure, so an idle tab still ends its session at the realm's idle timeout; a look
 the token is too old for is tried again every 30 seconds until the user's own work has refreshed
-the token. With the `mailValidRecipients` setting at `LOG` the backend only logs a mail and still
-marks it sent, so the dialog then says _Sent_ for a mail that left nothing.
+the token. With the `mailValidRecipients` setting at `LOG` the backend only logs a mail and marks it
+`HELD`, so the dialog says _Held, not sent_; a held mail is no failure, so the notice does not
+announce it. A system administrator can send it again from the mail queue. A mail announced as
+failed, sent again and failing again is not announced a second time (its id is already stored); it
+shows under My mails.
 
 **Export** produces a ZIP: ticket, plus either the filter string or `tag=<temporaryTagId>` for the
 selection path.
