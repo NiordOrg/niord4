@@ -54,6 +54,7 @@ export class MessageListFacade {
   private readonly _page = signal(0);
   private readonly _loading = signal(false);
   private readonly _error = signal<unknown | null>(null);
+  private readonly _indexIncomplete = signal(false);
 
   readonly messages = this._messages.asReadonly();
   readonly total = this._total.asReadonly();
@@ -61,6 +62,13 @@ export class MessageListFacade {
   readonly loading = this._loading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly hasMore = computed(() => this._messages().length < this._total());
+
+  /**
+   * Whether the last answer was a free-text search the backend ran while its search index was still
+   * being filled after a restart, so messages may be missing from the list. Each answer sets it
+   * anew; a failed search leaves it as the rows on screen left it.
+   */
+  readonly indexIncomplete = this._indexIncomplete.asReadonly();
 
   /**
    * What to say under the publication chip when the search was refused for it.
@@ -128,6 +136,7 @@ export class MessageListFacade {
         this._messages.set([]);
         this._total.set(0);
         this._page.set(0);
+        this._indexIncomplete.set(false);
       }
     });
 
@@ -264,6 +273,7 @@ export class MessageListFacade {
       this._messages.set(rows);
     }
     this._total.set(result.total);
+    this._indexIncomplete.set(result.indexIncomplete === true);
     this.selection.refreshSnapshotsFromSearchResults(rows);
   }
 }

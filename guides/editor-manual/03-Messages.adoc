@@ -238,6 +238,11 @@ A system administrator can switch the text search to the database's own search (
 _disableLucene_). The text filter then finds the messages that contain all the words you type, also
 in other forms of the words (_harbour_ finds _harbours_), and a `*` is not understood.
 
+For some minutes after the server has been restarted, the text filter searches an index that is still
+being built, and messages may be missing from the result. The list then shows a warning above the
+result, until the index is complete. A print, an export or a mail of the list made in those minutes
+does not say so.
+
 [#type-filter]
 ==== Type Filter
 

@@ -96,6 +96,9 @@ public class MessageExportRestService extends AbstractBatchableRestService {
 
         PagedSearchResultVo<SystemMessageVo> result = messageSearchRestService.searchSystemMessages(params);
         result.getData().forEach(m -> m.sort(params.getLanguage()));
+        // The archive's messages.json keeps its form: the mark of a search answered while the free-text index was
+        // being filled is for the editors' list, not a property of an archive another system may import
+        result.setIndexIncomplete(null);
 
         try {
             StreamingResponseBody stream = os -> messageExportService.export(result, os);

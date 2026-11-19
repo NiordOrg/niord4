@@ -211,10 +211,11 @@ public class MessageSearchService extends BaseService {
 
     /**
      * The message search of {@link #search(MessageSearchParams)}, which lets a failure through instead of answering
-     * it with an empty result: an empty result is then the index's answer, not a failure. One window is not covered:
-     * after a start the Lucene index is emptied and filled again, 5,000 messages a pass, one pass a minute, and until
-     * {@link MessageLuceneIndex#allMessagesIndexed()} a free-text search answers from the messages indexed so far,
-     * without an error (be/docs/potential-errors.md, LUCENE-7).
+     * it with an empty result: an empty result is then the index's answer, not a failure. One window is not an
+     * error: after a start the Lucene index is emptied and filled again, 5,000 messages a pass, one pass a minute, and
+     * until {@link MessageLuceneIndex#allMessagesIndexed()} a free-text search answers from the messages indexed so
+     * far. Such a result is marked ({@link PagedSearchResultVo#getIndexIncomplete()}); a caller that hands it on
+     * without the mark hands on a result that may miss messages (be/docs/potential-errors.md, LUCENE-7).
      * <p>
      * Used by the public API, the editors' search with its print, export and message mail, the scheduled
      * mailing-list mail and the mailing-list report, the Niord integration's look-up of its own copies, a
@@ -337,6 +338,13 @@ public class MessageSearchService extends BaseService {
             // A failure of the index is let through: answered as "no matching ids", it would
             // read as a real answer of zero messages.
             Set<Long> matches = new LinkedHashSet<>();
+            // After a start the Lucene index is emptied and filled again, and until it holds every message
+            // a search answers from the messages indexed so far. The search still answers, and its result
+            // says so, for the editors' list to show. Read before the search: an index complete then is
+            // complete for it. The PostgreSQL backend keeps its table across a start.
+            if (!disableLucene && !messageLuceneIndex.allMessagesIndexed()) {
+                result.setIndexIncomplete(true);
+            }
             // A literal query (a caller without an identity) reaches Lucene as plain words. The
             // PostgreSQL backend needs no flag: websearch_to_tsquery has no wildcard syntax.
             try {

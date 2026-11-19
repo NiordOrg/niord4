@@ -375,6 +375,24 @@ describe('MessageListFacade', () => {
     expect(selection.refreshSnapshotsFromSearchResults).toHaveBeenCalledWith([{ id: 'm-1' }]);
   });
 
+  it('carries the incomplete-index mark of each answer, and drops it with the next answer without it', () => {
+    const { facade, filter, emitNext } = setup();
+    expect(facade.indexIncomplete()).toBe(false);
+
+    filter.requestParams.set('query=buoy');
+    TestBed.tick();
+    flushDebounce();
+    emitNext({ data: makeMessages(['m-1']), total: 1, indexIncomplete: true });
+    expect(facade.indexIncomplete()).toBe(true);
+    expect(facade.messages().map((m) => m.id)).toEqual(['m-1']);
+
+    filter.requestParams.set('query=light');
+    TestBed.tick();
+    flushDebounce();
+    emitNext({ data: makeMessages(['m-2']), total: 1 });
+    expect(facade.indexIncomplete()).toBe(false);
+  });
+
   it('sets error on failure and retry re-issues exact request', () => {
     const { facade, filter, api, emitNext, emitError } = setup();
 

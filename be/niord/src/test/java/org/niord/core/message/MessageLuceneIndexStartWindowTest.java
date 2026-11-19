@@ -30,6 +30,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -40,8 +41,9 @@ import static org.mockito.Mockito.when;
  * The window after a start in which the free-text index is filled again (be/docs/potential-errors.md, LUCENE-7). With
  * {@code messageIndexDeleteOnStartup} on, the default, the start commits an empty index that can be read, and the
  * passes fill it again 5,000 messages a minute. A search in that window answers from what is indexed so far, without
- * an error, and the search service cannot tell that answer from a real one. The message lookup and the languages are
- * stubbed, so no database is needed.
+ * an error, while {@link MessageLuceneIndex#allMessagesIndexed()} says the index is not complete; the search service
+ * marks such an answer ({@code MessageSearchIndexIncompleteITTest}). These tests hold the index to saying so until a
+ * pass has made every message searchable. The message lookup and the languages are stubbed, so no database is needed.
  */
 class MessageLuceneIndexStartWindowTest {
 
@@ -62,29 +64,68 @@ class MessageLuceneIndexStartWindowTest {
 
     /**
      * A message indexed before a restart is not found by a search right after it, and the search does not fail: it
-     * answers an empty list while the index says it is not complete. Pins the behaviour; a fix that fails the search
-     * in this window (or keeps the index across a start) flips it.
+     * answers an empty list, and the index says it is not complete, which is what the search service marks its
+     * answer by. The owner's decision: the search keeps answering in this window, and the editors are told.
      */
     @Test
-    @SuppressWarnings("unchecked")
-    void aSearchRightAfterAStartAnswersFromTheEmptiedIndexWithoutAnError_documentsBug() throws Exception {
+    void aSearchRightAfterAStartAnswersFromTheEmptiedIndexWhileTheIndexSaysItIsNotComplete() throws Exception {
         Path folder = tmp.resolve("message-index");
         MessageLuceneIndex before = index(folder, message(21, "zzbeforerestart"));
         assertEquals(1, before.recreateIndex(), "precondition: the message is indexed before the restart");
+        assertTrue(before.allMessagesIndexed(), "precondition: a re-index ends complete");
         assertEquals(List.of(21L), before.searchIndex("zzbeforerestart", "en", 10));
         before.reader.close();
         before.reader = null;
 
-        // The restarted application: a new instance on the same folder, whose deferred pass reaches a mock
-        MessageLuceneIndex after = index(folder, message(21, "zzbeforerestart"));
-        ObjectProvider<MessageLuceneIndex> self = mock(ObjectProvider.class);
-        when(self.getObject()).thenReturn(mock(MessageLuceneIndex.class));
-        after.self = self;
-        after.init();
+        MessageLuceneIndex after = restarted(folder, message(21, "zzbeforerestart"));
 
         assertFalse(after.allMessagesIndexed(), "the index is being filled again");
         assertEquals(List.of(), after.searchIndex("zzbeforerestart", "en", 10),
                 "the search answers from the emptied index, without an error");
+    }
+
+    /**
+     * The first pass after the start indexes the message again; with fewer messages than a pass may index, the
+     * index is then complete, and the message is found again.
+     */
+    @Test
+    void theIndexIsCompleteOnceAPassHasIndexedEveryMessage() throws Exception {
+        Path folder = tmp.resolve("message-index");
+        MessageLuceneIndex after = restarted(folder, message(22, "zzrefilled"));
+        assertFalse(after.allMessagesIndexed(), "precondition: being filled");
+
+        assertEquals(1, after.updateLuceneIndex(MessageLuceneIndex.LUCENE_MAX_INDEX_COUNT));
+
+        assertTrue(after.allMessagesIndexed(), "a pass that found fewer messages than it may index completes it");
+        assertEquals(List.of(22L), after.searchIndex("zzrefilled", "en", 10));
+    }
+
+    /**
+     * A pass that fails before its commit (here a message whose series cannot be read) leaves the index marked as
+     * not complete. The mark used to be set when the pass had found its messages, before it indexed them, so a
+     * search in between, or after a failed pass, was taken for one over a complete index.
+     */
+    @Test
+    void aPassThatFailsBeforeItsCommitLeavesTheIndexMarkedIncomplete() throws Exception {
+        Path folder = tmp.resolve("message-index");
+        Message unreadable = message(23, "zzunreadable");
+        unreadable.setMessageSeries(null);
+        MessageLuceneIndex after = restarted(folder, unreadable);
+
+        assertEquals(0, after.updateLuceneIndex(MessageLuceneIndex.LUCENE_MAX_INDEX_COUNT), "the pass fails");
+
+        assertFalse(after.allMessagesIndexed(), "and the index is still not complete");
+    }
+
+    /** The restarted application: a new instance on the folder, started, whose deferred pass reaches a mock */
+    @SuppressWarnings("unchecked")
+    private MessageLuceneIndex restarted(Path folder, Message message) {
+        MessageLuceneIndex after = index(folder, message);
+        ObjectProvider<MessageLuceneIndex> self = mock(ObjectProvider.class);
+        when(self.getObject()).thenReturn(mock(MessageLuceneIndex.class));
+        after.self = self;
+        after.init();
+        return after;
     }
 
     /** An instance on the folder whose message lookup finds the given message, in English only */

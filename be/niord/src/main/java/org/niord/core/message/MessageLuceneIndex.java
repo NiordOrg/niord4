@@ -143,7 +143,13 @@ public class MessageLuceneIndex extends BaseService {
 
     DirectoryReader reader;
     int optimizeIndexCount = 0;
-    boolean allMessagesIndexed;
+
+    /**
+     * Whether the index holds every message: set by the first pass that finds fewer messages after the marker than it
+     * may index, once its commit can be read, and cleared when the index is deleted. Read by the searches, on other
+     * threads than the passes.
+     */
+    volatile boolean allMessagesIndexed;
 
     /**
      * The messages whose {@code updated} time lies in the look-back window behind the marker
@@ -269,7 +275,10 @@ public class MessageLuceneIndex extends BaseService {
     }
 
     /**
-     * Returns if all messages have been indexed
+     * Returns if all messages have been indexed. False from a start that deleted the index (or a re-index) until a
+     * pass has indexed every message again: a search in that window answers from the messages indexed so far, which
+     * {@code MessageSearchService} marks on its result.
+     *
      * @return if all messages have been indexed
      */
     public boolean allMessagesIndexed() {
@@ -292,17 +301,8 @@ public class MessageLuceneIndex extends BaseService {
      * @return the updated messages
      */
     private List<Message> findUpdatedMessages(Marker marker, int maxCount) {
-
-        List<Message> messages = messageQueryService.findUpdatedMessagesAfter(
+        return messageQueryService.findUpdatedMessagesAfter(
                 Timestamp.from(marker.updated()), marker.messageId(), maxCount);
-
-        // The first time less that the maximum number of messages are found,
-        // we flag that the indexing is complete
-        if (messages.size() < maxCount) {
-            allMessagesIndexed = true;
-        }
-
-        return messages;
     }
 
     /**
@@ -532,6 +532,9 @@ public class MessageLuceneIndex extends BaseService {
      * Deletes the current index. The caller holds the folder's {@link #writerLock(Path) writer lock}.
      */
     private void deleteIndex() throws IOException {
+        // From here until a pass has indexed every message again, a search answers from part of them
+        allMessagesIndexed = false;
+
         // Delete the index
         IndexWriter writer = null;
         try {
@@ -624,7 +627,11 @@ public class MessageLuceneIndex extends BaseService {
             List<Message> missedMessages = findMissedMessages(marker, maxIndexCount);
             log.debug(String.format("Found %d messages to index, and %d missed ones behind the marker",
                     updatedMessages.size(), missedMessages.size()));
+            // Fewer messages after the marker than a pass may index: once this pass's commit can be read, the
+            // index holds every message. Not before it, so a search in between is not taken for a complete one
+            boolean completesTheIndex = updatedMessages.size() < maxIndexCount;
             if (updatedMessages.isEmpty() && missedMessages.isEmpty()) {
+                allMessagesIndexed = true;
                 return 0;
             }
 
@@ -662,6 +669,9 @@ public class MessageLuceneIndex extends BaseService {
 
             // Re-open the reader from the writer
             refreshReader(writer);
+            if (completesTheIndex) {
+                allMessagesIndexed = true;
+            }
 
             // Check if we need to optimize the index
             optimizeIndexCount += indexed.size();

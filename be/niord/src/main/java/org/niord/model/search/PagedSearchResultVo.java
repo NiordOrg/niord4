@@ -40,6 +40,10 @@ public class PagedSearchResultVo<T> implements IJsonSerializable {
     // Optionally, specify a description - e.g. textual description of the search criteria
     String description;
 
+    // True when a free-text search was answered while the search index was still being filled after a start, so
+    // messages may be missing from the result; otherwise null, and left out of the JSON
+    Boolean indexIncomplete;
+
     /**
      * Paginates a content list according to the page number and size specified by the search parameters
      * @param content the list to paginate
@@ -116,6 +120,7 @@ public class PagedSearchResultVo<T> implements IJsonSerializable {
         result.setSize(getSize());
         result.setTotal(getTotal());
         result.setDescription(getDescription());
+        result.setIndexIncomplete(getIndexIncomplete());
         result.setData(
                 getData() == null
                 ? null
@@ -163,5 +168,26 @@ public class PagedSearchResultVo<T> implements IJsonSerializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    /**
+     * Whether the result was answered by the free-text index while it was still being filled after a start
+     * ({@code MessageSearchService}), so messages may be missing from it: {@code true}, or {@code null} for every
+     * other result
+     *
+     * @return {@code true} or {@code null}
+     */
+    public Boolean getIndexIncomplete() {
+        return indexIncomplete;
+    }
+
+    /**
+     * Marks the result as answered from an incomplete free-text index. Anything but {@code true} clears the mark,
+     * so an ordinary result never carries the property in its JSON
+     *
+     * @param indexIncomplete whether the result was answered from an incomplete index
+     */
+    public void setIndexIncomplete(Boolean indexIncomplete) {
+        this.indexIncomplete = Boolean.TRUE.equals(indexIncomplete) ? Boolean.TRUE : null;
     }
 }

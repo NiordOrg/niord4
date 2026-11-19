@@ -1,17 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MessageListStatus } from './message-list-status';
 import { MessagesFacade } from '../../services/messages-facade.service';
+import { provideNiordIcons } from '../../../../shared/icons/niord-icons';
 import { provideTestTransloco } from '../../../../shared/testing/transloco-testing';
+import en from '../../../../../../../../languages/en/i18n/admin/en.json';
 
-function setup(opts: { loading: boolean; error: unknown | null }) {
+function setup(opts: { loading: boolean; error: unknown | null; indexIncomplete?: boolean }) {
   const loading = signal(opts.loading);
   const error = signal<unknown | null>(opts.error);
+  const indexIncomplete = signal(opts.indexIncomplete ?? false);
   const retry = vi.fn();
   const facade = {
-    list: { loading, error, retry },
+    list: { loading, error, retry, indexIncomplete },
   } as unknown as MessagesFacade;
 
   try {
@@ -21,12 +25,17 @@ function setup(opts: { loading: boolean; error: unknown | null }) {
   }
 
   TestBed.configureTestingModule({
-    providers: [provideTestTransloco(), { provide: MessagesFacade, useValue: facade }],
+    providers: [
+      provideTestTransloco(),
+      provideNiordIcons(),
+      { provide: MessagesFacade, useValue: facade },
+    ],
   });
+  TestBed.inject(TranslocoService).setTranslation(en, 'en');
 
   const fixture = TestBed.createComponent(MessageListStatus);
   fixture.detectChanges();
-  return { fixture, loading, error, retry };
+  return { fixture, loading, error, retry, indexIncomplete };
 }
 
 describe('MessageListStatus', () => {
@@ -67,5 +76,45 @@ describe('MessageListStatus', () => {
     expect(button).not.toBeNull();
     button!.click();
     expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  describe('the notice of a search answered while the index is being filled', () => {
+    const notice = (root: HTMLElement) =>
+      root.querySelector('[data-testid="index-incomplete-notice"]') as HTMLElement | null;
+    const liveRegion = (root: HTMLElement) =>
+      root.querySelector('[data-testid="index-incomplete-status"]') as HTMLElement | null;
+
+    it('shows nothing for an ordinary answer, inside a live region that is always there', () => {
+      const { fixture } = setup({ loading: false, error: null });
+      const root = fixture.nativeElement as HTMLElement;
+      expect(notice(root)).toBeNull();
+      expect(liveRegion(root)?.getAttribute('role')).toBe('status');
+      expect(liveRegion(root)?.textContent?.trim()).toBe('');
+    });
+
+    it('shows the warning, in the warning style, inside the live region when the answer is marked', () => {
+      const { fixture } = setup({ loading: false, error: null, indexIncomplete: true });
+      const root = fixture.nativeElement as HTMLElement;
+      const shown = notice(root);
+      expect(shown).not.toBeNull();
+      expect(shown!.classList).toContain('message-warn');
+      expect(liveRegion(root)!.contains(shown)).toBe(true);
+      expect(shown!.textContent?.trim()).toBe(en.messages.list.indexIncomplete);
+    });
+
+    it('goes with the next answer without the mark', () => {
+      const { fixture, indexIncomplete } = setup({
+        loading: false,
+        error: null,
+        indexIncomplete: true,
+      });
+      const root = fixture.nativeElement as HTMLElement;
+      expect(notice(root)).not.toBeNull();
+
+      indexIncomplete.set(false);
+      fixture.detectChanges();
+      expect(notice(root)).toBeNull();
+      expect(liveRegion(root)).not.toBeNull();
+    });
   });
 });

@@ -197,6 +197,11 @@ The workhorse read, and the one that lies most quietly.
   `query=` the index cannot parse (an unbalanced quote, say) answers **400**; a search that fails (an
   unreadable index, a database fault) answers **5xx**. The same holds for the print, the export and the
   message mail, which search the same way.
+- **A free-text search right after a backend start can be short, and says so.** The backend builds its
+  text index again after each start, which takes minutes on a large database; until it is complete a
+  `query=` search answers from the messages indexed so far, and the answer carries
+  `indexIncomplete: true`. Every other answer leaves the property out. The print, the export and the
+  message mail carry no such mark.
 - **Callers without an identity get plain-word free text.** For a request with no token and no ticket,
   `query=` is matched as literal words (no wildcards, regular expressions, phrases or `AND`/`OR`/`NOT`)
   and cut to 256 characters, and `username`, `userType` and `comments` are ignored. A ticketed request

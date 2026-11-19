@@ -2,3 +2,13 @@
 @if (hasError()) {
   <app-error-banner [title]="errorTitle()" [retryLabel]="retryLabel()" (retry)="onRetry()" />
 }
+<!-- The live region stays in the page and only its content comes and goes, so a screen reader
+     announces the notice when an answer brings it. -->
+<div role="status" data-testid="index-incomplete-status">
+  @if (indexIncomplete()) {
+    <div class="message message-warn mb-2" data-testid="index-incomplete-notice">
+      <app-icon name="lucideTriangleAlert" class="message-icon" />
+      <span>{{ indexIncompleteText() }}</span>
+    </div>
+  }
+</div>

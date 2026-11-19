@@ -41,6 +41,10 @@ starts "Not sent: mailing list", and names the list and either the message (a st
 (a scheduled trigger); its last error says why it failed. A scheduled trigger is tried again within the hour, and
 leaves at most one such mail a day while it keeps failing.
 
+After a restart, the server builds its text search index again, which takes some minutes on a large database. A
+scheduled trigger whose message query has a text term (`query=`) and that runs in those minutes searches the part
+of the index built so far, so its mail may list too few messages; nothing in the mail or the queue says so.
+
 Niord notes every status change of a message in its database, together with the change, until the mails of the
 status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts
 just after the change: at once when the server is up again, or within a minute. When the server stops while it is

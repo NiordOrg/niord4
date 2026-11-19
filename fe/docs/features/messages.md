@@ -228,6 +228,15 @@ and refresh.
   (`-999999`), rendered as the translated label "General".
 - The empty state distinguishes zero rows with total 0 ("no matches") from zero rows with a non-zero
   total ("N matches").
+- An answer marked `indexIncomplete: true` (a free-text search the backend ran while its text index
+  was still being built after a restart) is shown as it came, and `MessageListStatus` shows a warning
+  (`messages.list.indexIncomplete`) above the result in every view that holds it, Table, Grid,
+  Details and the map's result list, inside a `role="status"` region that stays in the page. Each
+  answer sets the facade's `indexIncomplete` anew, so the warning goes with the next answer without
+  the mark; a failed search leaves it as it was. The other searches of the same endpoint show no
+  warning: the publication include dialog's message lookup (free text on the message id), and the
+  area-sort dialog and the home page (no free text). The print, export and mail of the list search on
+  the server and do not carry the mark.
 
 A **publication filter refusal** is reported per chip, not as a broken list: a `400` whose
 `error.code` starts with `PUBLICATION` is matched by prefix (not an enumeration) and its server message

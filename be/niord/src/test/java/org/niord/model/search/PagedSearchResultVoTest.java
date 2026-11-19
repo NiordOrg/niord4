@@ -17,6 +17,8 @@
 package org.niord.model.search;
 
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -241,6 +243,52 @@ public class PagedSearchResultVoTest {
         assertEquals(0, result.getTotal());
         assertEquals(0, result.getSize());
         assertNull(result.getDescription());
+    }
+
+    // ------------------------------------------------------------------
+    // indexIncomplete: the mark of a free-text search answered while the index was being filled
+    // ------------------------------------------------------------------
+
+    @Test
+    public void indexIncomplete_isNullUnlessSetTrue() {
+        PagedSearchResultVo<Integer> result = new PagedSearchResultVo<>();
+        assertNull(result.getIndexIncomplete(), "an ordinary result carries no mark");
+
+        result.setIndexIncomplete(true);
+        assertEquals(Boolean.TRUE, result.getIndexIncomplete());
+
+        result.setIndexIncomplete(false);
+        assertNull(result.getIndexIncomplete(), "false clears the mark, so it never reaches the JSON as false");
+        result.setIndexIncomplete(true);
+        result.setIndexIncomplete(null);
+        assertNull(result.getIndexIncomplete());
+    }
+
+    @Test
+    public void map_carriesTheIndexIncompleteMark() {
+        PagedSearchResultVo<Integer> result = PagedSearchResultVo.paginate(Arrays.asList(1, 2), 0, 2);
+        assertNull(result.map(i -> "n" + i).getIndexIncomplete(), "no mark, none mapped");
+
+        result.setIndexIncomplete(true);
+        assertEquals(Boolean.TRUE, result.map(i -> "n" + i).getIndexIncomplete(),
+                "the mark reaches the value objects the REST layer answers with");
+    }
+
+    @Test
+    public void json_ofAnOrdinaryResult_isAsItWasWithoutTheMark() {
+        ObjectMapper mapper = JsonMapper.builderWithJackson2Defaults().build();
+        PagedSearchResultVo<Integer> result = PagedSearchResultVo.paginate(Arrays.asList(1, 2, 3), 0, 2);
+        result.setDescription("criteria");
+
+        assertEquals("{\"data\":[1,2],\"total\":3,\"size\":2,\"description\":\"criteria\"}",
+                mapper.writeValueAsString(result), "no new property in an ordinary answer");
+
+        result.setIndexIncomplete(false);
+        assertFalse(mapper.writeValueAsString(result).contains("indexIncomplete"), "nor when it is false");
+
+        result.setIndexIncomplete(true);
+        assertEquals("{\"data\":[1,2],\"total\":3,\"size\":2,\"description\":\"criteria\",\"indexIncomplete\":true}",
+                mapper.writeValueAsString(result), "the marked answer carries it as true");
     }
 
     @Test
