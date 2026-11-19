@@ -61,8 +61,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code active-navwarns.ftl}). Each is queued as a {@link ScheduledMail} and sent by
  * {@link MailService#sendScheduledMail(Integer)}. In the test context the {@code baseUri} is
  * {@code http://localhost:8888}, where nothing listens (asserted first), so the stylesheet cannot be fetched: the
- * mail is SENT (mail runs in the LOG simulation mode), without its stylesheet. On the pre-fix code each stayed
- * PENDING with "Connection refused" as its last error, to be retried and end as ERROR.
+ * mail is handled without its stylesheet, and held, as mail runs in the LOG simulation mode. On the pre-fix code
+ * each stayed PENDING with "Connection refused" as its last error, to be retried and end as ERROR.
  *
  * <p>The mails are sent here, not left to the per-minute sender; the queued rows, the comment and the message are
  * removed afterwards.
@@ -165,12 +165,12 @@ class TemplateMailStylesheetITTest extends ITTest {
         return mail.getId();
     }
 
-    /** Sends the queued mail as the per-minute sender does, and asserts that it was sent */
+    /** Sends the queued mail as the per-minute sender does, and asserts that it was handled: held, under LOG */
     private void assertSent(Integer mailId) {
         mailService.sendScheduledMail(mailId);
         ScheduledMail mail = Tx.requiringNew().call(() -> em.find(ScheduledMail.class, mailId));
-        assertEquals(ScheduledMail.Status.SENT, mail.getStatus(),
-                "the mail is sent without its stylesheet; last error: " + mail.getLastError());
+        assertEquals(ScheduledMail.Status.HELD, mail.getStatus(),
+                "the mail is handled without its stylesheet; last error: " + mail.getLastError());
     }
 
     @Test

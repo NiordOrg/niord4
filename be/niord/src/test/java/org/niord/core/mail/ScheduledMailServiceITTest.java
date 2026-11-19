@@ -60,7 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>No real SMTP traffic is generated: the default {@code mailValidRecipients} setting is
  * {@code "LOG"}, which puts {@link MailService} in simulation mode, so a "send" merely sleeps and
- * marks the scheduled mail as SENT without contacting a mail server.
+ * marks the scheduled mail as HELD without contacting a mail server.
  *
  * <p>This is a framework-coupled test — see docs/framework-coupled-tests.md.
  */
@@ -455,7 +455,7 @@ class ScheduledMailServiceITTest extends ITTest {
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void sendScheduledMailMarksPendingMailAsSentInSimulationMode() {
+    void sendScheduledMailMarksPendingMailAsHeldUnderTheLogFilter() {
         String subject = "IT-MAIL-send-" + System.nanoTime();
 
         // Commit a PENDING mail with valid contents + a TO recipient in its own transaction, so the
@@ -470,21 +470,21 @@ class ScheduledMailServiceITTest extends ITTest {
         assertNotNull(id, "precondition: committed mail must have a generated id");
         committedMailIds.add(id);
 
-        // Simulation mode ("LOG"): no SMTP contact; the mail is marked SENT.
+        // Simulation mode ("LOG"): no SMTP contact; the mail is held, not marked SENT.
         ScheduledMail returned = mailService.sendScheduledMail(id);
         assertNotNull(returned, "sendScheduledMail must return the processed entity");
-        assertEquals(Status.SENT, returned.getStatus());
+        assertEquals(Status.HELD, returned.getStatus());
 
         // Verify the COMMITTED database state from a fresh transaction.
         ScheduledMail reloaded = Tx.requiringNew()
                 .call(() -> em.find(ScheduledMail.class, id));
         assertNotNull(reloaded, "the committed mail row must still exist");
-        assertEquals(Status.SENT, reloaded.getStatus(),
-                "a successfully (simulated) sent mail must be persisted with status SENT");
+        assertEquals(Status.HELD, reloaded.getStatus(),
+                "a mail handled under the LOG filter must be persisted with status HELD");
         assertEquals(1, reloaded.getAttempts(),
-                "registerMailSent must record exactly one attempt");
+                "registerMailHeld must record exactly one attempt");
         assertNull(reloaded.getLastError(),
-                "a successful send must clear lastError");
+                "a held mail carries no error");
     }
 
     // ------------------------------------------------------------------------------------------- //
@@ -493,14 +493,14 @@ class ScheduledMailServiceITTest extends ITTest {
     // sendPendingMails fetches up to mailMaxPerMinute (default 10) mails that are PENDING with a sendDate
     // in the past, and submits each to MailService.sendScheduledMail (@Transactional REQUIRES_NEW, which
     // COMMITS). The fixtures must therefore be committed so the REQUIRES_NEW send path can re-read them; in
-    // the default "LOG" simulation mode no SMTP traffic is generated, the mail is simply marked SENT. The
+    // the default "LOG" simulation mode no SMTP traffic is generated, the mail is simply marked HELD. The
     // package-private method is reachable from this same-package test. Only the cron firing *time* and the
     // @Lock(WRITE) concurrency guard are not asserted (the Quarkus scheduler is not driven; a single test
     // thread cannot exercise the lock). See docs/untestable-code.md / docs/framework-coupled-tests.md.
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void sendPendingMailsMarksDuePendingMailsAsSentButLeavesFutureOnesPending() {
+    void sendPendingMailsHandlesDuePendingMailsButLeavesFutureOnesPending() {
         long n = System.nanoTime();
 
         // A due PENDING mail (sendDate one day in the past) and a not-yet-due PENDING mail (one day ahead),
@@ -528,8 +528,8 @@ class ScheduledMailServiceITTest extends ITTest {
 
         ScheduledMail due = Tx.requiringNew().call(() -> em.find(ScheduledMail.class, dueId));
         ScheduledMail future = Tx.requiringNew().call(() -> em.find(ScheduledMail.class, futureId));
-        assertEquals(Status.SENT, due.getStatus(),
-                "a PENDING mail whose sendDate has passed must be sent (marked SENT) by sendPendingMails");
+        assertEquals(Status.HELD, due.getStatus(),
+                "a PENDING mail whose sendDate has passed must be handled (held, under LOG) by sendPendingMails");
         assertEquals(1, due.getAttempts(),
                 "the dispatched mail must record exactly one send attempt");
         assertEquals(Status.PENDING, future.getStatus(),

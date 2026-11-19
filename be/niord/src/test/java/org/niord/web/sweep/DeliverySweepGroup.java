@@ -35,7 +35,7 @@ import static org.niord.web.sweep.DeliverySweepFixture.*;
  * inactive mailing list with a public-report trigger that has a script (inactive, so the minute trigger job never
  * runs it); a contact on no list; a list parameter type; an inactive Niord integration at {@code http://127.0.0.1:9};
  * a firing period on a fixed day in a firing area of niord-fa (the read passes the day and that domain's header); an
- * AtoN; and a scheduled mail whose send date is far ahead, read as PENDING or SENT. The tear-down removes every one
+ * AtoN; and a scheduled mail whose send date is far ahead, read as PENDING or HELD. The tear-down removes every one
  * of them and reads each gone; the Twitter settings, which no endpoint removes (PROM8), are removed through the
  * entity manager so that their type can be deleted.
  *
@@ -509,9 +509,10 @@ class DeliverySweepGroup implements SweepGroup {
                     SweepResponse found = ctx.ok(as, SweepRequest.get("/rest/scheduled-mails/search")
                             .query("subject", MAIL));
                     String status = found.json().getString("data.find { it.subject == '" + MAIL + "' }.status");
-                    // The minute sender may have sent it (its send date is far ahead, so it should still wait)
-                    ctx.check("PENDING".equals(status) || "SENT".equals(status), "the fixture's mail is PENDING or "
-                            + "SENT (is " + status + ")", found);
+                    // The minute sender may have handled it, and under the suite's LOG held it (its send date is
+                    // far ahead, so it should still wait)
+                    ctx.check("PENDING".equals(status) || "HELD".equals(status), "the fixture's mail is PENDING or "
+                            + "HELD (is " + status + ")", found);
                 })
                 .variants((ctx, as) -> {
                     ctx.expectRows(ctx.ok(as, SweepRequest.get("/rest/scheduled-mails/search")

@@ -210,6 +210,16 @@ public class ScheduledMail extends BaseEntity<Integer> {
     }
 
     /**
+     * When the sender job handled the mail while the mail filter ({@code mailValidRecipients}) was LOG, call this
+     * method: nothing left the server, and the mail waits as held until a system administrator sends it again
+     */
+    public void registerMailHeld() {
+        status = Status.HELD;
+        attempts++;
+        lastError = null;
+    }
+
+    /**
      * Returns a new HTML mail from this queued mail
      *
      * @param baseUri the base URI of the document

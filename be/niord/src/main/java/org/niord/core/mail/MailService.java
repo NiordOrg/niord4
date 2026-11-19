@@ -108,6 +108,16 @@ public class MailService extends BaseService {
      * @param mail the mail to send
      */
     public void sendMail(Mail mail) throws MessagingException {
+        deliver(mail);
+    }
+
+    /**
+     * Sends the given mail synchronously, under the mail filter ({@code mailValidRecipients}) as it is now
+     * @param mail the mail to send
+     * @return true when the mail was handed to the mail server, false when the filter is LOG and the mail was only
+     *         held: nothing left the server
+     */
+    boolean deliver(Mail mail) throws MessagingException {
         try {
             long t0 = System.currentTimeMillis();
 
@@ -133,7 +143,8 @@ public class MailService extends BaseService {
             }
 
             // Check if we only simulate sending emails
-            if (recipientHandling.simulate()) {
+            boolean delivered = !recipientHandling.simulate();
+            if (!delivered) {
 
                 // Make the simulation realistic - sleep 0.5 - 1 seconds
                 try {
@@ -154,7 +165,13 @@ public class MailService extends BaseService {
                     .filter(r -> r.getAddress() != null)
                     .map(r -> r.getAddress().toString())
                     .collect(Collectors.joining(", "));
-            log.info("Sent email to " + recipients + " in " + (System.currentTimeMillis() - t0) + " ms");
+            if (delivered) {
+                log.info("Sent email to " + recipients + " in " + (System.currentTimeMillis() - t0) + " ms");
+            } else {
+                log.info("Held, not sent (" + VALID_RECIPIENTS_KEY + " is LOG): mail to " + recipients + " in "
+                        + (System.currentTimeMillis() - t0) + " ms");
+            }
+            return delivered;
 
         } catch (MessagingException e) {
             log.error("Failed sending mail for " + mail.getFrom(), e);
@@ -191,11 +208,12 @@ public class MailService extends BaseService {
                                 .forEach(r -> mail.replyTo(r.getAddress()));
                     }
 
-                    // Send the mail
-                    sendMail(mail);
-
-                    // Register that the mail has successfully been sent
-                    scheduledMail.registerMailSent();
+                    // Send the mail, and register that it was sent, or held under the LOG filter
+                    if (deliver(mail)) {
+                        scheduledMail.registerMailSent();
+                    } else {
+                        scheduledMail.registerMailHeld();
+                    }
 
                 } catch (Exception e) {
 

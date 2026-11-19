@@ -1490,13 +1490,13 @@ class MessagesSweepGroup implements SweepGroup {
                         ctx.check(queued.text().contains(to), "the scheduled mail names the recipient", queued);
                         // Sent here as the minute sender sends it (no endpoint sends a queued mail). Its stylesheet
                         // is fetched from the baseUri, http://localhost:8888, where nothing listens in the test
-                        // context: the mail goes out without it (MAIL9), in the LOG simulation mode
+                        // context: the mail is handled without it (MAIL9), and held, in the LOG simulation mode
                         Integer mailId = ctx.bean(JdbcTemplate.class).queryForObject(
                                 "SELECT id FROM public.\"ScheduledMail\" WHERE subject = ?", Integer.class, subject);
                         ctx.bean(MailService.class).sendScheduledMail(mailId);
                         SweepResponse sentMail = ctx.ok("sysadmin", SweepRequest.get("/rest/scheduled-mails/search")
                                 .query("subject", subject).note("read after the send"));
-                        ctx.checkEquals("SENT", sentMail.json().get("data[0].status"),
+                        ctx.checkEquals("HELD", sentMail.json().get("data[0].status"),
                                 "the scheduled mail's status after the send", sentMail);
                     } finally {
                         removeMail(ctx, subject);

@@ -109,6 +109,25 @@ public class ScheduledMailTest {
     }
 
     /**
+     * registerMailHeld: HELD, attempts incremented, lastError cleared, the send date left as it was.
+     */
+    @Test
+    public void registerMailHeld_marksHeldAndKeepsTheSendDate() {
+        ScheduledMail mail = new ScheduledMail();
+        Date sendDate = new Date(1_600_000_000_000L);
+        mail.setSendDate(sendDate);
+        mail.setAttempts(1);
+        mail.setLastError("a previous failure " + System.nanoTime());
+
+        mail.registerMailHeld();
+
+        assertEquals(ScheduledMail.Status.HELD, mail.getStatus());
+        assertEquals(2, mail.getAttempts());
+        assertNull(mail.getLastError(), "lastError must be cleared when the mail is held");
+        assertEquals(sendDate, mail.getSendDate(), "holding a mail does not move its send date");
+    }
+
+    /**
      * splitByRecipient: one ScheduledMail per recipient, each carrying exactly one recipient and
      * copying subject/sender/sendDate/created and the (same) contents byte array.
      */
