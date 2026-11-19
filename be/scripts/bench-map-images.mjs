@@ -1468,7 +1468,8 @@ async function apiReads(ctx, uids, listFilter, gets, searches, warmGets, warmSea
 // --------------------------------------------------------------------------------------- message reads
 // The reads of be/docs/message-read-benchmark.md beside cases 6 and R5, each request as the application
 // sends it (messages-api.service.ts and messages-shell.facade.ts of the administration app; messages.store.ts
-// and message-details-dialog.component.ts of the public site).
+// and message-details-dialog.component.ts of the public site). One exception: the public list leaves out the
+// mainType=NW&mainType=NM the site sends by default, which selects the same messages.
 
 /** The filter the owner timed: NW and NM; the backend lists the published ones when no status is given (it ignores areaId and language). */
 const READ_FILTER = 'mainType=NW&mainType=NM';

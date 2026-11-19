@@ -129,7 +129,7 @@ In this order; steps 2 and 3 are independent of each other.
    | 6 | R5 | `GET /rest/messages/message/{id}` for the set's messages, `--message-gets` times (200), and the list search of `--list-filter` with `maxSize=200`, `--searches` times (30) |
    | 6b | R6 | the backlog's request: `GET /rest/messages/search?mainType=NW&mainType=NM&lang=<lang>`, the default page of 100, `--searches` times |
    | 6c | R7 | the map view's: the same with `page=0&maxSize=1000&viewMode=map&includeNoPos=true`, as the administration app sends it, `--searches` times |
-   | 6d | R8 | the public site's, with no login: `GET /rest/public/v1/messages?lang=<lang>&externalize=false` `--searches` times, then `GET /rest/public/v1/message/{id}` with the same parameters `--message-gets` times over the first `--count` ids (50) of that list |
+   | 6d | R8 | the public site's, with no login: `GET /rest/public/v1/messages?lang=<lang>&externalize=false` `--searches` times (without the `mainType=NW&mainType=NM` the site sends by default, which selects the same messages), then `GET /rest/public/v1/message/{id}` with the same parameters `--message-gets` times over the first `--count` ids (50) of that list |
 
    The read cases do not take `--warmup` or `--rounds`: each discards its first answers (`local` 10 message
    GETs and 3 lists, `remote` 5 and 2) and times `--message-gets` and `--searches` requests, so the defaults are
