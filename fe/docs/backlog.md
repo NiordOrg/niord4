@@ -259,16 +259,10 @@ Background: [`angular-conventions.md`](angular-conventions.md), [`ui-apps/info/A
   names and public, mutable members. Finishing it is a rename across the whole site that no reader would notice,
   so it waits. New components follow the workspace convention; the existing ones keep their names until the
   rename is done.
-- **Translated strings cross component boundaries.** The translation-ownership rule (keys cross boundaries; the
-  component that puts a text in the DOM translates it) is broken in two places. The shared dialog frame takes an
-  already-translated `title`, which each opener pipes through Transloco. `MessageLabelService` returns finished
-  strings for a message's type label and its cancelled or expired chip, which the id badge renders from a
-  `computed()` whose only translation is a one-shot `translate()`. The badge is the visible one: the first time a
-  reader switches to a language in a session, the badges recompute before that language's bundle has loaded and
-  show the fallback language's words ("Afmeldt", "Udløbet" on an English page of a Danish deployment) until the list
-  is read again, which takes seconds on a slow link — and in the details dialog can last until the reader
-  navigates. The fix is keys out of the service, the pipe in the badge and the frame, and a spec that switches
-  language with the bundle arriving late.
+- **The dialog frame takes a translated title.** The translation-ownership rule (keys cross boundaries; the
+  component that puts a text in the DOM translates it) is broken in one place: the shared dialog frame takes an
+  already-translated `title`, which each opener pipes through Transloco. Nothing a reader sees follows from it,
+  since the pipe in the opener follows the language; the frame taking the key and piping it itself closes it.
 - **Three keys nothing renders.** `TERM_APPLY` and `TERM_CANCEL` word an apply and a cancel button no view has
   any more, and `ARIA_SWITCH_LANGUAGE` named the language buttons before each was named in its own language.
   All three still ship in the `en` bundle and in the countries' packs. Removing them is an `en` change, named in

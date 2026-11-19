@@ -1,26 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { TranslocoService } from '@jsverse/transloco';
 import { MessageLabelService } from './message-label.service';
-import { provideTestNiordConfig } from '../../testing/test-config';
+import { provideTestNiordConfig, provideTranslocoSpy } from '../../testing/test-config';
 import { Desc } from '../models/message.model';
 
 describe('MessageLabelService', () => {
   let service: MessageLabelService;
-  let translocoSpy: {
-    translate: ReturnType<typeof vi.fn>;
-    setActiveLang: ReturnType<typeof vi.fn>;
-    setAvailableLangs: ReturnType<typeof vi.fn>;
-  };
 
   beforeEach(() => {
-    translocoSpy = {
-      translate: vi.fn((key: string) => key),
-      setActiveLang: vi.fn(),
-      setAvailableLangs: vi.fn(),
-    };
-
     TestBed.configureTestingModule({
-      providers: [provideTestNiordConfig(), { provide: TranslocoService, useValue: translocoSpy }],
+      providers: [provideTestNiordConfig(), provideTranslocoSpy()],
     });
     service = TestBed.inject(MessageLabelService);
   });
@@ -59,16 +47,19 @@ describe('MessageLabelService', () => {
   describe('badge()', () => {
     it('names the message by its short id', () => {
       const badge = service.badge({ id: '1', mainType: 'NW', shortId: 'XX-001' });
-      expect(badge.label).toBe('XX-001');
+      expect(badge.shortId).toBe('XX-001');
+      expect(badge.typeKey).toBeUndefined();
+      expect(badge.mainTypeKey).toBeUndefined();
       expect(badge.status).toBeUndefined();
       expect(badge.suffix).toBeUndefined();
     });
 
-    it('composes type and main type when the message has no short id', () => {
+    // Keys, not words: the badge translates them where it renders them, in the language on screen.
+    it('names a message with no short id by the keys of its type and main type', () => {
       const badge = service.badge({ id: '1', mainType: 'NW', type: 'TEMPORARY_NOTICE' });
-      expect(translocoSpy.translate).toHaveBeenCalledWith('TYPE_TEMPORARY_NOTICE');
-      expect(translocoSpy.translate).toHaveBeenCalledWith('MAIN_TYPE_NW');
-      expect(badge.label).toBe('TYPE_TEMPORARY_NOTICE MAIN_TYPE_NW');
+      expect(badge.shortId).toBeUndefined();
+      expect(badge.typeKey).toBe('TYPE_TEMPORARY_NOTICE');
+      expect(badge.mainTypeKey).toBe('MAIN_TYPE_NW');
     });
 
     it('marks a temporary notice (T) and a preliminary one (P)', () => {
@@ -85,7 +76,7 @@ describe('MessageLabelService', () => {
         { id: '1', mainType: 'NW', shortId: 'X', status: 'EXPIRED', type: 'TEMPORARY_NOTICE' },
         true,
       );
-      expect(badge.status).toEqual({ kind: 'EXPIRED', label: 'STATUS_EXPIRED' });
+      expect(badge.status).toEqual({ kind: 'EXPIRED', key: 'STATUS_EXPIRED' });
     });
 
     // A permanent notice that has run out is the ordinary end of its life.
@@ -102,7 +93,7 @@ describe('MessageLabelService', () => {
         { id: '1', mainType: 'NW', shortId: 'X', status: 'CANCELLED' },
         true,
       );
-      expect(badge.status).toEqual({ kind: 'CANCELLED', label: 'STATUS_CANCELLED' });
+      expect(badge.status).toEqual({ kind: 'CANCELLED', key: 'STATUS_CANCELLED' });
     });
 
     it('leaves the status out unless the caller asks for it', () => {
