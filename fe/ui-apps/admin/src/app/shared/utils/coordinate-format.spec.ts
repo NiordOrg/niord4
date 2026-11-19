@@ -135,5 +135,19 @@ describe('coordinate-format', () => {
       expect(parseLatLon('56 30.0N - 180.5E')).toBeNull();
       expect(parseLatLon('-55 30N - 012 00E')).toBeNull();
     });
+
+    it('returns null for a fraction of a degree followed by minutes', () => {
+      // "56.5 30N" was read as 56.5° + 30' = 57° N, a position the editor never typed.
+      expect(parseLatLon('56.5 30N - 012 00E')).toBeNull();
+      expect(parseLatLon('56,5 30,0N - 012 00E')).toBeNull();
+      expect(parseLatLon("56° 30'N - 012.5° 15'E")).toBeNull();
+      expect(parseLatLon('56.5N - 012.25E')).toEqual({ lat: 56.5, lon: 12.25 });
+    });
+
+    it('reads a "-" before the longitude as the divider: the hemisphere letter decides', () => {
+      const parsed = parseLatLon('64 10N -051 43W');
+      expect(parsed?.lat).toBeCloseTo(64 + 10 / 60, 9);
+      expect(parsed?.lon).toBeCloseTo(-(51 + 43 / 60), 9);
+    });
   });
 });

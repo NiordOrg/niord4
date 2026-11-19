@@ -75,7 +75,8 @@ const HEMISPHERE = { north: 'N', south: 'S', east: 'E', west: 'W' } as const;
  * accepted as the decimal separator. Returns the signed decimal degrees, or `null`
  * when the format is unparseable or the position impossible: a sign before the degrees
  * (the hemisphere letter is always required, so a sign is never needed), minutes outside
- * [0, 60), or more than 90 degrees of latitude or 180 of longitude.
+ * [0, 60), a fraction of a degree followed by minutes, or more than 90 degrees of latitude
+ * or 180 of longitude.
  */
 function parseComponent(raw: string, isLatitude: boolean): number | null {
   const cleaned = raw.replace(/[°'"]/g, ' ').replace(/,/g, '.').trim().toUpperCase();
@@ -93,6 +94,9 @@ function parseComponent(raw: string, isLatitude: boolean): number | null {
   if (parts.length === 1) {
     degrees = Number(parts[0]);
   } else if (parts.length === 2) {
+    // A fraction of a degree followed by minutes ("56.5 30N", often a slipped decimal comma)
+    // would add the minutes to the fraction: 57°, a position the editor never typed.
+    if (parts[0].includes('.')) return null;
     const deg = Number(parts[0]);
     const minutes = Number(parts[1]);
     if (!Number.isFinite(deg) || !Number.isFinite(minutes)) return null;

@@ -2314,19 +2314,24 @@ code by the developer or the checker of the cluster named; most were not run.
   row written before those checks or by hand is hit. Fix: leave out a recipient whose address is null in
   `createMailTemplate` too, with a WARN naming it.
 
-## CG7. Two typed position forms are read as another position without a word
+## CG7. A `-` before the longitude is read as a divider, and the hemisphere letter decides
 
 - **Location:** `org/niord/core/geojson/PlainTextConverter.java` (`POSITION_FORMAT`, 84) and the admin app's
-  `parseLatLon` (`fe/ui-apps/admin/src/app/shared/utils/coordinate-format.ts` 115).
-- **Description:** a `-` just after the latitude's hemisphere letter is eaten as a separator, so `55 30N -012 00E`
-  is read as east; and a degree part with a fraction together with minutes (`56.5 30N`) is read as 56.5° plus
-  30 minutes, 57°.
-- **Why it looks wrong:** a typed position moves without a sign of it; impossible positions are refused since
-  2026-11-13, but these two are possible ones.
+  `parseLatLon` (`fe/ui-apps/admin/src/app/shared/utils/coordinate-format.ts` 124).
+- **Description:** a `-` just after the latitude's hemisphere letter is eaten as a divider, so `55 30N -012 00E`
+  is read as east.
+- **Why it looks wrong:** read as a sign, the `-` says west while the letter says east, and nothing tells the
+  editor which one won.
+- **Why it is left:** the input contradicts itself only when the editor also typed the wrong letter, and the
+  letter is what every position here is read by. Refusing a `-` there would refuse `64 10N -051 43W`, which is
+  read correctly today and is pinned by
+  `PlainTextConverterGridTest.aDashBeforeTheLongitude_isADivider_andTheHemisphereLetterDecides` and the admin
+  app's `coordinate-format.spec.ts`. The other half of this entry, a fraction of a degree followed by minutes
+  (`56.5 30N` read as 57°), is refused by both parsers since 2026-11-19.
 - **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster C12 (left by the plan as a named risk; read in
   the code).
-- **Severity:** Low — both are unusual ways to write a position. Fix: refuse a sign together with a hemisphere
-  letter wherever it stands, and a fraction of a degree together with minutes. Could break: nothing valid.
+- **Severity:** Low. Fix, if it is ever wanted: accept the divider only as a `-` with a space after it, and
+  refuse a sign joined to the longitude's digits; decide first what happens to `64 10N -051 43W`.
 
 ## TESTQ7. Two publication tests set a cut-off zone that nothing reads, so they run in UTC without saying so
 

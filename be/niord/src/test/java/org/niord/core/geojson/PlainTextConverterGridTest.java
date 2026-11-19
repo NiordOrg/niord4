@@ -166,6 +166,30 @@ public class PlainTextConverterGridTest {
     }
 
     @Test
+    public void aFractionOfADegreeFollowedByMinutes_isRefused() throws Exception {
+        // "56.5 30N" (often a slipped decimal comma) was read as 56.5° plus 30 minutes, 57° N, half a degree from
+        // either thing the editor may have meant. A fraction of a degree with minutes after it is refused, in the
+        // latitude and the longitude, with a comma as with a point; a fraction alone is decimal degrees, as before.
+        for (String t : List.of("56.5 30N 012 00E", "56,5 30.0N 012 00E", "56 30N 012.5 15E",
+                "56.5° 30'N 012° 00'E", "56.5° 30' 10\"N 012° 00' 00\"E")) {
+            Exception e = assertThrows(Exception.class, () -> EN.fromPlainText(t), t);
+            assertTrue(e.getMessage().startsWith("Invalid degree format"), t + ": " + e.getMessage());
+        }
+        double[] c = onlyCoordinate(EN.fromPlainText("56.5N 012.25E"));
+        assertEquals(56.5, c[1], 1e-9);
+        assertEquals(12.25, c[0], 1e-9);
+    }
+
+    @Test
+    public void aDashBeforeTheLongitude_isADivider_andTheHemisphereLetterDecides() throws Exception {
+        // The "-" between the two halves is a divider, not a sign: the letter after the longitude decides its
+        // side. This is the form CG7's other half is about, and it is read as typed.
+        double[] c = onlyCoordinate(EN.fromPlainText("64 10N -051 43W"));
+        assertEquals(64 + 10 / 60.0, c[1], 1e-9);
+        assertEquals(-(51 + 43 / 60.0), c[0], 1e-9);
+    }
+
+    @Test
     public void utmText_aLineThatCannotBeRead_isRefused_namingTheLine() {
         // Three UTM lines, the middle one unreadable: the text is refused, naming that line, instead of answering
         // a MultiPoint of the other two.
