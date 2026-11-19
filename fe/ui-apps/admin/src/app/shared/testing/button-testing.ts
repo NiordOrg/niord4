@@ -2,14 +2,19 @@
  * Presses a button with the keyboard, the way a browser does it: the button has the focus, Enter
  * fires its click on the keydown and Space on the keyup, and no mouse event is fired at all. jsdom
  * implements no activation for keys, so the click is dispatched here — a spec that presses a button
- * this way proves that the button acts on its click, which is what the keyboard reaches.
+ * this way proves that the button acts on its click, which is what the keyboard reaches. Like a
+ * browser, it fires no click when a handler prevents the default of the key event that activates the
+ * button (the keydown for Enter, the keydown or keyup for Space), so a handler that swallows the key
+ * fails the spec as it fails the user.
  */
 export function pressWithKey(button: HTMLElement, key: 'Enter' | ' '): void {
   button.focus();
-  button.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
-  if (key === 'Enter') button.click();
-  button.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
-  if (key === ' ') button.click();
+  const down = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+  button.dispatchEvent(down);
+  if (key === 'Enter' && !down.defaultPrevented) button.click();
+  const up = new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true });
+  button.dispatchEvent(up);
+  if (key === ' ' && !down.defaultPrevented && !up.defaultPrevented) button.click();
 }
 
 /**
