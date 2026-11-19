@@ -1690,6 +1690,22 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   that maps a setting key to a Secret and its key, rendered as an environment variable from `secretKeyRef`, held to
   the key rules of `app.settings`.
 
+## K8S3. On a dev-mode Keycloak the chart makes, a domain outside the sample's five has no lasting client
+
+- **Location:** `be/k8s/helm/niord/files/niord-realm.json` (the chart's realm) and the dev-mode Keycloak the chart
+  runs for test environments (`be/k8s/README.md`, the realm's import).
+- **Description:** the chart's realm holds a client for each of the base sample's five domains and for no other.
+  A database restored from a deployment with further domains brings domains that have no client on that realm. The
+  client can be made from the Domains page's *Create in Keycloak* or in the admin console, but a dev-mode Keycloak
+  keeps its data in the container and imports the realm file again at every restart, so the client and every role
+  given on it are gone after the next pod restart or chart upgrade that changes the realm's checksum.
+- **Why it looks wrong:** a person whose roles are on domain clients alone is refused in such a domain again after
+  each restart, and nothing in the realm or the chart keeps the client a sysadmin made.
+- **Exposed by:** a reading of the chart's realm against the domains a restored database brings (2026-11-19).
+- **Severity:** Low — test environments only (a production-mode realm, or a realm on a shared Keycloak, keeps the
+  client), and roles on the base client `niord-client-master` count in every domain. Fix: a chart value that adds
+  domain clients to the realm the chart renders, or a dev-mode Keycloak with a lasting database.
+
 ## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
 
 - **Location:** `org.niord.web.wms.WmsProxyServlet.doGet`: `WebUtils.cache(response, CACHE_TIMEOUT)` runs before

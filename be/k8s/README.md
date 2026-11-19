@@ -319,7 +319,11 @@ the test realm and `admin`/`admin`.
   old `niord-client-*` client the same role on it (Users or Groups, the user or group, Role
   mapping), then delete the old client. A domain a restored
   database holds that has no client yet gets one from the Domains page of the administration app,
-  or in the admin console.
+  or in the admin console. The realm file holds the sample's five domain clients and no other, so
+  such a client lasts only on a production-mode realm or a shared Keycloak: a dev-mode Keycloak
+  imports the file again at every restart and loses the client with every role given on it. There,
+  give people their roles on `niord-client-master`, which count in every domain (K8S3 in
+  [`be/docs/potential-errors.md`](../docs/potential-errors.md)).
 - **A realm imported before November 2026 gives the base client `niord-client-master` no `user`
   role, and its `editor` holds none.** A role on that client counts in every domain, but there
   `editor`, `admin` and `sysadmin` did not make a person a user, so someone whose roles are on it
