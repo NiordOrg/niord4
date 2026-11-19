@@ -56,7 +56,8 @@
  *      whole run raises one.
  *  13. At 320 × 568, 320 × 256, 768 × 500 and 1280 × 900, the map view's panel of messages
  *      without a position covers none of the chart's own controls: the zoom buttons, the layer
- *      switcher and every link of the credits are each the topmost element at their centre.
+ *      switcher and every link of the credits are each the topmost element at their centre. A
+ *      link that wraps onto a second line is tested at the centre of each line.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -593,6 +594,11 @@ function mapProblems(page, pinned) {
  * covers at its centre: the zoom buttons, the layer switcher's boxes and each link of the
  * credits. The fixture's messages carry no position, so the panel is always there; a run that
  * finds none says so rather than holding by default.
+ *
+ * A credit's link can wrap onto a second line at 320 px, as a long agency name does after the
+ * accessibility link. The centre of its bounding box then lies between the two lines, where the
+ * list around them is the topmost element, although nothing covers the link. So each line of a
+ * control is tested at its own centre, and the first line that fails is named.
  */
 async function mapControlsCovered(page) {
   // Where the bars are not pinned the chart is as tall as the viewport and starts below them.
@@ -617,22 +623,24 @@ async function mapControlsCovered(page) {
         control.textContent.trim() ||
         control.closest('label')?.textContent.trim() ||
         control.className;
-      const box = control.getBoundingClientRect();
-      const x = box.left + box.width / 2;
-      const y = box.top + box.height / 2;
-      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) {
-        problems.push(`"${name}" lies outside the viewport`);
-        continue;
-      }
-      const hit = document.elementFromPoint(x, y);
-      if (!hit || !control.contains(hit)) {
-        problems.push(
-          `"${name}" is covered by ${
-            hit && panel.contains(hit)
-              ? 'the panel of messages without a position'
-              : `<${hit?.tagName.toLowerCase()} class="${hit?.className}">`
-          }`,
-        );
+      for (const box of control.getClientRects()) {
+        const x = box.left + box.width / 2;
+        const y = box.top + box.height / 2;
+        if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) {
+          problems.push(`"${name}" lies outside the viewport`);
+          break;
+        }
+        const hit = document.elementFromPoint(x, y);
+        if (!hit || !control.contains(hit)) {
+          problems.push(
+            `"${name}" is covered by ${
+              hit && panel.contains(hit)
+                ? 'the panel of messages without a position'
+                : `<${hit?.tagName.toLowerCase()} class="${hit?.className}">`
+            }`,
+          );
+          break;
+        }
       }
     }
     return problems;
