@@ -6,7 +6,8 @@
 
 Niord does not send a mail at once: it puts it in its _mail queue_ and sends it from there. The _Mail Queue_ page
 lets a system administrator look through every mail in the queue, sent or not. You open it from *Sysadmin* ->
-*Mail Queue*. The page only shows mails: it cannot send, resend or delete one.
+*Mail Queue*. Besides showing the mails, the page can send a held, sent or failed mail again (see
+<<send-again,Sending a Mail Again>>); it cannot change or delete a mail.
 
 image::MailQueuePage.png[Mail Queue, 800]
 
@@ -22,8 +23,10 @@ Mails in Niord come from a few places:
 . Most mails are sent by mailing lists, as described in the <<mailing-lists,Mailing Lists>> chapter.
 
 Niord deletes a mail from the queue when it is older than the number of days in the setting `mailDeleteAfterDays`
-(30 unless it is changed). The page says so above the list ("NB: Mails get deleted after 30 days."). With a value of
-0 or less, Niord deletes no mail, and the page shows no such note.
+(30 unless it is changed), counted from when the mail was put in the queue. The page says so above the list ("NB:
+Mails get deleted after 30 days."). With a value of 0 or less, Niord deletes no mail, and the page shows no such
+note. A _Pending_ mail is never deleted, however old, so a mail sent again is not deleted while it waits to be sent;
+a mail of any other status, _Held_ included, is deleted by its age.
 
 [#sending-mails]
 === Sending Mails
@@ -34,7 +37,13 @@ keeps the error with the mail and tries again later: after 1, 5, 15 and then 60 
 fails too, the mail becomes _Error_, and Niord does not try again.
 
 So check the queue now and then for mails with the status _Error_, and put right what caused them, such as a
-mistyped address of a user or a contact.
+mistyped address of a user or a contact. A failed mail can then be sent again (see <<send-again,Sending a Mail
+Again>>).
+
+While the setting `mailValidRecipients` is `LOG`, nothing leaves the server: a pending mail that is due becomes
+_Held_ instead of _Sent_, and the server log has a line "Held, not sent (mailValidRecipients is LOG)" for it. A held
+mail stays held. Changing the setting later sends none of the held mails by itself; only _Send again_ does, one mail
+or many at a time. A mail still _Pending_ when the setting is changed is sent as usual.
 
 A mailing-list trigger that fails also leaves a mail with the status _Error_, which is never sent. Its subject
 starts "Not sent: mailing list", and names the list and either the message (a status change trigger) or the trigger
@@ -69,15 +78,22 @@ saved, Niord tries five more times, minutes apart, and after that once an hour: 
 mail with the status _Error_ is saved, and each try leaves an ERROR in the server log naming the trigger, its mailing
 list and the message.
 
-The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>):
+The setting `mailValidRecipients` decides who Niord really sends mail to (see <<settings,Settings>>). It is read
+for each mail when Niord sends it, not when the mail is made:
 
-* `ALL` sends every mail.
-* A comma-separated list of addresses sends mail only to those addresses; the other recipients are left out, and a
-  mail with no recipient left fails.
-* `LOG`, the value a new deployment starts with, sends no mail at all: Niord only pretends to send it, and the
-  queue still shows it as _Sent_. Set the setting to `ALL` when the deployment is to send mail.
+* `ALL` sends every mail to its recipients.
+* A comma-separated list of addresses sends a recipient on the list the mail as it is; every other recipient's copy
+  goes to the first address of the list instead, with the original address in brackets as its name. The mail
+  becomes _Sent_, since it was delivered. This is the way to try the mails out on a test address.
+* `LOG`, the value a new deployment starts with, sends no mail at all: Niord writes a line in the server log, and the
+  mail becomes _Held_. Set the setting to `ALL` when the deployment is to send mail; the mails held until then stay
+  held until they are sent again.
+* An empty value sends nothing either, but as a failure: every attempt fails, and the mail becomes _Error_ after the
+  fifth.
 
-Niord reads these settings when the server starts, so a change takes effect at the next restart of the server.
+Niord reads `mailValidRecipients` for every mail and `mailDeleteAfterDays` at every clean-up, so a change to either
+takes effect within minutes. `mailMaxPerMinute` and `mailSender` are read when the server starts, so a change to them
+takes effect at the next restart of the server.
 
 [#mail-filtering]
 === Mail Filtering
@@ -102,8 +118,9 @@ The fields above the list filter it:
 | Subject
 | Matches the subject of the mails.
 
-| All, Pending, Sent, Error
-| Shows the mails of one status, or of all of them.
+| All, Pending, Sent, Held, Error
+| Shows the mails of one status, or of all of them. _Held_ shows the mails the setting `mailValidRecipients` kept
+  from leaving while it was `LOG`.
 
 | From date, To date
 | The two date fields with a calendar mark, after the status buttons: the first is the _From date_, the second the
@@ -119,9 +136,65 @@ others it has) and its subject.
 
 Click the *Open mail details* button (the envelope) at the end of a row to see the whole mail: its sender and
 recipients, when it was put in the queue and, by its status, when it is due to be sent (_Due_, for a pending
-mail; after a failed attempt, the time of the next one), when it was sent (_Sent_) or when the last attempt was
-made (_Last attempt_, for a mail with the status _Error_; a mailing-list trigger's failure record shows no such
-row, since it was never tried), the last error and the number of attempts when sending failed, its subject and its
-content.
+mail; after a failed attempt, the time of the next one; for a held mail, the time it was due when it was held),
+when it was sent (_Sent_) or when the last attempt was made (_Last attempt_, for a mail with the status _Error_; a
+mailing-list trigger's failure record shows no such row, since it was never tried), when and by whom it was last
+sent again (_Sent again_, only for a mail that was), the last error and the number of attempts when sending failed,
+its subject and its content.
 
 image::MailQueueDetails.png[Mail Details Dialog, 400]
+
+[#send-again]
+=== Sending a Mail Again
+
+A system administrator can send a held, sent or failed mail again. _Send again_ puts the same mail back in the queue
+as _Pending_, exactly as it was made: the same subject, text and recipients. Niord sends it within a minute or two,
+with the full set of attempts of a new mail, and the setting `mailValidRecipients` in force at that moment decides
+who gets it. The mail's details then show when and by whom it was sent again, and the server log has a line for
+every _Send again_ with the user, the mails and the status each had.
+
+Two buttons send mails again:
+
+* *Send again*, the paper plane at the end of a row, before the envelope, sends that one mail. It is there for a
+  mail with the status _Held_, _Sent_ or _Error_. For a mail already sent, the confirmation says that its recipients
+  get it a second time; a sent mail is sent again only this way, one at a time.
+* *Send all matching again...*, at the right end of the filters, before the _Refresh_ button, sends every mail
+  that matches the filter, on every page of the list. It is there only while the filter shows _Held_ or _Error_
+  mails, and it takes at most 500 mails at a time: when more match, it sends nothing and asks you to narrow the
+  search, for example with a _From date_ or a subject.
+
+Before anything is sent, a confirmation lists the mails: one line for the mails with the same subject, status and
+minute of creation, oldest first, with how many they are, when they were made and who they are to (for many mails,
+the first ten addresses and how many more).
+
+Some mails are not sent again:
+
+* While `mailValidRecipients` is `LOG` or empty, _Send again_ is refused and nothing changes, since the mails would
+  only be held or fail again. The page says why; set the setting on the _Settings_ page first.
+* A mailing-list trigger's failure record ("Not sent: ...", "Delayed: ...", or a status change that was given up)
+  is not a mail, and has no *Send again* button; _Send all matching again..._ leaves it out.
+* A mail that changed after the list was read, because it was sent again by someone else, was being sent, or was
+  deleted, is left as it was. The message after the confirmation says how many mails were queued and how many were
+  left.
+
+Mails sent again go out at the pace of the setting `mailMaxPerMinute`, after the mails Niord makes itself: 500 mails
+at 10 a minute take 50 minutes, and a new warning's mails are not held back by them. A held mail that is never sent
+again is deleted by its age, like any other mail.
+
+[#send-again-after-a-restore]
+==== After a Restore
+
+A deployment started on a copy of another Niord's database finds that system's pending mails in the queue. To choose
+which of them to send:
+
+. Start the deployment with `mailValidRecipients` at `LOG`, and let the sender job run (it is switched off by
+  `-Dniord.schedule.mail-send-cron=-`): the pending mails that are due become _Held_. With the sender job switched
+  off they stay _Pending_, and all of them go out by themselves once the job runs with the setting open.
+. To try it out first, set `mailValidRecipients` to a test address and send one held mail again: it arrives at the
+  test address.
+. Set `mailValidRecipients` to `ALL`.
+. Filter the list on _Held_ and a _From date_, and send the mails again with _Send all matching again..._. Leave out
+  the mails made before the copy was taken: the old system may have sent them after that.
+
+A mail the old system marked _Sent_ while its own setting was `LOG` reads as _Sent_ here too, since it cannot be told
+apart from a delivered one; send it again one at a time if it is needed.
