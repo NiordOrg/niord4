@@ -32,7 +32,11 @@ function setup(opts: Opts = {}) {
   // The dialog runs the send itself: the fake keeps the sender it is given, so a test
   // can press Send through it, and answers the dialog's result only when a test asks for one.
   const open = vi.fn<
-    (ids: readonly string[], send: MailSender) => Observable<MailRequest | undefined>
+    (
+      ids: readonly string[],
+      send: MailSender,
+      indexIncomplete?: boolean,
+    ) => Observable<MailRequest | undefined>
   >((...args) => {
     sender = args[1];
     return 'dialogResult' in opts ? of(opts.dialogResult) : NEVER;
@@ -94,6 +98,14 @@ describe('MessageMailService', () => {
     pressSend({ ...REQUEST, language: 'kl' });
     expect(send.mock.calls[0][0].get('lang')).toBe('kl');
     expect(TestBed.inject(LanguageService).selectedLanguage()).toBe('da');
+  });
+
+  it("opens the dialog with the list's index state, so it can warn before the mail is sent", () => {
+    const { service, open } = setup();
+    service.mailSelection(['m1'], true).subscribe();
+    expect(open.mock.calls[0][2]).toBe(true);
+    service.mailSelection(['m1']).subscribe();
+    expect(open.mock.calls[1][2]).toBe(false);
   });
 
   it('dismiss (no MailRequest) → no temp tag, no send, no toast; completes with undefined', () => {

@@ -15,6 +15,12 @@
     </div>
   </ng-template>
 
+  @if (indexIncomplete()) {
+    <div class="message message-warn mb-3" data-testid="mail-index-incomplete">
+      <app-icon name="lucideTriangleAlert" class="message-icon" />
+      <span>{{ 'messages.list.indexIncomplete' | transloco }}</span>
+    </div>
+  }
   <form (submit)="$event.preventDefault()" class="flex flex-col gap-3">
     <div class="flex items-center gap-3">
       <label for="mailLanguage" class="w-24">{{ 'messages.outputLanguage' | transloco }}</label>

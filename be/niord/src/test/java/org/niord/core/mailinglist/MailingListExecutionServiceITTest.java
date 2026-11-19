@@ -18,6 +18,7 @@ package org.niord.core.mailinglist;
 import org.springframework.transaction.annotation.Transactional;
 import org.niord.test.Tx;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.AopTestUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
@@ -29,6 +30,7 @@ import org.niord.core.mail.ScheduledMail;
 import org.niord.core.mailinglist.vo.MailingListReportVo;
 import org.niord.core.message.Message;
 import org.niord.core.message.MessageDesc;
+import org.niord.core.message.MessageLuceneIndex;
 import org.niord.core.message.MessagePart;
 import org.niord.core.message.MessageSeries;
 import org.niord.core.message.MessagePartDesc;
@@ -42,6 +44,7 @@ import org.niord.test.ScriptResourceFixtures;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -110,6 +113,9 @@ class MailingListExecutionServiceITTest extends ITTest {
 
     @Autowired
     ScriptResourceService resourceService;
+
+    @Autowired
+    MessageLuceneIndex messageLuceneIndex;
 
     @PersistenceContext
     EntityManager em;
@@ -952,6 +958,68 @@ class MailingListExecutionServiceITTest extends ITTest {
                 "the report HTML must be the rendered IT Freemarker template");
         assertTrue(html.contains("count=0"),
                 "a query matching no messages must render an empty message list (count=0)");
+    }
+
+    /**
+     * A report run by hand whose free-text search is answered while the index is being filled after a start
+     * (LUCENE-7): the report is still made, with the line that says messages may be missing at its top; once the
+     * index is complete, the same report has no such line. The index is marked as not complete, its writer lock held
+     * so that no pass marks it complete meanwhile. FAILS without the line.
+     */
+    @Test
+    @Transactional
+    void aMailingListReportDuringTheRefillCarriesTheLineAtItsTop() throws Exception {
+        MailingList ml = persistActiveMailingList();
+        MailingListTrigger trigger = persistTrigger(ml, TriggerType.SCHEDULED);
+        addDesc(trigger, "Report subj");
+        addItTemplate(trigger);
+        trigger.setPublicReport(Boolean.TRUE);
+        trigger.setMessageQuery("query=zzreportrefill&status=PUBLISHED");
+        em.flush();
+
+        messageLuceneIndex.recreateIndex(); // an index that can be read, whatever the start-up pass has done
+        MessageLuceneIndex index = (MessageLuceneIndex) AopTestUtils.getUltimateTargetObject(messageLuceneIndex);
+        ReentrantLock lock = writerLock(index);
+        lock.lock();
+        boolean was = index.allMessagesIndexed();
+        try {
+            setIndexComplete(index, false);
+            String html = executionService.executeMailingListReport(trigger.getId(), "en");
+            assertTrue(html.contains("IT-MAILINGLIST-TEMPLATE"), "the report is still made: " + html);
+            assertTrue(html.indexOf(NOTICE) >= 0 && html.indexOf(NOTICE) < html.indexOf("IT-MAILINGLIST-TEMPLATE"),
+                    "with the line that says messages may be missing, at its top: " + html);
+
+            setIndexComplete(index, true);
+            html = executionService.executeMailingListReport(trigger.getId(), "en");
+            assertTrue(html.contains("IT-MAILINGLIST-TEMPLATE"), html);
+            assertFalse(html.contains(NOTICE), "no line once the index is complete: " + html);
+        } finally {
+            setIndexComplete(index, was);
+            lock.unlock();
+        }
+    }
+
+    /** The base product's English text of the line, as the dictionary holds it */
+    private static final String NOTICE = "The search index is being rebuilt, for example after a restart of the server. "
+            + "Until it is complete, messages may be missing from this result.";
+
+    /**
+     * The writer lock of this context's index, which every pass takes: held, no pass changes the mark. Read through
+     * reflection, as the index keeps it to its package.
+     */
+    private static ReentrantLock writerLock(MessageLuceneIndex index) throws Exception {
+        java.lang.reflect.Field folder = MessageLuceneIndex.class.getDeclaredField("indexFolder");
+        folder.setAccessible(true);
+        java.lang.reflect.Method lock = MessageLuceneIndex.class.getDeclaredMethod("writerLock", java.nio.file.Path.class);
+        lock.setAccessible(true);
+        return (ReentrantLock) lock.invoke(null, folder.get(index));
+    }
+
+    /** Marks this context's index as complete or not; the field is the index's own, set as a pass sets it */
+    private static void setIndexComplete(MessageLuceneIndex index, boolean complete) throws Exception {
+        java.lang.reflect.Field field = MessageLuceneIndex.class.getDeclaredField("allMessagesIndexed");
+        field.setAccessible(true);
+        field.setBoolean(index, complete);
     }
 
     @Test

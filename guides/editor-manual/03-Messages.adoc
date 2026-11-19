@@ -241,8 +241,9 @@ in other forms of the words (_harbour_ finds _harbours_), and a `*` is not under
 For some minutes after the server has been restarted, or after a system administrator has rebuilt
 the text search index, the text filter searches an index that is still being built, and messages may
 be missing from the result. The list then shows a warning above the
-result, until the index is complete. A print, an export or a mail of the list made in those minutes
-does not say so.
+result, until the index is complete. A print of the list made in those minutes says so in a line at
+the top of the PDF, and a mailing-list report says so at its top too. The mail dialog shows the same
+warning above its fields, and an export first shows it and asks whether to export all the same.
 
 [#type-filter]
 ==== Type Filter

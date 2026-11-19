@@ -208,8 +208,9 @@ The workhorse read, and the one that lies most quietly.
 - **A free-text search right after a backend start can be short, and says so.** The backend builds its
   text index again after each start, which takes minutes on a large database; until it is complete a
   `query=` search answers from the messages indexed so far, and the answer carries
-  `indexIncomplete: true`. Every other answer leaves the property out. The print, the export and the
-  message mail carry no such mark.
+  `indexIncomplete: true`. Every other answer leaves the property out. The print (PDF) of such a search
+  carries a line at its top that says messages may be missing; the export and the message mail carry no
+  mark, so the app warns before them from the list's own mark.
 - **Callers without an identity get plain-word free text.** For a request with no token and no ticket,
   `query=` is matched as literal words (no wildcards, regular expressions, phrases or `AND`/`OR`/`NOT`)
   and cut to 256 characters, and `username`, `userType` and `comments` are ignored. A ticketed request

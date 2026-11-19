@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.niord.core.NiordApp;
 import org.niord.core.domain.Domain;
 import org.niord.core.domain.DomainService;
+import org.niord.core.message.IndexIncompleteNotice;
 import org.niord.core.message.MessageSearchParams;
 import org.niord.core.message.MessageSeries;
 import org.niord.core.message.MessageService;
@@ -91,6 +92,7 @@ class MessageReportRestServiceTest {
     private FmReportService fmReportService;
     private FmTemplateService templateService;
     private FmTemplateBuilder builder;
+    private IndexIncompleteNotice indexIncompleteNotice;
     private MessageReportRestService service;
 
     @BeforeEach
@@ -104,6 +106,7 @@ class MessageReportRestServiceTest {
         templateService = mock(FmTemplateService.class);
         builder = mock(FmTemplateBuilder.class, RETURNS_SELF);
         when(templateService.newFmTemplateBuilder()).thenReturn(builder);
+        indexIncompleteNotice = mock(IndexIncompleteNotice.class);
 
         FmReport standard = new FmReport();
         standard.setReportId(FmReportService.STANDARD_REPORT_ID);
@@ -124,7 +127,7 @@ class MessageReportRestServiceTest {
     /** The service, making at most the given number of anonymous PDFs at once */
     private MessageReportRestService withPermits(int anonymousPdfConcurrency) {
         return new MessageReportRestService(mock(NiordApp.class), domainService, userService, messageService,
-                messageRestService, messageSearchRestService, fmReportService, templateService,
+                messageRestService, messageSearchRestService, fmReportService, templateService, indexIncompleteNotice,
                 anonymousPdfConcurrency);
     }
 
@@ -416,6 +419,44 @@ class MessageReportRestServiceTest {
         // Whatever markup a param: value carried runs no script on this origin
         assertEquals("sandbox", response.getHeaders().getFirst("Content-Security-Policy"));
         verify(builder).process(eq(ProcessFormat.TEXT), any());
+    }
+
+    /**
+     * A list whose search was answered while the free-text index was being filled (LUCENE-7) is still printed, with
+     * the line that says so at the top of the document. FAILS without it: the builder is handed no line.
+     */
+    @Test
+    void aListAnsweredFromAnIncompleteIndexIsPrintedWithTheLineThatSaysSo() throws Exception {
+        when(userService.currentUser()).thenReturn(new User());
+        PagedSearchResultVo<MessageVo> result = new PagedSearchResultVo<>();
+        result.setData(new ArrayList<>(List.of(message("m1", "dma-nw"))));
+        result.setIndexIncomplete(true);
+        when(messageSearchRestService.searchMessages(any(MessageSearchParams.class))).thenReturn(result);
+        when(indexIncompleteNotice.forResult(result, "en")).thenReturn("Messages may be missing.");
+        Map<String, String[]> query = new HashMap<>();
+        query.put("lang", new String[] { "en" });
+        query.put("query", new String[] { "wreck" });
+        NiordApp app = mock(NiordApp.class);
+        when(app.getLanguage("en")).thenReturn("en");
+        service = new MessageReportRestService(app, domainService, userService, messageService, messageRestService,
+                messageSearchRestService, fmReportService, templateService, indexIncompleteNotice, 3);
+
+        ResponseEntity<StreamingResponseBody> response = service.generatePdfForSearch(request(query));
+        render(response);
+
+        assertEquals("application/pdf", contentType(response));
+        verify(builder).topNotice("Messages may be missing.");
+        verify(builder).process(eq(ProcessFormat.PDF), any());
+    }
+
+    /** A list from a complete index gets no line */
+    @Test
+    void aListAnsweredFromACompleteIndexGetsNoLine() throws Exception {
+        searchReturns("Statuses: [PUBLISHED]", message("m1", "dma-nw"));
+
+        render(service.generatePdfForSearch(request(Map.of())));
+
+        verify(builder).topNotice(null);
     }
 
     @Test

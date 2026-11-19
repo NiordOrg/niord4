@@ -14,6 +14,7 @@ import { MessageImportDialog } from '../dialogs/message-import-dialog/message-im
 import { MyMailsDialog } from '../dialogs/my-mails-dialog/my-mails-dialog';
 import { MessageStatusUpdateDialog } from '../dialogs/message-status-update-dialog/message-status-update-dialog';
 import { MessageTagsDialogService } from '../dialogs/message-tags-dialog/message-tags-dialog.service';
+import { ConfirmService } from '../../../shared/services/confirm.service';
 import { MessageAreaSortLauncher } from '../services/message-area-sort.launcher';
 import { MessageExportService } from '../services/message-export.service';
 import { MessageListFacade } from '../services/message-list.facade';
@@ -81,6 +82,7 @@ export class MessagesActionMenu {
   private readonly tagsManager = inject(MessageTagsDialogService);
   private readonly comparison = inject(MessageComparisonDialogService);
   private readonly areaSortLauncher = inject(MessageAreaSortLauncher);
+  private readonly confirm = inject(ConfirmService);
 
   /**
    * The Action button that opened the menu — the picker anchors here because
@@ -118,6 +120,7 @@ export class MessagesActionMenu {
     sortByAriaPrefix: translateSignal('messages.shell.action.sortBy.ariaPrefix'),
     sortByAriaAscending: translateSignal('messages.shell.action.sortBy.ariaAscending'),
     sortByAriaDescending: translateSignal('messages.shell.action.sortBy.ariaDescending'),
+    indexIncomplete: translateSignal('messages.list.indexIncomplete'),
   } as const;
 
   protected readonly activeSortField = computed<SortBy>(() => this.filter.sortBy());
@@ -164,7 +167,9 @@ export class MessagesActionMenu {
       items.push({ separator: true });
       items.push(
         this.actionItem(this.t.mail(), 'lucideMail', () =>
-          this.mailService.mailSelection(this.selection.selectedIds()).subscribe(),
+          this.mailService
+            .mailSelection(this.selection.selectedIds(), this.list.indexIncomplete())
+            .subscribe(),
         ),
       );
     }
@@ -298,11 +303,28 @@ export class MessagesActionMenu {
   }
 
   private runExport(): void {
-    this.exportService.export({ filterParams: this.filter.requestParams() }).subscribe();
+    this.afterIndexWarning(this.t.export(), () =>
+      this.exportService.export({ filterParams: this.filter.requestParams() }).subscribe(),
+    );
   }
 
   private runExportSelection(): void {
-    this.exportService.exportSelection(this.selection.selectedIds()).subscribe();
+    this.afterIndexWarning(this.t.exportSelection(), () =>
+      this.exportService.exportSelection(this.selection.selectedIds()).subscribe(),
+    );
+  }
+
+  /**
+   * Runs the export at once; or, while the list on screen was answered from a search index still
+   * being rebuilt after a start, once the person has read the list's warning and confirmed it,
+   * since messages may be missing from what is exported.
+   */
+  private afterIndexWarning(acceptLabel: string, run: () => void): void {
+    if (!this.list.indexIncomplete()) {
+      run();
+      return;
+    }
+    this.confirm.confirmNeutral({ message: this.t.indexIncomplete(), acceptLabel, accept: run });
   }
 
   protected isSortItem(item: MenuItem | SortMenuItem): item is SortMenuItem {

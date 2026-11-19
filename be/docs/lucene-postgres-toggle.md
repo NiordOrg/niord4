@@ -89,9 +89,12 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   otherwise), and the administration app's _Messages_ list shows a warning above such a result. It reads the
   index's state before and after the search, so a re-index that empties the index meanwhile is marked too. The
   mark is set only by the Lucene branch: a search without free text and a PostgreSQL search are never marked. The public API
-  takes no free text and serializes the messages alone, the export drops the mark, a scheduled mailing-list trigger
-  waits for the index in the half hour after the start (`MailingListExecutionService.INCOMPLETE_INDEX_WAIT`), and the
-  print, the message mail and the mailing-list report pass the answer on without it ([`potential-errors.md`](./potential-errors.md), LUCENE-7).
+  takes no free text and serializes the messages alone, a scheduled mailing-list trigger waits for the index in the
+  half hour after the start (`MailingListExecutionService.INCOMPLETE_INDEX_WAIT`), the print of a list (PDF) and a
+  mailing-list report run by hand carry a line at their top that says messages may be missing
+  (`IndexIncompleteNotice`, the `pdf` text `pdf.list.index_incomplete`), and the administration app shows the list's
+  warning in the mail dialog and asks before an export, whose archive drops the mark to keep its form. What is left is
+  in [`potential-errors.md`](./potential-errors.md), LUCENE-7.
 - Both passes also look five minutes behind their marker (`MessageQueryService.INDEX_LOOK_BACK`, a constant).
   A message's `updated` time is stamped when its transaction writes it, and transactions commit in another
   order: a message stamped before the time a pass read up to, and committed after that pass, lay below the

@@ -55,6 +55,7 @@ export class MessageMailDialog {
   );
 
   protected readonly totalMessageNo = computed(() => this.dialog.totalMessageNo());
+  protected readonly indexIncomplete = computed(() => this.dialog.indexIncomplete());
 
   constructor() {
     // Reset the form every time the dialog opens — leftover state from the

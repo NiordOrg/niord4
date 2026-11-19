@@ -84,7 +84,12 @@ public final class RequiredTexts {
          * The template directive {@code LatLonDirective}, through {@code PositionUtils.getAudioFormat}: positions
          * formatted for audio in templates. Without the keys it prints nothing.
          */
-        LAT_LON_DIRECTIVE
+        LAT_LON_DIRECTIVE,
+        /**
+         * {@code IndexIncompleteNotice}: the line at the top of a printed message list and a mailing-list report made
+         * while the free-text index is being filled after a start. Without the key it prints a built-in English text.
+         */
+        INDEX_INCOMPLETE_NOTICE
     }
 
     /**
@@ -128,7 +133,8 @@ public final class RequiredTexts {
             JavaText.of("template", "navwarn.date.day_prefix", Reader.DATE_INTERVAL_DIRECTIVE),
             JavaText.of("template", "navwarn.date.time_prefix", Reader.DATE_INTERVAL_DIRECTIVE),
             JavaText.of("template", "navwarn.date.time_interval_prefix", Reader.DATE_INTERVAL_DIRECTIVE),
-            JavaText.of("template", "term.and", Reader.DATE_INTERVAL_DIRECTIVE));
+            JavaText.of("template", "term.and", Reader.DATE_INTERVAL_DIRECTIVE),
+            JavaText.of("pdf", "pdf.list.index_incomplete", Reader.INDEX_INCOMPLETE_NOTICE));
 
     /**
      * The key prefixes templates complete at runtime, such as {@code text("msg.status." + msg.status)}

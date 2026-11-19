@@ -27,6 +27,7 @@ import org.niord.core.mail.MailHtml;
 import org.niord.core.mail.ScheduledMail;
 import org.niord.core.mail.ScheduledMailRecipient;
 import org.niord.core.mailinglist.vo.MailingListReportVo;
+import org.niord.core.message.IndexIncompleteNotice;
 import org.niord.core.message.Message;
 import org.niord.core.message.MessageQueryService;
 import org.niord.core.message.MessageSearchParams;
@@ -108,7 +109,9 @@ public class MailingListExecutionService extends BaseService {
 
     private final MailingListStatusChangeOutbox statusChangeOutbox;
 
-    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService, MailingListStatusChangeOutbox statusChangeOutbox) {
+    private final IndexIncompleteNotice indexIncompleteNotice;
+
+    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService, MailingListStatusChangeOutbox statusChangeOutbox, IndexIncompleteNotice indexIncompleteNotice) {
         this.app = app;
         this.messageSearchService = messageSearchService;
         this.messageQueryService = messageQueryService;
@@ -117,6 +120,7 @@ public class MailingListExecutionService extends BaseService {
         this.dictionaryService = dictionaryService;
         this.messageSeriesService = messageSeriesService;
         this.statusChangeOutbox = statusChangeOutbox;
+        this.indexIncompleteNotice = indexIncompleteNotice;
     }
 
     /***************************************/
@@ -622,6 +626,10 @@ public class MailingListExecutionService extends BaseService {
     /**
      * Executes the given mailing list report, i.e. the scheduled triggers that can
      * be executed by end-users as reports.
+     * <p>
+     * A free-text search answered while the index was still being filled after a start may miss messages; the
+     * report is still made, with a line at its top that says so ({@link IndexIncompleteNotice}). A scheduled run
+     * waits for the index instead ({@link #executeScheduledTrigger(Integer)}).
      *
      * @param triggerId the ID of the trigger (mailing list report) to execute
      * @param lang the language
@@ -648,11 +656,13 @@ public class MailingListExecutionService extends BaseService {
             lang = languages.iterator().next();
         }
 
-        // Execute the script resources associated with the trigger
-        return executeScriptResources(
+        // Execute the script resources associated with the trigger, with the line that says the report may miss
+        // messages when the search was answered from an incomplete index
+        String html = executeScriptResources(
                 trigger,
                 messageResult.getData(),
                 lang);
+        return FmTemplateService.withTopNotice(html, indexIncompleteNotice.forResult(messageResult, lang));
     }
 
     /***************************************/

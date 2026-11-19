@@ -28,6 +28,11 @@ export type MailSender = (request: MailRequest) => Observable<unknown>;
 @Injectable({ providedIn: 'root' })
 export class MessageMailDialogService extends DialogHostService<MailRequest> {
   readonly totalMessageNo = signal(0);
+  /**
+   * The list the messages were chosen from was answered while the search index was being rebuilt
+   * (`indexIncomplete`), so messages may be missing from it: the dialog shows the list's own warning.
+   */
+  readonly indexIncomplete = signal(false);
   /** True while a send runs; the dialog keeps Send disabled meanwhile. */
   readonly sending = signal(false);
 
@@ -35,8 +40,13 @@ export class MessageMailDialogService extends DialogHostService<MailRequest> {
   /** Counts the opens, so a send that ends after its dialog was replaced touches nothing. */
   private openNo = 0;
 
-  open(messageIds: readonly string[], send: MailSender): Observable<MailRequest | undefined> {
+  open(
+    messageIds: readonly string[],
+    send: MailSender,
+    indexIncomplete = false,
+  ): Observable<MailRequest | undefined> {
     this.totalMessageNo.set(messageIds.length);
+    this.indexIncomplete.set(indexIncomplete);
     this.sender = send;
     this.sending.set(false);
     this.openNo++;

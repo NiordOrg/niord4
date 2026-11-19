@@ -928,10 +928,10 @@ public class MailingListMessageListenerTest {
 
         // PORT: MailingListExecutionService now has only a constructor-injection constructor
         // (NiordApp, MessageSearchService, MessageQueryService, FmTemplateService, JsResourceService,
-        // DictionaryService, MessageSeriesService, MailingListStatusChangeOutbox); the test never used those
+        // DictionaryService, MessageSeriesService, MailingListStatusChangeOutbox, IndexIncompleteNotice); the test never used those
         // collaborators, so we forward nulls — the overridden methods never touch them.
         RecordingMailingListExecutionService(MailingListStatusChangeOutbox outbox) {
-            super(null, null, null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null, null, null);
             this.outbox = outbox;
         }
 

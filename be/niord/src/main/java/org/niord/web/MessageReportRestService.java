@@ -23,6 +23,7 @@ import org.niord.core.NiordApp;
 import org.niord.core.batch.AbstractBatchableRestService;
 import org.niord.core.domain.Domain;
 import org.niord.core.domain.DomainService;
+import org.niord.core.message.IndexIncompleteNotice;
 import org.niord.core.message.MessagePrintParams;
 import org.niord.core.message.MessageSearchParams;
 import org.niord.core.message.MessageService;
@@ -96,6 +97,8 @@ public class MessageReportRestService extends AbstractBatchableRestService {
 
     private final FmTemplateService templateService;
 
+    private final IndexIncompleteNotice indexIncompleteNotice;
+
     /**
      * The PDFs rendered for anonymous callers at once, see {@link #acquireAnonymousPdfPermit(boolean)}.
      * Sized by {@code niord.reports.anonymous-pdf-concurrency}.
@@ -103,6 +106,7 @@ public class MessageReportRestService extends AbstractBatchableRestService {
     private final Semaphore anonymousPdfPermits;
 
     MessageReportRestService(NiordApp app, DomainService domainService, UserService userService, MessageService messageService, MessageRestService messageRestService, MessageSearchRestService messageSearchRestService, FmReportService fmReportService, FmTemplateService templateService,
+                             IndexIncompleteNotice indexIncompleteNotice,
                              @Value("${niord.reports.anonymous-pdf-concurrency}") int anonymousPdfConcurrency) {
         this.app = app;
         this.domainService = domainService;
@@ -112,6 +116,7 @@ public class MessageReportRestService extends AbstractBatchableRestService {
         this.messageSearchRestService = messageSearchRestService;
         this.fmReportService = fmReportService;
         this.templateService = templateService;
+        this.indexIncompleteNotice = indexIncompleteNotice;
         if (anonymousPdfConcurrency < 1) {
             throw new IllegalArgumentException(
                     "niord.reports.anonymous-pdf-concurrency must be at least 1, was " + anonymousPdfConcurrency);
@@ -349,6 +354,9 @@ public class MessageReportRestService extends AbstractBatchableRestService {
     /**
      * Generates a PDF for the message search result.
      *
+     * A free-text search answered while the index was still being filled after a start may miss messages; the PDF is
+     * still made, with a line at its top that says so ({@link IndexIncompleteNotice}).
+     *
      * If the debug flag is set to true, the HTML that is used for the PDF is returned directly -
      * to a caller the backend knows only, see {@link #printParams(HttpServletRequest, boolean)}. Which
      * report renders the list is decided by {@link #listReport(String, boolean)}.
@@ -386,6 +394,9 @@ public class MessageReportRestService extends AbstractBatchableRestService {
             String searchCriteria = result.getDescription() == null ? null
                     : HtmlUtils.htmlEscape(result.getDescription(), StandardCharsets.UTF_8.name());
 
+            // The line that says the list may miss messages, when the search was answered from an incomplete index
+            String topNotice = indexIncompleteNotice.forResult(result, language);
+
             try {
                 ProcessFormat format = printParams.getDebug() ? ProcessFormat.TEXT : ProcessFormat.PDF;
 
@@ -407,6 +418,7 @@ public class MessageReportRestService extends AbstractBatchableRestService {
                                 .data(printParams.getParams()) // Custom user-defined params
                                 .dictionaryNames("web", "message", "pdf")
                                 .language(language)
+                                .topNotice(topNotice)
                                 .process(format, os);
                     } catch (Exception e) {
                         throw new NiordWebException("Error generating PDF for messages", e);

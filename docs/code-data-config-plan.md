@@ -403,7 +403,9 @@ Two things cover this:
   `MailingListExecutionService.java:392-394`); nor can `AudioPromulgationService` generate a message's audio text
   (`position.*`, `AudioPromulgationService.java:121-125`). Of the template directives, `DateIntervalDirective` fails the
   render (`navwarn.date.*`, `term.and`); `FromToDateDirective` (`msg.time.until_further_notice`,
-  `msg.time.date_time_format`) and `LatLonDirective` (`position.*`) print nothing.
+  `msg.time.date_time_format`) and `LatLonDirective` (`position.*`) print nothing. `IndexIncompleteNotice`
+  (`pdf.list.index_incomplete`, the line at the top of a printed list or a mailing-list report made while the
+  free-text index refills) prints its built-in English sentence.
 - The base product ships its texts as an importable dictionary file: `be/niord/bootstrap/texts.json`, current
   with the code, and a frozen copy in each release folder, `be/niord/bootstrap/releases/<folder>/texts.json`
   (§6.4). Both are in the format the dictionary import reads (`ExportedDictionaryVo`, as `aton-dict.json`):

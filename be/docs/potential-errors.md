@@ -797,42 +797,35 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
   cluster.
 
-## LUCENE-7. For minutes after each start, the print, export and mail of a free-text search can miss messages without a sign
+## LUCENE-7. For minutes after each start, a script's free-text search and a late scheduled mail can miss messages without a sign
 
-- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java`: `init()` deletes the index when
-  `messageIndexDeleteOnStartup` is on (the default), the start-up pass follows five seconds later and then one pass a
-  minute, each of at most `LUCENE_MAX_INDEX_COUNT` (5,000) messages, and `allMessagesIndexed()` is false until a pass
-  has made every message searchable. `niord/src/main/java/org/niord/core/message/MessageSearchService.java`, the
-  free-text branch of `searchPagedMessageIds`, marks a result answered in that window
-  (`PagedSearchResultVo.indexIncomplete`), reading the index's state before and after the search, so a re-index
-  (`recreateIndex`) that empties the index while a search runs marks that search too. The callers that hand such a result on without the mark:
-  `MessageReportRestService` (the print), `MessageExportRestService` (the export, which drops the mark so the
-  archive keeps its form), `MessageMailRestService` (the message mail of a search) and `MailingListExecutionService`
-  (the mailing-list report, and a scheduled mailing-list mail more than half an hour after the start).
-- **Description:** the delete at start commits an empty index that can be read. Until the passes have indexed every
-  message again, which on a large database takes several minutes, a free-text search answers with the hits among the
-  messages indexed so far, possibly none. The owner's decision (2026-11-19): the search keeps answering, and the
-  editors are told. The editors' _Messages_ list shows a warning above such a result. A scheduled mailing-list
-  trigger whose stored query holds a `query=` term waits for the index in the half hour after the start: tried again
-  every two minutes, so its mail follows soon after the index is complete, with one WARN and one "Delayed:" record in
-  the Mail Queue, kept apart from the "Not sent:" records of failed runs; after that half hour it is mailed from what
-  the index holds, with a WARN naming the trigger, so a refill that stalls delays such a mail by at most half an hour.
-  With `messageIndexDeleteOnStartup` off the index is kept, but it counts as not complete until the start-up pass
-  (five seconds after the start) has run, so a trigger due in those seconds waits a few minutes too.
-  The print (PDF), export (ZIP) and message mail of the list and a mailing-list report pass the short answer on as a
-  real one, and so does a deployment's script that searches with free text. The public API (`/rest/public/v1/messages`)
-  takes no free text and does not read the index, a status-change mail is about its one message and runs no search,
-  and the PostgreSQL backend (`disableLucene`) keeps its table across a start: none of them is affected.
-- **Why it looks wrong:** a PDF or a mail made minutes after a deploy can leave warnings out without a word.
-- **Exposed by:** `MessageLuceneIndexStartWindowTest` (a message indexed before a restart is not found right after
-  it, the search does not fail, and the index says it is not complete) and `MessageSearchIndexIncompleteITTest` (the
-  mark, on the service, the editors' search and not on the public API); `MailingListDeliveryFaultITTest` holds a
-  scheduled trigger to the half hour's wait, its retry and its record. What the print, export, message mail and
-  report do with a marked result is not tested.
-- **Severity:** Low — the window is short, the editors' list warns in it and the scheduled mails wait for it. Fix,
-  for the owner to weigh: carry the mark on (a line in the print and the mailing-list report, a warning in the mail
-  and export dialogs before they are sent). With `messageIndexDeleteOnStartup` off the index is kept across a start,
-  and only the messages changed since its last pass are missing until the first pass (not checked by a test).
+- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java` (`init()` deletes the index when
+  `messageIndexDeleteOnStartup` is on, the default; `allMessagesIndexed()` is false until a pass has made every message
+  searchable again) and `MessageSearchService.searchPagedMessageIds`, which marks a free-text result answered in that
+  window (`PagedSearchResultVo.indexIncomplete`). The callers that still hand such a result on without the mark: a
+  deployment's script that searches with free text (`searchOrFail` from a template or mailing-list script), and
+  `MailingListExecutionService.executeScheduledTrigger` more than half an hour after the start.
+- **Description:** until the passes have indexed every message again, which on a large database takes several
+  minutes, a free-text search answers from the messages indexed so far. The owner's decision (2026-11-19): the search
+  keeps answering, and the people who use the answer are told. The editors' _Messages_ list shows a warning above such
+  a result; the print of the list (PDF) and a mailing-list report run by hand carry a line at their top
+  (`pdf.list.index_incomplete`, `IndexIncompleteNotice`); the administration app shows the list's warning in the mail
+  dialog and asks before an export (ZIP), whose archive keeps its form. A scheduled mailing-list trigger whose stored
+  query holds a `query=` term waits for the index in the half hour after the start (tried again every two minutes,
+  with one WARN and one "Delayed:" record in the Mail Queue); after that half hour it is mailed from what the index
+  holds, with a WARN naming the trigger and nothing in the mail. A script that searches with free text gets the marked
+  result and decides itself; none of the base product's scripts reads the mark. The message mail and the export
+  endpoints, called by anything other than the administration app, carry no sign either. The public API
+  (`/rest/public/v1/messages`) takes no free text, and the PostgreSQL backend (`disableLucene`) keeps its table across
+  a start: neither is affected.
+- **Why it looks wrong:** a scheduled mail sent half an hour after a deploy whose index refill stalled, or a script's
+  output made in the window, can leave warnings out without a word to its readers.
+- **Exposed by:** `MessageLuceneIndexStartWindowTest` and `MessageSearchIndexIncompleteITTest` (the mark, the print's
+  line); `MailingListDeliveryFaultITTest` holds a scheduled trigger to the half hour's wait, its retry and its record;
+  `MailingListExecutionServiceITTest` holds the report's line. What a script does with a marked result is not tested.
+- **Severity:** Low — the window is short, the scheduled mails wait for it, and the people who print, export, mail or
+  run a report are told. With `messageIndexDeleteOnStartup` off the index is kept across a start, and only the
+  messages changed since its last pass are missing until the first pass (not checked by a test).
 
 # Potential errors — REST-controller security audit
 
