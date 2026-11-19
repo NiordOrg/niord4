@@ -33,7 +33,7 @@
  *              their endpoints; no backend needed.
  *
  * MESSAGE READS. Cases 6b, 6c and 6d (local) and R6, R7 and R8 (remote) time the message reads of
- * be/docs/message-read-benchmark.md: the administration app's list search as an editor sends it (NW and NM,
+ * be/docs/message-read-benchmark.md: the administration app's list search with the owner's filter (NW and NM,
  * the default page of 100), its map view (1,000), and the public site's list and single message without a
  * login. They run only when --cases names them, read --searches and --message-gets as cases 6 and R5 do, and
  * need no image: a run of read cases alone (6 and R5 among them) fetches no map image and needs no stand-ins.

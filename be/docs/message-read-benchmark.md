@@ -134,7 +134,9 @@ In this order; steps 2 and 3 are independent of each other.
    The read cases do not take `--warmup` or `--rounds`: each discards its first answers (`local` 10 message
    GETs and 3 lists, `remote` 5 and 2) and times `--message-gets` and `--searches` requests, so the defaults are
    the recipe. 6b to 6d and R6 to R8 run only when `--cases` names them, and a run of read cases alone fetches
-   no map image, so it needs neither the stand-ins nor `--cache`:
+   no map image, so it needs neither the stand-ins nor `--cache`. 6b, 6c, R6 and R7 are timed without `--domain`:
+   the search without a domain, which lists every published NW and NM message. A `--domain` sends `NiordDomain`
+   and narrows them to that domain's series, so both systems are run with the same `--domain` or both without:
 
    ```
    NIORD_USER=<user> NIORD_PASS=<password> node be/scripts/bench-map-images.mjs local --variant new \
