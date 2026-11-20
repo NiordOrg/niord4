@@ -414,31 +414,53 @@ suffixed `_documentsBug` / `_documentsBehavior` where practical._
 - **Exposed by:** `JpaJsonAttributeConverterTest.nullHandlingDiffersFromPropertiesConverter_documentsBehavior`.
 - **Severity:** Low — latent inconsistency; the two near-identical converters should agree on a contract.
 
-## DB3 — un-audited `equals`/`like` predicates are silently case- and accent-sensitive
+## DB3 — What is left of text comparisons and case: exact identifiers, unique rules that count case, unindexed folded look-ups, accents and the locale
 
-- **Location:** equality/`LIKE` predicates on text columns throughout the criteria layer — `CriteriaHelper`
-  `equals`/`like` (`niord/src/main/java/org/niord/core/db/CriteriaHelper.java`), the area lineage-prefix
-  `like(lineage, parent.lineage + '%')`, and the ~101 `@NamedQuery` call sites that compare strings.
-- **Description:** `equals` emits a plain SQL `=` (`cb.equal`), so its case-sensitivity is the column's
-  collation, not the helper's. Under PostgreSQL's default collation `=` and `LIKE` are **case- and
-  accent-sensitive**: `equals(name, "alpha")` does *not* match a stored `"Alpha"`.
-  `equalsIgnoreCase`/`like` (which fold case explicitly via `cb.lower`) are the ones that do.
-- **Why it looks wrong:** the codebase inherits its lookup shapes from an era where the database collation
-  was case- and accent-*insensitive*, so a call site could rely on a forgiving match without saying so.
-  Nothing enforces that callers pass canonically-cased values (usernames, short ids are typically
-  lower-/upper-cased upstream, but not by contract). A lookup that used to succeed on a differently-cased
-  value now silently returns empty — and the suite does not catch it, because the tests assert exact-case
-  matches, which pass either way.
-- **Concretely-surfaced sites are handled** — `Message.findByShortId` and the `MessageSearchService`
-  creator/updater username match have been switched to case-insensitive matching. This umbrella stays open
-  for the **un-audited remainder**.
-- **Recommended action:** decide per column family whether case-insensitive matching is required; if so,
-  either fold both sides in the query (`lower(col) = lower(:v)`) or declare the affected columns with a
-  case-insensitive collation (`citext`, or an ICU `und-x-icu` case-insensitive collation) in the Liquibase
-  changelog. Do **not** silently accept the case-sensitive default without an explicit decision.
-- **Exposed by:** `CriteriaHelperITTest.equalsIsCaseSensitiveUnderPostgresDefaultCollation_documentsBehavior`
-  pins the helper's behaviour; the broad audit is not exercised by any single test.
-- **Severity:** Medium — latent, collation-dependent correctness across an unaudited set of predicates.
+- **Location:** `CriteriaHelper.equals` (`niord/src/main/java/org/niord/core/db/CriteriaHelper.java`, a plain
+  `cb.equal`), the named queries that compare text, the unique keys of `V001__baseline_schema.sql`, and the two
+  message index back ends (`MessageLuceneIndex`, `MessagePostgresIndex`).
+- **Description:** A text a person types is matched without regard to case: the free-text message search in both
+  back ends, user, contact, source, area and category names, chart and series search, tag and publication titles,
+  short ids, a saved message filter's name, an area's or a category's MRN (an exact match first) and a parameter
+  type's name when a type is created or renamed. What still compares exactly, or differs, is this:
+  - **Exact on purpose.** The identifiers Niord writes itself and reads back (message series ids, dictionary keys,
+    setting keys, uids, domain ids, a template parameter's type name) are compared letter for letter, and
+    `CriteriaHelper.equals` is passed only such ids, enums, booleans and language codes. The publication series id
+    (`PublicationSeriesService`, `IssuePickerService`) is compared exactly because it is a segment of the series'
+    address and its citation handle. The publication category id (`PublicationCategory.findByCategoryId`) is
+    compared exactly for the same reason: it is a segment of the category's address.
+  - **Unique rules that count case under look-ups that do not.** Contact `UNIQUE(email)`, NAVTEX transmitter
+    `UNIQUE(name)`, SafetyNET area `UNIQUE(name)` and script resource `UNIQUE(path)` treat "A" and "a" as different
+    rows, while their look-ups ignore case and answer the exact match among case twins. The saved message filter's
+    `UNIQUE(name, user_id)` and the parameter type's `UNIQUE(name)` are the same since their checks ignore case:
+    the code refuses or replaces a case twin, the database would accept one.
+  - **Folded look-ups without an index to serve them.** `Message.findByShortId` (`lower(shortId)`),
+    `Message.findByMessageId` (`lower(uid)` and `lower(shortId)`) and `Message.findByReference`
+    (`lower(ref.messageId)`) read the whole message or reference table each time: the existing indexes on those
+    columns are plain btrees, which `lower()` cannot use.
+  - **Accents differ between the index back ends.** Lucene, the default, removes the accents of a fixed list of 44
+    letters on both sides (`LuceneUtils`), so "cafe" finds "café"; the database back end (`disableLucene`) does not,
+    so it does not. Neither folds æ, ø or å. `be/docs/lucene-postgres-toggle.md` records the difference; no test
+    pins the database back end's side.
+  - **Chart numbers are compared exactly** (`Chart.findByChartNumber`, `MessageSearchService` chart filter,
+    `MemberResolutionService`, documented on `ChartCriterionVo`). Whether that matters depends on whether any
+    national chart catalogue holds a number with letters, which is not known.
+  - **The database's locale decides what `lower()` folds.** PostgreSQL's `lower()` and `to_tsvector` follow the
+    database's character locale (`LC_CTYPE`). Under a language locale they fold Æ, Ø, Å and accented capitals;
+    under `C`/`POSIX` with the libc provider they fold A-Z only. The repository sets no locale, and the stagings'
+    and a hosted database's have not been checked.
+- **Why it looks wrong:** none of these is a wrong answer today, but each is a place where the rule "a typed text
+  is matched without regard to case" depends on data or set-up rather than on the code: a case twin the unique key
+  lets in, a chart number with letters, a database made with the `C` locale.
+- **Recommended action:** before go-live, run `SELECT datname, datctype, datlocprovider FROM pg_database` (a read)
+  on each environment's database; one on `C`/`POSIX` with libc needs a database made with a language locale. Decide
+  the rest when they are wanted: unique indexes on `lower(col)` for the six rules (a changeset that first refuses and
+  names existing case twins, in V013's shape), expression indexes for the three look-ups, the `unaccent` extension
+  for the database back end, and the chart-number question with the catalogue owners.
+- **Exposed by:** `CriteriaHelperITTest.equalsIsCaseSensitiveUnderPostgresDefaultCollation_documentsBehavior` pins
+  `CriteriaHelper.equals`; `LookupFaultITTest.pathsAndAddressesThatDifferOnlyInCaseAnswerTheExactOne` the case
+  twins under folded look-ups.
+- **Severity:** Low.
 
 ## DB4 — `AtonService.search` / `searchPositions` swallow all exceptions and return "no matches"
 
