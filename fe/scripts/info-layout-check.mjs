@@ -15,7 +15,7 @@
  * depends on the width of the screen and on the language: a row of labels that fits in Danish
  * wraps in Kalaallisut. jsdom lays nothing out, so no unit test can see any of it. This script
  * opens the built artefact in Chromium, answers every /rest call from the fixture below, and
- * asserts seventeen things:
+ * asserts eighteen things:
  *
  *   1. At 320, 640, 1024 and 1920 px, in every language the build offers, every control of the
  *      menu bar — the four links and each language flag — lies inside the viewport and is the
@@ -65,6 +65,8 @@
  *  17. At 320 px under the WCAG 1.4.12 text spacing, a dialog whose title and legal document hold
  *      Kalaallisut's long words keeps its close button inside the panel, and no word runs past
  *      the body's edge.
+ *  18. A message's dialog opened by its own address and closed with Escape gives focus to the
+ *      message's row in the list, or to the main content when no list holds the message.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -338,6 +340,17 @@ for (const root of ROOTS) {
 }
 
 /**
+ * A message a link can open but no list holds: an expired one, say. Answered by its id only, so a
+ * dialog opened by its address has no row in the list to give focus back to.
+ */
+export const UNLISTED_MESSAGE = {
+  ...MESSAGES[0],
+  id: 'layout-check-unlisted',
+  shortId: 'NW-900-26',
+  status: 'EXPIRED',
+};
+
+/**
  * Two publications in a row: one whose file lies in the site's own repository, addressed by a
  * root-relative path, and one on another host. Each row carries a Download link and the first a
  * Browse link as well: beside the title from the sm width, under it below. The first title holds
@@ -406,6 +419,12 @@ export function answerRest(url) {
   if (url.pathname === '/rest/public/v1/messages') {
     const areaId = url.searchParams.get('areaId');
     return json(MESSAGES.filter((m) => !areaId || String(m.areas[0].parent.id) === areaId));
+  }
+  const message = /^\/rest\/public\/v1\/message\/(.+)$/.exec(url.pathname);
+  if (message) {
+    const id = decodeURIComponent(message[1]);
+    const found = [...MESSAGES, UNLISTED_MESSAGE].find((m) => m.id === id || m.shortId === id);
+    if (found) return json(found);
   }
   if (url.pathname === '/rest/public/v1/publications') return json(PUBLICATIONS);
   const publication = /^\/rest\/public\/v1\/publication\/(.+)$/.exec(url.pathname);
@@ -1028,6 +1047,38 @@ async function longWordDialogProblems(page) {
 }
 
 /**
+ * A message's dialog opened by its own address, closed with Escape: focus goes to the row of the
+ * message in the list when the list holds it, and to the main content when it does not — never to
+ * the page's body, where the next Tab would start again at the top of the page (WCAG 2.4.3). The
+ * focus is given once the router has drawn the list's own view, which only a browser shows.
+ */
+async function linkedDialogFocusProblems(page, message) {
+  await page.goto(`${ORIGIN}/messages/details/message/${encodeURIComponent(message.id)}`);
+  await page.waitForSelector('.dialog-panel .dialog-body');
+  await page.waitForSelector('.message-details-list .message-details-item');
+  await settle(page);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(
+    () => location.pathname === '/messages/details' && !document.querySelector('.dialog-panel'),
+  );
+  await settle(page);
+  await settle(page);
+  return page.evaluate((shortId) => {
+    const focused = document.activeElement;
+    if (!focused || focused === document.body) return ['focus fell to the page body'];
+    const row = [...document.querySelectorAll('.message-details-list .message-details-item')].find(
+      (item) => item.textContent.includes(shortId),
+    );
+    const expected = row
+      ? row.querySelector('button.row-link')
+      : document.getElementById('main-content');
+    if (focused === expected) return [];
+    const where = focused.id ? `#${focused.id}` : focused.tagName.toLowerCase();
+    return [`focus is on ${where}, not on ${row ? `the row of ${shortId}` : 'the main content'}`];
+  }, message.shortId);
+}
+
+/**
  * The publications table fits inside its panel, and no link of it reaches past the panel's edge.
  * A table wider than its panel need not widen the page: an ancestor that clips it cuts the links
  * off instead, which the page's own width does not show.
@@ -1482,6 +1533,17 @@ if (invokedDirectly) {
     record(
       'long words in a dialog at 320 px with text spacing',
       await longWordDialogProblems(page),
+    );
+
+    // 18. A dialog opened by its address gives focus to its row, or to the main content, on close.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    record(
+      'focus after a dialog opened by its address, its message in the list',
+      await linkedDialogFocusProblems(page, MESSAGES[2]),
+    );
+    record(
+      'focus after a dialog opened by its address, its message in no list',
+      await linkedDialogFocusProblems(page, UNLISTED_MESSAGE),
     );
 
     // 13. The panel of messages without a position leaves every control of the chart uncovered —
