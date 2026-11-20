@@ -113,6 +113,26 @@ class MessageIndexCompleteTest {
                 .findFirst().orElseThrow().getLevel());
     }
 
+    /**
+     * The pass that completes the index logs its own line first and then the line that says the index is complete, so
+     * a person who reads the log sees the pass before what it achieved
+     */
+    @Test
+    void theLuceneLineComesAfterTheLineOfThePassThatCompletedTheIndex() {
+        MessageLuceneIndex index = restarted(List.of(message(34, "zzorder", 1000)));
+
+        index.updateLuceneIndex(MessageLuceneIndex.LUCENE_MAX_INDEX_COUNT);
+
+        List<String> info = lucene.list.stream()
+                .filter(e -> e.getLevel() == Level.INFO)
+                .map(ILoggingEvent::getFormattedMessage)
+                .filter(m -> m.startsWith("Indexed ") || m.startsWith(LINE))
+                .toList();
+        assertEquals(2, info.size(), "the pass's line and the complete line: " + info);
+        assertTrue(info.get(0).startsWith("Indexed 1 messages"), "the pass's line first: " + info);
+        assertEquals("Message search index complete: Lucene, 1 messages indexed in this fill", info.get(1));
+    }
+
     /** A start on a database without messages: the first pass finds nothing to do, and the line says so */
     @Test
     void theLuceneIndexLogsTheLineAlsoWhenTheFillFoundNothingToDo() {
