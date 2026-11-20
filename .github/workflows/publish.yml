@@ -132,9 +132,9 @@ name: Publish
 # copy that still contains them. What holds for every copy is the deployment branch rule of the
 # `publish` and `harbor` environments — main only — a repository setting (Settings →
 # Environments), not this file: a branch's copy then never gets the robot credentials, so it
-# pushes no image or chart and no tag (the tag job needs the jobs that use them), and from the
-# country split never the publishing token either; until then that token is a repository secret,
-# which a branch's copy can name (Secrets, below). GitHub creates an environment a job names if
+# pushes no image or chart and no tag (the tag job needs the jobs that use them), and never the
+# publishing token either, which the jobs that deploy read as a secret of `publish` (Secrets,
+# below). GitHub creates an environment a job names if
 # it does not exist, with no rule at all, so the gate refuses (red) to publish while `publish` or
 # `harbor` is missing or allows any other branch, before a job enters either.
 #
@@ -144,14 +144,15 @@ name: Publish
 # The one job that pushes to Harbor declares `environment: harbor` and logs in with the
 # environment secrets HARBOR_ROBOT_USER / HARBOR_ROBOT_PASSWORD. GitHub Packages is another
 # organisation's registry, NiordOrg/niord's, which no token of this repository can write: the
-# build and web-publish jobs declare `environment: publish` and deploy with the repository
-# secrets NIORDORG_PACKAGES_USER / NIORDORG_PACKAGES_TOKEN (a classic personal access token of a
-# NiordOrg account with write:packages), handed to the deploy steps as NIORD_PUBLISH_USER /
-# NIORD_PUBLISH_TOKEN, the names setup-java writes into the settings.xml server `github`. That is
-# the owner's choice of 2026-10-22, until the country split: then a NiordOrg machine user's
-# publish-only token becomes a secret of `publish` (NIORD_PUBLISH_TOKEN, its login in the variable
-# NIORD_PUBLISH_USER), its delete-only token one of `retract`, both are rotated at the repository
-# move and yearly, and the repository secrets are deleted (docs/fe-country-split-plan.md §4.11
+# build and web-publish jobs declare `environment: publish` and deploy with its secrets
+# NIORDORG_PACKAGES_USER / NIORDORG_PACKAGES_TOKEN (a classic personal access token of a NiordOrg
+# account with write:packages), handed to the deploy steps as NIORD_PUBLISH_USER /
+# NIORD_PUBLISH_TOKEN, the names setup-java writes into the settings.xml server `github`. The
+# token lives on that environment (main only) and nowhere else, under the names it had as a
+# repository secret, the owner's choice of 2026-10-22. Still to come: a NiordOrg machine user's
+# publish-only token as the secret NIORD_PUBLISH_TOKEN of `publish` (its login in the variable
+# NIORD_PUBLISH_USER), the deploy steps moved to those names, its delete-only token as
+# NIORD_DELETE_TOKEN of `retract`, both rotated yearly (docs/fe-country-split-plan.md §4.11
 # rule 1). `publish` itself, main only, is required already: the gate checks it. Until `retract`
 # exists, retract-version.yml refuses every run. Decided 2026-10-06 (be/pom.xml,
 # github.repository): the Maven registry is repository-scoped, so packages published here, from a

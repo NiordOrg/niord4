@@ -448,9 +448,10 @@ still name the WMS over plain http (N-20).
    The outbound mail's login (F-X76), the chart's half done on 2026-11-18: `smtp.existingSecret`
    names a Secret with the relay's user name and password, passed to the application from that
    Secret, and `smtp.tls` names STARTTLS or implicit TLS; both are inert when unset. The
-   backend's half, the mail session's login and TLS, is separate: an app image without it ignores
-   both values and sends in clear text with no login. Whether production's relay needs them is
-   still the host's answer.
+   backend's half is built too: the mail session takes the login (`niord.smtp.username`, the
+   password from `NIORD_SMTP_PASSWORD`) and TLS (`niord.smtp.tls`: `none`, `starttls`, required
+   once named, or `ssl`, the relay's certificate checked in both), and another value stops the
+   start (`MailConfig`). Whether production's relay needs them is still the host's answer.
 4. The read of the running realms and of the stagings' settings, from the jump server (F-X70, F-X72,
    the realm pattern, N-20), and of the administration host's `Strict-Transport-Security` (F-X96).
    The public site's half of F-X96, done on 2026-11-18: its container sends
