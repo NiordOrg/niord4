@@ -1404,6 +1404,22 @@ was changed in production code.
 - **Exposed by:** the check of NAMING-1's fix, 2026-11-19 (read in the code; no test pins it).
 - **Severity:** Low — a release that late is rare, and the label can be typed.
 
+## PORT-17. An amend re-orders the whole issue, where the data model says surviving members keep their order
+
+- **Location:** `org/niord/core/publication/series/IssuePublishService.java` (`amend` →
+  `resolveFreezeAndWrite`, step 5: `MemberResolutionService.orderFor` and `IssueOrdering.assignSortIndex` over
+  every member) against `fe/docs/publications/DATA-MODEL.md` §6.6 rule 5.
+- **Description:** rule 5 says an amend does not recompute `sortIndex` for surviving members: they keep their
+  relative order, an added member is placed by the recorded sort key and the indices are re-densified. The code
+  sorts the whole post-override union again with the series' current sort, so a surviving member moves whenever
+  its sort key (its area's place in the tree, its number, a date) changed since the release, or the sort itself
+  did (an issue sorted by id is ordered by year and number since 2026-11-19, PORT-9).
+- **Why it looks wrong:** the stored order exists so a re-issued document does not re-order an unchanged list;
+  either the rule or the code is wrong, and nothing says which.
+- **Exposed by:** the check of PORT-9's fix, 2026-11-19 (read in the code).
+- **Severity:** Low — an amend replaces a document by a deliberate act with a reason, and the new document is
+  ordered consistently; only the promise that survivors keep their places is broken.
+
 # Potential errors — security review and fix sweep (2026-09)
 
 Residues of the fixes made after the security review of September 2026, recorded rather than fixed there. The
