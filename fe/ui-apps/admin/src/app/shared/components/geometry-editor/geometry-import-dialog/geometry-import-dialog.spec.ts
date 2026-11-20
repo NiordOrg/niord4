@@ -1,7 +1,7 @@
 import type { Signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { of, Subject } from 'rxjs';
+import { type Observable, of, Subject, throwError } from 'rxjs';
 
 import { GeometryApiService } from '../../../api/geometry-api.service';
 import type { GeometryFeatureCollection } from '../../../models/geometry.model';
@@ -29,7 +29,12 @@ function area(id: number): HierarchicalEntity {
  * Every backend call answers through a Subject the test holds, so the test decides when (and in
  * what order) the answers arrive.
  */
-function setup(opts: { withAreaSource?: boolean } = {}) {
+function setup(
+  opts: {
+    withAreaSource?: boolean;
+    getRoots?: () => Observable<readonly HierarchicalEntity[]>;
+  } = {},
+) {
   const textCalls: { text: string; answer: Subject<GeometryFeatureCollection> }[] = [];
   const utmCalls: { text: string; answer: Subject<GeometryFeatureCollection> }[] = [];
   const areaCalls: { id: number | string; answer: Subject<GeometryFeatureCollection> }[] = [];
@@ -47,7 +52,7 @@ function setup(opts: { withAreaSource?: boolean } = {}) {
     }),
   };
   const areaSource: AreaGeometrySource = {
-    getRoots: () => of([area(1), area(2)]),
+    getRoots: opts.getRoots ?? (() => of([area(1), area(2)])),
     getGeometry: (a) => {
       const answer = new Subject<GeometryFeatureCollection>();
       areaCalls.push({ id: a.id, answer });
@@ -90,6 +95,8 @@ interface Internals {
   onUtmInput: (text: string) => void;
   onAreaSelected: (a: HierarchicalEntity) => void;
   confirm: () => void;
+  areaRootsFailed: Signal<boolean>;
+  areaPickFailed: Signal<boolean>;
   importDisabled: Signal<boolean>;
   featureCollection: Signal<GeometryFeatureCollection>;
 }
@@ -330,11 +337,61 @@ describe('GeometryImportDialog', () => {
 
       expect(lonOf(d.featureCollection())).toBeNull();
       expect(d.importDisabled()).toBe(true);
+      expect(d.areaPickFailed()).toBe(true);
 
       d.onAreaSelected(area(1));
+      expect(d.areaPickFailed()).toBe(false);
       answer(areaCalls[2], fcAt(1));
       d.confirm();
       expect(imported.map(lonOf)).toEqual([1]);
+    });
+
+    it('a failed read of the picked area says so, and Retry reads that area again', () => {
+      const { fixture, comp, areaCalls, imported } = setup({ withAreaSource: true });
+      comp.visible.set(true);
+      fixture.detectChanges();
+      const d = internals(comp);
+
+      d.onAreaSelected(area(2));
+      areaCalls[0].answer.error(new Error('503'));
+      fixture.detectChanges();
+      const banner = document.querySelector('[data-testid="geometry-import-area-pick-error"]');
+      expect(banner?.textContent).toContain('common.fetchError');
+
+      banner!.querySelector<HTMLButtonElement>('button')!.click();
+      fixture.detectChanges();
+      expect(areaCalls.map((c) => c.id)).toEqual([2, 2]);
+      expect(document.querySelector('[data-testid="geometry-import-area-pick-error"]')).toBeNull();
+      answer(areaCalls[1], fcAt(2));
+      d.confirm();
+      expect(imported.map(lonOf)).toEqual([2]);
+    });
+
+    it('a failed read of the area tree says so in its place, and Retry reads it again', () => {
+      let reads = 0;
+      const getRoots = vi.fn(() =>
+        reads++ === 0
+          ? throwError(() => new Error('503'))
+          : of<readonly HierarchicalEntity[]>([area(1), area(2)]),
+      );
+      const { fixture, comp } = setup({ withAreaSource: true, getRoots });
+      comp.visible.set(true);
+      fixture.detectChanges();
+      const d = internals(comp);
+      expect(d.areaRootsFailed()).toBe(true);
+      const banner = document.querySelector('[data-testid="geometry-import-area-roots-error"]');
+      expect(banner?.textContent).toContain('common.fetchError');
+      expect(document.querySelector('.dialog-pane app-entity-tree')).toBeNull();
+
+      banner!.querySelector<HTMLButtonElement>('button')!.click();
+      fixture.detectChanges();
+      expect(getRoots).toHaveBeenCalledTimes(2);
+      expect(d.areaRootsFailed()).toBe(false);
+      expect(document.querySelector('[data-testid="geometry-import-area-roots-error"]')).toBeNull();
+      expect(document.querySelector('.dialog-pane app-entity-tree')).not.toBeNull();
+
+      comp.visible.set(false);
+      fixture.detectChanges();
     });
   });
 });
