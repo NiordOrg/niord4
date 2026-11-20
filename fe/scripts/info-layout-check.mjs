@@ -1059,7 +1059,9 @@ async function linkedDialogFocusProblems(page, message) {
   await settle(page);
   await page.keyboard.press('Escape');
   await page.waitForFunction(
-    () => location.pathname === '/messages/details' && !document.querySelector('.dialog-panel'),
+    () =>
+      document.location.pathname === '/messages/details' &&
+      !document.querySelector('.dialog-panel'),
   );
   await settle(page);
   await settle(page);
