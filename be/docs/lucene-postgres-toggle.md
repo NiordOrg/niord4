@@ -105,9 +105,14 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   the window once. A missed message that throws while it is indexed is logged and tried again by the next pass,
   without holding back the messages after the marker. A message after the marker that throws while the Lucene pass
   indexes it is logged as an ERROR with its id and skipped: the marker moves past it, the messages after it are
-  indexed, and it is indexed again when it is saved again (LUCENE-5, fixed 2026-11-19). A skipped message does not
-  hold the index's refill open: the pass commits, and `allMessagesIndexed()` is set as without it, so only the log
-  tells of it. The re-index of the admin page runs the same pass. A transaction that takes longer than five minutes from
+  indexed, and it is indexed again when it is saved again (LUCENE-5, fixed 2026-11-19). A message whose document
+  cannot be built keeps the document an earlier pass gave it, if any; one that Lucene refuses when it is added (a
+  term too long, for example) has none until then, since its earlier document is deleted first. A skipped message
+  does not hold the index's refill open: the pass commits, and `allMessagesIndexed()` is set as without it, so only
+  the log tells of it. A failure of the database while a message is read (a dropped connection, a pool timeout, an
+  SQL error after which the transaction refuses every later statement) is not skipped: it would fail every later
+  message of the batch too, so the pass fails as a whole, the marker stays, and the next pass tries the same
+  messages again. The re-index of the admin page runs the same pass. A transaction that takes longer than five minutes from
   writing a message to its commit is still missed.
 - `disableLucene` therefore only routes which index a free-text **search** reads. Both indexes are always
   populated, so the two can be compared at any time and the switch is effectively instant.

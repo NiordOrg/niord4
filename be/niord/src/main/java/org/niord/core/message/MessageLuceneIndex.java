@@ -22,10 +22,13 @@ import static org.niord.core.settings.Setting.Type.Boolean;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -80,6 +83,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.util.concurrent.CompletableFuture;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
+import jakarta.persistence.PersistenceException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -611,7 +616,9 @@ public class MessageLuceneIndex extends BaseService {
      * The marker moves only with the messages after it, never back. A message after the marker that cannot be
      * indexed is logged as an ERROR with its id and skipped: the marker moves past it, and it is indexed when it is
      * saved again (LUCENE-5). A message of the window that cannot be indexed is logged and left for the next pass.
-     * Neither changes what the pass does with the other messages.
+     * Neither changes what the pass does with the other messages. A failure of the database while a message after
+     * the marker is read ({@link #isDatabaseFault}) is not skipped: the pass fails, nothing is committed, and the
+     * next pass reads the same messages again.
      *
      * @param maxIndexCount max number of messages to index at a time, after the marker and in the window each
      * @return the number of updates
@@ -642,10 +649,14 @@ public class MessageLuceneIndex extends BaseService {
             writer = getNewWriter();
 
             // Update the index with the changes, each message on its own: one that fails is logged with its id and
-            // skipped, and the marker moves past it, so it does not hold back the messages after it (LUCENE-5). It
-            // keeps the document an earlier pass gave it, if any, and is indexed again when it is saved again, which
-            // gives it a later updated time. It is remembered with the indexed ones below, so the window behind the
-            // marker does not try it again every minute. The re-index (recreateIndex) runs this same pass
+            // skipped, and the marker moves past it, so it does not hold back the messages after it (LUCENE-5). One
+            // whose document cannot be built keeps the document an earlier pass gave it, if any; one that Lucene
+            // refuses when it is added has none, since its earlier document is deleted first. Either is indexed
+            // again when it is saved again, which gives it a later updated time. It is remembered with the indexed
+            // ones below, so the window behind the marker does not try it again every minute. A failure of the
+            // database or of the writer is not the message's fault and fails the pass as a whole (see
+            // isDatabaseFault): the marker stays, and the next pass tries the batch again. The re-index
+            // (recreateIndex) runs this same pass
             List<Message> handled = new ArrayList<>(updatedMessages);
             int skipped = 0;
             for (Message message : updatedMessages) {
@@ -655,6 +666,10 @@ public class MessageLuceneIndex extends BaseService {
                     // The writer is gone (a disk failure): no later message can be indexed, the pass fails as a whole
                     throw ex;
                 } catch (RuntimeException ex) {
+                    if (isDatabaseFault(ex)) {
+                        // Every later message of the batch would fail the same way and be skipped for good
+                        throw ex;
+                    }
                     skipped++;
                     log.error("Error indexing message " + message.getId() + ", skipped until it is saved again: "
                             + ex.getMessage(), ex);
@@ -711,6 +726,29 @@ public class MessageLuceneIndex extends BaseService {
         } finally {
             closeWriter(writer);
         }
+    }
+
+    /**
+     * Whether a failure while a message was indexed came from the database rather than from the message: a
+     * {@link PersistenceException} (Hibernate's exceptions among them, such as a lazy relation that cannot be
+     * loaded), a {@link DataAccessException} or an {@link SQLException}, anywhere in the cause chain. The pass reads
+     * each message's relations lazily, in its one transaction, so a dropped connection, a pool timeout or an SQL
+     * error after which PostgreSQL refuses every later statement of the transaction would fail every later message
+     * of the batch too. Such a failure is not skipped like a message that cannot be indexed (LUCENE-5): the pass
+     * fails as before, and the next pass tries the same messages again.
+     *
+     * @param ex the failure
+     * @return whether it came from the database
+     */
+    static boolean isDatabaseFault(Throwable ex) {
+        Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Throwable cause = ex; cause != null && seen.add(cause); cause = cause.getCause()) {
+            if (cause instanceof PersistenceException || cause instanceof DataAccessException
+                    || cause instanceof SQLException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

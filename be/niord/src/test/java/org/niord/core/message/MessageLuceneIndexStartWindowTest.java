@@ -15,19 +15,29 @@
  */
 package org.niord.core.message;
 
+import jakarta.persistence.PersistenceException;
 import org.apache.lucene.store.AlreadyClosedException;
+import org.hibernate.exception.JDBCConnectionException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.niord.core.NiordApp;
 import org.niord.model.message.Status;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataAccessResourceFailureException;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -145,10 +155,74 @@ class MessageLuceneIndexStartWindowTest {
         assertEquals(List.of(), after.searchIndex("zzunreadable", "en", 10));
     }
 
+    /** Failures of the database, as the lazy reads of a message in the pass's transaction meet them */
+    static Stream<Arguments> databaseFaults() {
+        return Stream.of(
+                Arguments.of("a persistence failure", (Supplier<RuntimeException>) () ->
+                        new PersistenceException("the connection was lost")),
+                Arguments.of("a Hibernate failure of the connection", (Supplier<RuntimeException>) () ->
+                        new JDBCConnectionException("could not load", new SQLException("connection refused"))),
+                Arguments.of("a Spring data-access failure", (Supplier<RuntimeException>) () ->
+                        new DataAccessResourceFailureException("no connection from the pool")),
+                Arguments.of("an SQL failure further down the cause chain", (Supplier<RuntimeException>) () ->
+                        new IllegalStateException("could not read",
+                                new SQLException("current transaction is aborted"))));
+    }
+
+    /**
+     * A failure of the database while the first message is read is not that message's fault, and is not skipped as
+     * one that cannot be indexed (LUCENE-5): in the pass's one transaction, every later message would fail the same
+     * way, be skipped for good, and the refill be taken for complete. The pass fails instead, nothing is committed,
+     * the marker stays, and the index is still not complete; once the database answers again, the next pass indexes
+     * every message of the batch.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("databaseFaults")
+    void aDatabaseFailureFailsThePassAndTheNextPassIndexesTheBatch(String what, Supplier<RuntimeException> fault)
+            throws Exception {
+        Path folder = tmp.resolve("message-index");
+        AtomicBoolean databaseDown = new AtomicBoolean(true);
+        Message first = new Message() {
+            @Override
+            public MessageSeries getMessageSeries() {
+                if (databaseDown.get()) {
+                    throw fault.get();
+                }
+                return super.getMessageSeries();
+            }
+        };
+        first.setId(25);
+        first.setStatus(Status.PUBLISHED);
+        first.setMessageSeries(new MessageSeries("lucene-start-window"));
+        first.setUpdated(new Date(System.currentTimeMillis() - 1000));
+        first.createDesc("en").setTitle("Wreck zzdbfirst");
+        Message second = message(26, "zzdbsecond");
+        MessageLuceneIndex after = restarted(folder, List.of(first, second));
+
+        assertEquals(0, after.updateLuceneIndex(MessageLuceneIndex.LUCENE_MAX_INDEX_COUNT), "the pass fails");
+
+        assertFalse(after.allMessagesIndexed(), "the index is still not complete");
+        assertEquals(MessageLuceneIndex.Marker.NONE, after.getMarker(), "the marker does not move");
+        assertEquals(List.of(), after.searchIndex("zzdbsecond", "en", 10), "nothing of the batch is committed");
+
+        databaseDown.set(false);
+        assertEquals(2, after.updateLuceneIndex(MessageLuceneIndex.LUCENE_MAX_INDEX_COUNT),
+                "the next pass indexes the whole batch");
+        assertTrue(after.allMessagesIndexed());
+        assertEquals(List.of(25L), after.searchIndex("zzdbfirst", "en", 10));
+        assertEquals(List.of(26L), after.searchIndex("zzdbsecond", "en", 10));
+        assertEquals(26, after.getMarker().messageId(), "the marker moves to the last message");
+    }
+
     /** The restarted application: a new instance on the folder, started, whose deferred pass reaches a mock */
-    @SuppressWarnings("unchecked")
     private MessageLuceneIndex restarted(Path folder, Message message) {
-        MessageLuceneIndex after = index(folder, message);
+        return restarted(folder, List.of(message));
+    }
+
+    /** The restarted application, whose message lookup finds the given messages */
+    @SuppressWarnings("unchecked")
+    private MessageLuceneIndex restarted(Path folder, List<Message> messages) {
+        MessageLuceneIndex after = index(folder, messages);
         ObjectProvider<MessageLuceneIndex> self = mock(ObjectProvider.class);
         when(self.getObject()).thenReturn(mock(MessageLuceneIndex.class));
         after.self = self;
@@ -158,8 +232,13 @@ class MessageLuceneIndexStartWindowTest {
 
     /** An instance on the folder whose message lookup finds the given message, in English only */
     private MessageLuceneIndex index(Path folder, Message message) {
+        return index(folder, List.of(message));
+    }
+
+    /** An instance on the folder whose message lookup finds the given messages, in English only */
+    private MessageLuceneIndex index(Path folder, List<Message> messages) {
         MessageQueryService messageQueryService = mock(MessageQueryService.class);
-        when(messageQueryService.findUpdatedMessagesAfter(any(), anyInt(), anyInt())).thenReturn(List.of(message));
+        when(messageQueryService.findUpdatedMessagesAfter(any(), anyInt(), anyInt())).thenReturn(messages);
         NiordApp app = mock(NiordApp.class);
         when(app.getLanguages()).thenReturn(new String[] { "en" });
         when(app.getLanguage(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
