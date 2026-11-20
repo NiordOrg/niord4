@@ -276,12 +276,13 @@ class MailDeliveryITTest extends ITTest {
     /**
      * MAIL14, the mail as sent. A staff member whose login has no e-mail address is stored as the mail's sender by
      * the bare name. The mail is sent and marked SENT, and since the sender gives no Reply-To, it reaches the wire
-     * with the first TO recipient as its Reply-To, as a mailing-list mail does. FAILS on the code that parsed the
-     * sender strictly as the Reply-To: the name of two words was refused, the attempt was recorded as an error and
-     * nothing reached the wire.
+     * with the deployment's sender address as its Reply-To, the address its From comes from (the owner decided on
+     * 2026-11-20), not its recipient, which a mailing-list mail gets. FAILS on the code that parsed the sender
+     * strictly as the Reply-To (the name of two words was refused, the attempt was recorded as an error and nothing
+     * reached the wire), and on the code that gave such a mail its first TO recipient as its Reply-To.
      */
     @Test
-    void sendScheduledMailFromASenderWithoutAnAddressIsDeliveredWithTheRecipientAsReplyTo() {
+    void sendScheduledMailFromASenderWithoutAnAddressIsDeliveredWithTheDeploymentsSenderAsReplyTo() {
         String subject = unique("no-sender-address");
 
         Integer id = Tx.requiringNew().call(() -> {
@@ -312,8 +313,10 @@ class MailDeliveryITTest extends ITTest {
         assertTrue(m.toAddresses().contains("no-sender-address@example.com"),
                 "the mail's recipient must reach the wire, was " + m.toAddresses());
         assertNotNull(m.header("Reply-To"), "the Mail Queue sets a Reply-To when the sender gives none");
-        assertTrue(m.header("Reply-To").contains("no-sender-address@example.com"),
-                "the Reply-To is the first TO recipient, was " + m.header("Reply-To"));
+        assertTrue(m.header("Reply-To").contains(DEFAULT_SENDER),
+                "the Reply-To is the deployment's sender address, was " + m.header("Reply-To"));
+        assertFalse(m.header("Reply-To").contains("no-sender-address@example.com"),
+                "the Reply-To is not the recipient, was " + m.header("Reply-To"));
         assertFalse(m.header("Reply-To").contains("Editor"),
                 "the sender's bare name is no part of the Reply-To, was " + m.header("Reply-To"));
     }

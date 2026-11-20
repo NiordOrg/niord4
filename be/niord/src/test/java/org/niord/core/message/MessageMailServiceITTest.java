@@ -228,7 +228,8 @@ class MessageMailServiceITTest extends ITTest {
     /**
      * A staff member whose login has no e-mail address sends a mail: the stored sender is the bare name, which the
      * sender's own list of mails matches on, and the mail made from it to be sent goes to its recipient with no
-     * Reply-To from the sender (the Mail Queue then sets the first recipient as the Reply-To: MailDeliveryITTest).
+     * Reply-To from the sender (the Mail Queue then sets the deployment's sender address as the Reply-To:
+     * MailDeliveryITTest).
      * FAILS on the code that parsed the sender strictly as the Reply-To: the name of two words was refused, so the
      * mail could not be made and ended in Error after its retries, and nobody got it.
      */

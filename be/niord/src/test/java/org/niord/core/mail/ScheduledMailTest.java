@@ -397,9 +397,9 @@ public class ScheduledMailTest {
     /**
      * toMail: the sender of a user without an e-mail address is the bare name. The mail is made with no Reply-To from
      * the sender, for a name of two words as for one of one word, and goes to its recipient (the Mail Queue then sets
-     * the first recipient as the Reply-To: MailDeliveryITTest). FAILS on the code that parsed every
-     * sender strictly as the Reply-To: a name of two words was refused, so the mail could not be made at all and
-     * ended in Error after its retries, and a name of one word became a Reply-To that is no address.
+     * the deployment's sender address as the Reply-To: MailServiceReplyToTest, MailDeliveryITTest). FAILS on the code
+     * that parsed every sender strictly as the Reply-To: a name of two words was refused, so the mail could not be
+     * made at all and ended in Error after its retries, and a name of one word became a Reply-To that is no address.
      */
     @Test
     public void toMailWithASenderWithoutAnAddressHasNoReplyTo() throws Exception {
