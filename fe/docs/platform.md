@@ -667,8 +667,9 @@ runner minutes for a minute or so less of waiting. Run a shard locally with
 Playwright is deliberately excluded: it needs a live backend and a real identity provider
 ([testing.md](./testing.md)).
 
-`npm ci` relies on the relaxed peer resolution configured in `.npmrc` (the ESLint TypeScript plugin
-has not yet widened its peer range to the TypeScript version in use). Drop that file once it does.
+`npm ci` relies on the relaxed peer resolution configured in `.npmrc`: the `@tiptap` packages are
+at two versions, whose peer ranges strict resolution refuses (the file says which). Drop that file
+once they are at one version.
 
 ### Dev servers: cross-origin or proxied
 

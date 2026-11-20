@@ -278,7 +278,7 @@ describe('country dependencies: the check', () => {
       check(peers({ '@angular/core': '^21.0.0' })).errors,
       "node_modules/ngx-harbour needs the peer @angular/core ^21.0.0, and the merged tree has 22.2.2, the base product's",
     );
-    // typescript-eslint's range against the base product's TypeScript 6 (fe/.npmrc).
+    // typescript-eslint 8.56's range against the base product's TypeScript 6.
     assertNamed(
       check(peers({ typescript: '>=4.8.4 <6.0.0' })).errors,
       'needs the peer typescript >=4.8.4 <6.0.0, and the merged tree has 6.0.3',

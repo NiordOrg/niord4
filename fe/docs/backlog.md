@@ -856,7 +856,8 @@ Background: [`testing.md`](testing.md).
 - No exhaustive-switch guard exists anywhere, so adding a member to a literal union does not break any build.
 - `.npmrc` still carries `legacy-peer-deps=true` because the `@tiptap` packages are at two versions:
   `package.json` asks for `@tiptap/core` ^3.30.5 and the others ^3.27.1, and the lock holds `@tiptap/core` 3.30.5,
-  whose peer is `@tiptap/pm` 3.30.5, beside 3.27.1 for the rest, whose extensions want `@tiptap/pm` 3.27.1. Strict
+  whose peer is `@tiptap/pm` 3.30.5, beside 3.27.1 for the rest, whose extensions want `@tiptap/pm` 3.27.1 and
+  `@tiptap/core` 3.27.1. Strict
   peer resolution refuses that tree. typescript-eslint, the file's first reason, accepts TypeScript 6.0 since
   8.73. Move the `@tiptap` packages to one version and delete the file: with them aligned,
   `npm install --legacy-peer-deps=false` resolves the tree (tried on a copy, 2026-11-20).

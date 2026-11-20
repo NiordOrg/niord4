@@ -199,7 +199,7 @@ describe('semver', () => {
     }
   });
 
-  it("rejects TypeScript 6 against typescript-eslint's peer range (fe/.npmrc)", () => {
+  it("rejects TypeScript 6 against typescript-eslint 8.56's peer range", () => {
     const range = '>=4.8.4 <6.0.0';
     assert.equal(satisfies('6.0.3', range), false);
     assert.equal(satisfies('6.0.0-beta', range), false);
