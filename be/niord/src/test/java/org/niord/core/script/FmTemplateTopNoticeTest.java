@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The line {@link FmTemplateService#withTopNotice(String, String)} puts at the top of a document, whichever template
- * made it: right after the opening body tag, escaped, and nothing at all for a blank text.
+ * made it: right after the opening body tag (one inside a comment, a script or a style aside), else after the opening
+ * html tag, else first; escaped, and nothing at all for a blank text.
  */
 class FmTemplateTopNoticeTest {
 
@@ -44,6 +45,29 @@ class FmTemplateTopNoticeTest {
 
         assertTrue(result.startsWith("<p class=\"top-notice\""), result);
         assertTrue(result.endsWith("Messages may be missing.</p><div>Report</div>"), result);
+    }
+
+    @Test
+    void aDocumentWithoutABodyTagGetsTheLineAfterItsHtmlTag() {
+        String html = "<?xml version=\"1.0\"?>\n<!DOCTYPE html>\n<html lang=\"en\"><div>Report</div></html>";
+
+        String result = FmTemplateService.withTopNotice(html, "Messages may be missing.");
+
+        assertTrue(result.startsWith("<?xml version=\"1.0\"?>\n<!DOCTYPE html>\n<html lang=\"en\"><p class=\"top-notice\""),
+                result);
+        assertTrue(result.endsWith("Messages may be missing.</p><div>Report</div></html>"), result);
+    }
+
+    @Test
+    void aBodyTagInsideACommentAScriptOrAStyleDoesNotCount() {
+        String html = "<html><head><!-- the <body> follows --><script>var s = '<body>';</script>"
+                + "<style>/* <body> */</style></head><body><h1>List</h1></body></html>";
+
+        String result = FmTemplateService.withTopNotice(html, "Messages may be missing.");
+
+        assertTrue(result.contains("</head><body><p class=\"top-notice\""), result);
+        assertTrue(result.contains(">Messages may be missing.</p><h1>List</h1>"), result);
+        assertEquals(1, result.split("top-notice", -1).length - 1, "one line: " + result);
     }
 
     @Test

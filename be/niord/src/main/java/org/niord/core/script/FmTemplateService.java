@@ -215,15 +215,21 @@ public class FmTemplateService extends BaseService {
         return cfg;
     }
 
-    /** The opening tag of an HTML document's body */
-    private static final Pattern BODY_START = Pattern.compile("<body\\b[^>]*>", Pattern.CASE_INSENSITIVE);
+    /**
+     * The opening tag of an HTML document's body (group 1) or of the document itself (group 2). A comment, a script
+     * or a style is matched as a whole first, with neither group, so a tag written inside one is passed over.
+     */
+    private static final Pattern DOCUMENT_START = Pattern.compile(
+            "<!--.*?-->|<script\\b.*?</script\\s*>|<style\\b.*?</style\\s*>|(<body\\b[^>]*>)|(<html\\b[^>]*>)",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
     /**
-     * Returns the HTML with a line of text at the top of the document: right after the opening {@code <body>} tag, or
-     * before everything when there is none. The line is made here and not by a template, because the template a
-     * deployment renders is its database row, which a change in the repository never reaches: so every document gets
-     * it, whichever template it was made from (the bootstrap's, an imported or edited row, a country's). The text is
-     * escaped.
+     * Returns the HTML with a line of text at the top of the document: right after the opening {@code <body>} tag;
+     * when there is none, right after the opening {@code <html>} tag; when there is neither, before everything. A
+     * tag inside a comment, a script or a style does not count. The line is made here and not by a template, because
+     * the template a deployment renders is its database row, which a change in the repository never reaches: so
+     * every document gets it, whichever template it was made from (the bootstrap's, an imported or edited row, a
+     * country's). The text is escaped.
      *
      * @param html   the document
      * @param notice the text of the line; blank leaves the document as it is
@@ -235,10 +241,18 @@ public class FmTemplateService extends BaseService {
         }
         String line = "<p class=\"top-notice\" style=\"border: 1px solid #a00; color: #a00; padding: 4px 8px;"
                 + " margin: 0 0 8px 0\">" + StringEscapeUtils.escapeHtml4(notice) + "</p>";
-        Matcher body = BODY_START.matcher(html);
-        return body.find()
-                ? html.substring(0, body.end()) + line + html.substring(body.end())
-                : line + html;
+        int at = 0;
+        Matcher start = DOCUMENT_START.matcher(html);
+        while (start.find()) {
+            if (start.group(1) != null) {
+                at = start.end();
+                break;
+            }
+            if (start.group(2) != null && at == 0) {
+                at = start.end();
+            }
+        }
+        return html.substring(0, at) + line + html.substring(at);
     }
 
     /** Returns the base URI used to access this application */
