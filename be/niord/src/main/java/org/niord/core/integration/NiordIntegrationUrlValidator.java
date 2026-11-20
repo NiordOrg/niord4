@@ -17,14 +17,23 @@
 package org.niord.core.integration;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.ProtocolException;
+import org.apache.http.client.RedirectStrategy;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.conn.DnsResolver;
+import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.impl.conn.SystemDefaultDnsResolver;
+import org.apache.http.protocol.HttpContext;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.regex.Pattern;
 
 /**
  * Validates the URL of a Niord integration point, so that the message importer cannot be pointed at
@@ -36,7 +45,8 @@ import java.net.UnknownHostException;
  * lives in the {@link #dnsResolver(boolean)} handed to the HTTP client: the addresses it approves are
  * the very ones the client connects to, so there is no window between check and connect (DNS
  * rebinding), no disagreement between how the check and the connect read an address literal, and any
- * redirect the client follows is checked exactly like the original request.
+ * redirect the client follows is checked exactly like the original request. The client follows no redirect from
+ * https to http ({@link #redirectStrategy()}).
  */
 @SuppressWarnings("unused")
 public class NiordIntegrationUrlValidator {
@@ -63,24 +73,74 @@ public class NiordIntegrationUrlValidator {
         try {
             uri = new URI(StringUtils.trimToEmpty(url));
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Invalid Niord integration URL: " + url);
+            throw new IllegalArgumentException("Invalid Niord integration URL: " + withoutUserInfo(url));
         }
 
+        // First, and without the URL: the message is returned to the caller and logged by RestExceptionStatusAdvice,
+        // and a URL with user info carries a credential, whatever else is wrong with it
+        if (uri.getRawUserInfo() != null) {
+            throw new IllegalArgumentException("Niord integration URL must not contain user info");
+        }
         if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
             throw new IllegalArgumentException("Niord integration URL must be http or https: " + url);
         }
-        if (uri.getUserInfo() != null) {
-            // Deliberately does NOT echo the URL: it is the one rejection whose URL carries a credential,
-            // and the message is returned to the caller and logged by RestExceptionStatusAdvice.
-            throw new IllegalArgumentException("Niord integration URL must not contain user info");
-        }
         if (StringUtils.isBlank(uri.getHost())) {
-            throw new IllegalArgumentException("Niord integration URL must contain a valid host name: " + url);
+            throw new IllegalArgumentException("Niord integration URL must contain a valid host name: "
+                    + withoutUserInfo(url));
         }
         if (uri.getRawQuery() != null || uri.getRawFragment() != null) {
             throw new IllegalArgumentException(
                     "Niord integration URL must not contain a query or fragment: " + url);
         }
+    }
+
+    /** User info before a host ({@code user:password@}) as it stands in a URL */
+    private static final Pattern USER_INFO = Pattern.compile("(?<=//)[^/?#]*@");
+
+    /**
+     * The URL without the user info in front of its host, for a message that names a URL the parser could not read
+     * (which says nothing of its user info) or that has no host (where a {@code user:password@} may stand)
+     */
+    static String withoutUserInfo(String url) {
+        return url == null ? null : USER_INFO.matcher(url).replaceFirst("");
+    }
+
+    /**
+     * Returns the redirect strategy used when fetching messages: the default one (a GET follows 301, 302, 303 and 307),
+     * except that a redirect from https to another scheme is refused, so a fetch that starts on TLS never ends
+     * without it. A redirect from http to https is followed, as a server that sends its plain address on to TLS
+     * does.
+     *
+     * @return the redirect strategy to use when fetching messages
+     */
+    public static RedirectStrategy redirectStrategy() {
+        return new DefaultRedirectStrategy() {
+            @Override
+            public URI getLocationURI(HttpRequest request, HttpResponse response, HttpContext context)
+                    throws ProtocolException {
+                URI location = super.getLocationURI(request, response, context);
+                if ("https".equalsIgnoreCase(schemeOf(request, context))
+                        && !"https".equalsIgnoreCase(location.getScheme())) {
+                    throw new ProtocolException("Niord integration: a redirect from https to "
+                            + location.getScheme() + " is not followed");
+                }
+                return location;
+            }
+        };
+    }
+
+    /** The scheme of the request being redirected: its own, if its URI is absolute, else its target host's */
+    private static String schemeOf(HttpRequest request, HttpContext context) {
+        try {
+            URI uri = new URI(request.getRequestLine().getUri());
+            if (uri.getScheme() != null) {
+                return uri.getScheme();
+            }
+        } catch (URISyntaxException ignored) {
+            // Read from the target host below
+        }
+        HttpHost target = HttpClientContext.adapt(context).getTargetHost();
+        return target == null ? null : target.getSchemeName();
     }
 
     /**

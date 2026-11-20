@@ -84,7 +84,8 @@ public class NiordIntegrationRestService {
             consumes = "application/json;charset=UTF-8",
             produces = "application/json;charset=UTF-8")
     public NiordIntegrationVo createNiordIntegration(@RequestBody NiordIntegrationVo integration) throws Exception {
-        log.info("Creating Niord integration point " + integration.getUrl());
+        // Not the address: it is checked by the service, which logs it once it has passed (a credential is refused)
+        log.info("Creating Niord integration point");
         return niordIntegrationService
                 .createNiordIntegration(new NiordIntegration(integration))
                 .toVo();
