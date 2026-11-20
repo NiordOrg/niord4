@@ -308,8 +308,13 @@ public final class IssueNaming {
      * token after it is not part of the weeks. So "Uge ${week} og ${weekTo}, ${year}" gives
      * "${week} og ${weekTo}", "Uge ${week}, ${year}" gives "${week}", and "Uge ${week}, ${year} (${weekTo})" gives
      * "${week}" too, where taking every week token would print the year inside the weeks. Within the stretch the
-     * tokens may stand in any order and any one may stand twice: "${weekTo} back to ${week}" and
-     * "${week} (${week-2-digits})" are taken whole.
+     * tokens may stand in any order and any one may stand twice: "${weekTo} back to ${week}" is taken as written.
+     *
+     * Text before the first week token and after the last is not part of the weeks, with one exception: a bracket,
+     * round or square, that the stretch opens and the pattern's text closes after it (before any further token) is
+     * taken up to its closing bracket, and one the stretch closes that the text before it opens is taken from its
+     * opening bracket. So "Week ${week} (${week-2-digits}) ${year}" gives "${week} (${week-2-digits})", which prints
+     * "36 (36)", and never the half-open "36 (36". A bracket the pattern leaves open is left as it is.
      */
     public static String weekSpanOf(String pattern) {
         if (pattern == null) {
@@ -318,6 +323,8 @@ public final class IssueNaming {
         Matcher m = TOKEN.matcher(pattern);
         int start = -1;
         int end = -1;
+        int before = 0;
+        int after = pattern.length();
         while (m.find()) {
             if (WEEK_TOKENS.contains(m.group(1))) {
                 if (start < 0) {
@@ -325,10 +332,63 @@ public final class IssueNaming {
                 }
                 end = m.end();
             } else if (start >= 0) {
+                after = m.start();
                 break;
+            } else {
+                before = m.end();
             }
         }
-        return start < 0 ? null : pattern.substring(start, end);
+        if (start < 0) {
+            return null;
+        }
+        for (char[] pair : BRACKETS) {
+            int open = 0;
+            int unopened = 0;
+            for (int i = start; i < end; i++) {
+                char c = pattern.charAt(i);
+                if (c == pair[0]) {
+                    open++;
+                } else if (c == pair[1]) {
+                    if (open > 0) {
+                        open--;
+                    } else {
+                        unopened++;
+                    }
+                }
+            }
+            end = closedAfter(pattern, end, after, pair, open);
+            start = openedBefore(pattern, start, before, pair, unopened);
+        }
+        return pattern.substring(start, end);
+    }
+
+    /** The brackets {@link #weekSpanOf} keeps whole, each as its opening and its closing character. */
+    private static final char[][] BRACKETS = {{'(', ')'}, {'[', ']'}};
+
+    /** The end of the span taken up to where the text after it closes {@code open} brackets, or as it was. */
+    private static int closedAfter(String pattern, int end, int limit, char[] pair, int open) {
+        for (int i = end; open > 0 && i < limit; i++) {
+            char c = pattern.charAt(i);
+            if (c == pair[0]) {
+                open++;
+            } else if (c == pair[1] && --open == 0) {
+                return i + 1;
+            }
+        }
+        return end;
+    }
+
+    /** The start of the span taken back to where the text before it opens {@code unopened} brackets, or as it was. */
+    private static int openedBefore(String pattern, int start, int limit, char[] pair, int unopened) {
+        for (int i = start - 1; unopened > 0 && i >= limit; i--) {
+            char c = pattern.charAt(i);
+            if (c == pair[1]) {
+                unopened++;
+            } else if (c == pair[0] && --unopened == 0) {
+                return i;
+            }
+        }
+        return start;
     }
 
     /**

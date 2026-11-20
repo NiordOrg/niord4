@@ -505,15 +505,40 @@ public class IssueNamingTest {
         assertEquals("${week} og ${weekTo}", IssueNaming.weekSpanOf(PAIR_IN_WORDS));
         assertEquals("${week-2-digits}+${weekTo-2-digits}",
                 IssueNaming.weekSpanOf("nm-w${week-2-digits}+${weekTo-2-digits}-${year}.pdf"));
-        // In another order, and with a token twice: taken whole.
+        // In another order, and with a token twice: taken as written.
         assertEquals("${weekTo} back to ${week}", IssueNaming.weekSpanOf("NtM ${weekTo} back to ${week}"));
-        assertEquals("${week} (${week-2-digits}", IssueNaming.weekSpanOf("Week ${week} (${week-2-digits}) ${year}"));
         // A week token after another token is not part of the weeks, which would then print the year.
         assertEquals("${week}", IssueNaming.weekSpanOf("Uge ${week}, ${year} (${weekTo})"));
         // No week at all.
         assertNull(IssueNaming.weekSpanOf("Efterretninger for søfarende ${year}"));
         assertNull(IssueNaming.weekSpanOf("A name without a token"));
         assertNull(IssueNaming.weekSpanOf(null));
+    }
+
+    /**
+     * A bracket the week part opens is taken up to where the pattern closes it, and one it closes from where the
+     * pattern opens it, so the weeks never print a half-open bracket: "Week ${week} (${week-2-digits}) ${year}" is
+     * headed "36 (36)", not "36 (36". Text outside a bracket stays outside, a bracket the pattern leaves open stays
+     * as it is, and a bracket is never taken across another token. FAILS on the stretch that ended at the last week
+     * token.
+     */
+    @Test
+    public void theWeekPartKeepsABracketItOpensOrClosesWhole() {
+        assertEquals("${week} (${week-2-digits})", IssueNaming.weekSpanOf("Week ${week} (${week-2-digits}) ${year}"));
+        assertEquals("36 (36)", IssueNaming.weeksText("Week ${week} (${week-2-digits}) ${year}", 36, null, 2026));
+        assertEquals("${week} [${week-2-digits}]", IssueNaming.weekSpanOf("Week ${week} [${week-2-digits}], ${year}"));
+        assertEquals("(${week}) + ${weekTo}", IssueNaming.weekSpanOf("Week (${week}) + ${weekTo}"),
+                "a bracket opened before the first week token and closed inside the stretch");
+        assertEquals("${week} og ${weekTo}", IssueNaming.weekSpanOf("Uge (${week} og ${weekTo}) ${year}"),
+                "a bracket around the whole stretch is outside it and stays outside");
+        assertEquals("${week} (${weekTo}", IssueNaming.weekSpanOf("Week ${week} (${weekTo} ${year})"),
+                "a bracket is not taken across another token");
+        assertEquals("${week} (${weekTo}", IssueNaming.weekSpanOf("Week ${week} (${weekTo}"),
+                "a bracket the pattern never closes stays open");
+        assertEquals("${week} ((${weekTo}))", IssueNaming.weekSpanOf("Week ${week} ((${weekTo})) ${year}"));
+        // The same characters as the name.
+        String pattern = "Week ${week} (${week-2-digits}) ${year}";
+        assertEquals(nameOf(pattern, 7, null, 2026), "Week " + IssueNaming.weeksText(pattern, 7, null, 2026) + " 2026");
     }
 
     /**
