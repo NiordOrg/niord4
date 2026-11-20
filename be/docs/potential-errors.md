@@ -97,18 +97,6 @@ as bugs.
 - **Exposed by:** `DataFilterTest.allOfFields_emptyVarargsReturnsTrue_documentsBehavior`.
 - **Severity:** Low — no current caller invokes it with an empty list, but it is an easy future trap.
 
-## M4. Lower-severity edges (recorded, mostly by-design)
-
-- **`DateIntervalVo.containsDate(null)` throws `NullPointerException`** when a bound is set (`date.after`/
-  `date.before` on a `null` arg). No null-guard; benign because callers pass a real date. Pinned by
-  `ChartMessageSeriesDateIntervalVoTest.containsDateNullArgumentWithBoundThrows_documentsBehavior`.
-- **`ChartVo.toFullChartNumber()` returns `null`** when `chartNumber` is `null` and `internationalNumber`
-  is also `null` (it returns `chartNumber` verbatim in that branch). Pinned by
-  `…toFullChartNumberWithNullChartNumberReturnsNull_documentsBehavior`.
-- **`DataFilter.forComponent(String)`** has a redundant condition (the `else if (field.startsWith(component + "."))`
-  guard is always true given the negated `if`); no behavioural effect, just dead/confusing logic for a
-  future maintainer/port.
-
 ---
 
 # Potential errors — `core.geojson` package
@@ -421,24 +409,6 @@ _Added while testing the public REST API surface, the Keycloak/domain security i
 `core.db` persistence helpers. Production code was not changed; each item is pinned by a test
 suffixed `_documentsBug` / `_documentsBehavior` where practical._
 
-## API1 — `ApiRestService.toMessageVo` externalizes part links and attachment links inconsistently
-
-- **Location:** `niord/src/main/java/org/niord/web/api/ApiRestService.java:297-303` (parts 297-299, attachments
-  302-303).
-- **Description:** With `externalize=true`, message **parts** are rewritten with
-  `from = concat("/rest/repo/file", repoPath)` (leading slash) and `rewriteRepoPath(from, to)`, while
-  **attachments** are rewritten with `rewriteRepoPath(repoPath, to)` — matching the *raw* `repoPath` with no
-  `/rest/repo/file` prefix — and `to = concat(baseUri, "rest/repo/file", repoPath)` (the middle segment has
-  **no** leading slash). Parts and attachments therefore use different source patterns and different target
-  prefixes.
-- **Why it looks wrong:** The two link families that should produce identically-shaped absolute URLs are
-  rewritten by divergent rules; an attachment link that already contained the `/rest/repo/file/` prefix would
-  not be rewritten the way the equivalent part link is, and vice-versa.
-- **Exposed by:** `ApiRestServiceITTest` (externalize true/false both return 200; the divergence is a
-  code-level inconsistency — a freshly created message has no populated repo links to make the difference
-  observable in JSON, so this is reported from code inspection plus the externalize tests).
-- **Severity:** Low/Medium — wrong/relative URLs for one link family in externalized public output.
-
 ## DB1 — JSON attribute converters silently swallow (de)serialization failures
 
 - **Location:** `niord/src/main/java/org/niord/core/db/JpaJsonAttributeConverter.java` and
@@ -609,18 +579,6 @@ pins the current (surprising) behaviour is named with a `_documentsBehavior` suf
 ---
 
 # Potential errors — `core.message.batch` import writer
-
-## BATCH2. `checkAddMessageToTag` adds an unsaved (null-id) message that may later collide
-
-- **Location:** same method, `AbstractMessageImportWriter.java` line 44.
-- **Description:** when all existing members carry non-null ids, an incoming UNSAVED message (`id == null`)
-  never matches any of them (`Integer.equals(null)` is `false`), so it is always added — even if, once
-  persisted, it would duplicate an existing member.
-- **Why it looks wrong:** the method's contract ("if the message is not already added to the tag, add it") is
-  id-based, but unsaved messages have no id yet, so the de-dup cannot be enforced for them. This is a design
-  smell that surfaces only for batch-imported, not-yet-flushed messages.
-- **Exposed by:** `BatchMessageProcessorUnitTest.writerCheckAddMessageToTag_unsavedIncomingIsAddedWhenMembersHaveIds`
-  (the unsaved message is added, growing the collection to 2). Pinned, not fixed.
 
 ## BATCH3. `AbstractMessageImportWriter.saveMessageTag` `@Transactional` is a no-op on self-invocation
 
@@ -848,45 +806,6 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 - **Severity:** Low. Fix: log the integration's id or host only, and set a redirect strategy that refuses an
   https-to-http hop (which could stop a peer that really redirects to http).
 
-## SECAUD-12 — Open-by-default authorization (systemic) *(now LOW · MOSTLY CLOSED)*
-
-- **Description:** an endpoint with *no* role constraint at any level is permitted for anonymous callers —
-  there is no deny-by-default backstop at the HTTP layer.
-- **Why the HTTP layer cannot simply be closed:** the one-time tickets that authorize non-Ajax downloads travel
-  as a `?ticket=` **query parameter**, invisible to Spring Security. Every ticketed export is `@PermitAll` with
-  the role enforced programmatically inside the handler, and `PublicationRestService.java` 709-715
-  (`generatePublicationReport`) self-calls
-  `/rest/message-reports/report.pdf` the same way. `anyRequest().authenticated()` would 401 all of them before
-  the handler ran.
-- **Closed at build time:** `RestControllerSecurityAnnotationTest` fails the build if any controller
-  handler lacks an explicit annotation. Its classpath scan is **condition-blind**, so a
-  `@ConditionalOn*`/`@Profile`-gated controller cannot slip past it either — `SecomAdminRestService`
-  (17 SYSADMIN handlers) had never been scanned before that change — and since 2026-09 it covers every
-  `@Controller`, finds handlers the way Spring MVC does (inherited and non-public methods included) and reads
-  their annotations with Spring Security's own lookup. `RestHandlerSecurityITTest` checks the handlers the
-  running application actually maps; a framework handler must be on its reviewed list.
-  `NonControllerHttpSurfaceInventoryTest` pins the inventory of every servlet, servlet filter and JAX-RS
-  resource implemented under `org.niord`, together with the mechanism that authorizes it, so a new anonymous
-  request-handling surface fails the build until someone records that decision.
-- **Closed at runtime:** the actuator — the one surface whose anonymous exposure widens by configuration alone
-  (`management.endpoints.web.exposure.include`) — is `denyAll` at the HTTP layer bar the `health` endpoint the
-  k8s probes contract on. Note this is **not** a pure no-op: `EndpointRequest.toAnyEndpoint()` also covers the
-  links index, so an anonymous `GET /rest/actuator` goes from `200` (a discovery document) to `401`.
-  Pinned by `ActuatorEndpointAuthorizationITTest`.
-- **Residual:** the annotation and inventory closures are **test-time**, so they bind this repository's build,
-  not a fork that skips the suite. The guards run on `niord`'s test classpath, so a surface added in
-  `niord-app` or `niord-dk` is covered by none of them. The inventory scan is scoped to `org.niord`, so a
-  *third-party* class mounted by Niord code is invisible to it — concretely the RESTEasy
-  `HttpServlet30Dispatcher` that `SecomConfiguration` registers at `/api/secom/*`. No guard can judge
-  whether a listed surface's own check is *correct*: `WmsProxyServlet`'s `wmsProtected` is a sysadmin-editable
-  setting, so `/wms/*` can be opened to anonymous callers at runtime with no code change and no test failure.
-  And `management.server.port` moves the whole actuator surface onto a child management context with its own
-  filter chain, which `SecurityConfig` does not apply to — the same one-line-YAML bypass the runtime rule
-  otherwise closes. Finally, many `@PermitAll` GET endpoints hand administration configuration to anonymous
-  callers; the security review of 2026-09 accepted that as a low risk (F-X64 in
-  [`security-review-2026-09.md`](../../docs/security-review-2026-09.md)), and closing it means deciding,
-  endpoint by endpoint, which anonymous reads the public site and the administration app's guest mode need.
-
 ## MASSASSIGN-1 — `BaseService.saveEntity()` merges on any client-supplied id *(LOW · OPEN)*
 
 - **Location:** `niord/src/main/java/org/niord/core/service/BaseService.java` (`saveEntity`: `em.merge` when
@@ -957,14 +876,6 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 - **Why it looks wrong:** it is the only test of the Danish NAV-warn date formatting; it should pin the expected
   output strings.
 - **Exposed by:** a review of the two Danish unit tests — neither carried a meaningful assertion.
-
-## DICT1. `DictionaryService` hard-fails startup when the database's default language has no bundle on the class path
-
-- **Location:** `DefaultTexts.read` (`niord/src/main/java/org/niord/core/defaults/DefaultTexts.java`), called from `DictionaryService.init`: when neither layer has a file for a bundle in the default language it throws `IllegalStateException("No default-language text for the '<bundle>' dictionary: neither … nor … is on the class path")`. The language list and the default language still come from the **persisted** `modelLanguages`/`defaultLanguage` settings.
-- **Description:** the default language's text for a bundle may come from the country's texts (`defaults/country/texts/<lang>/`) or from the language pack (`defaults/packs/<lang>/`, for `en` the base product's `defaults/base/texts/en/`); a root-level `<bundle>_<lang>.properties` is no longer read (NG-B). Pointing the English `niord-app` at a database whose default language is `da` (one that `niord-dk` or `niord-gl` has started, since DK's and GL's `defaults/country/settings.json` both set `defaultLanguage` `da` (GL's `main` has one, read on 2026-11-02), or whose `defaultLanguage` row is `da`) stops start-up, because `niord-app` has neither for `da`. The IT fixture alone does not: `niord-base-data.sql` holds no `Setting` row since C4b, so the IT start writes `modelLanguages` `["da","en"]` from the test tree's `niord.json` and `defaultLanguage` `en` from the base product's settings file; a missing `da` file would only warn, and the test tree's stand-in `da` pack (`src/test/resources/defaults/packs/da/`) gives one. A language other than the default one with no file in either layer only warns and contributes no texts.
-- **Why it looks wrong:** a missing translation is degraded content, not an integrity violation, yet a default language without a bundle stops the application. `docs/code-data-config-plan.md` keeps this case fatal (§4.2), so the entry stays open under it too.
-- **Exposed by:** the dev-loop run of 2026-08-20; re-read against the code on 2026-10-20; re-read on 2026-11-02.
-
 
 ## TESTQ5. `SecomProtocolITTest.cancelledDatasetsRequireATemporalExtentOrDataReference` expects an empty database-wide summary
 
@@ -1059,23 +970,6 @@ was changed in production code.
   `LiquibaseBootstrapITTest` now sets the system property in its static bootstrap. **Exposed by:** the first
   CI run of the merged publications port.
 
-## PORT-3. Release endpoint dereferences `stampedAt` without a null guard, after the irreversible half
-
-- **Location:** `niord/src/main/java/org/niord/web/publication/PublicationIssueRestService.java`,
-  `publish` (`out.put("stampedAt", result.stampedAt().getTime())`, line ~1079); the sibling `amend`
-  guards the same value (`== null ? null : …`, line ~1134).
-- **Why it looks wrong:** if `IssuePublishService.PublishResult.stampedAt()` can ever be null, the
-  release returns 500 after the member list is frozen and the documents rendered. Ported verbatim.
-
-## PORT-4. The preview PDF endpoint is gated declaratively, unlike the archive endpoint it mirrors
-
-- **Location:** `PublicationIssueRestService.preview` (`GET /issue/{publicId}/preview/{lang}`,
-  `@RolesAllowed(ADMIN)`) versus the archive endpoint's own javadoc, which explains that a request
-  whose identity comes from a one-time `?ticket=` is refused by a declarative gate and therefore uses
-  `@PermitAll` plus a programmatic `isCallerInRole` check.
-- **Why it looks wrong:** a top-level navigation to the preview carrying a ticket instead of a bearer
-  token gets 401 for exactly the reason the archive endpoint was shaped differently. Unchanged by the port.
-
 ## PORT-5. `WebUtils.getMultipartFiles` keys parts by file name, so two parts with one name collapse
 
 - **Location:** `niord/src/main/java/org/niord/core/util/WebUtils.java` (`getMultipartFiles`,
@@ -1085,22 +979,6 @@ was changed in production code.
 - **Why it looks wrong:** `PublicationIssueRestService.uploadFile`'s `TOO_MANY_FILES` guard tests
   `files.size() > 1`, which cannot fire for two parts posted under the same file name; one document is
   silently dropped instead of refused.
-
-## PORT-6. `ApiRestService.searchPublications` rewrites links on the adapter's value objects in place
-
-- **Location:** `niord/src/main/java/org/niord/web/api/ApiRestService.java` (`searchPublications`,
-  `externalize(p, app.getBaseUri())` inside a `forEach`), reading
-  `org.niord.core.publication.series.PublicationPublicAdapter.listVo(...)`.
-- **Why it looks wrong:** correct only while `listVo` builds fresh objects per call. If the adapter
-  ever caches or shares them, the first `externalize=true` request writes absolute URLs into shared
-  instances and later requests get them too; `externalize()` is idempotent, so the damage is invisible.
-
-## PORT-7. `PublicationRestService.unionWithIssues` mutates the caller's `PublicationSearchParams`
-
-- **Location:** `niord/src/main/java/org/niord/web/PublicationRestService.java` (`unionWithIssues`:
-  `params.maxSize(Integer.MAX_VALUE).page(0)`, then reads `params.getDomain()` from the mutated object).
-- **Why it looks wrong:** safe today because both callers build and discard the object, but any future
-  caller reusing a params instance gets silently wrong paging.
 
 ## PORT-8. `PublicationCategoryService` refuses a duplicate `categoryId` in two shapes
 
@@ -1118,36 +996,6 @@ was changed in production code.
 - **Why it looks wrong:** changing one silently makes the log lie about the budget. The number itself
   was argued from MySQL's shared `hibernate_sequence`, which this schema does not have. On PostgreSQL
   the import has been timed once, on a workstation, well inside the budget, and never on a cluster.
-
-## PORT-11. The local-dev realm grants no Niord roles on the `niord-web` client
-
-- **Location:** `keycloak/niord-realm-local.json` (`niord-web` client); the test realm gives that
-  client the four-role ladder.
-- **Why it looks wrong:** a local front end authenticating through `niord-web` holds no Niord role from
-  the bare token, so `publication-curate` (added to every other client by the port) cannot be exercised
-  through it either without adding the whole ladder to that client.
-
-## PORT-12. Hibernate 7 lock-mode ranking can skip `SELECT ... FOR UPDATE` on rows the transaction already wrote
-
-- **Location:** `org/niord/core/publication/series/IssuePublishService.java` (`em.find(..., LockModeType.PESSIMISTIC_WRITE)`
-  on the series and issue rows at publish/amend) and `StaleVersionGuard.forceIncrement` (which the port already
-  changed from `em.lock(..., PESSIMISTIC_FORCE_INCREMENT)` to dirtying the row's `updated` stamp because the lock
-  request was a no-op on Hibernate 7).
-- **Description:** Hibernate 7 collapsed the `LockMode` ranks; an entity already in `WRITE` state in the persistence
-  context outranks a later `PESSIMISTIC_WRITE` request, so the row-level lock is not taken.
-- **Why it looks wrong:** the publish path reads as if it relies on that lock to serialise two concurrent
-  releases. It does not, for four independent reasons: `IssueWorkMarker.start` claims the issue first in its own
-  transaction (the loser gets `ISSUE_BUSY`); the REST path only reads the issue before `publish`, so its entry is
-  still `READ` and the `FOR UPDATE` is issued; where the row was written in the same transaction the INSERT/UPDATE
-  already holds the PostgreSQL row lock until commit; and `@Version` refuses a stale second writer at flush. The
-  skipped statement is therefore harmless today — but the reading of the code is misleading, and a future caller
-  that writes the row first and then relies on the lock alone would be wrong.
-- **Side effects of the guard change:** `updated` now moves on a public-window change and on a curation (the
-  frontend shows it on the series and issue VOs), where before only `version` moved; and
-  `IssueCurationService`'s own `issue.setUpdated(new Date()); em.merge(issue)` beside the guard call is now
-  redundant (the guard's stamp is strictly later) though it reads as load-bearing.
-- **Exposed by:** the wave-3 integration fixes (StaleVersionGuard); the publish-path analysis is from the final
-  review, verified against the Hibernate 7.2 sources, not reproduced by a test.
 
 ## PORT-13. `IssuePublicWindowService.set()` marks the caller's transaction rollback-only on a refusal
 
@@ -1230,26 +1078,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Description:** in a JVM with more than one application context, every context that starts overwrites the field, so `CdiUtils.getBean` in a script resolves the beans of the context that started last, which reads another database. Every IT suite with a test that starts a context of its own on a container of its own (`BootstrapITTest`-style) has several. DK's first whole run of its C6 failed this way (`DkDgpsTemplateITTest`'s script found no area); DK's and GL's IT fixtures re-point the field at the test's own context (`DkBootstrapTemplates.pointScriptsAt`, `GlBootstrapTemplates.pointScriptsAt`). niord-base's own suite carries the same latent order dependence: `BootstrapITTest`, `BootstrapSameRunITTest` and `LiquibaseBootstrapITTest` start their own contexts beside `ITTest`'s cached one [inferred; no niord-base test has failed this way yet]. A production backend has one context and is not affected.
 - **Why it looks wrong:** a test's outcome depends on which context started last, and a script under test can read and act on another test's data without any error.
 - **Exposed by:** DK's and GL's C6 (`SIFA-DK/niord-dk` and `SIFA-DK/niord-gl`, 2026-10-22). Recorded, not fixed.
-
-## SETTINGS-4. A database set up before 2026-11-04 may still store the former published `pdfEncryptionPassword` default
-
-- **Location:** the `pdfEncryptionPassword` row of a deployment's `Setting` table. The code is fixed: since 2026-11-04
-  (the owner's ruling) the default is empty
-  (`niord/src/main/java/org/niord/core/script/FmTemplateService.java` 67-71, `defaultValue = ""`;
-  `defaults/base/settings-catalog.json` 731-733, `"codeDefault": ""`), and `getPDFEncryptionPassword` (102-107)
-  encrypts only with a non-blank password.
-- **Description:** until that fix the code default was a known sentence, published in the settings catalog. Start-up
-  adds a missing operator setting with its code default and never changes a stored row (`SettingsService.addMissing`),
-  so a database that started a base product version from 4.0.74 (the catalog's `introducedIn`) up to that fix without the row
-  stores that sentence, and a database carried over from the legacy Niord may store it too [inferred; no
-  deployment's row was read]. A deployment that switches `pdfEncryptionEnabled` on there without setting the
-  password encrypts its PDF reports with a value anyone with the old source can read.
-- **Why it looks wrong:** an encryption password that ships as a default protects nothing, and the code fix cannot
-  reach a stored row (a repository change never changes data, `docs/code-data-config-plan.md`).
-- **Exposed by:** the second review of the code, data and configuration work (2026-10-22), reading the settings catalog; the code half fixed
-  on 2026-11-04; narrowed to the stored rows by the cross-check of the error hunt of 2026-11-12 against this file.
-- **Severity:** Low — encryption is off by default. Fix: none in code; at the deploy step a sysadmin sets the
-  password before switching encryption on, and the operators' guide can say so.
 
 ## SETTINGS-5. `mailSender` defaults to a DMA address in the base product
 
