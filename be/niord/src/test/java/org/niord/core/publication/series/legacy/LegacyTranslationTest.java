@@ -256,6 +256,7 @@ public class LegacyTranslationTest {
         params.put("year", "${year}");
         params.put("week", "${week}");
         params.put("Edition", 4);
+        params.put("weeks", "36+37");
         params.put("chartNumber", "${chart}");
         params.put("area", "Kattegat");
         params.put("copies", 250);

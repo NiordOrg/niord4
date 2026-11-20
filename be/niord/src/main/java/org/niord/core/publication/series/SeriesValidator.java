@@ -440,7 +440,7 @@ public final class SeriesValidator {
         }
 
         // S-23. week, year, weekTo and edition -- and the derived yearNumber and
-        // weekNumber beside them -- are INJECTED into every report
+        // weekNumber, and weeks, beside them -- are INJECTED into every report
         // from the issue being rendered. Typing one as a report parameter puts a
         // second, fixed answer beside the derived one, and which of the two the
         // template reads is a question about parameter order rather than about
@@ -623,17 +623,15 @@ public final class SeriesValidator {
      * prevents is a typo rather than an attack, and "Week " reaching a template
      * beside the injected week is the same problem spelled differently.
      *
-     * Six names for four values: beside the four the document PRINTS, the render
-     * also carries the two numbers the numbering derived, for a template that has
-     * to compute from a year rather than print it. Typed here, either of those
-     * would put a fixed number under the name of a derived one.
-     *
-     * The render injects a seventh name, weeks (the issue's weeks as the weekly
-     * reports' heading prints them), made from these. It is not refused here: a
-     * typed weeks is overwritten by the injected one, never printed.
+     * Seven names: beside the four values the document PRINTS, the render also
+     * carries the two numbers the numbering derived, for a template that has to
+     * compute from a year rather than print it, and weeks, the issue's weeks as
+     * its name writes them, which the weekly reports print in their heading. Typed
+     * here, any of them would put a fixed answer under the name of an injected
+     * one, which the render overwrites.
      */
     public static final Set<String> RESERVED_REPORT_PARAMS =
-            Set.of("week", "weekto", "year", "edition", "yearnumber", "weeknumber");
+            Set.of("week", "weekto", "weeks", "year", "edition", "yearnumber", "weeknumber");
 
     /**
      * Whether a stored zone name is one java.time can actually read.

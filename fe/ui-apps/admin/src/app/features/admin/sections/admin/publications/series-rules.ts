@@ -114,15 +114,17 @@ export interface ReportParamRow {
 /**
  * Parameter names the issue supplies, which therefore cannot be typed.
  *
- * Six names, and they carry two different things. `week` (and the week a double
- * issue runs to), `year` and `edition` are what the issue PRINTS: free text,
- * rendered exactly as somebody wrote it, so a week may read "36+37" and a year
- * "Two thousand". `yearNumber` and `weekNumber` are what the numbering DERIVED
- * from the cut-off — the numbers for the one thing a template computes from a
- * year, the volume line of an accumulated report, which a printed label cannot
- * be asked to do arithmetic on. They are absent where the issue has neither.
+ * Seven names, and they carry three different things. `week` (and the week a
+ * double issue runs to), `year` and `edition` are what the issue PRINTS: free
+ * text, rendered exactly as somebody wrote it, so a week may read "36+37" and a
+ * year "Two thousand". `yearNumber` and `weekNumber` are what the numbering
+ * DERIVED from the cut-off — the numbers for the one thing a template computes
+ * from a year, the volume line of an accumulated report, which a printed label
+ * cannot be asked to do arithmetic on. They are absent where the issue has
+ * neither. `weeks` is the issue's weeks as its name writes them, which the weekly
+ * reports print in their heading.
  *
- * All six are injected into the report at render time. A row repeating one of
+ * All seven are injected into the report at render time. A row repeating one of
  * them would be a second source for the same value that can disagree with the
  * first — so the server refuses them, and the form refuses them first, next to
  * the input rather than as a failed save.
@@ -130,6 +132,7 @@ export interface ReportParamRow {
 export const RESERVED_REPORT_PARAM_KEYS: readonly string[] = [
   'week',
   'weekto',
+  'weeks',
   'year',
   'edition',
   'yearnumber',

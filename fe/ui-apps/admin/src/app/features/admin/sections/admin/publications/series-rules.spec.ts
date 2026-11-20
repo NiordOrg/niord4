@@ -500,18 +500,18 @@ describe('the payload', () => {
 /**
  * S-23, pinned key by key.
  *
- * The set is six, not four, and the two halves are different facts: four strings
- * the issue PRINTS and two numbers the numbering DERIVED. All six arrive by
- * injection, so a typed row is a second answer either way — and the list is the
+ * The set is seven, not four, and they are different facts: four strings the
+ * issue PRINTS, two numbers the numbering DERIVED and the weeks as the issue's
+ * name writes them. All seven arrive by injection, so a typed row is a second answer either way — and the list is the
  * server's, so a key going missing here is a save that fails for a reason no
  * field on the screen ever named.
  */
 describe('reserved report parameters', () => {
   it('refuses every key the render injects, and nothing else', () => {
-    for (const key of ['week', 'weekTo', 'year', 'edition', 'yearNumber', 'weekNumber']) {
+    for (const key of ['week', 'weekTo', 'weeks', 'year', 'edition', 'yearNumber', 'weekNumber']) {
       expect(isReservedReportParamKey(key)).toBe(true);
     }
-    for (const key of ['volume', 'issn', 'weeks', 'yearNumbers', '']) {
+    for (const key of ['volume', 'issn', 'weekly', 'yearNumbers', '']) {
       expect(isReservedReportParamKey(key)).toBe(false);
     }
   });
@@ -520,6 +520,7 @@ describe('reserved report parameters', () => {
     expect(isReservedReportParamKey('  WEEKNUMBER ')).toBe(true);
     expect(isReservedReportParamKey('YearNumber')).toBe(true);
     expect(isReservedReportParamKey('Week ')).toBe(true);
+    expect(isReservedReportParamKey(' Weeks')).toBe(true);
   });
 
   it('names the offending rows in the order they appear, as typed', () => {

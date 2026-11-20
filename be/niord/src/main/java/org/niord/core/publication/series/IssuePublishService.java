@@ -1207,8 +1207,9 @@ public class IssuePublishService extends BaseService {
         // under "Uge ${week} og ${weekTo}", "36+37" or "36-38" under the pair form,
         // and the pair form where the pattern writes no week), or the week label
         // whole: what the weekly reports print in their heading and page header, so
-        // a document is headed by the weeks its name says. Put over a series or issue
-        // parameter of the same name, as the four above are.
+        // a document is headed by the weeks its name says. Reserved by S-23 as the
+        // four above are, and put over a parameter of the same name that a row stored
+        // before the rule still holds.
         params.put("weeks", PrintedNumbering.printedWeeks(issue, lang));
         params.put("year", PrintedNumbering.printedYear(issue));
         params.put("edition", issue.getEdition());
