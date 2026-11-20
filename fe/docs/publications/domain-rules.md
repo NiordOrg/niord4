@@ -632,8 +632,8 @@ A series or an issue that stored one of the seven before it was refused is met a
 series is refused (S-23 is a hard rule) until the row is removed, and so is its activation; an issue edit is
 refused only where it adds or changes the key, so a row sent back unchanged passes, and the issue drawer
 neither shows nor sends a reserved key, so its next save drops it; a release reads no rule and puts the
-injected value over the stored one; the series import skips a file row that carries one, and the legacy import
-drops the key.
+injected value over the stored one; the series import skips a file row that carries one, and the import from the
+previous system drops the key.
 
 The series editor **suggests** the parameter names the chosen report declares and the series does not carry
 yet, each as a control that appends an empty row: a hint and never a check, because a template may read a
