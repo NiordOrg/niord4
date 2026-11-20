@@ -944,26 +944,6 @@ was changed in production code.
 - **Why it looks wrong:** one rule, two wire shapes on two methods of the same class. Kept deliberately
   during the port; worth one ruling once the catalogue advice is the only publications error shape.
 
-## PORT-10. Two independent literals carry the legacy import's 1800 s budget
-
-- **Location:** `LegacyImportService.IMPORT_TIMEOUT_SECONDS` (reported in the run's log line only)
-  and `PublicationTxRunner.callWithImportBudget` (`@Transactional(timeout = 1800)`, the one enforced).
-- **Why it looks wrong:** changing one silently makes the log lie about the budget. The number itself
-  was argued from MySQL's shared `hibernate_sequence`, which this schema does not have. On PostgreSQL
-  the import has been timed once, on a workstation, well inside the budget, and never on a cluster.
-
-## PORT-13. `IssuePublicWindowService.set()` marks the caller's transaction rollback-only on a refusal
-
-- **Location:** `org/niord/core/publication/series/IssuePublicWindowService.java` (`set`, and its javadoc).
-- **Description:** the javadoc says the method deliberately does not open its own transaction so a refusal cannot
-  mark the caller rollback-only. In this tree the class extends `BaseService`, whose class-level Spring
-  `@Transactional` advises `set()` as a participating transaction; a `TransitionRefusedException` therefore
-  sets rollback-only (`globalRollbackOnParticipationFailure` defaults to true).
-- **Why it looks wrong:** a caller that catches the refusal and continues writing gets an `UnexpectedRollbackException`
-  at commit instead of its own result. Ported verbatim; the javadoc no longer describes the mechanism. The scheduled
-  publication sweep and the hourly firing run had the same mechanism (the error hunt of 2026-11-12); their fix of
-  2026-11-13 (a transaction of its own per message or per area, `MessageTxRunner`) does not reach this method.
-
 ## RENDER4. `PublicationIssueDesc.fileSize`, `fileHash` and `fileGeneratedAt` are never written
 
 - **Location:** `org/niord/core/publication/series/PublicationIssueDesc.java` (the three fields and their setters); no

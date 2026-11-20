@@ -72,10 +72,13 @@ public class IssuePublicWindowService extends BaseService {
      * Set the period, or refuse to describe one that cannot exist.
      *
      * NOT ITS OWN TRANSACTION, deliberately. It runs inside the caller's, which
-     * is what makes the write and its audit entry one act -- and a refusal here
-     * is about the request rather than about the state, so it must not mark a
-     * caller's transaction for rollback on its way out of a validation that
-     * changed nothing.
+     * is what makes the write and its audit entry one act. It takes part in that
+     * transaction through the class-level {@code @Transactional} of
+     * {@link BaseService}, so a refusal here ({@code TransitionRefusedException})
+     * marks the caller's transaction for rollback on its way out, although the
+     * validation changed nothing: a caller that caught the refusal and went on
+     * writing would fail at its commit. The one caller,
+     * {@code OneOffRestService.setPublicWindow}, lets the refusal end the request.
      *
      * A REAL CHANGE ALSO MOVES THE SERIES' REVISION. The period is stored on the
      * issue and the form that sets it is version-checked against the series, so
