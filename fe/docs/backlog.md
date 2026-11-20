@@ -533,12 +533,6 @@ Background: [`features/editor.md`](features/editor.md).
   officer may take the period start for the day it came out. The full name as the span's title (or wrapping
   instead of cutting), and a word for the date (or the period's two ends, `intervalFrom`/`intervalTo`, which the
   answer carries) close it. Found by the error hunt's live check (2026-11-13); read in the code.
-- **The source view's _Format_ writes an HTML comment beside a block as the word "undefined".** `inlineOf`
-  (`ui-apps/admin/src/app/shared/forms/rich-text-editor/html-format.ts` 61-65) treats every inline node that is
-  not text as an element and takes its `outerHTML`, which a comment does not have, so
-  `<div><!-- c --><p>x</p></div>` (pasted Word HTML can hold such comments) comes out with `undefined` in place
-  of the comment. Writing a comment node as `<!--…-->`, or dropping it, closes it. Met by the error hunt's phase 2
-  fix stage (2026-11-16, cluster P3-11), read in the code; Low.
 - **The date picker's calendar does not take focus when it opens** (WCAG 2.4.3). Enter on a date field opens the
   calendar (`ui-apps/admin/src/app/shared/forms/date-picker/date-picker.ts`, `toggle`) and leaves the focus on the
   field. The calendar is drawn in the overlay container at the end of the page, so Tab reaches its days only after
