@@ -81,16 +81,18 @@ public class NiordIntegrationUrlValidator {
         if (uri.getRawUserInfo() != null) {
             throw new IllegalArgumentException("Niord integration URL must not contain user info");
         }
+        // Without the URL too: an address that is not hierarchical ("ftp:user:secret@host") has no user info to the
+        // parser, so the check above passes a credential it carries, and a query may hold one ("?password=...")
         if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
-            throw new IllegalArgumentException("Niord integration URL must be http or https: " + url);
+            throw new IllegalArgumentException("Niord integration URL must be http or https"
+                    + (uri.getScheme() == null ? "" : ", not " + uri.getScheme()));
         }
         if (StringUtils.isBlank(uri.getHost())) {
             throw new IllegalArgumentException("Niord integration URL must contain a valid host name: "
                     + withoutUserInfo(url));
         }
         if (uri.getRawQuery() != null || uri.getRawFragment() != null) {
-            throw new IllegalArgumentException(
-                    "Niord integration URL must not contain a query or fragment: " + url);
+            throw new IllegalArgumentException("Niord integration URL must not contain a query or fragment");
         }
     }
 

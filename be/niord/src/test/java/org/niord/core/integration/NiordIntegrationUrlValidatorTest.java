@@ -106,6 +106,24 @@ public class NiordIntegrationUrlValidatorTest {
     }
 
     /**
+     * A refusal names no part of the URL that can carry a credential: an address that is not hierarchical has no
+     * user info to the parser, and a query may hold a password, so neither refusal repeats the URL.
+     */
+    @Test
+    public void validateUrl_refusalsDoNotRepeatACredentialTheUrlCarries() {
+        String scheme = assertThrows(IllegalArgumentException.class,
+                () -> NiordIntegrationUrlValidator.validateUrl("ftp:user:xyzzy@peer.example.com")).getMessage();
+        assertTrue(scheme.contains("http or https"), scheme);
+        assertFalse(scheme.contains("xyzzy"), scheme);
+
+        String query = assertThrows(IllegalArgumentException.class,
+                () -> NiordIntegrationUrlValidator.validateUrl("https://peer.example.com/?password=xyzzy"))
+                .getMessage();
+        assertTrue(query.contains("query or fragment"), query);
+        assertFalse(query.contains("xyzzy"), query);
+    }
+
+    /**
      * A trailing slash stays ACCEPTED. It composes to "//rest/public/v1/messages", but Apache
      * HttpClient normalizes that before the request reaches the wire (pinned end-to-end by
      * {@code NiordIntegrationExecutionServiceHttpTest}), so it needs no rejection and no trimming.
