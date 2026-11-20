@@ -158,6 +158,12 @@ public class MessageLuceneIndex extends BaseService {
     volatile boolean allMessagesIndexed;
 
     /**
+     * The messages the passes indexed since the start or the last deletion of the index: the count the line that says
+     * the index is complete gives ({@link #markComplete()}). Written by the passes, under the folder's writer lock.
+     */
+    int indexedInFill;
+
+    /**
      * The messages whose {@code updated} time lies in the look-back window behind the marker
      * ({@link MessageQueryService#INDEX_LOOK_BACK}) and that this instance indexed (or left out) as they are now:
      * id to {@code updated} time. A pass indexes a message of the window only when it is not here with the same
@@ -289,6 +295,19 @@ public class MessageLuceneIndex extends BaseService {
      */
     public boolean allMessagesIndexed() {
         return allMessagesIndexed;
+    }
+
+    /**
+     * Marks the index complete. The first time after a start or a deletion of the index, it logs one INFO line that
+     * names the index and the messages this fill indexed, also when the fill found nothing to do, so a person who
+     * prepares a database can see in the log when the searches answer in full; the passes after that log nothing.
+     * The caller holds the folder's writer lock.
+     */
+    private void markComplete() {
+        if (!allMessagesIndexed) {
+            allMessagesIndexed = true;
+            log.info("Message search index complete: Lucene, " + indexedInFill + " messages indexed in this fill");
+        }
     }
 
     /**
@@ -541,6 +560,7 @@ public class MessageLuceneIndex extends BaseService {
     private void deleteIndex() throws IOException {
         // From here until a pass has indexed every message again, a search answers from part of them
         allMessagesIndexed = false;
+        indexedInFill = 0;
 
         // Delete the index
         IndexWriter writer = null;
@@ -641,7 +661,7 @@ public class MessageLuceneIndex extends BaseService {
             // index holds every message. Not before it, so a search in between is not taken for a complete one
             boolean completesTheIndex = updatedMessages.size() < maxIndexCount;
             if (updatedMessages.isEmpty() && missedMessages.isEmpty()) {
-                allMessagesIndexed = true;
+                markComplete();
                 return 0;
             }
 
@@ -701,14 +721,16 @@ public class MessageLuceneIndex extends BaseService {
             writer.commit();
             rememberIndexed(newMarker, handled);
 
+            int indexed = handled.size() - skipped;
+            indexedInFill += indexed;
+
             // Re-open the reader from the writer
             refreshReader(writer);
             if (completesTheIndex) {
-                allMessagesIndexed = true;
+                markComplete();
             }
 
             // Check if we need to optimize the index
-            int indexed = handled.size() - skipped;
             optimizeIndexCount += indexed;
             if (optimizeIndexCount > LUCENE_OPTIMIZE_INDEX_COUNT) {
                 writer.forceMerge(LUCENE_MAX_NUM_SEGMENTS);
