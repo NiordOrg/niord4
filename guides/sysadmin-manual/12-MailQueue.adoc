@@ -60,7 +60,11 @@ list" and names the list and the trigger, and whose last error says that the tex
 and by when the mail is made, at the latest half an hour after the restart; the server log has one WARN saying the
 trigger waits for the index. The trigger's mail is made as soon as the index is complete. When the index is still
 not complete half an hour after the restart, the mail is sent all the same, and the log has a WARN naming the
-trigger, since the mail may list too few messages.
+trigger, since the mail may list too few messages. The server log shows when the index is complete: the first time
+after the restart, it has the INFO line "Message search index complete: Lucene, <n> messages indexed in this fill".
+A system administrator can also ask at any time at `GET /rest/monitor/message-index`, which answers, for example,
+`{"lucene":true,"postgres":true,"complete":true}`; `lucene` is the index these triggers wait for. Where several
+servers run, each answers for itself.
 
 Niord notes every status change of a message in its database, together with the change, until the mails of the
 status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts

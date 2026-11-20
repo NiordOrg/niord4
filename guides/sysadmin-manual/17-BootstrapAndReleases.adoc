@@ -150,9 +150,13 @@ To take the changes of a release folder into a running deployment:
 . Check that the missing-path report is empty.
 
 New text keys need no import: the new version adds them in English when it starts, and a country's language pack
-brings their translations. The folder's "texts.json" is for a text key the deployment deleted: import it on the
-<<dictionaries,Dictionaries>> page, where the preview offers such a key unticked, and only a key you tick is added
-again.
+brings their translations. A text the deployment has is never changed by a new version, also when a release
+corrects its English value; the folder's "README.md" then names the text. The folder's "texts.json" serves both
+cases. Import it on the <<dictionaries,Dictionaries>> page, where the preview offers a text key the deployment
+deleted unticked under _Would add_, and every text whose value differs from the file unticked under _Would
+overwrite_. Only a key you tick is added or overwritten: tick an overwrite only for a text the README names, and
+only when the deployment has not written its own value. You may instead edit the value on the
+<<dictionaries,Dictionaries>> page.
 
 Whether to import at all is your decision: nothing applies these files by itself, and a new deployment needs none
 of them, because its bootstrap brings the current templates.
