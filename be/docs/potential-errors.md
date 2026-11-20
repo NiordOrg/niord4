@@ -1070,7 +1070,8 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Location:** `niord/src/main/java/org/niord/core/mail/MailService.java:47` (`@Setting(value = "mailSender",
   defaultValue = "niord@e-navigation.net", ...)`), published in `defaults/base/settings-catalog.json`.
 - **Description:** a deployment that does not set `mailSender` sends its mails from `niord@e-navigation.net`, an
-  address of the Danish Maritime Authority's e-Navigation project.
+  address of the Danish Maritime Authority's e-Navigation project. Since 2026-11-20 it is also the Reply-To of a
+  mail from a user without an e-mail address (`MailService.defaultReplyTo`), so a reply to such a mail goes there.
 - **Why it looks wrong:** the base product names no country or organisation (C5's done-when), and a mail from
   another organisation's address may be rejected or misread. `e-navigation` is not on C5's word list, which is why
   the scan missed it.

@@ -550,17 +550,15 @@ cut-off's week-year, and the earlier year's 52 or 53 weeks are counted (the owne
 pattern writes the pair as `${week}+${weekTo}`, and that `+`, and only that one, prints as a hyphen for an
 issue of three weeks or more, in the name, the file name and the citation alike (`IssueNaming.expand`, and
 the admin app's `issueNumberText` and `expandIssuePattern`; pinned by `IssueNamingTest` and
-`issue-number.spec.ts`). A released or imported issue keeps the name and file name it has.
+`issue-number.spec.ts`). A released or imported issue keeps the name and file name it has. A year prints its
+edition only when the edition is not the first; `(1)` beside a yearly invites the reader to look for a second
+edition that does not exist.
 
 **A week released late is still one week:** a window shorter than 1¾ periods (under 13 whole days) is named
 for its cut-off week alone, so a week released up to about five days late (cut on a Wednesday, released the
 Monday after next) is not a double week, though the week between the two cut-offs is then named by no issue
 unless the editor types the week label. The owner decided on 2026-11-20 to keep this tolerance, and
 `IssueNamingTest.aSingleWeekReleasedLateIsNotADoubleWeek` pins it.
-
-A year prints its
-edition only when the edition is not the first; `(1)` beside a yearly invites the reader to look for a second
-edition that does not exist.
 
 **Neither a name nor a period is unique.** `publicId` is the only unique key an issue carries: nothing
 refuses a second issue of the same series with the same name over the same period, and the archive holds
