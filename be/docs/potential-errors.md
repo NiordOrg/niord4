@@ -936,21 +936,20 @@ was changed in production code.
   let a released document be verified against its record, or tell two generations apart without reading the archive,
   are permanently NULL.
 
-## PORT-17. An amend re-orders the whole issue, where the data model says surviving members keep their order
+## PORT-18. The data model says an amend never re-runs the selection; the code, the contract's amendment and the admin manual re-run it
 
-- **Location:** `org/niord/core/publication/series/IssuePublishService.java` (`amend` →
-  `resolveFreezeAndWrite`, step 5: `MemberResolutionService.orderFor` and `IssueOrdering.assignSortIndex` over
-  every member) against `fe/docs/publications/DATA-MODEL.md` §6.6 rule 5.
-- **Description:** rule 5 says an amend does not recompute `sortIndex` for surviving members: they keep their
-  relative order, an added member is placed by the recorded sort key and the indices are re-densified. The code
-  sorts the whole post-override union again with the series' current sort, so a surviving member moves whenever
-  its sort key (its area's place in the tree, its number, a date) changed since the release, or the sort itself
-  did (an issue sorted by id is ordered by year and number since 2026-11-19, PORT-9).
-- **Why it looks wrong:** the stored order exists so a re-issued document does not re-order an unchanged list;
-  either the rule or the code is wrong, and nothing says which.
-- **Exposed by:** the check of PORT-9's fix, 2026-11-19 (read in the code).
-- **Severity:** Low — an amend replaces a document by a deliberate act with a reason, and the new document is
-  ordered consistently; only the promise that survivors keep their places is broken.
+- **Location:** `fe/docs/publications/DATA-MODEL.md` §4.5 ("Amend never re-resolves the query", steps 2 and 5, and the
+  list of what stays unchanged) and the first amend section of `fe/docs/publications/API-CONTRACT.md`, against
+  `org/niord/core/publication/series/IssuePublishService.java` (`amend` → `resolveFreezeAndWrite`, which resolves the
+  members again at the stored cut-off and writes the snapshot header anew).
+- **Description:** §4.5 says an amend applies only an explicit curation delta to the frozen snapshot and leaves
+  `criteriaSnapshot` and the other snapshot columns unchanged. The code takes no curation delta, re-runs the
+  resolution and rewrites the header; the contract's amendment of 2026-08-28 (I17) and the admin manual ("Amend runs
+  the selection again") say what the code does.
+- **Why it looks wrong:** a reader of the data model is promised a frozen membership an amend does not keep.
+- **Exposed by:** fix round 3 of the recorded faults, 2026-11-20, while the order after an amendment was written into
+  §6.6 rule 5 (read in the code; not run).
+- **Severity:** Low, documentation. Fix: bring §4.5 and the first amend section to what the 2026-08-28 amendment says.
 
 # Potential errors — security review and fix sweep (2026-09)
 

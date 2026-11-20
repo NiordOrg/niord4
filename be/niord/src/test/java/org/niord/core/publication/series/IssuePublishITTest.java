@@ -1513,6 +1513,57 @@ public class IssuePublishITTest extends ITTest {
     }
 
     /**
+     * An amendment orders the whole issue again by the series' sort as it stands at the amendment, the data
+     * model's §6.6 rule 5 (decided 2026-11-20): surviving members do not keep their relative order. Released
+     * sorted by publish date ascending, the issue prints the earlier notice first; amended after the series was
+     * set to descending, it prints the later one first, and the header records the sort it was ordered by.
+     */
+    @Test
+    @Transactional
+    public void anAmendmentOrdersTheWholeIssueByTheSeriesCurrentSort() {
+        PublicationSeries s = series(SeriesCadence.WEEKLY, TimeRelation.PUBLISHED_IN_INTERVAL,
+                ReleaseMode.MANUAL_GATE, NextIssueCreation.MANUAL, SeriesStatus.ACTIVE);
+        s.setMessageSortBy("PUBLISH_DATE");
+        s.setMessageSortOrder(org.niord.model.search.PagedSearchParamsVo.SortOrder.ASC);
+        Message earlier = compiledMessage("NM-EARLIER");
+        earlier.setPublishDateFrom(new Date(1_699_000_000_000L));
+        Message later = compiledMessage("NM-LATER");
+        later.setPublishDateFrom(new Date(1_699_100_000_000L));
+        PublicationIssue i = issue(s, new Date(1_698_900_000_000L));
+        em.flush();
+
+        publishService.publish(i.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(1_699_300_000_000L)));
+        em.flush();
+        assertEquals(List.of(earlier.getUid(), later.getUid()), ownRowsOf(i, earlier, later),
+                "released sorted by publish date ascending, the earlier notice is not printed first");
+
+        s.setMessageSortOrder(org.niord.model.search.PagedSearchParamsVo.SortOrder.DESC);
+        em.merge(s);
+        em.flush();
+        publishService.amend(i.getId(), new IssuePublishService.AmendRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, "the series is now sorted newest first"));
+        em.flush();
+
+        assertEquals(List.of(later.getUid(), earlier.getUid()), ownRowsOf(i, earlier, later),
+                "the amendment kept the released order where the series' sort now says otherwise");
+        assertEquals("DESC", i.getSnapshotSortOrder(), "the header does not record the sort the amendment used");
+        List<IssueMember> rows = frozenRowsOf(i);
+        for (int n = 0; n < rows.size(); n++) {
+            assertEquals(Integer.valueOf(n), rows.get(n).getSortIndex(), "the amended order is not dense from 0");
+        }
+    }
+
+    /** The uids of the given messages among an issue's frozen rows, in printed order. */
+    private List<String> ownRowsOf(PublicationIssue issue, Message... messages) {
+        Set<String> own = new java.util.HashSet<>();
+        for (Message m : messages) {
+            own.add(m.getUid());
+        }
+        return frozenRowsOf(issue).stream().map(IssueMember::getMessageUid).filter(own::contains).toList();
+    }
+
+    /**
      * What reaches the RENDERER is the document's sections, not a flat list.
      *
      * The renderer has no way to work out where a section begins: the ordered
