@@ -24,6 +24,22 @@ describe('issueNumberText', () => {
    */
   it('names a multi-week period by both weeks', () => {
     expect(issueNumberText({ week: 52, weekTo: 1, year: 2026 }, weekly)).toBe('52+1');
+    expect(issueNumberText({ week: 36, weekTo: 37, year: 2026 }, weekly)).toBe('36+37');
+  });
+
+  /**
+   * An issue of three weeks or more has only its first and its last week to
+   * print, and "36+38" reads as weeks 36 and 38: it is written as the range.
+   * Across a year's end the earlier year's length counts — 2025 has 52 ISO
+   * weeks and 2026 has 53.
+   */
+  it('names a period of three weeks or more as a range', () => {
+    expect(issueNumberText({ week: 36, weekTo: 38, year: 2026 }, weekly)).toBe('36-38');
+    expect(issueNumberText({ week: 35, weekTo: 38, year: 2026 }, weekly)).toBe('35-38');
+    expect(issueNumberText({ week: 52, weekTo: 2, year: 2026 }, weekly)).toBe('52-2');
+    expect(issueNumberText({ week: 52, weekTo: 1, year: 2027 }, weekly)).toBe('52-1');
+    expect(issueNumberText({ week: 53, weekTo: 1, year: 2027 }, weekly)).toBe('53+1');
+    expect(issueNumberText({ week: 53, weekTo: 2, year: 2027 }, weekly)).toBe('53-2');
   });
 
   it('names an annual by its year, ignoring the week it closed in', () => {

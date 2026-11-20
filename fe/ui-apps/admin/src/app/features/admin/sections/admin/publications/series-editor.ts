@@ -10,16 +10,17 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { disabled, form, FormField, max, min, required, validate } from '@angular/forms/signals';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { catchError, of, switchMap } from 'rxjs';
 
 import { DomainFacade } from '../../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
 import { currentDesc } from '../../../utils/localized-descs';
 import { NotificationService } from '../../../../../core/notifications/notification.service';
 import { Drawer } from '../../../../../shared/components/drawer/drawer';
+import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
+import { fixedListRead, listRead } from '../../../../../shared/utils/list-read';
 import { LocalizedTextInput } from '../../../components/localized-text-input/localized-text-input';
 import { DateTimeField } from '../../../../../shared/forms/date-picker/date-time-field';
 import { LengthCounter, tooLong } from '../../../../../shared/forms/length-counter/length-counter';
@@ -193,6 +194,7 @@ const DAY_OF_MONTH_MAX = 31;
     AppTabs,
     DateTimeField,
     Drawer,
+    ErrorBanner,
     LengthCounter,
     LocalizedTextInput,
     PublicationAvailabilityField,
@@ -385,10 +387,10 @@ export class PublicationSeriesEditor {
    * makes a report a precondition for activating a query-backed series. This is
    * the editor-tier list: the public reports plus the current domain's own.
    */
-  protected readonly reports = toSignal(
-    this.reportsApi.listReports({ forList: true }).pipe(catchError(() => of([]))),
-    { initialValue: [] as readonly MessageReport[] },
+  private readonly reportsRead = fixedListRead<MessageReport>(() =>
+    this.reportsApi.listReports({ forList: true }),
   );
+  protected readonly reports = this.reportsRead.value;
 
   /**
    * The domains, read for the OWNER's name and its timezone.
@@ -403,14 +405,11 @@ export class PublicationSeriesEditor {
    * asking Keycloak once per domain: nothing here renders it, and the wait is
    * paid by an editor that only needs a name and a timezone.
    */
-  protected readonly domains = toSignal(
-    toObservable(computed(() => this.language.selectedLanguage())).pipe(
-      switchMap((lang) =>
-        this.domainsApi.getAll(lang, { keycloakState: false }).pipe(catchError(() => of([]))),
-      ),
-    ),
-    { initialValue: [] as AdminDomain[] },
+  private readonly domainsRead = listRead<AdminDomain, string>(
+    toObservable(computed(() => this.language.selectedLanguage())),
+    (lang) => this.domainsApi.getAll(lang, { keycloakState: false }),
   );
+  protected readonly domains = this.domainsRead.value;
 
   /** The owner as the catalogue knows it, or `undefined` while it is unknown. */
   private readonly ownerDomain = computed(() =>
@@ -486,10 +485,8 @@ export class PublicationSeriesEditor {
     cutoffTimeToDate(this.formModel().nominalCutoffTime),
   );
 
-  protected readonly nameTokens = toSignal(
-    this.api.nameTokens().pipe(catchError(() => of<string[]>([]))),
-    { initialValue: [] as string[] },
-  );
+  private readonly nameTokensRead = fixedListRead<string>(() => this.api.nameTokens());
+  protected readonly nameTokens = this.nameTokensRead.value;
 
   /**
    * The same vocabulary, in the shape the pattern fields' insert menu takes.
@@ -509,10 +506,35 @@ export class PublicationSeriesEditor {
   // Fetched with every language's name, and labelled here. Asking the server to
   // narrow to one language leaves a category that only has a name in another
   // language with no name at all — it would render as its raw id.
-  protected readonly categories = toSignal(
-    this.api.publicationCategories().pipe(catchError(() => of([]))),
-    { initialValue: [] as PublicationCategory[] },
+  private readonly categoriesRead = fixedListRead<PublicationCategory>(() =>
+    this.api.publicationCategories(),
   );
+  protected readonly categories = this.categoriesRead.value;
+
+  /**
+   * The lists the pickers are filled from; one of them failing is said above the tabs.
+   * The source picker's list (`activeSeriesResource`, declared below) counts too; it is
+   * read inside the computed and the retry, by when it exists.
+   */
+  private readonly optionReads = [
+    this.reportsRead,
+    this.domainsRead,
+    this.nameTokensRead,
+    this.categoriesRead,
+  ];
+  protected readonly optionsFailed = computed(
+    () => this.optionReads.some((read) => read.failed()) || !!this.activeSeriesResource.error(),
+  );
+
+  /** Read again every option list that failed. */
+  protected retryOptions(): void {
+    for (const read of this.optionReads) {
+      if (read.failed()) read.retry();
+    }
+    if (this.activeSeriesResource.error()) {
+      this.activeSeriesResource.reload();
+    }
+  }
 
   /**
    * The estate's active series, for the source picker.
@@ -542,7 +564,8 @@ export class PublicationSeriesEditor {
 
   // value() throws in the resource's error state, so the read is guarded by
   // hasValue(): a list nobody could fetch leaves the picker holding what the
-  // series already names, which is the same place an empty estate leaves it.
+  // series already names, and the failure is said above the tabs with the other
+  // option lists (see optionReads), so it is not taken for an empty estate.
   private readonly activeSeries = computed<readonly PublicationSeries[]>(() =>
     this.activeSeriesResource.hasValue() ? this.activeSeriesResource.value() : [],
   );

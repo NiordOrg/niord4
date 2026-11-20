@@ -129,17 +129,32 @@ public class ContactService extends BaseService {
 
     /**
      * Returns the contact with the given email address, or null if not found.
+     * <p>
+     * The address is compared ignoring case, while the schema holds it unique with case: when several contacts have
+     * the address in different case (restored data), the one whose address is exactly the given one is returned, as
+     * the NAVTEX transmitter and SafetyNET area look-ups do; when none is, none is returned, as when there is none,
+     * and a WARN names the address.
+     *
      * @param email the email address of the contact
      * @return the contact with the given email address
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Contact findByEmail(String email) {
-        try {
-            return em.createNamedQuery("Contact.findByEmail", Contact.class)
-                    .setParameter("email", email)
-                    .getSingleResult();
-        } catch (Exception e) {
-            return null;
+        List<Contact> matches = em.createNamedQuery("Contact.findByEmail", Contact.class)
+                .setParameter("email", email)
+                .getResultList();
+        if (matches.size() <= 1) {
+            return matches.isEmpty() ? null : matches.getFirst();
         }
+        Contact exact = matches.stream()
+                .filter(c -> Objects.equals(c.getEmail(), email))
+                .findFirst()
+                .orElse(null);
+        if (exact == null) {
+            log.warn("Several contacts have the e-mail address '{}' in different case and none has it exactly; "
+                    + "the look-up by address answers none of them", email);
+        }
+        return exact;
     }
 
     /**

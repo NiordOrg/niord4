@@ -247,6 +247,33 @@ describe('ScheduleView', () => {
     expect(facade.retry).toHaveBeenCalledTimes(1);
   });
 
+  it('says so when the areas for the picker could not be read, and Retry reads them again', async () => {
+    const { fixture } = setup(true);
+    fixture.detectChanges();
+    TestBed.tick();
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((r) => r.url.endsWith('/areas/area-roots'))
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    await Promise.resolve();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const banner = () =>
+      [...el.querySelectorAll('[role="alert"]')].find((node) =>
+        node.textContent?.includes('common.fetchError'),
+      );
+    expect(banner()).toBeDefined();
+
+    banner()?.querySelector('button')?.click();
+    TestBed.tick();
+    http
+      .expectOne((r) => r.url.endsWith('/areas/area-roots'))
+      .flush([areaWithName(1, 'Firing area')]);
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(banner()).toBeUndefined();
+  });
+
   it('empty branch: settled with zero rows shows the inbox empty state, not the table', () => {
     const { fixture, facade } = setup(true);
     facade.loading.set(false);

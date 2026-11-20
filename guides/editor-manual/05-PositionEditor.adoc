@@ -282,7 +282,8 @@ degrees and minutes. You can change positions here:
   `55° 10.000'N - 015° 16.000'E`, the same without the symbols (`55 10.000N 015 16.000E`), or
   decimal degrees (`55.1667N 15.2667E`); a comma also works as the decimal sign. Niord does not
   read a position that cannot exist: minutes of 60 or more, more than 90° of latitude or 180° of
-  longitude, or a sign before the degrees (the N, S, E or W gives the side).
+  longitude, or a sign before the degrees (the N, S, E or W gives the side). Nor does it read a
+  fraction of a degree followed by minutes (`56.5 30N`): write `56.5N` or `56 30N`.
 * Point at a position to see its buttons: *+* (_Add a position after this one_), on lines and areas,
   adds a position and opens it for typing; *−* (_Delete this position_) deletes it, as long as
   enough positions are left for the type.
@@ -340,7 +341,9 @@ The text lists the features one after another, with a blank line between two fea
   minutes and seconds (`55° 10' 30"N`), or decimal degrees, with a point or a comma as the decimal
   sign. A line may start with a number, such as `1)`, and there may be a dash between latitude and
   longitude. Minutes and seconds must be below 60, the latitude at most 90° and the longitude at
-  most 180°, and the degrees take no sign: the hemisphere letter gives the side.
+  most 180°, and the degrees take no sign: the hemisphere letter gives the side. Degrees followed
+  by minutes are whole degrees: Niord does not read `56.5 30N`. Likewise, minutes followed by
+  seconds are whole minutes: Niord does not read `56° 30.5' 20"N`.
 * For an area, list its corners: Niord closes the outline, so you do not repeat the first corner at
   the end.
 * A name follows a comma, after the type (the feature's name) or after a position (the position's

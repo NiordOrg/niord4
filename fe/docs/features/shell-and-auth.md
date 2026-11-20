@@ -106,8 +106,13 @@ Bootstrap picks the initial session domain in strict order (`DomainService.boots
 2. the id persisted in `localStorage`;
 3. the first domain in the catalogue.
 
-The catalogue fetch is capped at 5 s and degrades to an empty list — a domains outage must not block
-boot. With no domain resolved the switcher hides and no domain header is sent. The two kinds of
+The catalogue fetch is capped at 5 s and a failure or timeout leaves the catalogue empty — a domains
+outage must not block boot. The shell then shows a notice under the header on every page, "Could
+not load domains" with _Retry_ (`DomainBootstrapBanner`, `core.domain.bootstrap.errorTitle`), since
+every list is empty for that reason alone. Retry reloads the app, as a desk change does, and the
+persisted id is kept through the failure, so a reload that reads the catalogue lands on the same
+desk. With no domain resolved the switcher hides and no
+domain header is sent. The two kinds of
 domain-derived gate then behave oppositely: the message-support checks (`supportsMainType`,
 `supportsType`) fall open, so everything is offered, while every capability flag reads `false`, so
 capability-gated affordances disappear — the Schedule nav item among them. A domains outage
@@ -288,7 +293,8 @@ logo, welcome heading, the product name, and a Login button when anonymous.
 - The message fetch is keyed on the active language (the backend localizes each message) and asks for
   up to 1000 published messages. Beyond that count the map silently truncates — a "showing N of
   total" affordance is on the [backlog](../backlog.md).
-- A failed fetch degrades to an empty list; the welcome panel never blanks.
+- A failed fetch leaves the map without messages and says so in the welcome panel ("Error fetching
+  data", with _Retry_); the panel never blanks.
 - The map is `@defer (on idle)` so the panel and logo paint without waiting on OpenLayers. Its
   placeholder is the map's own water colour, which is exactly why the `@error` branch is mandatory:
   Angular never retries a defer block, so without it a failed chunk fetch would read as a

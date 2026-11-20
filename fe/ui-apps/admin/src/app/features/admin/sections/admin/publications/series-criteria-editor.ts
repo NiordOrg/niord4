@@ -22,8 +22,10 @@ import {
 } from 'rxjs';
 
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
+import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
 import { TreePicker } from '../../../../../shared/components/tree-picker/tree-picker';
 import { Icon } from '../../../../../shared/icons/icon';
+import { listRead } from '../../../../../shared/utils/list-read';
 import { MAIN_TYPES, type MainType } from '../../../../../shared/models/main-type.model';
 import {
   MESSAGE_TYPES_BY_MAIN_TYPE,
@@ -194,7 +196,7 @@ const PREVIEW_DEBOUNCE_MS = 400;
  */
 @Component({
   selector: 'app-series-criteria-editor',
-  imports: [Icon, MessageRef, TranslocoPipe, TreePicker],
+  imports: [ErrorBanner, Icon, MessageRef, TranslocoPipe, TreePicker],
   templateUrl: './series-criteria-editor.html',
   host: { class: 'flex min-w-0 flex-col gap-4' },
 })
@@ -284,42 +286,40 @@ export class SeriesCriteriaEditor {
     this.shown() ? this.language.selectedLanguage() : null,
   );
 
-  private readonly messageSeriesOptions = toSignal(
-    toObservable(this.operandLoadLang).pipe(
-      switchMap((lang) =>
-        lang === null
-          ? of<ValueOption[]>([])
-          : this.messageSeriesApi.getAll().pipe(
+  private readonly messageSeriesRead = listRead<ValueOption, string | null>(
+    toObservable(this.operandLoadLang),
+    (lang) =>
+      lang === null
+        ? of<ValueOption[]>([])
+        : this.messageSeriesApi
+            .getAll()
+            .pipe(
               map((series) =>
                 series.map((s) => ({ value: s.seriesId, label: s.seriesId }) satisfies ValueOption),
               ),
-              catchError(() => of<ValueOption[]>([])),
             ),
-      ),
-    ),
-    { initialValue: [] as ValueOption[] },
   );
+  private readonly messageSeriesOptions = this.messageSeriesRead.value;
 
   // Read without the Keycloak state, which the server otherwise computes by
   // asking Keycloak once per domain: the picker shows an id and a name, so the
   // wait would be spent on a field nothing here renders.
-  private readonly domainOptions = toSignal(
-    toObservable(this.operandLoadLang).pipe(
-      switchMap((lang) =>
-        lang === null
-          ? of<ValueOption[]>([])
-          : this.domainsApi.getAll(lang, { keycloakState: false }).pipe(
+  private readonly domainRead = listRead<ValueOption, string | null>(
+    toObservable(this.operandLoadLang),
+    (lang) =>
+      lang === null
+        ? of<ValueOption[]>([])
+        : this.domainsApi
+            .getAll(lang, { keycloakState: false })
+            .pipe(
               map((domains) =>
                 domains.map(
                   (d) => ({ value: d.domainId, label: d.name || d.domainId }) satisfies ValueOption,
                 ),
               ),
-              catchError(() => of<ValueOption[]>([])),
             ),
-      ),
-    ),
-    { initialValue: [] as ValueOption[] },
   );
+  private readonly domainOptions = this.domainRead.value;
 
   /**
    * The language to load a tree in, or `null` while nothing needs it.
@@ -341,31 +341,21 @@ export class SeriesCriteriaEditor {
     return shown && used ? this.language.selectedLanguage() : null;
   });
 
-  protected readonly areaRoots = toSignal(
-    toObservable(this.areaLoadLang).pipe(
-      switchMap((lang) =>
-        lang === null
-          ? of<readonly AreaRef[]>([])
-          : this.areasApi
-              .getRoots({ language: lang })
-              .pipe(catchError(() => of<readonly AreaRef[]>([]))),
-      ),
-    ),
-    { initialValue: [] as readonly AreaRef[] },
+  private readonly areaRootsRead = listRead<AreaRef, string | null>(
+    toObservable(this.areaLoadLang),
+    (lang) =>
+      lang === null ? of<readonly AreaRef[]>([]) : this.areasApi.getRoots({ language: lang }),
   );
+  protected readonly areaRoots = this.areaRootsRead.value;
 
-  protected readonly categoryRoots = toSignal(
-    toObservable(this.categoryLoadLang).pipe(
-      switchMap((lang) =>
-        lang === null
-          ? of<readonly CategoryRef[]>([])
-          : this.categoriesApi
-              .getRoots({ language: lang })
-              .pipe(catchError(() => of<readonly CategoryRef[]>([]))),
-      ),
-    ),
-    { initialValue: [] as readonly CategoryRef[] },
+  private readonly categoryRootsRead = listRead<CategoryRef, string | null>(
+    toObservable(this.categoryLoadLang),
+    (lang) =>
+      lang === null
+        ? of<readonly CategoryRef[]>([])
+        : this.categoriesApi.getRoots({ language: lang }),
   );
+  protected readonly categoryRoots = this.categoryRootsRead.value;
 
   /** Charts carry no descs, so the catalogue does not reload on a language switch. */
   private readonly chartsNeeded = computed(() => {
@@ -374,14 +364,34 @@ export class SeriesCriteriaEditor {
     return shown && used;
   });
 
-  private readonly charts = toSignal(
-    toObservable(this.chartsNeeded).pipe(
-      switchMap((needed) =>
-        needed ? this.chartsApi.getAll().pipe(catchError(() => of<Chart[]>([]))) : of<Chart[]>([]),
-      ),
-    ),
-    { initialValue: [] as Chart[] },
+  private readonly chartsRead = listRead<Chart, boolean>(
+    toObservable(this.chartsNeeded),
+    (needed) => (needed ? this.chartsApi.getAll() : of<Chart[]>([])),
   );
+  private readonly charts = this.chartsRead.value;
+
+  /**
+   * The lists the operand pickers are filled from. One of them failing is said at the
+   * top of the panel, with a retry, so an empty picker is never taken for one with
+   * nothing to offer.
+   */
+  private readonly catalogueReads = [
+    this.messageSeriesRead,
+    this.domainRead,
+    this.areaRootsRead,
+    this.categoryRootsRead,
+    this.chartsRead,
+  ];
+  protected readonly cataloguesFailed = computed(() =>
+    this.catalogueReads.some((read) => read.failed()),
+  );
+
+  /** Read again every catalogue that failed. */
+  protected retryCatalogues(): void {
+    for (const read of this.catalogueReads) {
+      if (read.failed()) read.retry();
+    }
+  }
 
   /** Every message type, both main types, flattened — a series may span them. */
   private readonly messageTypeOptions: readonly ValueOption[] = MAIN_TYPES.flatMap((mainType) =>

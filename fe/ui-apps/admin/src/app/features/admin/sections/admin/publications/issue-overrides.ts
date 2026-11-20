@@ -2,6 +2,7 @@ import type {
   PublicationIssue,
   PublicationSeries,
 } from '../../../services/api/publication-series-api.service';
+import { weeksNamed } from './issue-number';
 
 /**
  * What one edition says differently from its series, worked out in one place.
@@ -95,6 +96,29 @@ export function printedNumbering(
 const TOKEN = /\$\{([^}]*)\}/g;
 
 /**
+ * A `+` written straight between the first week and the closing week
+ * (`${week}+${weekTo}`, either variant of each, spaces allowed around it): the
+ * pair form, which prints as a range for an issue of three weeks or more.
+ */
+const WEEK_PAIR_JOIN = /(\$\{week(?:-2-digits)?\}\s*)\+(?=\s*\$\{weekTo(?:-2-digits)?\})/g;
+
+/**
+ * The pattern with the pair's `+` written as a hyphen where the issue is named
+ * for three weeks or more: `36-38`, and across a year's end `52-2` beside the
+ * later year. A pair (`36+37`) and a single week expand as written. The same
+ * rule as the server's (`IssueNaming.expand`), decided by the derived numbers.
+ */
+function joined(pattern: string, derived: IssueNumbering): string {
+  const week = Number(derived.week);
+  const weekTo = derived.weekTo === '' ? undefined : Number(derived.weekTo);
+  const year = derived.year === '' ? undefined : Number(derived.year);
+  if (derived.week === '' || !Number.isFinite(week) || weeksNamed(week, weekTo, year) < 3) {
+    return pattern;
+  }
+  return pattern.replace(WEEK_PAIR_JOIN, '$1-');
+}
+
+/**
  * What a series' pattern would call this issue — or `undefined` where it cannot
  * say.
  *
@@ -117,7 +141,7 @@ export function expandIssuePattern(
   }
   const values = numberingTokens(printed, derived);
   let resolvable = true;
-  const expanded = source.replace(TOKEN, (_match, token: string) => {
+  const expanded = joined(source, derived).replace(TOKEN, (_match, token: string) => {
     const name = token.trim();
     // Asked of the map's OWN keys: a token naming something every object carries
     // — `${constructor}` — would otherwise resolve to a value that is not a

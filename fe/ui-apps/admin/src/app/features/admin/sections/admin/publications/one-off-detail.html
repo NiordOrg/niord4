@@ -79,6 +79,15 @@
       <span>{{ key | transloco }}</span>
     </div>
   }
+  <!-- The category below is named from this read: a failure is said, not shown as a raw id. -->
+  @if (categoriesRead.failed()) {
+    <app-error-banner
+      class="mb-4"
+      [title]="'common.fetchError' | transloco"
+      [retryLabel]="'common.retry' | transloco"
+      (retry)="categoriesRead.retry()"
+    />
+  }
 
   <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
     <div class="flex min-w-0 flex-col gap-4">

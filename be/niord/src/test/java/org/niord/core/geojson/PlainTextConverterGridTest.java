@@ -166,6 +166,79 @@ public class PlainTextConverterGridTest {
     }
 
     @Test
+    public void aFractionOfADegreeFollowedByMinutes_isRefused() throws Exception {
+        // "56.5 30N" (often a slipped decimal comma) was read as 56.5° plus 30 minutes, 57° N, half a degree from
+        // either thing the editor may have meant. A fraction of a degree with minutes after it is refused, in the
+        // latitude and the longitude, with a comma as with a point; a fraction alone is decimal degrees, as before.
+        for (String t : List.of("56.5 30N 012 00E", "56,5 30.0N 012 00E", "56 30N 012.5 15E",
+                "56.5° 30'N 012° 00'E", "56.5° 30' 10\"N 012° 00' 00\"E", "565e-1 30N 012 00E")) {
+            Exception e = assertThrows(Exception.class, () -> EN.fromPlainText(t), t);
+            assertTrue(e.getMessage().startsWith("Invalid degree format"), t + ": " + e.getMessage());
+        }
+        double[] c = onlyCoordinate(EN.fromPlainText("56.5N 012.25E"));
+        assertEquals(56.5, c[1], 1e-9);
+        assertEquals(12.25, c[0], 1e-9);
+    }
+
+    @Test
+    public void minutesWithAFractionFollowedBySeconds_areRefused() {
+        // "56 30.5' 20\"N" was read as 56° plus 30.5 minutes plus 20 seconds: the seconds were added to minutes that
+        // already carried a fraction, a position the editor never typed. Refused like a fraction of a degree
+        // followed by minutes, in the latitude and the longitude, in every notation seconds are read in: with and
+        // without the degree sign, a point or a comma, the spaces left out, the "I" and "J" a copy from a PDF
+        // leaves for the degree and the minute signs, and a fraction written as an exponent.
+        for (String t : List.of(
+                "56° 30.5' 20\"N 012° 00' 00\"E",
+                "56 30.5' 20\"N 012 00' 00\"E",
+                "56 30.5 20\"N 012 00 00\"E",
+                "56°30,5'20\"N 012°00'00\"E",
+                "56I 30,5J 20\"N 012I 00J 00\"E",
+                "56° 305e-1' 20\"n 012° 00' 00\"e",
+                "56° 30' 20\"N 012° 15.5' 10\"E")) {
+            Exception e = assertThrows(Exception.class, () -> EN.fromPlainText(t), t);
+            assertTrue(e.getMessage().startsWith("Invalid degree format"), t + ": " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void minutesWithAFractionAndNoSeconds_andWholeMinutesWithSeconds_areReadAsTyped() throws Exception {
+        // The refusal above is for a fraction of a minute with seconds after it. Minutes with a fraction and no
+        // seconds are the usual form, and whole minutes with seconds were always read as typed; both still are,
+        // and so are whole minutes written with a zero fraction before the seconds.
+        for (String t : List.of("56° 30.5'N 012° 15.25'E", "56 30,5N 012 15,25E", "56°30.5'N 012°15.25'E")) {
+            double[] c = onlyCoordinate(EN.fromPlainText(t));
+            assertEquals(56 + 30.5 / 60, c[1], 1e-9, t);
+            assertEquals(12 + 15.25 / 60, c[0], 1e-9, t);
+        }
+        for (String t : List.of("56° 30' 20\"N 012° 15' 10\"E", "56 30 20\"N 012 15 10\"E",
+                "56I 30J 20\"N 012I 15J 10\"E", "56° 30.0' 20\"N 012° 15,0' 10\"E")) {
+            double[] c = onlyCoordinate(EN.fromPlainText(t));
+            assertEquals(56 + 30 / 60.0 + 20 / 3600.0, c[1], 1e-9, t);
+            assertEquals(12 + 15 / 60.0 + 10 / 3600.0, c[0], 1e-9, t);
+        }
+    }
+
+    @Test
+    public void wholeDegreesWrittenWithAZeroFraction_andMinutes_areReadAsTyped() throws Exception {
+        // The refusal above is for a fraction of a degree, not for a point in the degree text: "56.0 30N" and
+        // "56. 30N" are whole degrees and were always read as 56° 30', so they still are
+        for (String t : List.of("56.0 30N 012.0 15E", "56. 30N 012. 15E", "56,0 30,0N 012,00 15,0E")) {
+            double[] c = onlyCoordinate(EN.fromPlainText(t));
+            assertEquals(56.5, c[1], 1e-9, t);
+            assertEquals(12.25, c[0], 1e-9, t);
+        }
+    }
+
+    @Test
+    public void aDashBeforeTheLongitude_isADivider_andTheHemisphereLetterDecides() throws Exception {
+        // The "-" between the two halves is a divider, not a sign: the letter after the longitude decides its
+        // side. This is the form CG7's other half is about, and it is read as typed.
+        double[] c = onlyCoordinate(EN.fromPlainText("64 10N -051 43W"));
+        assertEquals(64 + 10 / 60.0, c[1], 1e-9);
+        assertEquals(-(51 + 43 / 60.0), c[0], 1e-9);
+    }
+
+    @Test
     public void utmText_aLineThatCannotBeRead_isRefused_namingTheLine() {
         // Three UTM lines, the middle one unreadable: the text is refused, naming that line, instead of answering
         // a MultiPoint of the other two.

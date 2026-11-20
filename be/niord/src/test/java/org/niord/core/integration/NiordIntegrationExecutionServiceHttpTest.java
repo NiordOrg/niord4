@@ -190,7 +190,7 @@ public class NiordIntegrationExecutionServiceHttpTest {
     }
 
     /**
-     * 6) SSRF guard (SECAUD-9): with the setting at its default the loopback stub is never contacted.
+     * 6) SSRF guard: with the setting at its default the loopback stub is never contacted.
      * Asserting the stub's request count — not just the exception — is what proves the guard fires
      * before any byte leaves the process, which is the whole point of blocking an internal target.
      */

@@ -2,6 +2,14 @@
   {{ 'admin.publications.criteria.intro' | transloco }}
 </p>
 
+@if (cataloguesFailed()) {
+  <app-error-banner
+    [title]="'common.fetchError' | transloco"
+    [retryLabel]="'common.retry' | transloco"
+    (retry)="retryCatalogues()"
+  />
+}
+
 @if (!isEmpty() && !isScoped()) {
   <!-- C-6. Shown as a warning rather than left to the save, because this is the one
        criteria mistake whose preview looks plausible: a big number that is big for

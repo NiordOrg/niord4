@@ -29,9 +29,12 @@ import { MessageLabelsLayer } from '../map-layers/message-labels-layer';
 import { MessageMapTooltip } from '../map-layers/message-map-tooltip';
 import { attributionHtml } from './map-attribution';
 
-/** What OpenStreetMap asks a site that draws its tiles to say. */
+/**
+ * What OpenStreetMap asks a site that draws its tiles to say. It is the same English words on a
+ * page in every language, so it says which language it is in (WCAG 3.1.2).
+ */
 const OSM_CREDIT =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.';
+  '<span lang="en">&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.</span>';
 
 const MAP_ACCESSIBILITY = 'MAP_ACCESSIBILITY';
 const MAP_COPYRIGHT = 'MAP_COPYRIGHT';

@@ -203,7 +203,7 @@ the `(dictionary, key, language)` triples the database lacks (`DictionaryService
   (`DefaultsLedger.deletedKeys`), so a delete made on any node reaches every node's import at once.
 - **A missing pack file** for a configured language logs a warning and adds nothing for it. A missing
   *default-language* file
-  stays fatal, because the base product's `en` always exists (`be/docs/potential-errors.md`, DICT1).
+  stays fatal, because the base product's `en` always exists.
 - **No Reload.** No endpoint and no method writes a file's values over the database (§10).
 - **Performance (review, 2026-10-20).** `"DefaultsLedger"` has the primary key (kind, key, dictionary,
   language), with `''` as a `SETTING` row's dictionary and language and `*` as a deleted key's language (above;
@@ -403,7 +403,9 @@ Two things cover this:
   `MailingListExecutionService.java:392-394`); nor can `AudioPromulgationService` generate a message's audio text
   (`position.*`, `AudioPromulgationService.java:121-125`). Of the template directives, `DateIntervalDirective` fails the
   render (`navwarn.date.*`, `term.and`); `FromToDateDirective` (`msg.time.until_further_notice`,
-  `msg.time.date_time_format`) and `LatLonDirective` (`position.*`) print nothing.
+  `msg.time.date_time_format`) and `LatLonDirective` (`position.*`) print nothing. `IndexIncompleteNotice`
+  (`pdf.list.index_incomplete`, the line at the top of a printed list or a mailing-list report made while the
+  free-text index refills) prints its built-in English sentence.
 - The base product ships its texts as an importable dictionary file: `be/niord/bootstrap/texts.json`, current
   with the code, and a frozen copy in each release folder, `be/niord/bootstrap/releases/<folder>/texts.json`
   (§6.4). Both are in the format the dictionary import reads (`ExportedDictionaryVo`, as `aton-dict.json`):
@@ -2025,10 +2027,9 @@ script-resource history dialog has a Source column.
 - `LiquibaseBootstrapITTest`: start-up writes no report, domain or standard parameter type, and the marker
   reads `pending`.
 
-Open entries of `be/docs/potential-errors.md` that belong to these rules: DICT1 (a missing default-language
-file stays fatal, §4.2), CDI1 (`CdiUtils`' static last-started context), SETTINGS-4 (a stored
-`pdfEncryptionPassword` row may still hold the former published default; the code default is empty) and
-SETTINGS-5 (`mailSender`'s code default).
+Open entries of `be/docs/potential-errors.md` that belong to these rules: CDI1 (`CdiUtils`' static
+last-started context), SETTINGS-5 (`mailSender`'s code default) and SCRIPT8 (a deployment's stored script
+row that predates the port, which only a sysadmin's release import replaces).
 
 ---
 

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { catchError, map, of, type Observable } from 'rxjs';
+import { map, type Observable } from 'rxjs';
 
 import type { HierarchicalEntity } from '../../../shared/components/entity-tree/hierarchical-entity.model';
 import type { AreaGeometrySource } from '../../../shared/components/geometry-editor/area-geometry-source.token';
@@ -23,16 +23,16 @@ export class MessagesAreaGeometrySource implements AreaGeometrySource {
   /**
    * Re-fetches the picked area with geometry + ALL languages, so both `name:en`
    * and `name:da` land on the feature — the lang-scoped tree carries only the
-   * active language's desc (and no geometry). Falls back to the tree's own
-   * (geometry-less) ref on fetch failure, yielding an empty collection.
+   * active language's desc (and no geometry). A failed read is passed on as an
+   * error, so the import dialog says the read failed rather than offering the
+   * area as one without a geometry.
    */
   getGeometry(area: HierarchicalEntity): Observable<GeometryFeatureCollection> {
     // Safe widening: the picked entity always originates from this source's own
     // getRoots(), which returns AreaRefs.
     const ref = area as AreaRef;
-    return this.areasApi.getByIds([ref.id], { includeGeometry: true, allLanguages: true }).pipe(
-      catchError(() => of([ref] as readonly AreaRef[])),
-      map((areas) => this.areasApi.areaToFeatureCollection(areas[0] ?? ref)),
-    );
+    return this.areasApi
+      .getByIds([ref.id], { includeGeometry: true, allLanguages: true })
+      .pipe(map((areas) => this.areasApi.areaToFeatureCollection(areas[0] ?? ref)));
   }
 }

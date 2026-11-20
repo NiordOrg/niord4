@@ -152,6 +152,24 @@ describe('expanding a series pattern', () => {
     expect(expand('EfS ${constructor}', FOLLOWING)).toBeUndefined();
   });
 
+  /**
+   * The pair's `+` between the two week tokens prints as a hyphen for an issue
+   * of three weeks or more, as the server prints it, so the drawer does not mark
+   * such a name tailored. A pair and any other `+` are expanded as written.
+   */
+  it('writes the pair joiner as a range for three weeks or more, as the server does', () => {
+    const range = { ...FOLLOWING, week: 36, weekTo: 38 } as PublicationIssue;
+    expect(expand('Uge ${week}+${weekTo}, ${year}', range)).toBe('Uge 36-38, 2026');
+    expect(expand('nm-w${week-2-digits} + ${weekTo-2-digits}-${year}', range)).toBe(
+      'nm-w36 - 38-2026',
+    );
+    expect(expand('1+2 ${week}+${weekTo}', range)).toBe('1+2 36-38');
+    const pair = { ...FOLLOWING, week: 36, weekTo: 37 } as PublicationIssue;
+    expect(expand('Uge ${week}+${weekTo}, ${year}', pair)).toBe('Uge 36+37, 2026');
+    const yearEnd = { ...FOLLOWING, week: 52, weekTo: 2, year: 2026 } as PublicationIssue;
+    expect(expand('Uge ${week}+${weekTo}, ${year}', yearEnd)).toBe('Uge 52-2, 2026');
+  });
+
   it('says nothing about a series that names no pattern', () => {
     expect(expand(undefined, FOLLOWING)).toBeUndefined();
     expect(expand('  ', FOLLOWING)).toBeUndefined();

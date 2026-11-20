@@ -1,11 +1,12 @@
 import { Component, computed, inject, model, output, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
 import { Icon } from '../../../../../shared/icons/icon';
+import { fixedListRead, listRead } from '../../../../../shared/utils/list-read';
 import { ModelLanguageSelection } from '../../../services/model-language-selection';
 import { ModelLanguagePicker } from '../../../components/model-language-picker/model-language-picker';
 import { Select } from '../../../../../shared/forms/select/select';
@@ -22,7 +23,7 @@ import {
  */
 @Component({
   selector: 'app-list-values-editor',
-  imports: [Icon, Select, FormsModule, TranslocoPipe, ModelLanguagePicker],
+  imports: [ErrorBanner, Icon, Select, FormsModule, TranslocoPipe, ModelLanguagePicker],
   templateUrl: './list-values-editor.html',
   host: { class: 'flex min-h-0 flex-1 flex-col' },
 })
@@ -34,10 +35,12 @@ export class ListValuesEditor {
   readonly values = model<DictionaryEntry[]>([]);
   readonly valuesChanged = output<void>();
 
-  private readonly names = toSignal(
-    this.dictionariesApi.getDictionaryNames().pipe(catchError(() => of<string[]>([]))),
-    { initialValue: [] as string[] },
+  // A failed read of either list is said above the panes, with a retry, so an empty
+  // dictionary picker or entry list is never taken for one with nothing in it.
+  private readonly namesRead = fixedListRead<string>(() =>
+    this.dictionariesApi.getDictionaryNames(),
   );
+  private readonly names = this.namesRead.value;
   protected readonly dictionaryNames = computed(() => [...this.names()]);
 
   /** Requested dictionary (defaults to 'template'); falls back to the first available. */
@@ -50,18 +53,21 @@ export class ListValuesEditor {
 
   protected readonly dictSearch = signal('');
 
-  private readonly entries = toSignal(
-    toObservable(this.currentDictionaryName).pipe(
-      switchMap((name) =>
-        name
-          ? this.dictionariesApi
-              .getDictionaryEntries(name)
-              .pipe(catchError(() => of<DictionaryEntry[]>([])))
-          : of<DictionaryEntry[]>([]),
-      ),
-    ),
-    { initialValue: [] as DictionaryEntry[] },
+  private readonly entriesRead = listRead<DictionaryEntry, string>(
+    toObservable(this.currentDictionaryName),
+    (name) => (name ? this.dictionariesApi.getDictionaryEntries(name) : of<DictionaryEntry[]>([])),
   );
+  private readonly entries = this.entriesRead.value;
+
+  protected readonly loadFailed = computed(
+    () => this.namesRead.failed() || this.entriesRead.failed(),
+  );
+
+  /** Read again whichever list failed. */
+  protected retry(): void {
+    if (this.namesRead.failed()) this.namesRead.retry();
+    if (this.entriesRead.failed()) this.entriesRead.retry();
+  }
 
   // Dedupe on the natural `key` (non-optional), not the optional numeric `id`.
   private readonly selectedKeys = computed(() => new Set(this.values().map((value) => value.key)));

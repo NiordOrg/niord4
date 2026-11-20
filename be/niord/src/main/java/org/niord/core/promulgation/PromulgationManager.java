@@ -236,16 +236,27 @@ public class PromulgationManager {
     /***************************************/
 
     /**
-     * Manually generates a message promulgation record for the given type and message based on the contents of the message
+     * Manually generates a message promulgation record for the given type and message based on the contents of the message.
+     * <p>
+     * A type whose service is not registered (a type row that outlived its service) generates nothing: the message is
+     * left as it is, with a warning, as the life-cycle functions above skip such a type.
      * @param typeId the type of promulgation to generate
      * @param message the message template to generate a promulgation for
-     * @return the promulgation
+     * @return the promulgation, or for a type whose service is not registered the message's promulgation of the type
+     *         as it was (null for none)
      */
     public BaseMessagePromulgationVo generateMessagePromulgation(String typeId, SystemMessageVo message) throws PromulgationException {
 
         // Generate the message promulgation
         PromulgationType type = persistedPromulgationType(typeId);
         BasePromulgationService promulgationService = instantiatePromulgationService(type.getServiceId());
+        if (promulgationService == null) {
+            log.warn("Unable to instantiate promulgation service for type " + type.getTypeId());
+            return message.getPromulgations() == null ? null : message.getPromulgations().stream()
+                    .filter(mp -> mp.getType() != null && typeId.equals(mp.getType().getTypeId()))
+                    .findFirst()
+                    .orElse(null);
+        }
 
         // Create a new template promulgation of the given type and add it to the message promulgation list
         BaseMessagePromulgationVo p = promulgationService.generateMessagePromulgation(message, type);
@@ -287,7 +298,12 @@ public class PromulgationManager {
         if (message.getPromulgations() != null) {
             for (BaseMessagePromulgationVo promulgation : message.getPromulgations()) {
                 PromulgationType type = persistedPromulgationType(promulgation.getType().getTypeId());
-                instantiatePromulgationService(type.getServiceId()).messagePromulgationGenerated(message, type);
+                BasePromulgationService service = instantiatePromulgationService(type.getServiceId());
+                if (service != null) {
+                    service.messagePromulgationGenerated(message, type);
+                } else {
+                    log.warn("Unable to instantiate promulgation service for type " + type.getTypeId());
+                }
             }
         }
     }
@@ -300,7 +316,12 @@ public class PromulgationManager {
         if (message.getPromulgations() != null) {
             for (BaseMessagePromulgationVo promulgation : message.getPromulgations()) {
                 PromulgationType type = persistedPromulgationType(promulgation.getType().getTypeId());
-                instantiatePromulgationService(type.getServiceId()).resetMessagePromulgation(message, type);
+                BasePromulgationService service = instantiatePromulgationService(type.getServiceId());
+                if (service != null) {
+                    service.resetMessagePromulgation(message, type);
+                } else {
+                    log.warn("Unable to instantiate promulgation service for type " + type.getTypeId());
+                }
             }
         }
     }

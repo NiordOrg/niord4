@@ -1,4 +1,11 @@
 <div class="flex flex-col gap-2">
+  @if (typesResource.error()) {
+    <app-error-banner
+      [title]="'admin.paramTypes.loadError' | transloco"
+      [retryLabel]="'common.retry' | transloco"
+      (retry)="typesResource.reload()"
+    />
+  }
   <app-model-language-picker [selection]="modelLanguage" />
   <table class="niord-table">
     <thead>

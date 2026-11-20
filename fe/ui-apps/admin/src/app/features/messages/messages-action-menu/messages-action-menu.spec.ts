@@ -25,6 +25,7 @@ import type { Message } from '../models/message.model';
 import type { SortBy, SortOrder } from '../models/messages-filter-params.model';
 import { provideTestTransloco } from '../../../shared/testing/transloco-testing';
 import { provideFakeAuthFacade } from '../../../shared/testing/fake-auth';
+import { ConfirmService } from '../../../shared/services/confirm.service';
 import { of } from 'rxjs';
 
 interface FakeFilter {
@@ -33,6 +34,7 @@ interface FakeFilter {
   setSortBy: (v: SortBy) => void;
   setSortOrder: (v: SortOrder) => void;
   toggleSort: ReturnType<typeof vi.fn>;
+  requestParams: () => string;
 }
 
 interface ScenarioInputs {
@@ -42,6 +44,8 @@ interface ScenarioInputs {
   selectionSize: number;
   /** The backend's `user` role in the session domain; defaults to isLoggedIn. */
   domainUserRole?: boolean;
+  /** The list on screen was answered while the search index was being rebuilt. */
+  indexIncomplete?: boolean;
 }
 
 function setup(
@@ -85,10 +89,13 @@ function setup(
         sortOrder.set('ASC');
       }
     }),
+    requestParams: () => 'query=wreck',
   };
 
   const list = {
     messages: signal<readonly Message[]>(loadedMessages),
+    indexIncomplete: signal(inputs.indexIncomplete ?? false),
+    total: signal(0),
   } as unknown as MessageListFacade;
 
   TestBed.configureTestingModule({
@@ -136,6 +143,7 @@ function setup(
         provide: NotificationService,
         useValue: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
       },
+      ConfirmService,
       provideHttpClient(),
       provideHttpClientTesting(),
       provideTestTransloco(),
@@ -581,5 +589,84 @@ describe('MessagesActionMenu bulk tag membership', () => {
     const item = findItem(component, 'menu.action.tag.add_selection');
     item?.command?.({ originalEvent: new MouseEvent('click'), item: item });
     expect(openSpy).toHaveBeenCalledWith(triggerBtn, { messageIds: ['m1', 'm2'] });
+  });
+});
+
+describe('MessagesActionMenu while the search index is being rebuilt', () => {
+  const editor = { isLoggedIn: true, isEditor: true, isAdmin: false, selectionSize: 2 };
+
+  function run(component: MessagesActionMenu, label: string): void {
+    const item = findItem(component, label);
+    item?.command?.({ originalEvent: new MouseEvent('click'), item });
+  }
+
+  it('exports at once when the list is complete', () => {
+    const { component } = setup(editor);
+    const exports = TestBed.inject(MessageExportService);
+
+    run(component, 'menu.action.export');
+    run(component, 'menu.action.export_selection');
+
+    expect(TestBed.inject(ConfirmService).active()).toBeUndefined();
+    expect(exports.export).toHaveBeenCalledTimes(1);
+    expect(exports.exportSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the list's warning before the export, and exports only when it is confirmed", () => {
+    const { component } = setup({ ...editor, indexIncomplete: true });
+    const exports = TestBed.inject(MessageExportService);
+    const confirm = TestBed.inject(ConfirmService);
+
+    run(component, 'menu.action.export');
+
+    expect(exports.export).not.toHaveBeenCalled();
+    const asked = confirm.active();
+    expect(asked?.message).toBe('messages.list.indexIncomplete');
+    expect(asked?.acceptLabel).toBe('menu.action.export');
+    asked?.accept();
+    expect(exports.export).toHaveBeenCalledWith({ filterParams: 'query=wreck', total: 0 });
+  });
+
+  it("shows the list's warning before the export of the selection too", () => {
+    const { component } = setup({ ...editor, indexIncomplete: true });
+    const exports = TestBed.inject(MessageExportService);
+    const confirm = TestBed.inject(ConfirmService);
+
+    run(component, 'menu.action.export_selection');
+
+    expect(exports.exportSelection).not.toHaveBeenCalled();
+    expect(confirm.active()?.message).toBe('messages.list.indexIncomplete');
+    confirm.active()?.accept();
+    expect(exports.exportSelection).toHaveBeenCalledWith(['m1', 'm2']);
+  });
+
+  it("hands the list's state to the mail dialog, which shows the warning before the mail is sent", () => {
+    const mails = () => TestBed.inject(MessageMailService);
+
+    run(setup({ ...editor, indexIncomplete: true }).component, 'menu.action.mail');
+    expect(mails().mailSelection).toHaveBeenCalledWith(['m1', 'm2'], true);
+    TestBed.resetTestingModule();
+
+    run(setup(editor).component, 'menu.action.mail');
+    expect(mails().mailSelection).toHaveBeenCalledWith(['m1', 'm2'], false);
+  });
+});
+
+describe('MessagesActionMenu export', () => {
+  it("Export passes the search's total, so the export can say it holds only the first part", () => {
+    const { component } = setup({
+      isLoggedIn: true,
+      isEditor: false,
+      isAdmin: false,
+      selectionSize: 0,
+    });
+    Object.assign(TestBed.inject(MessagesFilterFacade), { requestParams: () => 'query=wreck' });
+    (TestBed.inject(MessageListFacade).total as ReturnType<typeof signal<number>>).set(1500);
+    const item = findItem(component, 'menu.action.export');
+    item?.command?.({ originalEvent: new MouseEvent('click'), item });
+    expect(TestBed.inject(MessageExportService).export).toHaveBeenCalledWith({
+      filterParams: 'query=wreck',
+      total: 1500,
+    });
   });
 });

@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tier-1 unit tests for {@link NiordIntegrationUrlValidator}, the SSRF guard on the Niord integration
- * importer (SECAUD-9).
+ * importer.
  *
  * <p>The guard is deliberately split in two, and the split is what these tests pin. The syntax check
  * runs when an integration point is created or updated and must NOT resolve DNS — an integration point

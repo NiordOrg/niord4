@@ -98,6 +98,8 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.cfg.DateTimeFeature;
 import tools.jackson.databind.json.JsonMapper;
 
+import jakarta.persistence.NonUniqueResultException;
+import jakarta.persistence.NoResultException;
 import jakarta.inject.Inject;
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.JMSContext;
@@ -197,16 +199,24 @@ public class MessageService extends BaseService {
 
     /**
      * Returns the message with the given legacy id
+     * <p>
+     * The legacy id is not unique in the schema: when several messages have it (restored data), none is returned, as
+     * when there is none, and a WARN names the legacy id.
      *
      * @param legacyId the id of the message
      * @return the message with the given id or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Message findByLegacyId(String legacyId) {
         try {
             return em.createNamedQuery("Message.findByLegacyId", Message.class)
                     .setParameter("legacyId", legacyId)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
+            return null;
+        } catch (NonUniqueResultException e) {
+            log.warn("Several messages have the legacy id '{}'; the look-up by legacy id answers none of them",
+                    legacyId);
             return null;
         }
     }

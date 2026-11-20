@@ -28,7 +28,8 @@ let dialogSeq = 0;
  * (two-way), `[header]` (rendered VERBATIM — consumers pass already-translated or
  * computed strings), `[modal]` `[closable]` `[closeOnEscape]` `[dismissableMask]`
  * `[style]` (the width mechanism, applied inline to the panel) `[panelClass]`, an
- * optional `[dirty]` unsaved-changes gate, and `#header` / `#footer` projection
+ * optional `[dirty]` unsaved-changes gate, an optional `[describedBy]` (the id of a
+ * body element the panel's `aria-describedby` points at), and `#header` / `#footer` projection
  * templates. Emits `(opened)`/`(closed)`.
  *
  * CDK overlay: global centered position (fixed — never repositions), block
@@ -72,6 +73,11 @@ export class Dialog {
   readonly panelClass = input('');
   /** Optional unsaved-changes gate — mirrors the drawer's. */
   readonly dirty = input(false);
+  /**
+   * Id of an element in the body that describes the dialog (`aria-describedby`), such as a
+   * warning a screen reader should announce when the dialog opens; none by default.
+   */
+  readonly describedBy = input<string | null>(null);
   readonly opened = output<void>();
   readonly closed = output<void>();
 

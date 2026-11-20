@@ -534,7 +534,7 @@ class CategoryRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // Create must not accept a client-supplied id (SECAUD-14)
+    // Create must not accept a client-supplied id (the root cause: MASSASSIGN-1 in be/docs/potential-errors.md)
     // ------------------------------------------------------------------------------------------- //
 
     /**

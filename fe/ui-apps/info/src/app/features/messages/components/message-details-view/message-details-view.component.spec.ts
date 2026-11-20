@@ -14,6 +14,12 @@ import {
   provideTestNiordConfig,
 } from '../../../../testing/test-config';
 
+/**
+ * The dialog and the CDK's overlay are fetched on demand, and the first fetch in a run compiles
+ * them: on a busy machine that takes longer than waitFor's default second.
+ */
+const DIALOG_FETCH = { timeout: 5000 };
+
 describe('MessageDetailsViewComponent', () => {
   function setUp(routeParams: Record<string, string>, address = '/messages/details') {
     const store = fakeMessagesStore({
@@ -53,7 +59,7 @@ describe('MessageDetailsViewComponent', () => {
     const { dialogSpy } = setUp({ messageId: 'msg-2' }, '/messages/details/message/msg-2');
 
     // The dialog and the CDK's overlay are fetched on demand, so the open lands a tick later.
-    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled());
+    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled(), DIALOG_FETCH);
     const config = (dialogSpy.open.mock.calls[0] as unknown[])[1] as {
       data: { messageId: string; messageIds: () => string[] };
     };
@@ -66,7 +72,7 @@ describe('MessageDetailsViewComponent', () => {
   it('hands the dialog the list itself, which fills in after the dialog has opened', async () => {
     const { dialogSpy, store } = setUp({ messageId: 'msg-2' }, '/messages/details/message/msg-2');
     store.messages.set([]);
-    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled());
+    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled(), DIALOG_FETCH);
     const config = (dialogSpy.open.mock.calls[0] as unknown[])[1] as {
       data: { messageIds: () => string[] };
     };
@@ -85,7 +91,7 @@ describe('MessageDetailsViewComponent', () => {
       { messageId: 'msg-2' },
       '/messages/details/message/msg-2?publicationId=p-1',
     );
-    await vi.waitFor(() => expect(closed.observed).toBe(true));
+    await vi.waitFor(() => expect(closed.observed).toBe(true), DIALOG_FETCH);
 
     closed.next();
     expect(navigate).toHaveBeenCalledWith(['/messages/details'], {
@@ -101,7 +107,7 @@ describe('MessageDetailsViewComponent', () => {
       { messageId: 'msg-2' },
       '/messages/details/message/msg-2',
     );
-    await vi.waitFor(() => expect(closed.observed).toBe(true));
+    await vi.waitFor(() => expect(closed.observed).toBe(true), DIALOG_FETCH);
 
     location.go('/publications');
     closed.next();
@@ -110,7 +116,7 @@ describe('MessageDetailsViewComponent', () => {
 
   /** What the view handed the dialog it opened, once the open has landed. */
   async function openedData(dialogSpy: { open: ReturnType<typeof vi.fn> }) {
-    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled());
+    await vi.waitFor(() => expect(dialogSpy.open).toHaveBeenCalled(), DIALOG_FETCH);
     return ((dialogSpy.open.mock.calls[0] as unknown[])[1] as { data: MessageDetailsDialogData })
       .data;
   }
@@ -163,6 +169,60 @@ describe('MessageDetailsViewComponent', () => {
     expect(location.path()).toBe('/publications');
     closed.next();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // WCAG 2.4.3: a dialog a link opened has no control behind it to give focus back to, and focus
+  // fell to the page's body, so the next Tab started again at the top of the page.
+  describe('focus, once the linked dialog has closed', () => {
+    const TITLED = [
+      { id: 'msg-1', shortId: 'NW-001-26', mainType: 'NW', descs: [{ lang: 'en', title: 'One' }] },
+      { id: 'msg-2', mainType: 'NM', descs: [{ lang: 'en', title: 'Two' }] },
+    ] as const;
+    let main: HTMLElement;
+
+    beforeEach(() => {
+      main = document.createElement('main');
+      main.id = 'main-content';
+      main.tabIndex = -1;
+      document.body.append(main);
+    });
+    afterEach(() => main.remove());
+
+    /** Opens the dialog a link names over the list, in the page, and closes it after `steps`. */
+    async function closeAfter(linked: string, steps: string[]): Promise<void> {
+      const { fixture, dialogSpy, closed, store } = setUp(
+        { messageId: linked },
+        `/messages/details/message/${linked}`,
+      );
+      store.messages.set([...TITLED]);
+      fixture.detectChanges();
+      main.append(fixture.nativeElement);
+      const data = await openedData(dialogSpy);
+      for (const step of steps) data.messageShown!(step);
+
+      closed.next();
+      await new Promise((resolve) => setTimeout(resolve));
+      TestBed.tick();
+    }
+
+    it('goes to the row of the message the dialog showed last', async () => {
+      await closeAfter('msg-2', ['msg-1']);
+      const focused = document.activeElement as HTMLElement;
+      expect(focused.matches('button.row-link')).toBe(true);
+      expect(focused.textContent).toContain('One');
+    });
+
+    it('finds that row by a short id as well', async () => {
+      await closeAfter('NW-001-26', []);
+      const focused = document.activeElement as HTMLElement;
+      expect(focused.matches('button.row-link')).toBe(true);
+      expect(focused.textContent).toContain('One');
+    });
+
+    it('goes to the main content when the list does not hold that message', async () => {
+      await closeAfter('msg-9', []);
+      expect(document.activeElement).toBe(main);
+    });
   });
 
   // Only a link names a message in the address; a dialog opened from the list leaves it alone.

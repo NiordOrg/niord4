@@ -13,6 +13,7 @@
     aria-modal="true"
     [attr.aria-labelledby]="headerTpl() ? null : titleId"
     [attr.aria-label]="headerTpl() ? header() || null : null"
+    [attr.aria-describedby]="describedBy() || null"
     cdkTrapFocus
     [cdkTrapFocusAutoCapture]="true"
   >

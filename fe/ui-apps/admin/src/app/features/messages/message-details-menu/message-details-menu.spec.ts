@@ -310,6 +310,31 @@ describe('MessageDetailsMenu lazy tag fetch', () => {
     expect(removeParent?.items?.[0].label).toBe('common.loading');
   });
 
+  it('says so in the Remove submenu when the tags could not be read, with a retry', async () => {
+    const { fixture, comp, httpMock } = setup({
+      isLoggedIn: true,
+      isEditor: true,
+      canEditSeries: true,
+    });
+    (comp as unknown as { onOpened: () => void }).onOpened();
+    fixture.detectChanges();
+    await settle();
+    httpMock
+      .expectOne((r) => r.method === 'GET' && r.url === TAG_FETCH_URL)
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    await settle();
+
+    const removeParent = findItem(comp, 'menu.action.tag.remove_named');
+    expect(removeParent?.items?.map((item) => item.label)).toEqual([
+      'common.fetchError',
+      'common.retry',
+    ]);
+    expect(removeParent?.items?.[0].disabled).toBe(true);
+    removeParent?.items?.[1].command?.();
+    await settle();
+    httpMock.expectOne((r) => r.method === 'GET' && r.url === TAG_FETCH_URL);
+  });
+
   it('omits the Remove submenu entirely when the message is in no tags', async () => {
     const { fixture, comp, httpMock } = setup({
       isLoggedIn: true,

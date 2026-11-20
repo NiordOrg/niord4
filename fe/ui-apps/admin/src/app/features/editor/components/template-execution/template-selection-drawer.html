@@ -20,13 +20,22 @@
         {{ 'editor.template.drawer.allTemplates' | transloco }}
       </button>
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <app-entity-tree
-          [entities]="roots()"
-          [expandFirstLevel]="true"
-          [showFilter]="false"
-          [selectedIds]="ancestorId() !== undefined ? [ancestorId()!] : []"
-          (entitySelected)="selectAncestor($event.id)"
-        />
+        @if (rootsFailed()) {
+          <app-error-banner
+            data-testid="template-drawer-roots-error"
+            [title]="'common.fetchError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="retryRoots()"
+          />
+        } @else {
+          <app-entity-tree
+            [entities]="roots()"
+            [expandFirstLevel]="true"
+            [showFilter]="false"
+            [selectedIds]="ancestorId() !== undefined ? [ancestorId()!] : []"
+            (entitySelected)="selectAncestor($event.id)"
+          />
+        }
       </div>
     </div>
 
@@ -45,6 +54,13 @@
       <div class="min-h-0 flex-1 overflow-y-auto">
         @if (loading()) {
           <p class="p-2 text-sm text-fg-subtle">{{ 'term.loading' | transloco }}</p>
+        } @else if (listFailed()) {
+          <app-error-banner
+            data-testid="template-drawer-list-error"
+            [title]="'common.fetchError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="retryList()"
+          />
         } @else if (results().length === 0) {
           <p class="p-2 text-sm text-fg-subtle">
             {{ 'editor.template.drawer.noResults' | transloco }}
@@ -100,6 +116,12 @@
           </p>
         } @else if (example.isLoading()) {
           <p class="p-2 text-sm text-fg-subtle">{{ 'term.loading' | transloco }}</p>
+        } @else if (example.error()) {
+          <app-error-banner
+            [title]="'common.fetchError' | transloco"
+            [retryLabel]="'common.retry' | transloco"
+            (retry)="example.reload()"
+          />
         } @else if (example.hasValue()) {
           <app-message-details-renderer
             [message]="example.value()!"

@@ -15,6 +15,11 @@
  */
 package org.niord.core.promulgation;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.junit.jupiter.api.Test;
@@ -31,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -283,6 +289,55 @@ class PromulgationManagerGapITTest extends ITTest {
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
                 () -> promulgationManager.generateMessagePromulgation("it-no-such-type", message));
         assertTrue(e.getMessage().contains("it-no-such-type"), e.getMessage());
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // A type whose service is not registered
+    // ------------------------------------------------------------------------------------------- //
+
+    /**
+     * A promulgation type whose service id names no registered service (a type row that outlived its service, or one
+     * imported from a deployment with a service of its own). The reset before and the clean-up after a template
+     * execution skip it with a warning, as saving the message does, and Generate leaves the message's promulgation of
+     * the type as it was. FAILS on the code that called the missing service: each of the three failed with a
+     * NullPointerException, so every template execution on a message carrying the type answered 500.
+     */
+    @Test
+    @Transactional
+    void aTypeWhoseServiceIsNotRegisteredIsSkippedWithAWarning() throws PromulgationException {
+        createType("it-no-service", "it-no-such-service", 310, true, null, null);
+
+        SystemMessageVo message = new SystemMessageVo();
+        message.setType(Type.COASTAL_WARNING);
+        List<BaseMessagePromulgationVo> promulgations = new ArrayList<>();
+        TwitterMessagePromulgationVo orphan = promulgationVo("it-no-service", 310);
+        orphan.setTweet("it-kept");
+        promulgations.add(orphan);
+        message.setPromulgations(promulgations);
+
+        Logger logger = (Logger) LoggerFactory.getLogger(PromulgationManager.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        BaseMessagePromulgationVo generated;
+        try {
+            assertDoesNotThrow(() -> promulgationManager.resetMessagePromulgations(message), "the reset");
+            assertDoesNotThrow(() -> promulgationManager.messagePromulgationGenerated(message), "the clean-up");
+            generated = promulgationManager.generateMessagePromulgation("it-no-service", message);
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertEquals(orphan, generated, "Generate answers the type's promulgation as it was");
+        assertEquals("it-kept", ((TwitterMessagePromulgationVo) message.promulgation("it-no-service")).getTweet(),
+                "and leaves it unchanged");
+        assertEquals(List.of("it-no-service"), typeIds(message), "the message keeps its promulgation");
+        long warnings = appender.list.stream()
+                .filter(e -> e.getLevel() == Level.WARN)
+                .filter(e -> e.getFormattedMessage()
+                        .equals("Unable to instantiate promulgation service for type it-no-service"))
+                .count();
+        assertEquals(3L, warnings, "each of the three logs the type it skipped");
     }
 
     // ------------------------------------------------------------------------------------------- //

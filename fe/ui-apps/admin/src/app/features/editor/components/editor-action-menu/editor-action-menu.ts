@@ -360,7 +360,8 @@ export class EditorActionMenu {
 
       // "Remove from…" submenu — one child per (unlocked) tag the message is in. A disabled
       // placeholder stands in while the membership list loads; the parent disappears entirely
-      // once it resolves to no tags.
+      // once it resolves to no tags. A failed read says so, with a retry, rather than reading as
+      // no tags.
       const removeItems = this.removeFromTagItems();
       if (this.tagsResource.isLoading()) {
         menuItems.push({
@@ -372,6 +373,23 @@ export class EditorActionMenu {
               icon: 'lucideLoaderCircle',
               spin: true,
               disabled: true,
+            },
+          ],
+        });
+      } else if (this.tagsResource.error()) {
+        menuItems.push({
+          label: this.transloco.translate('menu.action.tag.remove_named'),
+          icon: 'lucideTag',
+          items: [
+            {
+              label: this.transloco.translate('common.fetchError'),
+              icon: 'lucideCircleX',
+              disabled: true,
+            },
+            {
+              label: this.transloco.translate('common.retry'),
+              icon: 'lucideRefreshCw',
+              command: () => this.tagsResource.reload(),
             },
           ],
         });

@@ -523,8 +523,8 @@ function closingLines(answers, platform) {
   if (platform === 'win32')
     lines.push(
       'init: on Windows, give the scripts their exec bits in the first commit: git add -A && git add --chmod=+x start-local.sh be/mvnw be/scripts/check-country-build-group.sh',
-      // PORT-1 (be/docs/potential-errors.md): a NIORD_HOME with backslashes fails every
-      // integration test's context on Windows.
+      // One known Niord home for the integration tests, the same folder as their own default; the
+      // path may be written with forward slashes or backslashes.
       'init: on Windows, before be/mvnw verify: export NIORD_HOME=$(cygpath -m "$TEMP")/niord',
     );
   return lines;

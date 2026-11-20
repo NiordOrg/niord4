@@ -35,6 +35,8 @@ import org.niord.core.web.NiordWebException;
 import org.niord.model.search.PagedSearchParamsVo;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NonUniqueResultException;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.criteria.*;
 import javax.script.ScriptException;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,16 +78,24 @@ public class CategoryService extends TreeBaseService<Category> {
 
     /**
      * Returns the category with the given legacy id
+     * <p>
+     * The legacy id is not unique in the schema: when several categories have it (restored data), none is returned,
+     * as when there is none, and a WARN names the legacy id.
      *
      * @param legacyId the id of the category
      * @return the category with the given id or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Category findByLegacyId(String legacyId) {
         try {
             return em.createNamedQuery("Category.findByLegacyId", Category.class)
                     .setParameter("legacyId", legacyId)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
+            return null;
+        } catch (NonUniqueResultException e) {
+            log.warn("Several categories have the legacy id '{}'; the look-up by legacy id answers none of them",
+                    legacyId);
             return null;
         }
     }
@@ -467,16 +477,23 @@ public class CategoryService extends TreeBaseService<Category> {
 
     /**
      * Returns the category with the given MRN. Returns null if the category is not found.
+     * <p>
+     * The MRN is not unique in the schema: when several categories have it (restored data), none is returned, as
+     * when there is none, and a WARN names the MRN.
      *
      * @param mrn the MRN of the category
      * @return the category with the given MRN or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Category findByMrn(String mrn) {
         try {
             return em.createNamedQuery("Category.findByMrn", Category.class)
                     .setParameter("mrn", mrn)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
+            return null;
+        } catch (NonUniqueResultException e) {
+            log.warn("Several categories have the MRN '{}'; the look-up by MRN answers none of them", mrn);
             return null;
         }
     }
@@ -799,14 +816,12 @@ public class CategoryService extends TreeBaseService<Category> {
     /**
      * Returns the last change date for categories or null if no category exists
      * @return the last change date for categories
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     @Override
     public Date getLastUpdated() {
-        try {
-            return em.createNamedQuery("Category.findLastUpdated", Date.class).getSingleResult();
-        } catch (Exception e) {
-            return null;
-        }
+        // max() answers one row, holding null when there is no category
+        return em.createNamedQuery("Category.findLastUpdated", Date.class).getSingleResult();
     }
 
     /**

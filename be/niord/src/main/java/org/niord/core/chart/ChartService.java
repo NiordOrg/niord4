@@ -25,6 +25,8 @@ import org.niord.core.db.SpatialIntersectsPredicate;
 import org.niord.core.service.BaseService;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NonUniqueResultException;
+import jakarta.persistence.NoResultException;
 import jakarta.inject.Inject;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -45,16 +47,23 @@ public class ChartService extends BaseService {
 
     /**
      * Returns the chart with the given legacy id
+     * <p>
+     * The legacy id is not unique in the schema: when several charts have it (restored data), none is returned, as
+     * when there is none, and a WARN names the legacy id.
      *
-     * @param legacyId the id of the category
+     * @param legacyId the legacy id of the chart
      * @return the chart with the given id or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Chart findByLegacyId(String legacyId) {
         try {
             return em.createNamedQuery("Chart.findByLegacyId", Chart.class)
                     .setParameter("legacyId", legacyId)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
+            return null;
+        } catch (NonUniqueResultException e) {
+            log.warn("Several charts have the legacy id '{}'; the look-up by legacy id answers none of them", legacyId);
             return null;
         }
     }
@@ -101,7 +110,8 @@ public class ChartService extends BaseService {
      * Returns the chart with the given chart number
      *
      * @param chartNumber the chart number
-     * @return the chart with the given chart number
+     * @return the chart with the given chart number, or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Chart findByChartNumber(String chartNumber) {
         try {
@@ -109,7 +119,7 @@ public class ChartService extends BaseService {
                     .createNamedQuery("Chart.findByChartNumber", Chart.class)
                     .setParameter("chartNumber", chartNumber)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             return null;
         }
     }
@@ -119,16 +129,13 @@ public class ChartService extends BaseService {
      *
      * @param chartNumbers the chart numbers
      * @return the charts with the given chart numbers
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "none found"
      */
     public List<Chart> findByChartNumbers(String... chartNumbers) {
-        try {
-            return em
-                    .createNamedQuery("Chart.findByChartNumbers", Chart.class)
-                    .setParameter("chartNumbers", Arrays.asList(chartNumbers))
-                    .getResultList();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        return em
+                .createNamedQuery("Chart.findByChartNumbers", Chart.class)
+                .setParameter("chartNumbers", Arrays.asList(chartNumbers))
+                .getResultList();
     }
 
     /**

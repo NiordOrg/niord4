@@ -7,7 +7,6 @@ import {
   fakeMessagesStore,
   getTranslocoTestingModule,
   provideTestNiordConfig,
-  provideTranslocoSpy,
 } from '../../../../testing/test-config';
 
 describe('MessageTableViewComponent', () => {
@@ -22,10 +21,9 @@ describe('MessageTableViewComponent', () => {
     const dialogSpy = { open: vi.fn() };
 
     TestBed.configureTestingModule({
-      imports: [MessageTableViewComponent],
+      imports: [MessageTableViewComponent, getTranslocoTestingModule()],
       providers: [
         provideTestNiordConfig(),
-        provideTranslocoSpy(),
         { provide: MessagesStore, useValue: store },
         { provide: Dialog, useValue: dialogSpy },
       ],

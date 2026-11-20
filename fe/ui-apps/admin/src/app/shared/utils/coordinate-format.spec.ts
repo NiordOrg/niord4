@@ -135,5 +135,47 @@ describe('coordinate-format', () => {
       expect(parseLatLon('56 30.0N - 180.5E')).toBeNull();
       expect(parseLatLon('-55 30N - 012 00E')).toBeNull();
     });
+
+    it('returns null for a fraction of a degree followed by minutes', () => {
+      // "56.5 30N" was read as 56.5° + 30' = 57° N, a position the editor never typed.
+      expect(parseLatLon('56.5 30N - 012 00E')).toBeNull();
+      expect(parseLatLon('56,5 30,0N - 012 00E')).toBeNull();
+      expect(parseLatLon("56° 30'N - 012.5° 15'E")).toBeNull();
+      expect(parseLatLon('565e-1 30N - 012 00E')).toBeNull();
+      expect(parseLatLon('56.5N - 012.25E')).toEqual({ lat: 56.5, lon: 12.25 });
+    });
+
+    it('returns null for minutes with a fraction followed by seconds', () => {
+      // "56 30.5' 20"N" would add the seconds to minutes that already carry a fraction. This
+      // parser reads no seconds at all, so every notation of it is flagged, as the backend's
+      // PlainTextConverter refuses it.
+      expect(parseLatLon(`56° 30.5' 20"N - 012° 00'E`)).toBeNull();
+      expect(parseLatLon(`56 30,5' 20"N - 012 00E`)).toBeNull();
+      expect(parseLatLon(`56°30.5'20"N - 012°00'E`)).toBeNull();
+      expect(parseLatLon('56 30.5 20N - 012 00E')).toBeNull();
+      expect(parseLatLon(`56 30N - 012° 15.5' 10"E`)).toBeNull();
+    });
+
+    it('reads minutes with a fraction and no seconds as typed', () => {
+      // The usual form: the refusal above is for seconds after the fraction, not for the fraction.
+      for (const typed of [`56° 30.5'N - 012° 15.25'E`, '56 30,5N - 012 15,25E']) {
+        const parsed = parseLatLon(typed);
+        expect(parsed?.lat, typed).toBeCloseTo(56 + 30.5 / 60, 9);
+        expect(parsed?.lon, typed).toBeCloseTo(12 + 15.25 / 60, 9);
+      }
+    });
+
+    it('reads whole degrees written with a zero fraction, followed by minutes, as typed', () => {
+      // The refusal is for a fraction of a degree, not for a point in the degree text.
+      expect(parseLatLon('56.0 30N - 012.0 15E')).toEqual({ lat: 56.5, lon: 12.25 });
+      expect(parseLatLon('56. 30N - 012. 15E')).toEqual({ lat: 56.5, lon: 12.25 });
+      expect(parseLatLon('56,0 30,0N - 012,00 15,0E')).toEqual({ lat: 56.5, lon: 12.25 });
+    });
+
+    it('reads a "-" before the longitude as the divider: the hemisphere letter decides', () => {
+      const parsed = parseLatLon('64 10N -051 43W');
+      expect(parsed?.lat).toBeCloseTo(64 + 10 / 60, 9);
+      expect(parsed?.lon).toBeCloseTo(-(51 + 43 / 60), 9);
+    });
   });
 });

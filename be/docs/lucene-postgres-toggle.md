@@ -89,9 +89,12 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   otherwise), and the administration app's _Messages_ list shows a warning above such a result. It reads the
   index's state before and after the search, so a re-index that empties the index meanwhile is marked too. The
   mark is set only by the Lucene branch: a search without free text and a PostgreSQL search are never marked. The public API
-  takes no free text and serializes the messages alone, the export drops the mark, a scheduled mailing-list trigger
-  waits for the index in the half hour after the start (`MailingListExecutionService.INCOMPLETE_INDEX_WAIT`), and the
-  print, the message mail and the mailing-list report pass the answer on without it ([`potential-errors.md`](./potential-errors.md), LUCENE-7).
+  takes no free text and serializes the messages alone, a scheduled mailing-list trigger waits for the index in the
+  half hour after the start (`MailingListExecutionService.INCOMPLETE_INDEX_WAIT`), the print of a list (PDF) and a
+  mailing-list report run by hand carry a line at their top that says messages may be missing
+  (`IndexIncompleteNotice`, the `pdf` text `pdf.list.index_incomplete`), and the administration app shows the list's
+  warning in the mail dialog and asks before an export, whose archive drops the mark to keep its form. What is left is
+  in [`potential-errors.md`](./potential-errors.md), LUCENE-7.
 - Both passes also look five minutes behind their marker (`MessageQueryService.INDEX_LOOK_BACK`, a constant).
   A message's `updated` time is stamped when its transaction writes it, and transactions commit in another
   order: a message stamped before the time a pass read up to, and committed after that pass, lay below the
@@ -100,7 +103,16 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   it. The PostgreSQL pass knows this exactly: its rows hold the time they were built from. The Lucene pass keeps
   in memory the time of each message of the window it indexed, so after a restart that keeps the index it indexes
   the window once. A missed message that throws while it is indexed is logged and tried again by the next pass,
-  without holding back the messages after the marker. A transaction that takes longer than five minutes from
+  without holding back the messages after the marker. A message after the marker that throws while the Lucene pass
+  indexes it is logged as an ERROR with its id and skipped: the marker moves past it, the messages after it are
+  indexed, and it is indexed again when it is saved again (LUCENE-5, fixed 2026-11-19). A message whose document
+  cannot be built keeps the document an earlier pass gave it, if any; one that Lucene refuses when it is added (a
+  term too long, for example) has none until then, since its earlier document is deleted first. A skipped message
+  does not hold the index's refill open: the pass commits, and `allMessagesIndexed()` is set as without it, so only
+  the log tells of it. A failure of the database while a message is read (a dropped connection, a pool timeout, an
+  SQL error after which the transaction refuses every later statement) is not skipped: it would fail every later
+  message of the batch too, so the pass fails as a whole, the marker stays, and the next pass tries the same
+  messages again. The re-index of the admin page runs the same pass. A transaction that takes longer than five minutes from
   writing a message to its commit is still missed.
 - `disableLucene` therefore only routes which index a free-text **search** reads. Both indexes are always
   populated, so the two can be compared at any time and the switch is effectively instant.

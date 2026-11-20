@@ -549,7 +549,7 @@ class ContactServiceITTest extends ITTest {
         // transaction cannot roll those back) and are only cleaned up best-effort. Whether its
         // leftovers are present here comes down to class execution order, which differs between a
         // local run and the CI runner — so pinning the absolute total was green locally and red on
-        // CI. Assert the delta and this test's own rows instead. See docs/potential-errors.md TESTQ2.
+        // CI. Assert the delta and this test's own rows instead.
         long before = contactService.searchContacts(params().name("  ")).getTotal();
 
         contactService.createContact(newContact("it-blank-1@example.com", "IT-Blank", "en"));

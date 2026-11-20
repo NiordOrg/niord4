@@ -254,7 +254,9 @@ public class PlainTextConverterPropertyTest {
         Random random = new Random(SEED + 2);
         List<String> failures = new ArrayList<>();
         int accepted = 0;
-        for (int i = 0; i < 20000; i++) {
+        // 40000 lines: since a fraction of a degree followed by minutes is refused (CG7), 20000 left 50 accepted,
+        // one short of the floor below.
+        for (int i = 0; i < 40000; i++) {
             StringBuilder sb = new StringBuilder();
             int n = 4 + random.nextInt(14);
             for (int j = 0; j < n; j++) {

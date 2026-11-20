@@ -496,7 +496,10 @@ Five repo-level checks sit outside both suites:
   where a reader can type it, a message part that becomes a named tab stop when a language switch
   widens its table and stops being one when the switch back narrows it, and the map view's zoom
   buttons, layer switcher and credit links left uncovered by the panel of messages without a
-  position at four sizes. Every page carries the Content-Security-Policy of the image's nginx
+  position at four sizes, the credit links underlined, the teaser's banner at 4.5:1 over the chart,
+  a focus ring on every stop of the print sheet, a dialog's long words wrapped at 320 px under the
+  WCAG text spacing, and focus given to the message's row, or the main content, when a dialog
+  opened by its address closes. Every page carries the Content-Security-Policy of the image's nginx
   configuration and is served over plain HTTP, as the container serves it: the teaser and the map
   view must ask for their base-map tiles within that policy, and no page may break it. Frontend
   CI's Example country job runs it on the example's build on pull requests; on the base build it

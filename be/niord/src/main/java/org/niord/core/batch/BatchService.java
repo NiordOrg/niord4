@@ -421,18 +421,15 @@ public class BatchService extends BaseService {
      *
      * @param instanceId the instance id
      * @return the batch data entity with the given instance id
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public BatchData findByInstanceId(Long instanceId) {
-        try {
-            return em.createNamedQuery("BatchData.findByInstanceId", BatchData.class)
-                    .setParameter("instanceId", instanceId)
-                    .getResultList()
-                    .stream()
-                    .max(Comparator.comparing(BatchData::getCreated))
-                    .orElse(null);
-        } catch (Exception e) {
-            return null;
-        }
+        return em.createNamedQuery("BatchData.findByInstanceId", BatchData.class)
+                .setParameter("instanceId", instanceId)
+                .getResultList()
+                .stream()
+                .max(Comparator.comparing(BatchData::getCreated))
+                .orElse(null);
     }
 
     /**

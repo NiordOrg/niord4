@@ -27,6 +27,7 @@ import org.niord.core.mail.MailHtml;
 import org.niord.core.mail.ScheduledMail;
 import org.niord.core.mail.ScheduledMailRecipient;
 import org.niord.core.mailinglist.vo.MailingListReportVo;
+import org.niord.core.message.IndexIncompleteNotice;
 import org.niord.core.message.Message;
 import org.niord.core.message.MessageQueryService;
 import org.niord.core.message.MessageSearchParams;
@@ -34,11 +35,14 @@ import org.niord.core.message.MessageSearchService;
 import org.niord.core.message.MessageSeriesService;
 import org.niord.core.message.MessageTokenExpander;
 import org.niord.core.message.vo.SystemMessageVo;
+import org.niord.core.model.BaseEntity;
 import org.niord.core.model.DescEntity;
 import org.niord.core.script.FmTemplateService;
 import org.niord.core.script.JsResourceService;
 import org.niord.core.script.ScriptResource;
 import org.niord.core.service.BaseService;
+import org.niord.core.user.Contact;
+import org.niord.core.user.User;
 import org.niord.core.util.TimeUtils;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
@@ -105,7 +109,9 @@ public class MailingListExecutionService extends BaseService {
 
     private final MailingListStatusChangeOutbox statusChangeOutbox;
 
-    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService, MailingListStatusChangeOutbox statusChangeOutbox) {
+    private final IndexIncompleteNotice indexIncompleteNotice;
+
+    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService, MailingListStatusChangeOutbox statusChangeOutbox, IndexIncompleteNotice indexIncompleteNotice) {
         this.app = app;
         this.messageSearchService = messageSearchService;
         this.messageQueryService = messageQueryService;
@@ -114,6 +120,7 @@ public class MailingListExecutionService extends BaseService {
         this.dictionaryService = dictionaryService;
         this.messageSeriesService = messageSeriesService;
         this.statusChangeOutbox = statusChangeOutbox;
+        this.indexIncompleteNotice = indexIncompleteNotice;
     }
 
     /***************************************/
@@ -293,8 +300,8 @@ public class MailingListExecutionService extends BaseService {
     /**
      * Saves the record of a failed trigger: a mail in status ERROR, never sent, to the recipients of the list, with
      * the given subject, the note (HTML) followed by the cause, and the cause as its last error. A recipient with
-     * neither a name nor an e-mail address is left out (the Mail Queue holds no recipient without an address): the
-     * record must be saved even when that recipient is why the trigger's own mails failed.
+     * neither a name nor an e-mail address is left out (the Mail Queue holds no recipient without an address), as it
+     * is from the trigger's own mails.
      */
     private void saveFailureRecord(MailingList mailingList, String subject, String noteHtml, String error)
             throws IOException {
@@ -619,6 +626,10 @@ public class MailingListExecutionService extends BaseService {
     /**
      * Executes the given mailing list report, i.e. the scheduled triggers that can
      * be executed by end-users as reports.
+     * <p>
+     * A free-text search answered while the index was still being filled after a start may miss messages; the
+     * report is still made, with a line at its top that says so ({@link IndexIncompleteNotice}). A scheduled run
+     * waits for the index instead ({@link #executeScheduledTrigger(Integer)}).
      *
      * @param triggerId the ID of the trigger (mailing list report) to execute
      * @param lang the language
@@ -645,11 +656,13 @@ public class MailingListExecutionService extends BaseService {
             lang = languages.iterator().next();
         }
 
-        // Execute the script resources associated with the trigger
-        return executeScriptResources(
+        // Execute the script resources associated with the trigger, with the line that says the report may miss
+        // messages when the search was answered from an incomplete index
+        String html = executeScriptResources(
                 trigger,
                 messageResult.getData(),
                 lang);
+        return FmTemplateService.withTopNotice(html, indexIncompleteNotice.forResult(messageResult, lang));
     }
 
     /***************************************/
@@ -694,9 +707,27 @@ public class MailingListExecutionService extends BaseService {
                 .filter(r -> receives(r.getLanguage(), language, languages, isDefaultLanguage))
                 .collect(Collectors.toList()));
 
-        recipients.forEach(r -> mail.addRecipient(new ScheduledMailRecipient(TO, r.computeInternetAddress())));
+        // A recipient with neither a name nor an e-mail address has no address, which the Mail Queue refuses: it is
+        // left out, so it does not stop the mail of everyone else on the list
+        for (IMailable r : recipients) {
+            String address = r.computeInternetAddress();
+            if (address == null) {
+                log.warn("Mailing list " + trigger.getMailingList().getMailingListId() + ": "
+                        + describeRecipient(r) + " has no e-mail address and is left out of the mail of trigger "
+                        + trigger.getId());
+                continue;
+            }
+            mail.addRecipient(new ScheduledMailRecipient(TO, address));
+        }
 
         return mail;
+    }
+
+    /** A recipient by its kind and id, never by name or address, for the log: "contact 12", "user 7" **/
+    private static String describeRecipient(IMailable recipient) {
+        String kind = recipient instanceof User ? "user" : recipient instanceof Contact ? "contact" : "recipient";
+        Object id = recipient instanceof BaseEntity<?> entity ? entity.getId() : null;
+        return kind + " " + id;
     }
 
     /**

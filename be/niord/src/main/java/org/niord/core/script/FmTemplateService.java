@@ -27,6 +27,7 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import freemarker.template.TemplateNotFoundException;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.niord.core.NiordApp;
 import org.niord.core.dictionary.DictionaryService;
@@ -44,6 +45,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.niord.core.settings.Setting.Type.Boolean;
@@ -212,6 +215,46 @@ public class FmTemplateService extends BaseService {
         return cfg;
     }
 
+    /**
+     * The opening tag of an HTML document's body (group 1) or of the document itself (group 2). A comment, a script
+     * or a style is matched as a whole first, with neither group, so a tag written inside one is passed over.
+     */
+    private static final Pattern DOCUMENT_START = Pattern.compile(
+            "<!--.*?-->|<script\\b.*?</script\\s*>|<style\\b.*?</style\\s*>|(<body\\b[^>]*>)|(<html\\b[^>]*>)",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    /**
+     * Returns the HTML with a line of text at the top of the document: right after the opening {@code <body>} tag;
+     * when there is none, right after the opening {@code <html>} tag; when there is neither, before everything. A
+     * tag inside a comment, a script or a style does not count. The line is made here and not by a template, because
+     * the template a deployment renders is its database row, which a change in the repository never reaches: so
+     * every document gets it, whichever template it was made from (the bootstrap's, an imported or edited row, a
+     * country's). The text is escaped.
+     *
+     * @param html   the document
+     * @param notice the text of the line; blank leaves the document as it is
+     * @return the document with the line
+     */
+    public static String withTopNotice(String html, String notice) {
+        if (StringUtils.isBlank(notice) || html == null) {
+            return html;
+        }
+        String line = "<p class=\"top-notice\" style=\"border: 1px solid #a00; color: #a00; padding: 4px 8px;"
+                + " margin: 0 0 8px 0\">" + StringEscapeUtils.escapeHtml4(notice) + "</p>";
+        int at = 0;
+        Matcher start = DOCUMENT_START.matcher(html);
+        while (start.find()) {
+            if (start.group(1) != null) {
+                at = start.end();
+                break;
+            }
+            if (start.group(2) != null && at == 0) {
+                at = start.end();
+            }
+        }
+        return html.substring(0, at) + line + html.substring(at);
+    }
+
     /** Returns the base URI used to access this application */
     private String getBaseUri() {
         return app.getBaseUri();
@@ -236,6 +279,7 @@ public class FmTemplateService extends BaseService {
         String language;
         String[] dictionaryNames;
         String timeZone;
+        String topNotice;
         FmTemplateService templateService;
 
         /**
@@ -295,8 +339,8 @@ public class FmTemplateService extends BaseService {
 
             long t0 = System.currentTimeMillis();
             try {
-                // Process the template
-                String result = process();
+                // Process the template, and add the line the caller asks for at the top of the document
+                String result = withTopNotice(process(), topNotice);
 
                 if (format == ProcessFormat.TEXT) {
                     // The template's output as it is, which is also the debug HTML of a report: what the PDF
@@ -396,6 +440,19 @@ public class FmTemplateService extends BaseService {
                 this.timeZone = timeZone;
                 checkCreateData().put(TIME_ZONE_PROPERTY, timeZone);
             }
+            return this;
+        }
+
+        /**
+         * Prints a line of text at the top of the document that {@link #process(ProcessFormat, OutputStream)} makes,
+         * the PDF and the debug HTML alike, whichever template it is made from ({@link #withTopNotice}). Null or
+         * blank adds nothing.
+         *
+         * @param topNotice the text of the line, or null
+         * @return this builder
+         */
+        public FmTemplateBuilder topNotice(String topNotice) {
+            this.topNotice = topNotice;
             return this;
         }
 

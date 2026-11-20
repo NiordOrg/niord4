@@ -82,6 +82,14 @@
           <span>{{ 'menu.login' | transloco }}</span>
         </button>
       }
+      @if (resource.error()) {
+        <app-error-banner
+          class="self-stretch text-left"
+          [title]="'common.fetchError' | transloco"
+          [retryLabel]="'common.retry' | transloco"
+          (retry)="resource.reload()"
+        />
+      }
       <app-slot name="home.welcome" />
     </div>
   </div>

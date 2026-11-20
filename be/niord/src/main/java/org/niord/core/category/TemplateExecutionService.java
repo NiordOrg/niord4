@@ -38,6 +38,7 @@ import org.niord.model.message.MessagePartType;
 import org.niord.model.message.MessagePartVo;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NoResultException;
 import jakarta.inject.Inject;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
@@ -129,6 +130,7 @@ public class TemplateExecutionService extends BaseService {
      * A standard type's name returns the in-memory type, which has no id.
      * @param name the name
      * @return the parameter type with the given name
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public ParamType getParamTypeByName(String name) {
         if (isStandardParamType(name)) {
@@ -138,7 +140,7 @@ public class TemplateExecutionService extends BaseService {
             return em.createNamedQuery("ParamType.findByName", ParamType.class)
                     .setParameter("name", name)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             return null;
         }
     }

@@ -34,6 +34,7 @@ import org.niord.core.user.User;
 import org.niord.model.message.MainType;
 import org.niord.model.message.Status;
 import org.niord.model.message.Type;
+import org.niord.model.search.PagedSearchParamsVo;
 import org.niord.test.ITTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -190,6 +191,55 @@ public class LiveMemberListITTest extends ITTest {
         assertEquals(0L, em.createQuery("SELECT COUNT(x) FROM IssueMember x WHERE x.issue = :i", Long.class)
                 .setParameter("i", i).getSingleResult(),
                 "the live list froze member rows; it must write nothing at all");
+    }
+
+    /**
+     * PORT-9. A series sorted by id lists its notices in number order, as the
+     * message search does for the same choice, not in the order the rows were
+     * created: a notice drafted early and numbered late must not lead the issue.
+     */
+    @Test
+    @Transactional
+    public void aSeriesSortedByIdListsItsNoticesInNumberOrder() {
+        PublicationSeries s = series();
+        s.setMessageSortBy("ID");
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        // Created out of number order: the first row created is notice 12.
+        message("NM-012").setNumber(12);
+        message("NM-010").setNumber(10);
+        message("NM-011").setNumber(11);
+        em.flush();
+
+        assertEquals(List.of("NM-010", "NM-011", "NM-012"),
+                memberList.members(i).stream().map(IssueMemberVo::getFrozenShortId).toList(),
+                "the issue lists its notices in the order their rows were created");
+    }
+
+    /**
+     * PORT-9, the date sorts. A series sorted by publish date, newest first, over
+     * notices that share their publish date: the message search orders them by
+     * publishDateFrom, publishDateTo and id, all descending, and so does the issue.
+     * Read from the database, so the "to" date has to reach the order through the
+     * member projection, and the id breaks the last tie descending, as the search's
+     * desc(id) does.
+     */
+    @Test
+    @Transactional
+    public void aSeriesSortedByPublishDateDescendingOrdersTiesAsTheMessageSearchDoes() {
+        PublicationSeries s = series();
+        s.setMessageSortBy("PUBLISH_DATE");
+        s.setMessageSortOrder(PagedSearchParamsVo.SortOrder.DESC);
+        PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
+        // One publish date for all three; the first created runs longest, the other
+        // two end together. Search order: the longest first, then the later row.
+        message("NM-001").setPublishDateTo(new Date(OPENS.getTime() + 3 * WEEK));
+        message("NM-002").setPublishDateTo(new Date(OPENS.getTime() + 2 * WEEK));
+        message("NM-003").setPublishDateTo(new Date(OPENS.getTime() + 2 * WEEK));
+        em.flush();
+
+        assertEquals(List.of("NM-001", "NM-003", "NM-002"),
+                memberList.members(i).stream().map(IssueMemberVo::getFrozenShortId).toList(),
+                "the issue orders notices sharing a publish date unlike the message search");
     }
 
     /**

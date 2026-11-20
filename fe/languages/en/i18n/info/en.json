@@ -54,6 +54,7 @@
   "PART_TYPE_PROHIBITION": "Prohibition",
   "PART_TYPE_SIGNALS": "Signals",
   "PART_TYPE_TIME": "Time",
+  "PDF_BUSY": "Documents are being prepared for other readers just now. Please try again in a moment.",
   "PRINT_BANNER": "{{nm}} and {{nw}} on {{date}}",
   "PRINT_DATE_FORMAT": "d MMMM yyyy 'at' HH:mm",
   "PUBLICATIONS_LOAD_FAILED": "Failed to load publications",

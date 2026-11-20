@@ -25,6 +25,7 @@ import { MessageSelectionService } from '../../../features/messages/services/mes
 import { MessageTagActionsService } from '../../../features/messages/services/message-tag-actions.service';
 import { MessagesFilterFacade } from '../../../features/messages/services/messages-filter.facade';
 import type { MenuItem } from '../../../shared/models/menu-item.model';
+import { ConfirmService } from '../../../shared/services/confirm.service';
 import { provideTestTransloco } from '../../../shared/testing/transloco-testing';
 import { APP_CONFIG } from '../../config/app-config.token';
 import { TAG_SELECTION_STORE } from '../../domain/services/tag-selection-store.token';
@@ -139,7 +140,10 @@ const RENDERERS: Record<string, (identity: IdentityName) => Promise<string[]>> =
           toggleSort: vi.fn(),
         },
       },
-      { provide: MessageListFacade, useValue: { messages: () => [], total: () => 2 } },
+      {
+        provide: MessageListFacade,
+        useValue: { messages: () => [], total: () => 2, indexIncomplete: () => false },
+      },
       {
         provide: MessageTagActionsService,
         useValue: { addMessagesToTag: noop, removeMessagesFromTag: noop },
@@ -154,6 +158,8 @@ const RENDERERS: Record<string, (identity: IdentityName) => Promise<string[]>> =
       },
       { provide: MessageMailService, useValue: { mailSelection: noop } },
       { provide: MessageExportService, useValue: { export: noop, exportSelection: noop } },
+      // The menu asks before an export from a list searched while the index refills
+      ConfirmService,
     ]);
     const fixture = TestBed.createComponent(MessagesActionMenu);
     await settle();

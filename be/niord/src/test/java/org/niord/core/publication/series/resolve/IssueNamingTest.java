@@ -274,6 +274,155 @@ public class IssueNamingTest {
         assertEquals(30, two.weekTo());
     }
 
+    // ------------------------------------------- NAMING-1: the weeks a gap closed
+
+    /** A gap of one week, released a few hours early: the cut-off week alone. */
+    @Test
+    public void aGapOfOneWeekNamesTheCutoffWeek() {
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 16, 6, 51), at(2026, 9, 9, 10, 21), DK, null, ISO);
+        assertEquals(38, n.week());
+        assertNull(n.weekTo());
+    }
+
+    /** A gap of two weeks, released a few hours early: both weeks after the previous cut-off's. */
+    @Test
+    public void aGapOfTwoWeeksNamesBothWeeks() {
+        // The previous cut-off in week 35, this one in week 37, 13.85 days apart.
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 9, 6, 51), at(2026, 8, 26, 10, 21), DK, null, ISO);
+        assertEquals(36, n.week());
+        assertEquals(37, n.weekTo());
+    }
+
+    /**
+     * A gap of three weeks released a few hours early, as on the local rehearsal:
+     * the window runs from week 35 into week 38, and weeks 36 and 37 lie wholly
+     * inside it. Nineteen whole days floored to two periods and named the issue
+     * 37+38, so week 36 was named by no issue.
+     */
+    @Test
+    public void aGapOfThreeWeeksNamesEveryWeekItClosed() {
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 15, 6, 51), at(2026, 8, 26, 10, 21), DK, null, ISO);
+        assertEquals(36, n.week(), "week 36 lies wholly inside the window and no other issue closed it");
+        assertEquals(38, n.weekTo());
+
+        IssueNaming.Numbers onTime = IssueNaming.derive(at(2026, 9, 16, 10, 21), at(2026, 8, 26, 10, 21), DK,
+                null, ISO);
+        assertEquals(36, onTime.week());
+        assertEquals(38, onTime.weekTo());
+    }
+
+    /**
+     * The day count and the week count disagree: thirteen days and 22 hours, two
+     * periods by the day count, but from Monday early of week 35 to Sunday late of
+     * week 36. The previous issue closed week 35, so this one closed week 36 alone
+     * and is named for it; counted in days it was named 35+36, a week the issue
+     * before it had already been named for.
+     */
+    @Test
+    public void twoPeriodsByDaysButOneIsoWeekClosedNamesTheCutoffWeekAlone() {
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 6, 23, 0), at(2026, 8, 24, 0, 30), DK, null, ISO);
+        assertEquals(36, n.week());
+        assertNull(n.weekTo(), "week 35 was closed by the issue before this one");
+    }
+
+    /**
+     * Across a year's end: 2026 has 53 ISO weeks. From week 52 of 2026 into week 2
+     * of 2027 the issue closed weeks 53, 1 and 2, and takes the cut-off's week-year.
+     */
+    @Test
+    public void aGapAcrossTheYearsEndNamesTheWeeksOfBothYears() {
+        IssueNaming.Numbers three = IssueNaming.derive(at(2027, 1, 12, 6, 0), at(2026, 12, 23, 10, 0), DK, null,
+                ISO);
+        assertEquals(53, three.week(), "week 53 of 2026 lies wholly inside the window");
+        assertEquals(2, three.weekTo());
+        assertEquals(2027, three.year());
+
+        IssueNaming.Numbers two = IssueNaming.derive(at(2027, 1, 6, 10, 0), at(2026, 12, 23, 10, 0), DK, null, ISO);
+        assertEquals(53, two.week());
+        assertEquals(1, two.weekTo());
+        assertEquals(2027, two.year());
+    }
+
+    // ------------------------------- the printed span: a pair with "+", three weeks or more as a range
+
+    private static final String NAME = "Uge ${week}+${weekTo}, ${year}";
+
+    /**
+     * An issue that closed three weeks prints its first and its last week as a range, "36-38". Joined with "+" it
+     * read "36+38", which the domain rules define as a pair: a mariner reads weeks 36 and 38. Only the "+" between
+     * the two week tokens is written as a hyphen, in the name, the file name (either variant of the tokens) and the
+     * citation format alike, with or without spaces around it.
+     */
+    @Test
+    public void anIssueOfThreeWeeksPrintsARange() {
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 15, 6, 51), at(2026, 8, 26, 10, 21), DK, null, ISO);
+        assertEquals(3, IssueNaming.weeksNamed(n));
+
+        assertEquals("Uge 36-38, 2026", IssueNaming.expand(NAME, n));
+        assertEquals("nm-w36-38-2026.pdf",
+                IssueNaming.expand("nm-w${week-2-digits}+${weekTo-2-digits}-${year}.pdf", n));
+        assertEquals("EfS uge 36 - 38/2026 ${parameters}",
+                IssueNaming.expandCitation("EfS uge ${week} + ${weekTo}/${year} ${parameters}", n));
+        assertEquals("1+2 36-38", IssueNaming.expand("1+2 ${week}+${weekTo}", n),
+                "a '+' anywhere else in the pattern is printed as written");
+
+        // A stored issue, read back by its numbers alone, prints the same; four weeks are a range as well.
+        assertEquals("Uge 36-38, 2026", IssueNaming.expand(NAME, new IssueNaming.Numbers(36, 38, 2026, 9, 15, null)));
+        assertEquals("Uge 35-38, 2026", IssueNaming.expand(NAME, new IssueNaming.Numbers(35, 38, 2026, 9, 15, null)));
+    }
+
+    /** A pair keeps "+", and a single week is unchanged. */
+    @Test
+    public void aPairKeepsThePlusAndASingleWeekIsUnchanged() {
+        IssueNaming.Numbers pair = IssueNaming.derive(at(2026, 9, 9, 6, 51), at(2026, 8, 26, 10, 21), DK, null, ISO);
+        assertEquals(2, IssueNaming.weeksNamed(pair));
+        assertEquals("Uge 36+37, 2026", IssueNaming.expand(NAME, pair));
+        assertEquals("EfS uge 36+37/2026 ${parameters}",
+                IssueNaming.expandCitation("EfS uge ${week}+${weekTo}/${year} ${parameters}", pair));
+
+        IssueNaming.Numbers single = IssueNaming.derive(at(2026, 9, 16, 6, 51), at(2026, 9, 9, 10, 21), DK, null,
+                ISO);
+        assertEquals(1, IssueNaming.weeksNamed(single));
+        assertEquals("Uge 38, 2026", IssueNaming.expand("Uge ${week}, ${year}", single));
+    }
+
+    /**
+     * Across a year's end the range runs from the last week of the earlier year to the closing week and is named
+     * for the later year: weeks 52 of 2025, 1 and 2 of 2026 print "52-2" beside 2026. Two weeks across it stay a
+     * pair, "52+1". The count knows that 2026 has a week 53: weeks 52 of 2026 to 1 of 2027 are three weeks, "52-1",
+     * and 53 of 2026 to 2 of 2027 as well, "53-2".
+     */
+    @Test
+    public void aRangeAcrossTheYearsEndNamesTheLaterYear() {
+        IssueNaming.Numbers range = IssueNaming.derive(at(2026, 1, 7, 10, 0), at(2025, 12, 17, 10, 0), DK, null,
+                ISO);
+        assertEquals(52, range.week());
+        assertEquals(2, range.weekTo());
+        assertEquals(2026, range.year());
+        assertEquals(3, IssueNaming.weeksNamed(range));
+        assertEquals("Uge 52-2, 2026", IssueNaming.expand(NAME, range));
+
+        IssueNaming.Numbers pair = IssueNaming.derive(at(2025, 12, 31, 10, 0), at(2025, 12, 17, 10, 0), DK, null,
+                ISO);
+        assertEquals(52, pair.week());
+        assertEquals(1, pair.weekTo());
+        assertEquals(2026, pair.year());
+        assertEquals("Uge 52+1, 2026", IssueNaming.expand(NAME, pair));
+
+        IssueNaming.Numbers overWeek53 = IssueNaming.derive(at(2027, 1, 6, 10, 0), at(2026, 12, 16, 10, 0), DK,
+                null, ISO);
+        assertEquals(52, overWeek53.week());
+        assertEquals(1, overWeek53.weekTo());
+        assertEquals(2027, overWeek53.year());
+        assertEquals(3, IssueNaming.weeksNamed(overWeek53), "2026 has 53 ISO weeks: 52, 53 and 1");
+        assertEquals("Uge 52-1, 2027", IssueNaming.expand(NAME, overWeek53));
+
+        IssueNaming.Numbers fromWeek53 = IssueNaming.derive(at(2027, 1, 12, 6, 0), at(2026, 12, 23, 10, 0), DK,
+                null, ISO);
+        assertEquals("Uge 53-2, 2027", IssueNaming.expand(NAME, fromWeek53));
+        assertEquals("Uge 53+1, 2027", IssueNaming.expand(NAME, new IssueNaming.Numbers(53, 1, 2027, 1, 6, null)));
+    }
+
     // ------------------------------------------------------------- ${year}
 
     /**

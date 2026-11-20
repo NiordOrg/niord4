@@ -231,6 +231,8 @@ describe('TeaserComponent', () => {
     expect(licence!.closest('.ol-attribution')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
       '© OpenStreetMap contributors.',
     );
+    // English words on a page in any language say so (WCAG 3.1.2).
+    expect(licence!.closest('.ol-attribution [lang]')?.getAttribute('lang')).toBe('en');
     // Embedded in a frame on another site, the licence opens in a tab of its own, as the teaser does.
     expect(licence!.target).toBe('_blank');
     expect(licence!.rel).toBe('noopener');

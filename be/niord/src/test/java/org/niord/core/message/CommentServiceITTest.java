@@ -309,7 +309,7 @@ class CommentServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // createComment - client-supplied id (SECAUD-14)
+    // createComment - client-supplied id (the root cause: MASSASSIGN-1 in be/docs/potential-errors.md)
     // ------------------------------------------------------------------------------------------- //
 
     /**

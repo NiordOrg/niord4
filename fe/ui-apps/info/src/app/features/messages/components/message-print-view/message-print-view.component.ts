@@ -72,12 +72,16 @@ const MSGS_LOAD_FAILED = 'MSGS_LOAD_FAILED';
     }
 
     /* Nothing here is operable: the page is printed, and a link that looks like one invites a
-       click that does nothing. */
+       click that does nothing. The buttons are still in the tab order, so a keyboard reader
+       still sees where focus is: the site's ring, which the reset above takes away. */
     :host ::ng-deep .link-button {
       all: unset;
       color: inherit;
       font: inherit;
       cursor: default;
+    }
+    :host ::ng-deep .link-button:focus-visible {
+      outline: 2px solid var(--niord-primary-500);
     }
 
     :host ::ng-deep app-message-detail-card app-icon {

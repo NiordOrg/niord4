@@ -482,7 +482,7 @@ export function untouchedInit({ work, zip, sha256: hash, kitZip, kitSha256, vers
  * suite: the group count, be/scripts/check-country-build-group.sh, and the base product's
  * check-overrides.sh over the packaged jar against be/overrides.json. `h` adds to the harness
  * `{ maven(be, args, { env }), bash, backendEnv, m2 }`: backendEnv carries NIORD_HOME with
- * forward slashes on Windows (potential-errors.md PORT-1).
+ * forward slashes on Windows (backslashes would work as well).
  */
 export function untouchedBackend({ work, version, base = BE, h }) {
   const be = path.join(work, UNTOUCHED, 'be');

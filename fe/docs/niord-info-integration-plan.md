@@ -999,7 +999,8 @@ recorded here, newest last, for review at the end.
   in the reader's language falls back to the site's default language and then to the other site
   languages, not to English — the fallback a missing translation takes as well. (6) The values
   only this site draws with (`bg-map-sea`, `text-message-title`) are theme values of its own
-  entry stylesheet, the teaser's banner is the chrome pair at 60 %, and the deployment ribbon is
+  entry stylesheet, the teaser's banner is the chrome pair at 60 % (80 % since 2026-11-19, which
+  holds its text to 4.5:1 over a white tile in every country's colours), and the deployment ribbon is
   utilities. (7) The initial-bundle budget pair was re-set from the country builds' largest
   measure, 398 400 B: warning 410 kB, error 430 kB. The first visit the gate measures grew by
   293 B.

@@ -150,12 +150,18 @@ function answer(
     audit?: readonly unknown[];
     /** Answer the category catalogue and nothing else, so the reads stay open. */
     defer?: boolean;
+    /** The category catalogue read fails. */
+    categoriesFail?: boolean;
   } = {},
 ): { categoryRequests: number } {
   const categories = httpTesting.match(
     (r) => r.method === 'GET' && r.url.includes('/publication-categories/all'),
   );
   for (const request of categories) {
+    if (options.categoriesFail) {
+      request.flush(null, { status: 503, statusText: 'Service Unavailable' });
+      continue;
+    }
     request.flush([
       { categoryId: 'dk-dema-publications', descs: [{ lang: 'en', name: 'DEMA publications' }] },
     ]);
@@ -392,6 +398,31 @@ describe('OneOffDetail', () => {
     const { categoryRequests } = await setup();
 
     expect(categoryRequests).toBe(1);
+  });
+
+  it('says so when the category catalogue could not be read, and Retry reads it again', async () => {
+    const { element, fixture, httpTesting } = await setup({ categoriesFail: true });
+    const banner = () =>
+      [...element.querySelectorAll('[role="alert"]')].find((node) =>
+        node.textContent?.includes('common.fetchError'),
+      );
+    expect(banner()).toBeDefined();
+    expect(element.querySelector('[data-testid="one-off-category"]')?.textContent).toContain(
+      'dk-dema-publications',
+    );
+
+    banner()?.querySelector('button')?.click();
+    await settle();
+    httpTesting
+      .expectOne((r) => r.url.includes('/publication-categories/all'))
+      .flush([
+        { categoryId: 'dk-dema-publications', descs: [{ lang: 'en', name: 'DEMA publications' }] },
+      ]);
+    await fixture.whenStable();
+    expect(banner()).toBeUndefined();
+    expect(element.querySelector('[data-testid="one-off-category"]')?.textContent).toContain(
+      'DEMA publications',
+    );
   });
 
   it('renders the header cluster: the name and the context line', async () => {

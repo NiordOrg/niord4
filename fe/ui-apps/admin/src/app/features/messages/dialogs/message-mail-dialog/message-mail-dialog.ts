@@ -55,6 +55,9 @@ export class MessageMailDialog {
   );
 
   protected readonly totalMessageNo = computed(() => this.dialog.totalMessageNo());
+  protected readonly indexIncomplete = computed(() => this.dialog.indexIncomplete());
+  /** The warning's id: the dialog is described by it, so a screen reader announces it on open. */
+  protected readonly indexIncompleteId = 'message-mail-index-incomplete';
 
   constructor() {
     // Reset the form every time the dialog opens — leftover state from the

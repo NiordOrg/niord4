@@ -34,7 +34,6 @@ no new data after the backup, and stands.
 | Public download site not checked                                       | Nobody has looked at how the public site renders the exact stamped cut-off instant. Needs the site owner's sign-off before the window opens.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | [`publications/domain-rules.md`](publications/domain-rules.md) (cut-off model)                                                               |
 | Open rehearsal steps and sign-offs                                     | The schema-validate boot on the deployed container, the UAT pass with no developer present, and the reviewer signatures on both checklists.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | the go-live task sheet, kept outside this repository                                                                                         |
 | Sequenced after the window                                             | Two backend follow-ups, both listed on the task sheet: decommission the message-tag coupling (in the outgoing model each publication also owned a message tag holding its members; the series/issues model mints none) and lock that frontend's publication pages; write the admin-manual chapter for the series/issues model. These are ordering, not omissions. The sheet's third, gating the anonymous listing, is done: `GET /rest/publications/search` and `/all` serve an anonymous caller the public tier only (`OQ-18`, closed 2026-09-25).                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | backend + the go-live task sheet, kept outside this repository                                                                               |
-| Base map on OSM's volunteer servers                                    | The web maps of both applications and the backend's map images draw their base map from `tile.openstreetmap.org`, the OpenStreetMap Foundation's volunteer-run tile servers. Production volume needs a tile source of our own or a paid one: choose it before go-live and set it in the `osmUrl` setting, which switches the web maps and the server images together. The host must serve https and send CORS headers (the administration app's Content-Security-Policy admits it from the setting by itself), and a public site that moves to another host updates its cookie statement, which names `tile.openstreetmap.org`.                                                                                                                                                                                                                                                                                                                                                                                            | the `osmUrl` setting ([map-portrayal.md](map-portrayal.md), _Server-made map images_), deployment                                            |
 | Map images: slower for uncached places, untested over the real network | The backend now draws the map images of messages from OSM tiles it fetches itself. Measured on a workstation against stand-in map servers, they are faster than the previous renderer's wherever the tiles are cached, and 1.1 to 1.45 times slower for a place whose tiles are not: an image waits for the slowest of up to four tile requests instead of one static map. The first image after a start and a page of images right after a portrayal change are slower too. Whether that blocks go-live is the product owner's decision. Over the real network nothing is measured yet: at the next test deployment (Kubernetes, on the test data), check that the application pod reaches `tile.openstreetmap.org` (a proxy goes in as `-Dhttps.proxyHost` and `-Dhttps.proxyPort` through `app.javaOpts`), set `mapTileContact`, then run the benchmark in `remote` mode and hold its table against the one recorded for the previous Niord on the test environment.                                                    | [`be/docs/map-image-benchmark.md`](../../be/docs/map-image-benchmark.md), deployment                                                         |
 | Performance not compared with the previous Niord                       | **Must be fixed before go-live** (owner, 2026-11-02). The message reads are far slower than the previous Niord's: its list answers in ~110–150 ms on its test environment, Niord 4's in ~1 s on a workstation, on the same data but not yet the same machine, database engine or path to the database. Measured on the sample (2026-11-05): every association is batched, so the round trips are set by the batch fetch size: a page of 100 messages costs 86 statements at 16 and 19 at 128 or more, and the second-level cache the previous Niord had (still off) saves 2 of them. niord-base's core defaults load 256 owners a query since 2026-11-05 (16 before); the local profiles of niord-dk and niord-gl no longer set it, so their local runs take 256 too. Still to do: the time on the test data, the comparison of both applications on the same data and machine, and the cache; the assessment, the measurements and the plan are in [the message-read benchmark](../../be/docs/message-read-benchmark.md). | backend: `config/niord-core-defaults.yml`, `niord/pom.xml`; [`be/docs/message-read-benchmark.md`](../../be/docs/message-read-benchmark.md)   |
 
@@ -137,20 +136,13 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - The print route (`/messages/print`) and the teaser render outside the site's layout, so neither has a main
   landmark and a screen reader's jump to the main content finds nothing there. Wrapping each view's content in
   `<main>` closes it.
-- On the print route (`/messages/print`) every link-styled button in the message cards has its styling removed,
-  focus ring included, and stays in the tab order; the message-reference ids among them do nothing when pressed.
-  A keyboard user's focus disappears on each one. Rendering the references as text on that route, or taking the
-  buttons out of the tab order, closes it.
+- On the print route (`/messages/print`) every link-styled button in the message cards is drawn as plain text and
+  stays in the tab order, with the site's focus ring; the message-reference ids among them do nothing when pressed.
+  Rendering the references as text on that route, or taking the buttons out of the tab order, closes it.
 - **Every first visit carries OpenLayers' stylesheet.** `ol/ol.css` is imported by the global stylesheet, so a
   visit that lands on the message list, which draws no map, transfers about 1.2 kB (brotli) of map chrome in the
   styles group that `bundle:info` measures. Both applications import it globally today; loading it with the map
   kit instead means a lazy stylesheet in `shared-map/`, a map change measured for both.
-- **A busy PDF answers with a raw error.** The backend makes only a few PDFs at a time for readers without an
-  identity (three by default) and answers every further request with 503 at once — see _The PDF reports are
-  anonymous_ in [backend-api-notes.md](backend-api-notes.md). Both print buttons open the PDF's address in a
-  new tab, so a reader who meets the limit sees the backend's JSON error there rather than a page that asks
-  them to try again shortly. A page of the site's own for that answer, served by the container for a 503 on the
-  two PDF locations, needs wording the site owner has not been asked for.
 - **The site reserves no scrollbar gutter.** A permanent gutter would show as a stripe beside the full-bleed map
   view, so there is none, and where a platform draws classic scrollbars the centred message list can shift
   sideways by the scrollbar's width when the list arrives and grows past one screen. Not observed on the
@@ -188,26 +180,6 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
   views now show for an empty list (`MSGS_NONE`, "No messages to show"). Found by the error hunt's phase 2
   (2026-11-15), seen in a browser on a local rig; Low. Left by the owner on 2026-11-15: no new public-site text
   and no API change.
-- **The map credit's link is told from its line by a shade of grey alone** (WCAG 1.4.1). OpenLayers' own
-  stylesheet (`ol/ol.css`, imported by `ui-apps/info/src/styles.css`) draws the attribution's text in `#333` and
-  its link to the licence in `#666`, with no underline: 2.2:1 between the two, where a link that is told apart by
-  colour alone needs 3:1 and a second cue on focus and hover. It is on every chart of the site — the map view, the
-  map in a message's dialog and the teaser (whose credit line is its own markup, drawn with the same classes). An
-  underline on `.ol-attribution a`, in a stylesheet both applications load because the map kit draws the same
-  credit in the administration app, closes it. Found by the public site's audit
-  ([accessibility-audit-public-site.md](../../docs/accessibility-audit-public-site.md), 2026-11-18).
-- **The teaser's banner can fall just under 4.5:1** (WCAG 1.4.3). Its white 18 px text (normal weight, so not
-  large text) stands on the chrome colour at 60 % opacity over the chart (`features/teaser/teaser.component.ts`,
-  `bg-chrome/60`). With the default tokens that is 4.89:1 over the chart's land and 5.98:1 over its sea, and
-  4.44:1 where the tile under the banner is white. axe-core cannot measure text over an image and leaves it to a
-  person. A fill of 70 % (6.23:1 over white with the default tokens) closes it; a country's own header colour
-  changes every figure, so each country's build is measured again. Found by the public site's audit (2026-11-18).
-- **Closing a message's dialog opened by its own address leaves focus nowhere** (WCAG 2.4.3).
-  `/messages/details/message/<id>` opens the message in a dialog over the list; Escape closes it and moves the address to `/messages/details`, but there is no control the dialog was opened from, so focus
-  falls to the page's body and the next Tab starts again at the skip link. A dialog opened from the list returns
-  focus to its row, as it should. Moving focus to the main content (`#main-content`, which takes focus already for
-  the skip link) when the dialog closes without an opener closes it. Found by the public site's audit
-  (2026-11-18).
 
 ### The public site's image, configuration and gates
 
@@ -260,16 +232,10 @@ Background: [`angular-conventions.md`](angular-conventions.md), [`ui-apps/info/A
   names and public, mutable members. Finishing it is a rename across the whole site that no reader would notice,
   so it waits. New components follow the workspace convention; the existing ones keep their names until the
   rename is done.
-- **Translated strings cross component boundaries.** The translation-ownership rule (keys cross boundaries; the
-  component that puts a text in the DOM translates it) is broken in two places. The shared dialog frame takes an
-  already-translated `title`, which each opener pipes through Transloco. `MessageLabelService` returns finished
-  strings for a message's type label and its cancelled or expired chip, which the id badge renders from a
-  `computed()` whose only translation is a one-shot `translate()`. The badge is the visible one: the first time a
-  reader switches to a language in a session, the badges recompute before that language's bundle has loaded and
-  show the fallback language's words ("Afmeldt", "Udløbet" on an English page of a Danish deployment) until the list
-  is read again, which takes seconds on a slow link — and in the details dialog can last until the reader
-  navigates. The fix is keys out of the service, the pipe in the badge and the frame, and a spec that switches
-  language with the bundle arriving late.
+- **The dialog frame takes a translated title.** The translation-ownership rule (keys cross boundaries; the
+  component that puts a text in the DOM translates it) is broken in one place: the shared dialog frame takes an
+  already-translated `title`, which each opener pipes through Transloco. Nothing a reader sees follows from it,
+  since the pipe in the opener follows the language; the frame taking the key and piping it itself closes it.
 - **Three keys nothing renders.** `TERM_APPLY` and `TERM_CANCEL` word an apply and a cancel button no view has
   any more, and `ARIA_SWITCH_LANGUAGE` named the language buttons before each was named in its own language.
   All three still ship in the `en` bundle and in the countries' packs. Removing them is an `en` change, named in
@@ -286,8 +252,6 @@ Background: [`angular-conventions.md`](angular-conventions.md), [`ui-apps/info/A
   deep-link-only access with no way in from the header.
 - Deleting or deactivating the domain the current session is on leaves the session on the dead domain until the
   next reload — the refresh only re-points ids that still exist. Documented as a known limit in `domain.service.ts`.
-- A failed domain bootstrap degrades to an empty domain list with no notice. The start-up splash covers the wait;
-  nothing covers the failure.
 - Keycloak `url` / `realm` / `clientId` come from the backend at boot (`GET /rest/settings/keycloak`) or else
   from the build: the runtime settings overlay still excludes the whole `keycloak` block, because it is
   consumed before settings arrive.
@@ -338,8 +302,8 @@ Background: [`country-deployments.md`](country-deployments.md).
   the rule a reference states is the rule. Found by the agent route (2026-10-26).
 - **The administration app's English bundle ships keys that nothing reads.** Confirmed dead:
   `shared.auth.accountManagement` (the account menu reads `shared.auth.editAccount`),
-  `core.domain.bootstrap.errorTitle` and `errorBody` (no notice uses them: a failed domain bootstrap shows none,
-  see _Shell, authentication and domains_),
+  `core.domain.bootstrap.errorBody` (the notice of a failed domain bootstrap shows only the title,
+  `errorTitle`, with _Retry_),
   `editor.parts.moveUp`, `moveDown`, `add` and `remove` (the part cards read `editor.part.*`) and
   `msg.no_pos_messages` (`languages/en/i18n/admin/en.json` 93, 216-217, 3957-3960 and 4538). A count of the keys
   with no literal reference in the application found 36 more candidates outside publications, not checked one by
@@ -375,9 +339,7 @@ Background: [`features/messages.md`](features/messages.md).
 - Saved filters can only be created, applied and deleted — no rename, reorder, share or preview. One that stores
   ids belonging to another domain silently returns nothing.
 - Messages carry `unackComments`, but no list row or grid card shows a comment count or an unacknowledged marker.
-- The landing map asks for at most 1000 published messages and gives no sign when a deployment has more. The ZIP
-  export has the same silent ceiling from the other side: the server caps a search export at 1000 messages and
-  `message-export.service.ts` neither counts nor warns, so a larger search downloads a truncated archive.
+- The landing map asks for at most 1000 published messages and gives no sign when a deployment has more.
 - The table view keeps its date-column choice in the un-namespaced browser-storage key `dateColumnType`, while
   the rest of the application's keys carry the `niord.` prefix.
 - There are no skeleton placeholders anywhere; lists signal loading with the thin progress strip only.
@@ -467,6 +429,16 @@ Background: [`map-portrayal.md`](map-portrayal.md).
   3). Since the security fixes of September 2026 it renders its PNG in memory on every request, one request at
   a time, instead of writing a file per combination of values into the repository. Remove the endpoint, or
   give it a small bounded cache of rendered images.
+- **The administration app's map credit link is told from its line by a shade of grey alone** (WCAG 1.4.1). The
+  map kit's attribution control (`shared-map/ol-map.ts`) draws the credit on every map of the administration app
+  (the area and chart editors, the geometry preview and others), and OpenLayers' own stylesheet
+  (`ol/ol.css`, imported by `ui-apps/admin/src/styles.css`) draws its link to the licence in `#666` beside the
+  line's `#333`, with no underline: 2.2:1 between the two, where a link told apart by colour alone needs 3:1 and a
+  second cue on focus and hover. The public site underlines it in its own stylesheet since 2026-11-19
+  (`ui-apps/info/src/styles/chrome.css`, `.ol-attribution a`); the same rule in the administration app's
+  stylesheet, or moved to a stylesheet both applications load, closes it. Found by the public site's audit
+  ([accessibility-audit-public-site.md](../../docs/accessibility-audit-public-site.md), 2026-11-18), which did not
+  cover the administration app.
 - The administration app's own animations ignore a reader's reduced-motion setting: the 300 ms fit of the
   message-list layer, the geometry editor's zoom-to-extent and the drawer's slide. The map kit's own zooms and
   pans honour it; these three are started by the application and would read the same media query.
@@ -525,8 +497,8 @@ Background: [`features/editor.md`](features/editor.md).
   card's own implementation.
 - The two insert-dialog preference keys (`formatLocationSettings`, `formatTimeSettings`) are un-namespaced while
   the rest carry the `niord.` prefix.
-- Two editors saving the same message overwrite each other: there is no revision check on the save path. Accepted
-  today; worth a decision if concurrent editing becomes common.
+- Two editors saving the same message overwrite each other: there is no revision check on the save path. Not in
+  scope for the foreseeable future (the owner, 2026-11-19).
 - The deployment setting for the base editor-field visibility has no consumer; the additional-editor-field pool
   is a pinned list in `editor-field-candidates.ts`.
 - The rich-text toolbar's text-colour picker (description and comments) writes an inline `color` on a `<span>`,
@@ -559,27 +531,6 @@ Background: [`features/editor.md`](features/editor.md).
   apart, and a screen reader hears the same name twice. "Cancel message" on the red button and "Close" on the other
   close it. `04-Editor.adoc` (_Cancelling a Message_) says so as it is. Found by the user guides' writers
   (2026-11-11).
-- **The History tab cannot tell apart two versions with the same number.** The revision table tracks its rows by
-  `version` and the selection compares versions
-  (`features/editor/components/revision-table/revision-table.ts` 29 and 58-60,
-  `features/editor/views/editor-history-page/editor-history-page.ts` 199-205; `MessageHistoryVo` carries no id).
-  Messages carried over from the previous system hold repeated numbers: in `niord_guides` 384 version numbers are
-  used twice or more, on 354 messages (entries from 2016 to 2022); entries written by Niord 4 repeat none (0 of
-  the 1,745 in `niord_test` since August). On such a message, ticking one of the two rows ticks both and the pair
-  is compared, neither can be shown alone, and Angular's `@for` meets a duplicate key [read in the code and the
-  data; not clicked]. Keying the rows and the selection on the entry's id, or on its index, closes it; SCRIPT9 in
-  `be/docs/potential-errors.md` is the same fault in the script resources' history dialog.
-- **Load errors read as empty data in several places.** Nine components declare an `httpResource` and never read
-  its error state: the home page, the editor's action menu, recently edited drafts, the template selection drawer
-  and search popover, the comments store, the History page, the message details menu and the template parameters
-  field. A failed load there shows the empty state ("no history", no comments, no drafts) as if there were nothing.
-  In Admin > Publications the series and one-off editors turn a failed load of the domains, the publication
-  categories or the reports into an empty list (`catchError(() => of([]))`, `series-editor.ts` 366, 386 and 490,
-  `one-off-editor.ts` 309, 319 and 344, `one-off-detail.ts` 131, `issue-overrides-drawer.ts` 133), as does the
-  one-off list of the Publications page (`publications-page.ts` 294); an editor then sees an empty picker and no
-  notice. The Publications panel of the editor shows how it is meant: an error banner with _Retry_. Found by the
-  user guides' check (2026-11-12, its map of the frontend); read in the code (four of the nine resources and every
-  `catchError` site re-read for this entry), no failure was provoked.
 
 - **A missed row in the Publications panel cannot be read to its week, and its date looks like a release.** A
   `MISSED` row has no link (only a frozen row is in the document), so its name is the plain span with `truncate`

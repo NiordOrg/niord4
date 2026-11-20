@@ -10,7 +10,8 @@
  * The container is the last thing between an anonymous reader and a Niord backend that also
  * serves an editor. What the image promises is narrow and worth asserting from the outside: only
  * GET and HEAD leave it, only six paths exist, the two report PDFs take no query but the one the
- * site composes, the list renders no report but the public one, no credential survives the hop,
+ * site composes, the list renders no report but the public one, a reader turned away by a busy
+ * backend gets the site's own page with the 503 and its Retry-After, no credential survives the hop,
  * the backend learns nothing about the request that the client wrote itself, no upstream may set
  * a cookie on this origin, a missing asset is a 404 rather than the application rendered inside a
  * dialog, every response carries the site's security headers, a legal document or branding file
@@ -265,9 +266,26 @@ const REPO_FILE_TYPES = {
   pdf: ['application/pdf', '%PDF-1.4\n%%EOF\n'],
 };
 
+/**
+ * A PDF the stub answers as the backend does while it is making as many PDFs for readers as it
+ * makes at once, or with another refusal the container must pass as it came: a request whose
+ * series or message id names the case.
+ */
+const PDF_REFUSALS = {
+  busy: [503, { 'retry-after': '10' }],
+  gone: [404, {}],
+};
+
 let seen = [];
 const stub = http.createServer((req, res) => {
   seen.push({ method: req.method, url: req.url, headers: { ...req.headers } });
+  const refusal = /^\/rest\/message-reports\/.*\b(busy|gone)\b/.exec(req.url);
+  if (refusal) {
+    const [status, headers] = PDF_REFUSALS[refusal[1]];
+    res.writeHead(status, { 'content-type': 'application/problem+json', ...headers });
+    res.end(JSON.stringify({ status, detail: 'the stub refuses this PDF' }));
+    return;
+  }
   const isRepoFile = req.url.startsWith('/rest/repo/file/');
   const extension = req.url.split('?')[0].split('.').pop();
   const [type, body] = isRepoFile
@@ -682,6 +700,58 @@ async function run(port, stubPort) {
     messagePdf.status === 200 &&
       lastSeen()?.url === '/rest/message-reports/message/Local%20Warning-120-26.pdf?lang=da',
     `got ${messagePdf.status}, stub saw ${lastSeen()?.url}`,
+  );
+
+  // A busy PDF: the backend answers a reader 503 at once while it makes as many PDFs as it makes at
+  // once. The reader's tab gets the site's own page, still a 503 and with Retry-After, under the
+  // site's headers and kept by nobody; any other refusal passes as the backend wrote it.
+  for (const [path, what] of [
+    ['/rest/message-reports/report.pdf?lang=da&report=public&messageSeries=busy', 'the list PDF'],
+    ['/rest/message-reports/message/busy-1-26.pdf?lang=da', 'one message PDF'],
+  ]) {
+    const busy = await request(port, 'GET', path);
+    const body = busy.body.toString('utf8');
+    const problems = [
+      ...securityHeaderProblems(busy),
+      ...(busy.status === 503 ? [] : [`status ${busy.status}`]),
+      ...(busy.headers['retry-after'] === '10'
+        ? []
+        : [`retry-after ${JSON.stringify(busy.headers['retry-after'])}`]),
+      ...(busy.headers['cache-control'] === 'no-store'
+        ? []
+        : [`cache-control ${JSON.stringify(busy.headers['cache-control'])}`]),
+      ...(/^text\/html/.test(busy.headers['content-type'] ?? '')
+        ? []
+        : [`content-type ${busy.headers['content-type']}`]),
+      ...(body.includes('src="/pdf-busy.js"') && body.includes('id="pdf-busy-text"')
+        ? []
+        : ['the body is not the busy page']),
+    ];
+    check(
+      `a busy backend's 503 on ${what} reaches the reader as the site's page, with Retry-After`,
+      problems.length === 0 && lastSeen()?.url === path,
+      `${problems.join('; ')}; stub saw ${lastSeen()?.url}`,
+    );
+  }
+  const gone = await request(port, 'GET', '/rest/message-reports/message/gone-1-26.pdf?lang=da');
+  check(
+    "another refusal of a PDF passes as the backend's own",
+    gone.status === 404 &&
+      /^application\/problem\+json/.test(gone.headers['content-type'] ?? '') &&
+      !gone.body.toString('utf8').includes('pdf-busy'),
+    `got ${gone.status}, content-type ${gone.headers['content-type']}`,
+  );
+  const byName = await request(port, 'GET', '/pdf-busy.html');
+  check(
+    'the busy page is no page of its own: asked for by its name it is a 404',
+    byName.status === 404,
+    `got ${byName.status}`,
+  );
+  const busyScript = await request(port, 'GET', '/pdf-busy.js');
+  check(
+    "the busy page's script is served",
+    busyScript.status === 200 && /javascript/.test(busyScript.headers['content-type'] ?? ''),
+    `got ${busyScript.status}, content-type ${busyScript.headers['content-type']}`,
   );
 
   // A short id written with a letter outside ASCII, as encodeURIComponent spells it.
@@ -1419,6 +1489,9 @@ async function run(port, stubPort) {
     ...repoFiles.map(([path]) => `GET ${path}`),
     'GET /rest/message-reports/report.pdf?lang=da&report=public&mainType=NW&area=453&messageSeries=xx-nw',
     'GET /rest/message-reports/message/Local%20Warning-120-26.pdf?lang=da',
+    'GET /rest/message-reports/report.pdf?lang=da&report=public&messageSeries=busy',
+    'GET /rest/message-reports/message/busy-1-26.pdf?lang=da',
+    'GET /rest/message-reports/message/gone-1-26.pdf?lang=da',
     'GET /rest/message-reports/message/Lokal%C3%86-7-26.pdf?lang=da',
     ...messageIdUrls.map(([url]) => `GET ${url}`),
     ...repoFileNames.map(([method, url]) => `${method} ${url}`),

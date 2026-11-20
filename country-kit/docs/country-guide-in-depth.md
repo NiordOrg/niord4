@@ -921,10 +921,9 @@ With Docker running, from the repository root:
 (cd be && ./mvnw verify && scripts/check-country-build-group.sh)
 ```
 
-On Windows, export the Niord home with forward slashes first,
-`export NIORD_HOME=$(cygpath -m "$TEMP")/niord`: a Niord home with backslashes fails every
-integration test. The folder is shared by every Niord build on the machine, so two `verify` runs
-must not overlap.
+On Windows, export the Niord home first, as init's last line says,
+`export NIORD_HOME=$(cygpath -m "$TEMP")/niord`; either kind of slash works in the path. The
+folder is shared by every Niord build on the machine, so two `verify` runs must not overlap.
 
 The country build group's integration tests need Docker. A run whose integration tests skipped
 still ends with `BUILD SUCCESS`, with `Tests run: 0`, so always run the group check afterwards

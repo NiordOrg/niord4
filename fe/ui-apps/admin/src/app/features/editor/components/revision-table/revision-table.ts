@@ -10,6 +10,9 @@ import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
  * and toggling re-emits so the page can recompute the diff + attachments. Shares the `.niord-table`
  * chrome with the other list tables; an empty history deliberately shows ONLY the header, with NO
  * "no revisions" empty row.
+ *
+ * A row is the entry itself, never its version number: a message carried over from an older system
+ * can hold two entries with the same number, and each is selected on its own.
  */
 @Component({
   selector: 'app-revision-table',
@@ -26,7 +29,7 @@ import { LocaleDatePipe } from '../../../../shared/pipes/locale-date.pipe';
         </tr>
       </thead>
       <tbody>
-        @for (rev of revisions(); track rev.version) {
+        @for (rev of revisions(); track $index) {
           <tr>
             <td>
               @if (isSelected(rev) || selected().length < 2) {
@@ -56,6 +59,6 @@ export class RevisionTable {
   readonly toggleRevision = output<MessageHistory>();
 
   protected isSelected(rev: MessageHistory): boolean {
-    return this.selected().some((selected) => selected.version === rev.version);
+    return this.selected().includes(rev);
   }
 }

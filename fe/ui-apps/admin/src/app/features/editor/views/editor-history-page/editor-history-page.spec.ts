@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { of } from 'rxjs';
@@ -36,8 +36,12 @@ const message: Message = {
   created: 'x',
 };
 
-function hist(version: number, snapshot: string): MessageHistory {
-  return { version, created: '2026-06-01T10:00:00Z', user: 'alice', status: 'DRAFT', snapshot };
+function hist(
+  version: number,
+  snapshot: string,
+  created = Date.UTC(2026, 5, 1, 10),
+): MessageHistory {
+  return { version, created, user: 'alice', status: 'DRAFT', snapshot };
 }
 
 function setup() {
@@ -78,8 +82,39 @@ function setup() {
 
   const fixture = TestBed.createComponent(EditorHistoryPage);
   fixture.detectChanges();
+  lastFixture = fixture;
   return fixture.componentInstance as unknown as HistoryHandle;
 }
+
+let lastFixture: ComponentFixture<EditorHistoryPage> | undefined;
+
+describe('EditorHistoryPage failed read of the history', () => {
+  it("says so in the table's place, and Retry reads the history again", async () => {
+    setup();
+    const fixture = lastFixture!;
+    await Promise.resolve();
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const historyUrl = '/rest/messages/message/m-1/history';
+    for (const req of http.match((r) => r.url === historyUrl)) {
+      req.flush('down', { status: 503, statusText: 'Service Unavailable' });
+    }
+    await Promise.resolve();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('common.fetchError');
+    expect(host.querySelector('app-revision-table')).toBeNull();
+
+    host.querySelector<HTMLButtonElement>('[role="alert"] button')?.click();
+    fixture.detectChanges();
+    await Promise.resolve();
+    http.expectOne((r) => r.url === historyUrl).flush([hist(1, '{}')]);
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.querySelectorAll('app-revision-table tbody tr')).toHaveLength(1);
+  });
+});
 
 describe('EditorHistoryPage ≤2-select cap', () => {
   it('selects up to two revisions and ignores a third', () => {
@@ -109,6 +144,22 @@ describe('EditorHistoryPage ≤2-select cap', () => {
     // Snapshots come out version-ascending (older = left/old, newer = right/new), NOT click order,
     // so the diff direction + "comparing #a and #b" header are deterministic.
     expect(view.selectedSnapshots()).toEqual(['{"v":1}', '{"v":2}']);
+  });
+
+  it('tells two entries with the same version number apart', () => {
+    // A message carried over from an older system can hold two entries numbered alike.
+    const view = setup();
+    // `created` arrives as epoch milliseconds, the way the backend sends message dates.
+    const later = hist(3, '{"v":"later"}', Date.UTC(2016, 4, 2, 9));
+    const earlier = hist(3, '{"v":"earlier"}', Date.UTC(2016, 4, 1, 9));
+    view.toggle(later);
+    view.toggle(earlier);
+    expect(view.selected()).toEqual([later, earlier]);
+    // The pair compared is these two, the earlier one on the old side.
+    expect(view.selectedSnapshots()).toEqual(['{"v":"earlier"}', '{"v":"later"}']);
+
+    view.toggle(later);
+    expect(view.selected()).toEqual([earlier]);
   });
 });
 

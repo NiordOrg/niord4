@@ -5,6 +5,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { Card } from '../../../../shared/components/card/card';
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 import { Icon } from '../../../../shared/icons/icon';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { MessageIdBadge } from '../../../messages/components/message-id-badge/message-id-badge';
@@ -15,13 +16,21 @@ import { MessageEditShortcutService } from '../../../messages/services/message-e
 /**
  * The current user's recently-edited drafts, a quick-access list inside the editor. This is the
  * ONLY editor fetch that refetches on language change — the editable working copy
- * never does. Hidden entirely when there are no drafts.
+ * never does. Hidden entirely when there are no drafts; a failed read says so, with a retry.
  */
 @Component({
   selector: 'app-recently-edited-drafts',
-  imports: [TranslocoPipe, Card, MessageIdBadge, Icon],
+  imports: [TranslocoPipe, Card, ErrorBanner, MessageIdBadge, Icon],
   template: `
-    @if (drafts().length) {
+    @if (resource.error()) {
+      <app-card [header]="'editor.recently_edited' | transloco">
+        <app-error-banner
+          [title]="'common.fetchError' | transloco"
+          [retryLabel]="'common.retry' | transloco"
+          (retry)="resource.reload()"
+        />
+      </app-card>
+    } @else if (drafts().length) {
       <app-card [header]="'editor.recently_edited' | transloco" [padded]="false">
         <table class="niord-table">
           <tbody>
@@ -68,9 +77,9 @@ export class RecentlyEditedDrafts {
   private readonly editShortcut = inject(MessageEditShortcutService);
   private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
 
-  // A failed fetch leaves the resource in its error state (value() throws); read via hasValue()
-  // so an outage degrades to an empty list.
-  private readonly resource = httpResource<readonly Message[]>(
+  // A failed fetch leaves the resource in its error state (value() throws): the list is read via
+  // hasValue(), and the template shows the failure in its place.
+  protected readonly resource = httpResource<readonly Message[]>(
     () => ({
       url: `${this.apiBaseUrl}/messages/recently-edited-drafts`,
       params: { lang: this.language.selectedLanguage(), maxMessageNo: '20' },

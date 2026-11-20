@@ -206,6 +206,8 @@ interface PageInternals {
 interface SetupOptions {
   readonly selected?: string;
   readonly oneOffs?: readonly OneOffPublication[];
+  /** The one-off list read fails. */
+  readonly oneOffsFail?: boolean;
   readonly series?: readonly PublicationSeries[];
   readonly cadenced?: readonly PublicationSeries[];
   readonly timelines?: readonly IssueTimeline[];
@@ -349,6 +351,10 @@ async function setup(options: SetupOptions = {}) {
       if (request.request.url.endsWith('/one-off-publications/')) {
         // The table is scoped to the desk, and the scope travels as a param.
         requestedOneOffDomains.push(request.request.params.get('domain'));
+      }
+      if (options.oneOffsFail && request.request.url.endsWith('/one-off-publications/')) {
+        request.flush('down', { status: 503, statusText: 'Service Unavailable' });
+        continue;
       }
       request.flush(answerFor(request.request.url, options));
     }
@@ -751,6 +757,27 @@ describe('PublicationsPage — the one-off list', () => {
   it('asks for the session domain’s own one-offs', async () => {
     await setup({ sessionDomain: 'niord-annex' });
     expect(requestedOneOffDomains).toEqual(['niord-annex']);
+  });
+
+  it('says so when the one-offs could not be read, not that the desk has none', async () => {
+    const { element, fixture, httpTesting } = await setup({
+      sessionDomain: 'niord-annex',
+      oneOffsFail: true,
+    });
+    expect(element.textContent).toContain('common.fetchError');
+    expect(element.textContent).not.toContain('admin.publications.oneOff.noneInDomain');
+
+    const banner = [...element.querySelectorAll('[role="alert"]')].find((node) =>
+      node.textContent?.includes('common.fetchError'),
+    );
+    banner?.querySelector('button')?.click();
+    fixture.detectChanges();
+    httpTesting
+      .expectOne((r) => r.url.endsWith('/one-off-publications/'))
+      .flush([oneOff(true, { publicFrom: Date.UTC(2017, 1, 22) })]);
+    fixture.detectChanges();
+    expect(element.textContent).not.toContain('common.fetchError');
+    expect(element.querySelector('[data-testid="one-off-status"]')).not.toBeNull();
   });
 
   /** No desk, no scoping: the parameter is omitted rather than sent blank. */

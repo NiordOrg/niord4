@@ -161,7 +161,7 @@ class NiordIntegrationRestServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // URL validation — the write-time half of the SSRF guard (SECAUD-9)
+    // URL validation — the write-time half of the SSRF guard
     // ------------------------------------------------------------------------------------------- //
 
     /**

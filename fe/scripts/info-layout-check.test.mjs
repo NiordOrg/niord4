@@ -134,4 +134,22 @@ describe("info-layout-check's fixture", () => {
     );
     assert.equal(unknown.status, 404);
   });
+
+  // A message's dialog opened by its address reads the message itself, by id or short id; one
+  // message is answered there and in no list, so the dialog's close has no row to go back to.
+  it('answers a message by its id or short id, and holds one that no list holds', async () => {
+    const { answerRest, UNLISTED_MESSAGE } = await import('./info-layout-check.mjs');
+    const read = (id) =>
+      answerRest(
+        new URL(`http://niord-info.layout-check/rest/public/v1/message/${encodeURIComponent(id)}`),
+      );
+    const listed = JSON.parse(
+      answerRest(new URL('http://niord-info.layout-check/rest/public/v1/messages')).body,
+    );
+    assert.equal(JSON.parse(read(listed[2].id).body).id, listed[2].id);
+    assert.equal(JSON.parse(read(listed[2].shortId).body).id, listed[2].id);
+    assert.equal(JSON.parse(read(UNLISTED_MESSAGE.id).body).id, UNLISTED_MESSAGE.id);
+    assert.ok(!listed.some((m) => m.id === UNLISTED_MESSAGE.id));
+    assert.equal(read('elsewhere').status, 404);
+  });
 });

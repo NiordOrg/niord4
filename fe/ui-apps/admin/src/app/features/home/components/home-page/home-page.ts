@@ -8,6 +8,7 @@ import { APP_CONFIG } from '../../../../core/config/app-config.token';
 import { DomainFacade } from '../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { computeInitialMapView } from '../../../../shared/components/ol-map/map-view-defaults';
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 // TYPE-ONLY on purpose: a value import of OlMap here would keep the OpenLayers edge alive in
 // this file and the @defer on <app-home-map> would move nothing. `map-view-defaults` is pure
 // (its own OL imports are type-only), so `computeInitialMapView` can stay eager.
@@ -19,7 +20,7 @@ import type { MessageSearchResult } from '../../../messages/models/message-searc
 
 @Component({
   selector: 'app-home-page',
-  imports: [NgOptimizedImage, TranslocoPipe, HomeMap, SlotOutlet],
+  imports: [NgOptimizedImage, TranslocoPipe, ErrorBanner, HomeMap, SlotOutlet],
   templateUrl: './home-page.html',
   // `main` in layout.html is now a flex column; making the host a flex column
   // child that grows to fill main lets the inner wrapper use `flex-1` for the
@@ -53,10 +54,11 @@ export class HomePage {
    * TODO(MSG-LANDING-PAGINATION): If any deployment exceeds 1000 published
    * messages, the silent truncation hides the overflow on the landing map.
    * Add a "showing N of total" indicator (or page through results) before
-   * shipping to a deployment that approaches this threshold. Errors are
-   * swallowed to an empty list so an outage doesn't blank the welcome panel.
+   * shipping to a deployment that approaches this threshold. A failed read leaves
+   * the map without dots and says so in the welcome panel, with a retry, so an
+   * outage reads neither as open sea nor as a blank panel.
    */
-  private readonly resource = httpResource<readonly Message[]>(
+  protected readonly resource = httpResource<readonly Message[]>(
     () => ({
       url: `${this.config.apiBaseUrl}/messages/search`,
       params: { lang: this.language.selectedLanguage(), page: '0', maxSize: '1000' },
@@ -67,8 +69,7 @@ export class HomePage {
     },
   );
 
-  // A failed fetch leaves the resource in its error state (value() throws); read via hasValue()
-  // so an outage degrades to an empty list rather than blanking the welcome panel.
+  // A failed fetch leaves the resource in its error state (value() throws); read via hasValue().
   protected readonly messages = computed<readonly Message[]>(() =>
     this.resource.hasValue() ? this.resource.value() : [],
   );

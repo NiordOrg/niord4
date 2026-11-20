@@ -10,6 +10,7 @@ import {
 } from '../../../models/geometry.model';
 import { Icon } from '../../../icons/icon';
 import { Dialog } from '../../dialog/dialog';
+import { ErrorBanner } from '../../error-banner/error-banner';
 import { EntityTree } from '../../entity-tree/entity-tree';
 import type { HierarchicalEntity } from '../../entity-tree/hierarchical-entity.model';
 import { AppTab, AppTabList, AppTabPanel, AppTabPanels, AppTabs } from '../../tabs/tabs';
@@ -23,12 +24,16 @@ const EMPTY_FC = emptyFeatureCollection();
  * (pick an area that carries a geometry), From Text (a GeoJSON-as-plain-text textarea, parsed by the
  * backend), From UTM (a UTM list, parsed by the backend). Confirming emits the working collection;
  * the host APPENDS it to the current geometry.
+ *
+ * A failed read of the area tree, or of a picked area's geometry, says so in the From Area tab with
+ * a retry, rather than reading as no areas or as an area without a geometry.
  */
 @Component({
   selector: 'app-geometry-import-dialog',
   imports: [
     TranslocoPipe,
     Dialog,
+    ErrorBanner,
     Icon,
     EntityTree,
     AppTabs,
@@ -61,13 +66,32 @@ const EMPTY_FC = emptyFeatureCollection();
               <span class="mb-1 block text-sm text-fg-muted">
                 {{ 'geometry.import.areaLabel' | transloco }}
               </span>
-              <app-entity-tree
-                [entities]="areaRoots()"
-                [expandFirstLevel]="true"
-                [selectedIds]="selectedAreaIds()"
-                [filterPlaceholder]="'geometry.import.areaPlaceholder' | transloco"
-                (entitySelected)="onAreaSelected($event)"
-              />
+              @if (areaRootsFailed()) {
+                <app-error-banner
+                  data-testid="geometry-import-area-roots-error"
+                  [title]="'common.fetchError' | transloco"
+                  [retryLabel]="'common.retry' | transloco"
+                  (retry)="loadAreaRoots()"
+                />
+              } @else {
+                @if (areaPickFailed()) {
+                  <div class="mb-2">
+                    <app-error-banner
+                      data-testid="geometry-import-area-pick-error"
+                      [title]="'common.fetchError' | transloco"
+                      [retryLabel]="'common.retry' | transloco"
+                      (retry)="retryAreaPick()"
+                    />
+                  </div>
+                }
+                <app-entity-tree
+                  [entities]="areaRoots()"
+                  [expandFirstLevel]="true"
+                  [selectedIds]="selectedAreaIds()"
+                  [filterPlaceholder]="'geometry.import.areaPlaceholder' | transloco"
+                  (entitySelected)="onAreaSelected($event)"
+                />
+              }
             </app-tab-panel>
           }
 
@@ -171,6 +195,12 @@ export class GeometryImportDialog {
   protected readonly utmText = signal('');
   /** Root areas (with nested children) for the From-Area tree picker (loaded on dialog open). */
   protected readonly areaRoots = signal<readonly HierarchicalEntity[]>([]);
+  /** The area tree could not be read. */
+  protected readonly areaRootsFailed = signal(false);
+  /** The picked area's geometry could not be read (not the same as an area without one). */
+  protected readonly areaPickFailed = signal(false);
+  /** The area picked last, read again by the retry after a failed read of its geometry. */
+  private lastPickedArea: HierarchicalEntity | undefined;
   /** Ids of the picked area — drives the tree's row-selected highlight (single-select). */
   protected readonly selectedAreaIds = signal<readonly (string | number)[]>([]);
   protected readonly showUtmExamples = signal(false);
@@ -224,7 +254,12 @@ export class GeometryImportDialog {
       .pipe(
         switchMap((area) =>
           area && this.areaSource
-            ? this.areaSource.getGeometry(area).pipe(catchError(() => of(EMPTY_FC)))
+            ? this.areaSource.getGeometry(area).pipe(
+                catchError(() => {
+                  this.areaPickFailed.set(true);
+                  return of(EMPTY_FC);
+                }),
+              )
             : EMPTY,
         ),
         takeUntilDestroyed(),
@@ -258,6 +293,7 @@ export class GeometryImportDialog {
 
   protected reset(): void {
     this.areaPick$.next(null);
+    this.areaPickFailed.set(false);
     this.parsePending.set(false);
     this.activeTab.set(this.defaultTab());
     this.geometryText.set('');
@@ -281,6 +317,7 @@ export class GeometryImportDialog {
     this.activeTab.set(tab);
     // An area pick still loading belongs to the tab being left (or to a highlight cleared below).
     this.areaPick$.next(null);
+    this.areaPickFailed.set(false);
     if (tab === 'text' && this.geometryText().trim().length > 0) {
       this.parsePending.set(true);
       this.textParse$.next(this.geometryText());
@@ -310,19 +347,33 @@ export class GeometryImportDialog {
   /** Picking an area in the tree — the source resolves it to the FeatureCollection to import. */
   protected onAreaSelected(area: HierarchicalEntity): void {
     if (!this.areaSource) return;
+    this.lastPickedArea = area;
+    this.areaPickFailed.set(false);
     this.selectedAreaIds.set([area.id]);
     this.parsePending.set(true);
     this.areaPick$.next(area);
   }
 
-  private loadAreaRoots(): void {
+  /** Read the picked area's geometry again after a failed read. */
+  protected retryAreaPick(): void {
+    if (this.lastPickedArea) {
+      this.onAreaSelected(this.lastPickedArea);
+    }
+  }
+
+  protected loadAreaRoots(): void {
+    if (!this.areaSource) return;
+    this.areaRootsFailed.set(false);
     this.areaSource
-      ?.getRoots()
-      .pipe(
-        catchError(() => of([] as readonly HierarchicalEntity[])),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((roots) => this.areaRoots.set(roots));
+      .getRoots()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (roots) => this.areaRoots.set(roots),
+        error: () => {
+          this.areaRoots.set([]);
+          this.areaRootsFailed.set(true);
+        },
+      });
   }
 
   protected confirm(): void {

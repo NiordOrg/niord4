@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
@@ -31,7 +31,9 @@ class Host {
   readonly picked = signal<SystemCategory | undefined>(undefined);
 }
 
-async function setup(opts: { narrow?: boolean } = {}) {
+async function setup(
+  opts: { narrow?: boolean; searchTemplates?: () => Observable<SystemCategory[]> } = {},
+) {
   if (opts.narrow) {
     // Only the popover's narrow query exists here, so every query answers as a phone would.
     vi.stubGlobal('matchMedia', () => ({
@@ -51,7 +53,7 @@ async function setup(opts: { narrow?: boolean } = {}) {
       {
         provide: CategoriesApiService,
         useValue: {
-          searchTemplates: () => of(TEMPLATES),
+          searchTemplates: opts.searchTemplates ?? (() => of(TEMPLATES)),
           getTemplateDetails: () => of(TEMPLATES),
         },
       },
@@ -98,6 +100,23 @@ describe('TemplateSearchPopover', () => {
 
     expect(combobox()).not.toBeNull();
     expect(document.activeElement).toBe(combobox());
+  });
+
+  it('a failed read of the list says so, and Retry reads it again', async () => {
+    let calls = 0;
+    const ctx = await setup({
+      searchTemplates: () =>
+        calls++ === 0 ? throwError(() => new Error('offline')) : of(TEMPLATES),
+    });
+    ctx.popover.toggle(ctx.anchor);
+    await ctx.fixture.whenStable();
+
+    const alert = document.querySelector('.cdk-overlay-container [role="alert"]');
+    expect(alert?.textContent).toContain('common.fetchError');
+    expect(document.body.textContent).not.toContain('editor.template.drawer.noResults');
+    buttonNamed('common.retry')?.click();
+    await ctx.fixture.whenStable();
+    expect(options()).toHaveLength(3);
   });
 
   it('opens showing the full domain list, so picking needs no typing at all', async () => {

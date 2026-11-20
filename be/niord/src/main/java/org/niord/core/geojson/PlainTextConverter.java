@@ -405,8 +405,9 @@ public class PlainTextConverter {
      * Parses the degree (either latitude or longitude).
      * <p>
      * Every position here carries a hemisphere letter, so a sign before the degrees is refused, as are minutes or
-     * seconds outside [0, 60) and a value beyond {@code maxDegrees} (90 for a latitude, 180 for a longitude):
-     * each would otherwise be read as a position the editor never typed.
+     * seconds outside [0, 60), a fraction of a degree followed by minutes, minutes with a fraction followed by
+     * seconds and a value beyond {@code maxDegrees}
+     * (90 for a latitude, 180 for a longitude): each would otherwise be read as a position the editor never typed.
      *
      * @param deg the degree text
      * @param dir the hemisphere letter
@@ -432,6 +433,13 @@ public class PlainTextConverter {
         try {
             double val = Double.valueOf(parts[0]);
             if (parts.length == 2 || parts.length == 3) {
+                if (val != Math.floor(val)) {
+                    // A fraction of a degree followed by minutes ("56.5 30N", often a slipped decimal comma) would
+                    // add the minutes to the fraction: 57°, a position the editor never typed. The value decides, not
+                    // the text: "56.0 30N" and "56. 30N" are whole degrees and read as typed, and an exponent
+                    // ("565e-1 30N") is a fraction like any other
+                    throw new Exception("Invalid degree format: " + deg);
+                }
                 double min = Double.valueOf(parts[1]);
                 if (!(min >= 0 && min < 60)) {
                     throw new Exception("Invalid degree format: " + deg);
@@ -439,6 +447,14 @@ public class PlainTextConverter {
                 val += min / 60.0;
             }
             if (parts.length == 3 && includesSeconds) {
+                double min = Double.valueOf(parts[1]);
+                if (min != Math.floor(min)) {
+                    // Minutes with a fraction followed by seconds ("56 30.5' 20\"N") would add the seconds to minutes
+                    // that already carry a fraction, a position the editor never typed: refused as a fraction of a
+                    // degree followed by minutes is. Minutes with a fraction and no seconds are the usual form and
+                    // are read as typed, and so are whole minutes with seconds ("56 30.0' 20\"N" too)
+                    throw new Exception("Invalid degree format: " + deg);
+                }
                 double secs = Double.valueOf(parts[2]);
                 if (!(secs >= 0 && secs < 60)) {
                     throw new Exception("Invalid degree format: " + deg);

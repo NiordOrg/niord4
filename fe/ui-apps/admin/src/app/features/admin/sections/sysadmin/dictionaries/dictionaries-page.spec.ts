@@ -37,6 +37,8 @@ interface PageInternals {
 /** The page's config; `s124Enabled` is the backend's computed value the web settings supply. */
 interface SetupOptions {
   readonly s124Enabled?: boolean;
+  /** The read of the dictionary names fails. */
+  readonly namesFail?: boolean;
 }
 
 function setup(entries: unknown[], options: SetupOptions = {}) {
@@ -70,7 +72,12 @@ function setup(entries: unknown[], options: SetupOptions = {}) {
   const fixture = TestBed.createComponent(DictionariesPage);
   fixture.detectChanges();
   const httpTesting = TestBed.inject(HttpTestingController);
-  httpTesting.expectOne('/rest/dictionaries/names').flush(['web', 'mail']);
+  const namesRequest = httpTesting.expectOne('/rest/dictionaries/names');
+  if (options.namesFail) {
+    namesRequest.flush('down', { status: 503, statusText: 'Service Unavailable' });
+  } else {
+    namesRequest.flush(['web', 'mail']);
+  }
   httpTesting.expectOne('/rest/dictionaries/dictionary/web/entries').flush(entries);
   fixture.detectChanges();
   return { fixture, page: fixture.componentInstance as unknown as PageInternals, httpTesting };
@@ -126,6 +133,27 @@ describe('DictionariesPage', () => {
     page.extendedOverride.set(false); // hide extended → longValue leaves the filter
     page.onSearch('extended body');
     expect(page.filtered().length).toBe(0);
+  });
+
+  it('a failed read of the names says so above the entries, which stay on the page', () => {
+    const { fixture, httpTesting } = setup([{ key: 'a', descs: [{ lang: 'en', value: 'v' }] }], {
+      namesFail: true,
+    });
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[data-testid="dictionaries-names-error"]')?.textContent).toContain(
+      'common.fetchError',
+    );
+    expect(host.querySelectorAll('[role="alert"]')).toHaveLength(1);
+    expect(host.querySelectorAll('table tbody tr')).toHaveLength(1);
+
+    host
+      .querySelector<HTMLButtonElement>('[data-testid="dictionaries-names-error"] button')!
+      .click();
+    TestBed.tick();
+    httpTesting.expectOne('/rest/dictionaries/names').flush(['web', 'mail']);
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.querySelectorAll('table tbody tr')).toHaveLength(1);
   });
 
   it('copy opens the drawer in add mode with the id stripped', () => {

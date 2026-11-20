@@ -54,7 +54,12 @@ async function settle(): Promise<void> {
   }
 }
 
-async function setup(opts?: { admin?: boolean; comments?: MessageComment[]; loadError?: number }) {
+async function setup(opts?: {
+  admin?: boolean;
+  comments?: MessageComment[];
+  loadError?: number;
+  commentsError?: boolean;
+}) {
   const api = {
     editableDetails: vi.fn(() =>
       opts?.loadError
@@ -110,7 +115,11 @@ async function setup(opts?: { admin?: boolean; comments?: MessageComment[]; load
   for (const req of httpMock.match(
     (r) => r.method === 'GET' && r.url === '/rest/messages/message/m-1/comments',
   )) {
-    req.flush(opts?.comments ?? []);
+    if (opts?.commentsError) {
+      req.flush('down', { status: 503, statusText: 'Service Unavailable' });
+    } else {
+      req.flush(opts?.comments ?? []);
+    }
   }
   await settle();
   const view = fixture.componentInstance as unknown as CommentsHandle;
@@ -161,6 +170,26 @@ describe('EditorCommentsPage comment count (drives the tab badge)', () => {
   it('is 0 for an empty thread', async () => {
     const { store } = await setup({ comments: [] });
     expect(store.count()).toBe(0);
+  });
+});
+
+describe('EditorCommentsPage failed read of the thread', () => {
+  it('says so, not "no comments", and Retry reads the thread again', async () => {
+    const { fixture, httpMock } = await setup({ commentsError: true });
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('common.fetchError');
+    expect(host.textContent).not.toContain('editor.comments.none');
+
+    host.querySelector<HTMLButtonElement>('[role="alert"] button')?.click();
+    await settle();
+    httpMock
+      .expectOne((r) => r.method === 'GET' && r.url === '/rest/messages/message/m-1/comments')
+      .flush([]);
+    await settle();
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.textContent).toContain('editor.comments.none');
   });
 });
 

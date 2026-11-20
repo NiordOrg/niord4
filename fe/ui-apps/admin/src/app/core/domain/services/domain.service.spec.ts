@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 
 import { DomainService } from './domain.service';
 import { DomainsApiService } from './domains-api.service';
@@ -76,10 +76,48 @@ describe('DomainService', () => {
     expect(service.sessionDomain()?.domainId).toBe('niord-de');
   });
 
-  it('falls back to empty list on lookup error', async () => {
-    const { service } = setup({ apiResult: throwError(() => new Error('boom')) });
+  it('a failed start-up read says so and keeps the remembered domain for the reload', async () => {
+    localStorage.setItem('niord.sessionDomainId', 'niord-de');
+    let calls = 0;
+    const lookup = vi.fn(() =>
+      calls++ === 0 ? throwError(() => new Error('boom')) : of([niordDk, niordDe]),
+    );
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DomainsApiService, useValue: { lookup } },
+        { provide: LanguageService, useValue: { selectedLanguage: signal('en') } },
+      ],
+    });
+    const service = TestBed.inject(DomainService);
     await service.bootstrap();
+    expect(service.bootstrapFailed()).toBe(true);
     expect(service.availableDomains()).toEqual([]);
+    expect(service.sessionDomain()).toBeUndefined();
+    expect(localStorage.getItem('niord.sessionDomainId')).toBe('niord-de');
+
+    // The reload starts the app again: a start-up read that comes through finds the same desk.
+    await service.bootstrap();
+    expect(service.bootstrapFailed()).toBe(false);
+    expect(service.sessionDomain()?.domainId).toBe('niord-de');
+  });
+
+  it('a start-up read that times out says so', async () => {
+    vi.useFakeTimers();
+    try {
+      const { service } = setup({ apiResult: NEVER });
+      const done = service.bootstrap();
+      await vi.advanceTimersByTimeAsync(5_000);
+      await done;
+      expect(service.bootstrapFailed()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('an empty catalogue that arrives is no failure', async () => {
+    const { service } = setup({ apiResult: of([]) });
+    await service.bootstrap();
+    expect(service.bootstrapFailed()).toBe(false);
     expect(service.sessionDomain()).toBeUndefined();
   });
 

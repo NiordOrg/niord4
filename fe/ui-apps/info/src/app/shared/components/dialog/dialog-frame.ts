@@ -2,6 +2,7 @@ import { Component, DestroyRef, ElementRef, inject, input, viewChild } from '@an
 import { DialogRef, type CdkDialogContainer } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+import { ScrollRegion } from '../../directives/scroll-region';
 import { Icon } from '../../icons/icon';
 
 let dialogSeq = 0;
@@ -29,7 +30,7 @@ let dialogSeq = 0;
  */
 @Component({
   selector: 'app-dialog-frame',
-  imports: [Icon, TranslocoPipe],
+  imports: [Icon, ScrollRegion, TranslocoPipe],
   template: `
     <div class="dialog-panel">
       <header class="dialog-header">
@@ -43,7 +44,16 @@ let dialogSeq = 0;
           <app-icon name="lucideX" />
         </button>
       </header>
-      <div class="dialog-body"><ng-content /></div>
+      <!-- The body scrolls inside the panel. While it does, it is a tab stop named by the title,
+           so a document with nothing focusable in it can still be scrolled to its end from the
+           keyboard; the ring is drawn inside it, since the panel clips what lies outside. -->
+      <div
+        class="dialog-body focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-500"
+        [appScrollRegion]="title()"
+        [scrollsDown]="true"
+      >
+        <ng-content />
+      </div>
       <ng-content select="footer" />
     </div>
   `,

@@ -3564,7 +3564,8 @@
       "failedNoticeDetail": "See Actions > My mails... in Messages, and reach the recipients another way."
     },
     "export": {
-      "errorTempTag": "Failed to prepare the selection for export."
+      "errorTempTag": "Failed to prepare the selection for export.",
+      "truncated": "The archive holds the first {{limit}} of the {{total}} messages found. Narrow the search to export the rest."
     },
     "import": {
       "title": "Import Messages",

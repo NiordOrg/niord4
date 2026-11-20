@@ -237,7 +237,11 @@ and refresh.
   failed search leaves it as it was. The other searches of the same endpoint show no
   warning: the publication include dialog's message lookup (free text on the message id), and the
   area-sort dialog and the home page (no free text). The print, export and mail of the list search on
-  the server and do not carry the mark.
+  the server: the printed PDF carries a line at its top that says messages may be missing; for the
+  mail and the export, which carry no mark, the action menu hands the list's mark on: the mail dialog
+  shows the same warning above its form, the dialog described by it so a screen reader announces it
+  on open, and Export and Export selection ask first, with the warning
+  in a neutral confirm, and export only when it is accepted.
 
 A **publication filter refusal** is reported per chip, not as a broken list: a `400` whose
 `error.code` starts with `PUBLICATION` is matched by prefix (not an enumeration) and its server message

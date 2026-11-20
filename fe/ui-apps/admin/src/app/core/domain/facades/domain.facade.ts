@@ -21,6 +21,8 @@ export class DomainFacade {
   readonly availableDomains = this.service.availableDomains;
   readonly sessionDomain = this.service.sessionDomain;
   readonly searchDomain = this.service.searchDomain;
+  /** The start-up read of the domains failed: the shell says so and offers a reload. */
+  readonly bootstrapFailed = computed(() => this.service.bootstrapFailed());
 
   readonly searchDomainEffective = computed<Domain | undefined>(
     () => this.searchDomain() ?? this.sessionDomain(),

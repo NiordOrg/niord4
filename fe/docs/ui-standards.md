@@ -112,7 +112,9 @@ width mechanism (inline styles on the panel), and the same optional `[dirty]` ga
 Horizontally centred and **top-anchored** at `[top]` (default `5vh`), so a tall dialog grows
 downward from a stable position instead of recentering as its content changes; a near-fullscreen
 panel passes a smaller offset (`top="1rem"`). Block scroll, focus trap with auto-capture and
-restore. `[dismissableMask]` is off by default.
+restore. `[dismissableMask]` is off by default. An optional `[describedBy]` takes the id of a body
+element the panel's `aria-describedby` points at, for a warning a screen reader should announce
+when the dialog opens.
 
 ### Confirmations
 

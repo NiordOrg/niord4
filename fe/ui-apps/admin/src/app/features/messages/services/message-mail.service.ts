@@ -33,9 +33,13 @@ export class MessageMailService {
   private readonly language = inject(LanguageService);
   private readonly notifications = inject(NotificationService);
 
-  mailSelection(messageIds: readonly string[]): Observable<void> {
+  /**
+   * @param indexIncomplete the list the messages were chosen from was answered while the search
+   *   index was being rebuilt; the dialog then shows the list's warning before the mail is sent
+   */
+  mailSelection(messageIds: readonly string[], indexIncomplete = false): Observable<void> {
     return this.dialog
-      .open(messageIds, (request) => this.send(messageIds, request))
+      .open(messageIds, (request) => this.send(messageIds, request), indexIncomplete)
       .pipe(map(() => undefined));
   }
 

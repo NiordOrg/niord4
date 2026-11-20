@@ -41,6 +41,7 @@ import org.hibernate.Session;
 import org.slf4j.Logger;
 import tools.jackson.core.type.TypeReference;
 
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.TypedQuery;
 import javax.script.ScriptException;
 import java.sql.PreparedStatement;
@@ -128,7 +129,8 @@ public class DictionaryService extends BaseService {
      * Returns the dictionary with the given name
      *
      * @param name the name
-     * @return the dictionary with the given name
+     * @return the dictionary with the given name, or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Dictionary findByName(String name) {
         try {
@@ -136,7 +138,7 @@ public class DictionaryService extends BaseService {
                     .createNamedQuery("Dictionary.findByName", Dictionary.class)
                     .setParameter("name", name)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             return null;
         }
     }

@@ -2056,6 +2056,15 @@
         ]
       },
       {
+        "key": "pdf.list.index_incomplete",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "The search index is being rebuilt, for example after a restart of the server. Until it is complete, messages may be missing from this result."
+          }
+        ]
+      },
+      {
         "key": "pdf.list.title",
         "descs": [
           {

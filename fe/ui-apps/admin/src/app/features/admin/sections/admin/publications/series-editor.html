@@ -21,6 +21,17 @@
           <span>{{ 'admin.publications.otherDomainNote' | transloco: { domain } }}</span>
         </div>
       }
+      <!--
+        A list a picker below is filled from could not be read: said once, here,
+        so an empty picker is never taken for one with nothing to offer.
+      -->
+      @if (optionsFailed()) {
+        <app-error-banner
+          [title]="'common.fetchError' | transloco"
+          [retryLabel]="'common.retry' | transloco"
+          (retry)="retryOptions()"
+        />
+      }
 
       <app-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))">
         <app-tab-list>

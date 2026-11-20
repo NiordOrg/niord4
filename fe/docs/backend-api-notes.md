@@ -208,8 +208,9 @@ The workhorse read, and the one that lies most quietly.
 - **A free-text search right after a backend start can be short, and says so.** The backend builds its
   text index again after each start, which takes minutes on a large database; until it is complete a
   `query=` search answers from the messages indexed so far, and the answer carries
-  `indexIncomplete: true`. Every other answer leaves the property out. The print, the export and the
-  message mail carry no such mark.
+  `indexIncomplete: true`. Every other answer leaves the property out. The print (PDF) of such a search
+  carries a line at its top that says messages may be missing; the export and the message mail carry no
+  mark, so the app warns before them from the list's own mark.
 - **Callers without an identity get plain-word free text.** For a request with no token and no ticket,
   `query=` is matched as literal words (no wildcards, regular expressions, phrases or `AND`/`OR`/`NOT`)
   and cut to 256 characters, and `username`, `userType` and `comments` are ignored. A ticketed request
@@ -385,11 +386,13 @@ shows.
 **Only a few anonymous PDFs are made at a time.** A caller with no identity — no token and no
 ticket, the public site's reader among them — takes one of `niord.reports.anonymous-pdf-concurrency`
 permits (3 by default) while its PDF is made, on either endpoint. When none is free the answer is
-**503** at once, a problem+json body with no `Retry-After`, before anything is searched or looked up;
+**503** at once, a problem+json body with `Retry-After: 10`, before anything is searched or looked up;
 the same request a moment later can succeed. Such a PDF is rendered in full before its first byte is
 sent, and never with map thumbnails. A signed-in or ticketed caller takes no permit, and its PDF is
-streamed as it is rendered. The public site opens both PDFs in a new tab, so its reader sees that
-503 body there ([backlog.md](backlog.md), _The public site_).
+streamed as it is rendered. The public site opens both PDFs in a new tab, so its container answers
+that 503 with a page of the site's own (`ui-apps/info/public/pdf-busy.html`), still a 503 with
+`Retry-After: 10`, which says in the language the PDF was asked in (the bundle's `PDF_BUSY`) that
+documents are being prepared for other readers and to try again in a moment.
 
 `debug=true` on either endpoint returns the HTML the PDF is rendered from instead of the PDF —
 the cheap way to see which messages a set of parameters actually selects — and the free-form
@@ -548,6 +551,10 @@ Two distinct caps, easily confused:
 - The interactive print and mail endpoints (`/message-reports/report.pdf`, `/message-mail/send`)
   **truncate silently at 1000 messages**. Nothing in the response says the list was cut, so anything
   that must be complete cannot go through them.
+- The export (`/message-io/export.zip`) takes the first 1000 messages of the search in the same way,
+  and its answer, a download, says nothing either. The admin app compares the search's total (or
+  the selection's size) with `MESSAGE_EXPORT_LIMIT` (`message-export.service.ts`, kept equal to the
+  backend's `maxSize`) and shows a notice with the download that stays until it is closed.
 - Publishing a publication issue **refuses** above 1000 resolved members with `409 MEMBER_LIMIT_EXCEEDED`
   naming the issue and the count, and the publish checklist carries a `MEMBER_LIMIT` row reporting
   "_n_ of 1000" before it gets that far. A publication is rendered in-process from its frozen member

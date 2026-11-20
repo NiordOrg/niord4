@@ -18,6 +18,11 @@ import {
  * pixel counts as fitting — a bordered table overhangs its box by a fraction of one, which the
  * browser rounds up to a whole pixel, and there is nothing in it to scroll to. The name is what
  * a screen reader announces on arrival, so it is the label of what the box holds.
+ *
+ * A box that scrolls down as well, such as a dialog's body, says so with `scrollsDown`: it is
+ * then a tab stop also while its content is taller than it. A document with no link in it, a
+ * disclaimer on a phone, has nothing else a keyboard reader could reach its end by — some
+ * browsers put such a box into the tab order of their own accord, and others do not.
  */
 @Directive({
   selector: '[appScrollRegion]',
@@ -31,13 +36,20 @@ export class ScrollRegion {
   /** The region's accessible name. */
   readonly appScrollRegion = input.required<string>();
 
+  /** Whether content taller than the box counts too: the box scrolls down as well as sideways. */
+  readonly scrollsDown = input(false);
+
   protected readonly scrolls = signal(false);
 
   constructor() {
     const element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
-      const measure = () => this.scrolls.set(element.scrollWidth - element.clientWidth > 1);
+      const measure = () =>
+        this.scrolls.set(
+          element.scrollWidth - element.clientWidth > 1 ||
+            (this.scrollsDown() && element.scrollHeight - element.clientHeight > 1),
+        );
 
       // The box is measured whenever its size changes: a narrower screen, or a label that wraps
       // differently after a language switch.

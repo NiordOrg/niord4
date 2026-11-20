@@ -175,6 +175,26 @@ describe('HomePage', () => {
     req.flush({ data: [], total: 0 });
   });
 
+  it('says so in the welcome panel when the messages could not be read, and Retry reads them again', async () => {
+    const ctx = setup({});
+    fixture = ctx.fixture;
+    fixture.detectChanges();
+    ctx.httpMock
+      .expectOne((r) => r.url === '/api/messages/search')
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
+    await Promise.resolve();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('common.fetchError');
+
+    host.querySelector<HTMLButtonElement>('[role="alert"] button')?.click();
+    fixture.detectChanges();
+    ctx.httpMock.expectOne((r) => r.url === '/api/messages/search').flush({ data: [], total: 0 });
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it('re-fetches /messages/search in the new language when the language changes', () => {
     const ctx = setup({ language: 'en' });
     fixture = ctx.fixture;

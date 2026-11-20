@@ -15,7 +15,7 @@
  * depends on the width of the screen and on the language: a row of labels that fits in Danish
  * wraps in Kalaallisut. jsdom lays nothing out, so no unit test can see any of it. This script
  * opens the built artefact in Chromium, answers every /rest call from the fixture below, and
- * asserts thirteen things:
+ * asserts eighteen things:
  *
  *   1. At 320, 640, 1024 and 1920 px, in every language the build offers, every control of the
  *      menu bar — the four links and each language flag — lies inside the viewport and is the
@@ -58,6 +58,15 @@
  *      without a position covers none of the chart's own controls: the zoom buttons, the layer
  *      switcher and every link of the credits are each the topmost element at their centre. A
  *      link that wraps onto a second line is tested at the centre of each line.
+ *  14. Every link of a chart's credit line is underlined, on the map view and on the teaser.
+ *  15. The teaser's banner text holds 4.5:1 over a white tile and over the chart's land and water,
+ *      in the build's own colours.
+ *  16. On the print sheet every control the Tab key reaches shows a focus ring.
+ *  17. At 320 px under the WCAG 1.4.12 text spacing, a dialog whose title and legal document hold
+ *      Kalaallisut's long words keeps its close button inside the panel, and no word runs past
+ *      the body's edge.
+ *  18. A message's dialog opened by its own address and closed with Escape gives focus to the
+ *      message's row in the list, or to the main content when no list holds the message.
  *
  * The languages are the build's own: /rest/settings/web answers without a language setting, so
  * the country file decides, and each flag is pressed in turn. So are the root areas: the fixture
@@ -331,6 +340,17 @@ for (const root of ROOTS) {
 }
 
 /**
+ * A message a link can open but no list holds: an expired one, say. Answered by its id only, so a
+ * dialog opened by its address has no row in the list to give focus back to.
+ */
+export const UNLISTED_MESSAGE = {
+  ...MESSAGES[0],
+  id: 'layout-check-unlisted',
+  shortId: 'NW-900-26',
+  status: 'EXPIRED',
+};
+
+/**
  * Two publications in a row: one whose file lies in the site's own repository, addressed by a
  * root-relative path, and one on another host. Each row carries a Download link and the first a
  * Browse link as well: beside the title from the sm width, under it below. The first title holds
@@ -399,6 +419,12 @@ export function answerRest(url) {
   if (url.pathname === '/rest/public/v1/messages') {
     const areaId = url.searchParams.get('areaId');
     return json(MESSAGES.filter((m) => !areaId || String(m.areas[0].parent.id) === areaId));
+  }
+  const message = /^\/rest\/public\/v1\/message\/(.+)$/.exec(url.pathname);
+  if (message) {
+    const id = decodeURIComponent(message[1]);
+    const found = [...MESSAGES, UNLISTED_MESSAGE].find((m) => m.id === id || m.shortId === id);
+    if (found) return json(found);
   }
   if (url.pathname === '/rest/public/v1/publications') return json(PUBLICATIONS);
   const publication = /^\/rest\/public\/v1\/publication\/(.+)$/.exec(url.pathname);
@@ -876,6 +902,185 @@ async function printedLinkProblems(page) {
 }
 
 /**
+ * Every link of a chart's credit line is underlined: its grey is 2.2:1 from the line's, so colour
+ * alone would tell it apart (WCAG 1.4.1). There must be one, or the check proves nothing.
+ */
+function creditLinkProblems(page) {
+  return page.evaluate(() => {
+    const links = [...document.querySelectorAll('.ol-attribution a[href]')].filter(
+      (a) => a.getClientRects().length > 0,
+    );
+    if (links.length === 0) return ['the chart shows no credit link, so the check proves nothing'];
+    return links
+      .filter((a) => !getComputedStyle(a).textDecorationLine.includes('underline'))
+      .map((a) => `the credit link "${a.textContent.trim()}" is not underlined`);
+  });
+}
+
+/** OpenStreetMap's tile colours a banner over the chart can stand on: a white tile, land, water. */
+const TILE_COLOURS = { 'a white tile': '#ffffff', land: '#f2efe9', water: '#aad3df' };
+
+/**
+ * The teaser's banner text holds 4.5:1 over every tile colour it can stand on (WCAG 1.4.3; the
+ * text is 18 px and not bold, so not large). axe-core cannot measure text over an image, so the
+ * banner's own fill is laid over each tile colour on a canvas, whatever syntax the browser
+ * reports the fill in, and the text's colour is measured against what that gives. The colours are
+ * the build's, so a country's build measures its own.
+ */
+function teaserBannerProblems(page) {
+  return page.evaluate((tiles) => {
+    const banner = document.querySelector('#teaser-banner');
+    if (!banner) return ['the teaser shows no banner'];
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const paint = (...fills) => {
+      context.clearRect(0, 0, 1, 1);
+      for (const fill of fills) {
+        context.fillStyle = fill;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+    };
+    const luminance = (rgb) => {
+      const [r, g, b] = rgb.map((c) => {
+        const v = c / 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const style = getComputedStyle(banner);
+    const text = paint('#ffffff', style.color);
+    return Object.entries(tiles)
+      .map(([tile, colour]) => [tile, ratio(text, paint(colour, style.backgroundColor))])
+      .filter(([, measured]) => measured < 4.5)
+      .map(([tile, measured]) => `the banner's text is ${measured.toFixed(2)}:1 over ${tile}`);
+  }, TILE_COLOURS);
+}
+
+/**
+ * On the print sheet, every control the Tab key reaches shows a focus ring: the sheet draws its
+ * link-styled buttons as plain text, which took their ring away (WCAG 2.4.7). There must be one,
+ * or the check proves nothing.
+ */
+async function printSheetFocusProblems(page) {
+  const problems = [];
+  let stops = 0;
+  for (let step = 0; step < 12; step++) {
+    await page.keyboard.press('Tab');
+    const stop = await page.evaluate(() => {
+      const focused = document.activeElement;
+      if (!focused || focused === document.body || !focused.closest('app-message-print-view')) {
+        return null;
+      }
+      // The site's 2 px ring or the browser's own (`auto`), as on every other page of the site.
+      const style = getComputedStyle(focused);
+      return {
+        name: focused.textContent.trim(),
+        ring: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0,
+      };
+    });
+    if (!stop) continue;
+    stops++;
+    if (!stop.ring) problems.push(`"${stop.name}" shows no focus ring`);
+  }
+  if (stops === 0) {
+    problems.push('Tab reached no control on the sheet, so the check proves nothing');
+  }
+  return problems;
+}
+
+/**
+ * A dialog at 320 px under the WCAG 1.4.12 text spacing, with a title and a legal document of
+ * Kalaallisut's long words: the close button stays inside the panel, the title inside the
+ * header, and no word runs past the body's edge (WCAG 1.4.12). The base build has neither a legal
+ * document nor a title that long, so both are written into an open message's dialog here, in the
+ * classes a legal dialog renders them in.
+ */
+async function longWordDialogProblems(page) {
+  await page.locator('.message-details-item button.row-link').first().click();
+  await page.waitForSelector('.dialog-panel .dialog-body');
+  await settle(page);
+  await page.evaluate(() => {
+    const spacing = document.createElement('style');
+    spacing.id = 'layout-check-text-spacing';
+    spacing.textContent = `* { line-height: 1.5 !important; letter-spacing: .12em !important;
+      word-spacing: .16em !important; } p { margin-bottom: 2em !important; }`;
+    document.head.append(spacing);
+    document.querySelector('.dialog-panel .dialog-title').textContent =
+      'Akisussaatitaannginnermik nalunaarut';
+    const legal = document.createElement('div');
+    legal.className = 'legal-document';
+    legal.innerHTML =
+      '<p>Nalunaarutit pissarsiarisinnaaniassammatigit. pissarsiarineqarsinnaagaluartut,</p>' +
+      '<p>ilisimatitsissuteqartariaqarpugut, nalunaarutini.</p>';
+    document.querySelector('.dialog-panel .dialog-body').prepend(legal);
+  });
+  await settle(page);
+  const problems = await page.evaluate(() => {
+    const found = [];
+    const panel = document.querySelector('.dialog-panel').getBoundingClientRect();
+    const inside = (rect) => rect.left >= panel.left - 0.5 && rect.right <= panel.right + 0.5;
+    const close = document.querySelector('.dialog-panel .dialog-header .icon-button');
+    if (!inside(close.getBoundingClientRect())) found.push('the close button is outside the panel');
+    const title = document.querySelector('.dialog-panel .dialog-title');
+    if (!inside(title.getBoundingClientRect())) found.push('the title runs past the panel');
+    const body = document.querySelector('.dialog-panel .dialog-body');
+    if (body.scrollWidth - body.clientWidth > 1) {
+      found.push(`the body scrolls sideways by ${body.scrollWidth - body.clientWidth} px`);
+    }
+    for (const p of body.querySelectorAll('.legal-document p')) {
+      if (p.scrollWidth - p.clientWidth > 1) {
+        found.push(`a word of "${p.textContent.slice(0, 24)}…" runs past its line`);
+      }
+    }
+    return found;
+  });
+  await page.evaluate(() => document.getElementById('layout-check-text-spacing').remove());
+  await page.keyboard.press('Escape');
+  await settle(page);
+  return problems;
+}
+
+/**
+ * A message's dialog opened by its own address, closed with Escape: focus goes to the row of the
+ * message in the list when the list holds it, and to the main content when it does not — never to
+ * the page's body, where the next Tab would start again at the top of the page (WCAG 2.4.3). The
+ * focus is given once the router has drawn the list's own view, which only a browser shows.
+ */
+async function linkedDialogFocusProblems(page, message) {
+  await page.goto(`${ORIGIN}/messages/details/message/${encodeURIComponent(message.id)}`);
+  await page.waitForSelector('.dialog-panel .dialog-body');
+  await page.waitForSelector('.message-details-list .message-details-item');
+  await settle(page);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(
+    () =>
+      document.location.pathname === '/messages/details' &&
+      !document.querySelector('.dialog-panel'),
+  );
+  await settle(page);
+  await settle(page);
+  return page.evaluate((shortId) => {
+    const focused = document.activeElement;
+    if (!focused || focused === document.body) return ['focus fell to the page body'];
+    const row = [...document.querySelectorAll('.message-details-list .message-details-item')].find(
+      (item) => item.textContent.includes(shortId),
+    );
+    const expected = row
+      ? row.querySelector('button.row-link')
+      : document.getElementById('main-content');
+    if (focused === expected) return [];
+    const where = focused.id ? `#${focused.id}` : focused.tagName.toLowerCase();
+    return [`focus is on ${where}, not on ${row ? `the row of ${shortId}` : 'the main content'}`];
+  }, message.shortId);
+}
+
+/**
  * The publications table fits inside its panel, and no link of it reaches past the panel's edge.
  * A table wider than its panel need not widen the page: an ancestor that clips it cuts the links
  * off instead, which the page's own width does not show.
@@ -1304,6 +1509,44 @@ if (invokedDirectly) {
         'a message part whose table changes width on a language switch',
         'the build offers no Danish and English to switch between',
       );
+
+    // 14. A chart's credit link is underlined, on the map view and on the teaser.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await open(page, '/messages/map');
+    await page.waitForSelector('.ol-attribution a[href]');
+    record('the credit links of the map view', await creditLinkProblems(page));
+    await page.goto(`${ORIGIN}/teaser`);
+    await page.waitForSelector('#teaser-banner');
+    await settle(page);
+    record('the credit link of the teaser', await creditLinkProblems(page));
+
+    // 15. The teaser's banner text holds 4.5:1 over a white tile, land and water.
+    record("the teaser's banner over the chart", await teaserBannerProblems(page));
+
+    // 16. The print sheet's controls show the site's focus ring.
+    await page.goto(`${ORIGIN}/messages/print`);
+    await page.waitForSelector('app-message-print-view .message-details-item');
+    await settle(page);
+    record('focus on the print sheet', await printSheetFocusProblems(page));
+
+    // 17. At 320 px under the text spacing, a dialog's long words wrap and its close button stays.
+    await page.setViewportSize({ width: 320, height: 640 });
+    await open(page, '/messages/details');
+    record(
+      'long words in a dialog at 320 px with text spacing',
+      await longWordDialogProblems(page),
+    );
+
+    // 18. A dialog opened by its address gives focus to its row, or to the main content, on close.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    record(
+      'focus after a dialog opened by its address, its message in the list',
+      await linkedDialogFocusProblems(page, MESSAGES[2]),
+    );
+    record(
+      'focus after a dialog opened by its address, its message in no list',
+      await linkedDialogFocusProblems(page, UNLISTED_MESSAGE),
+    );
 
     // 13. The panel of messages without a position leaves every control of the chart uncovered —
     //     on a phone, at 400 % zoom, where the chart is barely taller than the panel's cap, and

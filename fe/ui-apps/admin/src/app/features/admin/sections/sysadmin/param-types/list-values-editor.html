@@ -1,5 +1,14 @@
 <app-model-language-picker class="mb-3" [selection]="modelLanguage" />
 
+@if (loadFailed()) {
+  <app-error-banner
+    class="mb-3"
+    [title]="'common.fetchError' | transloco"
+    [retryLabel]="'common.retry' | transloco"
+    (retry)="retry()"
+  />
+}
+
 <!-- Subgrid so both cards share one auto-sized header row (heights align to the
      taller header, no fixed px) and one 1fr body row (fills the drawer). -->
 <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-[auto_1fr]">

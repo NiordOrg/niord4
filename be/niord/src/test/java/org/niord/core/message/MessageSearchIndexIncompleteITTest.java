@@ -55,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * A free-text search answered while the Lucene index is still being filled after a start (be/docs/potential-errors.md,
  * LUCENE-7). The owner's decision of 2026-11-19: the search keeps answering as it does, and its result is marked
  * ({@link PagedSearchResultVo#getIndexIncomplete()}) so the editors' list can warn that messages may be missing; the
- * public API answers exactly as before.
+ * public API answers exactly as before. The print of a list made in the window says so in a line at its top.
  *
  * <p>The window is made by marking this context's index as not complete, with its rows indexed: what is tested is the
  * mark, not what a half-filled index finds. The index's writer lock is held meanwhile, so none of its passes (second
@@ -316,6 +316,48 @@ class MessageSearchIndexIncompleteITTest extends ITTest {
                     .then().statusCode(200)
                     .body("data.id", hasItem(message.getUid()))
                     .body("$", not(hasKey("indexIncomplete")));
+            return null;
+        });
+    }
+
+    /**
+     * The print of a list during the refill (LUCENE-7): the PDF is still made, and the HTML it is rendered from (the
+     * debug answer of a signed-in caller) carries the line that says messages may be missing, at the top of the
+     * document, with the message found; once the index is complete the same print has no such line. FAILS without
+     * the line: the print of the marked search reads as a complete one.
+     */
+    @Test
+    void thePrintOfAListDuringTheRefillCarriesTheLineAtItsTop() throws Exception {
+        String token = uniqueToken();
+        createPublished(token);
+        messageLuceneIndex.recreateIndex();
+
+        withIndexComplete(false, () -> {
+            String html = given().auth().oauth2(accessToken("sysadmin"))
+                    .queryParam("query", token).queryParam("lang", "en").queryParam("debug", true)
+                    .when().get("/rest/message-reports/report.pdf")
+                    .then().statusCode(200)
+                    .extract().asString();
+            assertTrue(html.contains(IndexIncompleteNotice.BUILT_IN_TEXT), "the print says messages may be missing");
+            assertTrue(html.indexOf(IndexIncompleteNotice.BUILT_IN_TEXT) < html.indexOf("Wreck " + token),
+                    "at the top, above the messages it found");
+
+            given().auth().oauth2(accessToken("sysadmin"))
+                    .queryParam("query", token).queryParam("lang", "en")
+                    .when().get("/rest/message-reports/report.pdf")
+                    .then().statusCode(200)
+                    .contentType("application/pdf");
+            return null;
+        });
+
+        withIndexComplete(true, () -> {
+            String html = given().auth().oauth2(accessToken("sysadmin"))
+                    .queryParam("query", token).queryParam("lang", "en").queryParam("debug", true)
+                    .when().get("/rest/message-reports/report.pdf")
+                    .then().statusCode(200)
+                    .extract().asString();
+            assertTrue(html.contains("Wreck " + token), "the print holds the message");
+            assertFalse(html.contains(IndexIncompleteNotice.BUILT_IN_TEXT), "and no line once the index is complete");
             return null;
         });
     }

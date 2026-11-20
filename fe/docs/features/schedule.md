@@ -70,7 +70,7 @@ search semantics.
 The picker itself is fed by a fourth request the page makes directly: an `httpResource` in
 `ScheduleView` for `GET /areas/area-roots?lang=`, read through a `hasValue()` guard because
 `value()` throws in the error state — a failed roots call therefore leaves the picker empty instead
-of blanking the page. That list is the **whole** area-root tree, not only firing areas; the server
+of blanking the page, and says so under the filter bar ("Error fetching data", with _Retry_). That list is the **whole** area-root tree, not only firing areas; the server
 intersects the ticked subtrees with the session domain's firing areas when it searches.
 
 The result is scoped server-side to the session domain's firing areas and arrives in tree-sort
@@ -181,7 +181,8 @@ would read as that night, so it reads `24 Nov 2026, 10:00 PM - 24 Nov 2026, 2:00
 warning mark. Formatting goes through `LocaleFormatService` — see the dates and time zones
 rules in [coding standards](../coding-standards.md).
 
-A failed save toasts an error and closes the editor; the row keeps the last server state.
+A failed save toasts an error and keeps the editor open with the rows as typed, so Save can be
+pressed again; the view behind it keeps the last server state.
 
 ## Update Firing Exercises
 

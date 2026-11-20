@@ -1,8 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService, translateSignal } from '@jsverse/transloco';
-import { catchError, of } from 'rxjs';
 
 import { ApiUrlResolver } from '../../../../../core/config/absolute-api-url';
 import { DomainFacade } from '../../../../../core/domain/facades/domain.facade';
@@ -18,6 +16,7 @@ import { Confirm } from '../../../../../shared/components/confirm/confirm';
 import { Icon } from '../../../../../shared/icons/icon';
 import type { MenuItem } from '../../../../../shared/models/menu-item.model';
 import { ConfirmService } from '../../../../../shared/services/confirm.service';
+import { fixedListRead } from '../../../../../shared/utils/list-read';
 import { nowTick } from '../../../../../shared/utils/now-tick';
 import { currentDesc } from '../../../utils/localized-descs';
 import {
@@ -126,11 +125,12 @@ export class OneOffDetail {
 
   // Fetched with every language's name and labelled here: narrowing to one
   // language on the server would leave a category named only in another
-  // language rendering as its raw id.
-  private readonly categories = toSignal(
-    this.api.publicationCategories().pipe(catchError(() => of([]))),
-    { initialValue: [] as PublicationCategory[] },
+  // language rendering as its raw id. A failed read is said above the cards,
+  // with a retry, so the raw id it leaves is not taken for the category's name.
+  protected readonly categoriesRead = fixedListRead<PublicationCategory>(() =>
+    this.api.publicationCategories(),
   );
+  private readonly categories = this.categoriesRead.value;
 
   /** The catalogue a transfer entry's domain ids are named from. */
   private readonly domains = computed(() => this.domainFacade.availableDomains());

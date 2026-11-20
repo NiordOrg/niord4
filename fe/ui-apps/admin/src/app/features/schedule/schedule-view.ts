@@ -86,7 +86,7 @@ export class ScheduleView {
   );
 
   // --- Area filter (popover tree-select over the area roots) ---
-  private readonly rootsResource = httpResource<readonly AreaRef[]>(
+  protected readonly rootsResource = httpResource<readonly AreaRef[]>(
     () => ({
       url: `${this.config.apiBaseUrl}/areas/area-roots`,
       params: { lang: this.language.selectedLanguage() },
@@ -94,7 +94,9 @@ export class ScheduleView {
     { defaultValue: [] },
   );
   // Guard the read: httpResource.value() throws in the error state (a failed /areas/area-roots
-  // would otherwise throw inside this computed during change detection and blank the view).
+  // would otherwise throw inside this computed during change detection and blank the view). The
+  // template says the failure under the filter bar, with a retry, so the empty picker is not
+  // taken for a domain with no areas.
   protected readonly areaRoots = computed(() =>
     this.rootsResource.hasValue() ? [...this.rootsResource.value()] : [],
   );

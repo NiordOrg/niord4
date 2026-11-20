@@ -32,6 +32,7 @@ import org.niord.model.message.MainType;
 import org.niord.model.message.Type;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NoResultException;
 import jakarta.inject.Inject;
 import jakarta.persistence.FlushModeType;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,13 +67,14 @@ public class MessageSeriesService extends BaseService {
      * Returns the message series with the given series identifier
      * @param seriesId the series identifier
      * @return the message series with the given series identifier or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public MessageSeries findBySeriesId(String seriesId) {
         try {
             return em.createNamedQuery("MessageSeries.findBySeriesId", MessageSeries.class)
                     .setParameter("seriesId", seriesId)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             return null;
         }
     }

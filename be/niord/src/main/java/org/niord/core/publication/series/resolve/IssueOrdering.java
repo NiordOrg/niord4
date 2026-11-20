@@ -31,9 +31,14 @@ import java.util.Map;
  * that orders differently is a different publication, and nothing about it would
  * look broken.
  *
- * The id tie-breaker is on every branch for that reason. Without it, two members
- * equal on every other key come back in whatever order the database felt like,
- * and two runs of the same issue differ.
+ * The id tie-breaker is on every branch for that reason, as the search's last
+ * term, and reversed with the rest for a descending sort, as the search's is.
+ * Without it, two members equal on every other key come back in whatever order
+ * the database felt like, and two runs of the same issue differ.
+ *
+ * A released or imported issue is not ordered here again: its order is the
+ * sortIndex stored on its member rows when it was released or imported, and
+ * every reader of such an issue reads that column.
  */
 public final class IssueOrdering {
 
@@ -63,7 +68,9 @@ public final class IssueOrdering {
             Integer number,
             Integer id,
             Date publishDateFrom,
+            Date publishDateTo,
             Date eventDateFrom,
+            Date eventDateTo,
             Date followUpDate) {
     }
 
@@ -147,25 +154,32 @@ public final class IssueOrdering {
                     // search's NULLS FIRST.
                     .thenComparing(o -> o.areaSortOrder() == null ? Double.MAX_VALUE : o.areaSortOrder())
                     .thenComparing(nullsLast(Orderable::year))
-                    .thenComparing(nullsLast(Orderable::number));
-            case PUBLISH_DATE -> Comparator.comparing(Orderable::publishDateFrom,
-                    Comparator.nullsLast(Comparator.naturalOrder()));
-            case EVENT_DATE -> Comparator.comparing(Orderable::eventDateFrom,
-                    Comparator.nullsLast(Comparator.naturalOrder()));
-            case FOLLOW_UP_DATE -> Comparator.comparing(Orderable::followUpDate,
-                    Comparator.nullsLast(Comparator.naturalOrder()));
-            case ID -> nullsLast(Orderable::id);
+                    .thenComparing(nullsLast(Orderable::number))
+                    .thenComparing(nullsLast(Orderable::id));
+            case PUBLISH_DATE -> nullsLast(Orderable::publishDateFrom)
+                    .thenComparing(nullsLast(Orderable::publishDateTo))
+                    .thenComparing(nullsLast(Orderable::id));
+            case EVENT_DATE -> nullsLast(Orderable::eventDateFrom)
+                    .thenComparing(nullsLast(Orderable::eventDateTo))
+                    .thenComparing(nullsLast(Orderable::id));
+            case FOLLOW_UP_DATE -> nullsLast(Orderable::followUpDate)
+                    .thenComparing(nullsLast(Orderable::id));
+            // "By id" is the search's year, number, publish date, id: the order the
+            // notices were numbered in, which is what a reader of the issue expects.
+            // The row id alone is the order the rows happened to be created in, so a
+            // notice created early and numbered late printed before its neighbours.
+            case ID -> nullsLast(Orderable::year)
+                    .thenComparing(nullsLast(Orderable::number))
+                    .thenComparing(nullsLast(Orderable::publishDateFrom))
+                    .thenComparing(nullsLast(Orderable::id));
         };
 
+        // Reversed WHOLESALE, the id included, because the search emits desc(id) as
+        // the last term of every descending sort. The id ends every branch, so the
+        // order stays reproducible: two members never tie on it.
         if (spec.direction() == Direction.DESC) {
             comparator = comparator.reversed();
         }
-
-        // The tie-breaker sits OUTSIDE the reversal: it exists to make the order
-        // deterministic, not to be part of what the user asked to sort by. Inside,
-        // a descending sort would reverse it too and two equal members would still
-        // be stable, but stability is not the point -- reproducibility is.
-        comparator = comparator.thenComparing(nullsLast(Orderable::id));
 
         List<Orderable> out = new ArrayList<>(members);
         out.sort(comparator);

@@ -19,6 +19,7 @@ import { DomainFacade } from '../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { Drawer } from '../../../../shared/components/drawer/drawer';
 import { EntityTree } from '../../../../shared/components/entity-tree/entity-tree';
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 import { MessageDetailsRenderer } from '../../../messages/components/message-details-renderer/message-details-renderer';
 import type { Message } from '../../../messages/models/message.model';
 import type { CategoryRef } from '../../../messages/models/messages-filter-params.model';
@@ -37,10 +38,15 @@ import { categoryName, fetchHydratedTemplates, isPerPosition } from './template-
  * All data is backend-driven: `GET /categories/category-roots` (tree), `GET
  * /categories/search?type=TEMPLATE` (list, domain-scoped), `getTemplateDetails` (hydration) and
  * `GET /messages/message/{id}` (example).
+ *
+ * A failed read says so in its own pane, with a retry that reads that part again, rather than
+ * reading as "no categories" or "no templates": the tree's failure in the tree pane, the list's in
+ * the list pane, an example's in the example pane. Each failure is kept apart, so one read that
+ * failed never hides another that worked, and a new search does not clear the tree's failure.
  */
 @Component({
   selector: 'app-template-selection-drawer',
-  imports: [TranslocoPipe, Drawer, EntityTree, MessageDetailsRenderer],
+  imports: [TranslocoPipe, Drawer, EntityTree, ErrorBanner, MessageDetailsRenderer],
   templateUrl: './template-selection-drawer.html',
   host: { class: 'contents' },
 })
@@ -71,6 +77,10 @@ export class TemplateSelectionDrawer {
   protected readonly searchName = signal('');
   protected readonly results = signal<readonly SystemCategory[]>([]);
   protected readonly loading = signal(false);
+  /** The category tree could not be read; set and cleared only by {@link loadRoots}. */
+  protected readonly rootsFailed = signal(false);
+  /** The template list could not be read; set and cleared only by {@link fetch}. */
+  protected readonly listFailed = signal(false);
   protected readonly checkedIds = signal<ReadonlySet<number>>(new Set());
 
   /** The template whose example is shown in the right pane (on hover). */
@@ -115,22 +125,45 @@ export class TemplateSelectionDrawer {
     this.hovered.set(undefined);
     this.searchName.set('');
     this.ancestorId.set(undefined);
-    if (!this.rootsLoaded) {
-      this.rootsLoaded = true;
-      this.categoriesApi
-        .getRoots({ language: this.lang() })
-        .pipe(takeUntilDestroyed(this.destroyRef))
+    this.loadRoots();
+    this.fetch();
+  }
+
+  /** Read the category tree again after a failed read. */
+  protected retryRoots(): void {
+    this.loadRoots();
+  }
+
+  /** Read the template list again after a failed read. */
+  protected retryList(): void {
+    this.fetch();
+  }
+
+  private loadRoots(): void {
+    if (this.rootsLoaded) {
+      return;
+    }
+    this.rootsLoaded = true;
+    this.rootsFailed.set(false);
+    this.categoriesApi
+      .getRoots({ language: this.lang() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
         // Only parent categories (type CATEGORY) drive the ancestor filter — the TEMPLATE leaves
         // live in the checklist, not the tree.
-        .subscribe((roots) => this.roots.set(pruneToCategories(roots)));
-    }
-    this.fetch();
+        next: (roots) => this.roots.set(pruneToCategories(roots)),
+        error: () => {
+          this.rootsLoaded = false; // read again by the retry or the next open
+          this.rootsFailed.set(true);
+        },
+      });
   }
 
   /** Fetch + hydrate the domain template list for the current name / ancestor filter. */
   private fetch(): void {
     const seq = ++this.fetchSeq;
     this.loading.set(true);
+    this.listFailed.set(false);
     fetchHydratedTemplates(this.categoriesApi, {
       domainId: this.domain.sessionDomain()?.domainId,
       language: this.lang(),
@@ -152,6 +185,7 @@ export class TemplateSelectionDrawer {
           }
           this.results.set([]);
           this.loading.set(false);
+          this.listFailed.set(true);
         },
       });
   }

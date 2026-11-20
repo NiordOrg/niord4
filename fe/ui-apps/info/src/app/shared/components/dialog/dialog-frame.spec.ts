@@ -7,6 +7,7 @@ import { DialogFrame } from './dialog-frame';
 import { openInfoDialog } from './open-dialog';
 import { provideInfoIcons } from '../../icons/info-icons';
 import { getTranslocoTestingModule } from '../../../testing/test-config';
+import { FakeResizeObserver } from '../../../testing/fake-resize-observer';
 
 @Component({
   imports: [DialogFrame],
@@ -63,6 +64,48 @@ describe('DialogFrame', () => {
       fixture.debugElement.query(By.directive(DialogFrame)).componentInstance.focusTitle();
 
       expect(document.activeElement).toBe(heading);
+    });
+
+    // WCAG 2.1.1: a document with nothing focusable in it — a disclaimer on a phone — can be
+    // scrolled to its end from the keyboard only when the body itself takes focus. A body that
+    // fits takes no tab stop.
+    describe('its body', () => {
+      beforeEach(() => vi.stubGlobal('ResizeObserver', FakeResizeObserver));
+      afterEach(() => {
+        vi.unstubAllGlobals();
+        FakeResizeObserver.last = undefined;
+      });
+
+      function bodyLaidOut(contentHeight: number, boxHeight: number): HTMLElement {
+        const body = setup().querySelector('.dialog-body') as HTMLElement;
+        TestBed.tick();
+        for (const [name, value] of [
+          ['scrollWidth', 300],
+          ['clientWidth', 300],
+          ['scrollHeight', contentHeight],
+          ['clientHeight', boxHeight],
+        ] as const) {
+          Object.defineProperty(body, name, { configurable: true, get: () => value });
+        }
+        FakeResizeObserver.last!.report();
+        TestBed.tick();
+        return body;
+      }
+
+      it('is a tab stop named by the title while its content is taller than it', () => {
+        const body = bodyLaidOut(1200, 400);
+        expect(body.getAttribute('tabindex')).toBe('0');
+        expect(body.getAttribute('role')).toBe('region');
+        expect(body.getAttribute('aria-label')).toBe('A title');
+        // Drawn inside the body: the panel clips whatever lies outside it.
+        expect(body.className).toContain('focus-visible:-outline-offset-2');
+      });
+
+      it('takes no tab stop while its content fits', () => {
+        const body = bodyLaidOut(400, 400);
+        expect(body.hasAttribute('tabindex')).toBe(false);
+        expect(body.hasAttribute('role')).toBe(false);
+      });
     });
 
     it('names the dialog by registering its heading with the container', () => {

@@ -61,7 +61,13 @@ curl -o messages.pdf \
 ----
 
 Making a PDF takes time, so a system makes only a few at once for callers without a login. When
-it is busy, it answers `503` at once, and the client should try again shortly.
+it is busy, it answers `503` at once, with the header `Retry-After: 10`, and the client should try
+again after that many seconds. On the system's own host the body of that answer is the usual error
+description (`application/problem+json`). On the public site's own host it is instead a page for a
+reader (`text/html`), which says that documents are being prepared for others; it carries the same
+status and `Retry-After`, and may not be cached. A client that saves the answer to a file, as the
+example above does, should check the status: with `--fail`, `curl` ends with an error on such an
+answer rather than taking it for the document.
 
 On the public site's own host (for example nautiskinformation.brs2.dk), both PDF addresses are
 held to the requests the site itself makes, and any other request is refused with `403`:

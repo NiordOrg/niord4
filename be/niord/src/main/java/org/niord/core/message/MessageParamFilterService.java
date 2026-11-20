@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.niord.core.service.BaseService;
 import org.niord.core.user.User;
 import org.niord.core.user.UserService;
+import jakarta.persistence.NoResultException;
 import org.slf4j.Logger;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -81,6 +82,7 @@ public class MessageParamFilterService extends BaseService {
      * Returns the message filter for the current user with the given name
      * @param name the name of the message filter to look up
      * @return the matching message filter or null
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public MessageParamFilter findByCurrentUserAndName(String name) {
         User user = userService.currentUser();
@@ -90,7 +92,7 @@ public class MessageParamFilterService extends BaseService {
                     .setParameter("user", user)
                     .setParameter("name", name)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             return null;
         }
     }

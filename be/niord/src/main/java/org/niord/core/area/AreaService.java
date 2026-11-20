@@ -37,6 +37,8 @@ import org.niord.core.web.NiordWebException;
 import org.niord.model.search.PagedSearchParamsVo;
 import org.slf4j.Logger;
 
+import jakarta.persistence.NonUniqueResultException;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.criteria.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -74,16 +76,23 @@ public class AreaService extends TreeBaseService<Area> {
 
     /**
      * Returns the area with the given legacy id
+     * <p>
+     * The legacy id is not unique in the schema: when several areas have it (restored data), none is returned, as
+     * when there is none, and a WARN names the legacy id.
      *
      * @param legacyId the legacy id of the area
      * @return the area with the given legacy id or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Area findByLegacyId(String legacyId) {
         try {
             return em.createNamedQuery("Area.findByLegacyId", Area.class)
                     .setParameter("legacyId", legacyId)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
+            return null;
+        } catch (NonUniqueResultException e) {
+            log.warn("Several areas have the legacy id '{}'; the look-up by legacy id answers none of them", legacyId);
             return null;
         }
     }
@@ -453,16 +462,23 @@ public class AreaService extends TreeBaseService<Area> {
 
     /**
      * Returns the area with the given MRN. Returns null if the area is not found.
+     * <p>
+     * The MRN is not unique in the schema: when several areas have it (restored data), none is returned, as when
+     * there is none, and a WARN names the MRN.
      *
      * @param mrn the MRN of the area
      * @return the area with the given MRN or null if not found
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Area findByMrn(String mrn) {
         try {
             return em.createNamedQuery("Area.findByMrn", Area.class)
                     .setParameter("mrn", mrn)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
+            return null;
+        } catch (NonUniqueResultException e) {
+            log.warn("Several areas have the MRN '{}'; the look-up by MRN answers none of them", mrn);
             return null;
         }
     }
@@ -531,14 +547,12 @@ public class AreaService extends TreeBaseService<Area> {
     /**
      * Returns the last change date for areas or null if no area exists
      * @return the last change date for areas
+     * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     @Override
     public Date getLastUpdated() {
-        try {
-            return em.createNamedQuery("Area.findLastUpdated", Date.class).getSingleResult();
-        } catch (Exception e) {
-            return null;
-        }
+        // max() answers one row, holding null when there is no area
+        return em.createNamedQuery("Area.findLastUpdated", Date.class).getSingleResult();
     }
 
     /**

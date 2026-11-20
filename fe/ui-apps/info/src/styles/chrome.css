@@ -110,7 +110,13 @@
 
   /* A legal document is country content: the file supplies the prose and its own markup, so
      the typography is written here rather than in the asset. The definition list is the
-     cookie statement's two-column table of purposes. */
+     cookie statement's two-column table of purposes. A word longer than its line breaks
+     rather than running past the dialog's edge: Kalaallisut's do at 320 px under a reader's own
+     letter spacing. `break-word` breaks only a word that overflows its line and leaves the
+     document's smallest width as it was, so a table in a country's document keeps its columns. */
+  .legal-document {
+    overflow-wrap: break-word;
+  }
   .legal-document h3 {
     margin: 1rem 0 0.5rem;
     font-size: 1.125rem;
@@ -140,4 +146,14 @@
       grid-template-columns: minmax(0, 12rem) 1fr;
     }
   }
+}
+
+/* A link in a chart's credit line is underlined, as every link in running text on this site is:
+   OpenLayers draws it in a grey 2.2:1 from the line's and with no underline, so colour alone told
+   it apart (WCAG 1.4.1). OpenLayers' stylesheet is unlayered and says `text-decoration: none`,
+   so this rule is unlayered too, and wins by coming after it. It covers the credit OpenLayers
+   writes on the map view and in a message's dialog, and the teaser's own credit line, which
+   wears the same classes. */
+.ol-attribution a {
+  text-decoration: underline;
 }

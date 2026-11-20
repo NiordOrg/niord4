@@ -25,11 +25,23 @@ const DEFAULT_BROWSER_NAVIGATOR: BrowserNavigator = {
   },
 };
 
+/**
+ * The most messages one archive holds: the backend's export takes the first this many of the
+ * search (`maxSize` in `MessageExportRestService.generateZipArchiveForSearch`), in the order the
+ * search sorts them. The two numbers are kept equal.
+ */
+export const MESSAGE_EXPORT_LIMIT = 1000;
+
 export interface ExportOptions {
   /** Current filter as a query string (no leading `?`). May be empty. Ignored when `tempTagId` set. */
   readonly filterParams: string;
   /** When set, export the temp-tag's messages (selection path) instead of the filter. */
   readonly tempTagId?: string;
+  /**
+   * How many messages the search (or the selection) holds, when known. Above
+   * {@link MESSAGE_EXPORT_LIMIT} the person is told that the archive holds only the first ones.
+   */
+  readonly total?: number;
 }
 
 /**
@@ -38,6 +50,10 @@ export interface ExportOptions {
  * then navigate the browser to `export.zip` — same-tab (the ZIP is an attachment,
  * so the page stays put). The export URL params live ONLY on the download URL,
  * never in the Angular router.
+ *
+ * The archive holds at most {@link MESSAGE_EXPORT_LIMIT} messages. When the search holds more, a
+ * notice says so with the download and stays until it is closed, so an archive cut short is never
+ * taken for a whole one.
  *
  * The ticket asks for the `user` role whenever the user holds it in the session domain, as the
  * print dialog's does: a ticket with no role names the user but grants none, and the export would
@@ -61,6 +77,14 @@ export class MessageExportService {
     return this.ticket.fetch(this.auth.hasDomainUserRole() ? 'user' : undefined).pipe(
       map((ticket) => {
         this.navigator.navigate(this.buildExportUrl(ticket, options));
+        if (options.total !== undefined && options.total > MESSAGE_EXPORT_LIMIT) {
+          this.notifications.notify({
+            severity: 'warn',
+            summaryKey: 'messages.export.truncated',
+            summaryParams: { limit: MESSAGE_EXPORT_LIMIT, total: options.total },
+            life: 0,
+          });
+        }
       }),
     );
   }
@@ -71,7 +95,9 @@ export class MessageExportService {
    */
   exportSelection(selectedIds: readonly string[]): Observable<void> {
     return this.tagsApi.createTempMessageTag(selectedIds).pipe(
-      switchMap((tempTag) => this.export({ filterParams: '', tempTagId: tempTag.tagId })),
+      switchMap((tempTag) =>
+        this.export({ filterParams: '', tempTagId: tempTag.tagId, total: selectedIds.length }),
+      ),
       catchError(() => {
         this.notifications.error('messages.export.errorTempTag');
         return of<void>(undefined);

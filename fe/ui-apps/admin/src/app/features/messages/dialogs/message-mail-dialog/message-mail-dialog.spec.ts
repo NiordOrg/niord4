@@ -157,6 +157,38 @@ describe('MessageMailDialog', () => {
     expect(emitted).toBeUndefined();
   });
 
+  it("shows the list's warning when the messages come from a list the search index was rebuilt under", () => {
+    const { fixture, service } = setup();
+    const warning = () => document.querySelector('[data-testid="mail-index-incomplete"]');
+
+    service.open(['m1'], () => of(undefined), true).subscribe();
+    fixture.detectChanges();
+    expect(warning()?.textContent?.trim()).toBe('messages.list.indexIncomplete');
+
+    service.dismiss();
+    fixture.detectChanges();
+    service.open(['m1'], () => of(undefined)).subscribe();
+    fixture.detectChanges();
+    expect(warning()).toBeNull();
+  });
+
+  it('is described by the warning, so a screen reader announces it before Send', () => {
+    const { fixture, service } = setup();
+    const panel = () => document.querySelector('.dialog-panel');
+
+    service.open(['m1'], () => of(undefined), true).subscribe();
+    fixture.detectChanges();
+    const warning = document.querySelector('[data-testid="mail-index-incomplete"]');
+    expect(warning?.id).toBeTruthy();
+    expect(panel()?.getAttribute('aria-describedby')).toBe(warning?.id);
+
+    service.dismiss();
+    fixture.detectChanges();
+    service.open(['m1'], () => of(undefined)).subscribe();
+    fixture.detectChanges();
+    expect(panel()?.hasAttribute('aria-describedby')).toBe(false);
+  });
+
   it('resets to empty each time the dialog re-opens (no leak from the prior open)', () => {
     const { fixture, service } = setup();
     service.open(['m1'], () => of(undefined)).subscribe();

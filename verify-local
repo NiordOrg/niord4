@@ -88,7 +88,7 @@
 #
 # The JDK: JAVA_HOME when it is 25 or newer, else ~/.jdks/temurin-25, else macOS's java_home or
 # the `java` on PATH. Windows (Git Bash): Maven gets -Dmaven.repo.local spelled out, NIORD_HOME is
-# exported with forward slashes (PORT-1 in be/docs/potential-errors.md), and python3 falls back to
+# exported with forward slashes (backslashes would work as well), and python3 falls back to
 # `py -3` (python3 can be the Microsoft Store stub). The known Windows-only test failures listed
 # below are reported, not counted.
 #

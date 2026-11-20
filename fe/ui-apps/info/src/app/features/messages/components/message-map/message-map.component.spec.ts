@@ -96,6 +96,20 @@ describe('MessageMapComponent', () => {
     for (const credit of credits) expect(credit).not.toMatch(/\starget=/);
   });
 
+  // OpenStreetMap's credit is English on a page in every language, and says so (WCAG 3.1.2):
+  // through the sanitiser, which keeps the attribute.
+  it("marks OpenStreetMap's English credit with its language", () => {
+    const fixture = createMap({ messages: MESSAGES });
+    const credits = fixture.debugElement
+      .query(By.directive(OlTileLayer))
+      .componentInstance.attributions() as readonly string[];
+    const osm = credits.find((credit) => credit.includes('openstreetmap.org'))!;
+    const parsed = new DOMParser().parseFromString(osm, 'text/html').body;
+
+    const marked = parsed.querySelector('[lang="en"]');
+    expect(marked?.textContent?.replace(/\s+/g, ' ').trim()).toBe('© OpenStreetMap contributors.');
+  });
+
   // The branding file words the statement's link in each language; the address is the country
   // configuration's, one line for every language and for the footer as well.
   it('links the accessibility statement the country configuration names', () => {

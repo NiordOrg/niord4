@@ -97,18 +97,6 @@ as bugs.
 - **Exposed by:** `DataFilterTest.allOfFields_emptyVarargsReturnsTrue_documentsBehavior`.
 - **Severity:** Low — no current caller invokes it with an empty list, but it is an easy future trap.
 
-## M4. Lower-severity edges (recorded, mostly by-design)
-
-- **`DateIntervalVo.containsDate(null)` throws `NullPointerException`** when a bound is set (`date.after`/
-  `date.before` on a `null` arg). No null-guard; benign because callers pass a real date. Pinned by
-  `ChartMessageSeriesDateIntervalVoTest.containsDateNullArgumentWithBoundThrows_documentsBehavior`.
-- **`ChartVo.toFullChartNumber()` returns `null`** when `chartNumber` is `null` and `internationalNumber`
-  is also `null` (it returns `chartNumber` verbatim in that branch). Pinned by
-  `…toFullChartNumberWithNullChartNumberReturnsNull_documentsBehavior`.
-- **`DataFilter.forComponent(String)`** has a redundant condition (the `else if (field.startsWith(component + "."))`
-  guard is always true given the negated `if`); no behavioural effect, just dead/confusing logic for a
-  future maintainer/port.
-
 ---
 
 # Potential errors — `core.geojson` package
@@ -288,25 +276,6 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   `inlineStylesRemovesStyleBlock`).
 - **Severity:** Low — design asymmetry, may surprise callers.
 
-## MAIL14. Every mail of a user without an e-mail address and with a name of two words ends in _Error_
-
-- **Location:** `niord/src/main/java/org/niord/core/mail/IMailable.java` (`computeInternetAddress`),
-  `niord/src/main/java/org/niord/core/message/MessageMailService.java` (records it as the mail's sender) and
-  `niord/src/main/java/org/niord/core/mail/ScheduledMail.java` (`toMail`: `mail.replyTo(new InternetAddress(sender))`).
-- **Description:** for a user whose mirror row has no e-mail address, `computeInternetAddress` returns the bare name.
-  `toMail` parses the sender strictly as the mail's Reply-To, and a name with a space is refused
-  (`AddressException: Local address contains control or whitespace in string ``Test Editor''`, run against the
-  Jakarta Mail of the build). `MailService.sendScheduledMail` records each refusal as a failed attempt, so every mail
-  such a user sends from the mail dialog or with a comment ends in _Error_ after its retries, and nothing reaches the
-  recipients. A one-word name parses and is sent with that word as its Reply-To.
-- **Why it looks wrong:** the Reply-To is a convenience; a sender without an address should give the mail no Reply-To,
-  not stop it.
-- **Exposed by:** the sender's own list of mails (`GET /rest/scheduled-mails/mine`, the admin app's _My mails..._),
-  which matches mails on that sender value and now shows such a user the failure (2026-11-18); pinned by
-  `ScheduledMailTest.toMailWithABareTwoWordSenderIsRefused_documentsBug`.
-- **Severity:** Low: a Keycloak user without an e-mail address is rare among staff who send mail. Fix: set the
-  Reply-To only when the sender holds an address (or parse it leniently and skip it on a refusal).
-
 ## REPOFILTER1 — `RepositoryServletFilter` catches a RESTEasy exception the MVC stack never throws
 
 - **Location:** `niord/src/main/java/org/niord/core/repo/RepositoryServletFilter.java:64-66` —
@@ -439,24 +408,6 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
 _Added while testing the public REST API surface, the Keycloak/domain security internals, and the
 `core.db` persistence helpers. Production code was not changed; each item is pinned by a test
 suffixed `_documentsBug` / `_documentsBehavior` where practical._
-
-## API1 — `ApiRestService.toMessageVo` externalizes part links and attachment links inconsistently
-
-- **Location:** `niord/src/main/java/org/niord/web/api/ApiRestService.java:297-303` (parts 297-299, attachments
-  302-303).
-- **Description:** With `externalize=true`, message **parts** are rewritten with
-  `from = concat("/rest/repo/file", repoPath)` (leading slash) and `rewriteRepoPath(from, to)`, while
-  **attachments** are rewritten with `rewriteRepoPath(repoPath, to)` — matching the *raw* `repoPath` with no
-  `/rest/repo/file` prefix — and `to = concat(baseUri, "rest/repo/file", repoPath)` (the middle segment has
-  **no** leading slash). Parts and attachments therefore use different source patterns and different target
-  prefixes.
-- **Why it looks wrong:** The two link families that should produce identically-shaped absolute URLs are
-  rewritten by divergent rules; an attachment link that already contained the `/rest/repo/file/` prefix would
-  not be rewritten the way the equivalent part link is, and vice-versa.
-- **Exposed by:** `ApiRestServiceITTest` (externalize true/false both return 200; the divergence is a
-  code-level inconsistency — a freshly created message has no populated repo links to make the difference
-  observable in JSON, so this is reported from code inspection plus the externalize tests).
-- **Severity:** Low/Medium — wrong/relative URLs for one link family in externalized public output.
 
 ## DB1 — JSON attribute converters silently swallow (de)serialization failures
 
@@ -629,18 +580,6 @@ pins the current (surprising) behaviour is named with a `_documentsBehavior` suf
 
 # Potential errors — `core.message.batch` import writer
 
-## BATCH2. `checkAddMessageToTag` adds an unsaved (null-id) message that may later collide
-
-- **Location:** same method, `AbstractMessageImportWriter.java` line 44.
-- **Description:** when all existing members carry non-null ids, an incoming UNSAVED message (`id == null`)
-  never matches any of them (`Integer.equals(null)` is `false`), so it is always added — even if, once
-  persisted, it would duplicate an existing member.
-- **Why it looks wrong:** the method's contract ("if the message is not already added to the tag, add it") is
-  id-based, but unsaved messages have no id yet, so the de-dup cannot be enforced for them. This is a design
-  smell that surfaces only for batch-imported, not-yet-flushed messages.
-- **Exposed by:** `BatchMessageProcessorUnitTest.writerCheckAddMessageToTag_unsavedIncomingIsAddedWhenMembersHaveIds`
-  (the unsaved message is added, growing the collection to 2). Pinned, not fixed.
-
 ## BATCH3. `AbstractMessageImportWriter.saveMessageTag` `@Transactional` is a no-op on self-invocation
 
 - **Location:** `niord/src/main/java/org/niord/core/message/batch/AbstractMessageImportWriter.java`,
@@ -690,6 +629,8 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   backoff and escalate to `ERROR`, so a transient Twitter/network failure is retried rather than lost.
 - **Exposed by:** code inspection during the port comparison.
 - **Severity:** Medium — reliability; silent loss of an outbound promulgation on any transient failure.
+  Neither national deployment uses Twitter/X promulgation (the owner, 2026-11-19); the code is left as it is and is
+  planned for removal.
 - **Related:** PROM10. X refuses the endpoint the post goes to, so today every attempt fails the same way, and a
   retry alone would not get a tweet out. The step before the post is lost the same silent way: the status-change
   event that starts a tweet rides the JMS status topic, which is not stored (the embedded broker's
@@ -718,7 +659,8 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** the PROM5 assessment (2026-11-12). The owner decided to leave Twitter as it is for now.
 - **Severity:** Medium where Twitter promulgation is used; none where it is not (the test seed's `twitter` type
   is inactive). Fix: post through `POST /2/tweets` (twitter4j has no v2 client, so a client of its own or another
-  library), and then PROM5's record and retry.
+  library), and then PROM5's record and retry. Neither national deployment uses Twitter/X promulgation (the owner,
+  2026-11-19); the code is left as it is and is planned for removal.
 
 ## BUILD1 — A build without a warm Maven cache fails whenever GRAD's repository is down
 
@@ -744,35 +686,18 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** niord-dk's CI, 2026-10-23.
 - **Severity:** Medium — availability of every build that has no warm cache, outside our control.
 
-## ERR2 — Handler-reachable `IllegalStateException` sites that are server faults rendered as 409 *(LOW · FIXED)*
+## ERR8 — Two `IllegalStateException` sites that cannot be reached in normal use would answer a server fault with 409
 
-- **Location:** `niord/src/main/java/org/niord/secom/service/S124ExchangeSetService.java` —
-  reading a version's published record (`retainedDataset`/`currentVersion`), `signingIdentity()`,
-  `sign(...)`, reachable with no catch from the
-  sysadmin `POST /rest/secom/datasets/{uuid}/republish` chain
-  (`org.niord.secom.web.SecomAdminRestService.republishDataset` → `SecomOutboxService.enqueueUpload`
-  → `buildExchangeSet`).
-- **Was:** with `RestExceptionStatusAdvice` (the ERR1 fix) mapping `IllegalStateException` → 409, corrupt
-  persisted GML, a JCA/private-key signing failure or certificate re-encoding reported `409 Conflict`
-  although they are server-side faults an operator cannot resolve by retrying. Confirmed 2026-09-09: a
-  committed dataset whose stored GML was overwritten with `<not-gml/>` plus one matching subscription,
-  then republish as sysadmin →
-  `409 {"title":"Conflict","detail":"Stored GML of dataset … cannot be unmarshalled"}`.
-- **Fixed** the same day: the sites throw the dedicated `S124ExchangeSetException` (a plain
-  `RuntimeException` the advice does not map, so Spring's default 500 rendering applies); `sign` runs
-  inside the bindings factory's signer callback during a build, and `S124ExchangeSetFactory.toExchangeSet`
-  wraps whatever the callback throws in its own `ExchangeSetException` (already a 500). Since the
-  2026-09-10 move to immutable published versions the serve path parses no GML at all — a build reads
-  the version's persisted entry (`S124ExchangeSetException` when it cannot) and ships the bytes as they
-  are — and `cancellationEntries` still catches per candidate. The SECOM protocol Get path is
-  JAX-RS/RESTEasy, where the Spring advice never applied and secomlib's `SecomV2ExceptionMapper` renders
-  500. Guarded by `SecomAdminRestITTest.republishOfACorruptPublishedRecordIsAServerFault` (500, nothing
-  enqueued) and the `S124ExchangeSetServiceTest` fault cases.
-- **Residual:** two effectively-dormant `IllegalStateException` sites keep the 409 mapping:
-  `UserService.currentUser()` (first-login row neither created nor found — requires `createUser` to
-  succeed and the immediate re-read to miss) and `KeycloakIntegrationService.keycloakAdmin()`
-  ("User not authenticated", unreachable under normal Jwt auth). Left as-is: no reproduction, no
-  operator-facing endpoint in practice.
+- **Location:** `niord/src/main/java/org/niord/core/user/UserService.java` (`currentUser()`: the first-login
+  row is neither created nor found, which needs `createUser` to succeed and the re-read straight after it to
+  miss) and `niord/src/main/java/org/niord/core/keycloak/KeycloakIntegrationService.java` (`keycloakAdmin()`,
+  "User not authenticated", for a caller with no token, which method security refuses before it gets there);
+  `RestExceptionStatusAdvice` answers an `IllegalStateException` with `409 Conflict`.
+- **Why it looks wrong:** both are server faults a caller cannot resolve by retrying, not conflicts. Neither
+  can be reached in normal use, and there is no reproduction.
+- **Exposed by:** the fix of the S-124 republish chain's 409s (2026-09-09), which moved those sites to a
+  dedicated exception rendered 500 and left these two.
+- **Severity:** Low. Fix: throw a dedicated runtime exception, rendered 500, at both sites.
 
 ## WEB10. Behind the local chart's nginx, `WebUtils.absoluteUrl` redirects point at port 80
 
@@ -813,42 +738,35 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
 - **Exposed by:** documenting `adminAppUrl` and the message-link form (2026-09-23). Not reproduced on a running
   cluster.
 
-## LUCENE-7. For minutes after each start, the print, export and mail of a free-text search can miss messages without a sign
+## LUCENE-7. For minutes after each start, a script's free-text search and a late scheduled mail can miss messages without a sign
 
-- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java`: `init()` deletes the index when
-  `messageIndexDeleteOnStartup` is on (the default), the start-up pass follows five seconds later and then one pass a
-  minute, each of at most `LUCENE_MAX_INDEX_COUNT` (5,000) messages, and `allMessagesIndexed()` is false until a pass
-  has made every message searchable. `niord/src/main/java/org/niord/core/message/MessageSearchService.java`, the
-  free-text branch of `searchPagedMessageIds`, marks a result answered in that window
-  (`PagedSearchResultVo.indexIncomplete`), reading the index's state before and after the search, so a re-index
-  (`recreateIndex`) that empties the index while a search runs marks that search too. The callers that hand such a result on without the mark:
-  `MessageReportRestService` (the print), `MessageExportRestService` (the export, which drops the mark so the
-  archive keeps its form), `MessageMailRestService` (the message mail of a search) and `MailingListExecutionService`
-  (the mailing-list report, and a scheduled mailing-list mail more than half an hour after the start).
-- **Description:** the delete at start commits an empty index that can be read. Until the passes have indexed every
-  message again, which on a large database takes several minutes, a free-text search answers with the hits among the
-  messages indexed so far, possibly none. The owner's decision (2026-11-19): the search keeps answering, and the
-  editors are told. The editors' _Messages_ list shows a warning above such a result. A scheduled mailing-list
-  trigger whose stored query holds a `query=` term waits for the index in the half hour after the start: tried again
-  every two minutes, so its mail follows soon after the index is complete, with one WARN and one "Delayed:" record in
-  the Mail Queue, kept apart from the "Not sent:" records of failed runs; after that half hour it is mailed from what
-  the index holds, with a WARN naming the trigger, so a refill that stalls delays such a mail by at most half an hour.
-  With `messageIndexDeleteOnStartup` off the index is kept, but it counts as not complete until the start-up pass
-  (five seconds after the start) has run, so a trigger due in those seconds waits a few minutes too.
-  The print (PDF), export (ZIP) and message mail of the list and a mailing-list report pass the short answer on as a
-  real one, and so does a deployment's script that searches with free text. The public API (`/rest/public/v1/messages`)
-  takes no free text and does not read the index, a status-change mail is about its one message and runs no search,
-  and the PostgreSQL backend (`disableLucene`) keeps its table across a start: none of them is affected.
-- **Why it looks wrong:** a PDF or a mail made minutes after a deploy can leave warnings out without a word.
-- **Exposed by:** `MessageLuceneIndexStartWindowTest` (a message indexed before a restart is not found right after
-  it, the search does not fail, and the index says it is not complete) and `MessageSearchIndexIncompleteITTest` (the
-  mark, on the service, the editors' search and not on the public API); `MailingListDeliveryFaultITTest` holds a
-  scheduled trigger to the half hour's wait, its retry and its record. What the print, export, message mail and
-  report do with a marked result is not tested.
-- **Severity:** Low — the window is short, the editors' list warns in it and the scheduled mails wait for it. Fix,
-  for the owner to weigh: carry the mark on (a line in the print and the mailing-list report, a warning in the mail
-  and export dialogs before they are sent). With `messageIndexDeleteOnStartup` off the index is kept across a start,
-  and only the messages changed since its last pass are missing until the first pass (not checked by a test).
+- **Location:** `niord/src/main/java/org/niord/core/message/MessageLuceneIndex.java` (`init()` deletes the index when
+  `messageIndexDeleteOnStartup` is on, the default; `allMessagesIndexed()` is false until a pass has made every message
+  searchable again) and `MessageSearchService.searchPagedMessageIds`, which marks a free-text result answered in that
+  window (`PagedSearchResultVo.indexIncomplete`). The callers that still hand such a result on without the mark: a
+  deployment's script that searches with free text (`searchOrFail` from a template or mailing-list script), and
+  `MailingListExecutionService.executeScheduledTrigger` more than half an hour after the start.
+- **Description:** until the passes have indexed every message again, which on a large database takes several
+  minutes, a free-text search answers from the messages indexed so far. The owner's decision (2026-11-19): the search
+  keeps answering, and the people who use the answer are told. The editors' _Messages_ list shows a warning above such
+  a result; the print of the list (PDF) and a mailing-list report run by hand carry a line at their top
+  (`pdf.list.index_incomplete`, `IndexIncompleteNotice`); the administration app shows the list's warning in the mail
+  dialog and asks before an export (ZIP), whose archive keeps its form. A scheduled mailing-list trigger whose stored
+  query holds a `query=` term waits for the index in the half hour after the start (tried again every two minutes,
+  with one WARN and one "Delayed:" record in the Mail Queue); after that half hour it is mailed from what the index
+  holds, with a WARN naming the trigger and nothing in the mail. A script that searches with free text gets the marked
+  result and decides itself; none of the base product's scripts reads the mark. The message mail and the export
+  endpoints, called by anything other than the administration app, carry no sign either. The public API
+  (`/rest/public/v1/messages`) takes no free text, and the PostgreSQL backend (`disableLucene`) keeps its table across
+  a start: neither is affected.
+- **Why it looks wrong:** a scheduled mail sent half an hour after a deploy whose index refill stalled, or a script's
+  output made in the window, can leave warnings out without a word to its readers.
+- **Exposed by:** `MessageLuceneIndexStartWindowTest` and `MessageSearchIndexIncompleteITTest` (the mark, the print's
+  line); `MailingListDeliveryFaultITTest` holds a scheduled trigger to the half hour's wait, its retry and its record;
+  `MailingListExecutionServiceITTest` holds the report's line. What a script does with a marked result is not tested.
+- **Severity:** Low — the window is short, the scheduled mails wait for it, and the people who print, export, mail or
+  run a report are told. With `messageIndexDeleteOnStartup` off the index is kept across a start, and only the
+  messages changed since its last pass are missing until the first pass (not checked by a test).
 
 # Potential errors — REST-controller security audit
 
@@ -866,168 +784,50 @@ test
 `MonitorRestService`, `S124RestService` and `AtonIconRestService` to satisfy that guard makes their
 pre-existing anonymous exposure *explicit* — it is not a fix.
 
-All four of the findings this section once carried open — **SECAUD-9, -12, -13, -14** — are fixed below.
-Each entry keeps its **Residual** bullet: what the fix does *not* cover.
+What the audit's fixes left open is below: INT8, from its finding on the Niord integration's address and TLS
+checks, and the mass-assignment entries, from its sweep of the `@RequestBody` handlers.
 
+## INT8 — An integration address with a credential in it is logged once, and the fetch follows a redirect from https to http *(LOW · OPEN)*
 
-## SECAUD-9 — Niord-integration SSRF + disabled TLS verification (bearer-MITM of imported messages) *(MEDIUM · FIXED)*
+- **Location:** `niord/src/main/java/org/niord/web/NiordIntegrationRestService.java` (`createNiordIntegration`
+  logs `integration.getUrl()` at INFO before the service checks the address);
+  `niord/src/main/java/org/niord/core/integration/NiordIntegrationExecutionService.java` (`newHttpClient`:
+  `HttpClients.custom()` keeps the default redirect strategy).
+- **Description:** an address such as `http://user:password@host` is refused at create, but the controller has
+  written it to the application log the line before. And the fetch follows a redirect from https to http: the
+  address check (`NiordIntegrationUrlValidator.dnsResolver`) checks every hop's address, not its scheme, so a
+  peer that redirects its own answer to http has the imported messages fetched without TLS.
+- **Why it looks wrong:** a refused credential should not reach the log, and a fetch that starts on https
+  should not end on http. The endpoint is SYSADMIN only, so the first needs a system administrator to type a
+  credential into the address; the second needs a trusted peer that downgrades its own redirects.
+- **Exposed by:** the security audit of every `@RestController` (2026-09), as what its fix of the
+  integration's SSRF and disabled TLS checks left open.
+- **Severity:** Low. Fix: log the integration's id or host only, and set a redirect strategy that refuses an
+  https-to-http hop (which could stop a peer that really redirects to http).
 
-- **Location:** `niord/src/main/java/org/niord/core/integration/NiordIntegrationExecutionService.java`
-  (`fetchMessages`) + `NiordIntegrationService.createNiordIntegration/updateNiordIntegration`.
-- **Was:** the fetch built a client with a trust-all `SSLContext` + `AllowAllHostnameVerifier`, against a URL
-  an admin supplies and nothing validates, and then created/cancelled **published** messages from the response.
-- **Fixed:** the trust-all block is deleted, so `HttpClients.custom()` uses the JVM trust store and the default
-  host name verifier (add the peer CA to the trust store for a private-CA peer).
-  `NiordIntegrationUrlValidator.validateUrl` rejects a non-http(s) scheme, embedded user-info and a missing
-  host at create/update and again before the fetch — syntax only, no DNS, so an integration point can still be
-  defined before the remote server exists. The address policy lives in
-  `NiordIntegrationUrlValidator.dnsResolver`, installed as the client's `DnsResolver`: the addresses it
-  approves are the ones the connection operator connects to, so there is no rebinding window, no parse
-  differential, and every redirect hop is checked like the original request. It rejects
-  wildcard/loopback/link-local/private/ULA/multicast peers, the reserved IPv4 ranges the JDK predicates miss
-  (0.0.0.0/8 — which Linux routes to loopback — 100.64.0.0/10, 192.0.0.0/24, 198.18.0.0/15, 240.0.0.0/4) and
-  the two IPv6 notations that wrap an arbitrary IPv4 address without the JDK collapsing them (NAT64
-  `64:ff9b::/96`, 6to4 `2002::/16`), unless the `niordIntegrationAllowPrivateHosts` setting is on.
-- **Operating note:** two Niord servers on the same private network or k8s cluster need
-  `niordIntegrationAllowPrivateHosts=true`. The default is off, and a blocked fetch surfaces only as a
-  swallowed `log.error` on the hourly schedule. The field is injected once, at bean creation, so every route
-  needs a restart. Three routes work: the sysadmin Settings page (the stored row); a JVM system property
-  named like the key, which `SettingsService.overrideOf` reads before the database
-  (`-DniordIntegrationAllowPrivateHosts=true` in an environment's `app.javaOpts`, which the chart hands to
-  the JVM as `JAVA_TOOL_OPTIONS`); or the chart's `app.settings.niordIntegrationAllowPrivateHosts`, rendered
-  as an environment variable of that name by `k8s/helm/niord/templates/app/deployment.yaml`. The last two
-  are set from an environment's values and survive a restore of another environment's database.
-- **Residual:** a public host that itself proxies inward; an https→http downgrade on a redirect
-  (`DefaultRedirectStrategy` permits it); `NiordIntegrationRestService.createNiordIntegration` logs the raw
-  URL at INFO *before* the service validates, so a rejected `http://user:pw@host` still reaches the
-  application log once; and IDN host names are now rejected at create/update (`URI.getHost()` is null for a
-  non-ASCII authority — use punycode).
-- **Pinned by:** `NiordIntegrationUrlValidatorTest` (6 tests, incl. the NAT64/6to4 and reserved-range cases),
-  `NiordIntegrationExecutionServiceHttpTest` (the loopback target is never contacted; a credentialed URL never
-  reaches the wire) and `NiordIntegrationRestServiceITTest` (the write-time 400s, and that an unresolvable but
-  well-formed host is still accepted).
-
-## SECAUD-12 — Open-by-default authorization (systemic) *(now LOW · MOSTLY CLOSED)*
-
-- **Description:** an endpoint with *no* role constraint at any level is permitted for anonymous callers —
-  there is no deny-by-default backstop at the HTTP layer.
-- **Why the HTTP layer cannot simply be closed:** the one-time tickets that authorize non-Ajax downloads travel
-  as a `?ticket=` **query parameter**, invisible to Spring Security. Every ticketed export is `@PermitAll` with
-  the role enforced programmatically inside the handler, and `PublicationRestService.java` 709-715
-  (`generatePublicationReport`) self-calls
-  `/rest/message-reports/report.pdf` the same way. `anyRequest().authenticated()` would 401 all of them before
-  the handler ran.
-- **Closed at build time:** `RestControllerSecurityAnnotationTest` fails the build if any controller
-  handler lacks an explicit annotation. Its classpath scan is **condition-blind**, so a
-  `@ConditionalOn*`/`@Profile`-gated controller cannot slip past it either — `SecomAdminRestService`
-  (17 SYSADMIN handlers) had never been scanned before that change — and since 2026-09 it covers every
-  `@Controller`, finds handlers the way Spring MVC does (inherited and non-public methods included) and reads
-  their annotations with Spring Security's own lookup. `RestHandlerSecurityITTest` checks the handlers the
-  running application actually maps; a framework handler must be on its reviewed list.
-  `NonControllerHttpSurfaceInventoryTest` pins the inventory of every servlet, servlet filter and JAX-RS
-  resource implemented under `org.niord`, together with the mechanism that authorizes it, so a new anonymous
-  request-handling surface fails the build until someone records that decision.
-- **Closed at runtime:** the actuator — the one surface whose anonymous exposure widens by configuration alone
-  (`management.endpoints.web.exposure.include`) — is `denyAll` at the HTTP layer bar the `health` endpoint the
-  k8s probes contract on. Note this is **not** a pure no-op: `EndpointRequest.toAnyEndpoint()` also covers the
-  links index, so an anonymous `GET /rest/actuator` goes from `200` (a discovery document) to `401`.
-  Pinned by `ActuatorEndpointAuthorizationITTest`.
-- **Residual:** the annotation and inventory closures are **test-time**, so they bind this repository's build,
-  not a fork that skips the suite. The guards run on `niord`'s test classpath, so a surface added in
-  `niord-app` or `niord-dk` is covered by none of them. The inventory scan is scoped to `org.niord`, so a
-  *third-party* class mounted by Niord code is invisible to it — concretely the RESTEasy
-  `HttpServlet30Dispatcher` that `SecomConfiguration` registers at `/api/secom/*`. No guard can judge
-  whether a listed surface's own check is *correct*: `WmsProxyServlet`'s `wmsProtected` is a sysadmin-editable
-  setting, so `/wms/*` can be opened to anonymous callers at runtime with no code change and no test failure.
-  And `management.server.port` moves the whole actuator surface onto a child management context with its own
-  filter chain, which `SecurityConfig` does not apply to — the same one-line-YAML bypass the runtime rule
-  otherwise closes. Finally, many `@PermitAll` GET endpoints hand administration configuration to anonymous
-  callers; the security review of 2026-09 accepted that as a low risk (F-X64 in
-  [`security-review-2026-09.md`](../../docs/security-review-2026-09.md)), and closing it means deciding,
-  endpoint by endpoint, which anonymous reads the public site and the administration app's guest mode need.
-
-## SECAUD-13 — `TicketServletFilter` registered only under `local`/`k8s` profiles; dead fail-open validator *(MEDIUM · FIXED)*
-
-- **Was:** `TicketServletFilter` was registered only by `NiordLocalWebConfig` (`@Profile({"local","k8s"})`).
-  Both supported deployments set one of those profiles, so nothing was broken in production — but the runtime
-  image's entry point is a bare `java -jar` (`k8s/docker/Dockerfile`) and neither deployable's
-  `application.yml` sets `spring.profiles.active`, so the profile comes from the chart, not the artifact. A
-  `docker run` outside the chart silently ignored every `?ticket=`. The integration suite runs with no profile
-  either, so the whole ticket-*consumption* path had zero end-to-end coverage.
-- **Fixed:** the registration moved to `TicketWebConfig`, profile-neutral in the style of `CorrelationConfig`,
-  with the order (`HIGHEST_PRECEDENCE + 30`) and the `LazyFilter` indirection carried over unchanged;
-  `TicketServletFilter` itself is untouched.
-- **Also fixed:** `TicketService.validateRolesForCurrentThread` — which returned `true` for *any* requested
-  role when the ticket carried none — is deleted. It had no production caller, and
-  `UserService.isCallerInRole` is the live, fail-**closed** sibling of the same decision. A ticket only ever
-  carries a role once `TicketRestService` verified the issuing caller held it, so "no roles" means "never
-  checked", and `false` is the only honest answer.
-- **Not a defect (deliberately unchanged):** the filter proceeds when a `ticket` parameter is present but
-  unknown or expired. The ticket is an *additive* credential — it is read only on the
-  `currentUserContext.isAnonymous()` branch, so it can add identity but never remove it — and rejecting a
-  stale one would break a request carrying a valid bearer token alongside it. Authorization still fails closed
-  downstream. Now pinned by `anUnknownTicketLeavesTheRequestAnonymous`.
-- **Residual:** the ticket is a URL-borne credential, so it lands in ingress/access logs, browser history and
-  `Referer` headers (the application's own log records only `getRequestURI()`, which excludes the query
-  string). And the filter registration is `DispatcherType.REQUEST` only, so a `StreamingResponseBody` body
-  lambda — `MessageReportRestService.report.pdf` — runs on a task executor *after* the filter's `finally` has
-  cleared the thread local; the search itself happens on the request thread and is unaffected.
-- **Pinned by:** `TicketWebConfigTest` (the registration is profile-neutral) and `TicketServletFilterITTest`
-  (the consuming half over real HTTP: a ticket authenticates an otherwise anonymous request, grants only the
-  roles it was issued for, a role-less ticket grants none, and a ticket is consumed by the request that
-  presents it). Four of those five fail on the pre-fix tree.
-
-## SECAUD-14 — Mass-assignment via full-VO body binding (`new Entity(vo)`) *(LOW · FIXED — and it was worse than filed)*
-
-- **The filed sites were all safe.** Verified individually: `Domain` (`DomainVo` carries no surrogate id and
-  `inKeycloak` is `@Transient`), `NiordIntegration`, `MailingList` (the recipient endpoints re-read the
-  persisted list and substitute only users/contacts, both laundered through `persistedUsers`/`persistedList`),
-  `FiringSchedule`/`FiringPeriod` and `Publication` all either copy no id or are guarded by an
-  `isPersisted()`/`isNew()` check in their create service.
-- **What the sweep of all 96 `@RequestBody` handlers found instead:** seven entity constructors copy the
-  client-supplied surrogate `id` straight off the request body (`Area:101`, `Category:117`,
-  `DictionaryEntry:68`, `ParamType:52`, `Contact:61`, `ScriptResource:77`, `Comment:81`), and
-  `BaseService.saveEntity()` calls `em.merge()` whenever `id != null`. A POST to a **create** endpoint
-  therefore silently **updated** an arbitrary existing row. Confirmed exploit:
-  `POST /rest/dictionaries/dictionary/message` with `{"id": <id of a 'web' dictionary entry>, ...}` moved that
-  entry across dictionaries, rewrote its key and orphan-deleted its whole desc set — HTTP 200, no error,
-  because the duplicate-key check only looks inside the *target* dictionary.
-- **Fix:** the repo's own `isPersisted()` guard — already present in six sibling services
-  (`SourceService`, `PublicationService`, `PublicationCategoryService`, `FiringScheduleService`,
-  `NiordIntegrationService`, `MessageService`) — added to the five create services whose only id-carrying
-  caller is the REST handler. `AreaService.createArea` / `CategoryService.createCategory` cannot use that
-  guard, because `importArea`/`importCategory` legitimately pass a template carrying a *foreign* system's id;
-  they instead `setId(null)` on entry, the idiom `BatchScriptResourceImportProcessor` already uses ("we match
-  on path, not ID"). Neither create method ever read the incoming id — both `saveEntity` first and read the
-  assigned id afterwards — so this is behaviour-preserving. The REST handlers additionally answer `400` to a
-  create body carrying an id, for API hygiene.
-- **Why the `setId(null)` and not just the controller check:** `POST /rest/areas/upload-areas`
-  (`@RolesAllowed(ADMIN)` — the *same* role as the create endpoint) runs the `area-import` batch job, whose
-  `BatchAreaImportProcessor` does not reset the id and reaches `createArea` through `importArea`.
-  `/rest/categories/upload-categories` is identical at SYSADMIN. A controller-only fix would have left the
-  merge reachable at the same privilege on the same controller.
-- **Residual:** the root primitive is untouched — `BaseService.saveEntity()` still merges on any non-null id,
-  and 14 entity constructors still copy the id off their VO. Seven create paths now carry a guard; an eighth
-  written later will not, and no build-time guard covers this class the way
-  `RestControllerSecurityAnnotationTest` covers missing security annotations.
-- **Pinned by:** `createEntryRejectsEntryWithExistingId` and its four service-level siblings, plus two REST
-  tests that additionally assert the victim row is left untouched.
-
-## MASSASSIGN-1 — `BaseService.saveEntity()` merges on any client-supplied id *(LOW · OPEN — the root primitive behind SECAUD-14)*
+## MASSASSIGN-1 — `BaseService.saveEntity()` merges on any client-supplied id *(LOW · OPEN)*
 
 - **Location:** `niord/src/main/java/org/niord/core/service/BaseService.java` (`saveEntity`: `em.merge` when
   `isPersisted()`), plus the 14 entity constructors that copy `id` off their VO (`Area`, `Category`,
   `Comment`, `Contact`, `DictionaryEntry`, `ParamType`, `ScriptResource`, `Source`, `NiordIntegration`,
   `FiringSchedule`, `FiringPeriod`, `MessageParamFilter`, `AtonNode`, `BaseMessagePromulgation`).
 - **Description:** "create" and "update" are decided by whether the entity carries an id, and the id can come
-  straight from a request body. Every create path therefore has to remember to guard — thirteen now do
-  (six pre-existing `isPersisted()`/`isNew()` checks, five added for SECAUD-14, two `setId(null)`), and the
-  next one written will not.
+  straight from a request body. A create path without a guard therefore silently updates an existing row: the
+  security audit of 2026-09 confirmed it on `POST /rest/dictionaries/dictionary/message` with the id of an
+  entry of another dictionary, which moved that entry across dictionaries, rewrote its key and orphan-deleted
+  its descriptions, with HTTP 200. Every create path has to remember to guard — thirteen now do: eleven
+  refuse an entity that is already persisted (`isPersisted()`/`isNew()`; the audit added five of them, for
+  dictionary entries, parameter types, contacts, script resources and comments), and
+  `AreaService.createArea` / `CategoryService.createCategory` reset the id instead, because the area and
+  category imports (the upload endpoints' batch jobs among them, at the create endpoints' own roles) pass a
+  template carrying a foreign system's id; their REST create handlers also answer `400` to a body with an id.
+  The next create path written will have no guard unless its author remembers.
 - **Why it looks wrong:** the safety property is spread across every caller instead of being enforced once.
   The repo already has the machinery to pin this kind of invariant at build time —
   `RestControllerSecurityAnnotationTest` does exactly that for missing security annotations — but nothing
   equivalent covers create-with-a-body-supplied-id.
-- **Exposed by:** the SECAUD-14 sweep of all 96 `@RequestBody` handlers.
+- **Exposed by:** the security audit's sweep of all 96 `@RequestBody` handlers (2026-09), which found seven
+  entity constructors copying the id off the body and guarded the create paths it found.
 
 ## MASSASSIGN-4 — Assorted server-managed fields accepted from the request body *(LOW · OPEN)*
 
@@ -1043,7 +843,7 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 - `FiringScheduleService.updateFiringPeriod` loads a firing period by the body's id without checking it
   belongs to the area named in the request, so an EDITOR can reassign a firing period between areas. Within
   EDITOR authority, so cosmetic.
-- **Exposed by:** the SECAUD-14 sweep.
+- **Exposed by:** the security audit's sweep of the `@RequestBody` handlers (2026-09).
 
 > **Residual blind spot (not a finding):** XXE was asserted-absent but the message-import ZIP
 > (`BatchMsgArchiveImportProcessor`) XML entity handling was **not** positively verified. The S-124 side is
@@ -1076,79 +876,6 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   output strings.
 - **Exposed by:** a review of the two Danish unit tests — neither carried a meaningful assertion.
 
-## DICT1. `DictionaryService` hard-fails startup when the database's default language has no bundle on the class path
-
-- **Location:** `DefaultTexts.read` (`niord/src/main/java/org/niord/core/defaults/DefaultTexts.java`), called from `DictionaryService.init`: when neither layer has a file for a bundle in the default language it throws `IllegalStateException("No default-language text for the '<bundle>' dictionary: neither … nor … is on the class path")`. The language list and the default language still come from the **persisted** `modelLanguages`/`defaultLanguage` settings.
-- **Description:** the default language's text for a bundle may come from the country's texts (`defaults/country/texts/<lang>/`) or from the language pack (`defaults/packs/<lang>/`, for `en` the base product's `defaults/base/texts/en/`); a root-level `<bundle>_<lang>.properties` is no longer read (NG-B). Pointing the English `niord-app` at a database whose default language is `da` (one that `niord-dk` or `niord-gl` has started, since DK's and GL's `defaults/country/settings.json` both set `defaultLanguage` `da` (GL's `main` has one, read on 2026-11-02), or whose `defaultLanguage` row is `da`) stops start-up, because `niord-app` has neither for `da`. The IT fixture alone does not: `niord-base-data.sql` holds no `Setting` row since C4b, so the IT start writes `modelLanguages` `["da","en"]` from the test tree's `niord.json` and `defaultLanguage` `en` from the base product's settings file; a missing `da` file would only warn, and the test tree's stand-in `da` pack (`src/test/resources/defaults/packs/da/`) gives one. A language other than the default one with no file in either layer only warns and contributes no texts.
-- **Why it looks wrong:** a missing translation is degraded content, not an integrity violation, yet a default language without a bundle stops the application. `docs/code-data-config-plan.md` keeps this case fatal (§4.2), so the entry stays open under it too.
-- **Exposed by:** the dev-loop run of 2026-08-20; re-read against the code on 2026-10-20; re-read on 2026-11-02.
-
-
-## TESTQ3. `PublicationServiceGapITTest` pinned a global PUBLISHED-message count — green on macOS, red on Linux CI
-
-- **Location:** `niord/src/test/java/org/niord/core/publication/PublicationServiceGapITTest.java`
-  (`draftToRecordingPersistsRecordingAndRunsStartRecording`), polluted by the S-124/SECOM IT classes
-  (`S124ServiceITTest`, `S124RestServiceITTest`, `S124CancellationWarningITTest`,
-  `S124DatasetPipelineITTest`, `SecomProtocolITTest`, ...), which commit PUBLISHED messages.
-- **Description:** the test set `messageTagFilter = "msg.status == Status.PUBLISHED"` and asserted the
-  resulting tag was empty, on the premise that "no published messages exist". But `newPublication()`
-  sets no domain, so `PublicationService.startRecordingPublication:522-529` passes an **empty** seriesId
-  set and the scan is database-**wide**. The assertion therefore required the entire shared database to
-  hold zero PUBLISHED rows at that moment — which is false whenever an S-124/SECOM class ran first.
-- **Why it looks wrong:** Failsafe has no `runOrder` configured, so it defaults to `filesystem` order,
-  which differs between APFS (macOS) and ext4 (Linux CI). The S-124/SECOM block runs *last* locally and
-  *first* on CI, so the same commit was green on a developer machine and red on CI. Identical mechanism
-  to [[TESTQ2]].
-- **Exposed by:** the SECAUD branch, which added two IT classes and thereby reshuffled the
-  filesystem order on Linux. The bug is **pre-existing**, not introduced there: it reproduces on
-  unmodified `main` with
-  `./mvnw -o verify -pl niord -Dfailsafe.runOrder=reversealphabetical -Dit.test='S124ServiceITTest,S124RestServiceITTest,S124CancellationWarningITTest,S124DatasetPipelineITTest,SecomProtocolITTest,PublicationServiceGapITTest'`
-  → `expected: <0> but was: <17>`.
-- **Fixed here** by making the filter match nothing deterministically (an extra `msg.uid == '<unique>'`
-  clause) instead of relying on the database being empty. Verified both ways: with the clause inverted
-  (`!=`) the same run matches all 17 published messages, proving the binding really evaluates and the
-  test is not passing vacuously.
-- **Residual — the pollution itself is untouched.** `SecomITTest.publishNw()` walks a fresh NW message
-  DRAFT → VERIFIED → PUBLISHED through the real `MessageService` in a committed transaction, and the
-  base class's only cleanup (`@BeforeEach secomSetup()`) wipes the five SECOM tables and nothing else:
-  there is no `delete from Message` anywhere under `niord/src/test/java/org/niord/secom/`, so the
-  cleanup is *absent* rather than best-effort and every SECOM run adds PUBLISHED rows permanently. The
-  41 rows in the failing CI run attribute exactly: `SecomProtocolITTest` 13, `SecomOutboxDispatchITTest`
-  9, `SecomPostGetITTest` 6, `SecomAdminRestITTest` 4, `S124DatasetPipelineITTest` 4,
-  `SecomSubscriptionITTest` 3, `SecomSecurityReloadITTest` 1, `SecomMetricsITTest` 1. Since C4b the
-  fixture holds the sample's 34 messages, published ones among them, so a PUBLISHED row is not always
-  test residue, and a global count starts above zero. Any other test that counts rows globally has the
-  same exposure.
-- **Note on the tempting non-fix:** pinning an explicit `runOrder` would make the suite deterministic
-  across platforms, but it only freezes one ordering — it does not remove the pollution, and it would
-  hide the next instance of this rather than surface it.
-
-## TESTQ2. `ContactServiceITTest.searchWithBlankNameReturnsAllContacts` pinned a global row count
-
-- **Location:** `niord/src/test/java/org/niord/core/user/ContactServiceITTest.java`
-  (`searchWithBlankNameReturnsAllContacts`), polluted by
-  `niord/src/test/java/org/niord/web/MailingListRestRecipientsITTest.java` (`createContact()`,
-  `cleanup()`).
-- **Description:** the test created two contacts and searched with a blank name. A blank name adds
-  no predicate, so `searchContacts` returns **every contact in the database**, and the test asserted
-  the total was exactly `2` on the premise that "no contacts are seeded". The seed's `Contact` table
-  is indeed empty, but that is not the same as the table being empty by the time this class runs.
-  `MailingListRestRecipientsITTest` creates twelve contacts through `POST /rest/contacts/contact/`;
-  those commit in the server's own transaction — which, as that class's own javadoc notes, a test
-  `@Transactional` cannot roll back — and its `cleanup()` is explicitly best-effort. Three survived,
-  so the search saw `2 + 3 = 5`.
-- **Why it looks wrong:** whether the assertion holds depends on which classes Failsafe happens to
-  run first. On the Linux CI runner `MailingListRestRecipientsITTest` precedes `ContactServiceITTest`
-  (09:26:08 vs 09:26:31 in the CI run); locally the order is reversed, so the same commit is
-  green on macOS and red on CI. The deeper issue is that a committed-write test class leaves rows in
-  a database later classes assume is pristine — any other test that counts rows globally is exposed
-  to the same trap. **Fixed here** by asserting the delta (`before + 2`) plus the presence of the
-  test's own two e-mails, which is independent of both class order and leftover rows; the pollution
-  itself remains.
-- **Exposed by:** Backend CI, once it was enabled. Reproduces identically on `main`
-  (`tests=2302`, `expected: <2> but was: <5>`), so it predates and is independent
-  of any one branch.
-
 ## TESTQ5. `SecomProtocolITTest.cancelledDatasetsRequireATemporalExtentOrDataReference` expects an empty database-wide summary
 
 - **Location:** `niord/src/test/java/org/niord/secom/SecomProtocolITTest.java`,
@@ -1165,8 +892,8 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   same exposure.
 - **Why it looks wrong:** the test's own dataset is identifiable (its `dataReference`), and the test checks it
   individually in its last step; the two database-wide assertions pin the state of the whole shared database
-  instead, which depends on run order and on which earlier classes clean up after themselves — the TESTQ3
-  kind of coupling, in a class that TESTQ3 names as a polluter of others.
+  instead, which depends on run order and on which earlier classes clean up after themselves — the coupling
+  that once made two other tests' database-wide counts green on a developer machine and red on CI.
 - **What exposed it:** a red `main` after a merge whose change could not touch SECOM (a registry URL in
   the pom and a workflow), with a green rerun of the same job. A fix would filter the summary assertions to
   the test's own dataset (or assert that it is absent/present by `dataReference`), not pin the collection size.
@@ -1215,22 +942,6 @@ Suspected issues surfaced while porting the publications redesign (`org.niord.co
 `org.niord.web.publication`) from the Quarkus branch. The port kept the source behaviour; nothing below
 was changed in production code.
 
-## PORT-1. A Windows `NIORD_HOME` is written back into the `niord.home` setting as invalid JSON — every IT context fails to boot
-
-- **Location:** `niord/src/main/java/org/niord/core/settings/SettingsService.java` (`peek`, line ~298,
-  and whatever persists the expanded value), `org/niord/core/db/JpaJsonAttributeConverter.java`.
-- **Description:** `ITTest` defaults `NIORD_HOME` to `java.io.tmpdir + "/niord"`, which on Windows is
-  `C:\Users\…\Temp\/niord`. The expanded value is stored in `Setting.setting_value` as
-  `"C:\Users\…\Temp\/niord"` with unescaped backslashes, so the next read logs
-  `Error converting String to JSON`, the converter returns `null`, and `peek("niord.home")` dies on
-  `result.toString()` — `RuntimeException: Error loading settings from niord.json` for every integration
-  test on a Windows machine.
-- **Why it looks wrong:** the writer bypasses the JSON converter (which would have escaped the
-  backslashes), and `peek` assumes a non-null value. The Linux CI runner never sees it because its
-  temp path has no backslashes.
-- **Workaround:** run ITs with `NIORD_HOME=C:/…` (forward slashes) exported. **Exposed by:** the
-  first Failsafe run of this repository on Windows (`SchemaDdlDumpITTest`, 2026-09-14).
-
 ## PORT-15. An unresolvable `${niord.home}` expands to the empty string, so a fresh database boots with its roots at the filesystem root
 
 - **Location:** `niord/src/main/java/org/niord/core/settings/SettingsService.java` (`expandSettingValue`, the
@@ -1258,23 +969,6 @@ was changed in production code.
   `LiquibaseBootstrapITTest` now sets the system property in its static bootstrap. **Exposed by:** the first
   CI run of the merged publications port.
 
-## PORT-3. Release endpoint dereferences `stampedAt` without a null guard, after the irreversible half
-
-- **Location:** `niord/src/main/java/org/niord/web/publication/PublicationIssueRestService.java`,
-  `publish` (`out.put("stampedAt", result.stampedAt().getTime())`, line ~1079); the sibling `amend`
-  guards the same value (`== null ? null : …`, line ~1134).
-- **Why it looks wrong:** if `IssuePublishService.PublishResult.stampedAt()` can ever be null, the
-  release returns 500 after the member list is frozen and the documents rendered. Ported verbatim.
-
-## PORT-4. The preview PDF endpoint is gated declaratively, unlike the archive endpoint it mirrors
-
-- **Location:** `PublicationIssueRestService.preview` (`GET /issue/{publicId}/preview/{lang}`,
-  `@RolesAllowed(ADMIN)`) versus the archive endpoint's own javadoc, which explains that a request
-  whose identity comes from a one-time `?ticket=` is refused by a declarative gate and therefore uses
-  `@PermitAll` plus a programmatic `isCallerInRole` check.
-- **Why it looks wrong:** a top-level navigation to the preview carrying a ticket instead of a bearer
-  token gets 401 for exactly the reason the archive endpoint was shaped differently. Unchanged by the port.
-
 ## PORT-5. `WebUtils.getMultipartFiles` keys parts by file name, so two parts with one name collapse
 
 - **Location:** `niord/src/main/java/org/niord/core/util/WebUtils.java` (`getMultipartFiles`,
@@ -1285,22 +979,6 @@ was changed in production code.
   `files.size() > 1`, which cannot fire for two parts posted under the same file name; one document is
   silently dropped instead of refused.
 
-## PORT-6. `ApiRestService.searchPublications` rewrites links on the adapter's value objects in place
-
-- **Location:** `niord/src/main/java/org/niord/web/api/ApiRestService.java` (`searchPublications`,
-  `externalize(p, app.getBaseUri())` inside a `forEach`), reading
-  `org.niord.core.publication.series.PublicationPublicAdapter.listVo(...)`.
-- **Why it looks wrong:** correct only while `listVo` builds fresh objects per call. If the adapter
-  ever caches or shares them, the first `externalize=true` request writes absolute URLs into shared
-  instances and later requests get them too; `externalize()` is idempotent, so the damage is invisible.
-
-## PORT-7. `PublicationRestService.unionWithIssues` mutates the caller's `PublicationSearchParams`
-
-- **Location:** `niord/src/main/java/org/niord/web/PublicationRestService.java` (`unionWithIssues`:
-  `params.maxSize(Integer.MAX_VALUE).page(0)`, then reads `params.getDomain()` from the mutated object).
-- **Why it looks wrong:** safe today because both callers build and discard the object, but any future
-  caller reusing a params instance gets silently wrong paging.
-
 ## PORT-8. `PublicationCategoryService` refuses a duplicate `categoryId` in two shapes
 
 - **Location:** `niord/src/main/java/org/niord/core/publication/PublicationCategoryService.java`:
@@ -1310,15 +988,6 @@ was changed in production code.
 - **Why it looks wrong:** one rule, two wire shapes on two methods of the same class. Kept deliberately
   during the port; worth one ruling once the catalogue advice is the only publications error shape.
 
-## PORT-9. `IssueOrdering`'s id tie-breaker contradicts its own opening claim
-
-- **Location:** `niord/src/main/java/org/niord/core/publication/series/resolve/IssueOrdering.java`
-  (~line 141): the id tie-breaker is appended outside the reversal and is always ascending, while
-  `MessageSearchService` emits `desc(id)` as the last term of every descending sort.
-- **Why it looks wrong:** the file documents this as deliberate ("reproducibility, not stability") yet
-  opens by claiming it reproduces the search's ORDER BY tuples exactly; the prose and the code should
-  be reconciled. The `areaSortOrder` null handling was aligned with PostgreSQL during the port.
-
 ## PORT-10. Two independent literals carry the legacy import's 1800 s budget
 
 - **Location:** `LegacyImportService.IMPORT_TIMEOUT_SECONDS` (reported in the run's log line only)
@@ -1326,36 +995,6 @@ was changed in production code.
 - **Why it looks wrong:** changing one silently makes the log lie about the budget. The number itself
   was argued from MySQL's shared `hibernate_sequence`, which this schema does not have. On PostgreSQL
   the import has been timed once, on a workstation, well inside the budget, and never on a cluster.
-
-## PORT-11. The local-dev realm grants no Niord roles on the `niord-web` client
-
-- **Location:** `keycloak/niord-realm-local.json` (`niord-web` client); the test realm gives that
-  client the four-role ladder.
-- **Why it looks wrong:** a local front end authenticating through `niord-web` holds no Niord role from
-  the bare token, so `publication-curate` (added to every other client by the port) cannot be exercised
-  through it either without adding the whole ladder to that client.
-
-## PORT-12. Hibernate 7 lock-mode ranking can skip `SELECT ... FOR UPDATE` on rows the transaction already wrote
-
-- **Location:** `org/niord/core/publication/series/IssuePublishService.java` (`em.find(..., LockModeType.PESSIMISTIC_WRITE)`
-  on the series and issue rows at publish/amend) and `StaleVersionGuard.forceIncrement` (which the port already
-  changed from `em.lock(..., PESSIMISTIC_FORCE_INCREMENT)` to dirtying the row's `updated` stamp because the lock
-  request was a no-op on Hibernate 7).
-- **Description:** Hibernate 7 collapsed the `LockMode` ranks; an entity already in `WRITE` state in the persistence
-  context outranks a later `PESSIMISTIC_WRITE` request, so the row-level lock is not taken.
-- **Why it looks wrong:** the publish path reads as if it relies on that lock to serialise two concurrent
-  releases. It does not, for four independent reasons: `IssueWorkMarker.start` claims the issue first in its own
-  transaction (the loser gets `ISSUE_BUSY`); the REST path only reads the issue before `publish`, so its entry is
-  still `READ` and the `FOR UPDATE` is issued; where the row was written in the same transaction the INSERT/UPDATE
-  already holds the PostgreSQL row lock until commit; and `@Version` refuses a stale second writer at flush. The
-  skipped statement is therefore harmless today — but the reading of the code is misleading, and a future caller
-  that writes the row first and then relies on the lock alone would be wrong.
-- **Side effects of the guard change:** `updated` now moves on a public-window change and on a curation (the
-  frontend shows it on the series and issue VOs), where before only `version` moved; and
-  `IssueCurationService`'s own `issue.setUpdated(new Date()); em.merge(issue)` beside the guard call is now
-  redundant (the guard's stamp is strictly later) though it reads as load-bearing.
-- **Exposed by:** the wave-3 integration fixes (StaleVersionGuard); the publish-path analysis is from the final
-  review, verified against the Hibernate 7.2 sources, not reproduced by a test.
 
 ## PORT-13. `IssuePublicWindowService.set()` marks the caller's transaction rollback-only on a refusal
 
@@ -1369,28 +1008,6 @@ was changed in production code.
   publication sweep and the hourly firing run had the same mechanism (the error hunt of 2026-11-12); their fix of
   2026-11-13 (a transaction of its own per message or per area, `MessageTxRunner`) does not reach this method.
 
-## PORT-14. `findByMrn`/`findByDomainId` report every infrastructure failure as "row does not exist"
-
-- **Location:** `org/niord/core/area/AreaService.findByMrn`, `org/niord/core/category/CategoryService.findByMrn` —
-  each ends in `catch (Exception e) { return null; }`.
-- **Why it looks wrong:** a NOT NULL violation on an unrelated flush surfaced during the port as the publications
-  criteria code `C-4 operand does not resolve` on a category that had just been inserted. Pre-existing; the
-  publications operand resolver now sits on top of it.
-- **The same ending elsewhere (2026-11-12):** about two dozen single-row lookups end `getSingleResult()` in
-  `catch (Exception e) { return null; }`, in `AreaService`, `CategoryService`, `ChartService`, `ContactService`,
-  `SourceService`, `MailingListService`, `DictionaryService`, `MessageSeriesService`, `MessageService` and others
-  (`grep -A4 "getSingleResult()"` for `catch (Exception`). PROM9 narrowed `PromulgationTypeService.getPromulgationType`
-  alone, to `NoResultException`. `MessageSeriesService.findBySeriesId` is on the message-save path
-  (`MessageService.createMessage` and `updateMessage`), runs after the managed message has been changed, and its
-  null is dereferenced on the next line: a failed flush there still ends in a `NullPointerException` with no
-  cause in the log.
-- **Narrowed on 2026-11-13** (the error hunt's fix stage): `DomainLookupService.findByDomainId`,
-  `NavtexPromulgationService.findTransmitterByName`, `SafetyNetPromulgationService.findAreaByName` and
-  `MessageQueryService.findByUid` catch `NoResultException` only, and
-  `MessageLookupFaultITTest#aFailedLookupOfAnExistingWarningPropagatesTheFailure` guards the last. Every other site
-  named above still catches every exception, `TwitterPromulgationService.getSettings` included (PROM7). One change
-  that narrows every such lookup to `NoResultException` would close this entry.
-
 ## RENDER4. `PublicationIssueDesc.fileSize`, `fileHash` and `fileGeneratedAt` are never written
 
 - **Location:** `org/niord/core/publication/series/PublicationIssueDesc.java` (the three fields and their setters); no
@@ -1400,19 +1017,21 @@ was changed in production code.
   let a released document be verified against its record, or tell two generations apart without reading the archive,
   are permanently NULL.
 
-## NAMING-1. A release more than two periods late names its issue for the closing weeks and drops a fully covered week
+## PORT-17. An amend re-orders the whole issue, where the data model says surviving members keep their order
 
-- **Location:** `org/niord/core/publication/series/resolve/IssueNaming.java` (`periods = floor(days / 7.0 + 0.25)`,
-  `week = end.minusWeeks(periods - 1)`).
-- **Description:** on the local rehearsal (2026-09-15) the open `weekly-ntm` issue whose window ran from
-  2026-08-26 10:21 to its release at 2026-09-15 06:51 (19 days, ISO weeks 36, 37 and part of 38) was labelled
-  `37+38`. `days` is an integer 19, so `19 / 7 + 0.25 = 2.96` yields two periods, and the label counts
-  backwards from the closing week: week 36, fully inside the window, is named by no issue.
-- **Why it looks wrong:** `domain-rules.md` says a multi-week issue "is named for the weeks it closed: the
-  cut-off week and the ones before it that no issue closed"; the quarter-period tolerance was meant for a
-  single week released a few days late, not for deciding which of three covered weeks to drop. Behaviour is
-  identical in the Quarkus source (`IssueNamingTest` passes as ported).
-- **Exposed by:** the local rehearsal's extra release step; not by any test.
+- **Location:** `org/niord/core/publication/series/IssuePublishService.java` (`amend` →
+  `resolveFreezeAndWrite`, step 5: `MemberResolutionService.orderFor` and `IssueOrdering.assignSortIndex` over
+  every member) against `fe/docs/publications/DATA-MODEL.md` §6.6 rule 5.
+- **Description:** rule 5 says an amend does not recompute `sortIndex` for surviving members: they keep their
+  relative order, an added member is placed by the recorded sort key and the indices are re-densified. The code
+  sorts the whole post-override union again with the series' current sort, so a surviving member moves whenever
+  its sort key (its area's place in the tree, its number, a date) changed since the release, or the sort itself
+  did (an issue sorted by id is ordered by year and number since 2026-11-19, PORT-9).
+- **Why it looks wrong:** the stored order exists so a re-issued document does not re-order an unchanged list;
+  either the rule or the code is wrong, and nothing says which.
+- **Exposed by:** the check of PORT-9's fix, 2026-11-19 (read in the code).
+- **Severity:** Low — an amend replaces a document by a deliberate act with a reason, and the new document is
+  ordered consistently; only the promise that survivors keep their places is broken.
 
 # Potential errors — security review and fix sweep (2026-09)
 
@@ -1446,32 +1065,13 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Why it looks wrong:** a test's outcome depends on which context started last, and a script under test can read and act on another test's data without any error.
 - **Exposed by:** DK's and GL's C6 (`SIFA-DK/niord-dk` and `SIFA-DK/niord-gl`, 2026-10-22). Recorded, not fixed.
 
-## SETTINGS-4. A database set up before 2026-11-04 may still store the former published `pdfEncryptionPassword` default
-
-- **Location:** the `pdfEncryptionPassword` row of a deployment's `Setting` table. The code is fixed: since 2026-11-04
-  (the owner's ruling) the default is empty
-  (`niord/src/main/java/org/niord/core/script/FmTemplateService.java` 67-71, `defaultValue = ""`;
-  `defaults/base/settings-catalog.json` 731-733, `"codeDefault": ""`), and `getPDFEncryptionPassword` (102-107)
-  encrypts only with a non-blank password.
-- **Description:** until that fix the code default was a known sentence, published in the settings catalog. Start-up
-  adds a missing operator setting with its code default and never changes a stored row (`SettingsService.addMissing`),
-  so a database that started a base product version from 4.0.74 (the catalog's `introducedIn`) up to that fix without the row
-  stores that sentence, and a database carried over from the legacy Niord may store it too [inferred; no
-  deployment's row was read]. A deployment that switches `pdfEncryptionEnabled` on there without setting the
-  password encrypts its PDF reports with a value anyone with the old source can read.
-- **Why it looks wrong:** an encryption password that ships as a default protects nothing, and the code fix cannot
-  reach a stored row (a repository change never changes data, `docs/code-data-config-plan.md`).
-- **Exposed by:** the second review of the code, data and configuration work (2026-10-22), reading the settings catalog; the code half fixed
-  on 2026-11-04; narrowed to the stored rows by the cross-check of the error hunt of 2026-11-12 against this file.
-- **Severity:** Low — encryption is off by default. Fix: none in code; at the deploy step a sysadmin sets the
-  password before switching encryption on, and the operators' guide can say so.
-
 ## SETTINGS-5. `mailSender` defaults to a DMA address in the base product
 
 - **Location:** `niord/src/main/java/org/niord/core/mail/MailService.java:47` (`@Setting(value = "mailSender",
   defaultValue = "niord@e-navigation.net", ...)`), published in `defaults/base/settings-catalog.json`.
 - **Description:** a deployment that does not set `mailSender` sends its mails from `niord@e-navigation.net`, an
-  address of the Danish Maritime Authority's e-Navigation project.
+  address of the Danish Maritime Authority's e-Navigation project. Since 2026-11-20 it is also the Reply-To of a
+  mail from a user without an e-mail address (`MailService.defaultReplyTo`), so a reply to such a mail goes there.
 - **Why it looks wrong:** the base product names no country or organisation (C5's done-when), and a mail from
   another organisation's address may be rejected or misread. `e-navigation` is not on C5's word list, which is why
   the scan missed it.
@@ -1526,7 +1126,9 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   GL's C6: its bootstrap carries the current files, and its release README names the overwrites.
 - **Why it looks wrong:** the data of a running deployment is the truth, so a stale row stays until a sysadmin
   imports the release file and ticks the overwrite. Whether DK's and GL's rows are stale is a check for the deploy
-  step.
+  step. For `fetch-firing-exercises.js` that import must take a country's release of 2026-11-19 or a later one:
+  from that day both countries' files call `searchOrFail`, and an earlier release brings back the lenient
+  `search`, whose failure mails the list an empty schedule its readers cannot tell from a day without exercises.
 - **Exposed by:** the review of the code, data and configuration plan (2026-10-20); narrowed to the
   deployment data by a review of 2026-10-22. Seen by the error hunt of 2026-11-12 (wave 3, the soak
   track): on two local copies of `niord_test` (`niord_d`, `niord_guides`) the audio-broadcast list's
@@ -1535,28 +1137,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `niord_test` holds the same trigger and due time. There the failed run is now retried every hour and leaves a
   mail in status Error in the Mail Queue once a day, which does not mend the row; the test environment's
   row is replaced only by a sysadmin's release import with the overwrite ticked, on a human's say-so. Open.
-
-## SCRIPT11. A failed search in DK's and GL's firing-exercise script mails the list an empty schedule
-
-- **Location:** the country repositories' own `be/bootstrap/templates/mailinglist/fetch-firing-exercises.js`
-  (`SIFA-DK/niord-dk` and `SIFA-DK/niord-gl`; DK's is the file the base sample's copy was taken from, and GL's is
-  the same but for its line 19, `docs/code-data-config-plan.md` §9.2), which call
-  `messageService.search(searchParams)`, and the `templates/mailinglist/fetch-firing-exercises.js` rows of the
-  deployments made from them; `niord/src/main/java/org/niord/core/message/MessageSearchService.java` `search` (logs
-  a failure and answers an empty result) beside `searchOrFail` (throws it).
-- **Description:** when that search fails (a database error, say, after the trigger's own `searchOrFail`
-  succeeded), the script puts an empty `firingExercises` list into the mail and `audio-broadcast.ftl` prints the
-  heading for tomorrow's firing exercises with no exercise under it. The mail is sent and the trigger is not
-  postponed [read in the code; not run]. The base sample's copy (`niord/sample/archive/`) calls `searchOrFail` and
-  `BootstrapScriptBeanCallsTest` refuses the lenient call in the base bootstrap and the sample; the countries' files
-  are their own, not shadows of a base file, so neither the base bump nor a country's release import changes them.
-- **Why it looks wrong:** a failure reaches the list's readers as "no firing exercises tomorrow", which they
-  cannot tell from a real empty schedule.
-- **Exposed by:** a review of 2026-11-18, which named the script in the javadoc of `MessageSearchService.search`.
-- **Severity:** Low — it needs a search that fails between the trigger's and the script's. Fix: the same one-line
-  change to `searchOrFail` in each country's bootstrap file, in that country's repository; a deployment's existing
-  row then changes only by a sysadmin's release import with the overwrite ticked, on a human's say-so (as SCRIPT8).
-  Open.
 
 ## TZ1. Time-dependent ITs fail by exactly one hour when they run in the hour the clocks go back
 
@@ -1755,14 +1335,16 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `PromulgationRoundTripITTest#twitterSettingsAreStoredButTheirWritesAndReadAnswer500_documentsBug` (the POST, the
   GET and the PUT each answer 500; the create and the update are stored, one row, checked in SQL); TESTQ6's
   `TwitterSettingsRestServiceITTest` 76 accepts the same 500. Also of this entry, handed over by the error hunt:
-  `TwitterPromulgationService.getSettings` (139-147) ends `catch (Exception e) { return null; }` (PORT-14's
-  pattern), so a failed read lets `createSettings` (155) try a second row, `updateSettings` (171) answer "No Settings
+  `TwitterPromulgationService.getSettings` (139-147) ends `catch (Exception e) { return null; }`, the one
+  single-row look-up left out when the others were narrowed to `NoResultException`, since Twitter is to go, so a
+  failed read lets `createSettings` (155) try a second row, `updateSettings` (171) answer "No Settings
   exists" and the tweet path (218) send nothing; it goes with the rest of this entry.
 - **Severity:** Medium where Twitter promulgation is used; the owner plans to remove Twitter promulgation
   (2026-11-12), and the entry goes with it. Fix, should it stay: a transaction around the handlers, as the NAVTEX
   transmitters' and the SafetyNET areas' handlers have; an error state in the
   dialog instead of the silent switch to an empty form; and secrets that may be left empty in edit mode to keep the
-  stored ones.
+  stored ones. Neither national deployment uses Twitter/X promulgation (the owner, 2026-11-19); the code is left as
+  it is and is planned for removal.
 
 ## PROM8. A promulgation type with transmitters, areas or saved Twitter settings cannot be deleted
 
@@ -1785,24 +1367,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   they are; change it with the fix.
 - **Severity:** Low. Fix: delete the type's own transmitters, areas and settings with it, and refuse a type that
   messages refer to with that reason.
-
-## PROM11. A promulgation type whose service is not registered fails three manager functions with a `NullPointerException`
-
-- **Location:** `org/niord/core/promulgation/PromulgationManager`: `generateMessagePromulgation`,
-  `messagePromulgationGenerated` and `resetMessagePromulgations` call the result of
-  `instantiatePromulgationService(type.getServiceId())` unchecked; it answers `null` for a service id no
-  registered service has.
-- **Description:** `onCreateMessage`, `onUpdateMessage` and `onUpdateMessageStatus` beside them check that null,
-  log "Unable to instantiate promulgation service for type ..." and go on. These three do not, and
-  `TemplateExecutionService` calls `resetMessagePromulgations` before and `messagePromulgationGenerated` after
-  every template execution, for every promulgation the message carries [read in the code; not run].
-- **Why it looks wrong:** a type row that outlives its service (a type imported from a deployment with a service
-  of its own, or the `twitter` rows once the Twitter service is removed) makes every template execution on a
-  message carrying its promulgation answer 500 with no cause named, while saving the same message works.
-- **Exposed by:** the review of the PROM9 fix (2026-11-12), which gave these three functions a named refusal for a
-  type that does not exist and left the service beside it.
-- **Severity:** Low while every type's service is registered; the first thing to meet when a service is removed.
-  Fix: skip with the warning the three siblings log.
 
 ## PROM12. A promulgation without a type answers 500
 
@@ -1943,7 +1507,7 @@ outside the repository.
 The fix stage of 2026-11-13 fixed every entry of the hunt that is no longer listed: each fix came with a regression
 test, most of them the entry's `_documentsBug` pin turned round, and git history keeps the entries it removed. The
 entries still listed are of three kinds: those the fix stage left on purpose, each saying why and what is
-recommended, for the owner to decide (MAILLIST1, SERIES7, SCRIPT10, LUCENE-5, API3, SETTINGS-7, MSG6); the part of
+recommended, for the owner to decide (MAILLIST1, SERIES7, SCRIPT10, API3, SETTINGS-7, MSG6); the part of
 an entry the fix stage fixed only in part (DOMAIN2); and, under a line of their own at the end
 of the section, the faults the fix stage met on its way and did not fix. Paths are under `niord/src/main/java/`
 unless they say otherwise.
@@ -2006,34 +1570,6 @@ unless they say otherwise.
   turns its exceptions into an empty output and a warning in the log); recommended to decide with the next template
   that wants another precision.
 
-## LUCENE-5. One message that throws stalls the free-text index for every later message
-
-- **Location:** `org/niord/core/message/MessageLuceneIndex.java` `updateLuceneIndex(int)` (its one try around the
-  whole batch and the outer catch), with `Message.findUpdatedMessagesAfter` ordered by `updated` and id. The
-  LUCENE-4 fix of 2026-11-12 changed the marker and the read, not this: the batch is still one try.
-- **Description:** the batch is indexed inside one try. A RuntimeException for one message returns 0 before the
-  marker and the commit, so the next pass (every minute) reads the same messages from the same marker, and that
-  message blocks every later one while it is among the first 5,000. (A message of the look-back window behind the
-  marker that throws is logged and tried again by the next pass, 591-601, and holds up nothing; one after the
-  marker still stalls the index.) An IOException from `addDocument` (707) or
-  `deleteDocuments` (675) is normally a disk failure after which Lucene closes the writer, so the commit throws
-  into the same catch. The re-index of the admin page does not recover either: `recreateIndex` deletes the index
-  first and then fails on the same message, so after it no later message is searchable at all.
-- **Why it looks wrong:** free-text search (the admin app's, and triggers with a query) answers "no match" for
-  messages that exist, and only the log shows it.
-- **Exposed by:** the error hunt of 2026-11-12, track C, read in the delivery path, then reproduced by track CT in
-  an index folder of its own,
-  `DeliveryFaultInjectionITTest#oneMessageThatCannotBeIndexedHidesEveryLaterMessageFromFreeTextSearch_documentsBug`
-  (M1 throws while indexed; M2 and M3 are not searchable after a pass, a second pass or the re-index). What could
-  throw for a real message was not found. LUCENE-4 is another fault.
-- **Severity:** Low — no real message is known to throw; when one does, the re-index makes it worse. Fix: a
-  per-message catch that records and skips, without moving the marker past a failed add, in the pass and in
-  `recreateIndex`.
-- **Left by the fix stage (2026-11-13):** no real message is known to throw while indexed, and the fix needs a
-  choice the entry leaves open (a failed message skipped past the marker is unsearchable until it is saved again;
-  one that holds the marker back makes every pass index the messages after it again); recommended as a Low
-  follow-up once that choice is made, the pin in `DeliveryFaultInjectionITTest` staying until then.
-
 ## API3. The public API ignores a malformed `wkt` and answers every message
 
 - **Location:** `org/niord/core/message/MessageSearchParams.java` `extent(String)` (296-302, the `ParseException`
@@ -2066,7 +1602,7 @@ unless they say otherwise.
 - **Why it looks wrong:** saving what was read should change nothing.
 - **Exposed by:** the error hunt of 2026-11-12, track A4, a round-trip integration test:
   `LeftoverRoundTripITTest#aPasswordSettingSavedBackAsReadIsErased_documentsBehavior`. Track A1 noted it, unrun.
-  SETTINGS-4 is another fault.
+  A stored row that still holds the password's former published default is another matter.
 - **Severity:** Low — not reachable from the application; a script erases the PDF encryption or WMS password. Fix:
   in `updateSetting` read a missing or null value of a Password setting as "unchanged" and an explicit empty string
   as a clear, the distinction the import makes.
@@ -2298,35 +1834,25 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster B18 (read in the code; not run).
 - **Severity:** Low. Fix: 400 for a missing or unknown message and for a null trigger.
 
-## MAILLIST9. A list recipient without any address stops every mail of the list's triggers
-
-- **Location:** `org/niord/core/mailinglist/MailingListExecutionService.java` `createMailTemplate` (the recipients:
-  `new ScheduledMailRecipient(TO, r.computeInternetAddress())`); `IMailable.computeInternetAddress`.
-- **Description:** for a contact with a blank e-mail address and no name, or a user with a blank user name and no
-  name or address, `computeInternetAddress` returns null, and `ScheduledMailRecipient.address` is `@NotNull` (and
-  `NOT NULL` in the table). Every mail a trigger of that recipient's list makes then fails as it is saved, for all its
-  recipients, a status-change trigger's and a scheduled trigger's alike. The failure is recorded in the Mail Queue
-  (the record leaves that recipient out since 2026-11-19), but no subscriber of the list gets the mail.
-- **Why it looks wrong:** one recipient without an address should be left out of the mail, not stop it for everyone.
-- **Exposed by:** a review of the status-change outbox, 2026-11-19; the failure record's half is pinned by
-  `MailingListDeliveryFaultITTest.theFailureRecordLeavesOutARecipientWithoutAnAddress`.
-- **Severity:** Low: `ContactService` refuses a blank contact address and a user always has a user name, so only a
-  row written before those checks or by hand is hit. Fix: leave out a recipient whose address is null in
-  `createMailTemplate` too, with a WARN naming it.
-
-## CG7. Two typed position forms are read as another position without a word
+## CG7. A `-` before the longitude is read as a divider, and the hemisphere letter decides
 
 - **Location:** `org/niord/core/geojson/PlainTextConverter.java` (`POSITION_FORMAT`, 84) and the admin app's
-  `parseLatLon` (`fe/ui-apps/admin/src/app/shared/utils/coordinate-format.ts` 115).
-- **Description:** a `-` just after the latitude's hemisphere letter is eaten as a separator, so `55 30N -012 00E`
-  is read as east; and a degree part with a fraction together with minutes (`56.5 30N`) is read as 56.5° plus
-  30 minutes, 57°.
-- **Why it looks wrong:** a typed position moves without a sign of it; impossible positions are refused since
-  2026-11-13, but these two are possible ones.
+  `parseLatLon` (`fe/ui-apps/admin/src/app/shared/utils/coordinate-format.ts` 124).
+- **Description:** a `-` just after the latitude's hemisphere letter is eaten as a divider, so `55 30N -012 00E`
+  is read as east.
+- **Why it looks wrong:** read as a sign, the `-` says west while the letter says east, and nothing tells the
+  editor which one won.
+- **Why it is left:** the input contradicts itself only when the editor also typed the wrong letter, and the
+  letter is what every position here is read by. Refusing a `-` there would refuse `64 10N -051 43W`, which is
+  read correctly today and is pinned by
+  `PlainTextConverterGridTest.aDashBeforeTheLongitude_isADivider_andTheHemisphereLetterDecides` and the admin
+  app's `coordinate-format.spec.ts`. The other half of this entry, a fraction of a degree followed by minutes
+  (`56.5 30N` read as 57°), is refused by both parsers since 2026-11-19, and minutes with a fraction followed
+  by seconds (`56 30.5' 20"N`) since 2026-11-20 (the admin app's parser reads no seconds at all).
 - **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster C12 (left by the plan as a named risk; read in
   the code).
-- **Severity:** Low — both are unusual ways to write a position. Fix: refuse a sign together with a hemisphere
-  letter wherever it stands, and a fraction of a degree together with minutes. Could break: nothing valid.
+- **Severity:** Low. Fix, if it is ever wanted: accept the divider only as a `-` with a space after it, and
+  refuse a sign joined to the longitude's digits; decide first what happens to `64 10N -051 43W`.
 
 ## TESTQ7. Two publication tests set a cut-off zone that nothing reads, so they run in UTC without saying so
 
@@ -2503,10 +2029,12 @@ path is from the repository root.
 - **Severity:** Medium. Fix: let `getAllForWeb` and `getAllEditable` decide by the catalogue entry's `web` and
   `editable` (and `cached`) for a declared key, and by the row's flags only for an undeclared one. No data changes.
   Could break: `mode` reaches `/settings/web` for the first time, so the public site shows its TEST ribbon where a
-  deployment's row says `test`; `wmsProtected` reaches the page with its String type, so SETTINGS-3 should be fixed
-  first or with it. SETTINGS-10 belongs in the same change.
+  deployment's row says `test`; `wmsProtected` reaches `/settings/web` with its stored String type, which both
+  sides read as before: the backend takes a text `false` safely (`WmsProxyServlet.isProtected`), and the admin
+  app's web-settings overlay converts a text `true` or `false` to a boolean (`admin/core/config/web-settings.ts`,
+  `coerce`). SETTINGS-10 belongs in the same change.
 - **Decision first:** may declared settings take their flags from the catalogue, once each staging's stored `mode`
-  value has been read? Recommended: yes, in one change with SETTINGS-3.
+  value has been read? Recommended: yes, in one change with SETTINGS-10.
 - **Left by the owner (2026-11-15):** no change to where the flags come from, and no read of the stagings' rows;
   the entry stays open as the record.
 
@@ -2547,6 +2075,23 @@ path is from the repository root.
 - **Decision first:** a text that a deployment sets, or no volume in the base product? Recommended: the text, with
   no volume printed when it is unset.
 - **Left by the owner (2026-11-15):** 1884 stays in the base templates; the entry stays open as the record.
+
+## RENDER11. The weekly report PDFs head an issue of two or more weeks with its first week alone
+
+- **Location:** `be/niord/bootstrap/templates/messages/nm-report-pdf.ftl` 66 and 73 and `nm-tp-report-pdf.ftl` 41,
+  47 and 57 (`${week}` alone); `IssuePublishService` hands the report `week` and `weekTo` as two values (~1203),
+  and the templates read only the first.
+- **Description:** an issue named for weeks 36 to 38 ("36-38", or "36+37" for a pair) gets a PDF whose page header
+  and heading say week 36. The accumulated report already prints a group's `week` and `weekTo`
+  (`nm-accumulated-report-pdf.ftl` 239).
+- **Why it looks wrong:** the PDF's heading names a different issue than the issue's name and file name do.
+- **Exposed by:** the review of round 1 of the recorded faults, 2026-11-20, read in the templates. True of a pair
+  before that round; the range form of 2026-11-20 did not cause it.
+- **Severity:** Low (the heading and page header only). Fix: print `weekTo` after `week` when it is set, joined by
+  `+` for a pair and `-` for three weeks or more as the name is (`IssueNaming`), or hand the templates the joined
+  text; it ships as a release import, since the templates are data (`docs/code-data-config-plan.md`). Could break:
+  `WeeklyReportTemplateTest`.
+- **Decision first:** should the weekly report templates print the weeks the way the name does? Recommended: yes.
 
 ## DICT7. The required-texts list names a template reader no shipped template uses
 

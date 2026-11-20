@@ -1,25 +1,26 @@
 import { inject, Injectable } from '@angular/core';
-import { TranslocoService } from '@jsverse/transloco';
 
-import {
-  Desc,
-  MainType,
-  Message,
-  MessageStatus,
-  PROVISIONAL_TYPE_SUFFIXES,
-} from '../models/message.model';
+import { Desc, Message, MessageStatus, PROVISIONAL_TYPE_SUFFIXES } from '../models/message.model';
 import { LanguageService } from './language.service';
 
-/** The status chip beside an identifier: the word, and which of the two states it names. */
+/** The status chip beside an identifier: which of the two states it names, and the key of its word. */
 export interface MessageStatusChip {
   readonly kind: MessageStatus;
-  readonly label: string;
+  readonly key: string;
 }
 
-/** What the id badge draws: the identifier, an optional status chip, an optional marker. */
+/**
+ * What the id badge draws: the identifier, an optional status chip, an optional marker. The words
+ * are keys, translated where the badge puts them in the page, so they follow a language switch
+ * and a bundle that arrives after it.
+ */
 export interface MessageBadge {
-  /** The short id, or the composed type and main-type labels when the message has none. */
-  readonly label: string;
+  /** The short id, when the message has one. */
+  readonly shortId?: string;
+  /** For a message with no short id, which is named by what it is: its type's word. */
+  readonly typeKey?: string;
+  /** For a message with no short id: its main type's word, after the type's. */
+  readonly mainTypeKey?: string;
   /** Present only for an expired notice or a cancellation — the two a reader has to notice. */
   readonly status?: MessageStatusChip;
   /** `(T)` for a temporary notice, `(P)` for a preliminary one. */
@@ -27,13 +28,13 @@ export interface MessageBadge {
 }
 
 /**
- * What a message is called in the language the reader is in. The words come from the bundle and
- * the active language, which is why this is a service and the functions in `message.util.ts`
- * are not.
+ * What a message is called in the language the reader is in. Its description is chosen by the
+ * active language, which is why this is a service and the functions in `message.util.ts` are not.
+ * The badge's words are handed out as keys: a word translated here, once, would keep the language
+ * it was translated in until the list is read again.
  */
 @Injectable({ providedIn: 'root' })
 export class MessageLabelService {
-  private readonly transloco = inject(TranslocoService);
   private readonly languageService = inject(LanguageService);
 
   /** The description record for the given language, falling back to the first one there is. */
@@ -52,30 +53,25 @@ export class MessageLabelService {
    */
   badge(msg: Message, showStatus = false): MessageBadge {
     return {
-      label: msg.shortId || this.composedLabel(msg.type, msg.mainType),
-      status: showStatus ? this.statusChip(msg) : undefined,
+      shortId: msg.shortId || undefined,
+      typeKey: !msg.shortId && msg.type ? 'TYPE_' + msg.type : undefined,
+      mainTypeKey: !msg.shortId && msg.mainType ? 'MAIN_TYPE_' + msg.mainType : undefined,
+      status: showStatus ? statusChip(msg) : undefined,
       suffix: suffixFor(msg.type),
     };
   }
+}
 
-  private composedLabel(type: string | undefined, mainType: MainType | undefined): string {
-    const typeLabel = type ? this.transloco.translate('TYPE_' + type) + ' ' : '';
-    return typeLabel + (mainType ? this.transloco.translate('MAIN_TYPE_' + mainType) : '');
+/**
+ * An expired permanent notice is not marked: a permanent notice that has run out is the ordinary
+ * end of its life and says nothing a reader has to act on.
+ */
+function statusChip(msg: Message): MessageStatusChip | undefined {
+  if (msg.status === 'CANCELLED') return { kind: 'CANCELLED', key: 'STATUS_CANCELLED' };
+  if (msg.status === 'EXPIRED' && msg.type !== 'PERMANENT_NOTICE') {
+    return { kind: 'EXPIRED', key: 'STATUS_EXPIRED' };
   }
-
-  /**
-   * An expired permanent notice is not marked: a permanent notice that has run out is the
-   * ordinary end of its life and says nothing a reader has to act on.
-   */
-  private statusChip(msg: Message): MessageStatusChip | undefined {
-    if (msg.status === 'CANCELLED') {
-      return { kind: 'CANCELLED', label: this.transloco.translate('STATUS_CANCELLED') };
-    }
-    if (msg.status === 'EXPIRED' && msg.type !== 'PERMANENT_NOTICE') {
-      return { kind: 'EXPIRED', label: this.transloco.translate('STATUS_EXPIRED') };
-    }
-    return undefined;
-  }
+  return undefined;
 }
 
 function suffixFor(type: string | undefined): string | undefined {

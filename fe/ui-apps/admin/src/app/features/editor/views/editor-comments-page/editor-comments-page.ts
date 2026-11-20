@@ -6,6 +6,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { NotificationService } from '../../../../core/notifications/notification.service';
 import { Card } from '../../../../shared/components/card/card';
+import { ErrorBanner } from '../../../../shared/components/error-banner/error-banner';
 import { ProgressBar } from '../../../../shared/components/progress-bar/progress-bar';
 import { Icon } from '../../../../shared/icons/icon';
 import type { MessageComment } from '../../../messages/models/message-comment.model';
@@ -28,7 +29,16 @@ import { EditorFacade } from '../../services/editor-facade';
  */
 @Component({
   selector: 'app-editor-comments-page',
-  imports: [TranslocoPipe, Icon, EditorViewHeader, Card, CommentCard, CommentEditor, ProgressBar],
+  imports: [
+    TranslocoPipe,
+    Icon,
+    EditorViewHeader,
+    Card,
+    CommentCard,
+    CommentEditor,
+    ErrorBanner,
+    ProgressBar,
+  ],
   template: `
     <app-editor-view-header />
 
@@ -65,17 +75,25 @@ import { EditorFacade } from '../../services/editor-facade';
     } @else if (facade.message(); as message) {
       @if (message.created) {
         <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-auto p-4">
-          @for (comment of comments(); track comment.id) {
-            <app-comment-card
-              [comment]="comment"
-              [canEdit]="canEdit(comment)"
-              (acknowledge)="acknowledge(comment)"
-              (save)="save($event)"
+          @if (commentsStore.loadFailed()) {
+            <app-error-banner
+              [title]="'common.fetchError' | transloco"
+              [retryLabel]="'common.retry' | transloco"
+              (retry)="commentsStore.reload()"
             />
-          } @empty {
-            <p class="text-center text-sm text-fg-muted">
-              {{ 'editor.comments.none' | transloco }}
-            </p>
+          } @else {
+            @for (comment of comments(); track comment.id) {
+              <app-comment-card
+                [comment]="comment"
+                [canEdit]="canEdit(comment)"
+                (acknowledge)="acknowledge(comment)"
+                (save)="save($event)"
+              />
+            } @empty {
+              <p class="text-center text-sm text-fg-muted">
+                {{ 'editor.comments.none' | transloco }}
+              </p>
+            }
           }
 
           <app-card [header]="'editor.comments.add' | transloco">

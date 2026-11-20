@@ -12,10 +12,13 @@ import type { HierarchicalEntity } from '../entity-tree/hierarchical-entity.mode
  * From-Area tab is hidden and the dialog opens on the From-Text tab.
  */
 export interface AreaGeometrySource {
-  /** Root areas (with nested children) for the From-Area tree picker. */
+  /** Root areas (with nested children) for the From-Area tree picker; a failed read errors. */
   getRoots(): Observable<readonly HierarchicalEntity[]>;
 
-  /** Resolves the picked area to the FeatureCollection to import. */
+  /**
+   * Resolves the picked area to the FeatureCollection to import; a failed read errors (the dialog
+   * says so), where an area without a geometry answers an empty collection.
+   */
   getGeometry(area: HierarchicalEntity): Observable<GeometryFeatureCollection>;
 }
 

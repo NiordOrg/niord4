@@ -251,9 +251,9 @@ export class TimeScheduleEditor {
         this.cancel();
       },
       error: () => {
+        // The editor stays open with the rows as typed, so a failed save can be tried again.
         this.notifications.error('schedule.toast.periodsError');
         this.saving.set(false);
-        this.cancel();
       },
     });
   }

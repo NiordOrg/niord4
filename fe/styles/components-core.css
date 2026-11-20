@@ -702,7 +702,15 @@
     border-bottom: 1px solid var(--niord-border);
     padding: 0.75rem 1rem;
   }
+  /* A title wraps rather than widening the header: a flex item keeps the width of its longest
+     word unless it may shrink below it, and a long word (Kalaallisut's, at 320 px, under a
+     reader's own letter spacing; a long path in the administration app) would push the close
+     button out of the panel, which clips it. So the title may shrink, and a word longer than its
+     line breaks. `break-word` leaves the title's smallest width as it was, so a title whose
+     words fit is laid out as before, in both applications. */
   .dialog-title {
+    min-width: 0;
+    overflow-wrap: break-word;
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--niord-fg);

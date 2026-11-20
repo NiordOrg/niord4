@@ -9,10 +9,9 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { disabled, form, FormField, required } from '@angular/forms/signals';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { catchError, of, switchMap } from 'rxjs';
 
 import { DomainFacade } from '../../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
@@ -20,6 +19,8 @@ import { currentDesc } from '../../../utils/localized-descs';
 import { NotificationService } from '../../../../../core/notifications/notification.service';
 import { CopyLinkButton } from '../../../../../shared/components/copy-link-button/copy-link-button';
 import { Drawer } from '../../../../../shared/components/drawer/drawer';
+import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
+import { fixedListRead, listRead } from '../../../../../shared/utils/list-read';
 import { LengthCounter, tooLong } from '../../../../../shared/forms/length-counter/length-counter';
 import { LocalizedInputs } from '../../../../../shared/forms/localized-inputs/localized-inputs';
 import { LocalizedTextInput } from '../../../components/localized-text-input/localized-text-input';
@@ -164,6 +165,7 @@ function transitionThatChangesNothing(
   imports: [
     CopyLinkButton,
     Drawer,
+    ErrorBanner,
     FormField,
     Icon,
     LengthCounter,
@@ -309,22 +311,19 @@ export class OneOffEditor {
   // The domains are read without the Keycloak state, which the server otherwise
   // computes by asking Keycloak once per domain: this list is rendered as ids
   // and names, so the wait buys the drawer nothing.
-  protected readonly domains = toSignal(
-    toObservable(computed(() => this.language.selectedLanguage())).pipe(
-      switchMap((lang) =>
-        this.domainsApi.getAll(lang, { keycloakState: false }).pipe(catchError(() => of([]))),
-      ),
-    ),
-    { initialValue: [] as AdminDomain[] },
+  private readonly domainsRead = listRead<AdminDomain, string>(
+    toObservable(computed(() => this.language.selectedLanguage())),
+    (lang) => this.domainsApi.getAll(lang, { keycloakState: false }),
   );
+  protected readonly domains = this.domainsRead.value;
 
   // Fetched with every language's name, and labelled here: narrowing to one
   // language on the server would leave a category named only in another
   // language rendering as its raw id.
-  protected readonly categories = toSignal(
-    this.seriesApi.publicationCategories().pipe(catchError(() => of([]))),
-    { initialValue: [] as PublicationCategory[] },
+  private readonly categoriesRead = fixedListRead<PublicationCategory>(() =>
+    this.seriesApi.publicationCategories(),
   );
+  protected readonly categories = this.categoriesRead.value;
 
   /** The category's name in the current language, or the first configured one. */
   protected categoryName(category: PublicationCategory): string {
@@ -346,10 +345,10 @@ export class OneOffEditor {
    * makes a report a precondition for activating a query-backed publication.
    * This is the editor-tier list: the public reports plus the current domain's own.
    */
-  protected readonly reports = toSignal(
-    this.reportsApi.listReports({ forList: true }).pipe(catchError(() => of([]))),
-    { initialValue: [] as readonly MessageReport[] },
+  private readonly reportsRead = fixedListRead<MessageReport>(() =>
+    this.reportsApi.listReports({ forList: true }),
   );
+  protected readonly reports = this.reportsRead.value;
 
   /**
    * The pattern vocabulary, in the shape the insert menu takes.
@@ -358,10 +357,24 @@ export class OneOffEditor {
    * writer picking one from the menu sees beforehand exactly what will appear
    * in the format.
    */
-  private readonly nameTokens = toSignal(
-    this.seriesApi.nameTokens().pipe(catchError(() => of<string[]>([]))),
-    { initialValue: [] as string[] },
-  );
+  private readonly nameTokensRead = fixedListRead<string>(() => this.seriesApi.nameTokens());
+  private readonly nameTokens = this.nameTokensRead.value;
+
+  /** The lists the pickers are filled from; one of them failing is said at the top. */
+  private readonly optionReads = [
+    this.domainsRead,
+    this.categoriesRead,
+    this.reportsRead,
+    this.nameTokensRead,
+  ];
+  protected readonly optionsFailed = computed(() => this.optionReads.some((read) => read.failed()));
+
+  /** Read again every option list that failed. */
+  protected retryOptions(): void {
+    for (const read of this.optionReads) {
+      if (read.failed()) read.retry();
+    }
+  }
 
   protected readonly patternTokens = computed(() =>
     // Assembled here rather than in the template: the braces decode before

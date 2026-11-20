@@ -35,7 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Fault injection on the lookup the delivery paths share: {@code MessageQueryService.findByUid}, which answers null
  * only when no message has the uid (a {@code NoResultException}). Written on 2026-11-12 for the {@code findByUid}
- * part of a fault filed as PROM14's note; the pattern is PORT-14's.
+ * part of a fault filed as PROM14's note. Every single-row look-up follows the same pattern (it catches
+ * {@code NoResultException} only); {@code LookupFaultITTest} holds the others to it.
  */
 class MessageLookupFaultITTest extends ITTest {
 

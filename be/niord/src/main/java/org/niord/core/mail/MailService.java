@@ -209,13 +209,7 @@ public class MailService extends BaseService {
                 try {
                     Mail mail = scheduledMail.toMail(app.getBaseUri(), HtmlMail.StyleHandling.INLINE_STYLES, false);
 
-                    // If undefined, set reply-to to the first to-recipient
-                    if (mail.getReplyTo().isEmpty()) {
-                        mail.getRecipients().stream()
-                                .filter(r -> r.getType() == Message.RecipientType.TO)
-                                .limit(1)
-                                .forEach(r -> mail.replyTo(r.getAddress()));
-                    }
+                    defaultReplyTo(mail, scheduledMail.getSender(), mailSender);
 
                     // Send the mail, and register that it was sent, or held: the mail filter kept it from its
                     // recipients (LOG, or a list that redirected one of them)
@@ -240,6 +234,40 @@ public class MailService extends BaseService {
             log.error("Error finding scheduled mail " + scheduledMailId, e);
             return null;
         }
+    }
+
+    /**
+     * The Reply-To of a queued mail that its own sender gave none ({@link ScheduledMail#toMail}).
+     * <ul>
+     *     <li>A mail a person sent, whose stored sender holds no usable address (a staff member whose login has no
+     *     e-mail address is stored by name): the deployment's sender address, the one the From address comes from
+     *     ({@code mailSender}), as the owner decided on 2026-11-20. Its first recipient would answer the recipient
+     *     itself. Such a mail is traced to its sender through the Mail Queue's record. Where the deployment's
+     *     sender address is itself empty or not one usable address, the mail is sent without a Reply-To rather
+     *     than not at all: the Reply-To is a convenience.</li>
+     *     <li>A mail with no sender, a mailing-list mail: its first TO recipient, as before.</li>
+     * </ul>
+     * A mail that already has a Reply-To (a sender with an address) is left as it is.
+     *
+     * @param mail the mail made from the queued mail
+     * @param storedSender the queued mail's sender, as stored
+     * @param deploymentSender the deployment's sender address
+     */
+    static void defaultReplyTo(Mail mail, String storedSender, String deploymentSender) {
+        if (!mail.getReplyTo().isEmpty()) {
+            return;
+        }
+        if (StringUtils.isNotBlank(storedSender)) {
+            InternetAddress deployment = ScheduledMail.replyTo(deploymentSender);
+            if (deployment != null) {
+                mail.replyTo(deployment);
+            }
+            return;
+        }
+        mail.getRecipients().stream()
+                .filter(r -> r.getType() == Message.RecipientType.TO)
+                .limit(1)
+                .forEach(r -> mail.replyTo(r.getAddress()));
     }
 
 }

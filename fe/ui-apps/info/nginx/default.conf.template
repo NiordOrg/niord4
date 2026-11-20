@@ -335,6 +335,12 @@ server {
     #
     # Each refuses a query it was not written for; the two maps at the top say what that is.
     # `return` is the one directive that is safe inside an `if` in a location.
+    #
+    # The backend makes only a few PDFs at a time for a reader without an identity and answers
+    # every further request 503 at once. The reader asked in a tab of its own, so the backend's
+    # error would be all that tab shows: the 503 is answered with the site's own page instead
+    # (`location = /pdf-busy.html` below), at the same address and with the same status. Only a
+    # 503 is: every other answer of the backend passes as it came.
     location = /rest/message-reports/report.pdf {
         limit_except GET HEAD { deny all; }
         if ($niord_list_pdf_query_ok = 0) {
@@ -342,6 +348,8 @@ server {
         }
         include /etc/nginx/niord-proxy.conf;
         proxy_read_timeout 180s;
+        proxy_intercept_errors on;
+        error_page 503 /pdf-busy.html;
         proxy_pass ${NIORD_SERVER_URL}/rest/message-reports/report.pdf;
     }
 
@@ -361,7 +369,24 @@ server {
         }
         include /etc/nginx/niord-proxy.conf;
         proxy_read_timeout 180s;
+        proxy_intercept_errors on;
+        error_page 503 /pdf-busy.html;
         proxy_pass ${NIORD_SERVER_URL};
+    }
+
+    # What a reader who asked for a PDF while the backend was busy is given (see the two PDF
+    # locations above): a page that says, in the language the PDF was asked in, that documents are
+    # being prepared for other readers and to try again in a moment. It keeps the 503, and says
+    # when to ask again in Retry-After, as the backend does (MessageReportRestService), since the
+    # backend's own headers do not pass an intercepted answer. Nobody may cache it. It is an error
+    # page only: asked for by its own name, it is a 404. Its script is an ordinary file of the
+    # build, served by the last location below.
+    location = /pdf-busy.html {
+        internal;
+        add_header Retry-After "10" always;
+        add_header Cache-Control "no-store" always;
+        include /etc/nginx/niord-security-headers.conf;
+        try_files $uri =404;
     }
 
     # Everything else under /rest/ does not exist on this host: /rest/repo/list/,

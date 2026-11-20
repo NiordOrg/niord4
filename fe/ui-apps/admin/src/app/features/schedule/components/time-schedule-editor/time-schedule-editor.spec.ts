@@ -2,7 +2,7 @@ import { WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { LocaleFormatService } from '../../../../core/main-shell/services/locale-format.service';
 import { NotificationService } from '../../../../core/notifications/notification.service';
@@ -582,6 +582,32 @@ describe('TimeScheduleEditor', () => {
     expect(update).toHaveBeenCalledTimes(1);
     expect(comp.editing()).toBe(false);
     expect(comp.periods().length).toBe(1);
+  });
+
+  it('a failed save keeps the editor open with the rows as typed and says so', () => {
+    const { comp, update } = setup([
+      { id: 3, fromDate: '2026-06-15T08:00:00Z', toDate: '2026-06-15T10:00:00Z' },
+    ]);
+    update.mockReturnValueOnce(throwError(() => new Error('offline')));
+    const notifications = TestBed.inject(NotificationService) as unknown as {
+      error: ReturnType<typeof vi.fn>;
+    };
+    comp.startEdit();
+    comp.setFrom(0, entered(5, 0));
+    comp.addInterval();
+    comp.setFrom(1, entered(14, 0));
+    const typed = comp.draft();
+    comp.save();
+
+    expect(notifications.error).toHaveBeenCalledWith('schedule.toast.periodsError');
+    expect(comp.editing()).toBe(true);
+    expect(comp.draft()).toEqual(typed);
+    expect(comp.periods().map((p) => p.id)).toEqual([3]); // the stored day is shown unchanged
+
+    // The same rows can be saved again.
+    comp.save();
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(comp.editing()).toBe(false);
   });
 
   it('cancel discards the draft without saving', () => {

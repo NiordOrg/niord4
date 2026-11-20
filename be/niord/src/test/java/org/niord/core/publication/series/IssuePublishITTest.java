@@ -1884,7 +1884,7 @@ public class IssuePublishITTest extends ITTest {
     }
 
     private static IssueOrdering.Orderable orderable(String uid) {
-        return new IssueOrdering.Orderable(uid, null, null, null, null, null, null, null, null);
+        return new IssueOrdering.Orderable(uid, null, null, null, null, null, null, null, null, null, null);
     }
 
     /** And an ordinary weekly hands over no sections at all. */

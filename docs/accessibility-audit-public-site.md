@@ -205,9 +205,9 @@ Pass, fail, not applicable, or needs a person, for the base build. A fail names 
 | 1.3.3 Sensory characteristics | A | Pass | |
 | 1.3.4 Orientation | AA | Pass | Both orientations render |
 | 1.3.5 Identify input purpose | AA | N/A | The site takes no personal data |
-| 1.4.1 Use of colour | A | **Fail** | The chart's credit link, by colour alone at 2.2:1: _The map credit's link is told from its line by a shade of grey alone_ |
+| 1.4.1 Use of colour | A | Pass (2026-11-19) | Fixed: the chart's credit links are underlined (the map view, a message's dialog and the teaser); measured in Chromium on the map view and the teaser of the base build by `npm run layout:info` |
 | 1.4.2 Audio control | A | N/A | |
-| 1.4.3 Contrast (minimum) | AA | **Fail** | The teaser's banner over a white tile, 4.44:1: _The teaser's banner can fall just under 4.5:1_. Every other text axe-core measured passes; the default subtle text colour (backlog) was not met on any page scanned, and its entry stays for the token |
+| 1.4.3 Contrast (minimum) | AA | Pass (2026-11-19) | Fixed: the teaser's banner is the chrome colour at 80 %, so its text is 8.82:1 over a white tile, 9.24:1 over the chart's land and 10.30:1 over its sea with the default tokens (measured in Chromium by `npm run layout:info`, which holds every build to 4.5:1 over all three); computed from the countries' tokens, Denmark's navy 7.94, 8.33 and 9.19:1, Greenland's 6.28, 6.58 and 7.22:1. Every other text axe-core measured passes; the default subtle text colour (backlog) was not met on any page scanned, and its entry stays for the token |
 | 1.4.4 Resize text | AA | Pass | At 200 % page zoom; the browser's text-only zoom was not checked |
 | 1.4.5 Images of text | AA | Pass | None |
 | 1.4.10 Reflow | AA | Pass | Nothing scrolls sideways at 320 px or 400 %; the Downloads tab strip scrolls in its own box (backlog). The chart is exempt as content that needs two dimensions |
@@ -222,11 +222,11 @@ Pass, fail, not applicable, or needs a person, for the base build. A fail names 
 | 2.3.1 Three flashes or below threshold | A | Pass | |
 | 2.4.1 Bypass blocks | A | Pass | The skip link and the landmarks; the print sheet and the teaser repeat no block |
 | 2.4.2 Page titled | A | Pass | Each view titled; one message shares the details view's title |
-| 2.4.3 Focus order | A | **Fail** | Focus falls to the body when a dialog opened by its address closes: _Closing a message's dialog opened by its own address leaves focus nowhere_ |
+| 2.4.3 Focus order | A | Pass (2026-11-19) | Fixed: when a dialog opened by its address closes, focus goes to the row of the message it showed last, or to the main content when the list does not hold it; measured by the details view's unit spec, and in Chromium on the base build by `npm run layout:info` (opened by its address, closed with Escape, for a message the list holds and one it does not; 2026-11-20) |
 | 2.4.4 Link purpose (in context) | A | Pass | |
 | 2.4.5 Multiple ways | AA | Pass | Every message is in three views, each one step from the menu |
 | 2.4.6 Headings and labels | AA | Pass | Remark: no page heading (backlog) |
-| 2.4.7 Focus visible | AA | **Fail** | The print sheet's link-styled buttons lose their ring (backlog, the print route's link buttons) |
+| 2.4.7 Focus visible | AA | Pass (2026-11-19) | Fixed: the print sheet's link-styled buttons show the site's 2 px ring; every stop the Tab key reaches on the sheet shows a ring, measured in Chromium on the base build by `npm run layout:info`. The reference ids among them still do nothing when pressed (backlog, the print route's link buttons) |
 | 2.5.1 Pointer gestures | A | Pass | The chart's drag has the zoom buttons beside it; the teaser does not pan |
 | 2.5.2 Pointer cancellation | A | Pass | |
 | 2.5.3 Label in name | A | Pass | |

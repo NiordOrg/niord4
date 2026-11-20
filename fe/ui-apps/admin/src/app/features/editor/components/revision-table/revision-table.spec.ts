@@ -7,10 +7,10 @@ import { DomainService } from '../../../../core/domain/services/domain.service';
 import type { MessageHistory } from '../../../messages/models/message-history.model';
 import { RevisionTable } from './revision-table';
 
-function rev(version: number): MessageHistory {
+function rev(version: number, created = Date.UTC(2026, 5, 1, 10)): MessageHistory {
   return {
     version,
-    created: '2026-06-01T10:00:00Z',
+    created,
     user: 'alice',
     status: 'DRAFT',
     snapshot: '{}',
@@ -56,5 +56,19 @@ describe('RevisionTable', () => {
     // Three rows still render, but only the two selected keep a checkbox.
     expect(rowCount(fixture)).toBe(3);
     expect(checkboxCount(fixture)).toBe(2);
+  });
+
+  it('ticks only the selected one of two entries with the same version number', async () => {
+    // A message carried over from an older system can hold two entries numbered alike.
+    const revisions = [rev(4), rev(3, Date.UTC(2016, 4, 2, 9)), rev(3, Date.UTC(2016, 4, 1, 9))];
+    const fixture = setup(revisions, [revisions[2]]);
+    await fixture.whenStable(); // ngModel writes the checked state after a microtask
+    const boxes = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLInputElement>(
+        'input[type=checkbox]',
+      ),
+    ];
+    expect(rowCount(fixture)).toBe(3);
+    expect(boxes.map((box) => box.checked)).toEqual([false, false, true]);
   });
 });
