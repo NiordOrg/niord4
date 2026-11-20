@@ -326,7 +326,6 @@ public class PromulgationManager {
         }
     }
 
-
     /**
      * Updates all referenced promulgation types with the persisted versions and returns the set of types
      * @param message the message to update
