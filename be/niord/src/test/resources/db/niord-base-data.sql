@@ -1941,7 +1941,7 @@ INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_i
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (242, 'en', NULL, 'NtM', 242);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (243, 'en', NULL, 'Translation', 243);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (244, 'en', NULL, 'CANCEL NAV WARN', 244);
-INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (245, 'en', NULL, 'd. MMMM yyyy', 245);
+INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (245, 'en', NULL, 'd MMMM yyyy', 245);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (246, 'en', NULL, 'CANCEL NAV WARN', 246);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (247, 'en', NULL, 'dd-MM-yyyy', 247);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (248, 'en', NULL, 'Dear {0}', 248);
@@ -5105,8 +5105,9 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
             <table class="group-info-line" width="100%">
                 <tr>
                     <td width="40%" align="left">
-                        <#-- group.weeks is the source''s weeks in the pair form the name patterns
-                             use: "36+37" for a pair, "36-38" for three weeks or more. -->
+                        <#-- group.weeks is the source''s weeks as its own name writes them, by
+                             its series'' name pattern ("36 og 37", "36+37", "36-38"), or its
+                             week label whole. -->
                         <#if !group.manual && group.week??>
                             ${text(''pdf.week'')} ${group.weeks!(group.week?c)}<#if group.year??>, ${group.year?c}</#if>
                         </#if>
@@ -5341,10 +5342,10 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 </head>
 <body>
 
-<#-- Headers and footers. ${weeks} is the issue''s weeks in the pair form the name
-     patterns use: "36", "36+37" for a pair, "36-38" for three weeks or more, or
-     the week label whole. The legacy print dialog hands only ${week}, which then
-     prints alone. -->
+<#-- Headers and footers. ${weeks} is the issue''s weeks as its name writes them, by
+     the week part of the series'' name pattern ("36 og 37", "36+37", "36-38"; the
+     pair form where the pattern writes no week), or the week label whole. The
+     legacy print dialog hands only ${week}, which then prints alone. -->
 <@renderDefaultHeaderAndFooter headerText="${text(''pdf.nm'')} - ${text(''pdf.week'')} ${weeks!week!''''}, ${year!''''}"/>
 
 
@@ -5471,9 +5472,10 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 </head>
 <body>
 
-<#-- ${weeks} is the issue''s weeks in the pair form the name patterns use: "36",
-     "36+37" for a pair, "36-38" for three weeks or more, or the week label whole.
-     The legacy print dialog hands only ${week}, which then prints alone. -->
+<#-- ${weeks} is the issue''s weeks as its name writes them, by the week part of the
+     series'' name pattern ("36 og 37", "36+37", "36-38"; the pair form where the
+     pattern writes no week), or the week label whole. The legacy print dialog
+     hands only ${week}, which then prints alone. -->
 <@renderDefaultHeaderAndFooter headerText="${text(''pdf.nm_tp'')} - ${text(''pdf.week'')} ${weeks!week!''''}, ${year!''''}"/>
 
 <#-- First page -->
