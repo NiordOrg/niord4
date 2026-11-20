@@ -854,28 +854,6 @@ handlers.
   output strings.
 - **Exposed by:** a review of the two Danish unit tests — neither carried a meaningful assertion.
 
-## TESTQ5. `SecomProtocolITTest.cancelledDatasetsRequireATemporalExtentOrDataReference` expects an empty database-wide summary
-
-- **Location:** `niord/src/test/java/org/niord/secom/SecomProtocolITTest.java`,
-  `cancelledDatasetsRequireATemporalExtentOrDataReference`: after cancelling its own dataset, the test calls
-  `GET /api/secom/v2/object/summary` with no parameters and asserts `summaryObject` has size 0, and
-  `GET /api/secom/v2/object` with no parameters and asserts 404.
-- **Description:** without a temporal extent the summary serves every *active* S-124 dataset in the shared
-  database, not only this test's. The assertion therefore requires that no other test has left a published,
-  uncancelled dataset behind at that moment. Backend CI on `main` (2026-10-06)
-  found one — `NW-112-01`, data reference `8a0980ce-65a7-8ea0-98a0-3662403d8e11`, committed by
-  another IT class that ran earlier — and the step failed with "Expected: a collection with size <0>, Actual:
-  <[{dataReference=8a0980ce-…, info_identifier=NW-112-01, …}]>"; the same commit's suite was green on the pull
-  request and green on the rerun. The second summary assertion (`validFrom=1970-01-01`, `hasSize(1)`) has the
-  same exposure.
-- **Why it looks wrong:** the test's own dataset is identifiable (its `dataReference`), and the test checks it
-  individually in its last step; the two database-wide assertions pin the state of the whole shared database
-  instead, which depends on run order and on which earlier classes clean up after themselves — the coupling
-  that once made two other tests' database-wide counts green on a developer machine and red on CI.
-- **What exposed it:** a red `main` after a merge whose change could not touch SECOM (a registry URL in
-  the pom and a workflow), with a green rerun of the same job. A fix would filter the summary assertions to
-  the test's own dataset (or assert that it is absent/present by `dataReference`), not pin the collection size.
-
 ## TESTQ4. `IssuePreviewAndFileITTest` reads two pool-thread names as proof of overlap, which the pool does not promise
 
 - **Location:** `niord/src/test/java/org/niord/core/publication/series/IssuePreviewAndFileITTest.java`,

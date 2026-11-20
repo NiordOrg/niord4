@@ -24,15 +24,19 @@ import org.niord.test.Tx;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -428,7 +432,7 @@ class SecomProtocolITTest extends SecomITTest {
     }
 
     @Test
-    void cancelledDatasetsRequireATemporalExtentOrDataReference() {
+    void cancelledDatasetsRequireATemporalExtentOrDataReference() throws Exception {
         S124Dataset dataset = committedDataset(55.5, 11.1);
         Tx.requiringNew().run(() -> {
             try {
@@ -439,17 +443,32 @@ class SecomProtocolITTest extends SecomITTest {
             }
         });
 
-        // Without a temporal extent, only active warnings are served (spec 4.1.3/4.1.4);
-        // an empty Get result is a 404 (design §6.3.5), an empty summary list is fine
-        secomGiven()
-                .get("/api/secom/v2/object")
-                .then()
-                .statusCode(404);
+        // Without a temporal extent, only active warnings are served (spec 4.1.3/4.1.4): the cancelled dataset is in
+        // neither the summary nor the Get. The assertions name this test's own dataset: another class's
+        // published warning, or a dataset the background status listener writes moments later, may be served
+        // beside it, so the size of the whole database's answer is not this test's to pin. An empty Get result is
+        // a 404 (design §6.3.5).
+        // The active warning of another test, as the one on CI that turned the size assertions red
+        S124Dataset other = committedDataset(56.0, 11.5);
+        String dataReference = dataset.getUuid().toString();
+        String datasetId = "\"" + dataset.getMessage().getShortId() + "\"";
         secomGiven()
                 .get("/api/secom/v2/object/summary")
                 .then()
                 .statusCode(200)
-                .body("summaryObject", hasSize(0));
+                .body("summaryObject.dataReference", not(hasItem(dataReference)))
+                .body("summaryObject.dataReference", hasItem(other.getUuid().toString()));
+        Response active = secomGiven().get("/api/secom/v2/object");
+        if (active.statusCode() != 404) {
+            assertEquals(200, active.statusCode(), active.asString());
+            List<String> data = active.path("dataResponseObject.data");
+            for (String zip : data) {
+                for (byte[] entry : unzip(Base64.getDecoder().decode(zip)).values()) {
+                    assertFalse(new String(entry, StandardCharsets.UTF_8).contains(datasetId),
+                            "the cancelled dataset " + datasetId + " is served without a temporal extent");
+                }
+            }
+        }
 
         // With a temporal extent covering the dataset, the cancelled dataset is included
         secomGiven()
@@ -457,16 +476,21 @@ class SecomProtocolITTest extends SecomITTest {
                 .get("/api/secom/v2/object/summary")
                 .then()
                 .statusCode(200)
-                .body("summaryObject", hasSize(1))
-                .body("summaryObject[0].info_status", equalTo("CANCELLED"));
+                .body("summaryObject.find { it.dataReference == '" + dataReference + "' }.info_status",
+                        equalTo("CANCELLED"));
 
-        // A known dataReference stays individually retrievable (use case 2)
-        secomGiven()
+        // A known dataReference stays individually retrievable (use case 2), and its data names the dataset, so the
+        // check above that no active dataset names it is not vacuous
+        Response known = secomGiven()
                 .queryParam("dataReference", dataset.getUuid().toString())
                 .get("/api/secom/v2/object")
                 .then()
                 .statusCode(200)
-                .body("dataResponseObject", hasSize(1));
+                .body("dataResponseObject", hasSize(1))
+                .extract().response();
+        Map<String, byte[]> entries = unzip(Base64.getDecoder().decode(known.<String>path("dataResponseObject[0].data")));
+        assertTrue(entries.values().stream().anyMatch(e -> new String(e, StandardCharsets.UTF_8).contains(datasetId)),
+                "the dataset's own data names it " + datasetId);
     }
 
     // ------------------------------------------------------------------------------------------- //
