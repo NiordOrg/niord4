@@ -109,13 +109,222 @@ const WEEK_PAIR_JOIN = /(\$\{week(?:-2-digits)?\}\s*)\+(?=\s*\$\{weekTo(?:-2-dig
  * rule as the server's (`IssueNaming.expand`), decided by the derived numbers.
  */
 function joined(pattern: string, derived: IssueNumbering): string {
-  const week = Number(derived.week);
-  const weekTo = derived.weekTo === '' ? undefined : Number(derived.weekTo);
-  const year = derived.year === '' ? undefined : Number(derived.year);
-  if (derived.week === '' || !Number.isFinite(week) || weeksNamed(week, weekTo, year) < 3) {
+  const weeks = weeksOf(derived);
+  if (weeks === undefined || weeks < 3) {
     return pattern;
   }
   return pattern.replace(WEEK_PAIR_JOIN, '$1-');
+}
+
+/** How many weeks the derived numbers name, or `undefined` where there is no week. */
+function weeksOf(derived: IssueNumbering): number | undefined {
+  const week = Number(derived.week);
+  if (derived.week === '' || !Number.isFinite(week)) {
+    return undefined;
+  }
+  const weekTo = derived.weekTo === '' ? undefined : Number(derived.weekTo);
+  const year = derived.year === '' ? undefined : Number(derived.year);
+  return weeksNamed(week, weekTo, year);
+}
+
+/**
+ * The pattern as the issue's weeks write it: {@link singleWeek} for an issue of
+ * one week, {@link joined} for one of three weeks or more, and as written for a
+ * pair.
+ */
+function written(pattern: string, derived: IssueNumbering): string {
+  return weeksOf(derived) === 1 ? singleWeek(pattern) : joined(pattern, derived);
+}
+
+/** The brackets a single week never leaves half, each as its opener and its closer. */
+const BRACKETS: readonly (readonly [string, string])[] = [
+  ['(', ')'],
+  ['[', ']'],
+];
+
+const isFirstWeek = (token: string) => token === 'week' || token === 'week-2-digits';
+const isClosingWeek = (token: string) => token === 'weekTo' || token === 'weekTo-2-digits';
+
+/**
+ * The pattern as a single week writes it: without its closing week, so a
+ * single week is `Uge 36, 2026` under `Uge ${week}+${weekTo}, ${year}` and
+ * under `Uge ${week} og ${weekTo}, ${year}` alike.
+ *
+ * The server's rule (`IssueNaming.singleWeek`), written to match it: each
+ * closing-week token goes with the text that joins it to the first-week token
+ * next to it (the one before, else the one after); a bracket that text opens or
+ * closes goes whole, one that holds the first week stays, and where the bracket
+ * closes or opens only beyond another token it stays with only the text inside
+ * it gone; a closing-week token with no first-week token next to it prints as
+ * the first week, in its own variant. The tokens are taken from left to right.
+ */
+function singleWeek(pattern: string): string {
+  let p = pattern;
+  for (;;) {
+    const tokens = [...p.matchAll(TOKEN)].map((m) => ({
+      name: m[1].trim(),
+      start: m.index,
+      end: m.index + m[0].length,
+    }));
+    const c = tokens.findIndex((t) => isClosingWeek(t.name));
+    if (c < 0) {
+      return p;
+    }
+    const closing = tokens[c];
+    const before = tokens[c - 1];
+    const after = tokens[c + 1];
+    if (before && isFirstWeek(before.name)) {
+      p = dropAfterFirstWeek(p, before.end, closing.start, closing.end, after?.start ?? p.length);
+    } else if (after && isFirstWeek(after.name)) {
+      p = dropBeforeFirstWeek(p, before?.end ?? 0, closing.start, closing.end, after.start);
+    } else {
+      const first = closing.name === 'weekTo' ? '${week}' : '${week-2-digits}';
+      p = p.slice(0, closing.start) + first + p.slice(closing.end);
+    }
+  }
+}
+
+/** The closing week at [cs, ce) and the text from the first week's end to it, brackets whole. */
+function dropAfterFirstWeek(
+  p: string,
+  from: number,
+  cs: number,
+  ce: number,
+  limit: number,
+): string {
+  // A bracket the joiner closes without opening it holds the first week, and stays.
+  let start = from;
+  for (const [opener, closer] of BRACKETS) {
+    let open = 0;
+    for (let i = from; i < cs; i++) {
+      if (p[i] === opener) {
+        open++;
+      } else if (p[i] === closer) {
+        if (open > 0) {
+          open--;
+        } else {
+          start = Math.max(start, i + 1);
+        }
+      }
+    }
+  }
+  // A bracket the rest of the joiner opens goes up to where the text after the closing week closes it.
+  let end = ce;
+  let keepTo = start;
+  let closed = true;
+  for (const [opener, closer] of BRACKETS) {
+    const opened: number[] = [];
+    for (let i = start; i < cs; i++) {
+      if (p[i] === opener) {
+        opened.push(i);
+      } else if (p[i] === closer && opened.length > 0) {
+        opened.pop();
+      }
+    }
+    if (opened.length === 0) {
+      continue;
+    }
+    keepTo = Math.max(keepTo, opened[opened.length - 1] + 1);
+    const at = closingAfter(p, ce, limit, opener, closer, opened.length);
+    if (at < 0) {
+      closed = false;
+    } else {
+      end = Math.max(end, at);
+    }
+  }
+  return closed ? p.slice(0, start) + p.slice(end) : p.slice(0, keepTo) + p.slice(ce);
+}
+
+/** The closing week at [cs, ce) and the text from it to the first week's start, brackets whole. */
+function dropBeforeFirstWeek(p: string, limit: number, cs: number, ce: number, to: number): string {
+  // A bracket the joiner opens without closing it holds the first week, and stays.
+  let end = to;
+  for (const [opener, closer] of BRACKETS) {
+    let depth = 0;
+    for (let i = to - 1; i >= ce; i--) {
+      if (p[i] === closer) {
+        depth++;
+      } else if (p[i] === opener) {
+        if (depth > 0) {
+          depth--;
+        } else {
+          end = Math.min(end, i);
+        }
+      }
+    }
+  }
+  // A bracket the rest of the joiner closes goes back to where the text before the closing week opens it.
+  let start = cs;
+  let keepFrom = end;
+  let opened = true;
+  for (const [opener, closer] of BRACKETS) {
+    let open = 0;
+    let unopened = 0;
+    let firstUnopened = -1;
+    for (let i = ce; i < end; i++) {
+      if (p[i] === opener) {
+        open++;
+      } else if (p[i] === closer) {
+        if (open > 0) {
+          open--;
+        } else {
+          unopened++;
+          if (firstUnopened < 0) {
+            firstUnopened = i;
+          }
+        }
+      }
+    }
+    if (unopened === 0) {
+      continue;
+    }
+    keepFrom = Math.min(keepFrom, firstUnopened);
+    const at = openingBefore(p, cs, limit, opener, closer, unopened);
+    if (at < 0) {
+      opened = false;
+    } else {
+      start = Math.min(start, at);
+    }
+  }
+  return opened ? p.slice(0, start) + p.slice(end) : p.slice(0, cs) + p.slice(keepFrom);
+}
+
+/** Just after the closer that closes `open` brackets, searching [from, limit), or -1. */
+function closingAfter(
+  p: string,
+  from: number,
+  limit: number,
+  opener: string,
+  closer: string,
+  open: number,
+): number {
+  for (let i = from; i < limit; i++) {
+    if (p[i] === opener) {
+      open++;
+    } else if (p[i] === closer && --open === 0) {
+      return i + 1;
+    }
+  }
+  return -1;
+}
+
+/** The opener that opens `unopened` brackets, searching back from `from` to `limit`, or -1. */
+function openingBefore(
+  p: string,
+  from: number,
+  limit: number,
+  opener: string,
+  closer: string,
+  unopened: number,
+): number {
+  for (let i = from - 1; i >= limit; i--) {
+    if (p[i] === closer) {
+      unopened++;
+    } else if (p[i] === opener && --unopened === 0) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 /**
@@ -124,8 +333,11 @@ function joined(pattern: string, derived: IssueNumbering): string {
  *
  * `undefined` is a real answer and the callers depend on it: a pattern with a
  * token this build cannot resolve, or one whose value the issue does not carry
- * (a single-week issue has no `weekTo`), expands to a string that is not what
- * the server would produce. Comparing against it would mark every such issue as
+ * (an issue with no numeric edition under `${edition}`), expands to a string
+ * that is not what the server would produce. A single week's closing week is
+ * not such a value: the pattern drops it with its joiner first
+ * ({@link singleWeek}), as the server does, so `Uge ${week}+${weekTo}, ${year}`
+ * suggests `Uge 36, 2026`. Comparing against it would mark every such issue as
  * tailored, and offering it as "follow the series again" would write a name
  * with a hole in it. So a pattern that cannot be expanded exactly is not
  * expanded at all, and the surfaces above simply say nothing about that field.
@@ -141,7 +353,7 @@ export function expandIssuePattern(
   }
   const values = numberingTokens(printed, derived);
   let resolvable = true;
-  const expanded = joined(source, derived).replace(TOKEN, (_match, token: string) => {
+  const expanded = written(source, derived).replace(TOKEN, (_match, token: string) => {
     const name = token.trim();
     // Asked of the map's OWN keys: a token naming something every object carries
     // — `${constructor}` — would otherwise resolve to a value that is not a

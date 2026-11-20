@@ -292,10 +292,13 @@ period ends, read in the time zone of the series' domain. `${weekTo}` is used by
 covers more than one week, such as a double issue over a holiday; it is empty otherwise. A
 pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
 an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
-prints as a hyphen). A single week under such a pattern keeps the `+` in its name, "Week 36+",
-and in its file name where the file name pattern writes `${weekTo}` as well; so a series whose
-issues are double only now and then names them by `${week}` alone, and the weeks of a double issue
-are written under _Numbering_ (see <<publication-tailor>>).
+prints as a hyphen). A single week under such a pattern leaves `${weekTo}` out together with the
+text between it and `${week}`: "Week ${week}+${weekTo}" names it "Week 36", and "Week ${week} and
+${weekTo}" does too, in the name, the file name and the reference format alike. A bracket around
+the closing week goes with it ("Week ${week} (${weekTo})" is "Week 36"), and a `${weekTo}` with
+no `${week}` beside it prints the single week ("Week ${weekTo}" is "Week 36"). So a pattern that
+writes both weeks serves a series whose issues are double only now and then. An issue named
+before this rule keeps the name it was given.
 
 The weekly reports print the weeks in their heading as the series' name pattern writes them when
 the document is generated: under `${week}+${weekTo}` a double issue is headed "Week 51+52" and a

@@ -550,7 +550,22 @@ cut-off's week-year, and the earlier year's 52 or 53 weeks are counted (the owne
 pattern writes the pair as `${week}+${weekTo}`, and that `+`, and only that one, prints as a hyphen for an
 issue of three weeks or more, in the name, the file name and the citation alike (`IssueNaming.expand`, and
 the admin app's `issueNumberText` and `expandIssuePattern`; pinned by `IssueNamingTest` and
-`issue-number.spec.ts`). A released or imported issue keeps the name and file name it has. A year prints its
+`issue-number.spec.ts`). **A single week leaves its closing week out.** An issue of one week has no closing
+week, so each closing-week token (`${weekTo}`, `${weekTo-2-digits}`) leaves the pattern together with the text
+that joins it to the first week: the name is `Uge 36, 2026` under `Uge ${week}+${weekTo}, ${year}` and under
+`Uge ${week} og ${weekTo}, ${year}` alike, and a file name and a citation the same. The token is joined to the
+first week when the token next to it, with only text between them, is `${week}` or `${week-2-digits}`: the one
+before it, else the one after it (`NtM ${weekTo} back to ${week}` is `NtM 36`). A bracket is never left half:
+one the dropped text opens goes up to where it closes (`Week ${week} (${weekTo}) ${year}` is `Week 36 2026`),
+one it closes goes back to where it opens, a bracket that holds the first week stays
+(`Week (${week}+${weekTo})` is `Week (36)`), and where the bracket closes or opens only beyond another token
+it stays and only the text inside it goes. A closing-week token with no first-week token next to it is the
+single week's closing week, which is that week, and prints as the first week in its own variant
+(`Uge ${weekTo}, ${year}` is `Uge 36, 2026`). The tokens are taken from left to right; a pair and a range are
+untouched; a closing week equal to the first is one week. The server's `IssueNaming.singleWeek` and the admin
+app's `expandIssuePattern` hold the same rule (pinned by `IssueNamingTest` and `issue-overrides.spec.ts`), so
+the suggestion the drawer offers is the name the server writes. A released or imported issue keeps the name and
+file name it has. A year prints its
 edition only when the edition is not the first; `(1)` beside a yearly invites the reader to look for a second
 edition that does not exist.
 
@@ -627,10 +642,9 @@ issue: `36` under
 `Uge ${week}, ${year}` (for an issue of weeks 36 to 38 too, as its name says), `36 og 37` under
 `Uge ${week} og ${weekTo}, ${year}`, `36+37` or `36-38` under `Uge ${week}+${weekTo}, ${year}`. A pattern
 that writes no week (or none at all) gives that last form, the pair form, so a document is headed by all its
-weeks where its name cannot say them; a week label is printed whole. One case leaves the name: a single week
-under a week part that writes the closing week is headed by the first week's token alone (`36`), where the
-name keeps the text before the empty closing week (`Uge 36+, 2026`, ISSUE13 in
-`be/docs/potential-errors.md`), until that name is settled. The pattern is read as it stands at the render,
+weeks where its name cannot say them; a week label is printed whole. A single week is headed by its week
+alone under all three (`36`), as its name leaves the closing week out (`Uge 36, 2026`, above). The pattern is
+read as it stands at the render,
 not the name stored on the issue, and the two part where an editor renamed the issue by hand without a week
 label, where the issue was named before the pattern changed (an amendment or a new release after the change
 is headed by the new pattern), and where the report's language has no pattern (the pair form, while another

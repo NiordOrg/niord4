@@ -569,10 +569,10 @@ public class IssueRenderRealITTest extends ITTest {
 
     /**
      * A single week of a series whose name patterns write the closing week, "Uge ${week}+${weekTo}, ${year}" and
-     * "Week ${week} and ${weekTo}, ${year}": the closing week expands to nothing, and the names keep the text before
-     * it ("Uge 46+, 2023", ISSUE13), but the PDFs are headed by the week alone, "46, 2023", under the title and on
-     * the NtM line. FAILS on the rule that expanded the whole week part, which headed them "46+, 2023" and
-     * "46 and , 2023".
+     * "Week ${week} and ${weekTo}, ${year}": the names leave the closing week out with the text that joins it
+     * ("Uge 46, 2023", "Week 46, 2023"), and the PDFs are headed by the week alone, "46, 2023", under the title and
+     * on the NtM line. FAILS on the rule that expanded the closing week as nothing and kept its joiner, which named
+     * and headed them "46+, 2023" and "46 and , 2023".
      */
     @Test
     @Transactional
@@ -592,6 +592,8 @@ public class IssueRenderRealITTest extends ITTest {
         PublicationIssue published = em.find(PublicationIssue.class, issue.getId());
         assertEquals(Integer.valueOf(46), published.getWeek(), "the issue's week");
         assertNull(published.getWeekTo(), "a single week has no closing week");
+        assertEquals("Uge 46, 2023", published.getDesc("da").getName());
+        assertEquals("Week 46, 2023", published.getDesc("en").getName());
 
         for (String lang : List.of("da", "en")) {
             byte[] bytes = store.readAll(store.stat(filePathOf(published, lang)).orElseThrow());

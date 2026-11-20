@@ -1655,6 +1655,43 @@ public class IssuePublishITTest extends ITTest {
     }
 
     /**
+     * A single week released under patterns that write two weeks is named, filed and linked by its one week: under
+     * "Uge ${week}+${weekTo}, ${year}" and "nm-uge-${week-2-digits}+${weekTo-2-digits}-${year}" the issue of week 46
+     * of 2023 is "Uge 46, 2023", its document "nm-uge-46-2023.pdf", and its link ends in that file name. FAILS on
+     * the expansion that printed the closing week as nothing and kept its joiner: "Uge 46+, 2023" and
+     * "nm-uge-46+-2023.pdf".
+     */
+    @Test
+    @Transactional
+    public void aSingleWeekIsNamedFiledAndLinkedWithoutItsClosingWeek() {
+        PublicationSeries s = series(SeriesCadence.WEEKLY, TimeRelation.PUBLISHED_IN_INTERVAL,
+                ReleaseMode.MANUAL_GATE, NextIssueCreation.MANUAL, SeriesStatus.ACTIVE);
+        s.getDescs().get(0).setNameSuggestionPattern("Uge ${week}+${weekTo}, ${year}");
+        s.getDescs().get(0).setFileNamePattern("nm-uge-${week-2-digits}+${weekTo-2-digits}-${year}");
+        // The cut-off on 14 November 2023 is in ISO week 46, and the window opens one week before it.
+        Date stamp = new Date(1_700_000_000_000L);
+        PublicationIssue i = issue(s, new Date(stamp.getTime() - 7 * 24 * 3600_000L));
+        em.flush();
+
+        publishService.publish(i.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS, null, stamp));
+        em.flush();
+        em.clear();
+
+        PublicationIssue after = em.find(PublicationIssue.class, i.getId());
+        assertEquals(IssueStatus.PUBLISHED, after.getStatus());
+        assertEquals(Integer.valueOf(46), after.getWeek(), "the issue's week");
+        assertNull(after.getWeekTo(), "a single week has no closing week");
+        PublicationIssueDesc desc = after.getDesc("da");
+        assertEquals("Uge 46, 2023", desc.getName(), "the name keeps the joiner of a closing week it does not have");
+        assertEquals("nm-uge-46-2023.pdf", desc.getFileName(),
+                "the file name keeps the joiner of a closing week it does not have");
+        assertEquals(after.getRepoPath() + "/nm-uge-46-2023.pdf", desc.getFilePath());
+        assertEquals("/rest/repo/file/" + after.getRepoPath() + "/nm-uge-46-2023.pdf",
+                IssuePublicationMapping.linkOf(desc), "the link is not the file's");
+    }
+
+    /**
      * A SOURCE WEEK THAT FILED NOTHING IS STILL A SECTION.
      *
      * The sections are the record of what the year covered, not of what happened

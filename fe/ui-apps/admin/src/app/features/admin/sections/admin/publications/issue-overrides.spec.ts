@@ -146,8 +146,6 @@ describe('expanding a series pattern', () => {
   it('says nothing about a pattern whose tokens it cannot resolve', () => {
     expect(expand('EfS ${month}/${year}', FOLLOWING)).toBeUndefined();
     expect(expand('EfS ${day-2-digits}.${month-2-digits}', FOLLOWING)).toBeUndefined();
-    // weekTo is a real token, but this issue does not run to a second week.
-    expect(expand('EfS ${week}-${weekTo} ${year}', FOLLOWING)).toBeUndefined();
     // Not a token at all, however much it looks like one to an object.
     expect(expand('EfS ${constructor}', FOLLOWING)).toBeUndefined();
   });
@@ -173,6 +171,73 @@ describe('expanding a series pattern', () => {
   it('says nothing about a series that names no pattern', () => {
     expect(expand(undefined, FOLLOWING)).toBeUndefined();
     expect(expand('  ', FOLLOWING)).toBeUndefined();
+  });
+});
+
+/**
+ * A single week is named without its closing week, as the server names it
+ * (`IssueNaming.singleWeek`, the same cases in `IssueNamingTest`): the
+ * closing-week token goes with the text that joins it to the first week. FAILS
+ * on the expansion that offered no name at all for a single week under
+ * `${weekTo}`, while the server wrote `Uge 36+, 2026`.
+ */
+describe('a single week under a pattern that writes two', () => {
+  const single = { ...FOLLOWING, week: 36, year: 2026 } as PublicationIssue;
+  const name = (pattern: string) => expand(pattern, single);
+
+  it('drops the closing week with the text that joins it, in either variant', () => {
+    expect(name('Uge ${week}+${weekTo}, ${year}')).toBe('Uge 36, 2026');
+    expect(name('Uge ${week} og ${weekTo}, ${year}')).toBe('Uge 36, 2026');
+    expect(name('Uge ${week} + ${weekTo}, ${year}')).toBe('Uge 36, 2026');
+    expect(name('nm-w${week-2-digits}+${weekTo-2-digits}-${year}.pdf')).toBe('nm-w36-2026.pdf');
+    expect(name('nm-w${week}-${weekTo-2-digits}-${year}.pdf')).toBe('nm-w36-2026.pdf');
+    expect(
+      expandFileNamePattern(
+        'nm-uge-${week-2-digits}+${weekTo-2-digits}-${year}',
+        printedNumbering(single),
+        derivedNumbering(single),
+      ),
+    ).toBe('nm-uge-36-2026.pdf');
+  });
+
+  it('treats a closing week equal to the first as one week, and keeps a label whole', () => {
+    expect(expand('Uge ${week}+${weekTo}, ${year}', { ...single, weekTo: 36 })).toBe(
+      'Uge 36, 2026',
+    );
+    expect(expand('Uge ${week}+${weekTo}, ${year}', { ...single, weekLabel: '36/37' })).toBe(
+      'Uge 36/37, 2026',
+    );
+  });
+
+  it('leaves a pair and a range as they are', () => {
+    expect(expand('Uge ${week}+${weekTo}, ${year}', { ...single, weekTo: 37 })).toBe(
+      'Uge 36+37, 2026',
+    );
+    expect(expand('Uge ${week} og ${weekTo}, ${year}', { ...single, weekTo: 37 })).toBe(
+      'Uge 36 og 37, 2026',
+    );
+  });
+
+  it('drops a closing week wherever it stands, and prints a lone one as the week', () => {
+    expect(name('NtM ${weekTo} back to ${week}')).toBe('NtM 36');
+    expect(name('NtM ${weekTo-2-digits}-${week}')).toBe('NtM 36');
+    expect(name('Uge ${weekTo}, ${year}')).toBe('Uge 36, 2026');
+    expect(name('uge-${weekTo-2-digits}-${year}')).toBe('uge-36-2026');
+    expect(name('Uge ${week}, ${year} (${weekTo})')).toBe('Uge 36, 2026 (36)');
+    expect(name('Uge ${week}+${weekTo} (${weekTo-2-digits}), ${year}')).toBe('Uge 36, 2026');
+    expect(name('${weekTo}+${weekTo-2-digits}')).toBe('36');
+  });
+
+  it('never leaves half a bracket', () => {
+    expect(name('Week ${week} (${weekTo}) ${year}')).toBe('Week 36 2026');
+    expect(name('Week ${week} [to ${weekTo}] ${year}')).toBe('Week 36 2026');
+    expect(name('Week ${week} ((${weekTo})) ${year}')).toBe('Week 36 2026');
+    expect(name('Week (${week}+${weekTo}) ${year}')).toBe('Week (36) 2026');
+    expect(name('Week (${week}) + (${weekTo}) ${year}')).toBe('Week (36) 2026');
+    expect(name('Uge (${weekTo}) ${week}')).toBe('Uge 36');
+    expect(name('NtM ${weekTo} (${week})')).toBe('NtM (36)');
+    expect(name('Uge ${week} (to ${weekTo}, ${year})')).toBe('Uge 36 (, 2026)');
+    expect(name('Uge (${year}, ${weekTo}) ${week}')).toBe('Uge (2026, ) 36');
   });
 });
 
