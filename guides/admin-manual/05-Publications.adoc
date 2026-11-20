@@ -265,9 +265,10 @@ links has only the file and link patterns.
 | How the report is printed.
 
 | Report parameters
-| Values handed to the report, as name and value pairs (_add parameter_). Week, year and edition
-  are set from the issue and cannot be typed here. Where the report names parameters of its own,
-  they are offered to add.
+| Values handed to the report, as name and value pairs (_add parameter_). The values the issue
+  supplies, `week`, `weekTo`, `weeks`, `year`, `edition`, `yearNumber` and `weekNumber`, are set
+  from the issue and cannot be typed here, nor for one issue under _Tailor issue_. Where the report
+  names parameters of its own, they are offered to add.
 
 | Sort messages by, Sort direction
 | The order of the messages in the document. Set both or neither.
@@ -291,9 +292,12 @@ period ends, read in the time zone of the series' domain. `${weekTo}` is used by
 covers more than one week, such as a double issue over a holiday; it is empty otherwise. A
 pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
 an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
-prints as a hyphen). The weekly reports print the weeks in their heading as the name pattern writes
-them, so a double issue named "Week 51+52" is headed "Week 51+52"; a single week is headed by its
-week alone. The values can be overridden for one issue (see <<publication-tailor>>).
+prints as a hyphen). The weekly reports print the weeks in their heading as the series' name
+pattern writes them when the document is generated: under `${week}+${weekTo}` a double issue is
+headed "Week 51+52" and a single week "Week 36"; under a pattern that writes the first week alone,
+as the series carried over from the previous system do, a double issue is headed by its first week.
+A name typed for one issue does not change the heading; a week written under _Numbering_ does, and
+is printed as written. The values can be overridden for one issue (see <<publication-tailor>>).
 
 [#publication-series-frequency]
 ==== Frequency & Naming
@@ -550,8 +554,10 @@ the series for one issue:
 * _Name_ and _File name_ in each language. Under each field Niord says what the series would
   suggest.
 * _Numbering_: the _Week_, _Year_ and _Edition_ printed on the issue. They are worked out from the
-  cut-off, but are free text: write "51 & 52" for a double issue, and the name, the file name and
-  the report's heading follow.
+  cut-off, but are free text. Under a name pattern that writes the first week alone (`${week}`),
+  write "51 & 52" for a double issue, and the name, the file name and the report's heading follow.
+  A pattern that also writes `${weekTo}` adds its own closing week after what you write
+  ("Week 51 & 52+52"), so leave the week as it is worked out there.
 * _Report_ and _Report parameters_: another report, or other parameter values, for this issue only.
 
 A tailored field shows _Follow the series again_ beside it, and _Reset all tailoring_ undoes them
