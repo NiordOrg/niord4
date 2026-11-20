@@ -302,23 +302,6 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
 - **Exposed by:** `FileTypesTest` asserts the *actual* mappings (including unknown-extension → `null`).
 - **Severity:** Low.
 
-## REPO5 — A message PDF may leave out an image attachment whose name holds `%` or `;`
-
-- **Location:** `be/niord/bootstrap/templates/messages/message-support.ftl`, macro `renderAttachment`
-  (`<img src="/rest/repo/file/${att.path}">`, the path written unencoded), fetched by the PDF renderer over HTTP
-  from the backend's own origin (`org/niord/core/script/pdf/SameOriginUserAgent`). The same line is in the
-  Greenland repository's copy of the template.
-- **Description:** since the request firewall accepts `%25` and `%3B` on a repository file's path, a file whose
-  name holds `%` or `;` opens in the administration app and on the public site. The
-  template does not encode the path, so the renderer asks for a raw `%` (an invalid escape) or a raw `;` (a path
-  parameter, refused by the firewall), and the image is presumably missing from the PDF. Not checked by running it.
-- **Why it looks wrong:** the attachment shows in the admin app and on the public site but not in the printed
-  message.
-- **Exposed by:** reading the template while the firewall was opened for such names, 2026-11-18; no test.
-- **Severity:** Low — an image attachment whose name holds one of these characters is rare. The template is data:
-  a fix (`?url` on each segment, or a path the code encodes) ships in a release folder and reaches a database only
-  by import.
-
 ## REPO6 — A link stored with a raw `;` in a repository file name still does not open
 
 - **Location:** the stored links that point at repository files: a publication desc's `link` written by

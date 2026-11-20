@@ -86,6 +86,30 @@
 
 
 <#-- ***************************************  -->
+<#-- A repository path as an address: each segment encoded, the slashes kept.
+     A path is stored encoded (an upload's) or as the file was named (an imported
+     message's), so an escape the path already holds (%25, %3B, %20) is kept and
+     every other character is encoded: both spellings give the same address, and a
+     "%" that starts no escape is a percent sign. The admin app and the public site
+     encode a path the same way (encodeRepoPath). -->
+<#-- ***************************************  -->
+<#function repoPathUrl path>
+    <#local out = '' />
+    <#list path?split('/') as segment>
+        <#if !segment?is_first><#local out = out + '/' /></#if>
+        <#list segment?matches(r'%[0-9A-Fa-f]{2}|%|[^%]+') as part>
+            <#if part?length == 3 && part?starts_with('%')>
+                <#local out = out + part />
+            <#else>
+                <#local out = out + part?url('UTF-8') />
+            </#if>
+        </#list>
+    </#list>
+    <#return out />
+</#function>
+
+
+<#-- ***************************************  -->
 <#-- Renders an attachment  -->
 <#-- ***************************************  -->
 <#macro renderAttachment att >
@@ -100,7 +124,7 @@
 
     <div class="attachment">
         <div>
-            <img src="/rest/repo/file/${att.path}" style="${imageStyle}">
+            <img src="/rest/repo/file/${repoPathUrl(att.path)}" style="${imageStyle}">
         </div>
         <#if att.descs?has_content && att.descs[0].caption?has_content>
             <div style="margin: 1mm; font-style: italic">${att.descs[0].caption}</div>
