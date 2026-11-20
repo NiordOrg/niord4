@@ -478,6 +478,56 @@ public class IssueRenderRealITTest extends ITTest {
         }
     }
 
+    /**
+     * RENDER11, through the real renderer: a released issue of two weeks or of three is headed by all its weeks,
+     * "45+46, 2023" and "44-46, 2023", in both languages' documents, where the templates printed the first week
+     * alone. The heading is read from the PDF's first page, which prints it under the title and on the
+     * "NtM 45+46 2023" line. The other cells check the model and the templates with stubbed texts; this one reads
+     * what the engine wrote.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = {2, 3})
+    @Transactional
+    public void aReleasedIssueOfSeveralWeeksIsHeadedByAllItsWeeks(int weeks) throws Exception {
+        PublicationIssue issue = anIssueInTwoLanguages();
+        writtenFolder = issue.getRepoPath();
+        // The release closes the issue on 14 November 2023, in ISO week 46; the interval opens the given number
+        // of weeks before it, as the injection test makes a range.
+        long cutoff = 1_700_000_000_000L;
+        issue.setIntervalFrom(new Date(cutoff - weeks * 7L * 24 * 3600 * 1000));
+        em.flush();
+
+        publishService.publish(issue.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(cutoff)));
+        em.flush();
+
+        PublicationIssue published = em.find(PublicationIssue.class, issue.getId());
+        assertEquals(IssueStatus.PUBLISHED, published.getStatus());
+        assertEquals(Integer.valueOf(47 - weeks), published.getWeek(), "the issue's first week");
+        assertEquals(Integer.valueOf(46), published.getWeekTo(), "the issue's closing week");
+        String expected = (weeks == 2 ? "45+46" : "44-46") + ", 2023";
+
+        for (String lang : List.of("da", "en")) {
+            byte[] bytes = store.readAll(store.stat(filePathOf(published, lang)).orElseThrow());
+            String firstPage = firstPageText(bytes);
+            assertTrue(firstPage.contains(expected),
+                    "the " + lang + " document of an issue of weeks " + (47 - weeks) + " to 46 is not headed '"
+                            + expected + "':\n" + firstPage);
+            assertTrue(firstPage.contains(expected.replace(",", "")),
+                    "the " + lang + " document's NtM line does not name all the weeks:\n" + firstPage);
+        }
+    }
+
+    /** The text of a PDF's first page, as the reader extracts it. */
+    private static String firstPageText(byte[] bytes) throws IOException {
+        com.itextpdf.text.pdf.PdfReader reader = new com.itextpdf.text.pdf.PdfReader(bytes);
+        try {
+            return com.itextpdf.text.pdf.parser.PdfTextExtractor.getTextFromPage(reader, 1);
+        } finally {
+            reader.close();
+        }
+    }
+
     private static String filePathOf(PublicationIssue issue, String lang) {
         return issue.getDescs().stream().filter(d -> lang.equals(d.getLang()))
                 .findFirst().orElseThrow().getFilePath();
