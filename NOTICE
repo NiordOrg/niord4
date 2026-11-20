@@ -54,6 +54,18 @@ GNU General Public License, version 3:
 
 Both were taken over from the previous Niord.
 
+GNU Affero General Public License, version 3:
+
+  com.itextpdf:itextpdf, version 5.5.13.3
+      The library that writes the PDF files. It comes with
+      org.xhtmlrenderer:flying-saucer-pdf-itext5 (be/pom.xml,
+      be/niord/pom.xml), which renders every PDF the backend makes, and one
+      class of the backend draws with it directly
+      (be/niord/src/main/java/org/niord/core/script/pdf/SVGReplacedElement.java).
+      It is not in this repository; Maven fetches it when the backend is
+      built, and the built backend and its container image hold it. The pom
+      it is published with states "GNU Affero General Public License v3".
+
 
 Third-party material in this repository
 ---------------------------------------
