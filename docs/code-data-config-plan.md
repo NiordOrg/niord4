@@ -1381,7 +1381,8 @@ whose absence silently falls back to `x.ftl`.
       a language was added to, the job's line ending ", replaced in N, languages added to M (an earlier archive of
       this bootstrap run created them)", with a note per key ("Replaced the en of k1 (…): one → ONE"); the cached
       dictionary is saved and evicted when either is above 0.
-    - **A category**, by MRN, else by one of its names in that name's language, case-insensitively, under the same
+    - **A category**, by MRN (without regard to case since 2026-11-21, an exact match first), else by one of its
+      names in that name's language, case-insensitively, under the same
       parent (a root among the roots only), so an entry carries the
       English name, and its parents', and a `da`-only entry creates a second category
       (`CategoryService.replaceInCategory`): the type, active flag, sort order and AtoN filter replaced when given

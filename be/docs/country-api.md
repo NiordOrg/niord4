@@ -339,7 +339,8 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   stays active.
 
   An addition names its base product entry as the import finds it: a template by its path, a dictionary entry by
-  the dictionary's name and its key, a category by its MRN, or else by one of its names in that name's language,
+  the dictionary's name and its key, a category by its MRN (without regard to case, an exact match first), or else
+  by one of its names in that name's language,
   case-insensitively, under the same parent (a root among the roots only), so an addition carries the English
   name, and the parents' too, and a
   `da`-only entry creates a second category; a parameter type by its name and a template parameter by its `paramId`

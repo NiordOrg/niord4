@@ -15,6 +15,11 @@
  */
 package org.niord.core.area;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.persistence.EntityManager;
@@ -428,6 +433,58 @@ class AreaServiceITTest extends ITTest {
 
         assertEquals(created.getId(), areaService.findByMrn("urn:mrn:dma:area:it-findme").getId());
         assertNull(areaService.findByMrn("urn:mrn:dma:area:does-not-exist"));
+    }
+
+    @Test
+    @Transactional
+    void findByMrnMatchesWithoutRegardToCase() {
+        Area created = newArea("IT-Mrn-Case", "en");
+        created.setMrn("urn:mrn:dma:area:IT-Case-Me");
+        created = areaService.createArea(created, null);
+        em.flush();
+
+        assertEquals(created.getId(), areaService.findByMrn("URN:MRN:DMA:AREA:it-case-me").getId(),
+                "an MRN typed in other capital letters finds the area");
+        assertEquals(created.getId(), areaService.findByAreaId("urn:mrn:dma:area:it-case-me").getId(),
+                "the look-up by id or MRN (the public API, the message search, the publication criteria) does too");
+        Area template = newArea("IT-Mrn-Case-Import", "en");
+        template.setMrn("URN:MRN:DMA:AREA:IT-CASE-ME");
+        assertEquals(created.getId(), areaService.importArea(template, true, false).getId(),
+                "an imported area whose MRN differs only in case is matched with the existing area, not created");
+    }
+
+    @Test
+    @Transactional
+    void findByMrnPrefersTheExactMatchAndAnswersNoneForTwinsWithoutOne() {
+        Area lower = newArea("IT-Mrn-Twin-1", "en");
+        lower.setMrn("urn:mrn:dma:area:it-twin");
+        lower = areaService.createArea(lower, null);
+        Area upper = newArea("IT-Mrn-Twin-2", "en");
+        upper.setMrn("URN:MRN:DMA:AREA:IT-TWIN");
+        upper = areaService.createArea(upper, null);
+        em.flush();
+
+        Logger logger = (Logger) LoggerFactory.getLogger(AreaService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertEquals(lower.getId(), areaService.findByMrn("urn:mrn:dma:area:it-twin").getId(),
+                    "the exact match is found");
+            assertEquals(upper.getId(), areaService.findByMrn("URN:MRN:DMA:AREA:IT-TWIN").getId(),
+                    "the exact match is found");
+            assertNull(areaService.findByMrn("Urn:Mrn:Dma:Area:It-Twin"),
+                    "two areas whose MRNs differ only in case and neither exactly: none is answered");
+        } finally {
+            logger.detachAppender(appender);
+        }
+        List<String> warnings = appender.list.stream()
+                .filter(e -> e.getLevel() == Level.WARN)
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("'Urn:Mrn:Dma:Area:It-Twin'")
+                        && w.contains("'urn:mrn:dma:area:it-twin'") && w.contains("'URN:MRN:DMA:AREA:IT-TWIN'")),
+                "a WARN names the MRN looked up and the two found: " + warnings);
     }
 
     @Test

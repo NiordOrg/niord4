@@ -15,6 +15,11 @@
  */
 package org.niord.core.category;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.persistence.EntityManager;
@@ -585,6 +590,59 @@ class CategoryServiceITTest extends ITTest {
 
         assertEquals(created.getId(), categoryService.findByMrn("urn:mrn:dma:category:it-findme").getId());
         assertNull(categoryService.findByMrn("urn:mrn:dma:category:does-not-exist"));
+    }
+
+    @Test
+    @Transactional
+    void findByMrnMatchesWithoutRegardToCase() {
+        Category created = newCategory("IT-Mrn-Case", "en");
+        created.setMrn("urn:mrn:dma:category:IT-Case-Me");
+        created = categoryService.createCategory(created, null);
+        em.flush();
+
+        assertEquals(created.getId(), categoryService.findByMrn("URN:MRN:DMA:CATEGORY:it-case-me").getId(),
+                "an MRN typed in other capital letters finds the category");
+        assertEquals(created.getId(), categoryService.findByCategoryId("urn:mrn:dma:category:it-case-me").getId(),
+                "the look-up by id or MRN (the message search, the publication criteria) does too");
+        Category template = newCategory("IT-Mrn-Case-Import", "en");
+        template.setMrn("URN:MRN:DMA:CATEGORY:IT-CASE-ME");
+        assertEquals(created.getId(), categoryService.importCategory(template, true, false).getId(),
+                "an imported category whose MRN differs only in case is matched with the existing one, not created");
+    }
+
+    @Test
+    @Transactional
+    void findByMrnPrefersTheExactMatchAndAnswersNoneForTwinsWithoutOne() {
+        Category lower = newCategory("IT-Mrn-Twin-1", "en");
+        lower.setMrn("urn:mrn:dma:category:it-twin");
+        lower = categoryService.createCategory(lower, null);
+        Category upper = newCategory("IT-Mrn-Twin-2", "en");
+        upper.setMrn("URN:MRN:DMA:CATEGORY:IT-TWIN");
+        upper = categoryService.createCategory(upper, null);
+        em.flush();
+
+        Logger logger = (Logger) LoggerFactory.getLogger(CategoryService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertEquals(lower.getId(), categoryService.findByMrn("urn:mrn:dma:category:it-twin").getId(),
+                    "the exact match is found");
+            assertEquals(upper.getId(), categoryService.findByMrn("URN:MRN:DMA:CATEGORY:IT-TWIN").getId(),
+                    "the exact match is found");
+            assertNull(categoryService.findByMrn("Urn:Mrn:Dma:Category:It-Twin"),
+                    "two categories whose MRNs differ only in case and neither exactly: none is answered");
+        } finally {
+            logger.detachAppender(appender);
+        }
+        List<String> warnings = appender.list.stream()
+                .filter(e -> e.getLevel() == Level.WARN)
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("'Urn:Mrn:Dma:Category:It-Twin'")
+                        && w.contains("'urn:mrn:dma:category:it-twin'")
+                        && w.contains("'URN:MRN:DMA:CATEGORY:IT-TWIN'")),
+                "a WARN names the MRN looked up and the two found: " + warnings);
     }
 
     @Test

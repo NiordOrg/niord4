@@ -135,6 +135,10 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - No route has an `<h1>`. The headings start at `<h4>` — the area and category headings the site has always
   shown — so a screen reader finds no page title in the document. Giving each route one means either a new visible
   heading or a visually hidden one, and both need wording the site owner has not been asked for.
+- The teaser's `?area=` is matched against the country's root areas letter for letter for the map's starting
+  view (`initialMapView` in `shared/utils/root-area-view.ts`), while the backend matches an area's MRN without regard to case since 2026-11-21. An MRN given in other capital
+  letters finds the area's messages, but the teaser's map starts on the country's first root area until the
+  messages frame it. Comparing an MRN without regard to case there closes it.
 - The print route (`/messages/print`) and the teaser render outside the site's layout, so neither has a main
   landmark and a screen reader's jump to the main content finds nothing there. Wrapping each view's content in
   `<main>` closes it.

@@ -504,24 +504,39 @@ public class CategoryService extends TreeBaseService<Category> {
     /**
      * Returns the category with the given MRN. Returns null if the category is not found.
      * <p>
+     * The MRN is matched without regard to case, exact match first: the category whose MRN is exactly the given one,
+     * and only when there is none, the category whose MRN differs from it only in case.
+     * <p>
      * The MRN is not unique in the schema: when several categories have it (restored data), none is returned, as
-     * when there is none, and a WARN names the MRN.
+     * when there is none, and a WARN names the MRN. So it is when no category has the MRN exactly and several have it
+     * in different case, and the WARN names theirs.
      *
      * @param mrn the MRN of the category
      * @return the category with the given MRN or null if not found
      * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Category findByMrn(String mrn) {
-        try {
-            return em.createNamedQuery("Category.findByMrn", Category.class)
-                    .setParameter("mrn", mrn)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        } catch (NonUniqueResultException e) {
+        List<Category> exact = em.createNamedQuery("Category.findByMrn", Category.class)
+                .setParameter("mrn", mrn)
+                .getResultList();
+        if (exact.size() > 1) {
             log.warn("Several categories have the MRN '{}'; the look-up by MRN answers none of them", mrn);
             return null;
         }
+        if (exact.size() == 1) {
+            return exact.getFirst();
+        }
+        List<Category> folded = em.createNamedQuery("Category.findByMrnIgnoreCase", Category.class)
+                .setParameter("mrn", mrn)
+                .getResultList();
+        if (folded.size() > 1) {
+            log.warn("No category has the MRN '{}' exactly and several have it in different case ({}); the look-up by "
+                    + "MRN answers none of them", mrn, folded.stream()
+                    .map(c -> "'" + c.getMrn() + "' (id " + c.getId() + ")")
+                    .collect(Collectors.joining(", ")));
+            return null;
+        }
+        return folded.isEmpty() ? null : folded.getFirst();
     }
 
     /**

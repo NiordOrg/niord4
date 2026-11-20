@@ -72,7 +72,7 @@ The API has seven endpoints:
 |<<area,/rest/public/v1/area/{areaId}>>
 |Returns one area by its id or its MRN (Maritime Resource Name, a globally unique name such as
 `urn:mrn:iho:country:dk`; see link:../model/model.html#area[Area] in the message model), with its
-parent areas.
+parent areas. The MRN is matched without regard to case.
 
 |<<sub-areas,/rest/public/v1/area/{areaId}/sub-areas>>
 |Lists the areas directly below an area.
@@ -164,7 +164,8 @@ be fetched here, so a citation of it keeps working. Any other id is refused (see
 |String, repeatable
 |`urn:mrn:iho:country:dk`
 |Only messages in these areas or their sub-areas. An area is named by its id (a number) or its
-MRN, as for <<area,/area/{areaId}>>. An area that does not exist matches no message. +
+MRN, as for <<area,/area/{areaId}>>; the MRN is matched without regard to case. An area that does
+not exist matches no message. +
 When every domain searched, those named or else those the system publishes by default, is itself
 limited to areas (see `domain`), the areas of the domains are added to the ones named here, and a
 message in any of them is returned. `areaId` then widens the answer rather than narrowing it.
@@ -449,7 +450,7 @@ Returns one area with its parent areas, up to the top of the area tree.
 |areaId
 |String, in the path
 |`urn:mrn:iho:country:dk`
-|The id of the area (a number) or its MRN.
+|The id of the area (a number) or its MRN, matched without regard to case.
 
 |lang
 |String
@@ -484,7 +485,7 @@ Lists the areas directly below an area, in the order of the area tree. Only area
 |areaId
 |String, in the path
 |`urn:mrn:iho:country:dk`
-|The id of the area (a number) or its MRN.
+|The id of the area (a number) or its MRN, matched without regard to case.
 
 |lang
 |String
