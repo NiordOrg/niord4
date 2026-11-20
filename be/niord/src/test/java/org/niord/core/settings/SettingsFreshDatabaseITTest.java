@@ -178,7 +178,8 @@ class SettingsFreshDatabaseITTest {
         }
 
         // A key only the code declares, with no value in either settings file: the row has the code default, so the
-        // administration app's maps start with the sea-chart layer switched off, as before the key was declared
+        // administration app's maps start with the sea-chart layer switched off, whatever the app's environment file
+        // says, since the value /web serves replaces it
         assertEquals(Map.of("value", false, "type", "Boolean", "web", true, "editable", true),
                 Map.of("value", rows.get("wmsLayerEnabledByDefault").get("value"),
                         "type", rows.get("wmsLayerEnabledByDefault").get("type"),

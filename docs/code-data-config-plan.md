@@ -531,7 +531,7 @@ sorted by key:
   `secomEnabled` (`SecomAdminRestService.java:82-85`) is `web=true` and `editable=false`; the catalog does.
 - **A computed web value is not a setting** (S-124 opt-out, 2026-11-01). `s124Enabled` and `secomEnabled`
   in `/rest/settings/web` are computed from the running properties (§3.2). `s124Enabled` has no declaration
-  and no catalog entry (`SettingsCatalogCurrentTest` asserts it undeclared; the catalog keeps its 73 keys), so
+  and no catalog entry (`SettingsCatalogCurrentTest` asserts it undeclared; the catalog gained no key for it), so
   a settings file naming it fails `undeclared-key`. The `secomEnabled` declaration and a stored row stay
   (add-only), but `/web` puts the computed value after the stored rows, so the row no longer decides what the
   administration app shows.
@@ -543,8 +543,12 @@ sorted by key:
   backend code reads, with `adminIntegrationPageEnabled` (`web=true`, default `false`), the gate of the
   administration app's Integration section (owner, 2026-10-21), and `wmsLayerEnabledByDefault` (`web=true`, default
   `false`, in the code only), whether the administration app's maps start with the sea-chart layer on where
-  `wmsLayerEnabled` shows it (the app read the key before any catalogue declared it, so until then no deployment
-  served it and the layer always started off): twelve constants. `niord.home` and
+  `wmsLayerEnabled` shows it. The app read the key before any catalog declared it, and until then no backend served
+  it, so the layer started as the app's environment file said (off when the file does not set it). Since the key is
+  declared, every start adds the row with `false` and `/web` serves it, and a value `/web` serves replaces the
+  environment file's: a configuration whose environment file sets `wmsLayerEnabledByDefault: true` starts the layer
+  off, unless its country's settings file sets the key `true` or a system administrator switches it on on the
+  Settings page. Twelve constants. `niord.home` and
   `disableLucene` are constants beside their readers: `SettingsService.NIORD_HOME` (no
   code default) and `MessagePostgresIndex.DISABLE_LUCENE` (default `false`). Each declaration
   carries its `web` and `editable` flags, its description and a type that follows the rows deployments hold

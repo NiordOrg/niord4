@@ -130,7 +130,7 @@ class SettingsCatalogCurrentTest {
         assertEquals(12, frontend.size(), "the twelve FrontendSettings keys: " + frontend);
 
         // Whether the administration app's maps start with the sea-chart layer on: served to the web applications
-        // and shown on the Settings page, off by default, as the app is when no value is served
+        // and shown on the Settings page, off by default (the value served replaces the app's environment file's)
         SettingsCatalog.Entry wmsByDefault = byKey.get("wmsLayerEnabledByDefault");
         assertTrue(wmsByDefault != null && wmsByDefault.web() && wmsByDefault.editable(),
                 "wmsLayerEnabledByDefault is a web setting the Settings page edits");
