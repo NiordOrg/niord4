@@ -85,6 +85,10 @@ The generated files are written by `ReleaseFilesGenerator` (`be/niord/bootstrap/
 command), and a release folder never changes once it is merged into the main branch. A change in
 Java that a template depends on stays compatible with the templates deployments already hold.
 
+A changed English text of a key that deployments already hold reaches them the same way: start-up
+leaves the stored text as it is, and the release folder's `texts.json` carries the new one, which
+the import on the Dictionaries page writes only where the system administrator ticks its overwrite.
+
 The imports on the Script resources and Dictionaries pages show a preview first. They add what is
 missing and overwrite only what the system administrator ticks, and they record who imported
 what. Whether to import at all is the system administrator's decision; nothing applies a release

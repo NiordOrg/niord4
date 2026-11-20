@@ -64,6 +64,10 @@ endpoint is missing.
 A green unit run prints only Maven's own lines: what the tests write to the console goes to
 `<module>/target/surefire-reports/<class>-output.txt`. A failure is printed in full.
 
+The test JVMs run in UTC, as a deployment's does: Surefire and Failsafe read the property `argLine`
+of `be/pom.xml`, `-Duser.timezone=UTC`, and `TestJvmZoneTest` and `TestJvmZoneITTest` fail when it
+is lost. An `argLine` given on the command line replaces it, so keep `-Duser.timezone=UTC` in it.
+
 [#writing-tests]
 === Writing tests
 

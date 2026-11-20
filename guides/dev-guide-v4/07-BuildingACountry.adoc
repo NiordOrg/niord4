@@ -62,4 +62,6 @@ In the base product's repository:
   the example depends on.
 
 When a change to the base product changes what a country may use or must do, it is recorded in
-`country-kit/API-CHANGES.md` in the same change.
+`country-kit/API-CHANGES.md`. Until the first production deployment that record is paused: an entry
+is written only when the base product's upgrade test demands one (the kit's `README.md`, _Paused
+until production_).
