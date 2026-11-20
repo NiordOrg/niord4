@@ -288,17 +288,18 @@ The patterns can use these tokens, which the _Insert_ button beside each field a
 `${week}`, `${week-2-digits}`, `${weekTo}`, `${weekTo-2-digits}`, `${year}`, `${year-2-digits}`,
 `${month}`, `${month-2-digits}`, `${day}`, `${day-2-digits}` and `${edition}`. They are filled in
 from the issue's cut-off: an issue is named after the week, month and year in which its content
-period ends, read in the time zone of the series' domain. `${weekTo}` is used by an issue that
-covers more than one week, such as a double issue over a holiday; it is empty otherwise. A
-pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
+period ends, read in the time zone of the series' domain. `${weekTo}` is the closing week of an
+issue that covers more than one week, such as a double issue over a holiday; for a single week
+it is left out together with the text that joins it to `${week}` (see below). A pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
 an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
 prints as a hyphen). A single week under such a pattern leaves `${weekTo}` out together with the
 text between it and `${week}`: "Week ${week}+${weekTo}" names it "Week 36", and "Week ${week} and
 ${weekTo}" does too, in the name, the file name and the reference format alike. A bracket around
 the closing week goes with it ("Week ${week} (${weekTo})" is "Week 36"), and a `${weekTo}` with
 no `${week}` beside it prints the single week ("Week ${weekTo}" is "Week 36"). So a pattern that
-writes both weeks serves a series whose issues are double only now and then. An issue named
-before this rule keeps the name it was given.
+writes both weeks serves a series whose issues are double only now and then. A published issue
+keeps the name and file name it was given; an open issue that follows the series gets the new
+name when its numbers are next worked out.
 
 The weekly reports print the weeks in their heading as the series' name pattern writes them when
 the document is generated: under `${week}+${weekTo}` a double issue is headed "Week 51+52" and a

@@ -334,13 +334,15 @@ function openingBefore(
  * `undefined` is a real answer and the callers depend on it: a pattern with a
  * token this build cannot resolve, or one whose value the issue does not carry
  * (an issue with no numeric edition under `${edition}`), expands to a string
- * that is not what the server would produce. A single week's closing week is
- * not such a value: the pattern drops it with its joiner first
- * ({@link singleWeek}), as the server does, so `Uge ${week}+${weekTo}, ${year}`
- * suggests `Uge 36, 2026`. Comparing against it would mark every such issue as
- * tailored, and offering it as "follow the series again" would write a name
- * with a hole in it. So a pattern that cannot be expanded exactly is not
- * expanded at all, and the surfaces above simply say nothing about that field.
+ * that is not what the server would produce. Comparing against such a partial
+ * expansion would mark every such issue as tailored, and offering it as "follow
+ * the series again" would write a name with a hole in it. So a pattern that
+ * cannot be expanded exactly is not expanded at all, and the surfaces above
+ * simply say nothing about that field.
+ *
+ * A single week's closing week is not such a value: the pattern drops it with
+ * its joiner first ({@link singleWeek}), as the server does, so
+ * `Uge ${week}+${weekTo}, ${year}` suggests `Uge 36, 2026`.
  */
 export function expandIssuePattern(
   pattern: string | undefined,
