@@ -352,9 +352,10 @@ class SettingsRestServiceITTest extends ITTest {
     /**
      * Whether the administration app's maps start with the sea-chart layer on ({@code map.wmsLayerEnabledByDefault} in
      * the app, which takes the key of the flat map as a JSON boolean or the text "true"). Start-up adds the row, off;
-     * the Settings page lists it; and a row that holds true, as the Settings page or a hand-written row leaves it, is
-     * served as the JSON boolean true. Before the key was declared, no catalogue named it: start-up added no row, and
-     * /web left out a row written by hand.
+     * the Settings page lists it; and once that row holds true, as the Settings page leaves it, it is served as the
+     * JSON boolean true. Before the key was declared, no catalog named it: start-up added no row, and /web left out a
+     * row written by hand. A row written by hand before then is kept with its own flags
+     * ({@code SettingsAddMissingITTest.aRowMadeByHandIsAdoptedWithItsOwnFlags}).
      */
     @Test
     void theSeaChartLayersStartIsAWebSettingTheSettingsPageEdits() {
