@@ -1035,6 +1035,22 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   in `Area.hasChanged` (fields left out of the comparison) was fixed on 2026-11-13. Pre-existing; recorded, not
   fixed.
 
+## CATEGORY2. A message's or a domain's category is matched by name at any depth
+
+- **Location:** `niord/src/main/java/org/niord/core/category/CategoryService.java` (`importCategory` without
+  `wholeChain`: a template without a parent is looked up by `findByName(name, lang, null)`, every category, the first
+  of an unordered result of at most one row), called by `MessageBaseDataResolver.resolve` (the archive import and the
+  integration), `BatchMessageImportProcessor` and `BatchDomainImportProcessor`.
+- **Description:** `new Message(vo)`, `new Domain(vo)` and `DomainMapper` build a category without its parent, even
+  when the file or the other Niord gives one, so the import has only the category's name: when several categories
+  share it at different depths, which one a message or a domain is linked to is not defined [inferred from the code;
+  not run]. The category file's import is not affected: its entries carry their parents, and one without a parent
+  matches a root only (fixed on 2026-11-20).
+- **Why it looks wrong:** the file names the category's place in the tree, and the import drops it. Building those
+  categories with their parents (a filter with `Category.parent`; the public API's message details carry it), and
+  then matching a parentless template among the roots only, closes it.
+- **Exposed by:** a review of 2026-10-22, narrowed on 2026-11-20. Pre-existing; recorded, not fixed.
+
 ## SCRIPT8. A deployment's `common.js` or `fetch-firing-exercises.js` row copied from a pre-port deployment may predate the port
 
 - **Location:** the database rows `templates/tmpl/common.js` and `templates/mailinglist/fetch-firing-exercises.js`

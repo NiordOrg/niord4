@@ -570,6 +570,31 @@ public class CategoryService extends TreeBaseService<Category> {
      */
     public Category importCategory(Category templateCategory, boolean create, boolean update,
                                    BootstrapRun.Scope scope, Consumer<BootstrapRun.Additions> report) {
+        return importCategory(templateCategory, create, update, scope, report, false);
+    }
+
+    /**
+     * As {@link #importCategory(Category, boolean, boolean, BootstrapRun.Scope, Consumer)}, for a template that may
+     * carry its whole chain of parents.
+     * <p>
+     * A template without a parent is matched by name at any depth unless {@code wholeChain} is set: a message's or a
+     * domain's category is read without its parent ({@code new Message(vo)}, {@code new Domain(vo)}), so its name alone
+     * must find the nested category it names. An entry of a category file carries its parents
+     * ({@code BatchCategoryImportProcessor}), so there a template without a parent is a root and matches a root only,
+     * never a category of the same name deeper in the tree. A template with a parent is matched under that parent
+     * either way.
+     *
+     * @param templateCategory the template category
+     * @param create whether to create a missing category or just find it
+     * @param update whether to update an existing category or just find it
+     * @param scope the bootstrap run's scope of the job
+     * @param report receives what was added, replaced and kept of each category an earlier archive of the run created
+     * @param wholeChain whether the template carries its whole chain of parents, so that one without a parent is a root
+     * @return the category
+     */
+    public Category importCategory(Category templateCategory, boolean create, boolean update,
+                                   BootstrapRun.Scope scope, Consumer<BootstrapRun.Additions> report,
+                                   boolean wholeChain) {
         // Sanity checks
         if (templateCategory == null) {
             return null;
@@ -602,19 +627,19 @@ public class CategoryService extends TreeBaseService<Category> {
         // Recursively, resolve the parent categories
         Category parent = null;
         if (templateCategory.getParent() != null) {
-            parent = importCategory(templateCategory.getParent(), create, update, scope, report);
+            parent = importCategory(templateCategory.getParent(), create, update, scope, report, wholeChain);
             if (!create && parent == null) {
                 return null;
             }
         }
         Integer parentId = (parent == null) ? null : parent.getId();
 
-        // Check if we can find the given category, under the same parent: a root template matches a root only, never
-        // a category of the same name deeper in the tree (CATEGORY2)
+        // Check if we can find the given category, under the same parent. A template without a parent matches a root
+        // only when it carries its whole chain (a category file's entry); otherwise by name at any depth (CATEGORY2)
         Category category = null;
         for (int x = 0; category == null && x < templateCategory.getDescs().size(); x++) {
             CategoryDesc desc = templateCategory.getDescs().get(x);
-            category = parentId == null
+            category = parentId == null && wholeChain
                     ? findRootByName(desc.getName(), desc.getLang())
                     : findByName(desc.getName(), desc.getLang(), parentId);
         }
