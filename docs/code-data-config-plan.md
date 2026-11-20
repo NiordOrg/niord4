@@ -541,7 +541,10 @@ sorted by key:
   `openSeaMapLayerEnabled`, `stdTemplateFields`, `documentationUrl`). They are declared in `FrontendSettings`, a
   small registry class of `new Setting(...)` constants in niord-base that no
   backend code reads, with `adminIntegrationPageEnabled` (`web=true`, default `false`), the gate of the
-  administration app's Integration section (owner, 2026-10-21): eleven constants. `niord.home` and
+  administration app's Integration section (owner, 2026-10-21), and `wmsLayerEnabledByDefault` (`web=true`, default
+  `false`, in the code only), whether the administration app's maps start with the sea-chart layer on where
+  `wmsLayerEnabled` shows it (the app read the key before any catalogue declared it, so until then no deployment
+  served it and the layer always started off): twelve constants. `niord.home` and
   `disableLucene` are constants beside their readers: `SettingsService.NIORD_HOME` (no
   code default) and `MessagePostgresIndex.DISABLE_LUCENE` (default `false`). Each declaration
   carries its `web` and `editable` flags, its description and a type that follows the rows deployments hold
@@ -550,7 +553,7 @@ sorted by key:
   `json`, and `batchMessageSeriesId` has type `String`, since every
   catalog entry needs one. The two `state` keys are constants declared with `scope` `state`
   (`AreaService.AREA_LAST_UPDATE`, `CategoryService.CATEGORY_LAST_UPDATE`, type `Date`), which `TreeBaseService`
-  writes through the internal writer (§5.3). The catalog holds 73 keys.
+  writes through the internal writer (§5.3). The catalog holds 74 keys.
 
 ### 5.2 The settings files
 
@@ -670,7 +673,7 @@ sorted by key:
 
 | Scope | Keys |
 |---|---|
-| **operator**, defaults in the base product's settings file or else in the code; edited on the Settings page as today, except `authServerTrustAllCertificates`, `secomEnabled` and `mapTileCachePath`, which are `editable=false` and stay off it (`KeycloakIntegrationService.java:81`, `SecomAdminRestService.java:82-83`, `MapTileSettings.java:89-93`) | every key below and every other non-state key: paths (`niord.home`, `repoRootPath`, `batchJobRootPath`, `messageIndexPath`, `publicationArchiveRootPath`, `publicationPreviewRootPath`, `mapTileCachePath`, `vipsPath`); the deployment's addresses (`baseUri`, `adminAppUrl`, `authServerUrl`, the SECOM URLs); the trust switches (`authServerTrustAllCertificates`, `niordIntegrationAllowPrivateHosts`, the SECOM security switches); the password settings (`pdfEncryptionPassword`, `wmsPassword`; masked and never web-visible, as today); `mode`, `mailSender`, `mailValidRecipients`, `secomEnabled`, `messageIndexDeleteOnStartup`; languages (`modelLanguages`, `siteLanguages`, `defaultLanguage`, `infoSiteLanguages`, `infoDefaultLanguage`) and the tile and WMS addresses (`osmUrl`, `openSeaMapUrl`, `wmsProvider`), as today (D3); `mapDefaultZoomLevel`/`Latitude`/`Longitude`, `wmsLayerEnabled`, `openSeaMapLayerEnabled`, `editorFieldsBase`/`Nw`/`Nm`, `stdTemplateFields`, `mapImageSize`, `mapImageZoomLevel`, `mailMaxPerMinute`, `mailDeleteAfterDays`, `batchFileExpiryDays`, `firingExerciseScheduleDays`, `repoCacheTimeout`, `batchMessageSeriesId`, `documentationUrl`, `mapTileContact`, `disableLucene`, `messageIndexIncludeDeletedMessages`, `pdfEncryptionEnabled`, `wmsLayers`, `wmsProtected`, `adminIntegrationPageEnabled`, `country` and `organisation` (both `required`), the SECOM operational keys (`secomAlertEmails`, `secomCertExpiryWarnDays`, `secomMaxSubscriptionsPerNode`, `secomOutbox*`, `secomRenewalEnabled`, `secomRenewalWindowDays`) |
+| **operator**, defaults in the base product's settings file or else in the code; edited on the Settings page as today, except `authServerTrustAllCertificates`, `secomEnabled` and `mapTileCachePath`, which are `editable=false` and stay off it (`KeycloakIntegrationService.java:81`, `SecomAdminRestService.java:82-83`, `MapTileSettings.java:89-93`) | every key below and every other non-state key: paths (`niord.home`, `repoRootPath`, `batchJobRootPath`, `messageIndexPath`, `publicationArchiveRootPath`, `publicationPreviewRootPath`, `mapTileCachePath`, `vipsPath`); the deployment's addresses (`baseUri`, `adminAppUrl`, `authServerUrl`, the SECOM URLs); the trust switches (`authServerTrustAllCertificates`, `niordIntegrationAllowPrivateHosts`, the SECOM security switches); the password settings (`pdfEncryptionPassword`, `wmsPassword`; masked and never web-visible, as today); `mode`, `mailSender`, `mailValidRecipients`, `secomEnabled`, `messageIndexDeleteOnStartup`; languages (`modelLanguages`, `siteLanguages`, `defaultLanguage`, `infoSiteLanguages`, `infoDefaultLanguage`) and the tile and WMS addresses (`osmUrl`, `openSeaMapUrl`, `wmsProvider`), as today (D3); `mapDefaultZoomLevel`/`Latitude`/`Longitude`, `wmsLayerEnabled`, `wmsLayerEnabledByDefault`, `openSeaMapLayerEnabled`, `editorFieldsBase`/`Nw`/`Nm`, `stdTemplateFields`, `mapImageSize`, `mapImageZoomLevel`, `mailMaxPerMinute`, `mailDeleteAfterDays`, `batchFileExpiryDays`, `firingExerciseScheduleDays`, `repoCacheTimeout`, `batchMessageSeriesId`, `documentationUrl`, `mapTileContact`, `disableLucene`, `messageIndexIncludeDeletedMessages`, `pdfEncryptionEnabled`, `wmsLayers`, `wmsProtected`, `adminIntegrationPageEnabled`, `country` and `organisation` (both `required`), the SECOM operational keys (`secomAlertEmails`, `secomCertExpiryWarnDays`, `secomMaxSubscriptionsPerNode`, `secomOutbox*`, `secomRenewalEnabled`, `secomRenewalWindowDays`) |
 | **state** | `areaLastUpdate`, `categoryLastUpdate` |
 | **none** (dead, dropped from the files) | `wmsLogin`, `wmsServiceName` (commented out, `WmsProxyServlet.java:76-82`) |
 
@@ -694,7 +697,7 @@ every rule but `https` fails the build. The rules as built:
 - **`missing-key`** (R-CDC7's completeness, scoped to the keys of the base product's settings file): a key of
   the base product's file missing from the country file fails, unless it is listed in `useBaseDefault`. The
   check reports that list with the warnings (where the report lands, see below). A key the base product declares only in code takes its code default and needs no
-  entry. The catalog holds 73 keys (the two `state` keys included) and the base file 26 of
+  entry. The catalog holds 74 keys (the two `state` keys included) and the base file 26 of
   them (`BaseProductSettingsCheckTest` reads 26 values). DK's
   and GL's files set every one of them, so they need no `useBaseDefault` entry. A key a base product release
   adds to its file fails both country builds until it is

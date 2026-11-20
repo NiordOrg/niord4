@@ -146,7 +146,7 @@ class SettingsFreshDatabaseITTest {
                 .filter(e -> e.declaredIn().stream().anyMatch(c -> !c.startsWith("org.niord.secom.")))
                 .map(SettingsCatalog.Entry::key)
                 .collect(Collectors.toCollection(TreeSet::new));
-        assertEquals(54, expected.size(), "71 operator keys less the 17 SECOM keys: " + expected);
+        assertEquals(55, expected.size(), "72 operator keys less the 17 SECOM keys: " + expected);
 
         Map<String, Map<String, Object>> rows = rows();
         assertEquals(expected, new TreeSet<>(rows.keySet()), "exactly the operator keys whose code runs here");
@@ -176,6 +176,15 @@ class SettingsFreshDatabaseITTest {
             }
             assertEquals(expected, ledgered, "one SETTING ledger row per added key");
         }
+
+        // A key only the code declares, with no value in either settings file: the row has the code default, so the
+        // administration app's maps start with the sea-chart layer switched off, as before the key was declared
+        assertEquals(Map.of("value", false, "type", "Boolean", "web", true, "editable", true),
+                Map.of("value", rows.get("wmsLayerEnabledByDefault").get("value"),
+                        "type", rows.get("wmsLayerEnabledByDefault").get("type"),
+                        "web", rows.get("wmsLayerEnabledByDefault").get("web"),
+                        "editable", rows.get("wmsLayerEnabledByDefault").get("editable")),
+                "start-up adds wmsLayerEnabledByDefault, off, served to the web applications and editable");
 
         // The generic boot (C5): the test root niord.json sets neither required key, so a fresh database gets the
         // base product's neutral country and organisation, recorded as from the base product
@@ -211,8 +220,8 @@ class SettingsFreshDatabaseITTest {
         Map<String, Map<String, Object>> before = rows();
         var response = given().when().get("/rest/settings/web").then().statusCode(200);
         for (String key : new String[] {"mode", "osmUrl", "openSeaMapUrl", "mapDefaultZoomLevel",
-                "mapDefaultLatitude", "mapDefaultLongitude", "wmsLayerEnabled", "openSeaMapLayerEnabled",
-                "siteLanguages", "infoSiteLanguages", "defaultLanguage", "modelLanguages"}) {
+                "mapDefaultLatitude", "mapDefaultLongitude", "wmsLayerEnabled", "wmsLayerEnabledByDefault",
+                "openSeaMapLayerEnabled", "siteLanguages", "infoSiteLanguages", "defaultLanguage", "modelLanguages"}) {
             response.body("$", hasKey(key));
         }
         assertEquals(before, rows(), "the GET writes no Setting row");
