@@ -616,16 +616,17 @@ public class IssueMemberListService {
 
     /**
      * A source issue as a compiled document heads its section: the reference {@link #sourceRefsOf} answers, and
-     * the source's weeks as its own name writes them (null for a source that is gone, or has no week).
+     * the source's weeks as its own series' name pattern writes them (null for a source that is gone, or has no
+     * week).
      */
     public record SourceHeading(SourceIssueRefVo ref, String weeks) {
     }
 
     /**
      * The same references, each with the weeks the accumulated report prints for the source: its week label
-     * whole, else its weeks by the week part of its own series' name pattern in the language
-     * (PrintedNumbering.printedWeeks), so a section names its weeks as the source's name does. In the same one
-     * query. Only the render asks for the weeks, inside its transaction: they read the source series' name
+     * whole, else its weeks by the week part of its own series' name pattern in the language, and in the pair form
+     * where that pattern cannot say a span of several weeks (PrintedNumbering.printedSourceWeeks), so a section
+     * names every week its source covered. In the same one query. Only the render asks for the weeks, inside its transaction: they read the source series' name
      * patterns, which the screens' references do without.
      */
     public Map<String, SourceHeading> sourceHeadingsOf(Collection<String> publicIds, String lang) {
@@ -647,7 +648,7 @@ public class IssueMemberListService {
             vo.setCutoff(i.effectiveCutoff());
             vo.setIntervalFrom(i.getIntervalFrom());
             vo.setName(IssueListService.nameOf(i, lang));
-            out.put(i.getPublicId(), new SourceHeading(vo, weeks ? PrintedNumbering.printedWeeks(i, lang) : null));
+            out.put(i.getPublicId(), new SourceHeading(vo, weeks ? PrintedNumbering.printedSourceWeeks(i, lang) : null));
         }
         for (String id : publicIds) {
             if (!out.containsKey(id)) {

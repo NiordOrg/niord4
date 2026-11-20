@@ -426,10 +426,10 @@ public final class IssueNaming {
      * {@code ${weekTo}} does for a single week) gives the pair form, "${week}+${weekTo}": the week alone, "36+37"
      * or "36-38". So a report is always headed by a week, and by all the weeks where its name cannot say them.
      *
-     * The report templates print it where they name the issue's weeks: the weekly reports' heading and page header
-     * (the report's {@code weeks}) and each source's line in the accumulated report ({@code group.weeks}). A closing
-     * week equal to the first is a single week. A week label is not this method's: it is printed whole, in its place
-     * ({@code PrintedNumbering.printedWeeks}).
+     * The weekly reports print it in their heading and page header (the report's {@code weeks}); each source's line
+     * in the accumulated report ({@code group.weeks}) takes {@link #allWeeksText}, which differs only where the
+     * pattern cannot say a span. A closing week equal to the first is a single week. A week label is not this
+     * method's: it is printed whole, in its place ({@code PrintedNumbering.printedWeeks}).
      *
      * @param namePattern the series' name pattern in the report's language, or null
      * @param week the first week, or null
@@ -459,6 +459,29 @@ public final class IssueNaming {
             }
         }
         return expand(span ? PAIR_FORM : "${week}", numbers);
+    }
+
+    /**
+     * The weeks a compiled document names one of its sources by: {@link #weeksText}, except for a source of several
+     * weeks whose pattern's week part does not write both its first and its closing week, which gets the pair form
+     * ("36+37", "36-38").
+     *
+     * The sections of a compiled document are the record of what its period covered, so a source's line names
+     * every week the source covered. A pattern that names the first week alone, "EfS uge ${week} - ${year}", as
+     * every pattern restored from the previous system does (that system had no closing-week token), names a double
+     * issue by its first week, and {@link #weeksText} heads the weekly itself so; its line in the compiled document
+     * would then say "Week 36" for a source of weeks 36 and 37, where the template printed "Week 36 - 37" before.
+     * A pattern that writes both weeks, and a single week, are as {@link #weeksText} gives them.
+     */
+    public static String allWeeksText(String namePattern, Integer week, Integer weekTo, Integer year) {
+        boolean span = week != null && weekTo != null && !weekTo.equals(week);
+        if (span) {
+            String weekPart = weekSpanOf(namePattern);
+            if (weekPart == null || !namesClosingWeek(weekPart) || firstWeekTokenOf(weekPart) == null) {
+                return weeksText(null, week, weekTo, year);
+            }
+        }
+        return weeksText(namePattern, week, weekTo, year);
     }
 
     /** The values each token expands to, for a given set of numbers. */

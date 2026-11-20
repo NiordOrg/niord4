@@ -136,9 +136,10 @@ public class IssueRenderService {
      * somebody added to the issue by hand, which came from no earlier document and
      * are printed under a heading that says so.
      *
-     * {@code weeks} is the source's weeks as its own name writes them, by its own series' name pattern in the
-     * render language, or its week label whole (PrintedNumbering.printedWeeks): what the accumulated report prints
-     * for the source as {@code group.weeks}.
+     * {@code weeks} is the source's weeks as its own series' name pattern in the render language writes them, in
+     * the pair form where that pattern cannot say a span of several weeks, or its week label whole
+     * (PrintedNumbering.printedSourceWeeks): what the accumulated report prints for the source as
+     * {@code group.weeks}.
      */
     public record RenderGroup(
             String publicId,
@@ -447,7 +448,8 @@ public class IssueRenderService {
             model.put("name", g.name());
             model.put("week", g.week());
             model.put("weekTo", g.weekTo());
-            // The source's weeks as its own name writes them ("36 og 37", "36+37", "36-38"), or its week label.
+            // The source's weeks as its series' pattern writes them ("36 og 37", "36+37", "36-38"), the pair form
+            // where the pattern cannot say its span, or its week label.
             model.put("weeks", g.weeks());
             model.put("year", g.year());
             model.put("cutoff", g.cutoff());

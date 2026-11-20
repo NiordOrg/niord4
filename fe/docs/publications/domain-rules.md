@@ -630,7 +630,10 @@ weeks where its name cannot say them; a week label is printed whole. One case le
 under a week part that writes the closing week is headed by the first week's token alone (`36`), where the
 name keeps the text before the empty closing week (`Uge 36+, 2026`, ISSUE13 in
 `be/docs/potential-errors.md`), until that name is settled. The accumulated report's sections carry the same
-as `group.weeks`, each by its source issue's own series pattern and label.
+as `group.weeks`, each by its source issue's own series pattern and label, with one difference: a source of
+several weeks whose pattern cannot say the span (it names the first week alone, as every pattern restored
+from the previous system does, or no week) is in the pair form, `36+37` or `36-38`, because the sections are
+the record of what the compilation covered and a line must name every week its source covered.
 
 A series or an issue that stored one of the seven before it was refused is met as follows: a save of the
 series is refused (S-23 is a hard rule) until the row is removed, and so is its activation; an issue edit is

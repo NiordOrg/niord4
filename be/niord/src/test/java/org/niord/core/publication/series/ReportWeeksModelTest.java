@@ -28,10 +28,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * RENDER11: the weeks a report names an issue for, as the report's model carries them. The weekly reports print the
  * issue's {@code weeks} in their heading and page header, and the accumulated report each source's
- * {@code group.weeks}, so that both say the weeks the issue's own name says: the week part of its series' name pattern
- * in the report's language, expanded as the name is ("36" under "Uge ${week}, ${year}", "36 og 37" under
+ * {@code group.weeks}: the weeks as the series' name pattern in the report's language writes them, in the name the
+ * series suggests for the issue, expanded as that name is ("36" under "Uge ${week}, ${year}", "36 og 37" under
  * "Uge ${week} og ${weekTo}", "36+37" or "36-38" under the pair form, and the pair form where the pattern writes no
- * week), or the week label whole.
+ * week), or the week label whole. A source of the accumulated report is in the pair form where its pattern cannot
+ * say its span.
  */
 class ReportWeeksModelTest {
 
@@ -91,6 +92,26 @@ class ReportWeeksModelTest {
         assertEquals("36 & 37", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, "36 & 37"), "en"));
         assertEquals("36 og 37", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, "  "), "da"),
                 "a blank label is no label");
+    }
+
+    /**
+     * A source of the accumulated report is named by every week it covered: as the weekly's heading where its
+     * pattern says the span (the Danish "36 og 37"), in the pair form where it names the first week alone (the
+     * English "36+37" and "36-38", where the weekly is headed "36"), its label whole. FAILS on the rule that named
+     * the English source "36", dropping its closing week.
+     */
+    @Test
+    void aSourceIsNamedByEveryWeekItCovered() {
+        PublicationSeries series = series();
+        assertEquals("36 og 37", PrintedNumbering.printedSourceWeeks(issue(series, 36, 37, 2026, null), "da"));
+        assertEquals("36+37", PrintedNumbering.printedSourceWeeks(issue(series, 36, 37, 2026, null), "en"));
+        assertEquals("36-38", PrintedNumbering.printedSourceWeeks(issue(series, 36, 38, 2026, null), "en"));
+        assertEquals("36", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, null), "en"),
+                "the weekly's own heading is as its name");
+        assertEquals("36", PrintedNumbering.printedSourceWeeks(issue(series, 36, null, 2026, null), "en"));
+        assertEquals("36-38", PrintedNumbering.printedSourceWeeks(issue(series, 36, 38, 2026, null), "kl"));
+        assertEquals("36 & 37", PrintedNumbering.printedSourceWeeks(issue(series, 36, 37, 2026, "36 & 37"), "en"));
+        assertNull(PrintedNumbering.printedSourceWeeks(null, "en"));
     }
 
     /** The accumulated report's sections carry the weeks the release worked out for each source, as they are. */

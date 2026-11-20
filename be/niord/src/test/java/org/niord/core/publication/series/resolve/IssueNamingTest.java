@@ -603,6 +603,38 @@ public class IssueNamingTest {
     }
 
     /**
+     * A compiled document's line for a source names every week the source covered: where the source's pattern
+     * cannot say its span (it names the first week alone, as the previous system's "EfS uge ${week} - ${year}"
+     * does, or no week), a source of several weeks is in the pair form, "36+37" or "36-38", where its weekly is
+     * headed "36". A pattern that writes both weeks, and a single week, are as the weekly's heading. FAILS on the
+     * rule that named a source of weeks 36 and 37 "36" under a first-week pattern, where the accumulated report
+     * printed "36 - 37" before.
+     */
+    @Test
+    public void aCompiledDocumentNamesEveryWeekOfASource() {
+        String previousSystem = "EfS uge ${week} - ${year}";
+        assertEquals("36+37", IssueNaming.allWeeksText(previousSystem, 36, 37, 2026));
+        assertEquals("36-38", IssueNaming.allWeeksText(previousSystem, 36, 38, 2026));
+        assertEquals("52+1", IssueNaming.allWeeksText(previousSystem, 52, 1, 2026));
+        assertEquals("52-2", IssueNaming.allWeeksText(FIRST_WEEK_ONLY, 52, 2, 2026));
+        assertEquals("36+37", IssueNaming.allWeeksText("Uge ${weekTo}, ${year}", 36, 37, 2026),
+                "a week part without the first week cannot say the span either");
+        assertEquals("36+37", IssueNaming.allWeeksText("Uge ${week}, ${year} (${weekTo})", 36, 37, 2026),
+                "a closing week outside the week part is not in it");
+        assertEquals("36-38", IssueNaming.allWeeksText(null, 36, 38, 2026));
+        // As the weekly's heading where the pattern says the span, and for a single week.
+        assertEquals("36", IssueNaming.weeksText(previousSystem, 36, 37, 2026), "the weekly's own heading");
+        assertEquals("36", IssueNaming.allWeeksText(previousSystem, 36, null, 2026));
+        assertEquals("36", IssueNaming.allWeeksText(previousSystem, 36, 36, 2026));
+        assertEquals("36 og 37", IssueNaming.allWeeksText(PAIR_IN_WORDS, 36, 37, 2026));
+        assertEquals("36 og 38", IssueNaming.allWeeksText(PAIR_IN_WORDS, 36, 38, 2026));
+        assertEquals("36-38", IssueNaming.allWeeksText(NAME, 36, 38, 2026));
+        assertEquals("37 back to 36", IssueNaming.allWeeksText("NtM ${weekTo} back to ${week}", 36, 37, 2026));
+        assertEquals("36", IssueNaming.allWeeksText(NAME, 36, null, 2026));
+        assertNull(IssueNaming.allWeeksText(NAME, null, 37, 2026));
+    }
+
+    /**
      * Across a year's end the year decides the range, as in the name: 2025 has 52 ISO weeks, so weeks 52 to 1 of
      * an issue named for 2026 are a pair, while 2026 has a week 53, so weeks 52 to 1 of 2027 are three. A pattern
      * that writes the weeks in words prints them as written.

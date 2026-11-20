@@ -235,9 +235,10 @@
             <table class="group-info-line" width="100%">
                 <tr>
                     <td width="40%" align="left">
-                        <#-- group.weeks is the source's weeks as its own name writes them, by
-                             its series' name pattern ("36 og 37", "36+37", "36-38"), or its
-                             week label whole. -->
+                        <#-- group.weeks is the source's weeks as its series' name pattern
+                             writes them ("36 og 37", "36+37", "36-38"), in the pair form where
+                             the pattern cannot say a span of several weeks, so the line names
+                             every week the source covered, or its week label whole. -->
                         <#if !group.manual && group.week??>
                             ${text('pdf.week')} ${group.weeks!(group.week?c)}<#if group.year??>, ${group.year?c}</#if>
                         </#if>
