@@ -673,7 +673,10 @@ describe('TimeScheduleEditor', () => {
       { fromDate: '2026-06-15T12:00:00Z', toDate: '2026-06-15T14:00:00Z' },
     ];
     for (const change of [
-      (c: Internals) => c.addInterval(),
+      (c: Internals) => {
+        c.addInterval();
+        c.setFrom(2, entered(16, 0));
+      },
       (c: Internals) => c.removeInterval(1),
       (c: Internals) => c.clearIntervals(),
     ]) {
@@ -696,6 +699,28 @@ describe('TimeScheduleEditor', () => {
       TestBed.resetTestingModule();
       const { comp, discard } = setup(stored);
       comp.startEdit();
+      await comp.cancel();
+      expect(discard.confirmDiscard).not.toHaveBeenCalled();
+      expect(comp.editing()).toBe(false);
+    }
+  });
+
+  /**
+   * Nothing would be lost: a time picked again as the field shows it, a blank row added, and Clear
+   * on the one blank row a day without periods opens with.
+   */
+  it('cancel closes at once, without asking, when the rows are the same in substance', async () => {
+    const stored = [{ fromDate: '2026-06-15T08:00:00Z', toDate: '2026-06-15T10:00:00Z' }];
+    for (const [initial, change] of [
+      [stored, (c: Internals) => c.setFrom(0, new Date(c.draft()[0].from!))],
+      [stored, (c: Internals) => c.setTo(0, entered(c.draft()[0].to!.getHours(), 0))],
+      [stored, (c: Internals) => c.addInterval()],
+      [[], (c: Internals) => c.clearIntervals()],
+    ] as const) {
+      TestBed.resetTestingModule();
+      const { comp, discard } = setup(initial);
+      comp.startEdit();
+      change(comp);
       await comp.cancel();
       expect(discard.confirmDiscard).not.toHaveBeenCalled();
       expect(comp.editing()).toBe(false);

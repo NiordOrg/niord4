@@ -73,7 +73,7 @@ image::FiringAreaScheduleEdit.png[An area's firing periods being edited, 460]
 * *Save* stores the lines as the area's firing periods, for that area and that day only, and closes
   the row. Nothing is stored before you click *Save*: *Clear* followed by *Save* deletes all the
   periods of the day. *Cancel* closes the row and leaves the periods as they were; when you have
-  added, taken out or changed a line, Niord first asks whether to leave without saving.
+  taken out a line or entered or changed a time, Niord first asks whether to leave without saving.
 
 A firing period is entered on the day it starts. A period without a start time starts at midnight,
 and one without an end time lasts until the end of the day; a line with neither is left out. To fire until

@@ -93,8 +93,9 @@ area-heading component.
 Each data row carries an `app-time-schedule-editor` for that area on the selected day. It is
 **commit-on-save** over a working copy: entering edit seeds a draft from the row's periods (one
 blank interval when the area has none), Add / Remove / Clear mutate only the draft, Cancel discards
-it (when a row was added, removed or changed, only after the app's usual unsaved-changes question,
-`shared.discard.*` through `DiscardConfirmService`; answered no, the rows stay as typed), Save PUTs
+it (when a row with a time was added, a row was removed or a time was changed, only after the app's
+usual unsaved-changes question, `shared.discard.*` through `DiscardConfirmService`; answered no, the
+rows stay as typed; a blank row added, or a time picked again as it was, asks nothing), Save PUTs
 the whole per-area list and replaces the shown periods with the server response. The source row is
 never mutated before a successful save. A new search result resets the row: the editor closes and
 adopts the fresh server periods.

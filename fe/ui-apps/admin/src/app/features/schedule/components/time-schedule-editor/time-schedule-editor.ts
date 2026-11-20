@@ -49,7 +49,7 @@ let nextEditorId = 0;
  * Inline (expand-in-row) firing-period editor for one area on the selected date.
  * View mode lists the formatted intervals + a pencil; edit mode is a repeating
  * from/to time-picker list (Add/Remove/Clear/Cancel/Save). Cancel asks the app's usual
- * "unsaved changes" question first when a row was added, removed or changed. Save normalises each
+ * "unsaved changes" question first when the rows differ in substance (see `draftChanged`). Save normalises each
  * changed or new interval onto the selected date (missing from → 00:00:00, missing
  * to → the last second of the day, an end of 00:00 → 00:00 of the next day, both-empty dropped), PUTs,
  * and shows the saved periods on success. A working copy keeps the source row
@@ -113,13 +113,17 @@ export class TimeScheduleEditor {
       .filter((id): id is number => typeof id === 'number'),
   );
   protected readonly draft = signal<readonly DraftInterval[]>([]);
-  /** The rows the edit opened with. A row is replaced, never changed in place, when it changes. */
+  /** The rows the edit opened with. */
   private readonly seededDraft = signal<readonly DraftInterval[]>([]);
-  /** A row was added, removed or changed since the edit opened. */
+  /**
+   * The rows differ in substance from the ones the edit opened with: a row with a time was added
+   * or taken out, or a row shows another time. A new row with no time carries nothing (a save
+   * drops it), and a time picked again as it was changes nothing, so neither counts.
+   */
   protected readonly draftChanged = computed(() => {
-    const draft = this.draft();
-    const seeded = this.seededDraft();
-    return draft.length !== seeded.length || draft.some((row, i) => row !== seeded[i]);
+    const draft = this.draft().filter(carriesSomething);
+    const seeded = this.seededDraft().filter(carriesSomething);
+    return draft.length !== seeded.length || draft.some((row, i) => !sameRow(row, seeded[i]));
   });
 
   /** The zone the entered times are read and written in. */
@@ -296,6 +300,28 @@ function resolveRow(date: Date, row: DraftInterval, timeZone: string): FiringPer
       ? original.toDate
       : rebaseOntoDate(date, row.to, 'end', timeZone);
   return original ? { ...original, fromDate, toDate } : { fromDate, toDate };
+}
+
+/** False for a new row with neither time, which a save drops. */
+function carriesSomething(row: DraftInterval): boolean {
+  return !!row.original || !!row.from || !!row.to;
+}
+
+/** The same stored period (or none), the same lock and the same two clocks shown. */
+function sameRow(a: DraftInterval, b: DraftInterval): boolean {
+  return (
+    a.original === b.original &&
+    !!a.locked === !!b.locked &&
+    sameClock(a.from, b.from) &&
+    sameClock(a.to, b.to)
+  );
+}
+
+/** Both empty, or both showing the same hour and minute. */
+function sameClock(a: Date | null, b: Date | null): boolean {
+  if (!a || !b) return a === b;
+  const [x, y] = [wallClockOf(a), wallClockOf(b)];
+  return x.hour === y.hour && x.minute === y.minute;
 }
 
 /** True unless both ends are known and the end is at or before the start. */
