@@ -101,6 +101,19 @@ public class NullCoordinateJsonTest {
     }
 
     @Test
+    void aNullCoordinate_onARingsFirstAndLastPosition_isRefusedAsNotANumber() throws Exception {
+        // The ring's ends are not numbers and never compare equal, so JTS alone would refuse the ring as not closed
+        for (String json : new String[] {
+                "{\"type\":\"Polygon\",\"coordinates\":[[[null,55.0],[11.0,55.0],[11.0,56.0],[null,55.0]]]}",
+                "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[10.0,null],[11.0,55.0],[11.0,56.0],[10.0,null]]]]}"}) {
+            GeometryVo vo = read(json);
+            IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+                    () -> JtsConverter.toJtsOnGlobe(vo), json);
+            assertTrue(refused.getMessage().contains("is not a number"), json + ": " + refused.getMessage());
+        }
+    }
+
+    @Test
     void theOtherValues_areReadAsBefore() throws Exception {
         assertArrayEquals(new double[] {10.5, 55.0},
                 ((PointVo) read("{\"type\":\"Point\",\"coordinates\":[10.5,55]}")).getCoordinates(), 0.0);
