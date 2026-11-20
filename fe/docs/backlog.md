@@ -728,7 +728,6 @@ Background: [`features/schedule.md`](features/schedule.md).
 
 - The selected day is component state, not a URL parameter: a day cannot be linked to or bookmarked, and a refresh
   returns to today.
-- Cancelling the inline period editor discards unsaved rows with no prompt.
 - Pressing Add appends an empty row but leaves keyboard focus where it was.
 - **A firing period's time fields have no visible label and cut their placeholder.** The From and To fields of a
   period are named by their aria-labels only

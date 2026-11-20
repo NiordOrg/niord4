@@ -6,6 +6,7 @@ import { of, throwError } from 'rxjs';
 
 import { LocaleFormatService } from '../../../../core/main-shell/services/locale-format.service';
 import { NotificationService } from '../../../../core/notifications/notification.service';
+import { DiscardConfirmService } from '../../../../shared/services/discard-confirm.service';
 import { provideTestTransloco } from '../../../../shared/testing/transloco-testing';
 import { provideTestSessionZone, wallClockIn } from '../../../../shared/testing/zone-testing';
 import type { FiringAreaPeriods, FiringPeriod } from '../../models/firing-area-periods.model';
@@ -32,7 +33,8 @@ interface Internals {
   setFrom(i: number, v: Date | null): void;
   setTo(i: number, v: Date | null): void;
   clearIntervals(): void;
-  cancel(): void;
+  removeInterval(i: number): void;
+  cancel(): Promise<void>;
   save(): void;
 }
 
@@ -51,12 +53,15 @@ function setup(
   date: Date = SELECTED_DATE,
 ) {
   const update = vi.fn((fap: FiringAreaPeriods) => of(fap));
+  // The answer to the "unsaved changes" question Cancel asks; `true` gives the rows up.
+  const discard = { result: true, confirmDiscard: vi.fn(() => Promise.resolve(discard.result)) };
   TestBed.configureTestingModule({
     providers: [
       provideTestTransloco(),
       provideTestSessionZone(timeZone ?? undefined),
       { provide: ScheduleApiService, useValue: { updateFiringAreaPeriods: update } },
       { provide: NotificationService, useValue: { success: vi.fn(), error: vi.fn() } },
+      { provide: DiscardConfirmService, useValue: discard },
       {
         provide: FiringPeriodFormatter,
         useValue: { format: () => '', formatInstant: (iso: string) => `<${iso}>` },
@@ -79,7 +84,7 @@ function setup(
   fixture.componentRef.setInput('date', date);
   fixture.detectChanges();
   const comp = fixture.componentInstance as unknown as Internals;
-  return { fixture, comp, update };
+  return { fixture, comp, update, discard };
 }
 
 /** Last PUT payload's firing periods. */
@@ -610,16 +615,80 @@ describe('TimeScheduleEditor', () => {
     expect(comp.editing()).toBe(false);
   });
 
-  it('cancel discards the draft without saving', () => {
-    const { comp, update } = setup([
+  it('cancel asks before it discards changed rows, and discards them without saving', async () => {
+    const { comp, update, discard } = setup([
       { fromDate: '2026-06-15T08:00:00Z', toDate: '2026-06-15T10:00:00Z' },
     ]);
     comp.startEdit();
     comp.setFrom(0, entered(5, 0));
-    comp.cancel();
+    await comp.cancel();
+    expect(discard.confirmDiscard).toHaveBeenCalledWith(); // the app's usual unsaved-changes text
     expect(comp.editing()).toBe(false);
     expect(comp.draft()).toEqual([]);
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('cancel keeps the rows as typed when the question is answered no', async () => {
+    const { comp, update, discard } = setup([
+      { fromDate: '2026-06-15T08:00:00Z', toDate: '2026-06-15T10:00:00Z' },
+    ]);
+    discard.result = false;
+    comp.startEdit();
+    comp.setFrom(0, entered(5, 0));
+    comp.addInterval();
+    const typed = comp.draft();
+    await comp.cancel();
+    expect(discard.confirmDiscard).toHaveBeenCalledTimes(1);
+    expect(comp.editing()).toBe(true);
+    expect(comp.draft()).toBe(typed);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('cancel asks after a row was added, removed or cleared', async () => {
+    const stored = [
+      { fromDate: '2026-06-15T08:00:00Z', toDate: '2026-06-15T10:00:00Z' },
+      { fromDate: '2026-06-15T12:00:00Z', toDate: '2026-06-15T14:00:00Z' },
+    ];
+    for (const change of [
+      (c: Internals) => c.addInterval(),
+      (c: Internals) => c.removeInterval(1),
+      (c: Internals) => c.clearIntervals(),
+    ]) {
+      TestBed.resetTestingModule();
+      const { comp, discard } = setup(stored);
+      discard.result = false;
+      comp.startEdit();
+      change(comp);
+      await comp.cancel();
+      expect(discard.confirmDiscard).toHaveBeenCalledTimes(1);
+      expect(comp.editing()).toBe(true);
+    }
+  });
+
+  it('cancel closes at once, without asking, when nothing was changed', async () => {
+    for (const stored of [
+      [{ fromDate: '2026-06-15T08:00:00Z', toDate: '2026-06-15T10:00:00Z' }],
+      [], // the one blank row a day without periods opens with
+    ]) {
+      TestBed.resetTestingModule();
+      const { comp, discard } = setup(stored);
+      comp.startEdit();
+      await comp.cancel();
+      expect(discard.confirmDiscard).not.toHaveBeenCalled();
+      expect(comp.editing()).toBe(false);
+    }
+  });
+
+  it('a successful save closes the editor without asking', () => {
+    const { comp, update, discard } = setup([
+      { fromDate: '2026-06-15T08:00:00Z', toDate: '2026-06-15T10:00:00Z' },
+    ]);
+    comp.startEdit();
+    comp.setFrom(0, entered(5, 0));
+    comp.save();
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(comp.editing()).toBe(false);
+    expect(discard.confirmDiscard).not.toHaveBeenCalled();
   });
 
   it('refuses to edit or save with no session domain zone', () => {

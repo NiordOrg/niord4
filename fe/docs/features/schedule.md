@@ -93,9 +93,11 @@ area-heading component.
 Each data row carries an `app-time-schedule-editor` for that area on the selected day. It is
 **commit-on-save** over a working copy: entering edit seeds a draft from the row's periods (one
 blank interval when the area has none), Add / Remove / Clear mutate only the draft, Cancel discards
-it, Save PUTs the whole per-area list and replaces the shown periods with the server response. The
-source row is never mutated before a successful save. A new search result resets the row: the editor
-closes and adopts the fresh server periods.
+it (when a row was added, removed or changed, only after the app's usual unsaved-changes question,
+`shared.discard.*` through `DiscardConfirmService`; answered no, the rows stay as typed), Save PUTs
+the whole per-area list and replaces the shown periods with the server response. The source row is
+never mutated before a successful save. A new search result resets the row: the editor closes and
+adopts the fresh server periods.
 
 **Zone.** A firing period is announced in the **session domain's** zone, so that is the zone the
 entered times belong to — not the browser's. A stored instant is seeded into the time fields as the
@@ -255,7 +257,6 @@ in-place reset path.
 
 | Limit                   | Note                                                                                   |
 | ----------------------- | -------------------------------------------------------------------------------------- |
-| No dirty-cancel confirm | Cancel discards the draft immediately                                                  |
 | Add does not move focus | the new row's `from` field is not focused (the shared time field exposes no focus API) |
 | No deep-linkable day    | adding one means introducing a `date` query param, which does not exist today          |
 | No inactive areas       | `inactive` is never sent                                                               |

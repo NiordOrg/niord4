@@ -5,6 +5,7 @@ import { Icon } from '../../../../shared/icons/icon';
 import { TimeField } from '../../../../shared/forms/time-field/time-field';
 import { DomainService } from '../../../../core/domain/services/domain.service';
 import { NotificationService } from '../../../../core/notifications/notification.service';
+import { DiscardConfirmService } from '../../../../shared/services/discard-confirm.service';
 import {
   shiftDaysInZone,
   wallClockOf,
@@ -47,7 +48,8 @@ let nextEditorId = 0;
 /**
  * Inline (expand-in-row) firing-period editor for one area on the selected date.
  * View mode lists the formatted intervals + a pencil; edit mode is a repeating
- * from/to time-picker list (Add/Remove/Clear/Cancel/Save). Save normalises each
+ * from/to time-picker list (Add/Remove/Clear/Cancel/Save). Cancel asks the app's usual
+ * "unsaved changes" question first when a row was added, removed or changed. Save normalises each
  * changed or new interval onto the selected date (missing from → 00:00:00, missing
  * to → 23:59:59, an end of 00:00 → 00:00 of the next day, both-empty dropped), PUTs,
  * and shows the saved periods on success. A working copy keeps the source row
@@ -92,6 +94,7 @@ export class TimeScheduleEditor {
   private readonly notifications = inject(NotificationService);
   private readonly formatter = inject(FiringPeriodFormatter);
   private readonly domain = inject(DomainService);
+  private readonly discardConfirm = inject(DiscardConfirmService);
 
   readonly firingAreaPeriods = input.required<FiringAreaPeriods>();
   readonly date = input.required<Date>();
@@ -110,6 +113,14 @@ export class TimeScheduleEditor {
       .filter((id): id is number => typeof id === 'number'),
   );
   protected readonly draft = signal<readonly DraftInterval[]>([]);
+  /** The rows the edit opened with. A row is replaced, never changed in place, when it changes. */
+  private readonly seededDraft = signal<readonly DraftInterval[]>([]);
+  /** A row was added, removed or changed since the edit opened. */
+  protected readonly draftChanged = computed(() => {
+    const draft = this.draft();
+    const seeded = this.seededDraft();
+    return draft.length !== seeded.length || draft.some((row, i) => row !== seeded[i]);
+  });
 
   /** The zone the entered times are read and written in. */
   protected readonly timeZone = computed(() => this.domain.sessionDomain()?.timeZone);
@@ -163,8 +174,7 @@ export class TimeScheduleEditor {
     effect(() => {
       const fap = this.firingAreaPeriods();
       untracked(() => {
-        this.editing.set(false);
-        this.draft.set([]);
+        this.closeEditor();
         this.periods.set(fap.firingPeriods);
       });
     });
@@ -191,7 +201,9 @@ export class TimeScheduleEditor {
       };
       return instantOf(p.fromDate) < dayStart ? { ...row, locked: true } : row;
     });
-    this.draft.set(seed.length > 0 ? seed : [{ from: null, to: null }]);
+    const rows = seed.length > 0 ? seed : [{ from: null, to: null }];
+    this.draft.set(rows);
+    this.seededDraft.set(rows);
     this.editing.set(true);
   }
 
@@ -220,9 +232,16 @@ export class TimeScheduleEditor {
     );
   }
 
-  protected cancel(): void {
+  /** Closes the editor; rows that were changed are given up only when the person confirms it. */
+  protected async cancel(): Promise<void> {
+    if (this.draftChanged() && !(await this.discardConfirm.confirmDiscard())) return;
+    this.closeEditor();
+  }
+
+  private closeEditor(): void {
     this.editing.set(false);
     this.draft.set([]);
+    this.seededDraft.set([]);
   }
 
   protected save(): void {
@@ -248,7 +267,7 @@ export class TimeScheduleEditor {
       next: (saved) => {
         this.periods.set(saved.firingPeriods);
         this.saving.set(false);
-        this.cancel();
+        this.closeEditor();
       },
       error: () => {
         // The editor stays open with the rows as typed, so a failed save can be tried again.
