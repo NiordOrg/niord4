@@ -363,18 +363,19 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
 - **Exposed by:** `NiordIntegrationExecutionGapITTest.failedReimportLeavesOldCopyPublishedAndImportsNoReplacement`
   asserts the post-INT3-fix safe end-state (old copy stays `PUBLISHED`, no replacement imported, failure
   swallowed) — the swallow itself is the residual documented here.
-- **Severity:** Medium — surfacing the failure (per-message transactions, or recording a failure on the
-  integration) is the natural follow-up during the transaction/event rewrite. The error hunt of 2026-11-12 found two
-  more faults that this catch kept silent (two own copies with one `legacyId`, and references an import left out
-  without a word); the fix stage of 2026-11-13 fixed both, and each now writes a WARN line to the log only, so the
-  failure record asked for here is still missing. Since 2026-11-16 (the review of the phase 2 fix stage, R6) one
-  kind of malformed source message no longer ends the run: a message whose content this Niord refuses as it builds
-  it (a position off the globe, an `IllegalArgumentException` before anything is written) is skipped with a WARN
-  that names it, the rest of the run goes on, and an updated message's old copy stays (`importOrSkip`, 259-272).
-  Every other failure of an import, such as the test's message without a type (a `NullPointerException`), still
-  ends the run as (b) says. Since the fix stage of 2026-11-13, a failed cancellation inside
-  `processNiordIntegration` rolls the whole run back (`MessageService.cancelMessage` and `updateStatus` roll back for
-  any exception): the run's catch logs it, the commit throws `UnexpectedRollbackException` and
+- **Severity:** Low (the owner, 2026-11-20): no deployment known to the base product's developers has an active
+  integration point, and the entry is not planned to be fixed. Surfacing the failure (per-message transactions, or
+  recording a failure on the integration) would be the natural follow-up during the transaction/event rewrite. The
+  error hunt of 2026-11-12 found two more faults that this catch kept silent (two own copies with one `legacyId`, and
+  references an import left out without a word); the fix stage of 2026-11-13 fixed both, and each now writes a WARN
+  line to the log only, so the failure record asked for here is still missing. Since 2026-11-16 (the review of the
+  phase 2 fix stage, R6) one kind of malformed source message no longer ends the run: a message whose content this
+  Niord refuses as it builds it (a position off the globe, an `IllegalArgumentException` before anything is written)
+  is skipped with a WARN that names it, the rest of the run goes on, and an updated message's old copy stays
+  (`importOrSkip`, 259-272). Every other failure of an import, such as the test's message without a type (a
+  `NullPointerException`), still ends the run as (b) says. Since the fix stage of 2026-11-13, a failed cancellation
+  inside `processNiordIntegration` rolls the whole run back (`MessageService.cancelMessage` and `updateStatus` roll
+  back for any exception): the run's catch logs it, the commit throws `UnexpectedRollbackException` and
   `NiordIntegrationService` logs that, where the part before the failure used to be committed. The one transaction
   spans every target series of the integration (the loop at 133 runs inside the `REQUIRES_NEW` at 116-117); the
   per-message transaction the scheduled publication and the hourly firing run now use, `MessageTxRunner`
@@ -664,6 +665,7 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   files, and a fresh local build here still needs GRAD or a warm cache, so the entry stays open.
 - **Exposed by:** niord-dk's CI, 2026-10-23.
 - **Severity:** Medium — availability of every build that has no warm cache, outside our control.
+- **Left by the owner (2026-11-20):** a fault that touches no running system.
 
 ## ERR8 — Two `IllegalStateException` sites that cannot be reached in normal use would answer a server fault with 409
 
@@ -1901,7 +1903,8 @@ path is from the repository root.
 - **Decision first:** may declared settings take their flags from the catalogue, once each staging's stored `mode`
   value has been read? Recommended: yes, in one change with SETTINGS-10.
 - **Left by the owner (2026-11-15):** no change to where the flags come from, and no read of the stagings' rows;
-  the entry stays open as the record.
+  the entry stays open as the record. A deployment whose settings are written by the countries' restore from the
+  previous system gets each kept row's flags from the catalogue there, so the fault is left to a row made by hand.
 
 ## SETTINGS-10. A setting marked not editable is still written by the settings API and the settings import
 
