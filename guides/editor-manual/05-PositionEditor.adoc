@@ -342,7 +342,8 @@ The text lists the features one after another, with a blank line between two fea
   sign. A line may start with a number, such as `1)`, and there may be a dash between latitude and
   longitude. Minutes and seconds must be below 60, the latitude at most 90° and the longitude at
   most 180°, and the degrees take no sign: the hemisphere letter gives the side. Degrees followed
-  by minutes are whole degrees: Niord does not read `56.5 30N`.
+  by minutes are whole degrees: Niord does not read `56.5 30N`. Likewise, minutes followed by
+  seconds are whole minutes: Niord does not read `56° 30.5' 20"N`.
 * For an area, list its corners: Niord closes the outline, so you do not repeat the first corner at
   the end.
 * A name follows a comma, after the type (the feature's name) or after a position (the position's

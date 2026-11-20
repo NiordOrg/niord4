@@ -145,6 +145,26 @@ describe('coordinate-format', () => {
       expect(parseLatLon('56.5N - 012.25E')).toEqual({ lat: 56.5, lon: 12.25 });
     });
 
+    it('returns null for minutes with a fraction followed by seconds', () => {
+      // "56 30.5' 20"N" would add the seconds to minutes that already carry a fraction. This
+      // parser reads no seconds at all, so every notation of it is flagged, as the backend's
+      // PlainTextConverter refuses it.
+      expect(parseLatLon(`56° 30.5' 20"N - 012° 00'E`)).toBeNull();
+      expect(parseLatLon(`56 30,5' 20"N - 012 00E`)).toBeNull();
+      expect(parseLatLon(`56°30.5'20"N - 012°00'E`)).toBeNull();
+      expect(parseLatLon('56 30.5 20N - 012 00E')).toBeNull();
+      expect(parseLatLon(`56 30N - 012° 15.5' 10"E`)).toBeNull();
+    });
+
+    it('reads minutes with a fraction and no seconds as typed', () => {
+      // The usual form: the refusal above is for seconds after the fraction, not for the fraction.
+      for (const typed of [`56° 30.5'N - 012° 15.25'E`, '56 30,5N - 012 15,25E']) {
+        const parsed = parseLatLon(typed);
+        expect(parsed?.lat, typed).toBeCloseTo(56 + 30.5 / 60, 9);
+        expect(parsed?.lon, typed).toBeCloseTo(12 + 15.25 / 60, 9);
+      }
+    });
+
     it('reads whole degrees written with a zero fraction, followed by minutes, as typed', () => {
       // The refusal is for a fraction of a degree, not for a point in the degree text.
       expect(parseLatLon('56.0 30N - 012.0 15E')).toEqual({ lat: 56.5, lon: 12.25 });

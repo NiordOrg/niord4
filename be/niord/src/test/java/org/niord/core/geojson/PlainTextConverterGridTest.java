@@ -181,6 +181,44 @@ public class PlainTextConverterGridTest {
     }
 
     @Test
+    public void minutesWithAFractionFollowedBySeconds_areRefused() {
+        // "56 30.5' 20\"N" was read as 56° plus 30.5 minutes plus 20 seconds: the seconds were added to minutes that
+        // already carried a fraction, a position the editor never typed. Refused like a fraction of a degree
+        // followed by minutes, in the latitude and the longitude, in every notation seconds are read in: with and
+        // without the degree sign, a point or a comma, the spaces left out, the "I" and "J" a copy from a PDF
+        // leaves for the degree and the minute signs, and a fraction written as an exponent.
+        for (String t : List.of(
+                "56° 30.5' 20\"N 012° 00' 00\"E",
+                "56 30.5' 20\"N 012 00' 00\"E",
+                "56 30.5 20\"N 012 00 00\"E",
+                "56°30,5'20\"N 012°00'00\"E",
+                "56I 30,5J 20\"N 012I 00J 00\"E",
+                "56° 305e-1' 20\"n 012° 00' 00\"e",
+                "56° 30' 20\"N 012° 15.5' 10\"E")) {
+            Exception e = assertThrows(Exception.class, () -> EN.fromPlainText(t), t);
+            assertTrue(e.getMessage().startsWith("Invalid degree format"), t + ": " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void minutesWithAFractionAndNoSeconds_andWholeMinutesWithSeconds_areReadAsTyped() throws Exception {
+        // The refusal above is for a fraction of a minute with seconds after it. Minutes with a fraction and no
+        // seconds are the usual form, and whole minutes with seconds were always read as typed; both still are,
+        // and so are whole minutes written with a zero fraction before the seconds.
+        for (String t : List.of("56° 30.5'N 012° 15.25'E", "56 30,5N 012 15,25E", "56°30.5'N 012°15.25'E")) {
+            double[] c = onlyCoordinate(EN.fromPlainText(t));
+            assertEquals(56 + 30.5 / 60, c[1], 1e-9, t);
+            assertEquals(12 + 15.25 / 60, c[0], 1e-9, t);
+        }
+        for (String t : List.of("56° 30' 20\"N 012° 15' 10\"E", "56 30 20\"N 012 15 10\"E",
+                "56I 30J 20\"N 012I 15J 10\"E", "56° 30.0' 20\"N 012° 15,0' 10\"E")) {
+            double[] c = onlyCoordinate(EN.fromPlainText(t));
+            assertEquals(56 + 30 / 60.0 + 20 / 3600.0, c[1], 1e-9, t);
+            assertEquals(12 + 15 / 60.0 + 10 / 3600.0, c[0], 1e-9, t);
+        }
+    }
+
+    @Test
     public void wholeDegreesWrittenWithAZeroFraction_andMinutes_areReadAsTyped() throws Exception {
         // The refusal above is for a fraction of a degree, not for a point in the degree text: "56.0 30N" and
         // "56. 30N" are whole degrees and were always read as 56° 30', so they still are

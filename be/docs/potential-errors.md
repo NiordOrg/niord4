@@ -1846,7 +1846,8 @@ code by the developer or the checker of the cluster named; most were not run.
   read correctly today and is pinned by
   `PlainTextConverterGridTest.aDashBeforeTheLongitude_isADivider_andTheHemisphereLetterDecides` and the admin
   app's `coordinate-format.spec.ts`. The other half of this entry, a fraction of a degree followed by minutes
-  (`56.5 30N` read as 57°), is refused by both parsers since 2026-11-19.
+  (`56.5 30N` read as 57°), is refused by both parsers since 2026-11-19, and minutes with a fraction followed
+  by seconds (`56 30.5' 20"N`) since 2026-11-20 (the admin app's parser reads no seconds at all).
 - **Exposed by:** the error hunt's fix stage, 2026-11-13, cluster C12 (left by the plan as a named risk; read in
   the code).
 - **Severity:** Low. Fix, if it is ever wanted: accept the divider only as a `-` with a space after it, and

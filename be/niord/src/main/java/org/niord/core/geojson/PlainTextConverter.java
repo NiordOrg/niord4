@@ -405,7 +405,8 @@ public class PlainTextConverter {
      * Parses the degree (either latitude or longitude).
      * <p>
      * Every position here carries a hemisphere letter, so a sign before the degrees is refused, as are minutes or
-     * seconds outside [0, 60), a fraction of a degree followed by minutes and a value beyond {@code maxDegrees}
+     * seconds outside [0, 60), a fraction of a degree followed by minutes, minutes with a fraction followed by
+     * seconds and a value beyond {@code maxDegrees}
      * (90 for a latitude, 180 for a longitude): each would otherwise be read as a position the editor never typed.
      *
      * @param deg the degree text
@@ -446,6 +447,14 @@ public class PlainTextConverter {
                 val += min / 60.0;
             }
             if (parts.length == 3 && includesSeconds) {
+                double min = Double.valueOf(parts[1]);
+                if (min != Math.floor(min)) {
+                    // Minutes with a fraction followed by seconds ("56 30.5' 20\"N") would add the seconds to minutes
+                    // that already carry a fraction, a position the editor never typed: refused as a fraction of a
+                    // degree followed by minutes is. Minutes with a fraction and no seconds are the usual form and
+                    // are read as typed, and so are whole minutes with seconds ("56 30.0' 20\"N" too)
+                    throw new Exception("Invalid degree format: " + deg);
+                }
                 double secs = Double.valueOf(parts[2]);
                 if (!(secs >= 0 && secs < 60)) {
                     throw new Exception("Invalid degree format: " + deg);

@@ -76,7 +76,9 @@ const HEMISPHERE = { north: 'N', south: 'S', east: 'E', west: 'W' } as const;
  * when the format is unparseable or the position impossible: a sign before the degrees
  * (the hemisphere letter is always required, so a sign is never needed), minutes outside
  * [0, 60), a fraction of a degree followed by minutes, or more than 90 degrees of latitude
- * or 180 of longitude.
+ * or 180 of longitude. Seconds are not read at all, so minutes with a fraction followed by
+ * seconds (`56 30.5' 20"N`), which the backend's `PlainTextConverter` refuses, are refused
+ * here too.
  */
 function parseComponent(raw: string, isLatitude: boolean): number | null {
   const cleaned = raw.replace(/[°'"]/g, ' ').replace(/,/g, '.').trim().toUpperCase();
