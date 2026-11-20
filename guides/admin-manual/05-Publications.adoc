@@ -288,8 +288,10 @@ The patterns can use these tokens, which the _Insert_ button beside each field a
 `${month}`, `${month-2-digits}`, `${day}`, `${day-2-digits}` and `${edition}`. They are filled in
 from the issue's cut-off: an issue is named after the week, month and year in which its content
 period ends, read in the time zone of the series' domain. `${weekTo}` is used by an issue that
-covers more than one week, such as a double issue over a holiday ("Week 51-52"); it is empty
-otherwise. The values can be overridden for one issue (see <<publication-tailor>>).
+covers more than one week, such as a double issue over a holiday; it is empty otherwise. A
+pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
+an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
+prints as a hyphen). The values can be overridden for one issue (see <<publication-tailor>>).
 
 [#publication-series-frequency]
 ==== Frequency & Naming

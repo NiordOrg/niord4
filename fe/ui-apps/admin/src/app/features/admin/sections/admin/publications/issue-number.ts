@@ -99,17 +99,60 @@ export function issueNumberText(
 }
 
 /**
- * "27", or "52+1" for an issue that closed two periods at once.
+ * "27", "52+1" for an issue that closed two weeks at once, or "36-38" for one
+ * that closed three weeks or more.
  *
  * The double week is the holiday issue, and the `+` form is what the publication
  * has always been called — the pair is one issue covering both weeks, not a
- * range from one to the other, which is why it is not written with a dash.
+ * range from one to the other, which is why it is not written with a dash. An
+ * issue of three weeks or more has only its first and its last week to print,
+ * and `36+38` would read as weeks 36 and 38, so it is written as the range it
+ * is. The server's naming (`IssueNaming.expand`) prints the same.
  */
 function weekText(issue: IssueNumbers): string | undefined {
   if (issue.week == null) {
     return undefined;
   }
-  return issue.weekTo == null ? String(issue.week) : `${issue.week}+${issue.weekTo}`;
+  if (issue.weekTo == null) {
+    return String(issue.week);
+  }
+  const joiner = weeksNamed(issue.week, issue.weekTo, issue.year) >= 3 ? '-' : '+';
+  return `${issue.week}${joiner}${issue.weekTo}`;
+}
+
+/**
+ * How many weeks an issue is named for: 1, 2 for a pair, 3 or more for a range.
+ *
+ * Counted from the numbers alone, as the server counts them
+ * (`IssueNaming.weeksNamed`). Across a year's end the closing week is the
+ * smaller number and the first week belongs to the week-year before the
+ * cut-off's, which has 52 or 53 ISO weeks: 52 to 2 named for 2026 is three
+ * weeks, and 52 to 1 named for 2027 is three as well, because 2026 has a week
+ * 53. A year that is not known counts the earlier year as 52 weeks.
+ */
+export function weeksNamed(
+  week: number,
+  weekTo: number | undefined,
+  year: number | undefined,
+): number {
+  if (weekTo == null) {
+    return 1;
+  }
+  if (weekTo >= week) {
+    return weekTo - week + 1;
+  }
+  const weeksBefore = year == null || !Number.isFinite(year) ? 52 : isoWeeksIn(year - 1);
+  return weeksBefore - week + 1 + weekTo;
+}
+
+/**
+ * The ISO weeks of a week-based year: 53 when it starts on a Thursday, or on a
+ * Wednesday in a leap year, else 52.
+ */
+function isoWeeksIn(year: number): number {
+  const firstDay = new Date(Date.UTC(year, 0, 1)).getUTCDay();
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  return firstDay === 4 || (leap && firstDay === 3) ? 53 : 52;
 }
 
 /**

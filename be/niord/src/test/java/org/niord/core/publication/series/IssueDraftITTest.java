@@ -351,6 +351,23 @@ public class IssueDraftITTest extends ITTest {
                 "floor(periods + 1/4) keeps a late single week single; rounding would call it two");
     }
 
+    /**
+     * A window of three periods is named for its first and its last week as a range: the "+" the pattern writes
+     * for a pair prints as a hyphen, because "27+29" reads as weeks 27 and 29.
+     */
+    @Test
+    @Transactional
+    public void aThreePeriodWindowIsNamedAsARange() {
+        PublicationSeries s = series(TimeRelation.PUBLISHED_IN_INTERVAL,
+                "EfS uge ${week}+${weekTo}, ${year}");
+
+        IssueDraftVo threeWeeks = drafts.draft(s, null, wednesday(2026, 6, 24), wednesday(2026, 7, 15),
+                new Date());
+        assertEquals(Integer.valueOf(27), threeWeeks.getWeek());
+        assertEquals(Integer.valueOf(29), threeWeeks.getWeekTo());
+        assertEquals("EfS uge 27-29, 2026", nameOf(threeWeeks, "da"));
+    }
+
     /** The file name is expanded from the same numbers, per configured language. */
     @Test
     @Transactional

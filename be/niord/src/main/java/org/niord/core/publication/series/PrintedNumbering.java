@@ -32,7 +32,8 @@ import org.niord.core.publication.series.resolve.IssueNaming;
  * A LABEL FOR THE WEEK AND ONE FOR THE YEAR, and none for the closing week,
  * because the closing week already answers the case a label would be typed for.
  * An edition whose period swallowed a week nobody published derives a second
- * number of its own, and ${week}+${weekTo} prints "36+37" from the arithmetic;
+ * number of its own, and ${week}+${weekTo} prints "36+37" from the arithmetic
+ * ("36-38" for an edition of three weeks or more: IssueNaming.expand);
  * an edition written some other way puts the whole of it -- "36 og 37" -- in the
  * week label, where the pattern that names it reads one field rather than two
  * that have to agree.

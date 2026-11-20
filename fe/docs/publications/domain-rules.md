@@ -544,8 +544,15 @@ and reading the cadence anyway would overrule a deliberate choice. A caller that
 `week != null` gets it wrong in both directions.
 
 Formatting rules: a double week reads `52+1`, not `52-1` — the pair is one issue covering both weeks, not
-a range. A year prints its edition only when the edition is not the first; `(1)` beside a yearly invites
-the reader to look for a second edition that does not exist.
+a range. An issue of three weeks or more reads as a range of its first and its last week, `36-38`, because
+`36+38` would read as weeks 36 and 38; across a year's end it reads `52-2` beside the later year, the
+cut-off's week-year, and the earlier year's 52 or 53 weeks are counted (the owner decided on 2026-11-20). A
+pattern writes the pair as `${week}+${weekTo}`, and that `+`, and only that one, prints as a hyphen for an
+issue of three weeks or more, in the name, the file name and the citation alike (`IssueNaming.expand`, and
+the admin app's `issueNumberText` and `expandIssuePattern`; pinned by `IssueNamingTest` and
+`issue-number.spec.ts`). A released or imported issue keeps the name and file name it has. A year prints its
+edition only when the edition is not the first; `(1)` beside a yearly invites the reader to look for a second
+edition that does not exist.
 
 **Neither a name nor a period is unique.** `publicId` is the only unique key an issue carries: nothing
 refuses a second issue of the same series with the same name over the same period, and the archive holds

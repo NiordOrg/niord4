@@ -88,6 +88,13 @@ public final class IssueNaming {
 
     private static final Pattern TOKEN = Pattern.compile("\\$\\{([^}]*)\\}");
 
+    /**
+     * A "+" written straight between the first week and the closing week ("${week}+${weekTo}", either variant of
+     * each, spaces allowed around the "+"): the pair form, which {@link #joined} turns into a range.
+     */
+    private static final Pattern WEEK_PAIR_JOIN = Pattern.compile(
+            "(\\$\\{week(?:-2-digits)?\\}\\s*)\\+(?=\\s*\\$\\{weekTo(?:-2-digits)?\\})");
+
     /** The numbers an issue derives from its cut-off. */
     public record Numbers(int week, Integer weekTo, int year, int month, int day, Integer edition) {
     }
@@ -108,7 +115,8 @@ public final class IssueNaming {
      *
      * THE WEEK AND THE YEAR, AND ${weekTo} IS ALWAYS THE DERIVED NUMBER. A window
      * that swallowed a period the publication skipped carries a second week of
-     * its own, so ${week}+${weekTo} already prints "36+37" from the arithmetic; a
+     * its own, so ${week}+${weekTo} already prints "36+37" from the arithmetic (and
+     * "36-38" for three weeks or more, see {@link #joined}); a
      * publication that writes the pair some other way writes the whole of it into
      * the week label, and the pattern that names the edition then reads one field
      * rather than two that have to be kept in step.
@@ -245,6 +253,46 @@ public final class IssueNaming {
         return at.toLocalDate().with(ChronoField.DAY_OF_WEEK, 1);
     }
 
+    /**
+     * How many weeks an issue is named for: 1 for a single week, 2 for a pair, 3 or more for a range.
+     *
+     * Counted from the numbers alone, so it answers for a stored issue as for a derived one. Across a year's end
+     * the closing week is the smaller number and the first week belongs to the week-year before the cut-off's,
+     * which has 52 or 53 ISO weeks: weeks 52 to 2 of an issue named for 2026 are three weeks (52 of 2025, 1 and
+     * 2), while weeks 52 to 1 of an issue named for 2027 are three as well, because 2026 has a week 53.
+     */
+    public static int weeksNamed(Numbers n) {
+        if (n == null || n.weekTo() == null) {
+            return 1;
+        }
+        if (n.weekTo() >= n.week()) {
+            return n.weekTo() - n.week() + 1;
+        }
+        return isoWeeksIn(n.year() - 1) - n.week() + 1 + n.weekTo();
+    }
+
+    /** The number of ISO weeks in a week-based year: 28 December is always in its last week. */
+    private static int isoWeeksIn(int weekBasedYear) {
+        return LocalDate.of(weekBasedYear, 12, 28).get(WeekFields.ISO.weekOfWeekBasedYear());
+    }
+
+    /**
+     * The pattern with the pair joiner written as a range where the issue is named for three weeks or more.
+     *
+     * A pattern names a double week "${week}+${weekTo}": "36+37", the pair, one issue covering both weeks. An issue
+     * that closed three weeks or more has only its first and its last week to print, and "36+38" reads as weeks 36
+     * and 38. So the "+" between the two tokens prints as a hyphen there, "36-38", and across a year's end "52-2"
+     * beside the later year. Only that "+" is touched: any other text of the pattern is printed as written, and a
+     * pair or a single week expands exactly as before. The admin app's issueNumberText and expandIssuePattern
+     * follow the same rule, so the strip, the drawer and the name agree.
+     */
+    private static String joined(String pattern, Numbers numbers) {
+        if (pattern == null || weeksNamed(numbers) < 3) {
+            return pattern;
+        }
+        return WEEK_PAIR_JOIN.matcher(pattern).replaceAll("$1-");
+    }
+
     /** The values each token expands to, for a given set of numbers. */
     public static Map<String, String> valuesOf(Numbers n) {
         Map<String, String> v = new LinkedHashMap<>();
@@ -309,7 +357,7 @@ public final class IssueNaming {
         }
         Map<String, String> values = valuesOf(numbers, labels);
 
-        Matcher m = TOKEN.matcher(pattern);
+        Matcher m = TOKEN.matcher(joined(pattern, numbers));
         StringBuilder out = new StringBuilder();
         while (m.find()) {
             String token = m.group(1);
@@ -367,7 +415,7 @@ public final class IssueNaming {
         }
         Map<String, String> values = valuesOf(numbers, labels);
 
-        Matcher m = TOKEN.matcher(pattern);
+        Matcher m = TOKEN.matcher(joined(pattern, numbers));
         StringBuilder out = new StringBuilder();
         while (m.find()) {
             String token = m.group(1);
