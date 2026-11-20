@@ -28,8 +28,9 @@ export class DictionariesFacade {
 
   private readonly requestedName = signal('web');
 
-  // A failed read of the names leaves the selector empty: it counts as a failed load
-  // (`error`, `namesFailed`), so the page says so rather than offering no dictionaries.
+  // A failed read of the names leaves the selector empty: `namesFailed` lets the page say so
+  // rather than offer no dictionaries. It is kept apart from `error` (the entries read), so the
+  // entries of the current dictionary, read correctly, stay on the page.
   private readonly namesRead = fixedListRead<string>(() => this.api.getDictionaryNames());
   readonly names = this.namesRead.value;
   readonly namesFailed = this.namesRead.failed;
@@ -67,7 +68,8 @@ export class DictionariesFacade {
 
   readonly entries = computed(() => this.state().entries);
   readonly loading = computed(() => this.state().loading);
-  readonly error = computed(() => this.state().error || this.namesFailed());
+  /** The current dictionary's entries could not be read. */
+  readonly error = computed(() => this.state().error);
 
   /** Switch dictionary only when the name is known — else keep current. */
   selectDictionary(name: string): void {
@@ -78,9 +80,14 @@ export class DictionariesFacade {
 
   /** Read the current dictionary again, and the names too when they failed. */
   refresh(): void {
+    this.retryNames();
+    this.refreshTick.update((tick) => tick + 1);
+  }
+
+  /** Read the dictionary names again after a failed read. */
+  retryNames(): void {
     if (this.namesFailed()) {
       this.namesRead.retry();
     }
-    this.refreshTick.update((tick) => tick + 1);
   }
 }

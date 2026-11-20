@@ -60,11 +60,19 @@
 
   <app-progress-bar [visible]="facade.loading()" />
 
+  <!-- The names' failure stands above the entries, which were read on their own and stay. -->
+  @if (facade.namesFailed()) {
+    <app-error-banner
+      data-testid="dictionaries-names-error"
+      [title]="'common.fetchError' | transloco"
+      [retryLabel]="'admin.dictionaries.retry' | transloco"
+      (retry)="facade.retryNames()"
+    />
+  }
+
   @if (facade.error()) {
     <app-error-banner
-      [title]="
-        (facade.namesFailed() ? 'common.fetchError' : 'admin.dictionaries.loadError') | transloco
-      "
+      [title]="'admin.dictionaries.loadError' | transloco"
       [retryLabel]="'admin.dictionaries.retry' | transloco"
       (retry)="facade.refresh()"
     />
