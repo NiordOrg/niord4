@@ -110,8 +110,9 @@ day it starts you can change its start time, and it keeps its end on the next da
 time is read on the day shown, so an end before the start makes the line say "The period must end
 after it starts. It runs past midnight: to keep firing after midnight, end it at 00:00 and add a
 period from 00:00 on the next day." Times and dates are shown on both ends of such a period, and of
-a period until midnight. A period you do not change is saved as it was. When Niord cannot store the periods it says "Error updating firing
-periods".
+a period until midnight. A period you do not change is saved as it was. When Niord cannot store the
+periods it says "Error updating firing periods", and the row stays open with the lines as you left
+them, so you can click *Save* again.
 
 The times are read in the time zone of the domain you are working in. When the domain has no time
 zone, the pencil cannot be used ("No time zone — choose a domain first").
