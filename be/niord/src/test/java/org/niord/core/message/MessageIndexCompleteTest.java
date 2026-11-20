@@ -194,6 +194,27 @@ class MessageIndexCompleteTest {
         assertEquals(List.of(), completeLines(postgres));
     }
 
+    /**
+     * A pass that rolls back wrote nothing to the table, so the line's figure leaves it out: it counts the messages of
+     * the passes that committed
+     */
+    @Test
+    void aPostgresPassThatRollsBackIsNotCountedInTheFill() {
+        MessagePostgresIndex index = new MessagePostgresIndex();
+
+        TransactionSynchronizationManager.initSynchronization();
+        index.passEnded(false, 5000);
+        TransactionSynchronizationManager.clearSynchronization();
+
+        TransactionSynchronizationManager.initSynchronization();
+        index.passEnded(true, 4);
+        commit();
+
+        assertTrue(index.allMessagesIndexed());
+        assertEquals(List.of("Message search index complete: PostgreSQL, 4 messages indexed in this fill"),
+                completeLines(postgres));
+    }
+
     /** The passes after the table is complete log nothing; a re-index begins a fill that logs once more */
     @Test
     void thePostgresTableLogsOneLinePerFill() {

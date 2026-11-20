@@ -119,8 +119,9 @@ public class MessagePostgresIndex extends BaseService {
     volatile boolean allMessagesIndexed;
 
     /**
-     * The messages the passes indexed since the start or the last re-index: the count the line that says the table is
-     * complete gives ({@link #markComplete(int)}). Written by the passes, under {@link #lock}.
+     * The messages the committed passes indexed since the start or the last re-index: the count the line that says
+     * the table is complete gives ({@link #markComplete(int)}). Written when a pass has committed
+     * ({@link #passCommitted}).
      */
     volatile int indexedInFill;
 
@@ -157,16 +158,15 @@ public class MessagePostgresIndex extends BaseService {
     }
 
     /**
-     * Counts a pass's messages into the fill and, when the pass completes the table, marks it complete once the
-     * pass's transaction has committed (at once when no transaction runs), so the table is never reported complete
-     * while its rows cannot yet be read. The caller holds {@link #lock}.
+     * Once the pass's transaction has committed (at once when no transaction runs), counts its messages into the fill
+     * and, when the pass completes the table, marks it complete: the table is never reported complete while its rows
+     * cannot yet be read, and a pass that rolls back is not counted. The caller holds {@link #lock}.
      *
      * @param completesTheIndex whether the pass found fewer messages after the marker than it may index
      * @param indexed           the messages the pass indexed
      */
     void passEnded(boolean completesTheIndex, int indexed) {
-        indexedInFill += indexed;
-        if (!completesTheIndex) {
+        if (!completesTheIndex && indexed == 0) {
             return;
         }
         int passFill = fill;
@@ -174,10 +174,29 @@ public class MessagePostgresIndex extends BaseService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    markComplete(passFill);
+                    passCommitted(passFill, completesTheIndex, indexed);
                 }
             });
         } else {
+            passCommitted(passFill, completesTheIndex, indexed);
+        }
+    }
+
+    /**
+     * A pass has committed: its messages count into the fill it belonged to, and it marks the table complete when it
+     * completes it. A pass that committed after a re-index began counts into neither: the re-index's fill counts its
+     * own passes.
+     *
+     * @param passFill          the fill the pass belonged to
+     * @param completesTheIndex whether the pass found fewer messages after the marker than it may index
+     * @param indexed           the messages the pass indexed
+     */
+    synchronized void passCommitted(int passFill, boolean completesTheIndex, int indexed) {
+        if (passFill != fill) {
+            return;
+        }
+        indexedInFill += indexed;
+        if (completesTheIndex) {
             markComplete(passFill);
         }
     }
