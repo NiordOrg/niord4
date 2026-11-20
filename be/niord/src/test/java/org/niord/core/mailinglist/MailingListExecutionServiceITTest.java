@@ -485,7 +485,7 @@ class MailingListExecutionServiceITTest extends ITTest {
         java.util.Date today = new java.util.Date();
         java.util.Locale danish = java.util.Locale.forLanguageTag("da");
         String expected = "Oplæsning " + new java.text.SimpleDateFormat("dd-MM-yyyy", danish).format(today)
-                + " / " + new java.text.SimpleDateFormat("d. MMMM yyyy", danish).format(today);
+                + " / " + new java.text.SimpleDateFormat("d MMMM yyyy", danish).format(today);
         assertEquals(expected, mails.get(0).getSubject(),
                 "the dates must be formatted with the default language's mail.date_format texts, "
                         + "in the trigger's language");
@@ -615,7 +615,7 @@ class MailingListExecutionServiceITTest extends ITTest {
 
         assertEquals(1, mails.size());
         assertSubjectIsTheDate(mails.get(0).getSubject(), before, after,
-                "d. MMMM yyyy", locale, java.time.ZoneId.systemDefault());
+                "d MMMM yyyy", locale, java.time.ZoneId.systemDefault());
     }
 
     @Test

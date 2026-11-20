@@ -72,7 +72,7 @@ public class WeeklyReportTemplateTest {
 
     private static final String TEMPLATE = "nm-report-pdf.ftl";
 
-    /** The text the report templates date a document by, and its English value (RENDER7) */
+    /** The text the report templates date a document by, and its English value */
     private static final String DATE_FORMAT_KEY = "msg.time.date_format";
     private static final String ENGLISH_DATE_FORMAT = "d MMMM yyyy";
 
@@ -227,7 +227,7 @@ public class WeeklyReportTemplateTest {
     }
 
     /**
-     * RENDER7. Every report dates its first page by the pattern of the language's
+     * Every report dates its first page by the pattern of the language's
      * date text ({@code msg.time.date_format}, "d MMMM yyyy" in English), not by
      * the Danish "dd. MMMM yyyy" written into the template. Asserted with a pattern
      * no template holds, so a template that keeps a pattern of its own fails here.

@@ -2227,7 +2227,7 @@
         "descs": [
           {
             "lang": "en",
-            "value": "d. MMMM yyyy"
+            "value": "d MMMM yyyy"
           }
         ]
       },

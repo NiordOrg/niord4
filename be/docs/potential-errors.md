@@ -1288,22 +1288,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low. Fix: number an entry one above the resource's highest history version, and key the dialog on
   the entry's id.
 
-## RENDER7. The English mail text `mail.date_format.long` writes its date the Danish way
-
-- **Location:** the English value of `mail.date_format.long` in
-  `niord/src/main/resources/defaults/base/texts/en/mail.properties` and `bootstrap/texts.json` (`d. MMMM yyyy`),
-  read by `MailingListExecutionService` for a trigger subject's `${date-long}`.
-- **Description:** the day with a full stop is the Danish form; the base product's other English date text is
-  `d MMMM yyyy` (`msg.time.date_format`). The report PDFs, which wrote `dd. MMMM yyyy` into their templates, date
-  their first page by `msg.time.date_format` since 2026-11-20 (release folder
-  `be/niord/bootstrap/releases/2026-11-20-report-template-fixes/`); this text is what is left.
-- **Why it looks wrong:** the base product publishes English only, and since the owner's ruling of 2026-11-11 (no
-  Danish in English texts) the user guides' guard treats such a date as Danish.
-- **Exposed by:** the user guides' screenshot rig (2026-11-11).
-- **Severity:** Low, cosmetic, a mail subject only. Fix: `d MMMM yyyy` as the English value; start-up never
-  changes a deployment's stored text, so a deployment takes it by editing the text on the Dictionaries page. Could
-  break: `MailingListExecutionServiceITTest`, which expects the current pattern.
-
 ## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
 
 - **Location:** `niord/src/main/java/org/niord/core/keycloak/KeycloakIntegrationService.java` `createKeycloakDomain`

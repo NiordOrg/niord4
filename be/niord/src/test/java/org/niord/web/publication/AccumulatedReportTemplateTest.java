@@ -65,7 +65,7 @@ public class AccumulatedReportTemplateTest {
 
     private static final String TEMPLATE = "nm-accumulated-report-pdf.ftl";
 
-    /** The text the report templates date a document by, and its English value (RENDER7) */
+    /** The text the report templates date a document by, and its English value */
     private static final String DATE_FORMAT_KEY = "msg.time.date_format";
     private static final String ENGLISH_DATE_FORMAT = "d MMMM yyyy";
 
@@ -433,7 +433,7 @@ public class AccumulatedReportTemplateTest {
         List<Map<String, Object>> groups = (List<Map<String, Object>>) model.get("groups");
         // 2 March 2024 to 9 March 2024, both 17:00 in Copenhagen.
         groups.get(0).put("intervalFrom", new Date(1_709_395_200_000L));
-        // The days are printed by the language's date text (RENDER7), here a pattern no template holds
+        // The days are printed by the language's date text, here a pattern no template holds
         model.put("text", new KeyText("yyyy-MM-dd"));
 
         String html = render(model);
