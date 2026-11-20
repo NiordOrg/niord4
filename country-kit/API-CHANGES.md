@@ -73,6 +73,23 @@ lead lists an entry again and a reused one hides a new entry. Each entry says:
 
 ## Unreleased
 
+**The public site's first visit carries the dialogs' keyboard and reading fixes, past a country's
+bundle baseline.** A first visit to `/messages/details` now loads what this version adds to the
+public site for its readers who use a keyboard or a screen reader: a dialog body that scrolls is a
+named tab stop, focus returns to a message's row when the dialog opened by its address closes, and
+the chart credit is marked as English, with its links underlined. The scripts of the landing route
+grow by about 0.5 kB transfer, in one more file, which in the example country is 3.0 % over its
+baseline and past the bundle report's tolerance, so check 8 of the checks on every country build
+fails `npm run build`. The base product's own baseline, `ui-apps/info/bundle-baseline.json`, and the
+example's are recorded again for the same changes. No export is added or removed. Why: the growth
+is the cost of these fixes on the first visit, not a change of the country's.
+
+What a country must do: at this bump, once `npm run build` has built the public site, record its
+baseline again with `npm run bundle:info -- --update-baseline` in `fe/` and commit
+`info/bundle-baseline.json`; the next build then passes check 8.
+
+## 4.0.205: the public site's first visit carries new features
+
 **The public site's first visit carries this version's features, past a country's bundle
 baseline.** A first visit to `/messages/details` now loads what this version adds to the public
 site: the "active now" filter worked out in the browser from the event dates every message carries,
