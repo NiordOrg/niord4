@@ -141,7 +141,15 @@ describe('coordinate-format', () => {
       expect(parseLatLon('56.5 30N - 012 00E')).toBeNull();
       expect(parseLatLon('56,5 30,0N - 012 00E')).toBeNull();
       expect(parseLatLon("56° 30'N - 012.5° 15'E")).toBeNull();
+      expect(parseLatLon('565e-1 30N - 012 00E')).toBeNull();
       expect(parseLatLon('56.5N - 012.25E')).toEqual({ lat: 56.5, lon: 12.25 });
+    });
+
+    it('reads whole degrees written with a zero fraction, followed by minutes, as typed', () => {
+      // The refusal is for a fraction of a degree, not for a point in the degree text.
+      expect(parseLatLon('56.0 30N - 012.0 15E')).toEqual({ lat: 56.5, lon: 12.25 });
+      expect(parseLatLon('56. 30N - 012. 15E')).toEqual({ lat: 56.5, lon: 12.25 });
+      expect(parseLatLon('56,0 30,0N - 012,00 15,0E')).toEqual({ lat: 56.5, lon: 12.25 });
     });
 
     it('reads a "-" before the longitude as the divider: the hemisphere letter decides', () => {

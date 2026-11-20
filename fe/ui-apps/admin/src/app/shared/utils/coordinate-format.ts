@@ -95,11 +95,12 @@ function parseComponent(raw: string, isLatitude: boolean): number | null {
     degrees = Number(parts[0]);
   } else if (parts.length === 2) {
     // A fraction of a degree followed by minutes ("56.5 30N", often a slipped decimal comma)
-    // would add the minutes to the fraction: 57°, a position the editor never typed.
-    if (parts[0].includes('.')) return null;
+    // would add the minutes to the fraction: 57°, a position the editor never typed. The
+    // value decides, not the text: "56.0 30N" is whole degrees, "565e-1 30N" a fraction.
     const deg = Number(parts[0]);
     const minutes = Number(parts[1]);
     if (!Number.isFinite(deg) || !Number.isFinite(minutes)) return null;
+    if (!Number.isInteger(deg)) return null;
     if (minutes < 0 || minutes >= 60) return null;
     degrees = deg + minutes / 60;
   } else {

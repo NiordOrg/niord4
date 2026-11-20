@@ -432,9 +432,11 @@ public class PlainTextConverter {
         try {
             double val = Double.valueOf(parts[0]);
             if (parts.length == 2 || parts.length == 3) {
-                if (parts[0].contains(".")) {
+                if (val != Math.floor(val)) {
                     // A fraction of a degree followed by minutes ("56.5 30N", often a slipped decimal comma) would
-                    // add the minutes to the fraction: 57°, a position the editor never typed
+                    // add the minutes to the fraction: 57°, a position the editor never typed. The value decides, not
+                    // the text: "56.0 30N" and "56. 30N" are whole degrees and read as typed, and an exponent
+                    // ("565e-1 30N") is a fraction like any other
                     throw new Exception("Invalid degree format: " + deg);
                 }
                 double min = Double.valueOf(parts[1]);

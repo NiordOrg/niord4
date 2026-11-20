@@ -171,13 +171,24 @@ public class PlainTextConverterGridTest {
         // either thing the editor may have meant. A fraction of a degree with minutes after it is refused, in the
         // latitude and the longitude, with a comma as with a point; a fraction alone is decimal degrees, as before.
         for (String t : List.of("56.5 30N 012 00E", "56,5 30.0N 012 00E", "56 30N 012.5 15E",
-                "56.5° 30'N 012° 00'E", "56.5° 30' 10\"N 012° 00' 00\"E")) {
+                "56.5° 30'N 012° 00'E", "56.5° 30' 10\"N 012° 00' 00\"E", "565e-1 30N 012 00E")) {
             Exception e = assertThrows(Exception.class, () -> EN.fromPlainText(t), t);
             assertTrue(e.getMessage().startsWith("Invalid degree format"), t + ": " + e.getMessage());
         }
         double[] c = onlyCoordinate(EN.fromPlainText("56.5N 012.25E"));
         assertEquals(56.5, c[1], 1e-9);
         assertEquals(12.25, c[0], 1e-9);
+    }
+
+    @Test
+    public void wholeDegreesWrittenWithAZeroFraction_andMinutes_areReadAsTyped() throws Exception {
+        // The refusal above is for a fraction of a degree, not for a point in the degree text: "56.0 30N" and
+        // "56. 30N" are whole degrees and were always read as 56° 30', so they still are
+        for (String t : List.of("56.0 30N 012.0 15E", "56. 30N 012. 15E", "56,0 30,0N 012,00 15,0E")) {
+            double[] c = onlyCoordinate(EN.fromPlainText(t));
+            assertEquals(56.5, c[1], 1e-9, t);
+            assertEquals(12.25, c[0], 1e-9, t);
+        }
     }
 
     @Test
