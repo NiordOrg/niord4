@@ -2150,22 +2150,6 @@ The fix stage of phase 2 met these while it fixed other entries, in its integrat
 its riskiest fixes; none was fixed. Each says how it was found. Java paths are under `be/niord/src/main/java/` unless
 they say otherwise; every other path is from the repository root.
 
-## CG10. A coordinate sent as JSON null is stored as 0
-
-- **Location:** the coordinate arrays of the GeoJSON value objects (`org/niord/model/geojson/PointVo.java` 34,
-  `LineStringVo.java` 34, `MultiPointVo.java` 34 and the others), read by the REST JSON mapper; the save paths
-  that build an entity from them (`Feature.fromGeoJson`, `Area(vo)`, `Chart(vo)`).
-- **Description:** a coordinate of `null` in a geometry the backend receives is read as 0 before any check runs:
-  `POST /rest/messages/message` with the coordinates `[10.5, null]` answered 200 and stored `[10.5, 0.0]`. A
-  latitude beyond 90 is refused on every save path since 2026-11-16, but one typed in the admin editor's
-  edit-as-text view reaches the backend as `null` (the map's projection has no number for it) and is stored as
-  latitude 0, without a word.
-- **Why it looks wrong:** a value the client did not send is stored as a position.
-- **Exposed by:** the error hunt's phase 2 fix stage, 2026-11-16, cluster P1-12: seen in its red run and again in
-  its check's run on the fixed code.
-- **Severity:** Low. Fix: refuse a null coordinate with 400, in the value objects' coordinate fields or in the
-  REST mapper. Could break: a client that relies on `null` being read as 0.
-
 ## FIRING10. A firing-period save that names a period another tab deleted answers 500
 
 - **Location:** `org/niord/core/schedule/FiringScheduleService.java` `updateFiringAreaPeriodsForDate` (316 on;

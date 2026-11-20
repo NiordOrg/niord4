@@ -23,10 +23,12 @@ import org.niord.test.ITTest;
 import org.niord.test.KeycloakTestTokens;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -568,6 +570,24 @@ class AreaRestServiceITTest extends ITTest {
         double[] stored = storedPoint(id);
         assertEquals(10.5, stored[0], 1e-9);
         assertEquals(54.5, stored[1], 1e-9, "the refused update must leave the stored latitude");
+    }
+
+    /** CG10: a coordinate sent as null was stored as 0; the create is a 400, as for one that is not a number. */
+    @Test
+    void anAreaSavedWithANullLatitude_isRefusedAndNotMade() {
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "descs", List.of(Map.of("lang", "en", "name", "IT-REST-NullCoord")),
+                        "geometry", Map.of("type", "Point", "coordinates", Arrays.asList(10.0, null))))
+                .when().post("/rest/areas/area/")
+                .then().statusCode(400)
+                .body("detail", containsString("is not a number"));
+
+        given().queryParam("lang", "en").queryParam("name", "IT-REST-NullCoord").queryParam("limit", 10)
+                .when().get("/rest/areas/search")
+                .then().statusCode(200)
+                .body("size()", is(0));
     }
 
 }

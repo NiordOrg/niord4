@@ -22,11 +22,13 @@ import org.junit.jupiter.api.Test;
 import org.niord.test.ITTest;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -370,6 +372,25 @@ class ChartRestServiceITTest extends ITTest {
         given().auth().oauth2(accessToken())
                 .when().delete("/rest/charts/chart/IT-REST-Missing-Del")
                 .then().statusCode(204);
+    }
+
+    @Test
+    void createChartWithANullCoordinate_isRefusedAndMakesNoChart() {
+        // CG10: a coordinate sent as null was read as 0 and stored; it is refused as not a number, as a NaN is
+        Map<String, Object> body = chartBody("IT-REST-NullCoord-1", "IT-REST-NullCoord-Name");
+        body.put("geometry", Map.of("type", "Point", "coordinates", Arrays.asList(10.0, null)));
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(body)
+                .when().post("/rest/charts/chart/")
+                .then().statusCode(400)
+                .body("detail", containsString("is not a number"));
+        createdChartNumbers.add("IT-REST-NullCoord-1");
+
+        given()
+                .when().get("/rest/charts/search/IT-REST-NullCoord-1")
+                .then().statusCode(200)
+                .body("size()", is(0));
     }
 
     @Test

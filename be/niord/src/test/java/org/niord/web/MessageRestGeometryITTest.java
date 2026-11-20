@@ -409,6 +409,29 @@ class MessageRestGeometryITTest extends ITTest {
     }
 
     @Test
+    void aMessageSavedWithANullLatitude_isRefusedAndNotSaved() {
+        // CG10: a coordinate sent as null was read as 0 and stored as latitude 0; it is refused as not a number
+        String uid = UidUtils.newUid();
+        String repoPath = UidUtils.uidToHashedFolderPath("messages", uid);
+        String editRepoPath = newTempDir();
+        try {
+            given().auth().oauth2(accessToken())
+                    .header("NiordDomain", "niord-nw")
+                    .contentType(ContentType.JSON)
+                    .body(draftWithGeometry(uid, repoPath, editRepoPath, Arrays.asList(10.5, null)))
+                    .when().post("/rest/messages/message")
+                    .then().statusCode(400)
+                    .body("detail", containsString("is not a number"));
+
+            assertEquals(0L, countMessages(uid), "a refused message must not be saved");
+        } finally {
+            deleteMessage(uid);
+            store.deleteFolder(repoPath);
+            store.deleteFolder(editRepoPath);
+        }
+    }
+
+    @Test
     void anUpdateWithAPointAt95North_isRefusedAndKeepsTheStoredGeometry() {
         String uid = UidUtils.newUid();
         String repoPath = UidUtils.uidToHashedFolderPath("messages", uid);
