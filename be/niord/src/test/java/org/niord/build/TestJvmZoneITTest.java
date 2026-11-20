@@ -16,7 +16,6 @@
 package org.niord.build;
 
 import org.junit.jupiter.api.Test;
-import org.niord.test.ITTest;
 
 import java.util.TimeZone;
 
@@ -27,8 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * do (the {@code argLine} property of {@code be/pom.xml}, which Failsafe reads as Surefire does): in a zone with
  * summer time the hour the clocks go back is stored one hour off, and some seventeen time-dependent tests failed by
  * exactly one hour when they ran in it.
+ * <p>
+ * Named {@code *ITTest} only to run in the Failsafe JVM; it needs no container and no application context.
  */
-class TestJvmZoneITTest extends ITTest {
+class TestJvmZoneITTest {
 
     @Test
     void theIntegrationTestJvmRunsInUtc() {
