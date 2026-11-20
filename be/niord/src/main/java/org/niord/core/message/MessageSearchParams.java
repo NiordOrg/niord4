@@ -335,9 +335,9 @@ public class MessageSearchParams extends PagedSearchParamsVo {
         if (types.size() > 0) { desc.add(String.format("Types: %s", types)); }
         if (mainTypes.size() > 0) { desc.add(String.format("Main types: %s", mainTypes)); }
         if (kinds.size() > 0) { desc.add(String.format("Kinds: %s", kinds)); }
-        if (seriesIds.size() > 0) { desc.add(String.format("Series ID's: %s", seriesIds)); }
-        if (areaIds.size() > 0) { desc.add(String.format("Area ID's: %s", areaIds)); }
-        if (categoryIds.size() > 0) { desc.add(String.format("Category ID's: %s", categoryIds)); }
+        if (seriesIds.size() > 0) { desc.add(String.format("Series IDs: %s", seriesIds)); }
+        if (areaIds.size() > 0) { desc.add(String.format("Area IDs: %s", areaIds)); }
+        if (categoryIds.size() > 0) { desc.add(String.format("Category IDs: %s", categoryIds)); }
         if (chartNumbers.size() > 0) { desc.add(String.format("Chart Numbers: %s", chartNumbers)); }
         if (tags.size() > 0) { desc.add(String.format("Tags: %s", tags)); }
         if (publications.size() > 0) { desc.add(String.format("Publications: %s", publications)); }

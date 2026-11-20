@@ -1192,21 +1192,23 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low — test hygiene. Fix: leave the provider empty in the test settings, so the no-provider branch
   is the one tested, and correct the Javadoc if a provider stays.
 
-## RENDER6. The message-list PDF prints "Series ID's" and an American time stamp
+## RENDER6. The message-list PDF's first page is English in every language, its criteria line Java's
 
-- **Location:** `MessageSearchParams` (the search description, `String.format("Series ID's: %s", ...)`) and
-  `bootstrap/templates/messages/message-list-pdf.ftl` (`${.now?datetime}`, in the "Generated" row and the header).
+- **Location:** `MessageSearchParams.toString` (the search description, `"Statuses: %s"` and the rest) and
+  `bootstrap/templates/messages/message-list-pdf.ftl` (the labels `Generated`, `Criteria`, `Result` and
+  `messages`, written into the template).
 - **Description:** the first page of the message-list report reads "Criteria: Domain: niord-nw, Statuses:
-  [PUBLISHED], Kinds: [WARNING], Series ID's: [dma-nw-local, dma-nw]" and "Generated: Nov 11, 2026, 11:28:28AM".
-  The criteria line is the search's English debug description, with a greengrocer's apostrophe and Java's list
-  brackets, printed whatever the report's language; the time stamp is FreeMarker's default `?datetime` format,
-  US order and a 12-hour clock with no space before AM, where every other date in the reports is formatted on
-  purpose (`dd. MMMM yyyy` in the accumulated report).
+  [PUBLISHED], Kinds: [WARNING], Series IDs: [dma-nw-local, dma-nw]". The criteria line is the search's English
+  debug description, with Java's list brackets, and the labels around it are English, printed whatever the
+  report's language. Since 2026-11-20 the description writes "Series IDs", "Area IDs" and "Category IDs" (it wrote
+  "Series ID's"), and the time stamp is printed by `msg.time.date_time_format` in the print's zone, as the message
+  PDFs print a time (it was FreeMarker's default "Nov 11, 2026, 11:28:28AM"); the template ships in the release
+  folder `be/niord/bootstrap/releases/2026-11-20-report-template-fixes/`.
 - **Why it looks wrong:** it is the first thing a reader sees on a printed report, and the user guides' picture of
   that page shows it.
 - **Exposed by:** the user guides' screenshot rig (2026-11-11, `fe/guides-shots/`, `pilot/report-first-page.png`).
-- **Severity:** Low, cosmetic. Fix: a criteria line made from the report's own texts in its language, and a
-  formatted time stamp in the domain's zone.
+- **Severity:** Low, cosmetic. Fix: a criteria line made from the report's own texts in its language, and the
+  labels as texts; new texts and a template change, which ships as a release import.
 
 ## PROM7. The Twitter settings of a type answer 500, and the dialog then offers an empty form whose save is refused
 

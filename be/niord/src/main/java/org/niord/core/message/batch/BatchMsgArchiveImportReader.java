@@ -70,7 +70,7 @@ import java.util.zip.ZipFile;
  *  ],
  *  "total": 20,
  *  "size": 20,
- *  "description": "Language: da, Domain: true, Statuses: [PUBLISHED], Series ID's: [dma-nm]"
+ *  "description": "Language: da, Domain: true, Statuses: [PUBLISHED], Series IDs: [dma-nm]"
  * }
  * </pre>
  */

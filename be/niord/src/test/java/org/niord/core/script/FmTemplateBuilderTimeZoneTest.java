@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -66,11 +67,12 @@ class FmTemplateBuilderTimeZoneTest {
     private Map<String, ScriptResource> rows;
     private FmTemplateService templateService;
 
-    /** The dictionary: the two date texts the message template uses, and the key itself for the rest */
+    /** The dictionary: the date texts the message templates use, and the key itself for the rest */
     private static class Texts extends ResourceBundle {
         private static final Map<String, String> TEXTS = Map.of(
                 "msg.field.published", "Published",
-                "msg.time.date_format", "d MMMM yyyy");
+                "msg.time.date_format", "d MMMM yyyy",
+                "msg.time.date_time_format", "d MMMM yyyy, 'hours' HH:mm");
 
         @Override
         protected Object handleGetObject(String key) {
@@ -186,5 +188,20 @@ class FmTemplateBuilderTimeZoneTest {
         assertFalse(withoutFrontPage.contains("Statuses: [PUBLISHED]"), withoutFrontPage);
         assertFalse(withoutFrontPage.contains("Result:"), withoutFrontPage);
         assertTrue(withoutFrontPage.contains("Buoy off station"), withoutFrontPage);
+    }
+
+    /**
+     * RENDER6. The list says when it was made by the language's date-and-time text ({@code msg.time.date_time_format},
+     * the form the message PDFs print a time in), on its front page and in its page header, not in FreeMarker's
+     * default "Nov 11, 2026, 11:28:28 AM". FAILS on the template that printed {@code .now?datetime}.
+     */
+    @Test
+    void theListSaysWhenItWasMadeByTheDateAndTimeText() throws Exception {
+        String standard = renderList("Europe/Copenhagen", true);
+
+        String stamp = "\\d{1,2} \\p{L}+ \\d{4}, hours \\d{2}:\\d{2}";
+        assertTrue(Pattern.compile("Generated: &nbsp;</th>\\s*<td>" + stamp + "</td>").matcher(standard).find(),
+                standard);
+        assertTrue(Pattern.compile("Generated " + stamp + "</span>").matcher(standard).find(), standard);
     }
 }
