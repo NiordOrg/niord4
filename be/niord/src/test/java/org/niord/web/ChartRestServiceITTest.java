@@ -404,4 +404,17 @@ class ChartRestServiceITTest extends ITTest {
                 .then().statusCode(200)
                 .body("size()", is(0));
     }
+
+    @Test
+    void intersectingChartsWithANullCoordinate_isRefused() {
+        // A coordinate sent as null is refused as the save refuses it, not searched as not a number
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(Map.of("type", "FeatureCollection", "features", List.of(Map.of(
+                        "type", "Feature", "properties", Map.of(),
+                        "geometry", Map.of("type", "Point", "coordinates", Arrays.asList(10.0, null))))))
+                .when().post("/rest/charts/intersecting-charts")
+                .then().statusCode(400)
+                .body("detail", containsString("is not a number"));
+    }
 }

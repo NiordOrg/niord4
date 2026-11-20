@@ -431,6 +431,19 @@ class AreaRestServiceITTest extends ITTest {
                 .body("size()", is(0));
     }
 
+    @Test
+    void intersectingAreasWithANullCoordinate_isRefused() {
+        // A coordinate sent as null is refused as the save refuses it, not searched as not a number
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(Map.of("type", "FeatureCollection", "features", List.of(Map.of(
+                        "type", "Feature", "properties", Map.of(),
+                        "geometry", Map.of("type", "Point", "coordinates", Arrays.asList(10.0, null))))))
+                .when().post("/rest/areas/intersecting-areas")
+                .then().statusCode(400)
+                .body("detail", containsString("is not a number"));
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // Create must not accept a client-supplied id (the root cause: MASSASSIGN-1 in be/docs/potential-errors.md)
     // ------------------------------------------------------------------------------------------- //

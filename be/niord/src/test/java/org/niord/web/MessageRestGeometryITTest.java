@@ -275,6 +275,24 @@ class MessageRestGeometryITTest extends ITTest {
     }
 
     @Test
+    void formatMessageGeometryWithANullCoordinate_isRefused() {
+        // A coordinate sent as null is refused (400) as the save refuses it, not formatted as not a number; on a
+        // ring's closing position it was a 500
+        for (String coordinates : new String[] {
+                "[[[10.0,55.0],[11.0,null],[11.0,56.0],[10.0,55.0]]]",
+                "[[[null,55.0],[11.0,55.0],[11.0,56.0],[null,55.0]]]"}) {
+            given()
+                    .contentType(ContentType.JSON)
+                    .queryParam("template", "numbered-list")
+                    .body("{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},"
+                            + "\"geometry\":{\"type\":\"Polygon\",\"coordinates\":" + coordinates + "}}]}")
+                    .when().post("/rest/messages/format-message-geometry")
+                    .then().statusCode(400)
+                    .body("detail", containsString("is not a number"));
+        }
+    }
+
+    @Test
     void formatMessageGeometryReachableAnonymouslyWithoutToken() {
         given()
                 .contentType(ContentType.JSON)

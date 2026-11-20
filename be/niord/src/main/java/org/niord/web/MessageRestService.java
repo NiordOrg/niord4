@@ -22,6 +22,7 @@ import org.niord.core.domain.Domain;
 import org.niord.core.domain.DomainService;
 import org.niord.core.geojson.FeatureService;
 import org.niord.core.geojson.GeometryFormatService;
+import org.niord.core.geojson.JtsConverter;
 import org.niord.core.geojson.PlainTextConverter;
 import org.niord.core.message.*;
 import org.niord.core.message.MessageQueryService;
@@ -1154,6 +1155,9 @@ public class MessageRestService  {
         if (!GEOMETRY_TEMPLATE_NAME.matcher(template).matches()) {
             throw new NiordWebException("Invalid geometry template", 400);
         }
+        // A coordinate sent as null is refused (400), as the save refuses it, not formatted as not a number; before
+        // the try for the same reason
+        JtsConverter.requireNumbers(geometry);
 
         try {
             return geometryFormatService.formatGeometryAsHtml(language, template, format, geometry);

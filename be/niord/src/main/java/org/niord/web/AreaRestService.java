@@ -293,6 +293,8 @@ public class AreaRestService extends AbstractBatchableRestService {
             @RequestParam(name = "maxLevel", defaultValue = "2") int maxLevel,
             @RequestBody FeatureCollectionVo featureCollection) {
 
+        // A coordinate sent as null is refused (400), as the save refuses it, not searched as not a number
+        JtsConverter.requireNumbers(featureCollection);
         GeometryVo geometryVo = featureCollection.toGeometry();
         if (geometryVo == null) {
             return Collections.emptyList();
