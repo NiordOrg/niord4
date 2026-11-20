@@ -2040,10 +2040,10 @@ path is from the repository root.
 - **Severity:** Medium. Fix: let `getAllForWeb` and `getAllEditable` decide by the catalogue entry's `web` and
   `editable` (and `cached`) for a declared key, and by the row's flags only for an undeclared one. No data changes.
   Could break: `mode` reaches `/settings/web` for the first time, so the public site shows its TEST ribbon where a
-  deployment's row says `test`; `wmsProtected` reaches `/settings/web` with its stored String type. The backend reads
-  a stored text `false` safely (`WmsProxyServlet.isProtected`), but the admin app takes only a JSON `true` as
-  protected (`admin/shared/components/ol-map/wms-layer-visibility.ts`), so the change should send a declared
-  Boolean as a Boolean. SETTINGS-10 belongs in the same change.
+  deployment's row says `test`; `wmsProtected` reaches `/settings/web` with its stored String type, which both
+  sides read as before: the backend takes a text `false` safely (`WmsProxyServlet.isProtected`), and the admin
+  app's web-settings overlay converts a text `true` or `false` to a boolean (`admin/core/config/web-settings.ts`,
+  `coerce`). SETTINGS-10 belongs in the same change.
 - **Decision first:** may declared settings take their flags from the catalogue, once each staging's stored `mode`
   value has been read? Recommended: yes, in one change with SETTINGS-10.
 - **Left by the owner (2026-11-15):** no change to where the flags come from, and no read of the stagings' rows;
