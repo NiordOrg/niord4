@@ -505,14 +505,6 @@ Background: [`features/editor.md`](features/editor.md).
   which the message-HTML sanitiser drops: the editing surface shows the colour, the preview, the message details,
   the comment cards and the public site do not. Either the picker goes, or `color` joins the sanitiser's two kept
   declarations.
-- A time typed into the date-time field in a clock change resolves differently from the backend.
-  `zonedDateToUtc` (`shared/utils/zoned-date.ts`) says a clock in a spring-forward gap moves forward and one in a
-  fall-back hour is its second occurrence, "as Java does"; Java takes the first occurrence, and west of UTC the
-  gap moves backward: in `America/Nuuk`, 23:30 on the spring day resolves to 22:30. The public site's copy
-  resolves both as Java's `ZonedDateTime.of` does. (The inclusive end of a day in the same file, which had the
-  same fault on the autumn day, is derived from the next day's start since 2026-11-13, in the frontend and in the
-  backend's `TimeUtils.endOfDay`.) When it is fixed, this item's allow entry in `country-kit/country-words.json`
-  goes too.
 - A save the backend refuses with 400 shows only the general `editor.save.error` toast, never the reason the
   backend gives. Since the rulings of 2026-09-26 a short id or referenced message id holding `<`, `>`, `"` or `&`
   is refused so (`docs/security-review-2026-09.md` §8); the editor could show the problem detail, or check the

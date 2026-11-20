@@ -81,6 +81,12 @@ There is no date library. The sanctioned helpers are:
 | `ui-apps/admin/src/app/core/main-shell/services/locale-format.service.ts` | Rendering. Applies the active locale + the session zone; `formatWith` is the low-level Intl passthrough for structural widget labels only.                                                                                                                                                                                                                   |
 | `ui-apps/admin/src/app/core/main-shell/services/date-time-format.ts`      | The one date/time layout config every renderer routes through.                                                                                                                                                                                                                                                                                               |
 
+**A wall clock in a clock change.** `zonedDateToUtc`, and everything built on it, resolves a time
+in the hour a clock change skips or repeats as Java's `ZonedDateTime.of` does, so the
+administration app, the public site and the backend store the same instant for it: a time in the
+spring gap moves forward by the gap (02:30 becomes 03:30), west of UTC too, and a time in the
+autumn's repeated hour is its first occurrence, before the clocks go back.
+
 **The bare `HH:mm` carrier.** A cut-off time or a scheduled send time is a clock with no date, so
 no zone can resolve it and it is stored and sent as an `HH:mm` string. Such a value rides on a
 browser-local `Date` parked on a fixed carrier day, because a control's value type is `Date`.
