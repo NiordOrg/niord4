@@ -27,8 +27,6 @@ import org.niord.core.script.vo.ScriptResourceVo;
 import org.niord.core.service.BaseService;
 import org.niord.core.user.User;
 import org.niord.core.user.UserService;
-import jakarta.persistence.NonUniqueResultException;
-import jakarta.persistence.NoResultException;
 import org.slf4j.Logger;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -112,24 +110,30 @@ public class ScriptResourceService extends BaseService {
      * Returns the script resource with the given path, or null if not found
      * <p>
      * The path is compared ignoring case, while the schema holds it unique with case: when several resources have
-     * the path in different case (restored data), none is returned, as when there is none, and a WARN names the path.
+     * the path in different case (restored data), the one whose path is exactly the given one is returned, as the
+     * NAVTEX transmitter and SafetyNET area look-ups do; when none is, none is returned, as when there is none, and a
+     * WARN names the path.
      *
      * @param path the script resource path
      * @return the script resource with the given path, or null if not found
      * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public ScriptResource findByPath(String path) {
-        try {
-            return em.createNamedQuery("ScriptResource.findByPath", ScriptResource.class)
-                    .setParameter("path", path)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        } catch (NonUniqueResultException e) {
-            log.warn("Several script resources have the path '{}' in different case; the look-up by path answers "
-                    + "none of them", path);
-            return null;
+        List<ScriptResource> matches = em.createNamedQuery("ScriptResource.findByPath", ScriptResource.class)
+                .setParameter("path", path)
+                .getResultList();
+        if (matches.size() <= 1) {
+            return matches.isEmpty() ? null : matches.getFirst();
         }
+        ScriptResource exact = matches.stream()
+                .filter(r -> Objects.equals(r.getPath(), path))
+                .findFirst()
+                .orElse(null);
+        if (exact == null) {
+            log.warn("Several script resources have the path '{}' in different case and none has it exactly; the "
+                    + "look-up by path answers none of them", path);
+        }
+        return exact;
     }
 
     /**

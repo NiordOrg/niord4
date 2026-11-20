@@ -34,14 +34,18 @@ import org.niord.core.mailinglist.MailingListService;
 import org.niord.core.message.MessageSeriesService;
 import org.niord.core.publication.PublicationService;
 import org.niord.core.report.FmReportService;
+import org.niord.core.script.ScriptResource;
 import org.niord.core.script.ScriptResourceService;
 import org.niord.core.source.SourceService;
+import org.niord.core.user.Contact;
+import org.niord.core.user.ContactService;
 import org.niord.test.ITTest;
 import org.niord.test.Tx;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.UnexpectedRollbackException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -57,12 +61,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * PORT-14: the single-row look-ups answer null only when no row has the identifier (a {@code NoResultException}).
+ * The single-row look-ups answer null only when no row has the identifier (a {@code NoResultException}).
  * A failure of the look-up's query propagates, so a caller does not act on "not found" and the log points at the
  * failure. Where the schema does not hold the identifier unique (areas' and categories' MRN and legacy id, a
- * message's or a chart's legacy id, a source's name, and a script path or a contact address compared ignoring
- * case), several rows answer null as before and a WARN names the identifier, without dooming the caller's
- * transaction. The look-up of a message by uid has the same guard in {@code MessageLookupFaultITTest}.
+ * message's or a chart's legacy id and a source's name), several rows answer null as before and a WARN names the
+ * identifier, without dooming the caller's transaction. A script path and a contact address are unique with case
+ * but compared ignoring case: of several rows, the one that matches exactly is answered, as the NAVTEX transmitter
+ * and SafetyNET area look-ups do, and only when none does, null with a WARN. The look-up of a message by uid has
+ * the same guard in {@code MessageLookupFaultITTest}.
  */
 class LookupFaultITTest extends ITTest {
 
@@ -78,6 +84,7 @@ class LookupFaultITTest extends ITTest {
     @Autowired FmReportService fmReportService;
     @Autowired ScriptResourceService scriptResourceService;
     @Autowired SourceService sourceService;
+    @Autowired ContactService contactService;
 
     @PersistenceContext
     EntityManager em;
@@ -216,6 +223,107 @@ class LookupFaultITTest extends ITTest {
                 }
             });
         }
+    }
+
+    /**
+     * Two script resources and two contacts whose path or address differs only in case, as restored data can hold
+     * (the columns are unique with case, the look-ups compare ignoring case). The look-up by the exact path or
+     * address answers that row, as the NAVTEX transmitter and SafetyNET area look-ups do; a spelling that matches
+     * neither exactly answers null with a WARN naming it, and the caller's transaction commits.
+     */
+    @Test
+    void pathsAndAddressesThatDifferOnlyInCaseAnswerTheExactOne() {
+        String suffix = Long.toString(System.nanoTime());
+        String lowerPath = "it-case-" + suffix + ".ftl";
+        String upperPath = "IT-CASE-" + suffix + ".ftl";
+        String mixedPath = "It-Case-" + suffix + ".ftl";
+        String lowerEmail = "it-case-" + suffix + "@example.org";
+        String upperEmail = "IT-CASE-" + suffix + "@example.org";
+        String mixedEmail = "It-Case-" + suffix + "@example.org";
+
+        Logger scriptLogger = (Logger) LoggerFactory.getLogger(ScriptResourceService.class);
+        Logger contactLogger = (Logger) LoggerFactory.getLogger(ContactService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        scriptLogger.addAppender(appender);
+        contactLogger.addAppender(appender);
+        AtomicReference<List<Integer>> resourceIds = new AtomicReference<>(List.of());
+        AtomicReference<List<Integer>> contactIds = new AtomicReference<>(List.of());
+        try {
+            // The path or address of the row each look-up answers, or null
+            List<String> answers = Tx.requiringNew().call(() -> {
+                ScriptResource lowerResource = scriptResource(lowerPath);
+                ScriptResource upperResource = scriptResource(upperPath);
+                Contact lowerContact = contact(lowerEmail);
+                Contact upperContact = contact(upperEmail);
+                em.flush();
+                resourceIds.set(List.of(lowerResource.getId(), upperResource.getId()));
+                contactIds.set(List.of(lowerContact.getId(), upperContact.getId()));
+                List<String> found = new ArrayList<>();
+                for (String path : List.of(lowerPath, upperPath, mixedPath)) {
+                    ScriptResource resource = scriptResourceService.findByPath(path);
+                    found.add(resource == null ? null : resource.getPath());
+                }
+                for (String email : List.of(lowerEmail, upperEmail, mixedEmail)) {
+                    Contact contact = contactService.findByEmail(email);
+                    found.add(contact == null ? null : contact.getEmail());
+                }
+                return found;
+            });
+
+            assertEquals(2L, Tx.requiringNew().call(() -> ((Number) em.createNativeQuery(
+                            "SELECT count(*) FROM public.\"ScriptResource\" WHERE lower(path) = lower(:path)")
+                    .setParameter("path", lowerPath).getSingleResult()).longValue()),
+                    "the caller's transaction committed both script resources");
+            assertEquals(lowerPath, answers.get(0), "the exact lower-case path is found");
+            assertEquals(upperPath, answers.get(1), "the exact upper-case path is found");
+            assertNull(answers.get(2), "a path that matches neither exactly answers none");
+            assertEquals(lowerEmail, answers.get(3), "the exact lower-case address is found");
+            assertEquals(upperEmail, answers.get(4), "the exact upper-case address is found");
+            assertNull(answers.get(5), "an address that matches neither exactly answers none");
+
+            List<String> warnings = appender.list.stream()
+                    .filter(e -> e.getLevel() == Level.WARN)
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .toList();
+            assertTrue(warnings.stream().anyMatch(w -> w.contains("'" + mixedPath + "'")),
+                    "a WARN names the path that matched neither exactly: " + warnings);
+            assertTrue(warnings.stream().anyMatch(w -> w.contains("'" + mixedEmail + "'")),
+                    "a WARN names the address that matched neither exactly: " + warnings);
+        } finally {
+            scriptLogger.detachAppender(appender);
+            contactLogger.detachAppender(appender);
+            Tx.requiringNew().run(() -> {
+                for (Integer id : resourceIds.get()) {
+                    ScriptResource resource = em.find(ScriptResource.class, id);
+                    if (resource != null) {
+                        em.remove(resource);
+                    }
+                }
+                for (Integer id : contactIds.get()) {
+                    Contact contact = em.find(Contact.class, id);
+                    if (contact != null) {
+                        em.remove(contact);
+                    }
+                }
+            });
+        }
+    }
+
+    private ScriptResource scriptResource(String path) {
+        ScriptResource resource = new ScriptResource();
+        resource.setPath(path);
+        resource.updateType();
+        resource.setContent("IT case-only duplicate");
+        em.persist(resource);
+        return resource;
+    }
+
+    private Contact contact(String email) {
+        Contact contact = new Contact();
+        contact.setEmail(email);
+        em.persist(contact);
+        return contact;
     }
 
     private Area area(String mrn, String legacyId, String name) {
