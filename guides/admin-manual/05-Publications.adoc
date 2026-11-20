@@ -292,12 +292,17 @@ period ends, read in the time zone of the series' domain. `${weekTo}` is used by
 covers more than one week, such as a double issue over a holiday; it is empty otherwise. A
 pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
 an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
-prints as a hyphen). The weekly reports print the weeks in their heading as the series' name
-pattern writes them when the document is generated: under `${week}+${weekTo}` a double issue is
-headed "Week 51+52" and a single week "Week 36"; under a pattern that writes the first week alone,
-as the series carried over from the previous system do, a double issue is headed by its first week.
-A name typed for one issue does not change the heading; a week written under _Numbering_ does, and
-is printed as written. The values can be overridden for one issue (see <<publication-tailor>>).
+prints as a hyphen). A single week under such a pattern keeps the `+` in its name, "Week 36+",
+and in its file name where the file name pattern writes `${weekTo}` as well; so a series whose
+issues are double only now and then names them by `${week}` alone, and the weeks of a double issue
+are written under _Numbering_ (see <<publication-tailor>>).
+
+The weekly reports print the weeks in their heading as the series' name pattern writes them when
+the document is generated: under `${week}+${weekTo}` a double issue is headed "Week 51+52" and a
+single week "Week 36"; under a pattern that writes the first week alone, as the series carried
+over from the previous system do, a double issue is headed by its first week. A name typed for one
+issue does not change the heading; a week written under _Numbering_ does, and is printed as
+written. The values can be overridden for one issue (see <<publication-tailor>>).
 
 [#publication-series-frequency]
 ==== Frequency & Naming

@@ -1676,7 +1676,8 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Severity:** Low, cosmetic. Fix: drop the text between the first week and an empty `${weekTo}` when the issue
   has a single week, in `IssueNaming.expand` and the admin app's `expandIssuePattern` alike. It changes suggested
   names and file names, and so the links of documents published after it; the special case in `weeksText` can then
-  go, as the heading and the name agree again by themselves.
+  go, as the heading and the name agree again by themselves. The admin manual (`guides/admin-manual/05-Publications.adoc`,
+  the paragraph on the patterns' tokens) describes it as it is; change it with the fix.
 
 ## CONTACT3. Changing a contact's address to one another contact has answers 500
 
