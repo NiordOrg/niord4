@@ -162,6 +162,10 @@ starts the shared containers (database, Keycloak, mail catcher), creates `niord_
 starts your backend, gives each active domain of `be/bootstrap/domains.json` its client in the local
 Keycloak when it is missing, bootstraps the database once with the base product's archive and then
 yours, and starts both applications. The first run builds the backend and takes some minutes.
+The launcher gives the backend its Niord home, `~/.niord-local/<database>`: a cache that is made
+again when it is missing, and the batch jobs' files. A backend you start another way needs
+`NIORD_HOME` set to a folder, or its start is refused with `niord.home cannot be resolved` and how
+to set it.
 `./start-local.sh --sample` runs the base product's sample instead. The detail is in
 [Running locally in detail](country-guide-in-depth.md#running-locally-in-detail) and
 [Running it locally](../README.md#running-it-locally--start-localsh).

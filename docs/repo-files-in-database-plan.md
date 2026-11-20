@@ -169,7 +169,8 @@ in a root `niord.json` on their mains, from which the 4.0.66 images on staging a
 (`defaults/base/settings.json:5`), the container's own filesystem. A country can no longer leave the key out
 by accident: its build's settings check refuses a file without it (`missing-key`, `DefaultSettingsChecks`)
 unless the key is listed in `useBaseDefault` with a reason. Recorded as SETTINGS-6 in
-`be/docs/potential-errors.md`, next to PORT-15 (an unresolvable token). The fix needs no code: the chart
+`be/docs/potential-errors.md`, next to PORT-15 (an unresolvable token; fixed and removed on 2026-11-21: a
+home that names no folder now refuses the start). The fix needs no code: the chart
 passes an environment variable named exactly `niord.home`, as it already passes `authServerUrl`
 (`app/deployment.yaml:109-110`), which `peek` consults before the row; the same variable decides where the
 server's own `niord.json` is read (`SettingsService.java:128-135`, `:179-195`). The JVM starts in exec form,

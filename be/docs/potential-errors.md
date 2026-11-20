@@ -883,33 +883,6 @@ Suspected issues surfaced while porting the publications redesign (`org.niord.co
 `org.niord.web.publication`) from the Quarkus branch. The port kept the source behaviour; nothing below
 was changed in production code.
 
-## PORT-15. An unresolvable `${niord.home}` expands to the empty string, so a fresh database boots with its roots at the filesystem root
-
-- **Location:** `niord/src/main/java/org/niord/core/settings/SettingsService.java` (`expandSettingValue`, the
-  final `replaceToken(token, "")`), consumed through `SettingInjectionBeanPostProcessor` by every `@Setting`
-  that defaults under `${niord.home}` — `PublicationPathService` (`publicationPreviewRootPath`), the Lucene index
-  folders, and whatever else names a directory.
-- **Description:** `niord.home` resolves from a system property `niord.home`, an environment variable
-  literally named `niord.home`, a `NIORD_HOME` system property or environment variable, or the `Setting` row.
-  In the IT suite the row comes from the test tree's `niord.json` (`niord.home = ${NIORD_HOME}`), which the IT
-  start writes (the fixture holds no `Setting` row since C4b); a database built from the bare master changelog
-  has no `Setting` rows, and the token resolves to nothing when neither a `niord.home` nor a `NIORD_HOME`
-  system property or environment variable is set. The token is then replaced with nothing,
-  so `${niord.home}/repo` becomes `/repo`. Observed on CI (2026-09-15, `LiquibaseBootstrapITTest`, which
-  boots exactly that fresh database): `PublicationPathService` refused to start with
-  `could not create /publication-archive`, a permission error at the filesystem root. Running as root in a
-  container it would instead create `/repo` and `/publication-archive` at the root and serve from there. On
-  Windows it creates `C:\repo`, `C:\publication-archive`, `C:\publication-preview` and `C:\message-index` —
-  all four are present on the development machine from local runs of that test, which is why it stayed green
-  there.
-- **Why it looks wrong:** a token nothing can resolve should refuse, or at least say so, rather than vanish
-  into a valid-looking absolute path. The code before the port tolerated it silently (the Lucene index logs
-  `Failed to open Lucene Index in folder /message-index` on every sweep); the publications containment check
-  turns the same condition into a boot failure whose message names a directory nobody configured.
-- **Workaround:** pass `-Dniord.home=...` (what `start-local.sh` does) or deploy with the seeded changelog.
-  `LiquibaseBootstrapITTest` now sets the system property in its static bootstrap. **Exposed by:** the first
-  CI run of the merged publications port.
-
 ## PORT-5. `WebUtils.getMultipartFiles` keys parts by file name, so two parts with one name collapse
 
 - **Location:** `niord/src/main/java/org/niord/core/util/WebUtils.java` (`getMultipartFiles`,

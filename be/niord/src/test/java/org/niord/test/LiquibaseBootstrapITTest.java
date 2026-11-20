@@ -107,21 +107,16 @@ class LiquibaseBootstrapITTest {
     static {
         // Mirror ITTest's static bootstrap: SettingsService needs ${NIORD_HOME} to resolve seeded tokens,
         // and twitter4j's restBaseURL must be frozen before any Spring context is built.
-        if (System.getenv("NIORD_HOME") == null && System.getProperty("NIORD_HOME") == null) {
+        // A blank NIORD_HOME is no home, as SettingsService reads it
+        if (ITTest.homeVariable() == null) {
             System.setProperty("NIORD_HOME", System.getProperty("java.io.tmpdir") + "/niord");
         }
-        // niord.home itself, the way -Dniord.home supplies it to a real deployment. The seeded database the
-        // rest of the suite boots on carries the Setting row niord.home = ${NIORD_HOME}; the FRESH database
-        // here has no Setting rows at all, and SettingsService expands an unresolvable ${niord.home} to the
-        // empty string. Every @Setting that defaults under it then lands at the filesystem root --
-        // /publication-archive, /message-index -- which Windows happily creates as C:\publication-archive
-        // and Linux refuses, so PublicationPathService aborted this context on CI (2026-09-15) while the
-        // same test stayed green on a developer machine. The system property is what SettingsService.peek
-        // consults first, before the database row.
+        // niord.home itself, the way -Dniord.home supplies it to a real deployment. The system property is what
+        // SettingsService.peek consults first, before the database row. (Before SettingsService refused a home that
+        // names no folder, an unresolvable home put the folders under it at the root of the disk: Windows created
+        // them and Linux refused, so this context failed on CI on 2026-09-15 while it passed on a developer machine.)
         if (System.getProperty("niord.home") == null) {
-            String home = System.getenv("NIORD_HOME") != null
-                    ? System.getenv("NIORD_HOME") : System.getProperty("NIORD_HOME");
-            System.setProperty("niord.home", home);
+            System.setProperty("niord.home", ITTest.homeVariable());
         }
         TwitterApiStub.bootstrap();
     }
