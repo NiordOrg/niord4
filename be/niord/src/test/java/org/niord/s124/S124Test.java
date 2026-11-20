@@ -382,6 +382,22 @@ public class S124Test {
     }
 
     @Test
+    public void aLinkInsideNiord_leavesItsWordsAndNoEmptyAngleBracketsInTheInformationText() throws Exception {
+        // U6: the information text ships receive printed " <>" after a link to another warning, whose address
+        // ("#/message/...") the plain text cannot show.
+        Message message = sampleMessage("en");
+        message.getParts().getFirst().getDescs().stream()
+                .filter(d -> "en".equals(d.getLang()))
+                .findFirst().orElseThrow()
+                .setDetails("<p>Replaces <a href=\"#/message/NW-001-17\">NW-001-17</a>.</p>");
+
+        String gml = service.generateGML(message, "en", GenerationType.FINAL);
+
+        XmlAssert.parse(gml).assertElementTextContains("text", "Replaces NW-001-17.");
+        assertFalse(gml.contains("&lt;&gt;"), gml);
+    }
+
+    @Test
     public void previewGenerationSupportsUnnumberedMessages() throws Exception {
         Message message = sampleMessage("en");
         message.setNumber(null);

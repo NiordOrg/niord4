@@ -36,10 +36,6 @@ for completeness remain below.
   lines 67–80, audio 105–120) — no null-guard on `direction`. Benign because callers always supply one.
   Pinned by `PositionAssemblerTest.navtexWithNullDirectionAppendsLiteralNull_documentsBehavior` and
   `audioEnglishNullDirectionFallsBackToLiteralNull_documentsBehavior`.
-- **`HtmlToPlainText` renders a relative anchor parsed without a base URI as `link <>`** (the `tail()`
-  `"a"` branch) — `absUrl("href")` returns `""`, dropping the href. Correct usage parses with a base URI
-  (then it renders `link <http://…>`). Pinned by
-  `HtmlToPlainTextTest.anchorWithoutBaseUriResolvesRelativeHrefToEmptyAngleBrackets`.
 
 ---
 
