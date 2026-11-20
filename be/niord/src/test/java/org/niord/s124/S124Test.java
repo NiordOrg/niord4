@@ -383,7 +383,7 @@ public class S124Test {
 
     @Test
     public void aLinkInsideNiord_leavesItsWordsAndNoEmptyAngleBracketsInTheInformationText() throws Exception {
-        // U6: the information text ships receive printed " <>" after a link to another warning, whose address
+        // The information text ships receive printed " <>" after a link to another warning, whose address
         // ("#/message/...") the plain text cannot show.
         Message message = sampleMessage("en");
         message.getParts().getFirst().getDescs().stream()

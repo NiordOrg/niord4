@@ -220,7 +220,7 @@ public class HtmlToPlainTextTest {
 
     @Test
     public void anchorWithoutBaseUri_keepsItsWordsAndPrintsNoEmptyAngleBrackets() {
-        // U6: with no base URI, absUrl("href") on a relative link returns "", and a link inside Niord (a message
+        // With no base URI, absUrl("href") on a relative link returns "", and a link inside Niord (a message
         // link "#/message/...", a repository path) has nothing to show; it printed " <>" after the link's words.
         assertEquals("link", plain("<a href=\"/x\">link</a>").trim());
         assertEquals("See NW-001-26.", plain("<p>See <a href=\"#/message/NW-001-26\">NW-001-26</a>.</p>").trim());

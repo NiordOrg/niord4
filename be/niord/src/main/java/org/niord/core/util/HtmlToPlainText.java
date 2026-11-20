@@ -124,7 +124,7 @@ public class HtmlToPlainText {
         }
 
         // a link's address after its words; nothing where the address does not resolve, as a link inside Niord
-        // ("#/message/...", a repository path) does not when the text is parsed without a base URI (U6)
+        // ("#/message/...", a repository path) does not when the text is parsed without a base URI
         private void appendAddress(String url) {
             if (!url.isEmpty())
                 append(String.format(" <%s>", url));
