@@ -567,6 +567,44 @@ public class IssueRenderRealITTest extends ITTest {
         }
     }
 
+    /**
+     * A single week of a series whose name patterns write the closing week, "Uge ${week}+${weekTo}, ${year}" and
+     * "Week ${week} and ${weekTo}, ${year}": the closing week expands to nothing, and the names keep the text before
+     * it ("Uge 46+, 2023", ISSUE13), but the PDFs are headed by the week alone, "46, 2023", under the title and on
+     * the NtM line. FAILS on the rule that expanded the whole week part, which headed them "46+, 2023" and
+     * "46 and , 2023".
+     */
+    @Test
+    @Transactional
+    public void aSingleWeekIsHeadedByItsWeekWithoutAJoiner() throws Exception {
+        PublicationIssue issue = anIssueInTwoLanguages(REPORT_ID, Map.of(
+                "da", "Uge ${week}+${weekTo}, ${year}",
+                "en", "Week ${week} and ${weekTo}, ${year}"));
+        writtenFolder = issue.getRepoPath();
+        long cutoff = 1_700_000_000_000L;
+        issue.setIntervalFrom(new Date(cutoff - 7L * 24 * 3600 * 1000));
+        em.flush();
+
+        publishService.publish(issue.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(cutoff)));
+        em.flush();
+
+        PublicationIssue published = em.find(PublicationIssue.class, issue.getId());
+        assertEquals(Integer.valueOf(46), published.getWeek(), "the issue's week");
+        assertNull(published.getWeekTo(), "a single week has no closing week");
+
+        for (String lang : List.of("da", "en")) {
+            byte[] bytes = store.readAll(store.stat(filePathOf(published, lang)).orElseThrow());
+            String firstPage = firstPageText(bytes);
+            assertTrue(firstPage.contains(" 46, 2023"),
+                    "the " + lang + " document is not headed by its week, '46, 2023':\n" + firstPage);
+            assertTrue(firstPage.contains(" 46 2023"),
+                    "the " + lang + " document's NtM line does not name its week:\n" + firstPage);
+            assertFalse(firstPage.contains("46+") || firstPage.contains("46 and"),
+                    "the " + lang + " document is headed by a joiner with no second week:\n" + firstPage);
+        }
+    }
+
     /** The text of a PDF's first page, as the reader extracts it. */
     private static String firstPageText(byte[] bytes) throws IOException {
         com.itextpdf.text.pdf.PdfReader reader = new com.itextpdf.text.pdf.PdfReader(bytes);

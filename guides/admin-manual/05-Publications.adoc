@@ -291,7 +291,9 @@ period ends, read in the time zone of the series' domain. `${weekTo}` is used by
 covers more than one week, such as a double issue over a holiday; it is empty otherwise. A
 pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
 an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
-prints as a hyphen). The values can be overridden for one issue (see <<publication-tailor>>).
+prints as a hyphen). The weekly reports print the weeks in their heading as the name pattern writes
+them, so a double issue named "Week 51+52" is headed "Week 51+52"; a single week is headed by its
+week alone. The values can be overridden for one issue (see <<publication-tailor>>).
 
 [#publication-series-frequency]
 ==== Frequency & Naming

@@ -618,15 +618,19 @@ issue **prints**, `yearNumber` and `weekNumber`, which carry what the numbering 
 the issue's weeks as its name writes them. A row repeating one of them would be a second source for the
 same value that can disagree with the first. Issue-level parameters are merged **over** the series' map key
 by key; the numbering is injected last.
-`weeks` is what the weekly reports print in their heading and page header. It is the week part of the series' name pattern in the report's
-language, the stretch from its first week token to its last (`${week}`, `${weekTo}` and their two-digit
-variants, with the text between them, ending at the first token of another kind), expanded for the issue by
-the code that expands the name, so the heading and the name say the weeks in the same characters: `36` under
+`weeks` is what the weekly reports print in their heading and page header. It is the week part of the
+series' name pattern in the report's language, the stretch from its first week token to its last (`${week}`,
+`${weekTo}` and their two-digit variants, with the text between them, ending at the first token of another
+kind, and with a bracket it opens or closes taken whole), expanded for the issue by the code that expands
+the name, so the heading and the name say the weeks in the same characters: `36` under
 `Uge ${week}, ${year}` (for an issue of weeks 36 to 38 too, as its name says), `36 og 37` under
 `Uge ${week} og ${weekTo}, ${year}`, `36+37` or `36-38` under `Uge ${week}+${weekTo}, ${year}`. A pattern
 that writes no week (or none at all) gives that last form, the pair form, so a document is headed by all its
-weeks where its name cannot say them; a week label is printed whole. The accumulated report's sections
-carry the same as `group.weeks`, each by its source issue's own series pattern and label.
+weeks where its name cannot say them; a week label is printed whole. One case leaves the name: a single week
+under a week part that writes the closing week is headed by the first week's token alone (`36`), where the
+name keeps the text before the empty closing week (`Uge 36+, 2026`, ISSUE13 in
+`be/docs/potential-errors.md`), until that name is settled. The accumulated report's sections carry the same
+as `group.weeks`, each by its source issue's own series pattern and label.
 
 A series or an issue that stored one of the seven before it was refused is met as follows: a save of the
 series is refused (S-23 is a hard rule) until the row is removed, and so is its activation; an issue edit is

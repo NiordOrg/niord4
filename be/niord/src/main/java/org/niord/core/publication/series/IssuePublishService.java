@@ -1202,14 +1202,15 @@ public class IssuePublishService extends BaseService {
         params.put("timeZone", series.cutoffZone().getId());
         params.put("week", PrintedNumbering.printedWeek(issue));
         params.put("weekTo", PrintedNumbering.printedWeekTo(issue));
-        // The issue's weeks as its name writes them, by the week part of the series'
-        // name pattern in this language ("36" under "Uge ${week}, ${year}", "36 og 37"
-        // under "Uge ${week} og ${weekTo}", "36+37" or "36-38" under the pair form,
-        // and the pair form where the pattern writes no week), or the week label
-        // whole: what the weekly reports print in their heading and page header, so
-        // a document is headed by the weeks its name says. Reserved by S-23 as the
-        // four above are, and put over a parameter of the same name that a row stored
-        // before the rule still holds.
+        // The issue's weeks as the series' name pattern writes them in this language,
+        // in the name the series suggests for the issue ("36" under
+        // "Uge ${week}, ${year}", "36 og 37" under "Uge ${week} og ${weekTo}", "36+37"
+        // or "36-38" under the pair form, and the pair form where the pattern writes
+        // no week; a single week under a pattern that writes the closing week is its
+        // week alone), or the week label whole: what the weekly reports print in
+        // their heading and page header (IssueNaming.weeksText). Reserved by S-23 as
+        // the four above are, and put over a parameter of the same name that a row
+        // stored before the rule still holds.
         params.put("weeks", PrintedNumbering.printedWeeks(issue, lang));
         params.put("year", PrintedNumbering.printedYear(issue));
         params.put("edition", issue.getEdition());

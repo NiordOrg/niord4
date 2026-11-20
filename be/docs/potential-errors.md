@@ -1665,15 +1665,18 @@ code by the developer or the checker of the cluster named; most were not run.
   expands to the empty text for a single week).
 - **Description:** a series whose name pattern writes the pair form, as the admin manual describes it
   ("Uge ${week}+${weekTo}, ${year}"), names every single-week issue "Uge 36+, 2026"; a pattern
-  "Uge ${week} og ${weekTo}" names it "Uge 36 og , 2026". The weekly reports' heading prints the weeks as the name
-  writes them since 2026-11-20, so it says "36+" too.
-- **Why it looks wrong:** a name, a file name and a heading with a joiner and no second week.
+  "Uge ${week} og ${weekTo}" names it "Uge 36 og , 2026", and the file-name pattern does the same. The admin app's
+  `expandIssuePattern` suggests no name at all there (it returns nothing for a single week under `${weekTo}`). The
+  weekly reports' heading, which prints the weeks as the name pattern writes them since 2026-11-20, is the one place
+  that leaves the name here: `IssueNaming.weeksText` heads such a week by the first week's token alone, "36".
+- **Why it looks wrong:** a name and a file name with a joiner and no second week.
 - **Exposed by:** fix round 2 of the recorded faults, 2026-11-20, while the weekly heading was made to follow the
-  name pattern (read in the code; `IssueNamingTest#theWeeksTextIsTheWeekPartOfTheIssuesName` asserts that the
-  heading and the name agree, the joiner included).
+  name pattern (read in the code; `IssueNamingTest#theWeeksOfASingleWeekNeverEndInAJoiner` asserts both the name as
+  it is and the heading without the joiner).
 - **Severity:** Low, cosmetic. Fix: drop the text between the first week and an empty `${weekTo}` when the issue
-  has a single week, in `IssueNaming.expand` and the admin app's `expandIssuePattern` alike; the heading follows by
-  itself.
+  has a single week, in `IssueNaming.expand` and the admin app's `expandIssuePattern` alike. It changes suggested
+  names and file names, and so the links of documents published after it; the special case in `weeksText` can then
+  go, as the heading and the name agree again by themselves.
 
 ## CONTACT3. Changing a contact's address to one another contact has answers 500
 

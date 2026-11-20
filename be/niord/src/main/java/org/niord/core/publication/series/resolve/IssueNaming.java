@@ -391,13 +391,36 @@ public final class IssueNaming {
         return start;
     }
 
+    /** Whether a week part names the closing week: holds {@code ${weekTo}} in either variant. */
+    private static boolean namesClosingWeek(String weekPart) {
+        return weekPart.contains("${weekTo}") || weekPart.contains("${weekTo-2-digits}");
+    }
+
+    /** The first token of a week part that names the first week, as written, or null where it names none. */
+    private static String firstWeekTokenOf(String weekPart) {
+        Matcher m = TOKEN.matcher(weekPart);
+        while (m.find()) {
+            if (m.group(1).equals("week") || m.group(1).equals("week-2-digits")) {
+                return m.group();
+            }
+        }
+        return null;
+    }
+
     /**
-     * The weeks an issue is named for, as its name writes them: the week part of the series' name pattern
-     * ({@link #weekSpanOf}) expanded for this issue by {@link #expand}, the code that expands the name, so the weeks
-     * the report prints are the same characters as the weeks in the name. "Uge ${week}, ${year}" gives "36" for an
-     * issue of weeks 36 to 38, as its name "Uge 36, 2026" says; "Uge ${week} og ${weekTo}, ${year}" gives "36 og 37"
-     * for a pair; "Uge ${week}+${weekTo}, ${year}" gives "36+37" for a pair and "36-38" for three weeks or more
-     * ({@link #joined}), across a year's end "52+1" and "52-2". Null where there is no week.
+     * The weeks an issue is named for, as the series' name pattern writes them, in the name the series suggests for
+     * the issue: the week part of the pattern ({@link #weekSpanOf}) expanded for this issue by {@link #expand}, the
+     * code that expands the name, so the weeks the report prints are the same characters as the weeks in that name.
+     * "Uge ${week}, ${year}" gives "36" for an issue of weeks 36 to 38, as the name "Uge 36, 2026" says;
+     * "Uge ${week} og ${weekTo}, ${year}" gives "36 og 37" for a pair; "Uge ${week}+${weekTo}, ${year}" gives
+     * "36+37" for a pair and "36-38" for three weeks or more ({@link #joined}), across a year's end "52+1" and
+     * "52-2". Null where there is no week.
+     *
+     * ONE PLACE WHERE THE WEEKS LEAVE THE NAME: a single week under a week part that writes the closing week. The
+     * closing week expands to nothing there, so the name keeps the text before it, "Uge 36+, 2026" and
+     * "Uge 36 og , 2026" (ISSUE13 in be/docs/potential-errors.md). A name is a suggestion an editor sees and can
+     * retype, a heading is not, so the weeks are then the first week's token alone, as the pattern writes it ("36",
+     * or "07" for {@code ${week-2-digits}}), until the name itself is settled.
      *
      * A pattern that writes no week (or none at all, or one whose week part expands to nothing, as a lone
      * {@code ${weekTo}} does for a single week) gives the pair form, "${week}+${weekTo}": the week alone, "36+37"
@@ -421,6 +444,9 @@ public final class IssueNaming {
         boolean span = weekTo != null && !weekTo.equals(week);
         Numbers numbers = new Numbers(week, span ? weekTo : null, year == null ? 0 : year, 1, 1, null);
         String weekPart = weekSpanOf(namePattern);
+        if (weekPart != null && !span && namesClosingWeek(weekPart)) {
+            weekPart = firstWeekTokenOf(weekPart);
+        }
         if (weekPart != null) {
             try {
                 String weeks = expand(weekPart, numbers);

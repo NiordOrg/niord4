@@ -561,9 +561,13 @@ public class IssueNamingTest {
         assertEquals("37 back to 36", IssueNaming.weeksText("NtM ${weekTo} back to ${week}", 36, 37, 2026));
         assertEquals("36", IssueNaming.weeksText("Uge ${week}, ${year} (${weekTo})", 36, 38, 2026));
 
-        // The same characters as the name, for every kind of pattern and span.
+        // The same characters as the name, for every kind of pattern and span, except a single week under a week
+        // part that writes the closing week (theWeeksOfASingleWeekNeverEndInAJoiner).
         for (String pattern : List.of(NAME, FIRST_WEEK_ONLY, PAIR_IN_WORDS)) {
             for (Integer weekTo : Arrays.asList(null, 37, 38)) {
+                if (weekTo == null && !pattern.equals(FIRST_WEEK_ONLY)) {
+                    continue;
+                }
                 String name = nameOf(pattern, 36, weekTo, 2026);
                 String prefix = pattern.substring(0, pattern.indexOf("${"));
                 String suffix = ", 2026";
@@ -571,6 +575,31 @@ public class IssueNamingTest {
                         "the weeks of " + pattern + " are not the name's");
             }
         }
+    }
+
+    /**
+     * A single week under a week part that writes the closing week is headed by its first week alone, as the
+     * pattern writes that token: the name keeps the text before the empty closing week ("Uge 36+, 2026",
+     * "Uge 36 og , 2026", ISSUE13), and a heading "36+" or "36 og " is a joiner with no second week. FAILS on the
+     * rule that expanded the whole week part for a single week too.
+     */
+    @Test
+    public void theWeeksOfASingleWeekNeverEndInAJoiner() {
+        assertEquals("Uge 36+, 2026", nameOf(NAME, 36, null, 2026), "the name is as it was (ISSUE13)");
+        assertEquals("36", IssueNaming.weeksText(NAME, 36, null, 2026));
+        assertEquals("36", IssueNaming.weeksText(NAME, 36, 36, 2026), "a closing week equal to the first is one week");
+        assertEquals("36", IssueNaming.weeksText(PAIR_IN_WORDS, 36, null, 2026));
+        assertEquals("52", IssueNaming.weeksText(NAME, 52, null, 2026));
+        assertEquals("07", IssueNaming.weeksText("nm-w${week-2-digits}+${weekTo-2-digits}", 7, null, 2026),
+                "the first week's token as the pattern writes it");
+        assertEquals("36", IssueNaming.weeksText("NtM ${weekTo} back to ${week}", 36, null, 2026),
+                "the first week's token wherever it stands in the week part");
+        assertEquals("36", IssueNaming.weeksText("Week (${week}+${weekTo}) ${year}", 36, null, 2026));
+        // A span is unchanged.
+        assertEquals("36+37", IssueNaming.weeksText(NAME, 36, 37, 2026));
+        assertEquals("36 og 37", IssueNaming.weeksText(PAIR_IN_WORDS, 36, 37, 2026));
+        // A week part without the closing week is the name's, a bracket and a repeated token included.
+        assertEquals("36 (36)", IssueNaming.weeksText("Week ${week} (${week-2-digits}) ${year}", 36, null, 2026));
     }
 
     /**
