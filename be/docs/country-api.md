@@ -26,7 +26,7 @@ All of one base product version, `4.0.<run>`, from the product's Maven registry 
 
 | Artefact | What the country does with it |
 |---|---|
-| `org.niord:niord-parent:<v>` (pom) | its `<parent>`: the dependency management niord-base was tested with, the repositories, and the Surefire and Failsafe configuration with the country build group |
+| `org.niord:niord-parent:<v>` (pom) | its `<parent>`: the dependency management niord-base was tested with, the repositories, and the Surefire and Failsafe configuration with the country build group and the test JVMs' zone (the property `argLine`, `-Duser.timezone=UTC`, which a country's own `argLine` replaces) |
 | `org.niord.base:niord-base:<v>` | its dependency: the library |
 | `org.niord.base:niord-base:<v>:test-jar:tests` | a test dependency: the IT harness (`ITTest`, the containers, the token helpers), the settings and text checkers and the country build group |
 | `org.niord:niord-bootstrap:<v>:zip` | the base product's bootstrap, applied to a fresh database before the country's own (§ Bootstrap and release folders) |
