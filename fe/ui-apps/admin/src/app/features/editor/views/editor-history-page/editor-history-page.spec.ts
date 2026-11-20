@@ -36,7 +36,11 @@ const message: Message = {
   created: 'x',
 };
 
-function hist(version: number, snapshot: string, created = '2026-06-01T10:00:00Z'): MessageHistory {
+function hist(
+  version: number,
+  snapshot: string,
+  created = Date.UTC(2026, 5, 1, 10),
+): MessageHistory {
   return { version, created, user: 'alice', status: 'DRAFT', snapshot };
 }
 
@@ -145,8 +149,9 @@ describe('EditorHistoryPage ≤2-select cap', () => {
   it('tells two entries with the same version number apart', () => {
     // A message carried over from an older system can hold two entries numbered alike.
     const view = setup();
-    const later = hist(3, '{"v":"later"}', '2016-05-02T09:00:00Z');
-    const earlier = hist(3, '{"v":"earlier"}', '2016-05-01T09:00:00Z');
+    // `created` arrives as epoch milliseconds, the way the backend sends message dates.
+    const later = hist(3, '{"v":"later"}', Date.UTC(2016, 4, 2, 9));
+    const earlier = hist(3, '{"v":"earlier"}', Date.UTC(2016, 4, 1, 9));
     view.toggle(later);
     view.toggle(earlier);
     expect(view.selected()).toEqual([later, earlier]);

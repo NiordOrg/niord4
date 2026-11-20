@@ -185,10 +185,12 @@ export class EditorHistoryPage {
   // number (a message carried over from an older system can hold such), so the diff is
   // deterministic and independent of click order: the older revision is always the left/old
   // (removed) side and the newer the right/new (added) side, and the "Comparing #a and #b" header
-  // reads the same way.
+  // reads the same way. `new Date(...)` reads the epoch milliseconds the backend sends (and an ISO
+  // string alike), where `Date.parse` of a number gives NaN and leaves the pair in click order.
   protected readonly orderedSelection = computed<readonly MessageHistory[]>(() =>
     [...this.selected()].sort(
-      (a, b) => a.version - b.version || Date.parse(a.created) - Date.parse(b.created),
+      (a, b) =>
+        a.version - b.version || new Date(a.created).getTime() - new Date(b.created).getTime(),
     ),
   );
 
