@@ -627,6 +627,10 @@ public final class SeriesValidator {
      * also carries the two numbers the numbering derived, for a template that has
      * to compute from a year rather than print it. Typed here, either of those
      * would put a fixed number under the name of a derived one.
+     *
+     * The render injects a seventh name, weeks (the issue's weeks as the weekly
+     * reports' heading prints them), made from these. It is not refused here: a
+     * typed weeks is overwritten by the injected one, never printed.
      */
     public static final Set<String> RESERVED_REPORT_PARAMS =
             Set.of("week", "weekto", "year", "edition", "yearnumber", "weeknumber");
