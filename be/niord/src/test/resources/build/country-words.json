@@ -68,6 +68,12 @@
       "reason": "a frozen release record, never rewritten (§4.6): the scripts it holds carry their licence header inside their JSON string"
     },
     {
+      "path": "niord/bootstrap/releases/2026-11-20-report-template-fixes/script-resources.json",
+      "word": "Danish Maritime Authority",
+      "text": "Copyright 2017 Danish Maritime Authority",
+      "reason": "a frozen release record, never rewritten (§4.6): the scripts it holds carry their licence header inside their JSON string"
+    },
+    {
       "path": "niord/bootstrap/releases/2026-10-21-templates-from-database/texts.json",
       "word": "Greenland",
       "text": "Danish, Greenlandic and Faroe waters",

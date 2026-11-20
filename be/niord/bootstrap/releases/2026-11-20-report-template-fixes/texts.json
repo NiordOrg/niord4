@@ -1,0 +1,2529 @@
+[
+  {
+    "name": "web",
+    "entries": [
+      {
+        "key": "editor.auto_generate",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Auto generate"
+          }
+        ]
+      },
+      {
+        "key": "editor.back_to_list",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Back to list"
+          }
+        ]
+      },
+      {
+        "key": "editor.clear",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Clear"
+          }
+        ]
+      },
+      {
+        "key": "editor.hide_subject",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Hide subject"
+          }
+        ]
+      },
+      {
+        "key": "editor.new_nm",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "New NM"
+          }
+        ]
+      },
+      {
+        "key": "editor.new_nm_template",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "New NM from Template"
+          }
+        ]
+      },
+      {
+        "key": "editor.new_nw",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "New NW"
+          }
+        ]
+      },
+      {
+        "key": "editor.new_nw_template",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "New NW from Template"
+          }
+        ]
+      },
+      {
+        "key": "editor.recently_edited",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Recently edited drafts"
+          }
+        ]
+      },
+      {
+        "key": "editor.reload_msg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Reload Message"
+          }
+        ]
+      },
+      {
+        "key": "editor.save_msg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Save Message"
+          }
+        ]
+      },
+      {
+        "key": "editor.save_verified",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "When saving a verified message, it becomes a draft message. Proceed?"
+          }
+        ]
+      },
+      {
+        "key": "editor.section.message_part",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Part {{part}}"
+          }
+        ]
+      },
+      {
+        "key": "editor.section.misc",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Miscellaneous"
+          }
+        ]
+      },
+      {
+        "key": "editor.section.preamble",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Preamble"
+          }
+        ]
+      },
+      {
+        "key": "editor.status.cancel_msg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancel Message"
+          }
+        ]
+      },
+      {
+        "key": "editor.status.copy_msg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Copy Message"
+          }
+        ]
+      },
+      {
+        "key": "editor.status.delete_msg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Delete Message"
+          }
+        ]
+      },
+      {
+        "key": "editor.status.publish",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Publish"
+          }
+        ]
+      },
+      {
+        "key": "editor.status.publish_msg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Publish Message"
+          }
+        ]
+      },
+      {
+        "key": "editor.status.verify_msg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Verify Message"
+          }
+        ]
+      },
+      {
+        "key": "footer.cookies",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cookies"
+          }
+        ]
+      },
+      {
+        "key": "footer.copyright",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "&copy; 2017 EfficienSea 2"
+          }
+        ]
+      },
+      {
+        "key": "footer.disclaimer",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Disclaimer"
+          }
+        ]
+      },
+      {
+        "key": "footer.link",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "http://efficiensea2.org"
+          }
+        ]
+      },
+      {
+        "key": "front_page.brand",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Nautical Information Directory"
+          }
+        ]
+      },
+      {
+        "key": "front_page.version_error",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Please refresh web-browser"
+          }
+        ]
+      },
+      {
+        "key": "front_page.welcome",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Welcome to the"
+          }
+        ]
+      },
+      {
+        "key": "lang.en",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "English"
+          }
+        ]
+      },
+      {
+        "key": "menu.action",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Action"
+          }
+        ]
+      },
+      {
+        "key": "menu.action.copy",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Copy..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.edit",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Edit..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.export",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Export..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.export_selection",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Export selection..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.fields.collapse",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Collapse fields"
+          }
+        ]
+      },
+      {
+        "key": "menu.action.fields.expand",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Expand fields"
+          }
+        ]
+      },
+      {
+        "key": "menu.action.fields.more",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "More fields:"
+          }
+        ]
+      },
+      {
+        "key": "menu.action.import",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Import..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.mail",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "E-mail selection..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.message.compare",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Compare..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.print",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Print..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.print.selection",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Print selection..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.report",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Report..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.select.all",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Select all"
+          }
+        ]
+      },
+      {
+        "key": "menu.action.select.none",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Clear selection"
+          }
+        ]
+      },
+      {
+        "key": "menu.action.sort_area",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Sort area..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.tag.add",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Add to tag..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.tag.add_named",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Add to \"{{tag}}\""
+          }
+        ]
+      },
+      {
+        "key": "menu.action.tag.add_selection",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Add selection to tag..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.tag.remove_named",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Remove from \"{{tag}}\""
+          }
+        ]
+      },
+      {
+        "key": "menu.action.tag.remove_selection",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Remove selection from tag..."
+          }
+        ]
+      },
+      {
+        "key": "menu.action.update_status",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Update selection status..."
+          }
+        ]
+      },
+      {
+        "key": "menu.admin",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Admin"
+          }
+        ]
+      },
+      {
+        "key": "menu.atons",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "AtoNs"
+          }
+        ]
+      },
+      {
+        "key": "menu.brand",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Niord"
+          }
+        ]
+      },
+      {
+        "key": "menu.editor",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Editor"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Filter"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.area",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Area"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.aton",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "AtoN"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.category",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Category"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.chart",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Chart"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.clear",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Clear Filter"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.comments",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Comments"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Date"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.domain",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Domain"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.kind",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Kind"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.messageSeries",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Message Series"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.promulgationType",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Promulgation"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.publication",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Publication"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.reference",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Reference"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.save",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Save Filter..."
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.status",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Status"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.tag",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Tag"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.text",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Text"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.type",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Type"
+          }
+        ]
+      },
+      {
+        "key": "menu.filter.user",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "User"
+          }
+        ]
+      },
+      {
+        "key": "menu.login",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Login"
+          }
+        ]
+      },
+      {
+        "key": "menu.logout",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Logout"
+          }
+        ]
+      },
+      {
+        "key": "menu.messages",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Messages"
+          }
+        ]
+      },
+      {
+        "key": "menu.schedule",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Schedule"
+          }
+        ]
+      },
+      {
+        "key": "menu.sysadmin",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Sysadmin"
+          }
+        ]
+      },
+      {
+        "key": "msg.copy.include_reference",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Include reference to copied message"
+          }
+        ]
+      },
+      {
+        "key": "msg.filter.all",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "All"
+          }
+        ]
+      },
+      {
+        "key": "msg.filter.reset",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Reset"
+          }
+        ]
+      },
+      {
+        "key": "msg.hide_attachments",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Hide attachments"
+          }
+        ]
+      },
+      {
+        "key": "msg.hide_internal_publications",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Hide internal"
+          }
+        ]
+      },
+      {
+        "key": "msg.hide_positions",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Hide positions"
+          }
+        ]
+      },
+      {
+        "key": "msg.hide_time",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Hide time"
+          }
+        ]
+      },
+      {
+        "key": "msg.list.load_more",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Load {{fromMessageNo}} - {{toMessageNo}} of {{totalMessageNo}} messages"
+          }
+        ]
+      },
+      {
+        "key": "msg.no_pos_messages",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Additional Messages"
+          }
+        ]
+      },
+      {
+        "key": "msg.show_attachments",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Show attachments"
+          }
+        ]
+      },
+      {
+        "key": "msg.show_internal_publications",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Show internal"
+          }
+        ]
+      },
+      {
+        "key": "msg.show_positions",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Show positions"
+          }
+        ]
+      },
+      {
+        "key": "msg.show_time",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Show time"
+          }
+        ]
+      },
+      {
+        "key": "promulgation.confirm.generate",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Generate a proposal for the '{{type}}' promulgation?"
+          }
+        ]
+      },
+      {
+        "key": "promulgation.confirm.generate_all",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Generate a proposal for all active promulgations?"
+          }
+        ]
+      },
+      {
+        "key": "promulgation.undefined",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Promulgation undefined"
+          }
+        ]
+      },
+      {
+        "key": "publication_type.LINK",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Link"
+          }
+        ]
+      },
+      {
+        "key": "publication_type.MESSAGE_REPORT",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Report"
+          }
+        ]
+      },
+      {
+        "key": "publication_type.NONE",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "None"
+          }
+        ]
+      },
+      {
+        "key": "publication_type.REPOSITORY",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Uploaded file"
+          }
+        ]
+      },
+      {
+        "key": "report.execute",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Execute"
+          }
+        ]
+      },
+      {
+        "key": "reports.report",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Report"
+          }
+        ]
+      },
+      {
+        "key": "reports.schedule",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Schedule"
+          }
+        ]
+      },
+      {
+        "key": "reports.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Execute Mailing List Report"
+          }
+        ]
+      },
+      {
+        "key": "source.date_format",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "D MMMM YYYY"
+          }
+        ]
+      },
+      {
+        "key": "template.aton.type",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Type"
+          }
+        ]
+      },
+      {
+        "key": "template.categories",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Categories"
+          }
+        ]
+      },
+      {
+        "key": "template.caution.min_dist",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Minimum dist. for mariners"
+          }
+        ]
+      },
+      {
+        "key": "template.caution.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Caution"
+          }
+        ]
+      },
+      {
+        "key": "template.execute",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Execute Templates"
+          }
+        ]
+      },
+      {
+        "key": "template.general",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "General"
+          }
+        ]
+      },
+      {
+        "key": "template.markings.bearing",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Bearing"
+          }
+        ]
+      },
+      {
+        "key": "template.markings.dist",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Dist. (m)"
+          }
+        ]
+      },
+      {
+        "key": "template.markings.light_char",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Light Char."
+          }
+        ]
+      },
+      {
+        "key": "template.markings.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Markings"
+          }
+        ]
+      },
+      {
+        "key": "template.markings.type",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Markings used"
+          }
+        ]
+      },
+      {
+        "key": "template.markings.type.bouys",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Buoys"
+          }
+        ]
+      },
+      {
+        "key": "template.markings.type.other_markings",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Other markings"
+          }
+        ]
+      },
+      {
+        "key": "template.markings.type.unmarked",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Unmarked"
+          }
+        ]
+      },
+      {
+        "key": "template.parent_category",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Parent Category"
+          }
+        ]
+      },
+      {
+        "key": "template.sample_message",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Example "
+          }
+        ]
+      },
+      {
+        "key": "template.select_category",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Select Category"
+          }
+        ]
+      },
+      {
+        "key": "template.select_template",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Select Template"
+          }
+        ]
+      },
+      {
+        "key": "template.selected_categories",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Selected Categories"
+          }
+        ]
+      },
+      {
+        "key": "template.vessel.contact",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Contact vessel on VHF channel 16 + channel"
+          }
+        ]
+      },
+      {
+        "key": "template.vessel.guard_vessels",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Guard Vessels"
+          }
+        ]
+      },
+      {
+        "key": "template.vessel.guard_vessels_in_area",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Guard vessels in area"
+          }
+        ]
+      },
+      {
+        "key": "template.vessel.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Work Vessel"
+          }
+        ]
+      },
+      {
+        "key": "term.add",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Add"
+          }
+        ]
+      },
+      {
+        "key": "term.add_selected",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Add Selected"
+          }
+        ]
+      },
+      {
+        "key": "term.and",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "and"
+          }
+        ]
+      },
+      {
+        "key": "term.call_sign",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Call Sign"
+          }
+        ]
+      },
+      {
+        "key": "term.cancel",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancel"
+          }
+        ]
+      },
+      {
+        "key": "term.close",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Close"
+          }
+        ]
+      },
+      {
+        "key": "term.color",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Color"
+          }
+        ]
+      },
+      {
+        "key": "term.contact",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Contact"
+          }
+        ]
+      },
+      {
+        "key": "term.format",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Format"
+          }
+        ]
+      },
+      {
+        "key": "term.generate",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Generate"
+          }
+        ]
+      },
+      {
+        "key": "term.generate_all",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Generate All"
+          }
+        ]
+      },
+      {
+        "key": "term.help",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "help"
+          }
+        ]
+      },
+      {
+        "key": "term.name",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Name"
+          }
+        ]
+      },
+      {
+        "key": "term.new_window",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "New Window"
+          }
+        ]
+      },
+      {
+        "key": "term.priority",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Priority"
+          }
+        ]
+      },
+      {
+        "key": "term.remove_all",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Remove All"
+          }
+        ]
+      },
+      {
+        "key": "term.remove_selected",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Remove Selected"
+          }
+        ]
+      },
+      {
+        "key": "term.result",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Result"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.comments",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Comments"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.details",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Details"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.edit",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Edit"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.grid",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Grid"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.history",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "History"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.map",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Map"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.selection",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Selection"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.status",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Status"
+          }
+        ]
+      },
+      {
+        "key": "view_mode.table",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "List"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "message",
+    "entries": [
+      {
+        "key": "msg.area.general",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "General Messages"
+          }
+        ]
+      },
+      {
+        "key": "msg.attachment.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Attachment for message {0}"
+          }
+        ]
+      },
+      {
+        "key": "msg.cancellation.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancellation of {0}"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.areas",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Areas"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.attachments",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Attachments"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.categories",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Categories"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.charts",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Charts"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.created_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Created date"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.description",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Description"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.details",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Details"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.event_dates",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Event dates"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.follow_up_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Follow-up date"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.id",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "ID"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.layout",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Layout"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.note",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Note"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.orig_info",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Org. Information"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.part_types",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Part Types"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.positions",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Positions"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.prohibition",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Prohibition"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.promulgation",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Promulgation"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.publication",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Publication"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.publish_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Publish date"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.publish_from_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Publish from"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.published",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Published"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.references",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "References"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.signals",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Signals"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.source",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Source"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.status",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Status"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.subject",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Subject"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.thumbnail",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Thumbnail"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.time",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Time"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Title"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.type",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Type"
+          }
+        ]
+      },
+      {
+        "key": "msg.field.updated_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Last updated"
+          }
+        ]
+      },
+      {
+        "key": "msg.firing_exercises.subject",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Firing exercises. Warning."
+          }
+        ]
+      },
+      {
+        "key": "msg.kind.CANCELLATION",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancellations"
+          }
+        ]
+      },
+      {
+        "key": "msg.kind.WARNING",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Warnings"
+          }
+        ]
+      },
+      {
+        "key": "msg.reference.cancellation",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "(cancelled)"
+          }
+        ]
+      },
+      {
+        "key": "msg.reference.reference",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "(reference)"
+          }
+        ]
+      },
+      {
+        "key": "msg.reference.repetition",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "(repetition)"
+          }
+        ]
+      },
+      {
+        "key": "msg.reference.repetition_new_time",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "(repetition with new time)"
+          }
+        ]
+      },
+      {
+        "key": "msg.reference.update",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "(updated repetition)"
+          }
+        ]
+      },
+      {
+        "key": "msg.status.CANCELLED",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancelled"
+          }
+        ]
+      },
+      {
+        "key": "msg.status.DELETED",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Deleted"
+          }
+        ]
+      },
+      {
+        "key": "msg.status.DRAFT",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Draft"
+          }
+        ]
+      },
+      {
+        "key": "msg.status.EXPIRED",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Expired"
+          }
+        ]
+      },
+      {
+        "key": "msg.status.PUBLISHED",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Published"
+          }
+        ]
+      },
+      {
+        "key": "msg.status.VERIFIED",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Verified"
+          }
+        ]
+      },
+      {
+        "key": "msg.time.date_format",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "d MMMM yyyy"
+          }
+        ]
+      },
+      {
+        "key": "msg.time.date_time_format",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "d MMMM yyyy, 'hours' HH:mm"
+          }
+        ]
+      },
+      {
+        "key": "msg.time.from_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "From {{fromDate}}"
+          }
+        ]
+      },
+      {
+        "key": "msg.time.time_format",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "HH:mm"
+          }
+        ]
+      },
+      {
+        "key": "msg.time.to_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Until {{toDate}}"
+          }
+        ]
+      },
+      {
+        "key": "msg.time.until_further_notice",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Until further notice"
+          }
+        ]
+      },
+      {
+        "key": "msg.type.COASTAL_WARNING",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Coastal"
+          }
+        ]
+      },
+      {
+        "key": "msg.type.LOCAL_WARNING",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Local"
+          }
+        ]
+      },
+      {
+        "key": "msg.type.MISCELLANEOUS_NOTICE",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Misc."
+          }
+        ]
+      },
+      {
+        "key": "msg.type.NAVAREA_WARNING",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "NAVAREA"
+          }
+        ]
+      },
+      {
+        "key": "msg.type.PERMANENT_NOTICE",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Perm."
+          }
+        ]
+      },
+      {
+        "key": "msg.type.PRELIMINARY_NOTICE",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Prelim."
+          }
+        ]
+      },
+      {
+        "key": "msg.type.SUBAREA_WARNING",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Subarea"
+          }
+        ]
+      },
+      {
+        "key": "msg.type.TEMPORARY_NOTICE",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Temp."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "pdf",
+    "entries": [
+      {
+        "key": "pdf.accumulated.added_by_hand",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Added by hand"
+          }
+        ]
+      },
+      {
+        "key": "pdf.accumulated.cutoff",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cut-off"
+          }
+        ]
+      },
+      {
+        "key": "pdf.accumulated.no_messages",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "No messages are in this issue."
+          }
+        ]
+      },
+      {
+        "key": "pdf.accumulated.period",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Published"
+          }
+        ]
+      },
+      {
+        "key": "pdf.accumulated.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Accumulated Notices to Mariners"
+          }
+        ]
+      },
+      {
+        "key": "pdf.details.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Message"
+          }
+        ]
+      },
+      {
+        "key": "pdf.fa",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Firing Practice Areas"
+          }
+        ]
+      },
+      {
+        "key": "pdf.fa.subtitle",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Annex to Notices to Mariners"
+          }
+        ]
+      },
+      {
+        "key": "pdf.fa.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Firing Practice Areas at Sea"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.index_incomplete",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "The search index is being rebuilt, for example after a restart of the server. Until it is complete, messages may be missing from this result."
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Message List"
+          }
+        ]
+      },
+      {
+        "key": "pdf.misc_nm",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Announcements, etc."
+          }
+        ]
+      },
+      {
+        "key": "pdf.nm",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Notices to Mariners"
+          }
+        ]
+      },
+      {
+        "key": "pdf.nm_abbrev",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "NtM"
+          }
+        ]
+      },
+      {
+        "key": "pdf.nm_almanac.desc",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "General information for the waters these notices cover"
+          }
+        ]
+      },
+      {
+        "key": "pdf.nm_almanac.subtitle",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Annex to Notices to Mariners"
+          }
+        ]
+      },
+      {
+        "key": "pdf.nm_almanac.title",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "NtM Almanac"
+          }
+        ]
+      },
+      {
+        "key": "pdf.nm_annex.nm_ref",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Annex to Notices to Mariners {0}"
+          }
+        ]
+      },
+      {
+        "key": "pdf.nm_tp",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Preliminary (P) and Temporary (T) Notices to Mariners"
+          }
+        ]
+      },
+      {
+        "key": "pdf.nw",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Navigational Warnings"
+          }
+        ]
+      },
+      {
+        "key": "pdf.page",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "page"
+          }
+        ]
+      },
+      {
+        "key": "pdf.toc",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Table of Contents"
+          }
+        ]
+      },
+      {
+        "key": "pdf.translation",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Translation"
+          }
+        ]
+      },
+      {
+        "key": "pdf.volume",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Volume {0}"
+          }
+        ]
+      },
+      {
+        "key": "pdf.week",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Week"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mail",
+    "entries": [
+      {
+        "key": "mail.active_nav_warnings",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Active Navigational Warnings"
+          }
+        ]
+      },
+      {
+        "key": "mail.comment.subject",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Comment from"
+          }
+        ]
+      },
+      {
+        "key": "mail.date_format.long",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "d. MMMM yyyy"
+          }
+        ]
+      },
+      {
+        "key": "mail.date_format.short",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "dd-MM-yyyy"
+          }
+        ]
+      },
+      {
+        "key": "mail.dear.user",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Dear {0}"
+          }
+        ]
+      },
+      {
+        "key": "mail.field.date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Date"
+          }
+        ]
+      },
+      {
+        "key": "mail.field.warning",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Warning"
+          }
+        ]
+      },
+      {
+        "key": "mail.greetings.best.regards",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Kind regards,<br>{0}"
+          }
+        ]
+      },
+      {
+        "key": "mail.navtex.cancel",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "CANCEL NAV WARN"
+          }
+        ]
+      },
+      {
+        "key": "mail.navwarn.cancel",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancel navigational warning"
+          }
+        ]
+      },
+      {
+        "key": "mail.safetynet.cancel",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "CANCEL NAV WARN"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "template",
+    "entries": [
+      {
+        "key": "cancellation.message",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancel message {0}"
+          }
+        ]
+      },
+      {
+        "key": "cancellation.this_message",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Cancel this message {0}"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.day_prefix",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "the"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.day_suffix",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "th,st,nd,rd,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,st,nd,rd,th,th,th,th,th,th,th,st"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.from",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "from"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.html_day_suffix",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "<sup>{{suffix}}</sup>"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.time_interval_prefix",
+        "descs": [
+          {
+            "lang": "en",
+            "value": ""
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.time_prefix",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "at"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.to",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "to"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.until",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "until"
+          }
+        ]
+      },
+      {
+        "key": "navwarn.date.until_further_notice",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "until further notice"
+          }
+        ]
+      },
+      {
+        "key": "position.between_pos",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "between pos."
+          }
+        ]
+      },
+      {
+        "key": "position.between_positions",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "between positions"
+          }
+        ]
+      },
+      {
+        "key": "position.deg",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "degrees"
+          }
+        ]
+      },
+      {
+        "key": "position.east",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "East"
+          }
+        ]
+      },
+      {
+        "key": "position.in_area",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "in the area"
+          }
+        ]
+      },
+      {
+        "key": "position.in_pos",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "in pos."
+          }
+        ]
+      },
+      {
+        "key": "position.in_position",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "in position"
+          }
+        ]
+      },
+      {
+        "key": "position.in_positions",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "in positions"
+          }
+        ]
+      },
+      {
+        "key": "position.min",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "min."
+          }
+        ]
+      },
+      {
+        "key": "position.north",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "North"
+          }
+        ]
+      },
+      {
+        "key": "position.south",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "South"
+          }
+        ]
+      },
+      {
+        "key": "position.west",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "West"
+          }
+        ]
+      },
+      {
+        "key": "term.and",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "and"
+          }
+        ]
+      }
+    ]
+  }
+]
