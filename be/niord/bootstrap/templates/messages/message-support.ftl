@@ -88,22 +88,31 @@
 <#-- ***************************************  -->
 <#-- A repository path as an address: each segment encoded, the slashes kept.
      A path is stored encoded (an upload's) or as the file was named (an imported
-     message's), so an escape the path already holds (%25, %3B, %20) is kept and
-     every other character is encoded: both spellings give the same address, and a
-     "%" that starts no escape is a percent sign. The admin app and the public site
-     encode a path the same way (encodeRepoPath). -->
+     message's). A segment that reads as encoded, every "%" in it starting the
+     escapes of a UTF-8 character, keeps its escapes (%25, %3B, %20, %C3%98) and
+     has every other character encoded; any other segment is a name as it was
+     uploaded and is encoded whole, its "%" signs included. So both spellings
+     give the same address. The admin app and the public site encode a path by
+     the same rule (encodeRepoPath, which decodes a segment where it decodes). -->
 <#-- ***************************************  -->
 <#function repoPathUrl path>
+    <#-- The escapes of one UTF-8 byte that continues a character (80-BF) -->
+    <#local cont = '%[89ab][0-9a-f]' />
+    <#-- One character of a segment that reads as encoded: anything but "%", or the escapes of one
+         UTF-8 character, which leaves out an overlong form and a surrogate, as a decoder does -->
+    <#local encodedChar = '[^%]|%[0-7][0-9a-f]|%(?:c[2-9a-f]|d[0-9a-f])' + cont
+        + '|%e0%[ab][0-9a-f]' + cont + '|%e[1-9a-cef]' + cont + cont + '|%ed%[89][0-9a-f]' + cont
+        + '|%f0%[9ab][0-9a-f]' + cont + cont + '|%f[1-3]' + cont + cont + cont + '|%f4%8[0-9a-f]' + cont + cont />
     <#local out = '' />
     <#list path?split('/') as segment>
         <#if !segment?is_first><#local out = out + '/' /></#if>
-        <#list segment?matches(r'%[0-9A-Fa-f]{2}|%|[^%]+') as part>
-            <#if part?length == 3 && part?starts_with('%')>
-                <#local out = out + part />
-            <#else>
-                <#local out = out + part?url('UTF-8') />
-            </#if>
-        </#list>
+        <#if segment?matches('(?:' + encodedChar + ')*', 'i')>
+            <#list segment?matches(r'%[0-9A-Fa-f]{2}|[^%]+') as part>
+                <#local out = out + part?starts_with('%')?then(part, part?url('UTF-8')) />
+            </#list>
+        <#else>
+            <#local out = out + segment?url('UTF-8') />
+        </#if>
     </#list>
     <#return out />
 </#function>

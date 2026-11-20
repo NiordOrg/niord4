@@ -121,5 +121,33 @@ class MessageAttachmentTemplateTest {
     void aNameOutsideAsciiIsEncodedAsUtf8() throws Exception {
         assertEquals("/rest/repo/file/messages/a/1f/uid-1/1/%C3%98resund.png",
                 imageAddress("messages/a/1f/uid-1/1/Øresund.png"));
+        assertEquals("/rest/repo/file/messages/a/1f/uid-1/1/%C3%98resund.png",
+                imageAddress("messages/a/1f/uid-1/1/%C3%98resund.png"));
+    }
+
+    /**
+     * A name with a "%" that starts no escape was stored as it was named, so the escape-like text beside it is
+     * part of the name and is encoded too, as encodeRepoPath encodes it: "50% off%20v2.png" is the file of that
+     * name, not "50% off v2.png". FAILS on the template that kept every escape-like triple.
+     */
+    @Test
+    void aNameWithAStrayPercentIsEncodedWholeEscapesIncluded() throws Exception {
+        assertEquals("/rest/repo/file/messages/a/1f/uid-1/1/50%25%20off%2520v2.png",
+                imageAddress("messages/a/1f/uid-1/1/50% off%20v2.png"));
+    }
+
+    /**
+     * Escapes that are not a UTF-8 character do not decode, so the name was stored as it was named and its "%"
+     * is a percent sign: "%FF.png" and the overlong "%C0%AF.png" are encoded whole, as encodeRepoPath encodes
+     * them. FAILS on the template that kept every escape-like triple.
+     */
+    @Test
+    void escapesThatAreNotUtf8AreANameAsUploaded() throws Exception {
+        assertEquals("/rest/repo/file/messages/a/1f/uid-1/1/%25FF.png",
+                imageAddress("messages/a/1f/uid-1/1/%FF.png"));
+        assertEquals("/rest/repo/file/messages/a/1f/uid-1/1/%25C0%25AF.png",
+                imageAddress("messages/a/1f/uid-1/1/%C0%AF.png"));
+        assertEquals("/rest/repo/file/messages/a/1f/uid-1/1/%25ED%25A0%2580.png",
+                imageAddress("messages/a/1f/uid-1/1/%ED%A0%80.png"));
     }
 }
