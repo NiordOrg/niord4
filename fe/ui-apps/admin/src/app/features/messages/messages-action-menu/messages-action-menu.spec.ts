@@ -95,6 +95,7 @@ function setup(
   const list = {
     messages: signal<readonly Message[]>(loadedMessages),
     indexIncomplete: signal(inputs.indexIncomplete ?? false),
+    total: signal(0),
   } as unknown as MessageListFacade;
 
   TestBed.configureTestingModule({
@@ -623,7 +624,7 @@ describe('MessagesActionMenu while the search index is being rebuilt', () => {
     expect(asked?.message).toBe('messages.list.indexIncomplete');
     expect(asked?.acceptLabel).toBe('menu.action.export');
     asked?.accept();
-    expect(exports.export).toHaveBeenCalledWith({ filterParams: 'query=wreck' });
+    expect(exports.export).toHaveBeenCalledWith({ filterParams: 'query=wreck', total: 0 });
   });
 
   it("shows the list's warning before the export of the selection too", () => {
@@ -648,5 +649,24 @@ describe('MessagesActionMenu while the search index is being rebuilt', () => {
 
     run(setup(editor).component, 'menu.action.mail');
     expect(mails().mailSelection).toHaveBeenCalledWith(['m1', 'm2'], false);
+  });
+});
+
+describe('MessagesActionMenu export', () => {
+  it("Export passes the search's total, so the export can say it holds only the first part", () => {
+    const { component } = setup({
+      isLoggedIn: true,
+      isEditor: false,
+      isAdmin: false,
+      selectionSize: 0,
+    });
+    Object.assign(TestBed.inject(MessagesFilterFacade), { requestParams: () => 'query=wreck' });
+    (TestBed.inject(MessageListFacade).total as ReturnType<typeof signal<number>>).set(1500);
+    const item = findItem(component, 'menu.action.export');
+    item?.command?.({ originalEvent: new MouseEvent('click'), item });
+    expect(TestBed.inject(MessageExportService).export).toHaveBeenCalledWith({
+      filterParams: 'query=wreck',
+      total: 1500,
+    });
   });
 });
