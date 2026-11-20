@@ -112,9 +112,10 @@
      the typography is written here rather than in the asset. The definition list is the
      cookie statement's two-column table of purposes. A word longer than its line breaks
      rather than running past the dialog's edge: Kalaallisut's do at 320 px under a reader's own
-     letter spacing. */
+     letter spacing. `break-word` breaks only a word that overflows its line and leaves the
+     document's smallest width as it was, so a table in a country's document keeps its columns. */
   .legal-document {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .legal-document h3 {
     margin: 1rem 0 0.5rem;
