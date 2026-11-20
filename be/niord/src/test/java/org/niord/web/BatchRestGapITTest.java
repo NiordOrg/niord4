@@ -15,21 +15,27 @@
  */
 package org.niord.web;
 
-import org.springframework.transaction.annotation.Transactional;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.niord.core.batch.BatchData;
 import org.niord.test.ITTest;
+import org.niord.test.Tx;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -40,8 +46,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>What is asserted here, end to end against the real Keycloak token and the seeded database:
  * <ul>
- *   <li>{@code /job-names} returns the distinct job names persisted in {@code BatchData} (the seed
- *       database carries several import jobs), so the list is non-empty and every entry is non-blank.</li>
+ *   <li>{@code /job-names} returns the distinct job names persisted in {@code BatchData}: the seed holds
+ *       none, so each test commits a row of its own, whose job name is listed, and every entry is non-blank.</li>
  *   <li>{@code /{jobName}/instances} for a job that has never executed in this JVM answers a 5xx — the
  *       documented {@code NoSuchJobException} bug (see below and docs/potential-errors.md), pinned so a
  *       later fix that returns an empty paged envelope deliberately updates the expectation.</li>
@@ -58,8 +64,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Test independence: none of these tests depend on JBeret's accumulating per-JVM job-instance state.
  * The {@code /instances} bug-pinning test uses a freshly generated, guaranteed-never-run job name; the
- * blank-script test only asserts the HTTP contract of its own POST. No row or job is left behind that
- * another test relies on, so every test passes alone and in the full suite.
+ * blank-script test only asserts the HTTP contract of its own POST. The {@code BatchData} row the job-name
+ * and status reads need is committed before each test and removed after it (they passed only after another
+ * class had left rows behind), so every test passes alone and in the full suite.
  *
  * <p>This is a framework-coupled test — see docs/framework-coupled-tests.md.
  */
@@ -67,20 +74,59 @@ class BatchRestGapITTest extends ITTest {
 
     private static final long UNKNOWN_INSTANCE_ID = 999999999L;
 
+    @PersistenceContext
+    EntityManager em;
+
+    /** The job name of the BatchData row this class commits for the reads of the job names and the status */
+    private String jobName;
+
+    /** The id of that row */
+    private Integer jobId;
+
+    /**
+     * The seed holds no BatchData row, so the two reads of the job names would find only the rows an earlier test
+     * class left behind: this class commits its own, under a job name no other test uses, and removes it again.
+     */
+    @BeforeEach
+    void commitABatchJobRow() {
+        jobName = "IT-REST-GAP-" + System.nanoTime();
+        long unique = System.nanoTime() % 1_000_000_000L;
+        jobId = Tx.requiringNew().call(() -> {
+            BatchData job = new BatchData();
+            job.setJobName(jobName);
+            job.setJobNo(unique);
+            job.setInstanceId(800_000_000_000L + unique);
+            job.setCreated(new Date());
+            em.persist(job);
+            em.flush();
+            return job.getId();
+        });
+    }
+
+    @AfterEach
+    void removeTheBatchJobRow() {
+        Tx.requiringNew().run(() -> {
+            BatchData job = em.find(BatchData.class, jobId);
+            if (job != null) {
+                em.remove(job);
+            }
+        });
+    }
+
     // ------------------------------------------------------------------------------------------- //
-    // /job-names — authorized read returns the seeded job names
+    // /job-names — authorized read returns the persisted job names
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void jobNamesWithAdminTokenReturnsSeededJobNames() {
-        // The seed database carries several import jobs (domain-import, chart-import, ...), so the
-        // distinct job-name list backed by "SELECT DISTINCT jobName FROM BatchData" is non-empty.
+    void jobNamesWithAdminTokenReturnsTheJobNamesOfTheBatchData() {
+        // The distinct job-name list is backed by "SELECT DISTINCT jobName FROM BatchData", so it holds the job
+        // name of the row this class committed.
         List<String> names = given().auth().oauth2(accessToken("admin"))
                 .when().get("/rest/batch/job-names")
                 .then().statusCode(200)
                 .extract().jsonPath().getList(".", String.class);
 
-        assertFalse(names.isEmpty(), "the seeded BatchData rows must yield at least one job name");
+        assertTrue(names.contains(jobName), "the committed BatchData row's job name must be listed: " + names);
         // Every entry must be a real, non-blank job name (the column is @NotNull).
         names.forEach(n -> assertTrue(n != null && !n.isBlank(), "job names must be non-blank: " + names));
     }
@@ -172,15 +218,17 @@ class BatchRestGapITTest extends ITTest {
 
     @Test
     void statusWithAdminTokenReportsNonEmptyTypes() {
-        // With an admin token the real status is computed: one BatchTypeVo per distinct seeded job name,
-        // so the "types" list is non-empty (unlike the empty BatchStatusVo returned to non-admins).
+        // With an admin token the real status is computed: one BatchTypeVo per distinct job name of the
+        // BatchData, so the "types" list holds this class's job (unlike the empty BatchStatusVo returned to
+        // non-admins).
         given().auth().oauth2(accessToken("admin"))
                 .when().get("/rest/batch/status")
                 .then().statusCode(200)
                 .body("runningExecutions", greaterThanOrEqualTo(0))
                 .body("types.size()", greaterThanOrEqualTo(1))
                 // Each reported type carries the job name it summarises.
-                .body("types[0].name", notNullValue());
+                .body("types[0].name", notNullValue())
+                .body("types.name", hasItem(jobName));
     }
 
     // ------------------------------------------------------------------------------------------- //
