@@ -12,7 +12,8 @@ import { legacyHashRedirectGuard } from './core/guards/legacy-hash-redirect.guar
 import { environment } from '../environments/environment';
 
 // Dev-only routes (excluded from production builds via `environment.production`, which
-// is `true` only in `environment.production.ts`). Hosts the geometry-editor sandbox so
+// is `true` in `environment.production.ts` and `environment.test.ts`, the deployed builds).
+// Hosts the geometry-editor sandbox so
 // the shared geometry editor can be exercised standalone (its e2e regression net).
 const devRoutes: Routes = environment.production
   ? []

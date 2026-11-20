@@ -362,8 +362,9 @@ for a token bundle over the password grant, `inject-auth.ts` seeds it onto a win
 `page.addInitScript()` before Angular bootstraps, and the `KEYCLOAK` provider in `ui-apps/admin/src/app/app.config.ts`
 returns a pre-hydrated stub instead of the real SSO client. The factory checks `config.production` at
 **runtime** before it even looks for the window key, so a production configuration never reaches the
-stub and setting the key by hand buys nothing. It is a guard, not a build-time elimination — the branch
-still ships.
+stub and setting the key by hand buys nothing; the `test` configuration is a production build too, so
+the stub works only on the development and local builds. It is a guard, not a build-time elimination —
+the branch still ships.
 
 Required: `KEYCLOAK_URL` (no default: the suite names no environment), `KEYCLOAK_TEST_USERNAME`
 and `KEYCLOAK_TEST_PASSWORD`. Optional: `KEYCLOAK_REALM` (`niord`), `KEYCLOAK_TEST_CLIENT_ID`

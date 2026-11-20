@@ -56,9 +56,9 @@ describe('app root routes', () => {
   it('registers the dev-only geometry-editor sandbox route in this (non-production) build', () => {
     // `environment.production` is false in unit/dev builds, so `devRoutes` is populated.
     // The production exclusion is a build-time ternary in app.routes.ts keyed off
-    // `environment.production` (true only in environment.production.ts); it is fixed at
-    // module-load time and cannot be flipped inside a unit test, so this only asserts the
-    // dev branch is present here.
+    // `environment.production` (true in environment.production.ts and environment.test.ts);
+    // it is fixed at module-load time and cannot be flipped inside a unit test, so this only
+    // asserts the dev branch is present here.
     expect(routeByPath('dev/geo-editor')).toBeDefined();
   });
 });

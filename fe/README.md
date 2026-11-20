@@ -184,11 +184,13 @@ From `angular.json`, for `niord-app`. All four configurations are standalone.
 | `production`  | `environment.production.ts`  | —                                                     | yes            | `npm run build` (default)                 |
 | `development` | `environment.development.ts` | — (no optimisation, no budgets, source maps)          | no             | `npm start`, `npm run watch`              |
 | `local`       | `environment.local.ts`       | — (unoptimised), `/rest` proxied to the `be/` backend | no             | `npm run start:local`                     |
-| `test`        | `environment.test.ts`        | — (optimised)                                         | no             | `ng build niord-app --configuration test` |
+| `test`        | `environment.test.ts`        | — (optimised, `production: true`, the TEST badge)     | no             | `ng build niord-app --configuration test` |
 
 The files in `ui-apps/admin/src/environments/` are the base product's and name no deployment:
 `environment.production.ts` and `environment.test.ts` take the API at `/rest` and Keycloak at `/auth`
-on the page's own origin, the single origin a deployment serves the app, the API and Keycloak from;
+on the page's own origin, the single origin a deployment serves the app, the API and Keycloak from,
+and both set `production: true`, so neither build registers the dev routes or lets the e2e token
+stub stand in for Keycloak;
 the development and local files take `/rest` through the dev proxy and the local stack's Keycloak on
 `localhost:8080`, with a world map and no WMS. A country's environments and configurations come
 from its own repository, generated in its workspace by the kit

@@ -1,5 +1,5 @@
-// The example country's test deployments: as production, on the deployment's own origin, with
-// the TEST badge.
+// The example country's test deployments: a production build, on the deployment's own origin,
+// with the TEST badge.
 import type { AppConfig } from '@niord/admin/api';
 
 export const environment: AppConfig = {
@@ -18,5 +18,5 @@ export const environment: AppConfig = {
     mapDefaultZoomLevel: 6,
   },
   mode: 'test',
-  production: false,
+  production: true,
 };
