@@ -157,10 +157,10 @@ bootstrap and loads the sample (`niord/sample/`): 5 domains, 6 message series, 5
 with English and Danish texts; the base product's settings offer English only, so it reads as English until a
 sysadmin adds `da` to `modelLanguages` on the Settings page and reloads the page (the administration app reads the languages when it loads). Only the place names are Danish.
 
-**The JVM's time zone.** The JVM runs in UTC (TZ1 in [`docs/potential-errors.md`](docs/potential-errors.md),
-the owner's ruling of 2026-10-25): timestamps are stored without a zone, in the JVM's zone, so a JVM in a zone with
-summer time stores the repeated autumn hour one hour off. `../start-local.sh` and the regeneration scripts set
-`-Duser.timezone=UTC`; `./run.sh` and `spring-boot:run` set nothing, so pass
+**The JVM's time zone.** The JVM runs in UTC (the owner's ruling of 2026-10-25): timestamps are stored
+without a zone, in the JVM's zone, so a JVM in a zone with summer time stores the repeated autumn hour one hour off.
+`../start-local.sh`, the regeneration scripts and the test JVMs (the `argLine` property of `pom.xml`, which Surefire
+and Failsafe read) set `-Duser.timezone=UTC`; `./run.sh` and `spring-boot:run` set nothing, so pass
 `-Dspring-boot.run.jvmArguments=-Duser.timezone=UTC`. The pom sets no `jvmArguments`, so nothing is replaced, and
 `mode=development` is an environment variable and stays (below).
 

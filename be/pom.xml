@@ -73,6 +73,12 @@
              shared with Failsafe, so defining it here would redirect the integration suite too. -->
         <niord.test.redirectOutput>true</niord.test.redirectOutput>
 
+        <!-- The test JVMs run in UTC, as the deployments do (the owner's ruling of 2026-10-25): timestamps are
+             stored without a zone, in the JVM's, so in a zone with summer time the hour the clocks go back is
+             read one hour off and time-dependent tests fail in it. Surefire and Failsafe both take their
+             argLine from this property; a country inherits it with the parent. -->
+        <argLine>-Duser.timezone=UTC</argLine>
+
         <!-- The country build group (the two niord-country-build executions below): false here, so a
              country that takes this pom as its <parent> runs the group. Only niord-base, niord-app and
              niord-bootstrap set it true: niord-base runs the same tests in its own suites, niord-app

@@ -1103,45 +1103,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   mail in status Error in the Mail Queue once a day, which does not mend the row; the test environment's
   row is replaced only by a sysadmin's release import with the overwrite ticked, on a human's say-so. Open.
 
-## TZ1. Time-dependent ITs fail by exactly one hour when they run in the hour the clocks go back
-
-- **Location:** the timestamp columns of `niord/src/main/resources/db/changelog/changes/V001__baseline_schema.sql`,
-  every one `timestamp(6) without time zone`; `niord/src/main/resources/config/niord-core-defaults.yml:45-64`
-  (`spring.jpa.properties.hibernate`), which sets no `hibernate.jdbc.time_zone`, so Hibernate reads and writes
-  them in the JVM's default zone. The ITs that failed are under `niord/src/test/java/org/niord/core/`:
-  `publication/series/EntityCriteriaResolutionITTest`, `OneOffWindowITTest`, `IssuePublishITTest`,
-  `IssueWorkMarkerITTest`, `AmendAndOverlapITTest`, `MemberResolutionDifferentialITTest`,
-  `integration/NiordIntegrationImportITTest`, `mail/ScheduledMailServiceITTest` and
-  `message/MessageTagServiceITTest`.
-- **Description:** in the hour that happens twice when the clocks go back (02:00-03:00 local in
-  Europe/Copenhagen), an instant written as a local time without a zone does not round-trip: read back, the
-  local time is taken as its other occurrence, one hour off. Seventeen ITs failed that way, each by exactly one
-  hour: `EntityCriteriaResolutionITTest` 8 of its 13, `OneOffWindowITTest` 2,
-  `IssuePublishITTest.concurrentPublishesProduceExactlyOneStamp` ("expected Sun Oct 25 02:01:36 CEST but was
-  2026-10-25 02:01:36.793"), one each of `IssueWorkMarkerITTest`, `AmendAndOverlapITTest` and
-  `MemberResolutionDifferentialITTest`, `NiordIntegrationImportITTest.importDefaultsMissingPublishDateFromToAboutNow`,
-  `ScheduledMailServiceITTest.getPendingMailsExcludesFutureAndSentMails` and
-  `MessageTagServiceITTest.createTempMessageTagDefaultsTtlWhenNull`. A re-run after the hour passed. Cause:
-  the columns without a zone, read and written in the JVM's zone [inferred; not traced]. The two regeneration
-  scripts pin the zone themselves (`niord/scripts/regen-sample.sh:304` and
-  `niord/scripts/regen-test-seed-postgres.sh:178-180`, `-Duser.timezone=UTC`); Surefire and Failsafe do not.
-- **Why it looks wrong:** a stored instant that moves by an hour once a year is a wrong value, not only a test
-  artefact: whatever the ITs check (publish stamps, publication windows, a tag's expiry, a mail's due time) is
-  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: the image
-  (`k8s/docker/Dockerfile`, `ENV TZ=UTC`) and the chart (`k8s/helm/niord/templates/app/deployment.yaml`, a fixed
-  `TZ: UTC` entry in the app container's environment, outside `app.javaOpts`, so a values file that replaces
-  that value keeps it) pin the pod's JVM to UTC; only an explicit `-Duser.timezone` in `app.javaOpts` would
-  override it, which the chart's README and the operators' guide say not to add. In UTC there is no repeated
-  hour; a developer's or a test server's JVM in a zone with summer time has one each year, and so has an
-  integration-test run.
-- **Exposed by:** the first `./verify-local` of the country split's P7-bs, which ran at 02:04 local on
-  2026-10-25, in the repeated hour.
-- **Decided (the owner, 2026-10-25):** the JVM runs in UTC; the chart and the images set it at the deploy step
-  (e.g. `TZ`/`-Duser.timezone=UTC` in `k8s/docker/Dockerfile` and `k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9). Built in the
-  image and the chart on 2026-11-18 (`TZ=UTC`, not in `app.javaOpts`); the entry stays open for the tests' zone,
-  which Surefire and Failsafe still do not pin.
-
 ## BATCH5. Sysadmin > Batch Jobs forgets every execution at a restart, and the bootstrap's job logs with it
 
 - **Location:** the JBeret SE environment's job repository (`niord/src/main/java/org/niord/core/conf/BatchConfig.java`

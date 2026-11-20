@@ -214,8 +214,8 @@ itself and waits for it. The backend serves the REST API on
 http://localhost:8888/rest; log in through the frontend below as `sysadmin` /
 `sysadmin`. While it runs, `./reload.sh`
 applies code edits from both backend modules without a stop/start. See
-`be/README.md` to drive Maven directly instead. The JVM runs in UTC (TZ1 in
-`be/docs/potential-errors.md`, the owner's ruling of 2026-10-25): `../start-local.sh` sets
+`be/README.md` to drive Maven directly instead. The JVM runs in UTC (the owner's ruling of
+2026-10-25): `../start-local.sh` sets
 `-Duser.timezone=UTC` and `./run.sh` does not, so pass
 `./run.sh -Dspring-boot.run.jvmArguments=-Duser.timezone=UTC` (`be/README.md`, its time-zone
 paragraph).

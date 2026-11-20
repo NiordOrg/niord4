@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
  * sequence, both read in the zone of the series' domain (TZ2; {@code MessageSeriesYearZoneITTest} runs the same
  * through the publishing path).
  * <p>
- * Every test that reads the JVM's zone sets it to UTC, the zone the deployments run in (TZ1, decided
+ * Every test that reads the JVM's zone sets it to UTC, the zone the deployments and the test JVMs run in (decided
  * 2026-10-25), and restores it.
  */
 public class MessageShortIdYearBoundaryTest {
