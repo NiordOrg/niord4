@@ -31,7 +31,9 @@ template is as it was.
 
 The weeks need the backend of the version whose release notes name this folder: it hands the reports the weeks in
 that pair form (`weeks`, and `group.weeks` for each source of the accumulated report). On an older backend
-the new templates print the first week alone, as the old ones did, and render as before. The dates read the texts
+the new templates still render, but the weeks are short: the weekly reports print the first week alone, as the
+old ones did, and the accumulated report names a source of two weeks or more by its first week alone, where the
+old one printed "Week 36 - 37". So upgrade first, as step 1 below says. The dates read the texts
 `msg.time.date_format` and `msg.time.date_time_format`, which every deployment holds (the message PDFs read them
 already); a deployment that changed them changes its reports' dates with them. In Danish, with the Danish text
 `d. MMMM yyyy`, a report's date loses its leading zero: "2. november 2026" where it printed "02. november 2026".
