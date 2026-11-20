@@ -300,8 +300,8 @@ public class WeeklyReportTemplateTest {
 
     /**
      * RENDER11. An issue named for weeks 36 to 38 is headed by those weeks, on its first page and in its page
-     * header, in both weekly reports, and so is a pair, in whatever form the issue's name writes them. The release
-     * hands the report the weeks as the name writes them ({@code weeks}); the templates printed {@code week} alone,
+     * header, in both weekly reports, and so is a pair, in whatever form the series' name pattern writes them. The
+     * release hands the report the weeks so written ({@code weeks}); the templates printed {@code week} alone,
      * so "Uge 36-38, 2026" was headed "Uge 36". FAILS on the templates that print {@code week}.
      */
     @Test

@@ -121,8 +121,8 @@ export interface ReportParamRow {
  * DERIVED from the cut-off — the numbers for the one thing a template computes
  * from a year, the volume line of an accumulated report, which a printed label
  * cannot be asked to do arithmetic on. They are absent where the issue has
- * neither. `weeks` is the issue's weeks as its name writes them, which the weekly
- * reports print in their heading.
+ * neither. `weeks` is the issue's weeks as the series' name pattern writes them,
+ * which the weekly reports print in their heading.
  *
  * All seven are injected into the report at render time. A row repeating one of
  * them would be a second source for the same value that can disagree with the

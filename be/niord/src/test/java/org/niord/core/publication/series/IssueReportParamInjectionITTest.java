@@ -240,7 +240,7 @@ public class IssueReportParamInjectionITTest extends ITTest {
     }
 
     /**
-     * And for a series whose name pattern writes the weeks, the weeks as the issue's name writes them: under
+     * And for a series whose name pattern writes the weeks, the weeks as that pattern writes them: under
      * "Uge ${week} og ${weekTo}, ${year}" an issue of weeks 34 to 36 is named "Uge 34 og 36, 2026" and headed
      * "34 og 36"; under "Uge ${week}, ${year}" it is named "Uge 34, 2026" and headed "34". FAILS on the rule that
      * handed every report the pair form, "34-36", whatever the name said.

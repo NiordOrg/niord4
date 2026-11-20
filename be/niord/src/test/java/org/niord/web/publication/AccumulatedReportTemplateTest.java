@@ -453,8 +453,9 @@ public class AccumulatedReportTemplateTest {
 
     /**
      * RENDER11. A source of two weeks is named "36+37" and one of three or more "36-38" where the weekly's name
-     * writes them so: the render hands each section its weeks as the source's own name writes them
-     * ({@code group.weeks}), and the template prints them as handed. FAILS on the template that printed every span as
+     * writes them so: the render hands each section its weeks as the source's own series pattern writes them, in
+     * the pair form where that pattern cannot say the span ({@code group.weeks}), and the template prints them as
+     * handed. FAILS on the template that printed every span as
      * "week - weekTo", which made a pair read as a range.
      */
     @Test

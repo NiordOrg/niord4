@@ -6,9 +6,10 @@ truth; nothing here ever changes it.
 
 The second round of the recorded faults of November 2026 corrected four things the base product's PDF reports
 print: the weeks a weekly report is headed by, the date on the reports' first page, the time stamp of the message
-list, and the image attachments of a message whose file name holds `%`, `;` or a space; and the English long date
-of a mailing-list subject. This folder carries the corrected templates and texts. Eight paths changed since the release `2026-11-16-error-hunt-phase-2-templates`; every other
-template is as it was.
+list, and the image attachments of a message whose file name holds `%`, `;` or a space. It also corrects one
+English text, the long date of a mailing-list subject. This folder carries the corrected templates and texts.
+Eight paths changed since the release `2026-11-16-error-hunt-phase-2-templates`; every other template is as it
+was.
 
 | File | Import | What |
 |---|---|---|
@@ -20,17 +21,22 @@ template is as it was.
 
 | Path | What the fix does | Shadowed by |
 |---|---|---|
-| `templates/messages/nm-report-pdf.ftl` | The Notices to Mariners report is headed, on its first page and in its page header, by the issue's weeks as its name writes them, by the week part of the series' name pattern in the report's language: "Week 36-38, 2026" for an issue of three weeks or more and "Week 36+37, 2026" for a pair under the pair form `${week}+${weekTo}` (it said "Week 36, 2026" for both), "Uge 36 og 37, 2026" under `Uge ${week} og ${weekTo}, ${year}`, "Week 36, 2026" under a pattern that names the first week alone, as the name does. A pattern that writes no week gives the pair form, and a week label an editor wrote is printed whole. Its first page is dated by the language's date text, `msg.time.date_format`: "20 November 2026" in English (it was "20. November 2026", the Danish form). | none |
+| `templates/messages/nm-report-pdf.ftl` | The Notices to Mariners report is headed, on its first page and in its page header, by the issue's weeks as the series' name pattern in the report's language writes them, in the name the series suggests for the issue: "Week 36-38, 2026" for an issue of three weeks or more and "Week 36+37, 2026" for a pair under the pair form `${week}+${weekTo}` (it said "Week 36, 2026" for both), "Uge 36 og 37, 2026" under `Uge ${week} og ${weekTo}, ${year}`. A single week is "Week 36, 2026" under these patterns too, as before (its name under the pair form keeps a "+", "Week 36+, 2026", which the heading leaves out). A pattern that names the first week alone, as every pattern restored from the previous system does, heads the issue as before: a double issue by its first week, "Week 36, 2026", as its name does; to head it by both weeks, write them in the issue's week label (Tailor issue, Numbering). A pattern that writes no week gives the pair form, and a week label an editor wrote is printed whole. Its first page is dated by the language's date text, `msg.time.date_format`: "20 November 2026" in English (it was "20. November 2026", the Danish form). | none |
 | `templates/messages/nm-tp-report-pdf.ftl` | The same for the T&P report: its heading, its page header and the "NtM 36-38 2026" line of its first page; and its date. | none |
-| `templates/messages/nm-accumulated-report-pdf.ftl` | A source issue's weeks are printed on its line as the source's own name writes them, by its own series' name pattern, or its week label whole: under the pair form a source of two weeks is "Week 36+37" (it was "Week 36 - 37", which reads as a range), one of three weeks or more "Week 36-38"; a source without a name is called by its weeks so written in the contents and its heading (it was called by its first week). The period and cut-off dates of each source are printed by `msg.time.date_format`. | GL |
+| `templates/messages/nm-accumulated-report-pdf.ftl` | A source issue's weeks are printed on its line as its own series' name pattern writes them, or its week label whole: under the pair form a source of two weeks is "Week 36+37" (it was "Week 36 - 37", which reads as a range), one of three weeks or more "Week 36-38", under `Uge ${week} og ${weekTo}` "Uge 36 og 37". Where the pattern cannot say a span (it names the first week alone, as every pattern restored from the previous system does, or no week), a source of several weeks is printed in the pair form, "Week 36+37" or "Week 36-38", so the line names every week the source covered. A source without a name is called by its weeks so written in the contents and its heading (it was called by its first week). The period and cut-off dates of each source are printed by `msg.time.date_format`. | GL |
 | `templates/messages/nm-almanac-report-pdf.ftl` | The first page's date by `msg.time.date_format`. | GL in `da` and `kl` (see below) |
 | `templates/messages/nm-annex-report-pdf.ftl` | The first page's date by `msg.time.date_format`. | GL in `da` and `kl` |
 | `templates/messages/fa-list-pdf.ftl` | The first page's date by `msg.time.date_format`. | GL in `da` and `kl` |
 | `templates/messages/message-list-pdf.ftl` | The time the list was made, on its first page and in its page header, by the language's date-and-time text, `msg.time.date_time_format`, in the zone the print is dated in: "20 November 2026, hours 11:28" in English, as the message PDFs print a time (it was "Nov 20, 2026, 11:28:28 AM"). The criteria line, made by the backend, now reads "Series IDs", "Area IDs" and "Category IDs" with a backend of this version, whichever template prints it. | GL in `da` and `kl` |
 | `templates/messages/message-support.ftl` | A message's image attachment is fetched by its path encoded segment by segment, by the rule the admin app and the public site follow: a segment that reads as encoded (every `%` in it starts the escapes of a UTF-8 character) keeps its escapes, any other is a name as it was uploaded and is encoded whole. So an image whose file name holds `%`, `;` or a space is in the message PDF (it could be left out where the path was stored as the file was named, as an imported message's is). | GL |
 
-The weeks need the backend of the version whose release notes name this folder: it hands the reports the weeks as
-the issue's name writes them (`weeks`, and `group.weeks` for each source of the accumulated report). On an older backend
+The weeks follow the series' name pattern as it stands when the report is printed, not the name stored on the
+issue. They part where an editor renamed the issue by hand, where the pattern changed after the issue was named
+(an amendment or a new release of it is headed by the new pattern), and where the report's language has no name
+pattern (the pair form). The week label is the way to head one issue otherwise.
+
+The weeks need the backend of the version whose release notes name this folder: it hands the reports the weeks
+(`weeks`, and `group.weeks` for each source of the accumulated report). On an older backend
 the new templates still render, but the weeks are short: the weekly reports print the first week alone, as the
 old ones did, and the accumulated report names a source of two weeks or more by its first week alone, where the
 old one printed "Week 36 - 37". So upgrade first, as step 1 below says. The dates read the texts

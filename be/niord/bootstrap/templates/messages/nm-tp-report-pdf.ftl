@@ -38,9 +38,10 @@
 </head>
 <body>
 
-<#-- ${weeks} is the issue's weeks as its name writes them, by the week part of the
-     series' name pattern ("36 og 37", "36+37", "36-38"; the pair form where the
-     pattern writes no week), or the week label whole. The legacy print dialog
+<#-- ${weeks} is the issue's weeks as the series' name pattern writes them, by the
+     week part of the pattern ("36 og 37", "36+37", "36-38"; the pair form where the
+     pattern writes no week; a single week alone, without a joiner the pattern
+     writes before ${weekTo}), or the week label whole. The legacy print dialog
      hands only ${week}, which then prints alone. -->
 <@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_tp')} - ${text('pdf.week')} ${weeks!week!''}, ${year!''}"/>
 
