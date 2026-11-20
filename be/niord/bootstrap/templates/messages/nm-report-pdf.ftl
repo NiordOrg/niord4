@@ -62,10 +62,10 @@
 </head>
 <body>
 
-<#-- Headers and footers. ${weeks} is the issue's weeks in the pair form the name
-     patterns use: "36", "36+37" for a pair, "36-38" for three weeks or more, or
-     the week label whole. The legacy print dialog hands only ${week}, which then
-     prints alone. -->
+<#-- Headers and footers. ${weeks} is the issue's weeks as its name writes them, by
+     the week part of the series' name pattern ("36 og 37", "36+37", "36-38"; the
+     pair form where the pattern writes no week), or the week label whole. The
+     legacy print dialog hands only ${week}, which then prints alone. -->
 <@renderDefaultHeaderAndFooter headerText="${text('pdf.nm')} - ${text('pdf.week')} ${weeks!week!''}, ${year!''}"/>
 
 

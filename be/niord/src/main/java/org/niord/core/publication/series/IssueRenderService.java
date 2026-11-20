@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import jakarta.inject.Inject;
 import org.niord.core.NiordApp;
 import org.niord.core.message.MessageService;
-import org.niord.core.publication.series.resolve.IssueNaming;
 import org.niord.core.report.FmReport;
 import org.niord.core.report.FmReportService;
 import org.niord.core.script.FmTemplateService;
@@ -136,12 +135,17 @@ public class IssueRenderService {
      * {@code manual} marks the one section that belongs to no source: the members
      * somebody added to the issue by hand, which came from no earlier document and
      * are printed under a heading that says so.
+     *
+     * {@code weeks} is the source's weeks as its own name writes them, by its own series' name pattern in the
+     * render language, or its week label whole (PrintedNumbering.printedWeeks): what the accumulated report prints
+     * for the source as {@code group.weeks}.
      */
     public record RenderGroup(
             String publicId,
             String name,
             Integer week,
             Integer weekTo,
+            String weeks,
             Integer year,
             java.util.Date cutoff,
             java.util.Date intervalFrom,
@@ -443,8 +447,8 @@ public class IssueRenderService {
             model.put("name", g.name());
             model.put("week", g.week());
             model.put("weekTo", g.weekTo());
-            // The source's weeks in the pair form the name patterns use: "36+37" for a pair, "36-38" for three or more.
-            model.put("weeks", IssueNaming.weeksText(g.week(), g.weekTo(), g.year()));
+            // The source's weeks as its own name writes them ("36 og 37", "36+37", "36-38"), or its week label.
+            model.put("weeks", g.weeks());
             model.put("year", g.year());
             model.put("cutoff", g.cutoff());
             model.put("intervalFrom", g.intervalFrom());

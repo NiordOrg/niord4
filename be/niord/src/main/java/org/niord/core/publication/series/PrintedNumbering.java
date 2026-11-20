@@ -80,11 +80,15 @@ public final class PrintedNumbering {
 
     /**
      * The weeks the report names the issue for, and what it is handed as {@code weeks}: the week label where one
-     * is written, which holds the whole span as the publication writes it ("36 og 37"); else the derived weeks in the
-     * pair form the name patterns use, "36", "36+37" for a pair and "36-38" for three weeks or more
+     * is written, which holds the whole span as the publication writes it ("36 og 37"); else the derived weeks as the
+     * issue's name writes them, by the week part of its series' name pattern in the report's language: "36" under
+     * "Uge ${week}, ${year}", "36 og 37" under "Uge ${week} og ${weekTo}, ${year}", "36+37" or "36-38" under
+     * "Uge ${week}+${weekTo}, ${year}", and that last form where the pattern writes no week
      * ({@link IssueNaming#weeksText}). Null where the issue has no week.
+     *
+     * @param lang the language the report is drawn in, whose name pattern is read
      */
-    public static String printedWeeks(PublicationIssue issue) {
+    public static String printedWeeks(PublicationIssue issue, String lang) {
         if (issue == null) {
             return null;
         }
@@ -92,7 +96,25 @@ public final class PrintedNumbering {
         if (label != null) {
             return label;
         }
-        return IssueNaming.weeksText(issue.getWeek(), issue.getWeekTo(), issue.getYear());
+        return IssueNaming.weeksText(namePatternOf(issue.getSeries(), lang),
+                issue.getWeek(), issue.getWeekTo(), issue.getYear());
+    }
+
+    /**
+     * The series' name pattern in the language, as a new issue's name is suggested from it, or null where the
+     * series has none there.
+     */
+    static String namePatternOf(PublicationSeries series, String lang) {
+        if (series == null || lang == null || series.getDescs() == null) {
+            return null;
+        }
+        for (PublicationSeriesDesc desc : series.getDescs()) {
+            if (lang.equals(desc.getLang())) {
+                String pattern = desc.getNameSuggestionPattern();
+                return pattern == null || pattern.isBlank() ? null : pattern;
+            }
+        }
+        return null;
     }
 
     /** What ${year} prints: the label, else the derived year. */

@@ -300,15 +300,15 @@ public class WeeklyReportTemplateTest {
 
     /**
      * RENDER11. An issue named for weeks 36 to 38 is headed by those weeks, on its first page and in its page
-     * header, in both weekly reports, and so is a pair. The release hands the report the weeks in the pair form the
-     * name patterns use ({@code weeks}); the templates printed {@code week} alone, so "Uge 36-38, 2026" was headed "Uge 36".
-     * FAILS on the templates that print {@code week}.
+     * header, in both weekly reports, and so is a pair, in whatever form the issue's name writes them. The release
+     * hands the report the weeks as the name writes them ({@code weeks}); the templates printed {@code week} alone,
+     * so "Uge 36-38, 2026" was headed "Uge 36". FAILS on the templates that print {@code week}.
      */
     @Test
     public void bothWeeklyReportsAreHeadedByTheWeeksTheIssuesNameSays() throws Exception {
-        for (String weeks : List.of("36-38", "36+37")) {
+        for (String weeks : List.of("36-38", "36+37", "36 og 37")) {
             Map<String, Object> model = aWeek();
-            model.put("weekTo", weeks.substring(3));
+            model.put("weekTo", weeks.substring(weeks.length() - 2));
             model.put("weeks", weeks);
 
             String nm = render(model);

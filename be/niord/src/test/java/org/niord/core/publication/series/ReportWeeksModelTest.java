@@ -28,14 +28,26 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * RENDER11: the weeks a report names an issue for, as the report's model carries them. The weekly reports print the
  * issue's {@code weeks} in their heading and page header, and the accumulated report each source's
- * {@code group.weeks}, so that both say all the issue's weeks in the pair form the name patterns use: "36+37" for a
- * pair, "36-38" for three weeks or more. Before, the model carried the first and the closing week only, and the templates had no way to tell a
- * pair from a range across a year's end.
+ * {@code group.weeks}, so that both say the weeks the issue's own name says: the week part of its series' name pattern
+ * in the report's language, expanded as the name is ("36" under "Uge ${week}, ${year}", "36 og 37" under
+ * "Uge ${week} og ${weekTo}", "36+37" or "36-38" under the pair form, and the pair form where the pattern writes no
+ * week), or the week label whole.
  */
 class ReportWeeksModelTest {
 
-    private static PublicationIssue issue(Integer week, Integer weekTo, Integer year, String weekLabel) {
+    /** A weekly in two languages, whose patterns write the weeks two different ways. */
+    private static PublicationSeries series() {
+        PublicationSeries series = new PublicationSeries();
+        series.createDesc("da").setNameSuggestionPattern("Efterretninger uge ${week} og ${weekTo}, ${year}");
+        series.createDesc("en").setNameSuggestionPattern("Notices week ${week}, ${year}");
+        series.createDesc("kl").setNameSuggestionPattern("  ");
+        return series;
+    }
+
+    private static PublicationIssue issue(PublicationSeries series, Integer week, Integer weekTo, Integer year,
+                                          String weekLabel) {
         PublicationIssue issue = new PublicationIssue();
+        issue.setSeries(series);
         issue.setWeek(week);
         issue.setWeekTo(weekTo);
         issue.setYear(year);
@@ -43,35 +55,59 @@ class ReportWeeksModelTest {
         return issue;
     }
 
+    /**
+     * Each language's document says the weeks its own name says. FAILS on the rule that printed the pair form in
+     * every language, "36+37" where the Danish name says "36 og 37" and the English one "36".
+     */
     @Test
-    void theIssuesWeeksAreTheSpanItsNameSays() {
-        assertEquals("36", PrintedNumbering.printedWeeks(issue(36, null, 2026, null)));
-        assertEquals("36+37", PrintedNumbering.printedWeeks(issue(36, 37, 2026, null)));
-        assertEquals("36-38", PrintedNumbering.printedWeeks(issue(36, 38, 2026, null)));
-        assertEquals("52-2", PrintedNumbering.printedWeeks(issue(52, 2, 2027, null)));
-        assertNull(PrintedNumbering.printedWeeks(issue(null, null, null, null)));
-        assertNull(PrintedNumbering.printedWeeks(null));
+    void theIssuesWeeksAreTheWeeksOfItsNameInTheReportsLanguage() {
+        PublicationSeries series = series();
+        assertEquals("36 og 37", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, null), "da"));
+        assertEquals("36", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, null), "en"));
+        assertEquals("36 og 38", PrintedNumbering.printedWeeks(issue(series, 36, 38, 2026, null), "da"));
+        assertEquals("52 og 2", PrintedNumbering.printedWeeks(issue(series, 52, 2, 2027, null), "da"));
     }
 
-    /** A week label holds the whole span as the publication writes it, so it is printed alone. */
+    /** A language with no pattern, a blank one, or no series at all: the pair form. */
+    @Test
+    void withoutAPatternTheWeeksAreThePairForm() {
+        PublicationSeries series = series();
+        for (String lang : java.util.Arrays.asList("kl", "de", null)) {
+            assertEquals("36", PrintedNumbering.printedWeeks(issue(series, 36, null, 2026, null), lang));
+            assertEquals("36+37", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, null), lang));
+            assertEquals("36-38", PrintedNumbering.printedWeeks(issue(series, 36, 38, 2026, null), lang));
+            assertEquals("52-2", PrintedNumbering.printedWeeks(issue(series, 52, 2, 2027, null), lang));
+        }
+        assertEquals("36-38", PrintedNumbering.printedWeeks(issue(null, 36, 38, 2026, null), "da"));
+        assertNull(PrintedNumbering.printedWeeks(issue(series, null, null, null, null), "da"));
+        assertNull(PrintedNumbering.printedWeeks(null, "da"));
+    }
+
+    /** A week label holds the whole span as the publication writes it, so it is printed alone, in every language. */
     @Test
     void aWeekLabelIsPrintedWhole() {
-        assertEquals("36 og 37", PrintedNumbering.printedWeeks(issue(36, 37, 2026, " 36 og 37 ")));
-        assertEquals("36+37", PrintedNumbering.printedWeeks(issue(36, 37, 2026, "  ")),
+        PublicationSeries series = series();
+        assertEquals("36 & 37", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, " 36 & 37 "), "da"));
+        assertEquals("36 & 37", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, "36 & 37"), "en"));
+        assertEquals("36 og 37", PrintedNumbering.printedWeeks(issue(series, 36, 37, 2026, "  "), "da"),
                 "a blank label is no label");
     }
 
+    /** The accumulated report's sections carry the weeks the release worked out for each source, as they are. */
     @Test
     void eachSourceOfTheAccumulatedReportCarriesItsWeeks() {
         List<IssueRenderService.RenderGroup> groups = List.of(
-                new IssueRenderService.RenderGroup("a", "NtM 36+37", 36, 37, 2026, new Date(), null, List.of(), false),
-                new IssueRenderService.RenderGroup("b", "NtM 38-40", 38, 40, 2026, new Date(), null, List.of(), false),
-                new IssueRenderService.RenderGroup("c", "NtM 41", 41, null, 2026, new Date(), null, List.of(), false),
-                new IssueRenderService.RenderGroup(null, null, null, null, null, null, null, List.of(), true));
+                new IssueRenderService.RenderGroup("a", "NtM 36+37", 36, 37, "36 og 37", 2026, new Date(), null,
+                        List.of(), false),
+                new IssueRenderService.RenderGroup("b", "NtM 38-40", 38, 40, "38-40", 2026, new Date(), null,
+                        List.of(), false),
+                new IssueRenderService.RenderGroup("c", "NtM 41", 41, null, "41", 2026, new Date(), null,
+                        List.of(), false),
+                new IssueRenderService.RenderGroup(null, null, null, null, null, null, null, null, List.of(), true));
 
         List<Map<String, Object>> model = IssueRenderService.modelGroups(groups, List.of());
 
-        assertEquals("36+37", model.get(0).get("weeks"));
+        assertEquals("36 og 37", model.get(0).get("weeks"));
         assertEquals("38-40", model.get(1).get("weeks"));
         assertEquals("41", model.get(2).get("weeks"));
         assertNull(model.get(3).get("weeks"), "the section added by hand names no week");

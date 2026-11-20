@@ -293,31 +293,86 @@ public final class IssueNaming {
         return WEEK_PAIR_JOIN.matcher(pattern).replaceAll("$1-");
     }
 
+    /** The four tokens a name writes its weeks with: the first week and the closing week, each in both variants. */
+    private static final Set<String> WEEK_TOKENS = Set.of("week", "week-2-digits", "weekTo", "weekTo-2-digits");
+
+    /** The weeks of a pattern that writes none: the pair form, which prints a range for three weeks or more. */
+    private static final String PAIR_FORM = "${week}+${weekTo}";
+
     /**
-     * The weeks an issue is named for, printed as a name pattern prints them with the pair form
-     * "${week}+${weekTo}": the week alone for a single week, "36+37" for a pair and "36-38" for three weeks or
-     * more ({@link #joined}), across a year's end "52+1" and "52-2". Null where there is no week.
+     * The week part of a name pattern: the stretch from its first week token to its last ({@code ${week}},
+     * {@code ${weekTo}} and their two-digit variants), with the text between them, or null where the pattern
+     * writes no week.
+     *
+     * The stretch ends at the first token of another kind ({@code ${year}}, a month, a day, the edition): a week
+     * token after it is not part of the weeks. So "Uge ${week} og ${weekTo}, ${year}" gives
+     * "${week} og ${weekTo}", "Uge ${week}, ${year}" gives "${week}", and "Uge ${week}, ${year} (${weekTo})" gives
+     * "${week}" too, where taking every week token would print the year inside the weeks. Within the stretch the
+     * tokens may stand in any order and any one may stand twice: "${weekTo} back to ${week}" and
+     * "${week} (${week-2-digits})" are taken whole.
+     */
+    public static String weekSpanOf(String pattern) {
+        if (pattern == null) {
+            return null;
+        }
+        Matcher m = TOKEN.matcher(pattern);
+        int start = -1;
+        int end = -1;
+        while (m.find()) {
+            if (WEEK_TOKENS.contains(m.group(1))) {
+                if (start < 0) {
+                    start = m.start();
+                }
+                end = m.end();
+            } else if (start >= 0) {
+                break;
+            }
+        }
+        return start < 0 ? null : pattern.substring(start, end);
+    }
+
+    /**
+     * The weeks an issue is named for, as its name writes them: the week part of the series' name pattern
+     * ({@link #weekSpanOf}) expanded for this issue by {@link #expand}, the code that expands the name, so the weeks
+     * the report prints are the same characters as the weeks in the name. "Uge ${week}, ${year}" gives "36" for an
+     * issue of weeks 36 to 38, as its name "Uge 36, 2026" says; "Uge ${week} og ${weekTo}, ${year}" gives "36 og 37"
+     * for a pair; "Uge ${week}+${weekTo}, ${year}" gives "36+37" for a pair and "36-38" for three weeks or more
+     * ({@link #joined}), across a year's end "52+1" and "52-2". Null where there is no week.
+     *
+     * A pattern that writes no week (or none at all, or one whose week part expands to nothing, as a lone
+     * {@code ${weekTo}} does for a single week) gives the pair form, "${week}+${weekTo}": the week alone, "36+37"
+     * or "36-38". So a report is always headed by a week, and by all the weeks where its name cannot say them.
      *
      * The report templates print it where they name the issue's weeks: the weekly reports' heading and page header
-     * (the report's {@code weeks}) and each source's line in the accumulated report ({@code group.weeks}), so a
-     * document is headed by all its weeks. It is this pair form whatever the series' own name pattern says, so the
-     * heading and the name agree only for a pattern that writes the pair this way: a series named by
-     * "Uge ${week}, ${year}" names a three-week issue "Uge 36, 2026", and one named by "Uge ${week} og ${weekTo}"
-     * a pair "Uge 36 og 37", while their headings say "36-38" and "36+37". A closing week equal to the first is a
-     * single week.
+     * (the report's {@code weeks}) and each source's line in the accumulated report ({@code group.weeks}). A closing
+     * week equal to the first is a single week. A week label is not this method's: it is printed whole, in its place
+     * ({@code PrintedNumbering.printedWeeks}).
      *
+     * @param namePattern the series' name pattern in the report's language, or null
      * @param week the first week, or null
      * @param weekTo the closing week, or null for a single week
      * @param year the week-based year the issue is named for, which places a span across a year's end; null reads
      *             as a span within one year
      */
-    public static String weeksText(Integer week, Integer weekTo, Integer year) {
+    public static String weeksText(String namePattern, Integer week, Integer weekTo, Integer year) {
         if (week == null) {
             return null;
         }
         boolean span = weekTo != null && !weekTo.equals(week);
         Numbers numbers = new Numbers(week, span ? weekTo : null, year == null ? 0 : year, 1, 1, null);
-        return expand(span ? "${week}+${weekTo}" : "${week}", numbers);
+        String weekPart = weekSpanOf(namePattern);
+        if (weekPart != null) {
+            try {
+                String weeks = expand(weekPart, numbers);
+                if (!weeks.isBlank()) {
+                    return weeks;
+                }
+            } catch (RuntimeException e) {
+                // A pattern that does not expand names no issue either (S-14 refuses it on the series); the pair
+                // form below still heads the document by its weeks.
+            }
+        }
+        return expand(span ? PAIR_FORM : "${week}", numbers);
     }
 
     /** The values each token expands to, for a given set of numbers. */

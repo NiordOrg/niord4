@@ -1675,6 +1675,22 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Severity:** Low. Fix: refuse New edition on an issue that a published edition already supersedes, or make the
   edition from the latest edition.
 
+## ISSUE13. A single week of a series named by `${week}+${weekTo}` is named with the "+" left over
+
+- **Location:** `org/niord/core/publication/series/resolve/IssueNaming.java` (`expand`, `valuesOf`: `${weekTo}`
+  expands to the empty text for a single week).
+- **Description:** a series whose name pattern writes the pair form, as the admin manual describes it
+  ("Uge ${week}+${weekTo}, ${year}"), names every single-week issue "Uge 36+, 2026"; a pattern
+  "Uge ${week} og ${weekTo}" names it "Uge 36 og , 2026". The weekly reports' heading prints the weeks as the name
+  writes them since 2026-11-20, so it says "36+" too.
+- **Why it looks wrong:** a name, a file name and a heading with a joiner and no second week.
+- **Exposed by:** fix round 2 of the recorded faults, 2026-11-20, while the weekly heading was made to follow the
+  name pattern (read in the code; `IssueNamingTest#theWeeksTextIsTheWeekPartOfTheIssuesName` asserts that the
+  heading and the name agree, the joiner included).
+- **Severity:** Low, cosmetic. Fix: drop the text between the first week and an empty `${weekTo}` when the issue
+  has a single week, in `IssueNaming.expand` and the admin app's `expandIssuePattern` alike; the heading follows by
+  itself.
+
 ## CONTACT3. Changing a contact's address to one another contact has answers 500
 
 - **Location:** `org/niord/core/user/ContactService.java` `updateContact`, which copies the new address without

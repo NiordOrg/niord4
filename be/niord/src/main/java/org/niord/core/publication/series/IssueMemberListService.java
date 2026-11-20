@@ -609,10 +609,34 @@ public class IssueMemberListService {
      * question of what a week is called.
      */
     public Map<String, SourceIssueRefVo> sourceRefsOf(Collection<String> publicIds, String lang) {
+        Map<String, SourceIssueRefVo> out = new LinkedHashMap<>();
+        sourceHeadingsOf(publicIds, lang, false).forEach((id, heading) -> out.put(id, heading.ref()));
+        return out;
+    }
+
+    /**
+     * A source issue as a compiled document heads its section: the reference {@link #sourceRefsOf} answers, and
+     * the source's weeks as its own name writes them (null for a source that is gone, or has no week).
+     */
+    public record SourceHeading(SourceIssueRefVo ref, String weeks) {
+    }
+
+    /**
+     * The same references, each with the weeks the accumulated report prints for the source: its week label
+     * whole, else its weeks by the week part of its own series' name pattern in the language
+     * (PrintedNumbering.printedWeeks), so a section names its weeks as the source's name does. In the same one
+     * query. Only the render asks for the weeks, inside its transaction: they read the source series' name
+     * patterns, which the screens' references do without.
+     */
+    public Map<String, SourceHeading> sourceHeadingsOf(Collection<String> publicIds, String lang) {
+        return sourceHeadingsOf(publicIds, lang, true);
+    }
+
+    private Map<String, SourceHeading> sourceHeadingsOf(Collection<String> publicIds, String lang, boolean weeks) {
         if (publicIds.isEmpty()) {
             return Map.of();
         }
-        Map<String, SourceIssueRefVo> out = new LinkedHashMap<>();
+        Map<String, SourceHeading> out = new LinkedHashMap<>();
         for (PublicationIssue i : issuesByPublicId(publicIds).values()) {
             SourceIssueRefVo vo = new SourceIssueRefVo();
             vo.setPublicId(i.getPublicId());
@@ -623,13 +647,13 @@ public class IssueMemberListService {
             vo.setCutoff(i.effectiveCutoff());
             vo.setIntervalFrom(i.getIntervalFrom());
             vo.setName(IssueListService.nameOf(i, lang));
-            out.put(i.getPublicId(), vo);
+            out.put(i.getPublicId(), new SourceHeading(vo, weeks ? PrintedNumbering.printedWeeks(i, lang) : null));
         }
         for (String id : publicIds) {
             if (!out.containsKey(id)) {
                 SourceIssueRefVo vo = new SourceIssueRefVo();
                 vo.setPublicId(id);
-                out.put(id, vo);
+                out.put(id, new SourceHeading(vo, null));
             }
         }
         return out;

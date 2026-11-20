@@ -217,9 +217,10 @@ public class IssueReportParamInjectionITTest extends ITTest {
     }
 
     /**
-     * RENDER11. The report is handed the weeks in the pair form the name patterns use, which the weekly reports
-     * print in their heading and page header: a single week alone, three weeks as a range. FAILS where the model carries
-     * only the first and the closing week, and the heading said the first week alone.
+     * RENDER11. The report is handed the weeks, which the weekly reports print in their heading and page header:
+     * for a series whose name pattern writes no week, the pair form, a single week alone and three weeks as a
+     * range. FAILS where the model carries only the first and the closing week, and the heading said the first week
+     * alone.
      */
     @Test
     @Transactional
@@ -236,6 +237,29 @@ public class IssueReportParamInjectionITTest extends ITTest {
         assertEquals("36", params.get("weekTo"));
         assertEquals("34-36", params.get("weeks"),
                 "an issue of weeks 34 to 36 is not headed by all its weeks");
+    }
+
+    /**
+     * And for a series whose name pattern writes the weeks, the weeks as the issue's name writes them: under
+     * "Uge ${week} og ${weekTo}, ${year}" an issue of weeks 34 to 36 is named "Uge 34 og 36, 2026" and headed
+     * "34 og 36"; under "Uge ${week}, ${year}" it is named "Uge 34, 2026" and headed "34". FAILS on the rule that
+     * handed every report the pair form, "34-36", whatever the name said.
+     */
+    @Test
+    @Transactional
+    public void theweeksAreTheWeeksOfTheIssuesNameAsTheSeriesPatternWritesThem() {
+        for (Map.Entry<String, String> expected : Map.of(
+                "Uge ${week} og ${weekTo}, ${year}", "34 og 36",
+                "Uge ${week}, ${year}", "34").entrySet()) {
+            PublicationSeries s = series();
+            s.getDescs().get(0).setNameSuggestionPattern(expected.getKey());
+            PublicationIssue three = issue(s);
+            three.setIntervalFrom(new Date(CUTOFF - 3 * WEEK));
+            em.flush();
+
+            assertEquals(expected.getValue(), paramsFromPublishing(three).get("weeks"),
+                    "an issue of a series named by " + expected.getKey() + " is headed by other weeks than its name");
+        }
     }
 
     /**

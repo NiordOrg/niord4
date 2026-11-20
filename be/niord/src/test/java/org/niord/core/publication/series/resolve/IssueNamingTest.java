@@ -20,7 +20,9 @@ import org.junit.jupiter.api.Test;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -482,23 +484,106 @@ public class IssueNamingTest {
                 IssueNaming.derive(d, null, DK, null, null).year());
     }
 
+    // ------------------------------- the weeks the reports print: the week part of the name
+
+    /** A pattern that names the first week alone. */
+    private static final String FIRST_WEEK_ONLY = "Uge ${week}, ${year}";
+
+    /** A pattern that writes a pair with a word between the weeks. */
+    private static final String PAIR_IN_WORDS = "Uge ${week} og ${weekTo}, ${year}";
+
+    /** The name a pattern gives the issue of these weeks, by the expansion the issue's name is made with */
+    private static String nameOf(String pattern, int week, Integer weekTo, int year) {
+        return IssueNaming.expand(pattern, new IssueNaming.Numbers(week, weekTo, year, 9, 15, null));
+    }
+
+    /** The week part of a pattern is the stretch from its first week token to its last, and nothing beyond it. */
+    @Test
+    public void theWeekPartOfAPatternRunsFromItsFirstWeekTokenToItsLast() {
+        assertEquals("${week}+${weekTo}", IssueNaming.weekSpanOf(NAME));
+        assertEquals("${week}", IssueNaming.weekSpanOf(FIRST_WEEK_ONLY));
+        assertEquals("${week} og ${weekTo}", IssueNaming.weekSpanOf(PAIR_IN_WORDS));
+        assertEquals("${week-2-digits}+${weekTo-2-digits}",
+                IssueNaming.weekSpanOf("nm-w${week-2-digits}+${weekTo-2-digits}-${year}.pdf"));
+        // In another order, and with a token twice: taken whole.
+        assertEquals("${weekTo} back to ${week}", IssueNaming.weekSpanOf("NtM ${weekTo} back to ${week}"));
+        assertEquals("${week} (${week-2-digits}", IssueNaming.weekSpanOf("Week ${week} (${week-2-digits}) ${year}"));
+        // A week token after another token is not part of the weeks, which would then print the year.
+        assertEquals("${week}", IssueNaming.weekSpanOf("Uge ${week}, ${year} (${weekTo})"));
+        // No week at all.
+        assertNull(IssueNaming.weekSpanOf("Efterretninger for søfarende ${year}"));
+        assertNull(IssueNaming.weekSpanOf("A name without a token"));
+        assertNull(IssueNaming.weekSpanOf(null));
+    }
+
     /**
-     * The weeks the report templates print (RENDER11): the span as a name with the pair form prints it, so a
-     * weekly's heading and an accumulated report's source line say what a name with the pair form says. Across a year's end
-     * the year decides: 2025 has 52 ISO weeks, so weeks 52 to 1 of an issue named for 2026 are a pair, while 2026
-     * has a week 53, so weeks 52 to 1 of 2027 are three.
+     * The weeks the report templates print are the weeks of the issue's name, as the series' own pattern writes
+     * them, the same characters: a series named "Uge ${week}, ${year}" names an issue of weeks 36 to 38
+     * "Uge 36, 2026" and is headed "36"; one named "Uge ${week} og ${weekTo}" is headed "36 og 37" for a pair; the
+     * pair form "36+37" and "36-38". FAILS on the rule that printed the pair form whatever the pattern said, which
+     * headed the first two "36-38" and "36+37".
      */
     @Test
-    public void theWeeksTextIsTheSpanAsTheNamePrintsIt() {
-        assertEquals("36", IssueNaming.weeksText(36, null, 2026));
-        assertEquals("36", IssueNaming.weeksText(36, 36, 2026), "a closing week equal to the first is one week");
-        assertEquals("36+37", IssueNaming.weeksText(36, 37, 2026));
-        assertEquals("36-38", IssueNaming.weeksText(36, 38, 2026));
-        assertEquals("52+1", IssueNaming.weeksText(52, 1, 2026));
-        assertEquals("52-2", IssueNaming.weeksText(52, 2, 2026));
-        assertEquals("52-1", IssueNaming.weeksText(52, 1, 2027));
-        assertEquals(IssueNaming.expand(NAME, new IssueNaming.Numbers(36, 38, 2026, 9, 15, null)),
-                "Uge " + IssueNaming.weeksText(36, 38, 2026) + ", 2026", "the text is not the name's span");
-        assertNull(IssueNaming.weeksText(null, 37, 2026));
+    public void theWeeksTextIsTheWeekPartOfTheIssuesName() {
+        assertEquals("36", IssueNaming.weeksText(FIRST_WEEK_ONLY, 36, 38, 2026));
+        assertEquals("36", IssueNaming.weeksText(FIRST_WEEK_ONLY, 36, 37, 2026));
+        assertEquals("36 og 37", IssueNaming.weeksText(PAIR_IN_WORDS, 36, 37, 2026));
+        assertEquals("36 og 38", IssueNaming.weeksText(PAIR_IN_WORDS, 36, 38, 2026),
+                "only the pair form's '+' prints as a range; a word between the weeks is printed as written");
+        assertEquals("36+37", IssueNaming.weeksText(NAME, 36, 37, 2026));
+        assertEquals("36-38", IssueNaming.weeksText(NAME, 36, 38, 2026));
+        assertEquals("07+08", IssueNaming.weeksText("nm-w${week-2-digits}+${weekTo-2-digits}", 7, 8, 2026));
+        assertEquals("37 back to 36", IssueNaming.weeksText("NtM ${weekTo} back to ${week}", 36, 37, 2026));
+        assertEquals("36", IssueNaming.weeksText("Uge ${week}, ${year} (${weekTo})", 36, 38, 2026));
+
+        // The same characters as the name, for every kind of pattern and span.
+        for (String pattern : List.of(NAME, FIRST_WEEK_ONLY, PAIR_IN_WORDS)) {
+            for (Integer weekTo : Arrays.asList(null, 37, 38)) {
+                String name = nameOf(pattern, 36, weekTo, 2026);
+                String prefix = pattern.substring(0, pattern.indexOf("${"));
+                String suffix = ", 2026";
+                assertEquals(name, prefix + IssueNaming.weeksText(pattern, 36, weekTo, 2026) + suffix,
+                        "the weeks of " + pattern + " are not the name's");
+            }
+        }
+    }
+
+    /**
+     * Across a year's end the year decides the range, as in the name: 2025 has 52 ISO weeks, so weeks 52 to 1 of
+     * an issue named for 2026 are a pair, while 2026 has a week 53, so weeks 52 to 1 of 2027 are three. A pattern
+     * that writes the weeks in words prints them as written.
+     */
+    @Test
+    public void theWeeksAcrossTheYearsEndAreTheNamesWeeks() {
+        assertEquals("52+1", IssueNaming.weeksText(NAME, 52, 1, 2026));
+        assertEquals("52-2", IssueNaming.weeksText(NAME, 52, 2, 2026));
+        assertEquals("52-1", IssueNaming.weeksText(NAME, 52, 1, 2027));
+        assertEquals("52 og 2", IssueNaming.weeksText(PAIR_IN_WORDS, 52, 2, 2026));
+        assertEquals("52", IssueNaming.weeksText(FIRST_WEEK_ONLY, 52, 2, 2026));
+        assertEquals("Uge 52-2, 2026", nameOf(NAME, 52, 2, 2026));
+    }
+
+    /**
+     * A pattern that writes no week, or none at all, gives the pair form, so the report is still headed by all the
+     * issue's weeks: the week alone, "36+37" for a pair, "36-38" for three weeks or more. So does a week part that
+     * expands to nothing, a lone ${weekTo} for a single week. A closing week equal to the first is one week.
+     */
+    @Test
+    public void aPatternWithoutAWeekGivesThePairForm() {
+        for (String pattern : Arrays.asList(null, "", "Efterretninger for søfarende ${year}")) {
+            assertEquals("36", IssueNaming.weeksText(pattern, 36, null, 2026));
+            assertEquals("36", IssueNaming.weeksText(pattern, 36, 36, 2026),
+                    "a closing week equal to the first is one week");
+            assertEquals("36+37", IssueNaming.weeksText(pattern, 36, 37, 2026));
+            assertEquals("36-38", IssueNaming.weeksText(pattern, 36, 38, 2026));
+            assertEquals("52+1", IssueNaming.weeksText(pattern, 52, 1, 2026));
+            assertEquals("52-2", IssueNaming.weeksText(pattern, 52, 2, 2026));
+        }
+        assertEquals("36", IssueNaming.weeksText("Uge ${weekTo}", 36, null, 2026),
+                "a week part that expands to nothing names no week");
+        assertEquals("37", IssueNaming.weeksText("Uge ${weekTo}", 36, 37, 2026),
+                "a lone closing week that expands is printed as the name prints it");
+        assertNull(IssueNaming.weeksText(NAME, null, 37, 2026));
+        assertNull(IssueNaming.weeksText(null, null, null, 2026));
     }
 }
