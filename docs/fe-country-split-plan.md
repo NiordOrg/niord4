@@ -906,7 +906,7 @@ as its own package, `org.niord:niord-country-kit`, beside the source zip, which 
   `AGENTS.md` with a one-line `CLAUDE.md` importing it, `.niord/.gitignore` and `fe/niord-pins.lock.json`
   with the base product's version and both zips' hashes. Its closing lines name set-up (with
   `--update-pins` when languages were answered) and the launcher and, on Windows, the commit line that gives the
-  three scripts their exec bits and the `NIORD_HOME` export before `be/mvnw verify` (`be/docs/potential-errors.md` PORT-1). An absent escape hatch, `audit-accepted.json` or
+  three scripts their exec bits and the `NIORD_HOME` export before `be/mvnw verify`. An absent escape hatch, `audit-accepted.json` or
   `fe/country/package.json` with its lockfile, counts as empty.
 - **The example country** `country-kit/example/` — a complete, fictitious country `xx`: every seam
   overridden, branding, a legal document, a vendored face, a country-only Tailwind utility, a home

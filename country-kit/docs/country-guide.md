@@ -190,9 +190,10 @@ yours, and starts both applications. The first run builds the backend and takes 
   process with `netstat -ano | grep ':4200 .*LISTENING'` (or `:4400`), the last column, and stop it
   with `taskkill //PID <pid> //T //F`; Git Bash needs the double slashes
   ([A development server's port on Windows](country-guide-in-depth.md#a-development-servers-port-on-windows)).
-- **Every integration test of `be/mvnw verify` fails.** A Niord home with backslashes does that:
-  export one first, as init's last line says: `export NIORD_HOME=$(cygpath -m "$TEMP")/niord`.
-  The folder is shared by every Niord build on the machine, so two `verify` runs must not overlap.
+- **Every integration test of `be/mvnw verify` fails.** A Niord home with backslashes no longer
+  does that: either kind of slash works, so read the first failure's own cause. The Niord home
+  init's last line exports, `export NIORD_HOME=$(cygpath -m "$TEMP")/niord`, is shared by every
+  Niord build on the machine, so two `verify` runs must not overlap.
 - **`The JAVA_HOME environment variable is not defined correctly`.** `be/mvnw` says so when
   `JAVA_HOME` names no JDK: export it naming your JDK 25.
 

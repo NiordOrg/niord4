@@ -77,6 +77,6 @@ The nested files own everything specific to a half. This file holds only what is
 - **`fe/shared-map/portrayal/`** (the portrayal definition and its symbols) is also read by the backend's map-image
   renderer: Maven copies it into niord-base. A change there runs Backend CI and is measured in both applications and
   in the server-made map images.
-- **Windows sessions:** Maven wants `JAVA_HOME` and `-Dmaven.repo.local` spelled out, and integration tests need
-  `NIORD_HOME` exported with forward slashes (`be/docs/potential-errors.md`, PORT-1). `python3` may resolve to the
-  Microsoft Store stub; `py` is the real interpreter.
+- **Windows sessions:** Maven wants `JAVA_HOME` and `-Dmaven.repo.local` spelled out. A `NIORD_HOME` exported for
+  the integration tests may be written with forward slashes or backslashes; unset, the tests use the temp folder's
+  `niord`. `python3` may resolve to the Microsoft Store stub; `py` is the real interpreter.

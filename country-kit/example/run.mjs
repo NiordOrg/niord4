@@ -63,7 +63,7 @@
  *      into the scratch repository as 4.0.0-example (`-pl niord install -DskipTests`, which still
  *      packages the test-jar), both jars checked; yy's `be/mvnw -B -ntp verify` against that
  *      repository, its country build group on Testcontainers, with NIORD_HOME on Windows the
- *      run's <dir>/niord-home written with forward slashes (be/docs/potential-errors.md PORT-1);
+ *      run's <dir>/niord-home written with forward slashes (backslashes would work as well);
  *      then, under bash (NIORD_BASH, else Git's on Windows), be/scripts/check-country-build-group.sh
  *      and this tree's be/k8s/scripts/check-overrides.sh over target/niord-yy-4.0.0-example.jar,
  *      as the country's ci.yml runs them. Then npm ci, the build with check-build's warning that
@@ -328,8 +328,7 @@ const probeDocker = () =>
 /**
  * The environment of the generated backend's build and checks: on Windows `env` with NIORD_HOME
  * the run's own `<work>/niord-home`, written with forward slashes (a Windows NIORD_HOME with
- * backslashes breaks every integration test context, be/docs/potential-errors.md PORT-1);
- * elsewhere `env` as it is.
+ * backslashes would work as well); elsewhere `env` as it is.
  */
 export function backendEnv(env, { work, platform = process.platform }) {
   if (platform !== 'win32') return env;
