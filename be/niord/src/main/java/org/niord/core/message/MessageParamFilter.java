@@ -40,7 +40,8 @@ import jakarta.validation.constraints.NotNull;
         @NamedQuery(name= "MessageParamFilter.findByUserAndIds",
                 query="SELECT f FROM MessageParamFilter f where f.user = :user and f.id in (:ids)"),
         @NamedQuery(name= "MessageParamFilter.findByUserAndName",
-                query="SELECT f FROM MessageParamFilter f where f.user = :user and f.name = :name"),
+                query="SELECT f FROM MessageParamFilter f where f.user = :user and lower(f.name) = lower(:name) "
+                        + "order by f.id"),
         @NamedQuery(name= "MessageParamFilter.findByUser",
             query="SELECT f FROM MessageParamFilter f where f.user = :user")
 })

@@ -20,13 +20,13 @@ import org.springframework.stereotype.Service;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.niord.core.service.BaseService;
 import org.niord.core.user.User;
 import org.niord.core.user.UserService;
-import jakarta.persistence.NoResultException;
 import org.slf4j.Logger;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -80,6 +80,11 @@ public class MessageParamFilterService extends BaseService {
 
     /**
      * Returns the message filter for the current user with the given name
+     * <p>
+     * The name is a text the user typed, so it is compared without regard to case. The schema holds the name unique
+     * per user with case, so a user may already have several filters whose names differ only in case: the one whose
+     * name is exactly the given one is returned, and when none is, the oldest of them (the lowest id).
+     *
      * @param name the name of the message filter to look up
      * @return the matching message filter or null
      * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
@@ -87,14 +92,15 @@ public class MessageParamFilterService extends BaseService {
     public MessageParamFilter findByCurrentUserAndName(String name) {
         User user = userService.currentUser();
 
-        try {
-            return em.createNamedQuery("MessageParamFilter.findByUserAndName", MessageParamFilter.class)
-                    .setParameter("user", user)
-                    .setParameter("name", name)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
+        List<MessageParamFilter> matches = em
+                .createNamedQuery("MessageParamFilter.findByUserAndName", MessageParamFilter.class)
+                .setParameter("user", user)
+                .setParameter("name", name)
+                .getResultList();
+        return matches.stream()
+                .filter(f -> Objects.equals(f.getName(), name))
+                .findFirst()
+                .orElse(matches.isEmpty() ? null : matches.getFirst());
     }
 
     /**
@@ -125,7 +131,8 @@ public class MessageParamFilterService extends BaseService {
 
     /**
      * Creates a new message filter for the current user from the given template.
-     * If a filter with the given name already exists, update this filter instead.
+     * If a filter with the given name already exists, update this filter instead: the name is compared without regard
+     * to case ({@link #findByCurrentUserAndName}), the filter keeps its id and takes the name as given now.
      * @param filter the new message filter
      * @return the persisted message filter
      */
