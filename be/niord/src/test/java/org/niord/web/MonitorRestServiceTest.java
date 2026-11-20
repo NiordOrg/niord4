@@ -18,6 +18,8 @@ package org.niord.web;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.Test;
+import org.niord.core.message.MessageLuceneIndex;
+import org.niord.core.message.MessagePostgresIndex;
 import org.niord.core.web.NiordWebException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,7 +29,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for the {@link MonitorRestService#db()} error-handling (SECAUD-11).
+ * Unit tests for the {@link MonitorRestService#db()} error-handling (SECAUD-11), and for the answer of
+ * {@link MonitorRestService#messageIndex()}.
  *
  * <p>The endpoint is {@code @PermitAll}, so anyone (unauthenticated) can call {@code GET /rest/monitor/db}.
  * The original catch echoed {@code ex.getMessage()} — the raw JDBC exception text, which leaks the
@@ -70,5 +73,22 @@ class MonitorRestServiceTest {
         svc.em = em;
 
         assertEquals("success", svc.db());
+    }
+
+    /** The message-index answer: each index's own flag, and complete only when both are */
+    @Test
+    void messageIndexIsCompleteOnlyWhenBothIndexesAre() {
+        MonitorRestService svc = new MonitorRestService();
+        svc.messageLuceneIndex = mock(MessageLuceneIndex.class);
+        svc.messagePostgresIndex = mock(MessagePostgresIndex.class);
+
+        for (boolean lucene : new boolean[] {false, true}) {
+            for (boolean postgres : new boolean[] {false, true}) {
+                when(svc.messageLuceneIndex.allMessagesIndexed()).thenReturn(lucene);
+                when(svc.messagePostgresIndex.allMessagesIndexed()).thenReturn(postgres);
+                assertEquals(new MonitorRestService.MessageIndexState(lucene, postgres, lucene && postgres),
+                        svc.messageIndex(), "lucene " + lucene + ", postgres " + postgres);
+            }
+        }
     }
 }

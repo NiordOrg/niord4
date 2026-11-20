@@ -16,7 +16,12 @@
 package org.niord.web;
 
 import org.junit.jupiter.api.Test;
+import org.niord.core.message.MessageLuceneIndex;
+import org.niord.core.message.MessagePostgresIndex;
 import org.niord.test.ITTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.AopTestUtils;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
@@ -26,11 +31,11 @@ import static org.hamcrest.Matchers.is;
  * Integration tests for {@link MonitorRestService}: the HTTP contract of the unauthenticated
  * {@code /rest/monitor} liveness/readiness probes.
  *
- * <p><b>Authorization model under test.</b> The service carries <em>no</em> security annotations —
- * neither a class-level {@code @RolesAllowed} nor any programmatic role check. Both endpoints are
- * therefore reachable anonymously, which is the whole point of a dead-or-alive monitor: an external
- * watchdog must be able to probe Niord without credentials. Consequently there is no 401/403 tier
- * oracle to exercise here, and these tests issue plain (token-less, header-less) requests.
+ * <p><b>Authorization model under test.</b> The service is class-level {@code @PermitAll}: the two
+ * probes are reachable anonymously, which is the whole point of a dead-or-alive monitor: an external
+ * watchdog must be able to probe Niord without credentials, so their tests issue plain (token-less,
+ * header-less) requests. {@code GET /rest/monitor/message-index} is {@code @RolesAllowed(SYSADMIN)}:
+ * anonymous is refused with 401, a lower role with 403.
  *
  * <p><b>Behaviour oracle.</b> {@code GET /rest/monitor/ping} is a pure liveness check that always
  * returns the literal {@code text/plain} body {@code "pong"} (HTTP 200). {@code GET /rest/monitor/db}
@@ -46,6 +51,13 @@ class MonitorRestServiceITTest extends ITTest {
 
     private static final String PING = "/rest/monitor/ping";
     private static final String DB   = "/rest/monitor/db";
+    private static final String MESSAGE_INDEX = "/rest/monitor/message-index";
+
+    @Autowired
+    MessageLuceneIndex messageLuceneIndex;
+
+    @Autowired
+    MessagePostgresIndex messagePostgresIndex;
 
     // ------------------------------------------------------------------------------------------- //
     // GET /ping — anonymous liveness probe, always returns the literal "pong" as text/plain.
@@ -75,5 +87,60 @@ class MonitorRestServiceITTest extends ITTest {
                 .extract().asString();
 
         org.junit.jupiter.api.Assertions.assertEquals("success", body.trim());
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // GET /message-index — whether both message search indexes are complete, for system
+    // administrators only (method-level @RolesAllowed over the class's @PermitAll)
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    void messageIndex_anonymousIsUnauthorized() {
+        given()
+                .when().get(MESSAGE_INDEX)
+                .then().statusCode(401);
+    }
+
+    @Test
+    void messageIndex_aLowerRoleIsForbidden() {
+        for (String role : new String[] {"user", "editor", "admin"}) {
+            given().auth().oauth2(accessToken(role))
+                    .when().get(MESSAGE_INDEX)
+                    .then().statusCode(403);
+        }
+    }
+
+    /**
+     * After both indexes are filled again (a re-index, as after a start), the answer says each is complete, and both
+     * together; it reads the indexes' state as it is at the call. A re-index of the PostgreSQL table that has not yet
+     * committed would say that index is not complete; the unit tests hold that.
+     */
+    @Test
+    void messageIndex_sysadminReadsEachIndexAndTheWhole() throws Exception {
+        messageLuceneIndex.recreateIndex();
+        messagePostgresIndex.recreateIndex();
+
+        given().auth().oauth2(accessToken())
+                .when().get(MESSAGE_INDEX)
+                .then().statusCode(200)
+                .contentType(containsString("application/json"))
+                .body("lucene", is(true))
+                .body("postgres", is(true))
+                .body("complete", is(true))
+                .body("size()", is(3));
+
+        boolean was = messageLuceneIndex.allMessagesIndexed();
+        Object lucene = AopTestUtils.getUltimateTargetObject(messageLuceneIndex);
+        ReflectionTestUtils.setField(lucene, "allMessagesIndexed", false);
+        try {
+            given().auth().oauth2(accessToken())
+                    .when().get(MESSAGE_INDEX)
+                    .then().statusCode(200)
+                    .body("lucene", is(false))
+                    .body("postgres", is(true))
+                    .body("complete", is(false));
+        } finally {
+            ReflectionTestUtils.setField(lucene, "allMessagesIndexed", was);
+        }
     }
 }
