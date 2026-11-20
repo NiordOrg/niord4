@@ -78,10 +78,13 @@ public class MonitorRestService {
     }
 
     /**
-     * Whether the two message search indexes hold every message. After a start, and after a re-index, the backend
-     * fills both again, and until then a free-text search answers from part of the messages; a script that prepares a
-     * database polls this until {@code complete} is true. It reads two flags held in memory: no database, no side
-     * effect, cheap to call every few seconds.
+     * Whether the two message search indexes hold every message. After a start the Lucene index is rebuilt
+     * ({@code messageIndexDeleteOnStartup}, true by default), and the PostgreSQL search table, which the database
+     * keeps, catches up from the last message it holds (from the first only when it is empty). Each reads incomplete
+     * until its first pass after the start has caught up, and until then a free-text search answers from part of the
+     * messages; a script that prepares a database polls this until {@code complete} is true. It reads two flags held
+     * in memory of this backend process (with several pods, each answers for itself): no database, no side effect,
+     * cheap to call every few seconds.
      *
      * @return one flag per index and whether both are complete
      */

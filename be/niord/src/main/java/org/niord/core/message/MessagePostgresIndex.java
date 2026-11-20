@@ -201,7 +201,10 @@ public class MessagePostgresIndex extends BaseService {
         }
     }
 
-    /** Begins a new fill (a re-index): the table is not complete until a pass of this fill has committed */
+    /**
+     * Begins a new fill (a re-index, {@link #recreateIndex()}, which code and tests start; no page or endpoint does):
+     * the table is not complete until a pass of this fill has committed
+     */
     synchronized void startFill() {
         fill++;
         allMessagesIndexed = false;
@@ -212,7 +215,8 @@ public class MessagePostgresIndex extends BaseService {
      * Marks the table complete, unless a re-index has begun since the pass that completed it. The first time after a
      * start or a re-index, it logs one INFO line that names the index and the messages this fill indexed, also when the
      * fill found nothing to do, so a person who prepares a database can see in the log when the searches answer in
-     * full; the passes after that log nothing.
+     * full; the passes after that log nothing. After a restart the table is kept, so the figure counts only what it
+     * lacked: 0 means nothing was missing. The state is this backend process's.
      *
      * @param passFill the fill the completing pass belonged to
      */
