@@ -52,15 +52,15 @@ describe('MessagesAreaGeometrySource', () => {
     expect(result).toBe(COLLECTION);
   });
 
-  it('falls back to the tree ref (no error surfaced) when the geometry fetch fails', () => {
+  it('passes a failed geometry read on as an error, so the import dialog can say so', () => {
     const { source, areaToFeatureCollection } = setup({ fetchError: true });
-    let result: GeometryFeatureCollection | undefined;
+    const next = vi.fn();
     const error = vi.fn();
-    source.getGeometry(REF).subscribe({ next: (r) => (result = r), error });
+    source.getGeometry(REF).subscribe({ next, error });
 
-    expect(error).not.toHaveBeenCalled();
-    expect(areaToFeatureCollection).toHaveBeenCalledWith(REF);
-    expect(result).toBe(COLLECTION);
+    expect(error).toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+    expect(areaToFeatureCollection).not.toHaveBeenCalled();
   });
 
   it('uses the tree ref when the fetch returns an empty array', () => {
