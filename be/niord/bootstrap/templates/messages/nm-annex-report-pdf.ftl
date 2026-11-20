@@ -37,7 +37,7 @@
 <table class="first-page-info-line" style="margin: 1cm 0">
     <tr>
         <td>
-            ${.now?string['dd. MMMM yyyy']}
+            ${.now?string(text('msg.time.date_format'))}
             <#if edition?? && edition != '1'> - Version ${edition}</#if>
         </td>
         <td align="right">

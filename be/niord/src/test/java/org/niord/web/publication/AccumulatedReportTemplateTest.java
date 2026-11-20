@@ -65,6 +65,10 @@ public class AccumulatedReportTemplateTest {
 
     private static final String TEMPLATE = "nm-accumulated-report-pdf.ftl";
 
+    /** The text the report templates date a document by, and its English value (RENDER7) */
+    private static final String DATE_FORMAT_KEY = "msg.time.date_format";
+    private static final String ENGLISH_DATE_FORMAT = "d MMMM yyyy";
+
     /**
      * The shared macros, stood in for.
      *
@@ -92,10 +96,20 @@ public class AccumulatedReportTemplateTest {
      * the document count the volume from anything at all.
      */
     private static class KeyText implements TemplateMethodModelEx {
+        /** The pattern the language's date text holds, which the templates date the document by */
+        private final String dateFormat;
+
+        KeyText(String dateFormat) {
+            this.dateFormat = dateFormat;
+        }
+
         @Override
         public Object exec(List arguments) {
             if (arguments.isEmpty()) {
                 return "";
+            }
+            if (arguments.size() == 1 && DATE_FORMAT_KEY.equals(String.valueOf(arguments.get(0)))) {
+                return dateFormat;
             }
             StringBuilder out = new StringBuilder(String.valueOf(arguments.get(0)));
             for (int i = 1; i < arguments.size(); i++) {
@@ -120,7 +134,7 @@ public class AccumulatedReportTemplateTest {
         cfg.setObjectWrapper(new DefaultObjectWrapper(Configuration.VERSION_2_3_31));
         cfg.setLocalizedLookup(false);
 
-        model.put("text", new KeyText());
+        model.putIfAbsent("text", new KeyText(ENGLISH_DATE_FORMAT));
 
         Template template = cfg.getTemplate(TEMPLATE);
         StringWriter out = new StringWriter();
@@ -419,6 +433,8 @@ public class AccumulatedReportTemplateTest {
         List<Map<String, Object>> groups = (List<Map<String, Object>>) model.get("groups");
         // 2 March 2024 to 9 March 2024, both 17:00 in Copenhagen.
         groups.get(0).put("intervalFrom", new Date(1_709_395_200_000L));
+        // The days are printed by the language's date text (RENDER7), here a pattern no template holds
+        model.put("text", new KeyText("yyyy-MM-dd"));
 
         String html = render(model);
 
@@ -427,12 +443,12 @@ public class AccumulatedReportTemplateTest {
         String line = html.substring(first, second);
         assertTrue(line.contains("pdf.accumulated.period"), "the week with a period is not dated by it: " + line);
         assertFalse(line.contains("pdf.accumulated.cutoff"), "the week with a period still prints its cut-off");
-        assertTrue(line.contains("02. ") && line.contains("09. "),
-                "the period does not name both of its days: " + line);
+        assertTrue(line.contains("2024-03-02 - 2024-03-09"),
+                "the period does not name both of its days by the language's date text: " + line);
 
-        // The week with no period start keeps its cut-off.
-        assertTrue(html.substring(second).contains("pdf.accumulated.cutoff"),
-                "a week with no period start lost its cut-off line");
+        // The week with no period start keeps its cut-off, dated the same way.
+        assertTrue(html.substring(second).contains("pdf.accumulated.cutoff: 2024-03-"),
+                "a week with no period start lost its cut-off line, or is not dated by the date text");
     }
 
     /**

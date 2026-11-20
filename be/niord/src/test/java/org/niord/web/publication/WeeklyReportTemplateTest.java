@@ -22,8 +22,11 @@ import freemarker.cache.StringTemplateLoader;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
+import freemarker.template.SimpleScalar;
 import freemarker.template.Template;
+import freemarker.template.TemplateHashModel;
 import freemarker.template.TemplateMethodModelEx;
+import freemarker.template.TemplateModel;
 import org.junit.jupiter.api.Test;
 import org.niord.model.message.MessageVo;
 import org.niord.model.message.Type;
@@ -69,6 +72,10 @@ public class WeeklyReportTemplateTest {
 
     private static final String TEMPLATE = "nm-report-pdf.ftl";
 
+    /** The text the report templates date a document by, and its English value (RENDER7) */
+    private static final String DATE_FORMAT_KEY = "msg.time.date_format";
+    private static final String ENGLISH_DATE_FORMAT = "d MMMM yyyy";
+
     /** The shared macros, stood in for: this is a test about the cover line. */
     private static final String MESSAGE_SUPPORT_STUB = """
             <#macro pageSizeStyle frontPage=true></#macro>
@@ -83,17 +90,38 @@ public class WeeklyReportTemplateTest {
             """;
 
     /** Every label answers with its own key, and with its arguments in brackets. */
-    private static class KeyText implements TemplateMethodModelEx {
+    private static class KeyText implements TemplateMethodModelEx, TemplateHashModel {
+        /** The pattern the language's date text holds, which the templates date the document by */
+        private final String dateFormat;
+
+        KeyText(String dateFormat) {
+            this.dateFormat = dateFormat;
+        }
+
         @Override
         public Object exec(List arguments) {
             if (arguments.isEmpty()) {
                 return "";
+            }
+            if (arguments.size() == 1 && DATE_FORMAT_KEY.equals(String.valueOf(arguments.get(0)))) {
+                return dateFormat;
             }
             StringBuilder out = new StringBuilder(String.valueOf(arguments.get(0)));
             for (int i = 1; i < arguments.size(); i++) {
                 out.append(i == 1 ? "(" : ",").append(String.valueOf(arguments.get(i)));
             }
             return arguments.size() > 1 ? out.append(")").toString() : out.toString();
+        }
+
+        /** Read as a hash too, {@code text['key']}, as the dictionary model is */
+        @Override
+        public TemplateModel get(String key) {
+            return new SimpleScalar(key);
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return false;
         }
     }
 
@@ -116,7 +144,7 @@ public class WeeklyReportTemplateTest {
         cfg.setObjectWrapper(new DefaultObjectWrapper(Configuration.VERSION_2_3_31));
         cfg.setLocalizedLookup(false);
 
-        model.put("text", new KeyText());
+        model.putIfAbsent("text", new KeyText(ENGLISH_DATE_FORMAT));
 
         Template template = cfg.getTemplate(templateName);
         StringWriter out = new StringWriter();
@@ -192,10 +220,36 @@ public class WeeklyReportTemplateTest {
 
         // Formatted the way the template formats it, in the same default locale
         // FreeMarker is configured with here.
-        String today = new SimpleDateFormat("dd. MMMM yyyy", Locale.getDefault())
+        String today = new SimpleDateFormat(ENGLISH_DATE_FORMAT, Locale.getDefault())
                 .format(new Date());
         assertTrue(html.contains(today),
                 "the cover no longer says which day the document was printed on");
+    }
+
+    /**
+     * RENDER7. Every report dates its first page by the pattern of the language's
+     * date text ({@code msg.time.date_format}, "d MMMM yyyy" in English), not by
+     * the Danish "dd. MMMM yyyy" written into the template. Asserted with a pattern
+     * no template holds, so a template that keeps a pattern of its own fails here.
+     * FAILS on the templates that wrote "dd. MMMM yyyy".
+     */
+    @Test
+    public void everyReportDatesItsFirstPageByTheLanguagesDateText() throws Exception {
+        String isoToday = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        for (String template : List.of(TEMPLATE, "nm-tp-report-pdf.ftl", "nm-almanac-report-pdf.ftl",
+                "nm-annex-report-pdf.ftl", "fa-list-pdf.ftl")) {
+            Map<String, Object> model = aWeek();
+            model.put("text", new KeyText("'dated' yyyy-MM-dd"));
+            if (template.startsWith("nm-almanac")) {
+                // The cover is what is asserted: the almanac's contents need more of a message than these have
+                model.put("messages", new ArrayList<>());
+            }
+
+            String html = render(template, model);
+
+            assertTrue(html.contains("dated " + isoToday),
+                    template + " does not date its first page by the language's date text: " + html);
+        }
     }
 
     /**

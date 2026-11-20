@@ -1303,24 +1303,21 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low. Fix: number an entry one above the resource's highest history version, and key the dialog on
   the entry's id.
 
-## RENDER7. The base product's report PDFs print their date the Danish way in English
+## RENDER7. The English mail text `mail.date_format.long` writes its date the Danish way
 
-- **Location:** the base product's templates `bootstrap/templates/messages/nm-report-pdf.ftl:78`,
-  `nm-tp-report-pdf.ftl:53`, `nm-almanac-report-pdf.ftl:35`, `nm-annex-report-pdf.ftl:40`, `fa-list-pdf.ftl:40`
-  (`${.now?string["dd. MMMM yyyy"]}`) and `nm-accumulated-report-pdf.ftl:249,251` (the period lines); the English
-  value of `mail.date_format.long` in `bootstrap/texts.json` (`d. MMMM yyyy`).
-- **Description:** the pattern is written into the templates, not taken from the report's language, so the English
-  NM report prints "11. November 2026": the day with a full stop is the Danish form. The base product's own English
-  date formats elsewhere are `d MMMM yyyy` (`msg.time.date_format`).
+- **Location:** the English value of `mail.date_format.long` in
+  `niord/src/main/resources/defaults/base/texts/en/mail.properties` and `bootstrap/texts.json` (`d. MMMM yyyy`),
+  read by `MailingListExecutionService` for a trigger subject's `${date-long}`.
+- **Description:** the day with a full stop is the Danish form; the base product's other English date text is
+  `d MMMM yyyy` (`msg.time.date_format`). The report PDFs, which wrote `dd. MMMM yyyy` into their templates, date
+  their first page by `msg.time.date_format` since 2026-11-20 (release folder
+  `be/niord/bootstrap/releases/2026-11-20-report-template-fixes/`); this text is what is left.
 - **Why it looks wrong:** the base product publishes English only, and since the owner's ruling of 2026-11-11 (no
-  Danish in English texts) the user guides' guard treats the date as Danish; RENDER6 is the same kind of fault on
-  the message-list PDF, which calls the accumulated report's pattern deliberate.
-- **Exposed by:** the user guides' screenshot rig (2026-11-11): its guard refuses the copy's NM report as Danish,
-  so `guides/sysadmin-manual/11-PrintReports.adoc` shows the Standard report instead (`PrintReportExample.png`).
-- **Severity:** Low, cosmetic. Fix: a date-format text per language read by the templates; the templates are data
-  a deployment receives by a release import (`docs/code-data-config-plan.md`), so a fix ships as one. The error
-  hunt's fix of 2026-11-13 to line 53 of `nm-almanac-report-pdf.ftl` ships that template in the release folder
-  `be/niord/bootstrap/releases/2026-11-12-error-hunt-templates/` and leaves line 35, this entry's, as it was.
+  Danish in English texts) the user guides' guard treats such a date as Danish.
+- **Exposed by:** the user guides' screenshot rig (2026-11-11).
+- **Severity:** Low, cosmetic, a mail subject only. Fix: `d MMMM yyyy` as the English value; start-up never
+  changes a deployment's stored text, so a deployment takes it by editing the text on the Dictionaries page. Could
+  break: `MailingListExecutionServiceITTest`, which expects the current pattern.
 
 ## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
 
@@ -1970,8 +1967,7 @@ path is from the repository root.
 - **Exposed by:** the error hunt's phase 2, 2026-11-15, read in the templates (G2-2). Confirmed by a second reader.
 - **Severity:** Low (the cover only). Fix: take the base year from a text that a deployment sets, with no volume
   printed when it is unset, or drop the volume from the base product's covers and leave it to a country's own
-  templates; either ships as a release import. Could break: the two tests that pin `year - 1884`. RENDER7 is its
-  sibling in the same templates.
+  templates; either ships as a release import. Could break: the two tests that pin `year - 1884`.
 - **Decision first:** a text that a deployment sets, or no volume in the base product? Recommended: the text, with
   no volume printed when it is unset.
 - **Left by the owner (2026-11-15):** 1884 stays in the base templates; the entry stays open as the record.

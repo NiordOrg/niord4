@@ -248,9 +248,9 @@
                              cut-off alone. ?datetime because a Date arrives without a
                              declared kind. -->
                         <#if group.cutoff?? && group.intervalFrom??>
-                            ${text('pdf.accumulated.period')}: ${group.intervalFrom?datetime?string["dd. MMMM yyyy"]} - ${group.cutoff?datetime?string["dd. MMMM yyyy"]}
+                            ${text('pdf.accumulated.period')}: ${group.intervalFrom?datetime?string(text("msg.time.date_format"))} - ${group.cutoff?datetime?string(text("msg.time.date_format"))}
                         <#elseif group.cutoff??>
-                            ${text('pdf.accumulated.cutoff')}: ${group.cutoff?datetime?string["dd. MMMM yyyy"]}
+                            ${text('pdf.accumulated.cutoff')}: ${group.cutoff?datetime?string(text("msg.time.date_format"))}
                         </#if>
                     </td>
                     <#-- No range where there are no numbers to range over. -->

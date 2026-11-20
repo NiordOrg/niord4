@@ -77,7 +77,7 @@
 <table class="first-page-info-line">
     <tr>
         <td width="25%" align="left">
-            ${.now?string["dd. MMMM yyyy"]}
+            ${.now?string(text("msg.time.date_format"))}
             <#if edition?? && edition != '1'> - Version ${edition}</#if>
         </td>
         <td width="25%" align="center">ISSN ${ISSN!""}</td>
