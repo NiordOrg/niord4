@@ -105,7 +105,10 @@ class DefaultTextsTest {
         assertEquals("Aktive grønlandske navigationsadvarsler", layered.text("web", "da", "a").value());
     }
 
-    /** DICT1, kept fatal: the default language must have a file for every bundle in either layer. */
+    /**
+     * Kept fatal (docs/code-data-config-plan.md §4.2): the default language must have a file for every bundle in
+     * either layer.
+     */
     @Test
     void aMissingDefaultLanguageFileFailsNamingThePathsLookedAt() throws IOException {
         write(first, "defaults/packs/da/web.properties", "a = A\n");

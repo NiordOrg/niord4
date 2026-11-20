@@ -714,7 +714,7 @@ class DictionaryServiceITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // createEntry - client-supplied id (SECAUD-14)
+    // createEntry - client-supplied id (the root cause: MASSASSIGN-1 in be/docs/potential-errors.md)
     // ------------------------------------------------------------------------------------------- //
 
     /**

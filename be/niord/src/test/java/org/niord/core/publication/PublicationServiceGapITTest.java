@@ -240,7 +240,7 @@ class PublicationServiceGapITTest extends ITTest {
         // scan is therefore database-WIDE. A bare "msg.status == Status.PUBLISHED" would consequently
         // pick up every published message any earlier IT class left committed, making this assertion
         // pass or fail purely on Failsafe class order - green on macOS, red on Linux CI. Same trap as
-        // TESTQ2 in docs/potential-errors.md.
+        // ContactServiceITTest's blank-name search once fell into.
         String unmatchableUid = "IT-no-such-message-" + System.nanoTime();
         p.setMessageTagFilter("msg.status == Status.PUBLISHED && msg.uid == '" + unmatchableUid + "'");
         Publication created = service.createPublication(p);

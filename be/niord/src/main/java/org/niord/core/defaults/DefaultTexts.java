@@ -49,7 +49,8 @@ import java.util.TreeMap;
  * NG-B, after GL's bump onto the staged packs; docs/code-data-config-plan.md §4.1).
  *
  * <p>A language with no file in either layer contributes nothing and logs a warning; at runtime the default language
- * serves its texts. The default language must have a file in either layer for every bundle (DICT1).
+ * serves its texts. The default language must have a file in either layer for every bundle
+ * (docs/code-data-config-plan.md §4.2).
  *
  * <p>Pure: no Spring, no database. {@code DictionaryService} adds what the result has and the database lacks.
  */

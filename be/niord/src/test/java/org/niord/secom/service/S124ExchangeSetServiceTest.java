@@ -611,7 +611,7 @@ public class S124ExchangeSetServiceTest {
 
         // A dedicated fault type, not an IllegalStateException: RestExceptionStatusAdvice renders
         // that as a 409 client-state conflict, and the sysadmin republish chain reaches this
-        // site uncaught (potential-errors ERR2)
+        // site uncaught
         S124ExchangeSetException e = assertThrows(S124ExchangeSetException.class,
                 () -> service.buildExchangeSet(List.of(dataset), List.of()));
         assertTrue(e.getMessage().contains(dataset.getMrn()), e.getMessage());

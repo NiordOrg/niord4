@@ -784,9 +784,8 @@ test
 `MonitorRestService`, `S124RestService` and `AtonIconRestService` to satisfy that guard makes their
 pre-existing anonymous exposure *explicit* — it is not a fix.
 
-All four of the findings this section once carried open — **SECAUD-9, -12, -13, -14** — are fixed below.
-Each entry keeps its **Residual** bullet: what the fix does *not* cover.
-
+What the audit's fixes left open is below: INT8, from its finding on the Niord integration's address and TLS
+checks, and the mass-assignment entries, from its sweep of the `@RequestBody` handlers.
 
 ## INT8 — An integration address with a credential in it is logged once, and the fetch follows a redirect from https to http
 
@@ -844,7 +843,7 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
 - `FiringScheduleService.updateFiringPeriod` loads a firing period by the body's id without checking it
   belongs to the area named in the request, so an EDITOR can reassign a firing period between areas. Within
   EDITOR authority, so cosmetic.
-- **Exposed by:** the SECAUD-14 sweep.
+- **Exposed by:** the security audit's sweep of the `@RequestBody` handlers (2026-09).
 
 > **Residual blind spot (not a finding):** XXE was asserted-absent but the message-import ZIP
 > (`BatchMsgArchiveImportProcessor`) XML entity handling was **not** positively verified. The S-124 side is
@@ -893,8 +892,8 @@ Each entry keeps its **Residual** bullet: what the fix does *not* cover.
   same exposure.
 - **Why it looks wrong:** the test's own dataset is identifiable (its `dataReference`), and the test checks it
   individually in its last step; the two database-wide assertions pin the state of the whole shared database
-  instead, which depends on run order and on which earlier classes clean up after themselves — the TESTQ3
-  kind of coupling, in a class that TESTQ3 names as a polluter of others.
+  instead, which depends on run order and on which earlier classes clean up after themselves — the coupling
+  that once made two other tests' database-wide counts green on a developer machine and red on CI.
 - **What exposed it:** a red `main` after a merge whose change could not touch SECOM (a registry URL in
   the pom and a workflow), with a green rerun of the same job. A fix would filter the summary assertions to
   the test's own dataset (or assert that it is absent/present by `dataReference`), not pin the collection size.
@@ -1615,7 +1614,7 @@ unless they say otherwise.
 - **Why it looks wrong:** saving what was read should change nothing.
 - **Exposed by:** the error hunt of 2026-11-12, track A4, a round-trip integration test:
   `LeftoverRoundTripITTest#aPasswordSettingSavedBackAsReadIsErased_documentsBehavior`. Track A1 noted it, unrun.
-  SETTINGS-4 is another fault.
+  A stored row that still holds the password's former published default is another matter.
 - **Severity:** Low — not reachable from the application; a script erases the PDF encryption or WMS password. Fix:
   in `updateSetting` read a missing or null value of a Password setting as "unchanged" and an explicit empty string
   as a clear, the distinction the import makes.
