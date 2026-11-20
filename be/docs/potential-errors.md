@@ -1976,23 +1976,6 @@ path is from the repository root.
   no volume printed when it is unset.
 - **Left by the owner (2026-11-15):** 1884 stays in the base templates; the entry stays open as the record.
 
-## RENDER11. The weekly report PDFs head an issue of two or more weeks with its first week alone
-
-- **Location:** `be/niord/bootstrap/templates/messages/nm-report-pdf.ftl` 66 and 73 and `nm-tp-report-pdf.ftl` 41,
-  47 and 57 (`${week}` alone); `IssuePublishService` hands the report `week` and `weekTo` as two values (~1203),
-  and the templates read only the first.
-- **Description:** an issue named for weeks 36 to 38 ("36-38", or "36+37" for a pair) gets a PDF whose page header
-  and heading say week 36. The accumulated report already prints a group's `week` and `weekTo`
-  (`nm-accumulated-report-pdf.ftl` 239).
-- **Why it looks wrong:** the PDF's heading names a different issue than the issue's name and file name do.
-- **Exposed by:** the review of round 1 of the recorded faults, 2026-11-20, read in the templates. True of a pair
-  before that round; the range form of 2026-11-20 did not cause it.
-- **Severity:** Low (the heading and page header only). Fix: print `weekTo` after `week` when it is set, joined by
-  `+` for a pair and `-` for three weeks or more as the name is (`IssueNaming`), or hand the templates the joined
-  text; it ships as a release import, since the templates are data (`docs/code-data-config-plan.md`). Could break:
-  `WeeklyReportTemplateTest`.
-- **Decision first:** should the weekly report templates print the weeks the way the name does? Recommended: yes.
-
 ## DICT7. The required-texts list names a template reader no shipped template uses
 
 - **Location:** `org/niord/core/dictionary/RequiredTexts.java` 78-82, 108 and 111 (`FROM_TO_DATE_DIRECTIVE`);

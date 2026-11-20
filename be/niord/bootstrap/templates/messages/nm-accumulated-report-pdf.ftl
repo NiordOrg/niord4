@@ -235,8 +235,10 @@
             <table class="group-info-line" width="100%">
                 <tr>
                     <td width="40%" align="left">
+                        <#-- group.weeks is the source's weeks as its name prints them:
+                             "36+37" for a pair, "36-38" for three weeks or more. -->
                         <#if !group.manual && group.week??>
-                            ${text('pdf.week')} ${group.week?c}<#if group.weekTo?? && group.weekTo != group.week> - ${group.weekTo?c}</#if><#if group.year??>, ${group.year?c}</#if>
+                            ${text('pdf.week')} ${group.weeks!(group.week?c)}<#if group.year??>, ${group.year?c}</#if>
                         </#if>
                     </td>
                     <td width="30%" align="center">

@@ -481,4 +481,24 @@ public class IssueNamingTest {
         assertEquals(IssueNaming.derive(d, null, DK, null, ISO).year(),
                 IssueNaming.derive(d, null, DK, null, null).year());
     }
+
+    /**
+     * The weeks the report templates print (RENDER11): the span as a name with the pair form prints it, so a
+     * weekly's heading and an accumulated report's source line say what the issue's name says. Across a year's end
+     * the year decides: 2025 has 52 ISO weeks, so weeks 52 to 1 of an issue named for 2026 are a pair, while 2026
+     * has a week 53, so weeks 52 to 1 of 2027 are three.
+     */
+    @Test
+    public void theWeeksTextIsTheSpanAsTheNamePrintsIt() {
+        assertEquals("36", IssueNaming.weeksText(36, null, 2026));
+        assertEquals("36", IssueNaming.weeksText(36, 36, 2026), "a closing week equal to the first is one week");
+        assertEquals("36+37", IssueNaming.weeksText(36, 37, 2026));
+        assertEquals("36-38", IssueNaming.weeksText(36, 38, 2026));
+        assertEquals("52+1", IssueNaming.weeksText(52, 1, 2026));
+        assertEquals("52-2", IssueNaming.weeksText(52, 2, 2026));
+        assertEquals("52-1", IssueNaming.weeksText(52, 1, 2027));
+        assertEquals(IssueNaming.expand(NAME, new IssueNaming.Numbers(36, 38, 2026, 9, 15, null)),
+                "Uge " + IssueNaming.weeksText(36, 38, 2026) + ", 2026", "the text is not the name's span");
+        assertNull(IssueNaming.weeksText(null, 37, 2026));
+    }
 }

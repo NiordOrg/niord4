@@ -435,6 +435,30 @@ public class AccumulatedReportTemplateTest {
                 "a week with no period start lost its cut-off line");
     }
 
+    /**
+     * RENDER11. A source of two weeks is named "36+37" and one of three or more "36-38", as the weekly's name and
+     * heading say them: the render hands each section its weeks so written ({@code group.weeks}). FAILS on the
+     * template that printed every span as "week - weekTo", which made a pair read as a range.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void aSourceOfSeveralWeeksIsNamedAsItsNameSaysThem() throws Exception {
+        Map<String, Object> model = yearOfTwoWeeks();
+        List<Map<String, Object>> groups = (List<Map<String, Object>>) model.get("groups");
+        groups.get(0).put("week", 36);
+        groups.get(0).put("weekTo", 37);
+        groups.get(0).put("weeks", "36+37");
+        groups.get(1).put("week", 38);
+        groups.get(1).put("weekTo", 40);
+        groups.get(1).put("weeks", "38-40");
+
+        String html = render(model);
+
+        assertTrue(html.contains("pdf.week 36+37, 2024"), "a pair is not named with '+': " + html);
+        assertTrue(html.contains("pdf.week 38-40, 2024"), "three weeks are not named as a range: " + html);
+        assertFalse(html.contains("36 - 37"), "a pair is still printed as a range");
+    }
+
     /** And the weeks that did print are untouched by it. */
     @Test
     public void theWeeksAroundAnEmptyOnePrintExactlyAsBefore() throws Exception {

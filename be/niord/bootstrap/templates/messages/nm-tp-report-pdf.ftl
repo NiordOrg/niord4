@@ -38,13 +38,16 @@
 </head>
 <body>
 
-<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_tp')} - ${text('pdf.week')} ${week!''}, ${year!''}"/>
+<#-- ${weeks} is the weeks the issue's name says: "36", "36+37" for a pair, "36-38"
+     for three weeks or more, or the week label whole. The legacy print dialog
+     hands only ${week}, which then prints alone. -->
+<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_tp')} - ${text('pdf.week')} ${weeks!week!''}, ${year!''}"/>
 
 <#-- First page -->
 <h1>${text("pdf.nm_tp")}</h1>
 
 <div class="week-year-header">
-    ${text("pdf.week")} ${week!""}, ${year!""}
+    ${text("pdf.week")} ${weeks!week!""}, ${year!""}
 </div>
 
 <table class="first-page-info-line" style="margin-bottom: 1cm">
@@ -54,7 +57,7 @@
             <#if edition?? && edition != '1'> - Version ${edition}</#if>
         </td>
         <td width="50%" align="right">
-            ${text("pdf.nm_abbrev")}  ${week!""} ${year!""}
+            ${text("pdf.nm_abbrev")}  ${weeks!week!""} ${year!""}
         </td>
     </tr>
 </table>

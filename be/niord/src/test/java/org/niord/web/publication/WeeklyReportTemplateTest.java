@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -97,6 +98,10 @@ public class WeeklyReportTemplateTest {
     }
 
     private String render(Map<String, Object> model) throws Exception {
+        return render(TEMPLATE, model);
+    }
+
+    private String render(String templateName, Map<String, Object> model) throws Exception {
         StringTemplateLoader stubs = new StringTemplateLoader();
         stubs.putTemplate("message-support.ftl", MESSAGE_SUPPORT_STUB);
 
@@ -113,7 +118,7 @@ public class WeeklyReportTemplateTest {
 
         model.put("text", new KeyText());
 
-        Template template = cfg.getTemplate(TEMPLATE);
+        Template template = cfg.getTemplate(templateName);
         StringWriter out = new StringWriter();
         template.process(model, out);
         return out.toString();
@@ -226,5 +231,55 @@ public class WeeklyReportTemplateTest {
         assertTrue(html.contains("pdf.volume(141)"),
                 "the label reached the volume arithmetic, which fails the whole render the first "
                         + "time a year is written out in words");
+    }
+
+    // ------------------------------------------------------ the weeks of the issue
+
+    /** The number of times the text occurs in the document */
+    private static int occurrences(String html, String needle) {
+        int count = 0;
+        for (int at = html.indexOf(needle); at >= 0; at = html.indexOf(needle, at + 1)) {
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * RENDER11. An issue named for weeks 36 to 38 is headed by those weeks, on its first page and in its page
+     * header, in both weekly reports, and so is a pair. The release hands the report the weeks as the name prints
+     * them ({@code weeks}); the templates printed {@code week} alone, so "Uge 36-38, 2026" was headed "Uge 36".
+     * FAILS on the templates that print {@code week}.
+     */
+    @Test
+    public void bothWeeklyReportsAreHeadedByTheWeeksTheIssuesNameSays() throws Exception {
+        for (String weeks : List.of("36-38", "36+37")) {
+            Map<String, Object> model = aWeek();
+            model.put("weekTo", weeks.substring(3));
+            model.put("weeks", weeks);
+
+            String nm = render(model);
+            assertEquals(2, occurrences(nm, "pdf.week " + weeks + ", 2025"),
+                    "the NtM report's heading and page header do not both say weeks " + weeks + ": " + nm);
+
+            String tp = render("nm-tp-report-pdf.ftl", model);
+            assertEquals(2, occurrences(tp, "pdf.week " + weeks + ", 2025"),
+                    "the T&P report's heading and page header do not both say weeks " + weeks + ": " + tp);
+            assertTrue(tp.contains("pdf.nm_abbrev  " + weeks + " 2025"),
+                    "the T&P report's first-page line does not say weeks " + weeks);
+        }
+    }
+
+    /** A single week, and the legacy print dialog's model, which hands the week alone, print the week. */
+    @Test
+    public void aSingleWeekAndAPrintWithoutWeeksPrintTheWeek() throws Exception {
+        Map<String, Object> single = aWeek();
+        single.put("weeks", "36");
+        assertEquals(2, occurrences(render(single), "pdf.week 36, 2025"));
+
+        Map<String, Object> dialog = aWeek();
+        dialog.remove("weekTo");
+        assertEquals(2, occurrences(render(dialog), "pdf.week 36, 2025"),
+                "a render with no weeks lost the week; the print dialog hands only the week");
+        assertEquals(2, occurrences(render("nm-tp-report-pdf.ftl", dialog), "pdf.week 36, 2025"));
     }
 }

@@ -217,6 +217,28 @@ public class IssueReportParamInjectionITTest extends ITTest {
     }
 
     /**
+     * RENDER11. The report is handed the weeks as the issue's name prints them, which the weekly reports print in
+     * their heading and page header: a single week alone, three weeks as a range. FAILS where the model carries
+     * only the first and the closing week, and the heading said the first week alone.
+     */
+    @Test
+    @Transactional
+    public void theweeksAreInjectedAsTheNamePrintsThem() {
+        PublicationIssue single = issue(series());
+        em.flush();
+        assertEquals("36", paramsFromPublishing(single).get("weeks"));
+
+        PublicationIssue three = issue(series());
+        three.setIntervalFrom(new Date(CUTOFF - 3 * WEEK));
+        em.flush();
+        Map<String, Object> params = paramsFromPublishing(three);
+        assertEquals("34", params.get("week"));
+        assertEquals("36", params.get("weekTo"));
+        assertEquals("34-36", params.get("weeks"),
+                "an issue named for weeks 34 to 36 is headed by other weeks than its name says");
+    }
+
+    /**
      * And the numbers the issue was DERIVED with travel beside the labels.
      *
      * A document may have to compute from a year rather than print it -- the

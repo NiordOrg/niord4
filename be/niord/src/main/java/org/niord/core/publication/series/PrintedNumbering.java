@@ -78,6 +78,23 @@ public final class PrintedNumbering {
         return asText(issue == null ? null : issue.getWeekTo());
     }
 
+    /**
+     * The weeks the report names the issue for, and what it is handed as {@code weeks}: the week label where one
+     * is written, which holds the whole span as the publication writes it ("36 og 37"); else the derived weeks as
+     * the name prints them, "36", "36+37" for a pair and "36-38" for three weeks or more
+     * ({@link IssueNaming#weeksText}). Null where the issue has no week.
+     */
+    public static String printedWeeks(PublicationIssue issue) {
+        if (issue == null) {
+            return null;
+        }
+        String label = trimmed(issue.getWeekLabel());
+        if (label != null) {
+            return label;
+        }
+        return IssueNaming.weeksText(issue.getWeek(), issue.getWeekTo(), issue.getYear());
+    }
+
     /** What ${year} prints: the label, else the derived year. */
     public static String printedYear(PublicationIssue issue) {
         return printed(issue == null ? null : issue.getYearLabel(),

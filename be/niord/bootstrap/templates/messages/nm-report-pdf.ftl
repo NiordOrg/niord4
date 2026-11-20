@@ -62,15 +62,17 @@
 </head>
 <body>
 
-<#-- Headers and footers -->
-<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm')} - ${text('pdf.week')} ${week!''}, ${year!''}"/>
+<#-- Headers and footers. ${weeks} is the weeks the issue's name says: "36", "36+37"
+     for a pair, "36-38" for three weeks or more, or the week label whole. The
+     legacy print dialog hands only ${week}, which then prints alone. -->
+<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm')} - ${text('pdf.week')} ${weeks!week!''}, ${year!''}"/>
 
 
 <#-- First page -->
 <h1>${text("pdf.nm")}</h1>
 
 <div class="week-year-header">
-    ${text("pdf.week")} ${week!""}, ${year!""}
+    ${text("pdf.week")} ${weeks!week!""}, ${year!""}
 </div>
 <table class="first-page-info-line">
     <tr>

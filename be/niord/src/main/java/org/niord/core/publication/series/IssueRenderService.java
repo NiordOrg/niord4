@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import jakarta.inject.Inject;
 import org.niord.core.NiordApp;
 import org.niord.core.message.MessageService;
+import org.niord.core.publication.series.resolve.IssueNaming;
 import org.niord.core.report.FmReport;
 import org.niord.core.report.FmReportService;
 import org.niord.core.script.FmTemplateService;
@@ -414,7 +415,7 @@ public class IssueRenderService {
      * members are LOOKED UP IN THAT LIST rather than carried alongside it, so a
      * section still cannot name anything the document does not print.
      */
-    private static List<Map<String, Object>> modelGroups(List<RenderGroup> groups,
+    static List<Map<String, Object>> modelGroups(List<RenderGroup> groups,
                                                          List<MessageVo> orderedMessages) {
         if (groups == null) {
             return null;
@@ -442,6 +443,8 @@ public class IssueRenderService {
             model.put("name", g.name());
             model.put("week", g.week());
             model.put("weekTo", g.weekTo());
+            // The source's weeks as its name prints them: "36+37" for a pair, "36-38" for three or more.
+            model.put("weeks", IssueNaming.weeksText(g.week(), g.weekTo(), g.year()));
             model.put("year", g.year());
             model.put("cutoff", g.cutoff());
             model.put("intervalFrom", g.intervalFrom());

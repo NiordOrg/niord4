@@ -293,6 +293,29 @@ public final class IssueNaming {
         return WEEK_PAIR_JOIN.matcher(pattern).replaceAll("$1-");
     }
 
+    /**
+     * The weeks an issue is named for, printed as a name pattern prints them with the pair form
+     * "${week}+${weekTo}": the week alone for a single week, "36+37" for a pair and "36-38" for three weeks or
+     * more ({@link #joined}), across a year's end "52+1" and "52-2". Null where there is no week.
+     *
+     * The report templates print it where they name the issue's weeks: the weekly reports' heading and page header
+     * (the report's {@code weeks}) and each source's line in the accumulated report ({@code group.weeks}), so a
+     * document says the weeks its name says. A closing week equal to the first is a single week.
+     *
+     * @param week the first week, or null
+     * @param weekTo the closing week, or null for a single week
+     * @param year the week-based year the issue is named for, which places a span across a year's end; null reads
+     *             as a span within one year
+     */
+    public static String weeksText(Integer week, Integer weekTo, Integer year) {
+        if (week == null) {
+            return null;
+        }
+        boolean span = weekTo != null && !weekTo.equals(week);
+        Numbers numbers = new Numbers(week, span ? weekTo : null, year == null ? 0 : year, 1, 1, null);
+        return expand(span ? "${week}+${weekTo}" : "${week}", numbers);
+    }
+
     /** The values each token expands to, for a given set of numbers. */
     public static Map<String, String> valuesOf(Numbers n) {
         Map<String, String> v = new LinkedHashMap<>();
