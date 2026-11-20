@@ -64,7 +64,7 @@
         <#elseif group.name?has_content>
             ${group.name}
         <#elseif group.week??>
-            ${text('pdf.week')} ${group.week?c}
+            ${text('pdf.week')} ${group.weeks!(group.week?c)}
         <#else>
             ${text('pdf.nm')}
         </#if>

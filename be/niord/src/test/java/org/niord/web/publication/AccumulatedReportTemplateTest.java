@@ -475,6 +475,26 @@ public class AccumulatedReportTemplateTest {
         assertFalse(html.contains("36 - 37"), "a pair is still printed as a range");
     }
 
+    /**
+     * A source without a name is called by its weeks in the contents and its heading, all of them. FAILS on the
+     * template that called it by its first week alone.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void aSourceWithoutANameIsCalledByAllItsWeeks() throws Exception {
+        Map<String, Object> model = yearOfTwoWeeks();
+        List<Map<String, Object>> groups = (List<Map<String, Object>>) model.get("groups");
+        groups.get(1).put("name", null);
+        groups.get(1).put("week", 38);
+        groups.get(1).put("weekTo", 40);
+        groups.get(1).put("weeks", "38-40");
+
+        String html = render(model);
+
+        // The contents, the heading and the info line
+        assertEquals(3, occurrences(html, "pdf.week 38-40"), html);
+    }
+
     /** And the weeks that did print are untouched by it. */
     @Test
     public void theWeeksAroundAnEmptyOnePrintExactlyAsBefore() throws Exception {
