@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -685,6 +686,44 @@ class CategoryServiceITTest extends ITTest {
         Category reloaded = em.find(Category.class, imported.getId());
         assertEquals("IT-ImpParent", reloaded.getParent().getDesc("en").getName(),
                 "the recursively created parent must be persisted and linked");
+    }
+
+    @Test
+    @Transactional
+    void importOfARootTemplate_doesNotMatchASameNamedCategoryDeeperDown() {
+        // CATEGORY2: a root template was looked up by name at any depth, so it was found as the child below and
+        // that child was updated. It matches a root only, and here there is none, so a root is created.
+        Category holder = categoryService.createCategory(newCategory("IT-Cat2-Holder", "en"), null);
+        Category child = categoryService.createCategory(newCategory("IT-Cat2-Twin", "en"), holder.getId());
+        em.flush();
+
+        Category imported = categoryService.importCategory(newCategory("IT-Cat2-Twin", "en"), true, true);
+
+        assertNotEquals(child.getId(), imported.getId(), "the root template must not match the child");
+        assertNull(imported.getParent(), "the imported category is a root");
+        em.flush();
+        em.clear();
+        assertEquals(holder.getId(), em.find(Category.class, child.getId()).getParent().getId(),
+                "the child stays where it was");
+    }
+
+    @Test
+    @Transactional
+    void importMatchesTheCategoryOfItsNameUnderTheSameParent_atEachDepth() {
+        // CATEGORY2: two categories of one name, a root and a child; each template finds its own
+        Category root = categoryService.createCategory(newCategory("IT-Cat2-Same", "en"), null);
+        Category holder = categoryService.createCategory(newCategory("IT-Cat2-Parent", "en"), null);
+        Category child = categoryService.createCategory(newCategory("IT-Cat2-Same", "en"), holder.getId());
+        em.flush();
+
+        assertEquals(root.getId(),
+                categoryService.importCategory(newCategory("IT-Cat2-Same", "en"), false, false).getId(),
+                "the root template finds the root");
+
+        Category childTemplate = newCategory("IT-Cat2-Same", "en");
+        childTemplate.setParent(newCategory("IT-Cat2-Parent", "en"));
+        assertEquals(child.getId(), categoryService.importCategory(childTemplate, false, false).getId(),
+                "the child template finds the child under its parent");
     }
 
     @Test

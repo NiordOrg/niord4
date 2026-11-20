@@ -1095,19 +1095,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   in `Area.hasChanged` (fields left out of the comparison) was fixed on 2026-11-13. Pre-existing; recorded, not
   fixed.
 
-## CATEGORY2. A root category template is matched by name at any depth
-
-- **Location:** `niord/src/main/java/org/niord/core/category/CategoryService.java:123-128` (`searchCategories`
-  adds the parent predicate only when `parentId` is not null), `:394-410` (`findByName`: the first of an
-  unordered result of at most one row), called by `importCategory` for each of the template's names.
-- **Description:** for a root category of an import file, `findByName(name, lang, null)` searches every category,
-  so a root can be found as a same-named category elsewhere in the tree, and which one is found is not defined
-  when several share the name (no ordering, `maxSize 1`). The import then updates that category, or, within one
-  bootstrap run, adds to it [inferred from the code; not run].
-- **Why it looks wrong:** an import file's root is meant to match a root. A `parent IS NULL` predicate when no
-  parent is given closes it; the firing-exercises lookup (`getFiringExercisesCategory`) reads the same way.
-- **Exposed by:** a review of 2026-10-22. Pre-existing; recorded, not fixed.
-
 ## SCRIPT8. A deployment's `common.js` or `fetch-firing-exercises.js` row copied from a pre-port deployment may predate the port
 
 - **Location:** the database rows `templates/tmpl/common.js` and `templates/mailinglist/fetch-firing-exercises.js`

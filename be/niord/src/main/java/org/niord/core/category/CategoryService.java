@@ -138,6 +138,8 @@ public class CategoryService extends TreeBaseService<Category> {
             categoryRoot.join("parent", JoinType.LEFT);
             Path<Category> parent = categoryRoot.get("parent");
             criteriaHelper.equals(parent.get("id"), params.getParentId());
+        } else if (params.isRootOnly()) {
+            criteriaHelper.add(cb.isNull(categoryRoot.get("parent")));
         }
 
         // Optionally, match any ancestor
@@ -476,6 +478,30 @@ public class CategoryService extends TreeBaseService<Category> {
     }
 
     /**
+     * Looks up a root category (one without a parent) by name
+     * @param name the name to search for
+     * @param lang the language. Optional
+     * @return The matching root category, or null if not found
+     */
+    public Category findRootByName(String name, String lang) {
+        if (StringUtils.isBlank(name)) {
+            return null;
+        }
+
+        CategorySearchParams params = new CategorySearchParams();
+        params.rootOnly(true)
+                .language(lang)
+                .inactive(true) // Also search inactive categories
+                .name(name)
+                .exact(true) // Not substring matches
+                .maxSize(1);
+
+        List<Category> categories = searchCategories(params);
+
+        return categories.isEmpty() ? null : categories.get(0);
+    }
+
+    /**
      * Returns the category with the given MRN. Returns null if the category is not found.
      * <p>
      * The MRN is not unique in the schema: when several categories have it (restored data), none is returned, as
@@ -583,11 +609,14 @@ public class CategoryService extends TreeBaseService<Category> {
         }
         Integer parentId = (parent == null) ? null : parent.getId();
 
-        // Check if we can find the given category
+        // Check if we can find the given category, under the same parent: a root template matches a root only, never
+        // a category of the same name deeper in the tree (CATEGORY2)
         Category category = null;
         for (int x = 0; category == null && x < templateCategory.getDescs().size(); x++) {
             CategoryDesc desc = templateCategory.getDescs().get(x);
-            category = findByName(desc.getName(), desc.getLang(), parentId);
+            category = parentId == null
+                    ? findRootByName(desc.getName(), desc.getLang())
+                    : findByName(desc.getName(), desc.getLang(), parentId);
         }
 
         // Create the category if no matching category was found

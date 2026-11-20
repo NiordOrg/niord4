@@ -340,9 +340,8 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
 
   An addition names its base product entry as the import finds it: a template by its path, a dictionary entry by
   the dictionary's name and its key, a category by its MRN, or else by one of its names in that name's language,
-  case-insensitively, under the same parent (a root: by name at any depth, CATEGORY2 in
-  `be/docs/potential-errors.md`; the base product's 45 English names are unique, case-insensitively, so a root's
-  lookup finds the intended category), so an addition carries the English name, and the parents' too, and a
+  case-insensitively, under the same parent (a root among the roots only), so an addition carries the English
+  name, and the parents' too, and a
   `da`-only entry creates a second category; a parameter type by its name and a template parameter by its `paramId`
   (then by its order among equal ones), a promulgation type by its `typeId` and a report by its `reportId`. A whole
   restatement of a base product entry is applied by the same rule: its values replace the base product's where they

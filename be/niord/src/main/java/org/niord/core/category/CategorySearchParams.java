@@ -34,6 +34,7 @@ public class CategorySearchParams extends PagedSearchParamsVo {
     public static final String TREE_SORT_ORDER = "TREE_ORDER";
 
     Integer parentId;       // Direct parent
+    boolean rootOnly;       // Only root categories (no parent); ignored when a parent is given
     Integer ancestorId;     // Any ancestor
     String language;
     String name;
@@ -51,6 +52,7 @@ public class CategorySearchParams extends PagedSearchParamsVo {
     public String toString() {
         List<String> desc = new ArrayList<>();
         if (parentId != null) { desc.add(String.format("Parent: %s", parentId)); }
+        if (rootOnly) { desc.add("Root only: true"); }
         if (ancestorId != null) { desc.add(String.format("Ancestor: %s", ancestorId)); }
         if (type != null) { desc.add(String.format("Type: %s", type)); }
         if (isNotBlank(language)) { desc.add(String.format("Language: %s", language)); }
@@ -82,6 +84,15 @@ public class CategorySearchParams extends PagedSearchParamsVo {
 
     public CategorySearchParams parentId(Integer parentId) {
         this.parentId = parentId;
+        return this;
+    }
+
+    public boolean isRootOnly() {
+        return rootOnly;
+    }
+
+    public CategorySearchParams rootOnly(boolean rootOnly) {
+        this.rootOnly = rootOnly;
         return this;
     }
 
