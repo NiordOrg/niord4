@@ -3851,174 +3851,175 @@ COPY public."DictionaryEntry" (id, "atonFilter", dict_key, dictionary_id) FROM s
 218	\N	msg.status.DELETED	2
 219	\N	pdf.fa.subtitle	3
 220	\N	pdf.nm_annex.nm_ref	3
-221	\N	pdf.nm_tp	3
-222	\N	pdf.accumulated.period	3
-223	\N	pdf.nm_almanac.subtitle	3
-224	\N	pdf.accumulated.no_messages	3
-225	\N	pdf.fa.title	3
-226	\N	pdf.volume	3
-227	\N	pdf.nw	3
-228	\N	pdf.accumulated.cutoff	3
-229	\N	pdf.details.title	3
-230	\N	pdf.accumulated.title	3
-231	\N	pdf.week	3
-232	\N	pdf.nm	3
-233	\N	pdf.list.title	3
-234	\N	pdf.nm_almanac.desc	3
-235	\N	pdf.page	3
-236	\N	pdf.fa	3
-237	\N	pdf.accumulated.added_by_hand	3
-238	\N	pdf.misc_nm	3
-239	\N	pdf.nm_abbrev	3
-240	\N	pdf.nm_almanac.title	3
-241	\N	pdf.toc	3
-242	\N	pdf.translation	3
-243	\N	mail.navtex.cancel	4
-244	\N	mail.date_format.long	4
-245	\N	mail.safetynet.cancel	4
-246	\N	mail.date_format.short	4
-247	\N	mail.dear.user	4
-248	\N	mail.field.warning	4
-249	\N	mail.navwarn.cancel	4
-250	\N	mail.active_nav_warnings	4
-251	\N	mail.greetings.best.regards	4
-252	\N	mail.comment.subject	4
-253	\N	mail.field.date	4
-254	\N	navwarn.date.until_further_notice	5
-255	\N	position.between_pos	5
-256	\N	position.in_area	5
-257	\N	navwarn.date.time_interval_prefix	5
-258	\N	term.and	5
-259	\N	position.in_pos	5
-260	\N	cancellation.this_message	5
-261	\N	position.between_positions	5
-262	\N	position.south	5
-263	\N	navwarn.date.from	5
-264	\N	position.in_position	5
-265	\N	position.west	5
-266	\N	position.east	5
-267	\N	position.in_positions	5
-268	\N	navwarn.date.until	5
-269	\N	navwarn.date.html_day_suffix	5
-270	\N	position.deg	5
-271	\N	cancellation.message	5
-272	\N	navwarn.date.day_suffix	5
-273	\N	position.min	5
-274	\N	navwarn.date.time_prefix	5
-275	\N	navwarn.date.to	5
-276	\N	position.north	5
-277	\N	navwarn.date.day_prefix	5
-278	aton.kv('seamark:buoy_lateral:category', 'port') && aton.k('seamark:light.*')	aton.type.light_buoy.red	6
-279	aton.kv('seamark:type', 'light.*')	aton.type.light	6
-280	aton.kv('seamark:type', 'buoy_special_purpose') && !aton.k('seamark:light.*')	aton.function.buoy.special	6
-281	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.cable	6
-282	\N	marking.color.yellow	6
-283	aton.kv('seamark:type', 'buoy_special_purpose') && aton.k('seamark:light.*')	aton.type.light_buoy.yellow	6
-284	aton.kv('seamark:buoy_cardinal:category', 'south') && aton.k('seamark:light.*')	aton.function.light_buoy.south_cardinal	6
-285	\N	vessel.type.vessel	6
-286	\N	aton.bearing.nw	6
-287	aton.kv('seamark:buoy_lateral:category', 'starboard') && !aton.k('seamark:light.*')	aton.type.buoy.green	6
-288	aton.kv('seamark:type', 'buoy_emergency_wreck') && aton.k('seamark:light.*')	aton.type.light_buoy.blue_yellow	6
-289	aton.kv('seamark:type', 'buoy_isolated_danger') && !aton.k('seamark:light.*')	aton.function.buoy.isolated_danger	6
-290	\N	obstruction.type.obstruction	6
-291	\N	object.adrift.logs	6
-292	\N	marking.color.orange	6
-293	\N	aton.bearing.e	6
-294	aton.kv('seamark:buoy_cardinal:category', 'east') && !aton.k('seamark:light.*')	aton.function.buoy.east_cardinal	6
-295	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && !aton.k('seamark:light.*')	aton.function.buoy.starboard_bifurcation	6
-296	\N	object.adrift.dinghy	6
-297	\N	aton.bearing.ne	6
-298	\N	salvage.type.submarine	6
-299	\N	aton.bearing.w	6
-300	\N	object.adrift.container	6
-301	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon	6
-302	\N	vessel.type.sailing_vessel	6
-303	\N	aton.bearing.s	6
-304	aton.kv('seamark:type', 'buoy_emergency_wreck') && aton.k('seamark:light.*')	aton.function.light_buoy.emergency_wreck	6
-305	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.front_rear	6
-306	\N	aton.bearing.n	6
-307	aton.kv('seamark:type', 'buoy.*')	aton.function.aton	6
-308	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && !aton.k('seamark:light.*')	aton.function.buoy.port_bifurcation	6
-309	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.front	6
-310	aton.kv('seamark:buoy_cardinal:category', 'east') && !aton.k('seamark:light.*')	aton.type.buoy.black_yellow_black	6
-311	\N	exercise.type.mine_laying	6
-312	aton.kv('seamark:buoy_cardinal:category', 'south') && aton.k('seamark:light.*')	aton.type.light_buoy.yellow_black	6
-313	\N	salvage.type.wind_mill	6
-314	\N	object.adrift.shooting_target	6
-315	\N	exercise.type.torpedo	6
-316	\N	obstruction.type.ground	6
-317	\N	exercise.type.mine_laying_sweeping	6
-318	\N	object.adrift.fish_farm	6
-319	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.rear	6
-320	aton.kv('seamark:type', 'buoy_isolated_danger') && !aton.k('seamark:light.*')	aton.type.buoy.black_red	6
-321	aton.kv('seamark:buoy_cardinal:category', 'north') && !aton.k('seamark:light.*')	aton.function.buoy.north_cardinal	6
-322	aton.kv('seamark:buoy_cardinal:category', 'north') && !aton.k('seamark:light.*')	aton.type.buoy.black_yellow	6
-323	\N	obstruction.report.observed	6
-324	\N	marking.type.fender	6
-325	\N	radio_navigation.status.unreliable	6
-326	aton.kv('seamark:type', 'buoy.*') && !aton.k('seamark:light.*')	aton.function.buoy	6
-327	\N	salvage.type.wreck	6
-328	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && !aton.k('seamark:light.*')	aton.function.light_buoy.port_bifurcation	6
-329	\N	marking.color.blue	6
-330	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && !aton.k('seamark:light.*')	aton.type.buoy.port_bifurcation	6
-331	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && aton.k('seamark:light.*')	aton.type.light_buoy.port_bifurcation	6
-332	\N	marking.color.red	6
-333	\N	object.adrift.boat	6
-334	\N	aton.withdrawn.temporarily	6
-335	aton.kv('seamark:buoy_lateral:category', 'starboard') && !aton.k('seamark:light.*')	aton.function.buoy.starboard_hand	6
-336	\N	aton.type.light.post	6
-337	\N	object.adrift.fishing_vessel	6
-338	\N	vessel.type.fishing_vessel	6
-339	aton.kv('seamark:light:category', 'rear')	aton.type.light.rear	6
-340	\N	marking.color.white	6
-341	\N	aton.bearing.se	6
-342	\N	aton.type.light.mole	6
-343	aton.kv('seamark:type', 'buoy_safe_water') && aton.k('seamark:light.*')	aton.function.light_buoy.safe_water	6
-344	\N	object.adrift.lifeboat	6
-345	\N	marking.type.balloon	6
-346	aton.kv('seamark:light:category', 'front|rear')	aton.type.light.front_rear	6
-347	aton.kv('seamark:buoy_cardinal:category', 'south') && !aton.k('seamark:light.*')	aton.function.buoy.south_cardinal	6
-348	aton.kv('seamark:type', 'buoy_isolated_danger') && aton.k('seamark:light.*')	aton.type.light_buoy.black_red	6
-349	\N	salvage.type.platform	6
-350	\N	obstruction.type.stone	6
-351	aton.kv('seamark:type', 'buoy_safe_water') && !aton.k('seamark:light.*')	aton.function.buoy.safe_water	6
-352	aton.kv('seamark:light:category', 'front')	aton.type.light.front	6
-353	aton.kv('seamark:buoy_cardinal:category', 'west') && !aton.k('seamark:light.*')	aton.function.buoy.west_cardinal	6
-354	aton.kv('seamark:buoy_cardinal:category', 'north') && aton.k('seamark:light.*')	aton.type.light_buoy.black_yellow	6
-355	\N	obstruction.report.reported	6
-356	aton.kv('seamark:buoy_lateral:category', 'port') && !aton.k('seamark:light.*')	aton.function.buoy.port_hand	6
-357	aton.kv('seamark:type', 'buoy.*') && aton.k('seamark:light.*')	aton.function.light_buoy	6
-358	aton.kv('seamark:buoy_cardinal:category', 'west') && !aton.k('seamark:light.*')	aton.type.buoy.yellow_black_yellow	6
-359	aton.kv('seamark:buoy_cardinal:category', 'east') && aton.k('seamark:light.*')	aton.function.light_buoy.east_cardinal	6
-360	\N	exercise.type.missile	6
-361	\N	object.adrift.object	6
-362	aton.kv('seamark:buoy_cardinal:category', 'east') && aton.k('seamark:light.*')	aton.type.light_buoy.black_yellow_black	6
-363	aton.kv('seamark:buoy_cardinal:category', 'west') && aton.k('seamark:light.*')	aton.type.light_buoy.yellow_black_yellow	6
-364	\N	radio_navigation.status.inoperative	6
-365	aton.kv('seamark:type', 'buoy_special_purpose') && !aton.k('seamark:light.*')	aton.type.buoy.yellow	6
-366	aton.kv('seamark:buoy_cardinal:category', 'west') && aton.k('seamark:light.*')	aton.function.light_buoy.west_cardinal	6
-367	aton.kv('seamark:buoy_lateral:category', 'starboard') && aton.k('seamark:light.*')	aton.function.light_buoy.starboard_hand	6
-368	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && !aton.k('seamark:light.*')	aton.type.buoy.starboard_bifurcation	6
-369	aton.kv('seamark:buoy_lateral:category', 'port') && aton.k('seamark:light.*')	aton.function.light_buoy.port_hand	6
-370	\N	exercise.type.military	6
-371	\N	marking.type.container	6
-372	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && !aton.k('seamark:light.*')	aton.function.light_buoy.starboard_bifurcation	6
-373	aton.kv('seamark:light:.*:category', 'directional')	aton.type.light.sector	6
-374	\N	object.adrift.life_raft	6
-375	aton.kv('seamark:buoy_cardinal:category', 'south') && !aton.k('seamark:light.*')	aton.type.buoy.yellow_black	6
-376	aton.kv('seamark:buoy_lateral:category', 'port') && !aton.k('seamark:light.*')	aton.type.buoy.red	6
-377	\N	aton.withdrawn.permanently	6
-378	aton.kv('seamark:type', 'buoy_safe_water') && aton.k('seamark:light.*')	aton.type.light_buoy.red_white	6
-379	aton.kv('seamark:type', 'buoy_safe_water') && !aton.k('seamark:light.*')	aton.type.buoy.red_white	6
-380	aton.kv('seamark:buoy_cardinal:category', 'north') && aton.k('seamark:light.*')	aton.function.light_buoy.north_cardinal	6
-381	aton.kv('seamark:type', 'buoy_special_purpose') && aton.k('seamark:light.*')	aton.function.light_buoy.special	6
-382	aton.kv('seamark:type', 'buoy_isolated_danger') && aton.k('seamark:light.*')	aton.function.light_buoy.isolated_danger	6
-383	\N	object.adrift.fishing_net	6
-384	aton.kv('seamark:buoy_lateral:category', 'starboard') && aton.k('seamark:light.*')	aton.type.light_buoy.green	6
-385	\N	object.adrift.fishing_stakes	6
-386	\N	object.adrift.sailboat	6
-387	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && aton.k('seamark:light.*')	aton.type.light_buoy.starboard_bifurcation	6
-388	\N	aton.bearing.sw	6
+221	\N	pdf.accumulated.period	3
+222	\N	pdf.accumulated.no_messages	3
+223	\N	pdf.fa.title	3
+224	\N	pdf.list.index_incomplete	3
+225	\N	pdf.volume	3
+226	\N	pdf.nw	3
+227	\N	pdf.accumulated.cutoff	3
+228	\N	pdf.nm_almanac.desc	3
+229	\N	pdf.accumulated.added_by_hand	3
+230	\N	pdf.misc_nm	3
+231	\N	pdf.nm_almanac.title	3
+232	\N	pdf.toc	3
+233	\N	pdf.nm_tp	3
+234	\N	pdf.nm_almanac.subtitle	3
+235	\N	pdf.details.title	3
+236	\N	pdf.accumulated.title	3
+237	\N	pdf.week	3
+238	\N	pdf.nm	3
+239	\N	pdf.list.title	3
+240	\N	pdf.page	3
+241	\N	pdf.fa	3
+242	\N	pdf.nm_abbrev	3
+243	\N	pdf.translation	3
+244	\N	mail.navtex.cancel	4
+245	\N	mail.date_format.long	4
+246	\N	mail.safetynet.cancel	4
+247	\N	mail.date_format.short	4
+248	\N	mail.dear.user	4
+249	\N	mail.field.warning	4
+250	\N	mail.navwarn.cancel	4
+251	\N	mail.active_nav_warnings	4
+252	\N	mail.greetings.best.regards	4
+253	\N	mail.comment.subject	4
+254	\N	mail.field.date	4
+255	\N	navwarn.date.until_further_notice	5
+256	\N	position.between_pos	5
+257	\N	position.in_area	5
+258	\N	navwarn.date.time_interval_prefix	5
+259	\N	term.and	5
+260	\N	position.in_pos	5
+261	\N	cancellation.this_message	5
+262	\N	position.between_positions	5
+263	\N	position.south	5
+264	\N	navwarn.date.from	5
+265	\N	position.in_position	5
+266	\N	position.west	5
+267	\N	position.east	5
+268	\N	position.in_positions	5
+269	\N	navwarn.date.until	5
+270	\N	navwarn.date.html_day_suffix	5
+271	\N	position.deg	5
+272	\N	cancellation.message	5
+273	\N	navwarn.date.day_suffix	5
+274	\N	position.min	5
+275	\N	navwarn.date.time_prefix	5
+276	\N	navwarn.date.to	5
+277	\N	position.north	5
+278	\N	navwarn.date.day_prefix	5
+279	aton.kv('seamark:buoy_lateral:category', 'port') && aton.k('seamark:light.*')	aton.type.light_buoy.red	6
+280	aton.kv('seamark:type', 'light.*')	aton.type.light	6
+281	aton.kv('seamark:type', 'buoy_special_purpose') && !aton.k('seamark:light.*')	aton.function.buoy.special	6
+282	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.cable	6
+283	\N	marking.color.yellow	6
+284	aton.kv('seamark:type', 'buoy_special_purpose') && aton.k('seamark:light.*')	aton.type.light_buoy.yellow	6
+285	aton.kv('seamark:buoy_cardinal:category', 'south') && aton.k('seamark:light.*')	aton.function.light_buoy.south_cardinal	6
+286	\N	vessel.type.vessel	6
+287	\N	aton.bearing.nw	6
+288	aton.kv('seamark:buoy_lateral:category', 'starboard') && !aton.k('seamark:light.*')	aton.type.buoy.green	6
+289	aton.kv('seamark:type', 'buoy_emergency_wreck') && aton.k('seamark:light.*')	aton.type.light_buoy.blue_yellow	6
+290	aton.kv('seamark:type', 'buoy_isolated_danger') && !aton.k('seamark:light.*')	aton.function.buoy.isolated_danger	6
+291	\N	obstruction.type.obstruction	6
+292	\N	object.adrift.logs	6
+293	\N	marking.color.orange	6
+294	\N	aton.bearing.e	6
+295	aton.kv('seamark:buoy_cardinal:category', 'east') && !aton.k('seamark:light.*')	aton.function.buoy.east_cardinal	6
+296	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && !aton.k('seamark:light.*')	aton.function.buoy.starboard_bifurcation	6
+297	\N	object.adrift.dinghy	6
+298	\N	aton.bearing.ne	6
+299	\N	salvage.type.submarine	6
+300	\N	aton.bearing.w	6
+301	\N	object.adrift.container	6
+302	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon	6
+303	\N	vessel.type.sailing_vessel	6
+304	\N	aton.bearing.s	6
+305	aton.kv('seamark:type', 'buoy_emergency_wreck') && aton.k('seamark:light.*')	aton.function.light_buoy.emergency_wreck	6
+306	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.front_rear	6
+307	\N	aton.bearing.n	6
+308	aton.kv('seamark:type', 'buoy.*')	aton.function.aton	6
+309	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && !aton.k('seamark:light.*')	aton.function.buoy.port_bifurcation	6
+310	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.front	6
+311	aton.kv('seamark:buoy_cardinal:category', 'east') && !aton.k('seamark:light.*')	aton.type.buoy.black_yellow_black	6
+312	\N	exercise.type.mine_laying	6
+313	aton.kv('seamark:buoy_cardinal:category', 'south') && aton.k('seamark:light.*')	aton.type.light_buoy.yellow_black	6
+314	\N	salvage.type.wind_mill	6
+315	\N	object.adrift.shooting_target	6
+316	\N	exercise.type.torpedo	6
+317	\N	obstruction.type.ground	6
+318	\N	exercise.type.mine_laying_sweeping	6
+319	\N	object.adrift.fish_farm	6
+320	aton.kv('seamark:type', 'beacon.*')	aton.function.beacon.rear	6
+321	aton.kv('seamark:type', 'buoy_isolated_danger') && !aton.k('seamark:light.*')	aton.type.buoy.black_red	6
+322	aton.kv('seamark:buoy_cardinal:category', 'north') && !aton.k('seamark:light.*')	aton.function.buoy.north_cardinal	6
+323	aton.kv('seamark:buoy_cardinal:category', 'north') && !aton.k('seamark:light.*')	aton.type.buoy.black_yellow	6
+324	\N	obstruction.report.observed	6
+325	\N	marking.type.fender	6
+326	\N	radio_navigation.status.unreliable	6
+327	aton.kv('seamark:type', 'buoy.*') && !aton.k('seamark:light.*')	aton.function.buoy	6
+328	\N	salvage.type.wreck	6
+329	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && !aton.k('seamark:light.*')	aton.function.light_buoy.port_bifurcation	6
+330	\N	marking.color.blue	6
+331	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && !aton.k('seamark:light.*')	aton.type.buoy.port_bifurcation	6
+332	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_port') && aton.k('seamark:light.*')	aton.type.light_buoy.port_bifurcation	6
+333	\N	marking.color.red	6
+334	\N	object.adrift.boat	6
+335	\N	aton.withdrawn.temporarily	6
+336	aton.kv('seamark:buoy_lateral:category', 'starboard') && !aton.k('seamark:light.*')	aton.function.buoy.starboard_hand	6
+337	\N	aton.type.light.post	6
+338	\N	object.adrift.fishing_vessel	6
+339	\N	vessel.type.fishing_vessel	6
+340	aton.kv('seamark:light:category', 'rear')	aton.type.light.rear	6
+341	\N	marking.color.white	6
+342	\N	aton.bearing.se	6
+343	\N	aton.type.light.mole	6
+344	aton.kv('seamark:type', 'buoy_safe_water') && aton.k('seamark:light.*')	aton.function.light_buoy.safe_water	6
+345	\N	object.adrift.lifeboat	6
+346	\N	marking.type.balloon	6
+347	aton.kv('seamark:light:category', 'front|rear')	aton.type.light.front_rear	6
+348	aton.kv('seamark:buoy_cardinal:category', 'south') && !aton.k('seamark:light.*')	aton.function.buoy.south_cardinal	6
+349	aton.kv('seamark:type', 'buoy_isolated_danger') && aton.k('seamark:light.*')	aton.type.light_buoy.black_red	6
+350	\N	salvage.type.platform	6
+351	\N	obstruction.type.stone	6
+352	aton.kv('seamark:type', 'buoy_safe_water') && !aton.k('seamark:light.*')	aton.function.buoy.safe_water	6
+353	aton.kv('seamark:light:category', 'front')	aton.type.light.front	6
+354	aton.kv('seamark:buoy_cardinal:category', 'west') && !aton.k('seamark:light.*')	aton.function.buoy.west_cardinal	6
+355	aton.kv('seamark:buoy_cardinal:category', 'north') && aton.k('seamark:light.*')	aton.type.light_buoy.black_yellow	6
+356	\N	obstruction.report.reported	6
+357	aton.kv('seamark:buoy_lateral:category', 'port') && !aton.k('seamark:light.*')	aton.function.buoy.port_hand	6
+358	aton.kv('seamark:type', 'buoy.*') && aton.k('seamark:light.*')	aton.function.light_buoy	6
+359	aton.kv('seamark:buoy_cardinal:category', 'west') && !aton.k('seamark:light.*')	aton.type.buoy.yellow_black_yellow	6
+360	aton.kv('seamark:buoy_cardinal:category', 'east') && aton.k('seamark:light.*')	aton.function.light_buoy.east_cardinal	6
+361	\N	exercise.type.missile	6
+362	\N	object.adrift.object	6
+363	aton.kv('seamark:buoy_cardinal:category', 'east') && aton.k('seamark:light.*')	aton.type.light_buoy.black_yellow_black	6
+364	aton.kv('seamark:buoy_cardinal:category', 'west') && aton.k('seamark:light.*')	aton.type.light_buoy.yellow_black_yellow	6
+365	\N	radio_navigation.status.inoperative	6
+366	aton.kv('seamark:type', 'buoy_special_purpose') && !aton.k('seamark:light.*')	aton.type.buoy.yellow	6
+367	aton.kv('seamark:buoy_cardinal:category', 'west') && aton.k('seamark:light.*')	aton.function.light_buoy.west_cardinal	6
+368	aton.kv('seamark:buoy_lateral:category', 'starboard') && aton.k('seamark:light.*')	aton.function.light_buoy.starboard_hand	6
+369	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && !aton.k('seamark:light.*')	aton.type.buoy.starboard_bifurcation	6
+370	aton.kv('seamark:buoy_lateral:category', 'port') && aton.k('seamark:light.*')	aton.function.light_buoy.port_hand	6
+371	\N	exercise.type.military	6
+372	\N	marking.type.container	6
+373	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && !aton.k('seamark:light.*')	aton.function.light_buoy.starboard_bifurcation	6
+374	aton.kv('seamark:light:.*:category', 'directional')	aton.type.light.sector	6
+375	\N	object.adrift.life_raft	6
+376	aton.kv('seamark:buoy_cardinal:category', 'south') && !aton.k('seamark:light.*')	aton.type.buoy.yellow_black	6
+377	aton.kv('seamark:buoy_lateral:category', 'port') && !aton.k('seamark:light.*')	aton.type.buoy.red	6
+378	\N	aton.withdrawn.permanently	6
+379	aton.kv('seamark:type', 'buoy_safe_water') && aton.k('seamark:light.*')	aton.type.light_buoy.red_white	6
+380	aton.kv('seamark:type', 'buoy_safe_water') && !aton.k('seamark:light.*')	aton.type.buoy.red_white	6
+381	aton.kv('seamark:buoy_cardinal:category', 'north') && aton.k('seamark:light.*')	aton.function.light_buoy.north_cardinal	6
+382	aton.kv('seamark:type', 'buoy_special_purpose') && aton.k('seamark:light.*')	aton.function.light_buoy.special	6
+383	aton.kv('seamark:type', 'buoy_isolated_danger') && aton.k('seamark:light.*')	aton.function.light_buoy.isolated_danger	6
+384	\N	object.adrift.fishing_net	6
+385	aton.kv('seamark:buoy_lateral:category', 'starboard') && aton.k('seamark:light.*')	aton.type.light_buoy.green	6
+386	\N	object.adrift.fishing_stakes	6
+387	\N	object.adrift.sailboat	6
+388	aton.kv('seamark:buoy_lateral:category', 'preferred_channel_starboard') && aton.k('seamark:light.*')	aton.type.light_buoy.starboard_bifurcation	6
+389	\N	aton.bearing.sw	6
 1000001	\N	radio_navigation.dgps.skagen	6
 1000002	\N	radio_navigation.dgps.torshavn	6
 1000003	\N	radio_navigation.dgps.hammer_odde	6
@@ -4251,293 +4252,294 @@ COPY public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) FROM
 218	en	\N	Deleted	218
 219	en	\N	Annex to Notices to Mariners	219
 220	en	\N	Annex to Notices to Mariners {0}	220
-221	en	\N	Preliminary (P) and Temporary (T) Notices to Mariners	221
-222	en	\N	Published	222
-223	en	\N	Annex to Notices to Mariners	223
-224	en	\N	No messages are in this issue.	224
-225	en	\N	Firing Practice Areas at Sea	225
-226	en	\N	Volume {0}	226
-227	en	\N	Navigational Warnings	227
-228	en	\N	Cut-off	228
-229	en	\N	Message	229
-230	en	\N	Accumulated Notices to Mariners	230
-231	en	\N	Week	231
-232	en	\N	Notices to Mariners	232
-233	en	\N	Message List	233
-234	en	\N	General information for the waters these notices cover	234
-235	en	\N	page	235
-236	en	\N	Firing Practice Areas	236
-237	en	\N	Added by hand	237
-238	en	\N	Announcements, etc.	238
-239	en	\N	NtM	239
-240	en	\N	NtM Almanac	240
-241	en	\N	Table of Contents	241
-242	en	\N	Translation	242
-243	en	\N	CANCEL NAV WARN	243
-244	en	\N	d. MMMM yyyy	244
-245	en	\N	CANCEL NAV WARN	245
-246	en	\N	dd-MM-yyyy	246
-247	en	\N	Dear {0}	247
-248	en	\N	Warning	248
-249	en	\N	Cancel navigational warning	249
-250	en	\N	Active Navigational Warnings	250
-251	en	\N	Kind regards,<br>{0}	251
-252	en	\N	Comment from	252
-253	en	\N	Date	253
-254	en	\N	until further notice	254
-255	en	\N	between pos.	255
-256	en	\N	in the area	256
-257	en	\N		257
-258	en	\N	and	258
-259	en	\N	in pos.	259
-260	en	\N	Cancel this message {0}	260
-261	en	\N	between positions	261
-262	en	\N	South	262
-263	en	\N	from	263
-264	en	\N	in position	264
-265	en	\N	West	265
-266	en	\N	East	266
-267	en	\N	in positions	267
-268	en	\N	until	268
-269	en	\N	<sup>{{suffix}}</sup>	269
-270	en	\N	degrees	270
-271	en	\N	Cancel message {0}	271
-272	en	\N	th,st,nd,rd,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,st,nd,rd,th,th,th,th,th,th,th,st	272
-273	en	\N	min.	273
-274	en	\N	at	274
-275	en	\N	to	275
-276	en	\N	North	276
-277	en	\N	the	277
-278	en	a red light buoy	red light buoy	278
-279	en	the light	light	279
-280	en	the special buoy	special buoy	280
-281	en	the cable beacon	cable beacon	281
-282	en	\N	yellow	282
-283	en	a yellow light buoy	yellow light buoy	283
-284	en	the south cardinal light buoy	south cardinal light buoy	284
-285	en	a vessel	vessel	285
-286	en	North West	NW	286
-287	en	a green buoy	green buoy	287
-288	en	a blue-yellow light buoy	blue-yellow light buoy	288
-289	en	the isolated danger buoy	isolated danger buoy	289
-290	en	the obstruction	obstruction	290
-291	en	logs	logs	291
-292	en	\N	orange	292
-293	en	East	E	293
-294	en	the east cardinal buoy	east cardinal buoy	294
-295	en	the preferred channel to starboard hand buoy	preferred channel to starboard hand buoy	295
-296	en	a dinghy	dinghy	296
-297	en	North East	NE	297
-298	en	the submarine	submarine	298
-299	en	west	W	299
-300	en	a container	container	300
-301	en	the beacon	beacon	301
-302	en	a sailing vessel	sailing vessel	302
-303	en	South	S	303
-304	en	the emergency wreck light buoy	emergency wreck light buoy	304
-305	en	the front and rear beacon	front and rear beacon	305
-306	en	North	N	306
-307	en	the buoy	buoy	307
-308	en	the preferred channel to port hand buoy	preferred channel to port hand buoy	308
-309	en	the front beacon	front beacon	309
-310	en	a black-yellow-black buoy	black-yellow-black buoy	310
-311	en	a mine laying exercise	mine laying exercise	311
-312	en	a yellow-black light buoy	yellow-black light buoy	312
-313	en	the wind mill	wind mill	313
-314	en	a shooting target	shooting target	314
-315	en	a torpedo exercise	torpedo exercise	315
-316	en	the ground	ground	316
-317	en	a mine laying and mine sweeping exercise	mine laying and mine sweeping exercise	317
-318	en	a fish farm	fish farm	318
-319	en	the rear beacon	rear beacon	319
-320	en	a black-red buoy	black-red buoy	320
-321	en	the north cardinal buoy	north cardinal buoy	321
-322	en	a black-yellow buoy	black-yellow buoy	322
-323	en	\N	observed	323
-324	en	a {{color}} fender	fender	324
-325	en	is unreliable	unreliable	325
-326	en	the buoy	buoy	326
-327	en	the wreck	wreck	327
-328	en	the preferred channel to port hand light buoy	preferred channel to port hand light buoy	328
-329	en	\N	blue	329
-330	en	a red-green-red buoy	red-green-red buoy	330
-331	en	a red-green-red light buoy	red-green-red light buoy	331
-332	en	\N	red	332
-333	en	a boat	boat	333
-334	en	\N	temporarily	334
-335	en	the starboard hand buoy	starboard hand buoy	335
-336	en	the light post	light post	336
-337	en	a fishing vessel	fishing vessel	337
+221	en	\N	Published	221
+222	en	\N	No messages are in this issue.	222
+223	en	\N	Firing Practice Areas at Sea	223
+224	en	\N	The search index is being rebuilt, for example after a restart of the server. Until it is complete, messages may be missing from this result.	224
+225	en	\N	Volume {0}	225
+226	en	\N	Navigational Warnings	226
+227	en	\N	Cut-off	227
+228	en	\N	General information for the waters these notices cover	228
+229	en	\N	Added by hand	229
+230	en	\N	Announcements, etc.	230
+231	en	\N	NtM Almanac	231
+232	en	\N	Table of Contents	232
+233	en	\N	Preliminary (P) and Temporary (T) Notices to Mariners	233
+234	en	\N	Annex to Notices to Mariners	234
+235	en	\N	Message	235
+236	en	\N	Accumulated Notices to Mariners	236
+237	en	\N	Week	237
+238	en	\N	Notices to Mariners	238
+239	en	\N	Message List	239
+240	en	\N	page	240
+241	en	\N	Firing Practice Areas	241
+242	en	\N	NtM	242
+243	en	\N	Translation	243
+244	en	\N	CANCEL NAV WARN	244
+245	en	\N	d. MMMM yyyy	245
+246	en	\N	CANCEL NAV WARN	246
+247	en	\N	dd-MM-yyyy	247
+248	en	\N	Dear {0}	248
+249	en	\N	Warning	249
+250	en	\N	Cancel navigational warning	250
+251	en	\N	Active Navigational Warnings	251
+252	en	\N	Kind regards,<br>{0}	252
+253	en	\N	Comment from	253
+254	en	\N	Date	254
+255	en	\N	until further notice	255
+256	en	\N	between pos.	256
+257	en	\N	in the area	257
+258	en	\N		258
+259	en	\N	and	259
+260	en	\N	in pos.	260
+261	en	\N	Cancel this message {0}	261
+262	en	\N	between positions	262
+263	en	\N	South	263
+264	en	\N	from	264
+265	en	\N	in position	265
+266	en	\N	West	266
+267	en	\N	East	267
+268	en	\N	in positions	268
+269	en	\N	until	269
+270	en	\N	<sup>{{suffix}}</sup>	270
+271	en	\N	degrees	271
+272	en	\N	Cancel message {0}	272
+273	en	\N	th,st,nd,rd,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,th,st,nd,rd,th,th,th,th,th,th,th,st	273
+274	en	\N	min.	274
+275	en	\N	at	275
+276	en	\N	to	276
+277	en	\N	North	277
+278	en	\N	the	278
+279	en	a red light buoy	red light buoy	279
+280	en	the light	light	280
+281	en	the special buoy	special buoy	281
+282	en	the cable beacon	cable beacon	282
+283	en	\N	yellow	283
+284	en	a yellow light buoy	yellow light buoy	284
+285	en	the south cardinal light buoy	south cardinal light buoy	285
+286	en	a vessel	vessel	286
+287	en	North West	NW	287
+288	en	a green buoy	green buoy	288
+289	en	a blue-yellow light buoy	blue-yellow light buoy	289
+290	en	the isolated danger buoy	isolated danger buoy	290
+291	en	the obstruction	obstruction	291
+292	en	logs	logs	292
+293	en	\N	orange	293
+294	en	East	E	294
+295	en	the east cardinal buoy	east cardinal buoy	295
+296	en	the preferred channel to starboard hand buoy	preferred channel to starboard hand buoy	296
+297	en	a dinghy	dinghy	297
+298	en	North East	NE	298
+299	en	the submarine	submarine	299
+300	en	west	W	300
+301	en	a container	container	301
+302	en	the beacon	beacon	302
+303	en	a sailing vessel	sailing vessel	303
+304	en	South	S	304
+305	en	the emergency wreck light buoy	emergency wreck light buoy	305
+306	en	the front and rear beacon	front and rear beacon	306
+307	en	North	N	307
+308	en	the buoy	buoy	308
+309	en	the preferred channel to port hand buoy	preferred channel to port hand buoy	309
+310	en	the front beacon	front beacon	310
+311	en	a black-yellow-black buoy	black-yellow-black buoy	311
+312	en	a mine laying exercise	mine laying exercise	312
+313	en	a yellow-black light buoy	yellow-black light buoy	313
+314	en	the wind mill	wind mill	314
+315	en	a shooting target	shooting target	315
+316	en	a torpedo exercise	torpedo exercise	316
+317	en	the ground	ground	317
+318	en	a mine laying and mine sweeping exercise	mine laying and mine sweeping exercise	318
+319	en	a fish farm	fish farm	319
+320	en	the rear beacon	rear beacon	320
+321	en	a black-red buoy	black-red buoy	321
+322	en	the north cardinal buoy	north cardinal buoy	322
+323	en	a black-yellow buoy	black-yellow buoy	323
+324	en	\N	observed	324
+325	en	a {{color}} fender	fender	325
+326	en	is unreliable	unreliable	326
+327	en	the buoy	buoy	327
+328	en	the wreck	wreck	328
+329	en	the preferred channel to port hand light buoy	preferred channel to port hand light buoy	329
+330	en	\N	blue	330
+331	en	a red-green-red buoy	red-green-red buoy	331
+332	en	a red-green-red light buoy	red-green-red light buoy	332
+333	en	\N	red	333
+334	en	a boat	boat	334
+335	en	\N	temporarily	335
+336	en	the starboard hand buoy	starboard hand buoy	336
+337	en	the light post	light post	337
 338	en	a fishing vessel	fishing vessel	338
-339	en	the rear light	rear light	339
-340	en	\N	white	340
-341	en	South East	SE	341
-342	en	the mole head light	mole head light	342
-343	en	the safe water light buoy	safe water light buoy	343
-344	en	a lifeboat	lifeboat	344
-345	en	a {{color}} balloon	balloon	345
-346	en	the front and rear light	front and rear light	346
-347	en	the south cardinal buoy	south cardinal buoy	347
-348	en	a black-red light buoy	black-red light buoy	348
-349	en	the platform	platform	349
-350	en	the stone	stone	350
-351	en	the safe water buoy	safe water buoy	351
-352	en	the front light	front light	352
-353	en	the west cardinal buoy	west cardinal buoy	353
-354	en	a black-yellow light buoy	black-yellow light buoy	354
-355	en	\N	reported	355
-356	en	the port hand buoy	port hand buoy	356
-357	en	the light buoy	light buoy	357
-358	en	a yellow-black-yellow buoy	yellow-black-yellow buoy	358
-359	en	the east cardinal light buoy	east cardinal light buoy	359
-360	en	a missile exercise	missile exercise	360
-361	en	an object	object	361
-362	en	a black-yellow-black light buoy	black-yellow-black light buoy	362
-363	en	a yellow-black-yellow light buoy	yellow-black-yellow light buoy	363
-364	en	is inoperative	inoperative	364
-365	en	a yellow buoy	yellow buoy	365
-366	en	the west cardinal light buoy	west cardinal light buoy	366
-367	en	the starboard hand light buoy	starboard hand light buoy	367
-368	en	a green-red-green buoy	green-red-green buoy	368
-369	en	the port hand light buoy	port hand light buoy	369
-370	en	a military exercise	military exercise	370
-371	en	a {{color}} container	container	371
-372	en	the preferred channel to starboard hand light buoy	preferred channel to starboard hand light buoy	372
-373	en	the sector light	sector light	373
-374	en	a life raft	life raft	374
-375	en	a yellow-black buoy	yellow-black buoy	375
-376	en	a red buoy	red buoy	376
-377	en	\N	permanently	377
-378	en	a red-white bouy	red-white bouy	378
+339	en	a fishing vessel	fishing vessel	339
+340	en	the rear light	rear light	340
+341	en	\N	white	341
+342	en	South East	SE	342
+343	en	the mole head light	mole head light	343
+344	en	the safe water light buoy	safe water light buoy	344
+345	en	a lifeboat	lifeboat	345
+346	en	a {{color}} balloon	balloon	346
+347	en	the front and rear light	front and rear light	347
+348	en	the south cardinal buoy	south cardinal buoy	348
+349	en	a black-red light buoy	black-red light buoy	349
+350	en	the platform	platform	350
+351	en	the stone	stone	351
+352	en	the safe water buoy	safe water buoy	352
+353	en	the front light	front light	353
+354	en	the west cardinal buoy	west cardinal buoy	354
+355	en	a black-yellow light buoy	black-yellow light buoy	355
+356	en	\N	reported	356
+357	en	the port hand buoy	port hand buoy	357
+358	en	the light buoy	light buoy	358
+359	en	a yellow-black-yellow buoy	yellow-black-yellow buoy	359
+360	en	the east cardinal light buoy	east cardinal light buoy	360
+361	en	a missile exercise	missile exercise	361
+362	en	an object	object	362
+363	en	a black-yellow-black light buoy	black-yellow-black light buoy	363
+364	en	a yellow-black-yellow light buoy	yellow-black-yellow light buoy	364
+365	en	is inoperative	inoperative	365
+366	en	a yellow buoy	yellow buoy	366
+367	en	the west cardinal light buoy	west cardinal light buoy	367
+368	en	the starboard hand light buoy	starboard hand light buoy	368
+369	en	a green-red-green buoy	green-red-green buoy	369
+370	en	the port hand light buoy	port hand light buoy	370
+371	en	a military exercise	military exercise	371
+372	en	a {{color}} container	container	372
+373	en	the preferred channel to starboard hand light buoy	preferred channel to starboard hand light buoy	373
+374	en	the sector light	sector light	374
+375	en	a life raft	life raft	375
+376	en	a yellow-black buoy	yellow-black buoy	376
+377	en	a red buoy	red buoy	377
+378	en	\N	permanently	378
 379	en	a red-white bouy	red-white bouy	379
-380	en	the north cardinal light buoy	north cardinal light buoy	380
-381	en	the special light buoy	special light buoy	381
-382	en	the isolated danger light buoy	isolated danger light buoy	382
-383	en	a fishing net	fishing net	383
-384	en	a green light buoy	green light buoy	384
-385	en	fishing stakes	fishing stakes	385
-386	en	a sailboat	sailboat	386
-387	en	a green-red-green light buoy	green-red-green light buoy	387
-388	en	South West	SW	388
-1000001	da	en rød lystønde	rød lystønde	278
-1000002	da	fyret	fyr	279
-1000003	da	specialafmærkningen	specialafmærkning	280
-1000004	da	kabelbåken	kabelbåke	281
-1000005	da	\N	gul	282
-1000006	da	en gul lystønde	gul lystønde	283
+380	en	a red-white bouy	red-white bouy	380
+381	en	the north cardinal light buoy	north cardinal light buoy	381
+382	en	the special light buoy	special light buoy	382
+383	en	the isolated danger light buoy	isolated danger light buoy	383
+384	en	a fishing net	fishing net	384
+385	en	a green light buoy	green light buoy	385
+386	en	fishing stakes	fishing stakes	386
+387	en	a sailboat	sailboat	387
+388	en	a green-red-green light buoy	green-red-green light buoy	388
+389	en	South West	SW	389
+1000001	da	en rød lystønde	rød lystønde	279
+1000002	da	fyret	fyr	280
+1000003	da	specialafmærkningen	specialafmærkning	281
+1000004	da	kabelbåken	kabelbåke	282
+1000005	da	\N	gul	283
+1000006	da	en gul lystønde	gul lystønde	284
 1000007	da	\N	Skagen	1000001
 1000008	en	\N	Skagen	1000001
-1000009	da	sydkardinalen	sydkardinal	284
-1000010	da	et skib	skib	285
-1000011	da	nordvest	NW	286
-1000012	da	et grønt dagsømærke	grønt dagsømærke	287
-1000013	da	en blå-gul lystønde	blå-gul lystønde	288
-1000014	da	den isolerede fareafmærkning	isoleret fareafmærkning	289
-1000015	da	sejladshindringen	sejladshindring	290
-1000016	da	tømmer	tømmer	291
-1000017	da	\N	orange	292
-1000018	da	øst	E	293
-1000019	da	østkardinalen	østkardinal	294
-1000020	da	den styrbord skillepunktsafmærkning	styrbord skillepunktsafmærkning	295
-1000021	da	en jolle	jolle	296
-1000022	da	nordøst	NE	297
-1000023	da	ubåden	ubåd	298
+1000009	da	sydkardinalen	sydkardinal	285
+1000010	da	et skib	skib	286
+1000011	da	nordvest	NW	287
+1000012	da	et grønt dagsømærke	grønt dagsømærke	288
+1000013	da	en blå-gul lystønde	blå-gul lystønde	289
+1000014	da	den isolerede fareafmærkning	isoleret fareafmærkning	290
+1000015	da	sejladshindringen	sejladshindring	291
+1000016	da	tømmer	tømmer	292
+1000017	da	\N	orange	293
+1000018	da	øst	E	294
+1000019	da	østkardinalen	østkardinal	295
+1000020	da	den styrbord skillepunktsafmærkning	styrbord skillepunktsafmærkning	296
+1000021	da	en jolle	jolle	297
+1000022	da	nordøst	NE	298
+1000023	da	ubåden	ubåd	299
 1000024	da	\N	Torshavn	1000002
 1000025	en	\N	Torshavn	1000002
-1000026	da	Vest	W	299
-1000027	da	en container	container	300
-1000028	da	båken	båke	301
-1000029	da	et sejlskib	sejlskib	302
-1000030	da	syd	S	303
-1000031	da	vragafmærkningen	vragafmærkning	304
-1000032	da	for- og bagbåken	for- og bagbåke	305
-1000033	da	nord	N	306
-1000034	da	den flydende afmærkning	flydende afmærkning	307
-1000035	da	den bagbord skillepunktsafmærkning	bagbord skillepunktsafmærkning	308
-1000036	da	forbåken	forbåke	309
-1000037	da	et sort-gult-sort dagsømærke	sort-gult-sort dagsømærke	310
-1000038	da	en minelægningsøvelse	minelægningsøvelse	311
-1000039	da	en gul-sort lystønde	gul-sort lystønde	312
-1000040	da	vindmøllen	vindmølle	313
-1000041	da	et skydemål	skydemål	314
-1000042	da	en torpedoøvelse	torpedoøvelse	315
-1000043	da	grunden	grund	316
-1000044	da	en minelægnings- og minerydningsøvelse	minelægnings- og minerydningsøvelse	317
-1000045	da	et havbrug	havbrug	318
-1000046	da	bagbåken	bagbåke	319
-1000047	da	et sort-rødt dagsømærke	sort-rødt dagsømærke	320
-1000048	da	nordkardinalen	nordkardinal	321
-1000049	da	et sort-gult dagsømærke	sort-gult dagsømærke	322
-1000050	da	\N	observeret	323
+1000026	da	Vest	W	300
+1000027	da	en container	container	301
+1000028	da	båken	båke	302
+1000029	da	et sejlskib	sejlskib	303
+1000030	da	syd	S	304
+1000031	da	vragafmærkningen	vragafmærkning	305
+1000032	da	for- og bagbåken	for- og bagbåke	306
+1000033	da	nord	N	307
+1000034	da	den flydende afmærkning	flydende afmærkning	308
+1000035	da	den bagbord skillepunktsafmærkning	bagbord skillepunktsafmærkning	309
+1000036	da	forbåken	forbåke	310
+1000037	da	et sort-gult-sort dagsømærke	sort-gult-sort dagsømærke	311
+1000038	da	en minelægningsøvelse	minelægningsøvelse	312
+1000039	da	en gul-sort lystønde	gul-sort lystønde	313
+1000040	da	vindmøllen	vindmølle	314
+1000041	da	et skydemål	skydemål	315
+1000042	da	en torpedoøvelse	torpedoøvelse	316
+1000043	da	grunden	grund	317
+1000044	da	en minelægnings- og minerydningsøvelse	minelægnings- og minerydningsøvelse	318
+1000045	da	et havbrug	havbrug	319
+1000046	da	bagbåken	bagbåke	320
+1000047	da	et sort-rødt dagsømærke	sort-rødt dagsømærke	321
+1000048	da	nordkardinalen	nordkardinal	322
+1000049	da	et sort-gult dagsømærke	sort-gult dagsømærke	323
+1000050	da	\N	observeret	324
 1000051	da	\N	Hammer Odde	1000003
 1000052	en	\N	Hammer Odde	1000003
-1000053	da	en {{color}} fender	fender	324
-1000054	da	er uregelmæssig	uregelmæssig	325
-1000055	da	dagsømærket	dagsømærke	326
-1000056	da	vraget	vrag	327
-1000057	da	den bagbord skillepunktsafmærkning	bagbord skillepunktsafmærkning	328
-1000058	da	\N	blå	329
-1000059	da	et rødt-grønt-rødt dagsømærke	rødt-grønt-rødt dagsømærke	330
-1000060	da	en rød-grøn-rød lystønde	rød-grøn-rød lystønde	331
-1000061	da	\N	rød	332
-1000062	da	en båd	båd	333
-1000063	da	\N	midlertidigt	334
-1000064	da	den styrbord sideafmærkning	styrbord sideafmærkning	335
-1000065	da	fyrpælen	fyrpæl	336
-1000066	da	et fiskeskib	fiskeskib	337
-1000067	da	et fiskeskib	fiskeskib	338
-1000068	da	bagfyret	bagfyr	339
-1000069	da	\N	hvid	340
-1000070	da	sydøst	SE	341
-1000071	da	molefyret	molefyr	342
-1000072	da	midtfarvandsafmærkningen	midtfarvandsafmærkning	343
-1000073	da	en redningsbåd	redningsbåd	344
-1000074	da	en {{color}} blåser	blåser	345
-1000075	da	for- og bagfyret	for- og bagfyr	346
-1000076	da	sydkardinalen	sydkardinal	347
-1000077	da	en sort-rød lystønde	sort-rød lystønde	348
-1000078	da	platformen	platform	349
-1000079	da	stenen	sten	350
-1000080	da	midtfarvandsafmærkningen	midtfarvandsafmærkning	351
-1000081	da	forfyret	forfyr	352
-1000082	da	vestkardinalen	vestkardinal	353
-1000083	da	en sort-gul lystønde	sort-gul lystønde	354
-1000084	da	\N	rapporteret	355
-1000085	da	den bagbord sideafmærkning	bagbord sideafmærkning	356
-1000086	da	lystønden	lystønde	357
-1000087	da	et gult-sort-gult dagsømærke	gult-sort-gult dagsømærke	358
-1000088	da	østkardinalen	østkardinal	359
-1000089	da	en missiløvelse	missiløvelse	360
-1000090	da	En genstand	genstand	361
+1000053	da	en {{color}} fender	fender	325
+1000054	da	er uregelmæssig	uregelmæssig	326
+1000055	da	dagsømærket	dagsømærke	327
+1000056	da	vraget	vrag	328
+1000057	da	den bagbord skillepunktsafmærkning	bagbord skillepunktsafmærkning	329
+1000058	da	\N	blå	330
+1000059	da	et rødt-grønt-rødt dagsømærke	rødt-grønt-rødt dagsømærke	331
+1000060	da	en rød-grøn-rød lystønde	rød-grøn-rød lystønde	332
+1000061	da	\N	rød	333
+1000062	da	en båd	båd	334
+1000063	da	\N	midlertidigt	335
+1000064	da	den styrbord sideafmærkning	styrbord sideafmærkning	336
+1000065	da	fyrpælen	fyrpæl	337
+1000066	da	et fiskeskib	fiskeskib	338
+1000067	da	et fiskeskib	fiskeskib	339
+1000068	da	bagfyret	bagfyr	340
+1000069	da	\N	hvid	341
+1000070	da	sydøst	SE	342
+1000071	da	molefyret	molefyr	343
+1000072	da	midtfarvandsafmærkningen	midtfarvandsafmærkning	344
+1000073	da	en redningsbåd	redningsbåd	345
+1000074	da	en {{color}} blåser	blåser	346
+1000075	da	for- og bagfyret	for- og bagfyr	347
+1000076	da	sydkardinalen	sydkardinal	348
+1000077	da	en sort-rød lystønde	sort-rød lystønde	349
+1000078	da	platformen	platform	350
+1000079	da	stenen	sten	351
+1000080	da	midtfarvandsafmærkningen	midtfarvandsafmærkning	352
+1000081	da	forfyret	forfyr	353
+1000082	da	vestkardinalen	vestkardinal	354
+1000083	da	en sort-gul lystønde	sort-gul lystønde	355
+1000084	da	\N	rapporteret	356
+1000085	da	den bagbord sideafmærkning	bagbord sideafmærkning	357
+1000086	da	lystønden	lystønde	358
+1000087	da	et gult-sort-gult dagsømærke	gult-sort-gult dagsømærke	359
+1000088	da	østkardinalen	østkardinal	360
+1000089	da	en missiløvelse	missiløvelse	361
+1000090	da	En genstand	genstand	362
 1000091	da	\N	Blåvand	1000004
 1000092	en	\N	Blåvand	1000004
-1000093	da	en sort-gul-sort lystønde	sort-gul-sort lystønde	362
-1000094	da	en gul-sort-gul lystønde	gul-sort-gul lystønde	363
-1000095	da	er ude af drift	ude af drift	364
-1000096	da	et gult dagsømærke	gult dagsømærke	365
-1000097	da	vestkardinalen	vestkardinal	366
-1000098	da	den styrbord sideafmærkning	styrbord sideafmærkning	367
-1000099	da	et grønt-rødt-grønt dagsømærke	grønt-rødt-grønt dagsømærke	368
-1000100	da	den bagbord sideafmærkning	bagbord sideafmærkning	369
-1000101	da	en militærøvelse	militærøvelse	370
-1000102	da	en {{color}} dunk	dunk	371
-1000103	da	den styrbord skillepunktsafmærkning	styrbord skillepunktsafmærkning	372
-1000104	da	vinkelfyret	vinkelfyr	373
-1000105	da	en redningsflåde	redningsflåde	374
-1000106	da	et gult-sort dagsømærke	gult-sort dagsømærke	375
-1000107	da	et rødt dagsømærke	rødt dagsømærke	376
-1000108	da	\N	permanent	377
-1000109	da	en rød-hvidt lystønde	rød-hvidt lystønde	378
-1000110	da	et rødt-hvidt dagsømærke	rødt-hvidt dagsømærke	379
-1000111	da	nordkardinalen	nordkardinal	380
-1000112	da	specialafmærkningen	specialafmærkning	381
-1000113	da	den isolerede fareafmærkning	isoleret fareafmærkning	382
-1000114	da	et fiskenet	fiskenet	383
-1000115	da	en grøn lystønde	grøn lystønde	384
-1000116	da	bundgarnspæle	bundgarnspæle	385
-1000117	da	en sejlbåd	sejlbåd	386
-1000118	da	en grøn-rød-grøn lystønde	grøn-rød-grøn lystønde	387
-1000119	da	sydvest	SW	388
+1000093	da	en sort-gul-sort lystønde	sort-gul-sort lystønde	363
+1000094	da	en gul-sort-gul lystønde	gul-sort-gul lystønde	364
+1000095	da	er ude af drift	ude af drift	365
+1000096	da	et gult dagsømærke	gult dagsømærke	366
+1000097	da	vestkardinalen	vestkardinal	367
+1000098	da	den styrbord sideafmærkning	styrbord sideafmærkning	368
+1000099	da	et grønt-rødt-grønt dagsømærke	grønt-rødt-grønt dagsømærke	369
+1000100	da	den bagbord sideafmærkning	bagbord sideafmærkning	370
+1000101	da	en militærøvelse	militærøvelse	371
+1000102	da	en {{color}} dunk	dunk	372
+1000103	da	den styrbord skillepunktsafmærkning	styrbord skillepunktsafmærkning	373
+1000104	da	vinkelfyret	vinkelfyr	374
+1000105	da	en redningsflåde	redningsflåde	375
+1000106	da	et gult-sort dagsømærke	gult-sort dagsømærke	376
+1000107	da	et rødt dagsømærke	rødt dagsømærke	377
+1000108	da	\N	permanent	378
+1000109	da	en rød-hvidt lystønde	rød-hvidt lystønde	379
+1000110	da	et rødt-hvidt dagsømærke	rødt-hvidt dagsømærke	380
+1000111	da	nordkardinalen	nordkardinal	381
+1000112	da	specialafmærkningen	specialafmærkning	382
+1000113	da	den isolerede fareafmærkning	isoleret fareafmærkning	383
+1000114	da	et fiskenet	fiskenet	384
+1000115	da	en grøn lystønde	grøn lystønde	385
+1000116	da	bundgarnspæle	bundgarnspæle	386
+1000117	da	en sejlbåd	sejlbåd	387
+1000118	da	en grøn-rød-grøn lystønde	grøn-rød-grøn lystønde	388
+1000119	da	sydvest	SW	389
 \.
 
 
@@ -5348,165 +5350,165 @@ ListParamType	1000002	dgps_station_list
 --
 
 COPY public."ParamType_DictionaryEntry" ("ListParamType_id", values_id, "indexNo") FROM stdin;
-5	321	0
-5	347	1
-5	294	2
-5	353	3
-5	356	4
-5	335	5
-5	295	6
-5	308	7
-5	351	8
-5	280	9
-5	289	10
-5	326	11
-5	307	12
-6	322	0
-6	375	1
-6	310	2
-6	358	3
-6	287	4
-6	376	5
-6	368	6
-6	330	7
-6	379	8
-6	365	9
-6	320	10
-7	301	0
-7	309	1
-7	319	2
-7	281	3
-7	305	4
-13	380	0
-13	284	1
-13	359	2
-13	366	3
-13	369	4
-13	367	5
-13	328	6
-13	372	7
-13	343	8
-13	381	9
-13	382	10
-13	304	11
-13	357	12
-13	307	13
-14	354	0
-14	312	1
-14	362	2
-14	363	3
-14	384	4
-14	278	5
-14	331	6
-14	387	7
-14	378	8
-14	283	9
-14	348	10
-14	288	11
-15	279	0
-15	352	1
-15	339	2
-15	346	3
-15	373	4
-15	342	5
-15	336	6
-16	306	0
-16	293	1
-16	303	2
-16	299	3
-16	297	4
-16	341	5
-16	388	6
-16	286	7
-17	322	0
-17	375	1
-17	310	2
-17	358	3
-17	287	4
-17	376	5
-17	368	6
-17	330	7
-17	379	8
-17	365	9
-17	320	10
-17	354	11
-17	312	12
-17	362	13
-17	363	14
-17	384	15
-17	278	16
-17	387	17
-17	331	18
-17	378	19
-17	283	20
-17	348	21
-17	288	22
-18	332	0
-18	292	1
-18	282	2
-18	329	3
-18	340	4
-19	345	0
-19	324	1
-19	371	2
-20	361	0
-20	333	1
-20	344	2
-20	374	3
-20	386	4
-20	296	5
-20	337	6
-20	314	7
-20	318	8
-20	383	9
-20	385	10
-20	291	11
-20	300	12
-22	279	0
-22	321	1
-22	347	2
-22	294	3
-22	353	4
-22	356	5
-22	335	6
-22	308	7
-22	295	8
-22	351	9
-22	289	10
-22	280	11
-22	380	12
-22	284	13
-22	359	14
-22	366	15
-22	369	16
-22	367	17
-22	328	18
-22	372	19
-22	343	20
-22	382	21
-22	381	22
-22	304	23
-23	325	0
-23	364	1
-25	285	0
-25	338	1
-25	302	2
-26	327	0
-26	298	1
-26	349	2
-26	313	3
-27	370	0
-27	360	1
-27	315	2
-27	311	3
-27	317	4
-29	290	0
-29	316	1
-29	350	2
-30	323	0
-30	355	1
-31	377	0
-31	334	1
+5	322	0
+5	348	1
+5	295	2
+5	354	3
+5	357	4
+5	336	5
+5	296	6
+5	309	7
+5	352	8
+5	281	9
+5	290	10
+5	327	11
+5	308	12
+6	323	0
+6	376	1
+6	311	2
+6	359	3
+6	288	4
+6	377	5
+6	369	6
+6	331	7
+6	380	8
+6	366	9
+6	321	10
+7	302	0
+7	310	1
+7	320	2
+7	282	3
+7	306	4
+13	381	0
+13	285	1
+13	360	2
+13	367	3
+13	370	4
+13	368	5
+13	329	6
+13	373	7
+13	344	8
+13	382	9
+13	383	10
+13	305	11
+13	358	12
+13	308	13
+14	355	0
+14	313	1
+14	363	2
+14	364	3
+14	385	4
+14	279	5
+14	332	6
+14	388	7
+14	379	8
+14	284	9
+14	349	10
+14	289	11
+15	280	0
+15	353	1
+15	340	2
+15	347	3
+15	374	4
+15	343	5
+15	337	6
+16	307	0
+16	294	1
+16	304	2
+16	300	3
+16	298	4
+16	342	5
+16	389	6
+16	287	7
+17	323	0
+17	376	1
+17	311	2
+17	359	3
+17	288	4
+17	377	5
+17	369	6
+17	331	7
+17	380	8
+17	366	9
+17	321	10
+17	355	11
+17	313	12
+17	363	13
+17	364	14
+17	385	15
+17	279	16
+17	388	17
+17	332	18
+17	379	19
+17	284	20
+17	349	21
+17	289	22
+18	333	0
+18	293	1
+18	283	2
+18	330	3
+18	341	4
+19	346	0
+19	325	1
+19	372	2
+20	362	0
+20	334	1
+20	345	2
+20	375	3
+20	387	4
+20	297	5
+20	338	6
+20	315	7
+20	319	8
+20	384	9
+20	386	10
+20	292	11
+20	301	12
+22	280	0
+22	322	1
+22	348	2
+22	295	3
+22	354	4
+22	357	5
+22	336	6
+22	309	7
+22	296	8
+22	352	9
+22	290	10
+22	281	11
+22	381	12
+22	285	13
+22	360	14
+22	367	15
+22	370	16
+22	368	17
+22	329	18
+22	373	19
+22	344	20
+22	383	21
+22	382	22
+22	305	23
+23	326	0
+23	365	1
+25	286	0
+25	339	1
+25	303	2
+26	328	0
+26	299	1
+26	350	2
+26	314	3
+27	371	0
+27	361	1
+27	316	2
+27	312	3
+27	318	4
+29	291	0
+29	317	1
+29	351	2
+30	324	0
+30	356	1
+31	378	0
+31	335	1
 1000002	1000001	0
 1000002	1000004	1
 1000002	1000003	2
@@ -5823,19 +5825,19 @@ COPY public."ScriptResource" (id, created, updated, version, content, path, type
 16	2026-10-22 00:00:00	2026-10-22 00:00:00	0	/*\n * Copyright 2017 Danish Maritime Authority.\n *\n * Licensed under the Apache License, Version 2.0 (the "License");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *       http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an "AS IS" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License.\n */\n\nvar safetynet = message.promulgation('safetynet');\nif (safetynet !== null && safetynet.areaName !== null) {\n    var safetynetService = CdiUtils.getBean(org.niord.core.promulgation.SafetyNetPromulgationService.class);\n    var area = safetynetService.findAreaByName(\n        safetynet.type.typeId,\n        safetynet.areaName);\n    if (area !== null) {\n        params.put('area', area.toVo(org.niord.model.DataFilter.get().fields(org.niord.model.DataFilter.DETAILS)));\n    }\n}\n	templates/mailinglist/publish-safetynet.js	JS
 17	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#-- introduction: this deployment's text goes here -->\n	templates/mailinglist/safetynet-intro.ftl	FM
 18	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#-- introduction: this deployment's text goes here -->\n	templates/messages/fa-list-pdf-intro.ftl	FM
-19	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.fa.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        .intro {\n            margin-top: 1cm;\n            font-size: 12px;\n        }\n        .intro table {\n            margin: 0 auto;\n            font-size: 12px;\n            text-align: left;\n        }\n        .intro table th {\n            width: 2cm;\n            font-weight: normal;\n        }\n    </style>\n\n</head>\n<body>\n\n\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.fa.title')}"/>\n\n<h1>${text("pdf.fa.title")}</h1>\n\n<table class="first-page-info-line" style="margin-top: 10mm">\n    <tr>\n        <td>\n            ${.now?string['dd. MMMM yyyy']}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td align="right">${text['pdf.fa.subtitle']}</td>\n    </tr>\n</table>\n\n<div class="intro">\n  <#include "fa-list-pdf-intro.ftl">\n</div>\n\n<div class="page-break">&nbsp;</div>\n\n<@renderMessageList messages=messages areaHeadings=areaHeadings/>\n\n</body>\n</html>\n	templates/messages/fa-list-pdf.ftl	FM
+19	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.fa.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        .intro {\n            margin-top: 1cm;\n            font-size: 12px;\n        }\n        .intro table {\n            margin: 0 auto;\n            font-size: 12px;\n            text-align: left;\n        }\n        .intro table th {\n            width: 2cm;\n            font-weight: normal;\n        }\n    </style>\n\n</head>\n<body>\n\n\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.fa.title')}"/>\n\n<h1>${text("pdf.fa.title")}</h1>\n\n<table class="first-page-info-line" style="margin-top: 10mm">\n    <tr>\n        <td>\n            ${.now?string(text('msg.time.date_format'))}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td align="right">${text['pdf.fa.subtitle']}</td>\n    </tr>\n</table>\n\n<div class="intro">\n  <#include "fa-list-pdf-intro.ftl">\n</div>\n\n<div class="page-break">&nbsp;</div>\n\n<@renderMessageList messages=messages areaHeadings=areaHeadings/>\n\n</body>\n</html>\n	templates/messages/fa-list-pdf.ftl	FM
 20	2026-10-22 00:00:00	2026-10-22 00:00:00	0	\n<#if frontPage!true>\n    <div class="first-page-footer">\n    </div>\n</#if>\n\n<div class="footer">\n    <div style="text-align: center"><img src="/img/company-logo.png" style="height: 1cm"></div>\n</div>\n	templates/messages/message-list-pdf-footer.ftl	FM
-21	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle frontPage=frontPage!true/>\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n</head>\n<body>\n\n\n<@renderDefaultHeaderAndFooter headerText="Generated ${.now?datetime}" frontPage=frontPage!true/>\n\n\n<#if frontPage!true>\n\n    <h1>${text("pdf.list.title")}</h1>\n\n    <div style="margin: 1cm 0">\n        <table border="0">\n            <tr>\n                <th align="right" valign="top" nowrap>Generated: &nbsp;</th>\n                <td>${.now?datetime}</td>\n            </tr>\n            <tr>\n                <th align="right" valign="top" nowrap>Criteria: &nbsp;</th>\n                <td><small>${searchCriteria}</small></td>\n            </tr>\n            <tr>\n                <th align="right" valign="top" nowrap>Result: &nbsp;</th>\n                <td>${messages?size} messages</td>\n            </tr>\n        </table>\n    </div>\n\n    <@renderTOC messages=messages areaHeadings=areaHeadings />\n\n    <div class="page-break">&nbsp;</div>\n\n</#if>\n\n<@renderMessageList messages=messages areaHeadings=areaHeadings/>\n\n</body>\n</html>\n	templates/messages/message-list-pdf.ftl	FM
+21	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle frontPage=frontPage!true/>\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n</head>\n<body>\n\n\n<#-- The moment the list was made, by the language's date-and-time text, in the zone the print is dated in -->\n<#assign generated = .now?string(text('msg.time.date_time_format'))/>\n\n<@renderDefaultHeaderAndFooter headerText="Generated ${generated}" frontPage=frontPage!true/>\n\n\n<#if frontPage!true>\n\n    <h1>${text("pdf.list.title")}</h1>\n\n    <div style="margin: 1cm 0">\n        <table border="0">\n            <tr>\n                <th align="right" valign="top" nowrap>Generated: &nbsp;</th>\n                <td>${generated}</td>\n            </tr>\n            <tr>\n                <th align="right" valign="top" nowrap>Criteria: &nbsp;</th>\n                <td><small>${searchCriteria}</small></td>\n            </tr>\n            <tr>\n                <th align="right" valign="top" nowrap>Result: &nbsp;</th>\n                <td>${messages?size} messages</td>\n            </tr>\n        </table>\n    </div>\n\n    <@renderTOC messages=messages areaHeadings=areaHeadings />\n\n    <div class="page-break">&nbsp;</div>\n\n</#if>\n\n<@renderMessageList messages=messages areaHeadings=areaHeadings/>\n\n</body>\n</html>\n	templates/messages/message-list-pdf.ftl	FM
 22	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n\n    <link rel="stylesheet" type="text/css" href="/css/templates/mail.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n</head>\n<body>\n\n<h3>${text("mail.dear.user", mailTo)}</h3>\n\n<p style="margin-top:20px">\n    ${mailMessage}\n</p>\n\n<p style="margin-top:20px; margin-bottom: 40px">\n    ${text("mail.greetings.best.regards", mailSender)}\n</p>\n\n<hr>\n\n<@renderMessageList messages=messages areaHeadings=false />\n\n</body>\n</html>\n	templates/messages/message-mail.ftl	FM
-23	2026-10-22 00:00:00	2026-10-22 00:00:00	0	\n<#assign line = 'org.niord.core.script.directive.LineDirective'?new()>\n<#assign formatPos = "org.niord.core.script.directive.LatLonDirective"?new()>\n<#assign formatDateInterval = "org.niord.core.script.directive.DateIntervalDirective"?new()>\n<#assign txtToHtml = "org.niord.core.script.directive.TextToHtmlDirective"?new()>\n<#assign trailingDot = "org.niord.core.script.directive.TrailingDotDirective"?new()>\n\n<#-- ***************************************  -->\n<#-- Parametrized message styles             -->\n<#-- ***************************************  -->\n<#macro pageSizeStyle frontPage=true>\n    <style type="text/css" media="all">\n\n        @page {\n            size: ${pageSize!"A4"} ${pageOrientation!"portrait"};\n        }\n\n    <#if frontPage>\n        /** First page rules **/\n        @page :first {\n            margin: 1.5cm 1.0cm;\n            @top-center {\n                content: element(first-page-header);\n            }\n            @bottom-center {\n                content: element(first-page-footer);\n            }\n        }\n    </#if>\n\n    </style>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the default headers and footers  -->\n<#-- ***************************************  -->\n<#macro renderDefaultHeaderAndFooter headerText frontPage=true>\n    <#if frontPage>\n        <div class="first-page-header">\n        </div>\n    </#if>\n    <div class="header">\n        <span style="float: left">${headerText}</span>\n        <span style="float: right">${text("pdf.page")} <span id="pagenumber"></span></span>\n        &nbsp;\n    </div>\n\n    <#include "message-list-pdf-footer.ftl">\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the parent-first area lineage    -->\n<#-- ***************************************  -->\n<#macro areaLineage area>\n    <#if area??>\n        <#if area.parent??>\n            <@areaLineage area=area.parent /> -\n        </#if>\n        <#if area.descs?has_content>${area.descs[0].name}</#if>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Returns the two root-most area headings  -->\n<#-- ***************************************  -->\n<#function areaHeading area="area" >\n    <#if area?? && (!area.parent?? || (area.parent?? && !area.parent.parent??))>\n        <#return area/>\n    </#if>\n    <#if area?? >\n        <#return areaHeading(area.parent) />\n    </#if>\n    <#return NULL/>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Returns if the attachment has the given type  -->\n<#-- ***************************************  -->\n<#function includeAttachment att type >\n    <#return att.display?has_content && att.display == type && att.type?has_content && att.type?starts_with('image')/>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Renders an attachment  -->\n<#-- ***************************************  -->\n<#macro renderAttachment att >\n    <#assign imageStyle='max-width: 100%;' />\n    <#if att.width?has_content && att.height?has_content>\n        <#assign imageStyle="max-width: 100%; width: " + att.width + "; height: " + att.height />\n    <#elseif att.width?has_content>\n        <#assign imageStyle="max-width: 100%; width: " + att.width + "; " />\n    <#elseif att.height?has_content>\n        <#assign imageStyle="max-width: 100%; height: " + att.height + "; " />\n    </#if>\n\n    <div class="attachment">\n        <div>\n            <img src="/rest/repo/file/${att.path}" style="${imageStyle}">\n        </div>\n        <#if att.descs?has_content && att.descs[0].caption?has_content>\n            <div style="margin: 1mm; font-style: italic">${att.descs[0].caption}</div>\n        </#if>\n    </div>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders all nessage attachments of the given type    -->\n<#-- ***************************************  -->\n<#macro renderMessageAttachments msg type>\n    <#if msg.attachments?has_content>\n        <#list msg.attachments as att>\n            <#if includeAttachment(att, type)>\n                <@renderAttachment att=att />\n            </#if>\n        </#list>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders all separate-page attachments    -->\n<#-- ***************************************  -->\n<#macro renderSeparatePageAttachments msg>\n    <#if msg.attachments?has_content>\n        <#list msg.attachments as att>\n            <#if includeAttachment(att, 'SEPARATE_PAGE')>\n            <div class="separate-attachment-page">\n                <#assign messageId=msg.id />\n                <#if msg.shortId?has_content>\n                    <#assign messageId=msg.shortId />\n                </#if>\n                <div style="margin: 1mm">\n                    <h4 id="${messageId}">${text("msg.attachment.title", messageId)}</h4>\n                </div>\n                <@renderAttachment att=att />\n            </div>\n            </#if>\n        </#list>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the TOC for area-headings        -->\n<#-- ***************************************  -->\n<#macro renderTOC messages areaHeadings prefix="">\n    <#if areaHeadings>\n        <div>\n            <h2>${text("pdf.toc")}</h2>\n            <@renderTOCEntries messages=messages prefix=prefix />\n        </div>\n    </#if>\n</#macro>\n\n\n<#macro renderTOCEntries messages prefix="">\n    <#assign tocAreaHeadingId=-9999999 />\n    <ol class='toc'>\n        <#list messages as msg>\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if area?? && area.id != tocAreaHeadingId>\n                    <#assign tocAreaHeadingId=area.id />\n                    <li><a href='#${prefix}${tocAreaHeadingId?c}'><@areaLineage area=areaHeading(area) /></a></li>\n                </#if>\n            <#elseif  tocAreaHeadingId == -9999999>\n                <li><a href='#${prefix}${tocAreaHeadingId?c}'>${text("msg.area.general")}</a></li>\n                <#assign tocAreaHeadingId=-9999998 />\n            </#if>\n        </#list>\n    </ol>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Returns the desc for the given language  -->\n<#-- ***************************************  -->\n<#function descForLang entity lang=language >\n    <#if entity.descs?has_content>\n        <#list entity.descs as desc>\n            <#if desc.lang?? && desc.lang == lang>\n                <#return desc />\n            </#if>\n        </#list>\n    </#if>\n    <#if entity.descs?has_content>\n        <#return entity.descs[0] />\n    </#if>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Returns the given promulgation           -->\n<#-- ***************************************  -->\n<#function promulgation msg type >\n    <#if msg.promulgations?has_content>\n        <#list msg.promulgations as p>\n            <#if p.type?? && p.type.typeId == type>\n                <#return p />\n            </#if>\n        </#list>\n    </#if>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Renders a language flag if wrong lang    -->\n<#-- ***************************************  -->\n<#macro renderLangFlag desc lang=language  draft=draft!false >\n    <#if draft == true && desc?? && desc.lang != lang>\n        <img src="/img/flags/${desc.lang}.png" class="lang-flag"/>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the number and year of a         -->\n<#-- as "number-3-digits/year-2-digits"       -->\n<#-- ***************************************  -->\n<#macro renderNumberYearId message defaultValue="" >\n    <#if message?? && message.year?? && message.number??>\n        ${message.number?string['000']}/${(message.year % 100)?string['00']}\n    <#else>\n        ${defaultValue}\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the message source + publ. date  -->\n<#-- ***************************************  -->\n<#function renderSource desc msg >\n    <#assign source=""/>\n    <#if desc?? && desc.source?has_content>\n        <#assign source=source + desc.source/>\n    </#if>\n    <#if desc?? && desc.source?has_content && msg.publishDateFrom??>\n        <#assign source=source?remove_ending(".") + ". "/>\n    </#if>\n    <#if msg.publishDateFrom??>\n        <#assign source=source + text('msg.field.published') + ' ' + msg.publishDateFrom?string(text('msg.time.date_format'))/>\n    </#if>\n    <#return source/>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Renders a message part                   -->\n<#-- ***************************************  -->\n<#macro renderMessagePart part lang=language draft=draft!false >\n    <#assign partDesc=descForLang(part, lang)!>\n    <#if !(part.hideSubject!false) && partDesc?? && partDesc.subject??>\n        <p>\n            <strong>${partDesc.subject}</strong>\n            <@renderLangFlag desc=partDesc lang=lang draft=draft/>\n        </p>\n    </#if>\n    <#if partDesc?? && partDesc.details??>\n        <div>\n            <@line>${partDesc.details}</@line>\n        </div>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders a message                        -->\n<#-- ***************************************  -->\n<#macro renderMessage msg lang=language draft=draft!false link=link!false >\n\n    <#assign msgDesc=descForLang(msg, lang)!>\n\n    <div style="width: 100%;">\n\n    <#-- Attachments to display above message -->\n    <@renderMessageAttachments msg=msg type="ABOVE" />\n\n\n    <#-- Title line -->\n    <#if msg.originalInformation?has_content && msg.originalInformation>\n        <div class="avoid-break-after original-information">*</div>\n    </#if>\n\n    <#if msg.shortId?has_content>\n        <div class="avoid-break-before-after">\n            <span class="label-message-id">${msg.shortId}</span>\n            <#if msg.status == 'CANCELLED' || (msg.status == 'EXPIRED' && msg.type != 'PERMANENT_NOTICE')>\n                <span class="label-status">${text("msg.status." + msg.status)}</span>\n            </#if>\n            <#if msg.mainType == 'NM' && msg.type??>\n                <#switch msg.type>\n                    <#case 'TEMPORARY_NOTICE'>(T)<#break>\n                    <#case 'PRELIMINARY_NOTICE'>(P)<#break>\n                </#switch>\n            </#if>\n        </div>\n    </#if>\n\n    <#if msgDesc?has_content && msgDesc.title?has_content>\n        <div class="avoid-break-before-after" id="msg_${msg.id}">\n            <strong>\n                <#if link == true>\n                    <a href="${adminAppUrl}/messages?messageId=${msg.id?url('UTF-8')}" target="_blank" id="msg_${msg.id}">\n                        ${msgDesc.title}\n                    </a>\n                <#else>\n                    ${msgDesc.title}\n                </#if>\n            </strong>\n            <@renderLangFlag desc=msgDesc lang=lang />\n        </div>\n    </#if>\n\n\n    <table class="field-table">\n\n        <#-- Type line (drafts only) -->\n        <#if draft == true>\n            <tr>\n                <td class="field-name">${text("msg.field.type")}</td>\n                <td class="field-value">\n                    ${text("msg.type." + msg.type)} ${msg.mainType}\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Status (drafts only) -->\n        <#if draft == true>\n            <tr>\n                <td class="field-name">${text("msg.field.status")}</td>\n                <td class="field-value">\n                    ${msg.status?lower_case}\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Reference lines -->\n        <#if msg.references?has_content>\n            <tr>\n                <td class="field-name">\n                    ${text("msg.field.references")}\n                </td>\n                <td class="field-value">\n                    <#list msg.references as ref>\n                        <#assign refDesc=descForLang(ref, lang)!>\n                        <div>\n                            <@trailingDot>\n                                <#if link == true>\n                                    <a href="${adminAppUrl}/messages?messageId=${ref.messageId?url('UTF-8')}" target="_blank" id="msg_${ref.messageId}">\n                                        ${ref.messageId}\n                                    </a>\n                                <#else>\n                                    ${ref.messageId}\n                                </#if>\n\n                                <#if ref.type == 'REPETITION'>\n                                    - ${text("msg.reference.repetition")}\n                                <#elseif ref.type == 'REPETITION_NEW_TIME'>\n                                    - ${text("msg.reference.repetition_new_time")}\n                                <#elseif ref.type == 'CANCELLATION'>\n                                    - ${text("msg.reference.cancellation")}\n                                <#elseif ref.type == 'UPDATE'>\n                                    - ${text("msg.reference.update")}\n                                </#if>\n\n                                <#if refDesc?has_content && refDesc.description??>\n                                    - ${refDesc.description}\n                                </#if>\n                            </@trailingDot>\n                        </div>\n                    </#list>\n                </td>\n            </tr>\n        </#if>\n\n\n        <#-- Details line -->\n        <#if msg.parts?has_content>\n            <#list msg.parts as part>\n                <tr style="page-break-inside: auto;">\n                    <td class="field-name">\n                        <#if part?is_first || part.type != msg.parts[part?index - 1].type>\n                            ${text("msg.field." + part.type?lower_case)}\n                        </#if>\n                    </td>\n                    <td class="field-value message-description" style="page-break-inside: auto;">\n                        <@renderMessagePart part=part lang=lang draft=draft/>\n                    </td>\n                </tr>\n            </#list>\n        </#if>\n\n\n        <#-- Charts line -->\n        <#if msg.charts?has_content>\n            <tr>\n                <td class="field-name">${text("msg.field.charts")}</td>\n                <td class="field-value">\n                    <@trailingDot>\n                        <#list msg.charts as chart>\n                          ${chart.chartNumber}<#if chart.internationalNumber?has_content> (INT ${chart.internationalNumber?c})</#if><#if chart_has_next>,</#if>\n                        </#list>\n                    </@trailingDot>\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Publication line -->\n        <#if msgDesc?has_content && msgDesc.publication?has_content>\n            <tr>\n                <td class="field-name">${text("msg.field.publication")}</td>\n                <td class="field-value">\n                ${msgDesc.publication!""}\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Source line -->\n        <#assign source=renderSource(msgDesc, msg)/>\n        <#if source?has_content>\n            <tr>\n                <td class="field-value" align="right" colspan="2">\n                    (${source!""})\n                </td>\n            </tr>\n        </#if>\n\n    </table>\n\n    <#-- Attachments to display below message -->\n    <@renderMessageAttachments msg=msg type="BELOW" />\n\n    </div>\n\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders a list of messages               -->\n<#-- ***************************************  -->\n<#macro renderMessageList messages areaHeadings=true prefix="" draft=draft!false link=link!false>\n\n    <#assign areaHeadingId=-9999999 />\n\n    <table class="message-table">\n        <#-- Layout row for fixed-layout table -->\n        <tr>\n            <#if mapThumbnails!true>\n                <#assign colspan=2 />\n                <td width="140"></td>\n                <td width="*"></td>\n            <#else>\n                <#assign colspan=1 />\n                <td width="100%"></td>\n            </#if>\n        </tr>\n\n        <#list messages as msg>\n\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if areaHeadings && area?? && area.id != areaHeadingId>\n                    <#assign areaHeadingId=area.id />\n                    <tr class="table-header-row">\n                        <td colspan="${colspan}" class="table-header"><h4 id="${prefix}${areaHeadingId?c}"><@areaLineage area=areaHeading(area) /></h4></td>\n                    </tr>\n                </#if>\n            <#elseif  areaHeadings && areaHeadingId == -9999999>\n                <tr class="table-header-row">\n                    <td colspan="${colspan}" class="table-header"><h4 id="${prefix}${areaHeadingId?c}">${text("msg.area.general")}</h4></td>\n                </tr>\n                <#assign areaHeadingId=-9999998 />\n            </#if>\n            <#if separatePageIds?? && separatePageIds?seq_contains(msg.id)>\n                <#assign msgClass="break-before" />\n            <#else>\n                <#assign msgClass="" />\n            </#if>\n            <tr class="${msgClass}">\n                <#if mapThumbnails!true>\n                    <td class="table-image">\n                        <img src="/rest/message-map-image/${msg.id}.png" width="120" height="120"/>\n                    </td>\n                </#if>\n                <td class="table-item">\n                    <#if draft>\n                        <#list languages as lang>\n                            <#if lang?is_first>\n                                <#-- A language no dictionary names (no lang.<code>) is named by its code, as the administration app does -->\n                                <div class="lang-header-first">\n                                    <img src="/img/flags/${lang}.png" height="12"/>&nbsp;<#attempt>${text('lang.' + lang)}<#recover>${lang?upper_case}</#attempt> ${text('pdf.translation')}\n                                </div>\n                            <#else>\n                                <div class="lang-header">\n                                    <img src="/img/flags/${lang}.png" height="12"/>&nbsp;<#attempt>${text('lang.' + lang)}<#recover>${lang?upper_case}</#attempt> ${text('pdf.translation')}\n                                </div>\n                            </#if>\n                            <@renderMessage msg=msg lang=lang draft=draft link=link/>\n                        </#list>\n                    <#else>\n                        <@renderMessage msg=msg lang=language draft=draft link=link/>\n                    </#if>\n                </td>\n            </tr>\n        </#list>\n    </table>\n\n    <#list messages as msg>\n        <@renderSeparatePageAttachments msg=msg />\n    </#list>\n\n</#macro>\n	templates/messages/message-support.ftl	FM
+23	2026-10-22 00:00:00	2026-10-22 00:00:00	0	\n<#assign line = 'org.niord.core.script.directive.LineDirective'?new()>\n<#assign formatPos = "org.niord.core.script.directive.LatLonDirective"?new()>\n<#assign formatDateInterval = "org.niord.core.script.directive.DateIntervalDirective"?new()>\n<#assign txtToHtml = "org.niord.core.script.directive.TextToHtmlDirective"?new()>\n<#assign trailingDot = "org.niord.core.script.directive.TrailingDotDirective"?new()>\n\n<#-- ***************************************  -->\n<#-- Parametrized message styles             -->\n<#-- ***************************************  -->\n<#macro pageSizeStyle frontPage=true>\n    <style type="text/css" media="all">\n\n        @page {\n            size: ${pageSize!"A4"} ${pageOrientation!"portrait"};\n        }\n\n    <#if frontPage>\n        /** First page rules **/\n        @page :first {\n            margin: 1.5cm 1.0cm;\n            @top-center {\n                content: element(first-page-header);\n            }\n            @bottom-center {\n                content: element(first-page-footer);\n            }\n        }\n    </#if>\n\n    </style>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the default headers and footers  -->\n<#-- ***************************************  -->\n<#macro renderDefaultHeaderAndFooter headerText frontPage=true>\n    <#if frontPage>\n        <div class="first-page-header">\n        </div>\n    </#if>\n    <div class="header">\n        <span style="float: left">${headerText}</span>\n        <span style="float: right">${text("pdf.page")} <span id="pagenumber"></span></span>\n        &nbsp;\n    </div>\n\n    <#include "message-list-pdf-footer.ftl">\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the parent-first area lineage    -->\n<#-- ***************************************  -->\n<#macro areaLineage area>\n    <#if area??>\n        <#if area.parent??>\n            <@areaLineage area=area.parent /> -\n        </#if>\n        <#if area.descs?has_content>${area.descs[0].name}</#if>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Returns the two root-most area headings  -->\n<#-- ***************************************  -->\n<#function areaHeading area="area" >\n    <#if area?? && (!area.parent?? || (area.parent?? && !area.parent.parent??))>\n        <#return area/>\n    </#if>\n    <#if area?? >\n        <#return areaHeading(area.parent) />\n    </#if>\n    <#return NULL/>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Returns if the attachment has the given type  -->\n<#-- ***************************************  -->\n<#function includeAttachment att type >\n    <#return att.display?has_content && att.display == type && att.type?has_content && att.type?starts_with('image')/>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- A repository path as an address: each segment encoded, the slashes kept.\n     A path is stored encoded (an upload's) or as the file was named (an imported\n     message's), so an escape the path already holds (%25, %3B, %20) is kept and\n     every other character is encoded: both spellings give the same address, and a\n     "%" that starts no escape is a percent sign. The admin app and the public site\n     encode a path the same way (encodeRepoPath). -->\n<#-- ***************************************  -->\n<#function repoPathUrl path>\n    <#local out = '' />\n    <#list path?split('/') as segment>\n        <#if !segment?is_first><#local out = out + '/' /></#if>\n        <#list segment?matches(r'%[0-9A-Fa-f]{2}|%|[^%]+') as part>\n            <#if part?length == 3 && part?starts_with('%')>\n                <#local out = out + part />\n            <#else>\n                <#local out = out + part?url('UTF-8') />\n            </#if>\n        </#list>\n    </#list>\n    <#return out />\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Renders an attachment  -->\n<#-- ***************************************  -->\n<#macro renderAttachment att >\n    <#assign imageStyle='max-width: 100%;' />\n    <#if att.width?has_content && att.height?has_content>\n        <#assign imageStyle="max-width: 100%; width: " + att.width + "; height: " + att.height />\n    <#elseif att.width?has_content>\n        <#assign imageStyle="max-width: 100%; width: " + att.width + "; " />\n    <#elseif att.height?has_content>\n        <#assign imageStyle="max-width: 100%; height: " + att.height + "; " />\n    </#if>\n\n    <div class="attachment">\n        <div>\n            <img src="/rest/repo/file/${repoPathUrl(att.path)}" style="${imageStyle}">\n        </div>\n        <#if att.descs?has_content && att.descs[0].caption?has_content>\n            <div style="margin: 1mm; font-style: italic">${att.descs[0].caption}</div>\n        </#if>\n    </div>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders all nessage attachments of the given type    -->\n<#-- ***************************************  -->\n<#macro renderMessageAttachments msg type>\n    <#if msg.attachments?has_content>\n        <#list msg.attachments as att>\n            <#if includeAttachment(att, type)>\n                <@renderAttachment att=att />\n            </#if>\n        </#list>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders all separate-page attachments    -->\n<#-- ***************************************  -->\n<#macro renderSeparatePageAttachments msg>\n    <#if msg.attachments?has_content>\n        <#list msg.attachments as att>\n            <#if includeAttachment(att, 'SEPARATE_PAGE')>\n            <div class="separate-attachment-page">\n                <#assign messageId=msg.id />\n                <#if msg.shortId?has_content>\n                    <#assign messageId=msg.shortId />\n                </#if>\n                <div style="margin: 1mm">\n                    <h4 id="${messageId}">${text("msg.attachment.title", messageId)}</h4>\n                </div>\n                <@renderAttachment att=att />\n            </div>\n            </#if>\n        </#list>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the TOC for area-headings        -->\n<#-- ***************************************  -->\n<#macro renderTOC messages areaHeadings prefix="">\n    <#if areaHeadings>\n        <div>\n            <h2>${text("pdf.toc")}</h2>\n            <@renderTOCEntries messages=messages prefix=prefix />\n        </div>\n    </#if>\n</#macro>\n\n\n<#macro renderTOCEntries messages prefix="">\n    <#assign tocAreaHeadingId=-9999999 />\n    <ol class='toc'>\n        <#list messages as msg>\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if area?? && area.id != tocAreaHeadingId>\n                    <#assign tocAreaHeadingId=area.id />\n                    <li><a href='#${prefix}${tocAreaHeadingId?c}'><@areaLineage area=areaHeading(area) /></a></li>\n                </#if>\n            <#elseif  tocAreaHeadingId == -9999999>\n                <li><a href='#${prefix}${tocAreaHeadingId?c}'>${text("msg.area.general")}</a></li>\n                <#assign tocAreaHeadingId=-9999998 />\n            </#if>\n        </#list>\n    </ol>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Returns the desc for the given language  -->\n<#-- ***************************************  -->\n<#function descForLang entity lang=language >\n    <#if entity.descs?has_content>\n        <#list entity.descs as desc>\n            <#if desc.lang?? && desc.lang == lang>\n                <#return desc />\n            </#if>\n        </#list>\n    </#if>\n    <#if entity.descs?has_content>\n        <#return entity.descs[0] />\n    </#if>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Returns the given promulgation           -->\n<#-- ***************************************  -->\n<#function promulgation msg type >\n    <#if msg.promulgations?has_content>\n        <#list msg.promulgations as p>\n            <#if p.type?? && p.type.typeId == type>\n                <#return p />\n            </#if>\n        </#list>\n    </#if>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Renders a language flag if wrong lang    -->\n<#-- ***************************************  -->\n<#macro renderLangFlag desc lang=language  draft=draft!false >\n    <#if draft == true && desc?? && desc.lang != lang>\n        <img src="/img/flags/${desc.lang}.png" class="lang-flag"/>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the number and year of a         -->\n<#-- as "number-3-digits/year-2-digits"       -->\n<#-- ***************************************  -->\n<#macro renderNumberYearId message defaultValue="" >\n    <#if message?? && message.year?? && message.number??>\n        ${message.number?string['000']}/${(message.year % 100)?string['00']}\n    <#else>\n        ${defaultValue}\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders the message source + publ. date  -->\n<#-- ***************************************  -->\n<#function renderSource desc msg >\n    <#assign source=""/>\n    <#if desc?? && desc.source?has_content>\n        <#assign source=source + desc.source/>\n    </#if>\n    <#if desc?? && desc.source?has_content && msg.publishDateFrom??>\n        <#assign source=source?remove_ending(".") + ". "/>\n    </#if>\n    <#if msg.publishDateFrom??>\n        <#assign source=source + text('msg.field.published') + ' ' + msg.publishDateFrom?string(text('msg.time.date_format'))/>\n    </#if>\n    <#return source/>\n</#function>\n\n\n<#-- ***************************************  -->\n<#-- Renders a message part                   -->\n<#-- ***************************************  -->\n<#macro renderMessagePart part lang=language draft=draft!false >\n    <#assign partDesc=descForLang(part, lang)!>\n    <#if !(part.hideSubject!false) && partDesc?? && partDesc.subject??>\n        <p>\n            <strong>${partDesc.subject}</strong>\n            <@renderLangFlag desc=partDesc lang=lang draft=draft/>\n        </p>\n    </#if>\n    <#if partDesc?? && partDesc.details??>\n        <div>\n            <@line>${partDesc.details}</@line>\n        </div>\n    </#if>\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders a message                        -->\n<#-- ***************************************  -->\n<#macro renderMessage msg lang=language draft=draft!false link=link!false >\n\n    <#assign msgDesc=descForLang(msg, lang)!>\n\n    <div style="width: 100%;">\n\n    <#-- Attachments to display above message -->\n    <@renderMessageAttachments msg=msg type="ABOVE" />\n\n\n    <#-- Title line -->\n    <#if msg.originalInformation?has_content && msg.originalInformation>\n        <div class="avoid-break-after original-information">*</div>\n    </#if>\n\n    <#if msg.shortId?has_content>\n        <div class="avoid-break-before-after">\n            <span class="label-message-id">${msg.shortId}</span>\n            <#if msg.status == 'CANCELLED' || (msg.status == 'EXPIRED' && msg.type != 'PERMANENT_NOTICE')>\n                <span class="label-status">${text("msg.status." + msg.status)}</span>\n            </#if>\n            <#if msg.mainType == 'NM' && msg.type??>\n                <#switch msg.type>\n                    <#case 'TEMPORARY_NOTICE'>(T)<#break>\n                    <#case 'PRELIMINARY_NOTICE'>(P)<#break>\n                </#switch>\n            </#if>\n        </div>\n    </#if>\n\n    <#if msgDesc?has_content && msgDesc.title?has_content>\n        <div class="avoid-break-before-after" id="msg_${msg.id}">\n            <strong>\n                <#if link == true>\n                    <a href="${adminAppUrl}/messages?messageId=${msg.id?url('UTF-8')}" target="_blank" id="msg_${msg.id}">\n                        ${msgDesc.title}\n                    </a>\n                <#else>\n                    ${msgDesc.title}\n                </#if>\n            </strong>\n            <@renderLangFlag desc=msgDesc lang=lang />\n        </div>\n    </#if>\n\n\n    <table class="field-table">\n\n        <#-- Type line (drafts only) -->\n        <#if draft == true>\n            <tr>\n                <td class="field-name">${text("msg.field.type")}</td>\n                <td class="field-value">\n                    ${text("msg.type." + msg.type)} ${msg.mainType}\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Status (drafts only) -->\n        <#if draft == true>\n            <tr>\n                <td class="field-name">${text("msg.field.status")}</td>\n                <td class="field-value">\n                    ${msg.status?lower_case}\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Reference lines -->\n        <#if msg.references?has_content>\n            <tr>\n                <td class="field-name">\n                    ${text("msg.field.references")}\n                </td>\n                <td class="field-value">\n                    <#list msg.references as ref>\n                        <#assign refDesc=descForLang(ref, lang)!>\n                        <div>\n                            <@trailingDot>\n                                <#if link == true>\n                                    <a href="${adminAppUrl}/messages?messageId=${ref.messageId?url('UTF-8')}" target="_blank" id="msg_${ref.messageId}">\n                                        ${ref.messageId}\n                                    </a>\n                                <#else>\n                                    ${ref.messageId}\n                                </#if>\n\n                                <#if ref.type == 'REPETITION'>\n                                    - ${text("msg.reference.repetition")}\n                                <#elseif ref.type == 'REPETITION_NEW_TIME'>\n                                    - ${text("msg.reference.repetition_new_time")}\n                                <#elseif ref.type == 'CANCELLATION'>\n                                    - ${text("msg.reference.cancellation")}\n                                <#elseif ref.type == 'UPDATE'>\n                                    - ${text("msg.reference.update")}\n                                </#if>\n\n                                <#if refDesc?has_content && refDesc.description??>\n                                    - ${refDesc.description}\n                                </#if>\n                            </@trailingDot>\n                        </div>\n                    </#list>\n                </td>\n            </tr>\n        </#if>\n\n\n        <#-- Details line -->\n        <#if msg.parts?has_content>\n            <#list msg.parts as part>\n                <tr style="page-break-inside: auto;">\n                    <td class="field-name">\n                        <#if part?is_first || part.type != msg.parts[part?index - 1].type>\n                            ${text("msg.field." + part.type?lower_case)}\n                        </#if>\n                    </td>\n                    <td class="field-value message-description" style="page-break-inside: auto;">\n                        <@renderMessagePart part=part lang=lang draft=draft/>\n                    </td>\n                </tr>\n            </#list>\n        </#if>\n\n\n        <#-- Charts line -->\n        <#if msg.charts?has_content>\n            <tr>\n                <td class="field-name">${text("msg.field.charts")}</td>\n                <td class="field-value">\n                    <@trailingDot>\n                        <#list msg.charts as chart>\n                          ${chart.chartNumber}<#if chart.internationalNumber?has_content> (INT ${chart.internationalNumber?c})</#if><#if chart_has_next>,</#if>\n                        </#list>\n                    </@trailingDot>\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Publication line -->\n        <#if msgDesc?has_content && msgDesc.publication?has_content>\n            <tr>\n                <td class="field-name">${text("msg.field.publication")}</td>\n                <td class="field-value">\n                ${msgDesc.publication!""}\n                </td>\n            </tr>\n        </#if>\n\n        <#-- Source line -->\n        <#assign source=renderSource(msgDesc, msg)/>\n        <#if source?has_content>\n            <tr>\n                <td class="field-value" align="right" colspan="2">\n                    (${source!""})\n                </td>\n            </tr>\n        </#if>\n\n    </table>\n\n    <#-- Attachments to display below message -->\n    <@renderMessageAttachments msg=msg type="BELOW" />\n\n    </div>\n\n</#macro>\n\n\n<#-- ***************************************  -->\n<#-- Renders a list of messages               -->\n<#-- ***************************************  -->\n<#macro renderMessageList messages areaHeadings=true prefix="" draft=draft!false link=link!false>\n\n    <#assign areaHeadingId=-9999999 />\n\n    <table class="message-table">\n        <#-- Layout row for fixed-layout table -->\n        <tr>\n            <#if mapThumbnails!true>\n                <#assign colspan=2 />\n                <td width="140"></td>\n                <td width="*"></td>\n            <#else>\n                <#assign colspan=1 />\n                <td width="100%"></td>\n            </#if>\n        </tr>\n\n        <#list messages as msg>\n\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if areaHeadings && area?? && area.id != areaHeadingId>\n                    <#assign areaHeadingId=area.id />\n                    <tr class="table-header-row">\n                        <td colspan="${colspan}" class="table-header"><h4 id="${prefix}${areaHeadingId?c}"><@areaLineage area=areaHeading(area) /></h4></td>\n                    </tr>\n                </#if>\n            <#elseif  areaHeadings && areaHeadingId == -9999999>\n                <tr class="table-header-row">\n                    <td colspan="${colspan}" class="table-header"><h4 id="${prefix}${areaHeadingId?c}">${text("msg.area.general")}</h4></td>\n                </tr>\n                <#assign areaHeadingId=-9999998 />\n            </#if>\n            <#if separatePageIds?? && separatePageIds?seq_contains(msg.id)>\n                <#assign msgClass="break-before" />\n            <#else>\n                <#assign msgClass="" />\n            </#if>\n            <tr class="${msgClass}">\n                <#if mapThumbnails!true>\n                    <td class="table-image">\n                        <img src="/rest/message-map-image/${msg.id}.png" width="120" height="120"/>\n                    </td>\n                </#if>\n                <td class="table-item">\n                    <#if draft>\n                        <#list languages as lang>\n                            <#if lang?is_first>\n                                <#-- A language no dictionary names (no lang.<code>) is named by its code, as the administration app does -->\n                                <div class="lang-header-first">\n                                    <img src="/img/flags/${lang}.png" height="12"/>&nbsp;<#attempt>${text('lang.' + lang)}<#recover>${lang?upper_case}</#attempt> ${text('pdf.translation')}\n                                </div>\n                            <#else>\n                                <div class="lang-header">\n                                    <img src="/img/flags/${lang}.png" height="12"/>&nbsp;<#attempt>${text('lang.' + lang)}<#recover>${lang?upper_case}</#attempt> ${text('pdf.translation')}\n                                </div>\n                            </#if>\n                            <@renderMessage msg=msg lang=lang draft=draft link=link/>\n                        </#list>\n                    <#else>\n                        <@renderMessage msg=msg lang=language draft=draft link=link/>\n                    </#if>\n                </td>\n            </tr>\n        </#list>\n    </table>\n\n    <#list messages as msg>\n        <@renderSeparatePageAttachments msg=msg />\n    </#list>\n\n</#macro>\n	templates/messages/message-support.ftl	FM
 24	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#-- introduction: this deployment's text goes here -->\n	templates/messages/nm-accumulated-report-pdf-intro.ftl	FM
-25	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<#--\n    The accumulated notices: a year drawn as the weeks it was compiled from.\n\n    The document is sectioned rather than flat, and the sections arrive in the\n    model as "groups" -- each one a source issue, its numbers, its content period and the\n    ids of the messages it printed, in the order that issue printed them. The ids\n    partition the ordered "messages" list rather than duplicating it, so a section\n    can never print something the list does not contain.\n\n    A section whose id list is empty is a week that printed nothing, and it is\n    still listed and still printed -- with its heading and one sentence in place\n    of the tables. The sections are the record of what the year covered, and a\n    year that quietly prints fifty-one of its fifty-two weeks is a document\n    claiming a week was never covered.\n\n    A model with no groups still renders: the flat list under one heading. That is\n    what a preview of an unsourced issue, or any other report pointed at this\n    template, produces.\n-->\n\n<#-- A cut-off is an instant, and which DAY it falls on is answered by the zone the\n     publication's own desk keeps -- never by the renderer's, which on an unattended\n     release is whatever zone the container happens to run in. -->\n\n<#if timeZone?has_content>\n    <#setting time_zone=timeZone>\n</#if>\n\n<#--\n    The messages of one section.\n\n    A section that was handed its own members uses them. A section that was only\n    named its ids picks them out of the ordered list, which is what a model built\n    by hand -- the report editor, a fixture -- hands over, and costs one scan of\n    the whole list per section.\n-->\n<#function messagesOfGroup group>\n    <#if group.messages??>\n        <#return group.messages />\n    </#if>\n    <#return messages?filter(msg -> group.messageIds?seq_contains(msg.id)) />\n</#function>\n\n<#-- The first and last printed number of a set of messages, where they have any. -->\n<#macro numberRange msgs>\n    <#local minNo = -1 />\n    <#local maxNo = -1 />\n    <#list msgs as msg>\n        <#if msg.number??>\n            <#if minNo == -1 || msg.number lt minNo><#local minNo = msg.number /></#if>\n            <#if maxNo == -1 || msg.number gt maxNo><#local maxNo = msg.number /></#if>\n        </#if>\n    </#list>\n    <#if minNo != -1>${minNo?c} - ${maxNo?c}</#if>\n</#macro>\n\n<#-- What a section is called: the source issue's own name, or what it is instead. -->\n<#macro groupTitle group>\n    <#compress>\n        <#if group.manual>\n            ${text('pdf.accumulated.added_by_hand')}\n        <#elseif group.name?has_content>\n            ${group.name}\n        <#elseif group.week??>\n            ${text('pdf.week')} ${group.week?c}\n        <#else>\n            ${text('pdf.nm')}\n        </#if>\n    </#compress>\n</#macro>\n\n<#--\n    One section's messages, split the way the weekly splits its own: the notices\n    proper with area headings, then the announcements under their own heading.\n\n    Split by ?filter rather than by appending to a list one message at a time.\n    Appending builds a sequence out of a chain of concatenations, one link per\n    message, and reading the n'th element walks the chain -- so printing the list\n    afterwards costs the square of its length. On a section of twenty that is\n    nothing; on the flat list a one-off or an unsourced preview produces, where\n    the whole document is one "section" of three thousand, it was the largest\n    single term in the time to render.\n-->\n<#macro renderGroupBody msgs prefix>\n    <#local nmMsgs = msgs?filter(msg -> msg.type != 'MISCELLANEOUS_NOTICE') />\n    <#local miscMsgs = msgs?filter(msg -> msg.type == 'MISCELLANEOUS_NOTICE') />\n\n    <#if nmMsgs?has_content>\n        <@renderMessageList messages=nmMsgs areaHeadings=areaHeadings prefix=prefix/>\n    </#if>\n\n    <#if miscMsgs?has_content>\n        <table width="100%">\n            <tr>\n                <td class="table-header"><h4 id="${prefix}misc">${text('pdf.misc_nm')}</h4></td>\n            </tr>\n        </table>\n        <@renderMessageList messages=miscMsgs areaHeadings=false prefix="${prefix}misc"/>\n    </#if>\n</#macro>\n\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.accumulated.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        .nm-toc {\n            margin-top: 1cm;\n        }\n        .toc {\n            font-size: 12px;\n        }\n        .intro {\n            margin-top: 2cm;\n            font-size: 12px;\n            page-break-after:always;\n        }\n        .intro table {\n            margin: 0 auto;\n            font-size: 12px;\n            text-align: left;\n        }\n        .intro table th {\n            width: 2cm;\n            font-weight: normal;\n        }\n        .year-header {\n            font-size: 24px;\n            text-align: right;\n            margin-top: 1cm;\n            margin-bottom: 1mm;\n        }\n        .group-header {\n            margin-top: 8mm;\n            page-break-after: avoid;\n        }\n        .group-header h3 {\n            margin-bottom: 1mm;\n        }\n        .group-info-line {\n            font-size: 11px;\n            border-bottom: 1px solid #999999;\n            padding-bottom: 1mm;\n        }\n        /* The sentence a section with nothing in it carries: the intro's text\n           size, and none of its cover-page spacing or page break. */\n        .group-empty {\n            font-size: 12px;\n            margin-top: 4mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<#-- Headers and footers -->\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.accumulated.title')} ${year!''}"/>\n\n\n<#--\n    First page. ${year} is the year LABEL and prints exactly as it was typed:\n    free text, in letters as readily as in digits. The volume is counted from\n    ${yearNumber}, the year the numbering derived -- never from the label, which\n    is not arithmetic to do, and never from the clock, which would stamp the year\n    of printing on a document of a year that has been over for months. An issue\n    whose numbering derived no year prints no volume line at all.\n-->\n<h1>${text("pdf.accumulated.title")}</h1>\n\n<div class="year-header">\n    ${year!""}\n</div>\n<table class="first-page-info-line">\n    <tr>\n        <#-- The weekly prints the day it was made here. This one cannot: an annual\n             is routinely rendered again years later, and a printing date would be\n             the only part of the document that was not about its own year. -->\n        <td width="25%" align="left">\n            <#if edition?? && edition != '1'>Version ${edition}</#if>\n        </td>\n        <td width="25%" align="center">ISSN ${ISSN!""}</td>\n        <td width="25%" align="center">\n            <#if yearNumber??>${text('pdf.volume', (yearNumber - 1884))}</#if>\n        </td>\n        <td width="25%" align="right"><@numberRange msgs=messages /></td>\n    </tr>\n</table>\n\n<#if groups?has_content>\n    <div class="nm-toc">\n        <h2>${text("pdf.toc")}</h2>\n        <ol class='toc'>\n            <#list groups as group>\n                <#-- Every section, the empty ones included: the contents list what\n                     the year covered, and a week missing from it reads as a week\n                     that was never covered at all. -->\n                <li><a href='#group_${group?index}'><@groupTitle group=group /></a></li>\n            </#list>\n        </ol>\n    </div>\n</#if>\n\n\n<div class="intro">\n    <#include "nm-accumulated-report-pdf-intro.ftl">\n</div>\n\n\n<#if groups?has_content>\n\n    <#list groups as group>\n        <#assign groupMessages = messagesOfGroup(group) />\n\n        <#-- EVERY section is printed, including one nothing was filed under. The\n             sections are the record of what the year covered, so a week that\n             printed nothing still gets its heading and says so in a sentence; a\n             year that quietly prints fifty-one of its fifty-two weeks is a\n             document claiming a week was never covered. -->\n\n        <#if !group?is_first>\n            <div class="page-break"></div>\n        </#if>\n\n        <div class="group-header">\n            <h3 id="group_${group?index}"><@groupTitle group=group /></h3>\n            <table class="group-info-line" width="100%">\n                <tr>\n                    <td width="40%" align="left">\n                        <#if !group.manual && group.week??>\n                            ${text('pdf.week')} ${group.week?c}<#if group.weekTo?? && group.weekTo != group.week> - ${group.weekTo?c}</#if><#if group.year??>, ${group.year?c}</#if>\n                        </#if>\n                    </td>\n                    <td width="30%" align="center">\n                        <#-- The stretch the week's notices were published in, which is what a\n                             reader of the year looks a week up by. A source with no period\n                             start -- an in-force edition is a single instant -- has its\n                             cut-off alone. ?datetime because a Date arrives without a\n                             declared kind. -->\n                        <#if group.cutoff?? && group.intervalFrom??>\n                            ${text('pdf.accumulated.period')}: ${group.intervalFrom?datetime?string["dd. MMMM yyyy"]} - ${group.cutoff?datetime?string["dd. MMMM yyyy"]}\n                        <#elseif group.cutoff??>\n                            ${text('pdf.accumulated.cutoff')}: ${group.cutoff?datetime?string["dd. MMMM yyyy"]}\n                        </#if>\n                    </td>\n                    <#-- No range where there are no numbers to range over. -->\n                    <td width="30%" align="right"><#if groupMessages?has_content><@numberRange msgs=groupMessages /></#if></td>\n                </tr>\n            </table>\n        </div>\n\n        <#if groupMessages?has_content>\n            <@renderGroupBody msgs=groupMessages prefix="g${group?index}"/>\n        <#else>\n            <p class="group-empty">${text('pdf.accumulated.no_messages')}</p>\n        </#if>\n    </#list>\n\n<#elseif messages?has_content>\n\n    <#-- No sections: the ordered list, whole, exactly as the weekly prints one. -->\n    <div class="group-header">\n        <h3>${text('pdf.nm')}</h3>\n    </div>\n    <@renderGroupBody msgs=messages prefix="nm"/>\n\n</#if>\n\n</body>\n</html>\n	templates/messages/nm-accumulated-report-pdf.ftl	FM
+25	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<#--\n    The accumulated notices: a year drawn as the weeks it was compiled from.\n\n    The document is sectioned rather than flat, and the sections arrive in the\n    model as "groups" -- each one a source issue, its numbers, its content period and the\n    ids of the messages it printed, in the order that issue printed them. The ids\n    partition the ordered "messages" list rather than duplicating it, so a section\n    can never print something the list does not contain.\n\n    A section whose id list is empty is a week that printed nothing, and it is\n    still listed and still printed -- with its heading and one sentence in place\n    of the tables. The sections are the record of what the year covered, and a\n    year that quietly prints fifty-one of its fifty-two weeks is a document\n    claiming a week was never covered.\n\n    A model with no groups still renders: the flat list under one heading. That is\n    what a preview of an unsourced issue, or any other report pointed at this\n    template, produces.\n-->\n\n<#-- A cut-off is an instant, and which DAY it falls on is answered by the zone the\n     publication's own desk keeps -- never by the renderer's, which on an unattended\n     release is whatever zone the container happens to run in. -->\n\n<#if timeZone?has_content>\n    <#setting time_zone=timeZone>\n</#if>\n\n<#--\n    The messages of one section.\n\n    A section that was handed its own members uses them. A section that was only\n    named its ids picks them out of the ordered list, which is what a model built\n    by hand -- the report editor, a fixture -- hands over, and costs one scan of\n    the whole list per section.\n-->\n<#function messagesOfGroup group>\n    <#if group.messages??>\n        <#return group.messages />\n    </#if>\n    <#return messages?filter(msg -> group.messageIds?seq_contains(msg.id)) />\n</#function>\n\n<#-- The first and last printed number of a set of messages, where they have any. -->\n<#macro numberRange msgs>\n    <#local minNo = -1 />\n    <#local maxNo = -1 />\n    <#list msgs as msg>\n        <#if msg.number??>\n            <#if minNo == -1 || msg.number lt minNo><#local minNo = msg.number /></#if>\n            <#if maxNo == -1 || msg.number gt maxNo><#local maxNo = msg.number /></#if>\n        </#if>\n    </#list>\n    <#if minNo != -1>${minNo?c} - ${maxNo?c}</#if>\n</#macro>\n\n<#-- What a section is called: the source issue's own name, or what it is instead. -->\n<#macro groupTitle group>\n    <#compress>\n        <#if group.manual>\n            ${text('pdf.accumulated.added_by_hand')}\n        <#elseif group.name?has_content>\n            ${group.name}\n        <#elseif group.week??>\n            ${text('pdf.week')} ${group.weeks!(group.week?c)}\n        <#else>\n            ${text('pdf.nm')}\n        </#if>\n    </#compress>\n</#macro>\n\n<#--\n    One section's messages, split the way the weekly splits its own: the notices\n    proper with area headings, then the announcements under their own heading.\n\n    Split by ?filter rather than by appending to a list one message at a time.\n    Appending builds a sequence out of a chain of concatenations, one link per\n    message, and reading the n'th element walks the chain -- so printing the list\n    afterwards costs the square of its length. On a section of twenty that is\n    nothing; on the flat list a one-off or an unsourced preview produces, where\n    the whole document is one "section" of three thousand, it was the largest\n    single term in the time to render.\n-->\n<#macro renderGroupBody msgs prefix>\n    <#local nmMsgs = msgs?filter(msg -> msg.type != 'MISCELLANEOUS_NOTICE') />\n    <#local miscMsgs = msgs?filter(msg -> msg.type == 'MISCELLANEOUS_NOTICE') />\n\n    <#if nmMsgs?has_content>\n        <@renderMessageList messages=nmMsgs areaHeadings=areaHeadings prefix=prefix/>\n    </#if>\n\n    <#if miscMsgs?has_content>\n        <table width="100%">\n            <tr>\n                <td class="table-header"><h4 id="${prefix}misc">${text('pdf.misc_nm')}</h4></td>\n            </tr>\n        </table>\n        <@renderMessageList messages=miscMsgs areaHeadings=false prefix="${prefix}misc"/>\n    </#if>\n</#macro>\n\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.accumulated.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        .nm-toc {\n            margin-top: 1cm;\n        }\n        .toc {\n            font-size: 12px;\n        }\n        .intro {\n            margin-top: 2cm;\n            font-size: 12px;\n            page-break-after:always;\n        }\n        .intro table {\n            margin: 0 auto;\n            font-size: 12px;\n            text-align: left;\n        }\n        .intro table th {\n            width: 2cm;\n            font-weight: normal;\n        }\n        .year-header {\n            font-size: 24px;\n            text-align: right;\n            margin-top: 1cm;\n            margin-bottom: 1mm;\n        }\n        .group-header {\n            margin-top: 8mm;\n            page-break-after: avoid;\n        }\n        .group-header h3 {\n            margin-bottom: 1mm;\n        }\n        .group-info-line {\n            font-size: 11px;\n            border-bottom: 1px solid #999999;\n            padding-bottom: 1mm;\n        }\n        /* The sentence a section with nothing in it carries: the intro's text\n           size, and none of its cover-page spacing or page break. */\n        .group-empty {\n            font-size: 12px;\n            margin-top: 4mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<#-- Headers and footers -->\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.accumulated.title')} ${year!''}"/>\n\n\n<#--\n    First page. ${year} is the year LABEL and prints exactly as it was typed:\n    free text, in letters as readily as in digits. The volume is counted from\n    ${yearNumber}, the year the numbering derived -- never from the label, which\n    is not arithmetic to do, and never from the clock, which would stamp the year\n    of printing on a document of a year that has been over for months. An issue\n    whose numbering derived no year prints no volume line at all.\n-->\n<h1>${text("pdf.accumulated.title")}</h1>\n\n<div class="year-header">\n    ${year!""}\n</div>\n<table class="first-page-info-line">\n    <tr>\n        <#-- The weekly prints the day it was made here. This one cannot: an annual\n             is routinely rendered again years later, and a printing date would be\n             the only part of the document that was not about its own year. -->\n        <td width="25%" align="left">\n            <#if edition?? && edition != '1'>Version ${edition}</#if>\n        </td>\n        <td width="25%" align="center">ISSN ${ISSN!""}</td>\n        <td width="25%" align="center">\n            <#if yearNumber??>${text('pdf.volume', (yearNumber - 1884))}</#if>\n        </td>\n        <td width="25%" align="right"><@numberRange msgs=messages /></td>\n    </tr>\n</table>\n\n<#if groups?has_content>\n    <div class="nm-toc">\n        <h2>${text("pdf.toc")}</h2>\n        <ol class='toc'>\n            <#list groups as group>\n                <#-- Every section, the empty ones included: the contents list what\n                     the year covered, and a week missing from it reads as a week\n                     that was never covered at all. -->\n                <li><a href='#group_${group?index}'><@groupTitle group=group /></a></li>\n            </#list>\n        </ol>\n    </div>\n</#if>\n\n\n<div class="intro">\n    <#include "nm-accumulated-report-pdf-intro.ftl">\n</div>\n\n\n<#if groups?has_content>\n\n    <#list groups as group>\n        <#assign groupMessages = messagesOfGroup(group) />\n\n        <#-- EVERY section is printed, including one nothing was filed under. The\n             sections are the record of what the year covered, so a week that\n             printed nothing still gets its heading and says so in a sentence; a\n             year that quietly prints fifty-one of its fifty-two weeks is a\n             document claiming a week was never covered. -->\n\n        <#if !group?is_first>\n            <div class="page-break"></div>\n        </#if>\n\n        <div class="group-header">\n            <h3 id="group_${group?index}"><@groupTitle group=group /></h3>\n            <table class="group-info-line" width="100%">\n                <tr>\n                    <td width="40%" align="left">\n                        <#-- group.weeks is the source's weeks as its name prints them:\n                             "36+37" for a pair, "36-38" for three weeks or more. -->\n                        <#if !group.manual && group.week??>\n                            ${text('pdf.week')} ${group.weeks!(group.week?c)}<#if group.year??>, ${group.year?c}</#if>\n                        </#if>\n                    </td>\n                    <td width="30%" align="center">\n                        <#-- The stretch the week's notices were published in, which is what a\n                             reader of the year looks a week up by. A source with no period\n                             start -- an in-force edition is a single instant -- has its\n                             cut-off alone. ?datetime because a Date arrives without a\n                             declared kind. -->\n                        <#if group.cutoff?? && group.intervalFrom??>\n                            ${text('pdf.accumulated.period')}: ${group.intervalFrom?datetime?string(text("msg.time.date_format"))} - ${group.cutoff?datetime?string(text("msg.time.date_format"))}\n                        <#elseif group.cutoff??>\n                            ${text('pdf.accumulated.cutoff')}: ${group.cutoff?datetime?string(text("msg.time.date_format"))}\n                        </#if>\n                    </td>\n                    <#-- No range where there are no numbers to range over. -->\n                    <td width="30%" align="right"><#if groupMessages?has_content><@numberRange msgs=groupMessages /></#if></td>\n                </tr>\n            </table>\n        </div>\n\n        <#if groupMessages?has_content>\n            <@renderGroupBody msgs=groupMessages prefix="g${group?index}"/>\n        <#else>\n            <p class="group-empty">${text('pdf.accumulated.no_messages')}</p>\n        </#if>\n    </#list>\n\n<#elseif messages?has_content>\n\n    <#-- No sections: the ordered list, whole, exactly as the weekly prints one. -->\n    <div class="group-header">\n        <h3>${text('pdf.nm')}</h3>\n    </div>\n    <@renderGroupBody msgs=messages prefix="nm"/>\n\n</#if>\n\n</body>\n</html>\n	templates/messages/nm-accumulated-report-pdf.ftl	FM
 26	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#-- introduction: this deployment's text goes here -->\n	templates/messages/nm-almanac-report-pdf-intro.ftl	FM
-27	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        table.contact-info {\n            margin-bottom: 5mm;\n            font-size: 11px;\n        }\n        table.contact-info tr td {\n            padding: 3mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_almanac.title')} - ${text('pdf.nm_almanac.subtitle')}"/>\n\n<h1 style="margin-top: 5mm">${text("pdf.nm_almanac.title")}</h1>\n\n<h5>${text("pdf.nm_almanac.desc")}</h5>\n\n<table class="first-page-info-line" style="margin-top: 5mm">\n    <tr>\n        <td>\n            ${.now?string['dd. MMMM yyyy']}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td align="right">${text("pdf.nm_almanac.subtitle")}</td>\n    </tr>\n</table>\n\n<div>\n  <#include "nm-almanac-report-pdf-intro.ftl">\n</div>\n\n<div>\n    <h2>${text("pdf.toc")}</h2>\n    <table width="100%" cellpadding="1" cellspacing="0">\n        <#list messages as msg>\n            <#if msg.descs?has_content && msg.descs[0].title?has_content>\n                <tr>\n                    <td style="width: 2cm" valign="top">\n                        <a href='#msg_${msg.id}'><#if msg.shortId?has_content>${msg.shortId}</#if></a>\n                    </td>\n                    <td width="*">\n                        <div class="toc"><a href='#msg_${msg.id}'>${msg.descs[0].title}</a></div>\n                    </td>\n                </tr>\n            </#if>\n        </#list>\n    </table>\n</div>\n\n\n<div class="page-break">&nbsp;</div>\n\n<@renderMessageList messages=messages areaHeadings=areaHeadings/>\n\n</body>\n</html>\n	templates/messages/nm-almanac-report-pdf.ftl	FM
-28	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle frontPage=true/>\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n</head>\n<body>\n\n\n<#assign msg=messages[0] />\n\n<#-- Construct the title -->\n<#assign title="" />\n<#if msg.descs?has_content && msg.descs[0].title?has_content>\n    <#assign title=msg.descs[0].title />\n</#if>\n<#if msg.parts?has_content>\n    <#list msg.parts as part>\n        <#if part.type == 'DETAILS' && part.descs?has_content && part.descs[0].subject?has_content>\n            <#assign title=part.descs[0].subject />\n        </#if>\n    </#list>\n</#if>\n<#assign title=title?remove_ending(".") />\n\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_annex.nm_ref', .vars['NtM-ref']!'')}" frontPage=true/>\n\n<h1 style="margin-top: 5mm">${title}</h1>\n\n<table class="first-page-info-line" style="margin: 1cm 0">\n    <tr>\n        <td>\n            ${.now?string['dd. MMMM yyyy']}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td align="right">\n            ${text("pdf.nm_annex.nm_ref", .vars['NtM-ref']!"")}\n        </td>\n    </tr>\n</table>\n\n<@renderMessageList messages=messages areaHeadings=false/>\n\n</body>\n</html>\n	templates/messages/nm-annex-report-pdf.ftl	FM
+27	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        table.contact-info {\n            margin-bottom: 5mm;\n            font-size: 11px;\n        }\n        table.contact-info tr td {\n            padding: 3mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_almanac.title')} - ${text('pdf.nm_almanac.subtitle')}"/>\n\n<h1 style="margin-top: 5mm">${text("pdf.nm_almanac.title")}</h1>\n\n<h5>${text("pdf.nm_almanac.desc")}</h5>\n\n<table class="first-page-info-line" style="margin-top: 5mm">\n    <tr>\n        <td>\n            ${.now?string(text('msg.time.date_format'))}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td align="right">${text("pdf.nm_almanac.subtitle")}</td>\n    </tr>\n</table>\n\n<div>\n  <#include "nm-almanac-report-pdf-intro.ftl">\n</div>\n\n<div>\n    <h2>${text("pdf.toc")}</h2>\n    <table width="100%" cellpadding="1" cellspacing="0">\n        <#list messages as msg>\n            <#if msg.descs?has_content && msg.descs[0].title?has_content>\n                <tr>\n                    <td style="width: 2cm" valign="top">\n                        <a href='#msg_${msg.id}'><#if msg.shortId?has_content>${msg.shortId}</#if></a>\n                    </td>\n                    <td width="*">\n                        <div class="toc"><a href='#msg_${msg.id}'>${msg.descs[0].title}</a></div>\n                    </td>\n                </tr>\n            </#if>\n        </#list>\n    </table>\n</div>\n\n\n<div class="page-break">&nbsp;</div>\n\n<@renderMessageList messages=messages areaHeadings=areaHeadings/>\n\n</body>\n</html>\n	templates/messages/nm-almanac-report-pdf.ftl	FM
+28	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle frontPage=true/>\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n</head>\n<body>\n\n\n<#assign msg=messages[0] />\n\n<#-- Construct the title -->\n<#assign title="" />\n<#if msg.descs?has_content && msg.descs[0].title?has_content>\n    <#assign title=msg.descs[0].title />\n</#if>\n<#if msg.parts?has_content>\n    <#list msg.parts as part>\n        <#if part.type == 'DETAILS' && part.descs?has_content && part.descs[0].subject?has_content>\n            <#assign title=part.descs[0].subject />\n        </#if>\n    </#list>\n</#if>\n<#assign title=title?remove_ending(".") />\n\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_annex.nm_ref', .vars['NtM-ref']!'')}" frontPage=true/>\n\n<h1 style="margin-top: 5mm">${title}</h1>\n\n<table class="first-page-info-line" style="margin: 1cm 0">\n    <tr>\n        <td>\n            ${.now?string(text('msg.time.date_format'))}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td align="right">\n            ${text("pdf.nm_annex.nm_ref", .vars['NtM-ref']!"")}\n        </td>\n    </tr>\n</table>\n\n<@renderMessageList messages=messages areaHeadings=false/>\n\n</body>\n</html>\n	templates/messages/nm-annex-report-pdf.ftl	FM
 29	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#-- introduction: this deployment's text goes here -->\n	templates/messages/nm-report-pdf-intro.ftl	FM
-30	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<#--\n    Split by ?filter rather than by appending to a list one message at a time.\n    Appending builds a sequence out of a chain of concatenations, one link per\n    message, and reading the n'th element walks the chain -- so printing the list\n    afterwards costs the square of its length.\n-->\n<#assign nmMessages = messages?filter(msg -> msg.type != 'MISCELLANEOUS_NOTICE') />\n<#assign miscMessages = messages?filter(msg -> msg.type == 'MISCELLANEOUS_NOTICE') />\n<#assign minMessageNo = 9999999 />\n<#assign maxMessageNo = -9999999 />\n<#list messages as msg>\n    <#if msg.number?? && msg.number lt minMessageNo >\n        <#assign minMessageNo = msg.number />\n    </#if>\n    <#if msg.number?? && msg.number gt maxMessageNo >\n        <#assign maxMessageNo = msg.number />\n    </#if>\n</#list>\n\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        .nm-toc {\n            margin-top: 1cm;\n        }\n        .toc {\n            font-size: 12px;\n        }\n        .intro {\n            margin-top: 2cm;\n            font-size: 12px;\n            page-break-after:always;\n        }\n        .intro table {\n            margin: 0 auto;\n            font-size: 12px;\n            text-align: left;\n        }\n        .intro table th {\n            width: 2cm;\n            font-weight: normal;\n        }\n        .week-year-header {\n            font-size: 24px;\n            text-align: right;\n            margin-top: 1cm;\n            margin-bottom: 1mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<#-- Headers and footers -->\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm')} - ${text('pdf.week')} ${week!''}, ${year!''}"/>\n\n\n<#-- First page -->\n<h1>${text("pdf.nm")}</h1>\n\n<div class="week-year-header">\n    ${text("pdf.week")} ${week!""}, ${year!""}\n</div>\n<table class="first-page-info-line">\n    <tr>\n        <td width="25%" align="left">\n            ${.now?string["dd. MMMM yyyy"]}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td width="25%" align="center">ISSN ${ISSN!""}</td>\n        <#-- The volume is counted from ${yearNumber}, the year the numbering\n             derived, and not from the clock: a December issue amended in January,\n             and any re-render years later, would otherwise print the volume of the\n             year it was printed in rather than of the year it is the issue for.\n             The legacy print dialog renders this same template with no issue\n             behind it, so where no year was derived the clock still answers. -->\n        <td width="25%" align="center"><#if yearNumber??>${text('pdf.volume', (yearNumber - 1884))}<#else>${text('pdf.volume', (.now?string('yyyy')?number - 1884))}</#if></td>\n        <td width="25%" align="right">\n            <#if minMessageNo != 9999999 && maxMessageNo != -9999999>\n                ${minMessageNo?c} - ${maxMessageNo?c}\n            </#if>\n        </td>\n    </tr>\n</table>\n\n<div class="nm-toc">\n    <h2>${text("pdf.toc")}</h2>\n    <ol class='toc'>\n\n        <#assign tocAreaHeadingId=-9999999 />\n        <#list nmMessages as msg>\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if area?? && area.id != tocAreaHeadingId>\n                    <#assign tocAreaHeadingId=area.id />\n                    <li><a href='#nm${tocAreaHeadingId?c}'><@areaLineage area=areaHeading(area) /></a></li>\n                </#if>\n            <#elseif  tocAreaHeadingId == -9999999>\n                <li><a href='#nm${tocAreaHeadingId?c}'>${text("msg.area.general")}</a></li>\n                <#assign tocAreaHeadingId=-9999998 />\n            </#if>\n        </#list>\n\n        <#if miscMessages?has_content>\n            <li>\n                <div class="toc"><a href='#misc'>${text('pdf.misc_nm')}</a></div>\n            </li>\n        </#if>\n    </ol>\n</div>\n\n\n<div class="intro">\n    <#include "nm-report-pdf-intro.ftl">\n</div>\n\n\n<#-- Permanent and T&P messages -->\n<#if nmMessages?has_content>\n    <@renderMessageList messages=nmMessages areaHeadings=areaHeadings prefix="nm"/>\n</#if>\n\n<#-- Add page break -->\n<#if nmMessages?has_content && miscMessages?has_content>\n    <div class="page-break"></div>\n</#if>\n\n<#-- Misc messages -->\n<#if miscMessages?has_content>\n    <table width="100%">\n        <tr>\n            <td class="table-header"><h4 id="misc">${text('pdf.misc_nm')}</h4></td>\n        </tr>\n    </table>\n    <@renderMessageList messages=miscMessages areaHeadings=false/>\n</#if>\n\n</body>\n</html>\n	templates/messages/nm-report-pdf.ftl	FM
-31	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<#--\n    Split by ?filter rather than by appending to a list one message at a time.\n    Appending builds a sequence out of a chain of concatenations, one link per\n    message, and reading the n'th element walks the chain -- so printing the list\n    afterwards costs the square of its length, which on a list of a whole year's\n    temporary and preliminary notices is most of the time to render it.\n-->\n<#assign tpMessages = messages?filter(msg ->\n        msg.type == 'PRELIMINARY_NOTICE' || msg.type == 'TEMPORARY_NOTICE') />\n\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        td.table-item {\n            vertical-align: top;\n            width: 100%;\n            padding: 5px 0;\n        }\n        .week-year-header {\n            font-size: 24px;\n            text-align: right;\n            margin-top: 1cm;\n            margin-bottom: 1mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_tp')} - ${text('pdf.week')} ${week!''}, ${year!''}"/>\n\n<#-- First page -->\n<h1>${text("pdf.nm_tp")}</h1>\n\n<div class="week-year-header">\n    ${text("pdf.week")} ${week!""}, ${year!""}\n</div>\n\n<table class="first-page-info-line" style="margin-bottom: 1cm">\n    <tr>\n        <td width="50%" align="left">\n            ${.now?string["dd. MMMM yyyy"]}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td width="50%" align="right">\n            ${text("pdf.nm_abbrev")}  ${week!""} ${year!""}\n        </td>\n    </tr>\n</table>\n\n\n<#-- T&P messages -->\n<#if tpMessages?has_content>\n\n    <#assign areaHeadingId=-9999999 />\n\n     <table class="message-table">\n\n         <#-- Define column widths (fixed table layout) -->\n         <tr>\n             <td style="width: 2.5cm"></td>\n             <td style="width: 0.5cm"></td>\n             <td width="*"></td>\n         </tr>\n\n        <#list tpMessages as msg>\n\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if areaHeadings && area?? && area.id != areaHeadingId>\n                    <#assign areaHeadingId=area.id />\n                    <tr class="table-header-row">\n                        <td colspan="3" class="table-item">\n                            <h4 id="${areaHeadingId?c}"><@areaLineage area=areaHeading(area) /></h4>\n                        </td>\n                    </tr>\n                </#if>\n            <#elseif  areaHeadings && areaHeadingId == -9999999>\n                <tr class="table-header-row">\n                    <td colspan="3" class="table-header"><h4 id="${areaHeadingId?c}">${text("msg.area.general")}</h4></td>\n                </tr>\n                <#assign areaHeadingId=-9999998 />\n            </#if>\n            <tr>\n                <td class="table-item">\n                    <#if msg.shortId?has_content>\n                        ${msg.shortId}\n                    </#if>\n                </td>\n                <td class="table-item">\n                    <#if msg.type == 'PRELIMINARY_NOTICE'>\n                        (P)\n                    <#elseif msg.type == 'TEMPORARY_NOTICE'>\n                        (T)\n                    </#if>\n                </td>\n                <td class="table-item">\n                    <#if msg.descs?has_content && msg.descs[0].title?has_content>\n                        ${msg.descs[0].title}\n                    </#if>\n                </td>\n            </tr>\n        </#list>\n    </table>\n\n</#if>\n\n\n</body>\n</html>\n	templates/messages/nm-tp-report-pdf.ftl	FM
+30	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<#--\n    Split by ?filter rather than by appending to a list one message at a time.\n    Appending builds a sequence out of a chain of concatenations, one link per\n    message, and reading the n'th element walks the chain -- so printing the list\n    afterwards costs the square of its length.\n-->\n<#assign nmMessages = messages?filter(msg -> msg.type != 'MISCELLANEOUS_NOTICE') />\n<#assign miscMessages = messages?filter(msg -> msg.type == 'MISCELLANEOUS_NOTICE') />\n<#assign minMessageNo = 9999999 />\n<#assign maxMessageNo = -9999999 />\n<#list messages as msg>\n    <#if msg.number?? && msg.number lt minMessageNo >\n        <#assign minMessageNo = msg.number />\n    </#if>\n    <#if msg.number?? && msg.number gt maxMessageNo >\n        <#assign maxMessageNo = msg.number />\n    </#if>\n</#list>\n\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        .nm-toc {\n            margin-top: 1cm;\n        }\n        .toc {\n            font-size: 12px;\n        }\n        .intro {\n            margin-top: 2cm;\n            font-size: 12px;\n            page-break-after:always;\n        }\n        .intro table {\n            margin: 0 auto;\n            font-size: 12px;\n            text-align: left;\n        }\n        .intro table th {\n            width: 2cm;\n            font-weight: normal;\n        }\n        .week-year-header {\n            font-size: 24px;\n            text-align: right;\n            margin-top: 1cm;\n            margin-bottom: 1mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<#-- Headers and footers. ${weeks} is the weeks the issue's name says: "36", "36+37"\n     for a pair, "36-38" for three weeks or more, or the week label whole. The\n     legacy print dialog hands only ${week}, which then prints alone. -->\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm')} - ${text('pdf.week')} ${weeks!week!''}, ${year!''}"/>\n\n\n<#-- First page -->\n<h1>${text("pdf.nm")}</h1>\n\n<div class="week-year-header">\n    ${text("pdf.week")} ${weeks!week!""}, ${year!""}\n</div>\n<table class="first-page-info-line">\n    <tr>\n        <td width="25%" align="left">\n            ${.now?string(text("msg.time.date_format"))}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td width="25%" align="center">ISSN ${ISSN!""}</td>\n        <#-- The volume is counted from ${yearNumber}, the year the numbering\n             derived, and not from the clock: a December issue amended in January,\n             and any re-render years later, would otherwise print the volume of the\n             year it was printed in rather than of the year it is the issue for.\n             The legacy print dialog renders this same template with no issue\n             behind it, so where no year was derived the clock still answers. -->\n        <td width="25%" align="center"><#if yearNumber??>${text('pdf.volume', (yearNumber - 1884))}<#else>${text('pdf.volume', (.now?string('yyyy')?number - 1884))}</#if></td>\n        <td width="25%" align="right">\n            <#if minMessageNo != 9999999 && maxMessageNo != -9999999>\n                ${minMessageNo?c} - ${maxMessageNo?c}\n            </#if>\n        </td>\n    </tr>\n</table>\n\n<div class="nm-toc">\n    <h2>${text("pdf.toc")}</h2>\n    <ol class='toc'>\n\n        <#assign tocAreaHeadingId=-9999999 />\n        <#list nmMessages as msg>\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if area?? && area.id != tocAreaHeadingId>\n                    <#assign tocAreaHeadingId=area.id />\n                    <li><a href='#nm${tocAreaHeadingId?c}'><@areaLineage area=areaHeading(area) /></a></li>\n                </#if>\n            <#elseif  tocAreaHeadingId == -9999999>\n                <li><a href='#nm${tocAreaHeadingId?c}'>${text("msg.area.general")}</a></li>\n                <#assign tocAreaHeadingId=-9999998 />\n            </#if>\n        </#list>\n\n        <#if miscMessages?has_content>\n            <li>\n                <div class="toc"><a href='#misc'>${text('pdf.misc_nm')}</a></div>\n            </li>\n        </#if>\n    </ol>\n</div>\n\n\n<div class="intro">\n    <#include "nm-report-pdf-intro.ftl">\n</div>\n\n\n<#-- Permanent and T&P messages -->\n<#if nmMessages?has_content>\n    <@renderMessageList messages=nmMessages areaHeadings=areaHeadings prefix="nm"/>\n</#if>\n\n<#-- Add page break -->\n<#if nmMessages?has_content && miscMessages?has_content>\n    <div class="page-break"></div>\n</#if>\n\n<#-- Misc messages -->\n<#if miscMessages?has_content>\n    <table width="100%">\n        <tr>\n            <td class="table-header"><h4 id="misc">${text('pdf.misc_nm')}</h4></td>\n        </tr>\n    </table>\n    <@renderMessageList messages=miscMessages areaHeadings=false/>\n</#if>\n\n</body>\n</html>\n	templates/messages/nm-report-pdf.ftl	FM
+31	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "message-support.ftl"/>\n\n<#--\n    Split by ?filter rather than by appending to a list one message at a time.\n    Appending builds a sequence out of a chain of concatenations, one link per\n    message, and reading the n'th element walks the chain -- so printing the list\n    afterwards costs the square of its length, which on a list of a whole year's\n    temporary and preliminary notices is most of the time to render it.\n-->\n<#assign tpMessages = messages?filter(msg ->\n        msg.type == 'PRELIMINARY_NOTICE' || msg.type == 'TEMPORARY_NOTICE') />\n\n\n<html>\n<head>\n\n    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>\n    <title>${text("pdf.list.title")}</title>\n\n    <@pageSizeStyle />\n    <link rel="stylesheet" type="text/css" href="/css/templates/pdf.css">\n    <link rel="stylesheet" type="text/css" href="/css/templates/common.css">\n\n    <style type="text/css" media="all">\n        td.table-item {\n            vertical-align: top;\n            width: 100%;\n            padding: 5px 0;\n        }\n        .week-year-header {\n            font-size: 24px;\n            text-align: right;\n            margin-top: 1cm;\n            margin-bottom: 1mm;\n        }\n    </style>\n\n</head>\n<body>\n\n<#-- ${weeks} is the weeks the issue's name says: "36", "36+37" for a pair, "36-38"\n     for three weeks or more, or the week label whole. The legacy print dialog\n     hands only ${week}, which then prints alone. -->\n<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_tp')} - ${text('pdf.week')} ${weeks!week!''}, ${year!''}"/>\n\n<#-- First page -->\n<h1>${text("pdf.nm_tp")}</h1>\n\n<div class="week-year-header">\n    ${text("pdf.week")} ${weeks!week!""}, ${year!""}\n</div>\n\n<table class="first-page-info-line" style="margin-bottom: 1cm">\n    <tr>\n        <td width="50%" align="left">\n            ${.now?string(text("msg.time.date_format"))}\n            <#if edition?? && edition != '1'> - Version ${edition}</#if>\n        </td>\n        <td width="50%" align="right">\n            ${text("pdf.nm_abbrev")}  ${weeks!week!""} ${year!""}\n        </td>\n    </tr>\n</table>\n\n\n<#-- T&P messages -->\n<#if tpMessages?has_content>\n\n    <#assign areaHeadingId=-9999999 />\n\n     <table class="message-table">\n\n         <#-- Define column widths (fixed table layout) -->\n         <tr>\n             <td style="width: 2.5cm"></td>\n             <td style="width: 0.5cm"></td>\n             <td width="*"></td>\n         </tr>\n\n        <#list tpMessages as msg>\n\n            <#if msg.areas?has_content>\n                <#assign area=areaHeading(msg.areas[0]) />\n                <#if areaHeadings && area?? && area.id != areaHeadingId>\n                    <#assign areaHeadingId=area.id />\n                    <tr class="table-header-row">\n                        <td colspan="3" class="table-item">\n                            <h4 id="${areaHeadingId?c}"><@areaLineage area=areaHeading(area) /></h4>\n                        </td>\n                    </tr>\n                </#if>\n            <#elseif  areaHeadings && areaHeadingId == -9999999>\n                <tr class="table-header-row">\n                    <td colspan="3" class="table-header"><h4 id="${areaHeadingId?c}">${text("msg.area.general")}</h4></td>\n                </tr>\n                <#assign areaHeadingId=-9999998 />\n            </#if>\n            <tr>\n                <td class="table-item">\n                    <#if msg.shortId?has_content>\n                        ${msg.shortId}\n                    </#if>\n                </td>\n                <td class="table-item">\n                    <#if msg.type == 'PRELIMINARY_NOTICE'>\n                        (P)\n                    <#elseif msg.type == 'TEMPORARY_NOTICE'>\n                        (T)\n                    </#if>\n                </td>\n                <td class="table-item">\n                    <#if msg.descs?has_content && msg.descs[0].title?has_content>\n                        ${msg.descs[0].title}\n                    </#if>\n                </td>\n            </tr>\n        </#list>\n    </table>\n\n</#if>\n\n\n</body>\n</html>\n	templates/messages/nm-tp-report-pdf.ftl	FM
 32	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "common.ftl"/>\n\n<#macro aton defaultSubjectFields=true enDefaultName="" enDetails="" enNavtex="">\n\n    <#if defaultSubjectFields>\n        <@defaultSubjectFieldTemplates/>\n    </#if>\n\n    <field-template field="part.getDesc('en').details" format="html">\n        <#list params.positions![] as pos>\n            <@renderAtonType atonParams=pos defaultName="${enDefaultName}" format="long" lang="en"/>\n            <@renderPositionList geomParam=pos lang="en"/> ${enDetails}.<br>\n        </#list>\n    </field-template>\n\n    <#if promulgate('navtex')>\n        <field-template field="message.promulgation('navtex').text" update="append">\n            <#list params.positions![] as pos>\n                <@line format="navtex">\n                    <@renderAtonType atonParams=pos defaultName="${enDefaultName}" format="short" lang="en"/>\n                    <@renderPositionList geomParam=pos format="navtex" lang="en"/> ${enNavtex}.\n                </@line>\n            </#list>\n        </field-template>\n    </#if>\n\n    <#if promulgate('safetynet')>\n        <field-template field="message.promulgation('safetynet').text" update="append">\n            <#list params.positions![] as pos>\n                <@line format="navtex">\n                    <@renderAtonType atonParams=pos defaultName="${enDefaultName}" format="short" lang="en"/>\n                    <@renderPositionList geomParam=pos format="navtex" lang="en"/> ${enNavtex}.\n                </@line>\n            </#list>\n        </field-template>\n    </#if>\n\n</#macro>\n	templates/tmpl/aton-common.ftl	FM
 33	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "aton-common.ftl"/>\n\n\n<#macro renderAtonReplacementType atonParams defaultName format='long' lang='en'>\n    <#if atonParams?has_content && atonParams.aton_replacement?has_content>\n        <#assign desc=descForLang(atonParams.aton_replacement, lang)!>\n        <#if desc?? && format == 'long'>\n            ${desc.longValue}\n        <#elseif desc??>\n            ${desc.value}\n        <#else>\n            ${defaultName}\n        </#if>\n    <#else>\n        ${defaultName}\n    </#if>\n</#macro>\n\n\n<#macro atonReplaced enDefaultName="" enDefaultReplacementName="">\n\n    <@defaultSubjectFieldTemplates/>\n\n    <field-template field="part.getDesc('en').details" format="html">\n        <#list params.positions![] as pos>\n            <@renderAtonType atonParams=pos defaultName="${enDefaultName}" format="long" lang="en"/>\n            <@renderPositionList geomParam=pos lang="en"/> has been replaced with\n            <@renderAtonReplacementType atonParams=pos defaultName="${enDefaultReplacementName}" format="long" lang="en"/>\n            <#if pos.aton_light?has_content>\n                showing\n                <@lightCharacterFormat light=pos.aton_light format="verbose" lang="en"/>\n            </#if>.<br>\n        </#list>\n    </field-template>\n\n    <#if promulgate('navtex')>\n        <field-template field="message.promulgation('navtex').text" update="append">\n            <#list params.positions![] as pos>\n                <@line format="navtex">\n                    <@renderAtonType atonParams=pos defaultName="${enDefaultName}" format="short" lang="en"/>\n                    <@renderPositionList geomParam=pos format="navtex" lang="en"/> REPLACED WITH\n                    <@renderAtonReplacementType atonParams=pos defaultName="${enDefaultReplacementName}" format="navtex" lang="en"/>\n                    <#if pos.aton_light?has_content>\n                        showing\n                        <@lightCharacterFormat light=pos.aton_light format="normal" lang="en"/>\n                    </#if>.\n                </@line>\n            </#list>\n        </field-template>\n    </#if>\n\n    <#if promulgate('safetynet')>\n        <field-template field="message.promulgation('safetynet').text" update="append">\n            <#list params.positions![] as pos>\n                <@line format="navtex">\n                    <@renderAtonType atonParams=pos defaultName="${enDefaultName}" format="short" lang="en"/>\n                    <@renderPositionList geomParam=pos format="navtex" lang="en"/> REPLACED WITH\n                    <@renderAtonReplacementType atonParams=pos defaultName="${enDefaultReplacementName}" format="navtex" lang="en"/>\n                    <#if pos.aton_light?has_content>\n                        showing\n                        <@lightCharacterFormat light=pos.aton_light format="normal" lang="en"/>\n                    </#if>.\n                </@line>\n            </#list>\n        </field-template>\n    </#if>\n\n</#macro>\n	templates/tmpl/aton-replacement-common.ftl	FM
 34	2026-10-22 00:00:00	2026-10-22 00:00:00	0	<#include "aton-common.ftl"/>\n\n<@aton\n    enDefaultName="The beacon"\n    enDetails="is damaged"\n    enNavtex="DAMAGED"\n    />\n	templates/tmpl/beacon-damaged.ftl	FM
