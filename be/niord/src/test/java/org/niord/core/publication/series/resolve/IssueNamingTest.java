@@ -312,6 +312,20 @@ public class IssueNamingTest {
     }
 
     /**
+     * The day count and the week count disagree: thirteen days and 22 hours, two
+     * periods by the day count, but from Monday early of week 35 to Sunday late of
+     * week 36. The previous issue closed week 35, so this one closed week 36 alone
+     * and is named for it; counted in days it was named 35+36, a week the issue
+     * before it had already been named for.
+     */
+    @Test
+    public void twoPeriodsByDaysButOneIsoWeekClosedNamesTheCutoffWeekAlone() {
+        IssueNaming.Numbers n = IssueNaming.derive(at(2026, 9, 6, 23, 0), at(2026, 8, 24, 0, 30), DK, null, ISO);
+        assertEquals(36, n.week());
+        assertNull(n.weekTo(), "week 35 was closed by the issue before this one");
+    }
+
+    /**
      * Across a year's end: 2026 has 53 ISO weeks. From week 52 of 2026 into week 2
      * of 2027 the issue closed weeks 53, 1 and 2, and takes the cut-off's week-year.
      */
