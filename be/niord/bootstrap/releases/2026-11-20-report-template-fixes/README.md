@@ -6,14 +6,14 @@ truth; nothing here ever changes it.
 
 The second round of the recorded faults of November 2026 corrected four things the base product's PDF reports
 print: the weeks a weekly report is headed by, the date on the reports' first page, the time stamp of the message
-list, and the image attachments of a message whose file name holds `%`, `;` or a space. This folder carries the
-corrected templates. Eight paths changed since the release `2026-11-16-error-hunt-phase-2-templates`; every other
+list, and the image attachments of a message whose file name holds `%`, `;` or a space; and the English long date
+of a mailing-list subject. This folder carries the corrected templates and texts. Eight paths changed since the release `2026-11-16-error-hunt-phase-2-templates`; every other
 template is as it was.
 
 | File | Import | What |
 |---|---|---|
 | `script-resources.json` | Script resources page, Import: a preview, then the import of the ticked paths | the base product's templates and scripts at this release; the eight that changed are listed below |
-| `texts.json` | Dictionaries page, Import | the base product's English texts at this release; these fixes changed no text and add none. Since the previous folder it holds `pdf.list.index_incomplete`, which start-up adds to a deployment by itself, so there is nothing to import from it unless a deployment deleted a key |
+| `texts.json` | Dictionaries page, Import | the base product's English texts at this release. One changed: `mail.date_format.long` (mail), the long date of a mailing-list subject's `${date-long}`, is `d MMMM yyyy`, "20 November 2026" (it was `d. MMMM yyyy`, the Danish form); see below. Since the previous folder it also holds `pdf.list.index_incomplete`, which start-up adds to a deployment by itself |
 | `missing-paths.sql` | none: run it read-only, `psql -d <database> -f missing-paths.sql` | the missing-path report as SQL, for the release notes |
 
 ## The changed paths, and what changes on paper
@@ -48,6 +48,12 @@ already); a deployment that changed them changes its reports' dates with them. I
    own differences are lost. Tick no other overwrite. A deployment that has not imported
    `2026-11-16-error-hunt-phase-2-templates` yet reads that folder's README first; this folder repeats its
    changes.
+
+3. The English long date of a mailing-list subject: start-up never changes a stored text, so a deployment keeps
+   its `mail.date_format.long` until a sysadmin changes it. Either edit the English value on the Dictionaries page
+   (dictionary `mail`) to `d MMMM yyyy`, or import `texts.json` on the Dictionaries page and tick that key under
+   *Would overwrite* (no overwrite is ticked by itself). A deployment that wrote its own value keeps it; one whose
+   English value is already `d MMMM yyyy` has nothing to do.
 
 Prints already made keep what they printed until they are made again. A weekly or accumulated edition already
 released keeps its PDF; an amendment or a new release of it is printed with the new templates.
