@@ -5105,9 +5105,10 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
             <table class="group-info-line" width="100%">
                 <tr>
                     <td width="40%" align="left">
-                        <#-- group.weeks is the source''s weeks as its own name writes them, by
-                             its series'' name pattern ("36 og 37", "36+37", "36-38"), or its
-                             week label whole. -->
+                        <#-- group.weeks is the source''s weeks as its series'' name pattern
+                             writes them ("36 og 37", "36+37", "36-38"), in the pair form where
+                             the pattern cannot say a span of several weeks, so the line names
+                             every week the source covered, or its week label whole. -->
                         <#if !group.manual && group.week??>
                             ${text(''pdf.week'')} ${group.weeks!(group.week?c)}<#if group.year??>, ${group.year?c}</#if>
                         </#if>
@@ -5342,9 +5343,10 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 </head>
 <body>
 
-<#-- Headers and footers. ${weeks} is the issue''s weeks as its name writes them, by
-     the week part of the series'' name pattern ("36 og 37", "36+37", "36-38"; the
-     pair form where the pattern writes no week), or the week label whole. The
+<#-- Headers and footers. ${weeks} is the issue''s weeks as the series'' name pattern
+     writes them, by the week part of the pattern ("36 og 37", "36+37", "36-38"; the
+     pair form where the pattern writes no week; a single week alone, without a
+     joiner the pattern writes before ${weekTo}), or the week label whole. The
      legacy print dialog hands only ${week}, which then prints alone. -->
 <@renderDefaultHeaderAndFooter headerText="${text(''pdf.nm'')} - ${text(''pdf.week'')} ${weeks!week!''''}, ${year!''''}"/>
 
@@ -5472,9 +5474,10 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 </head>
 <body>
 
-<#-- ${weeks} is the issue''s weeks as its name writes them, by the week part of the
-     series'' name pattern ("36 og 37", "36+37", "36-38"; the pair form where the
-     pattern writes no week), or the week label whole. The legacy print dialog
+<#-- ${weeks} is the issue''s weeks as the series'' name pattern writes them, by the
+     week part of the pattern ("36 og 37", "36+37", "36-38"; the pair form where the
+     pattern writes no week; a single week alone, without a joiner the pattern
+     writes before ${weekTo}), or the week label whole. The legacy print dialog
      hands only ${week}, which then prints alone. -->
 <@renderDefaultHeaderAndFooter headerText="${text(''pdf.nm_tp'')} - ${text(''pdf.week'')} ${weeks!week!''''}, ${year!''''}"/>
 
