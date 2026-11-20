@@ -36,6 +36,7 @@ const LINKED_SERIES = {
 
 const EXISTING: OneOffPublication = {
   series: LINKED_SERIES,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- the server still sends the field, and the type requires it
   active: true,
   issuePublicId: 'i-1',
   issueStatus: 'PUBLISHED',

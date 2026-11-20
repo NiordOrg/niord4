@@ -281,8 +281,8 @@ jobs:
           node-version-file: fe/.nvmrc
           cache: npm
           cache-dependency-path: fe/package-lock.json
-      # fe/.npmrc sets legacy-peer-deps=true, so `npm ci` resolves the typescript-eslint <->
-      # TypeScript peer mismatch without extra flags.
+      # fe/.npmrc sets legacy-peer-deps=true, so `npm ci` resolves the @tiptap packages' peer
+      # mismatch without extra flags.
       - name: Install dependencies
         id: install
         run: npm ci

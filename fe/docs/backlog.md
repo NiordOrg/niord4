@@ -795,11 +795,6 @@ Background: [`styling-reference.md`](styling-reference.md).
 
 Background: [`testing.md`](testing.md).
 
-- Dependabot alert 68, `minimatch` below 11.0.1 (a denial of service through a glob pattern), stays open in the
-  lock: the only `minimatch` is 10.2.5, held by ESLint and typescript-eslint at `^10`, so no update within their
-  ranges fixes it and Dependabot opens no pull request. It is a lint-only dependency that runs on this repository's
-  own files, so the owner dismissed the alert as tolerable (2026-11-01). It closes itself once ESLint and
-  typescript-eslint move to `minimatch` 11; an `overrides` entry forcing 11 under ESLint was not wanted.
 - **The pre-commit hook is never installed.** `prepare` runs husky 9 in `fe/`, which stops at ".git can't be
   found" because `.git` is at the repository root, so `core.hooksPath` stays unset and `fe/.husky/pre-commit`
   never runs: lint-staged (since KM-2 also over `../country-kit/`) runs only by hand, `npx lint-staged` from
@@ -859,8 +854,12 @@ Background: [`testing.md`](testing.md).
   public site only, and there only as an import — nothing but its `app.config.ts` may import a country folder;
   in the administration app, and for a branch on a country value in either, it is review alone.
 - No exhaustive-switch guard exists anywhere, so adding a member to a literal union does not break any build.
-- `.npmrc` still carries `legacy-peer-deps=true` because typescript-eslint's declared peer range has not caught up
-  with the TypeScript version in use. Delete the file when it does.
+- `.npmrc` still carries `legacy-peer-deps=true` because the `@tiptap` packages are at two versions:
+  `package.json` asks for `@tiptap/core` ^3.30.5 and the others ^3.27.1, and the lock holds `@tiptap/core` 3.30.5,
+  whose peer is `@tiptap/pm` 3.30.5, beside 3.27.1 for the rest, whose extensions want `@tiptap/pm` 3.27.1. Strict
+  peer resolution refuses that tree. typescript-eslint, the file's first reason, accepts TypeScript 6.0 since
+  8.73. Move the `@tiptap` packages to one version and delete the file: with them aligned,
+  `npm install --legacy-peer-deps=false` resolves the tree (tried on a copy, 2026-11-20).
 - **The unit tests fail on Node 26, which `package.json`'s `engines` accepts.** Node 25 and later put a
   `localStorage` of their own on the global object (Web Storage, on by default, `undefined` without
   `--localstorage-file`), and vitest's jsdom environment leaves a global that is already there in place, so a
