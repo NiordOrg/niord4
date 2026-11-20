@@ -429,6 +429,16 @@ Background: [`map-portrayal.md`](map-portrayal.md).
   3). Since the security fixes of September 2026 it renders its PNG in memory on every request, one request at
   a time, instead of writing a file per combination of values into the repository. Remove the endpoint, or
   give it a small bounded cache of rendered images.
+- **The administration app's map credit link is told from its line by a shade of grey alone** (WCAG 1.4.1). The
+  map kit's attribution control (`shared-map/ol-map.ts`) draws the credit on every map of the administration app
+  (the area and chart editors, the geometry preview and others), and OpenLayers' own stylesheet
+  (`ol/ol.css`, imported by `ui-apps/admin/src/styles.css`) draws its link to the licence in `#666` beside the
+  line's `#333`, with no underline: 2.2:1 between the two, where a link told apart by colour alone needs 3:1 and a
+  second cue on focus and hover. The public site underlines it in its own stylesheet since 2026-11-19
+  (`ui-apps/info/src/styles/chrome.css`, `.ol-attribution a`); the same rule in the administration app's
+  stylesheet, or moved to a stylesheet both applications load, closes it. Found by the public site's audit
+  ([accessibility-audit-public-site.md](../../docs/accessibility-audit-public-site.md), 2026-11-18), which did not
+  cover the administration app.
 - The administration app's own animations ignore a reader's reduced-motion setting: the 300 ms fit of the
   message-list layer, the geometry editor's zoom-to-extent and the drawer's slide. The map kit's own zooms and
   pans honour it; these three are started by the application and would read the same media query.
