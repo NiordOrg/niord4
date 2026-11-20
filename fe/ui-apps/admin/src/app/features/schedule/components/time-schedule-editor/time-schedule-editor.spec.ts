@@ -543,6 +543,29 @@ describe('TimeScheduleEditor', () => {
     expect(clockIn(LISBON, periods[1].toDate)).toBe('2026-06-15 09:15:00');
   });
 
+  /**
+   * A blank end is the last second of the selected day in the domain zone: the next day's start,
+   * one second back. Greenland changes its clocks at 23:00 local, so its spring day has no 23:59:59
+   * (a clock of 23:59:59 would land at 00:59:59 of the next day) and its autumn day has two (the
+   * first would end the day an hour early).
+   */
+  it('a blank end is the last second of the selected day, also on the days a zone changes its clock late in the evening', () => {
+    for (const [zone, day, end] of [
+      ['America/Nuuk', new Date(2026, 2, 28, 12, 0, 0, 0), '2026-03-29T00:59:59.000Z'],
+      ['America/Nuuk', new Date(2026, 9, 24, 12, 0, 0, 0), '2026-10-25T01:59:59.000Z'],
+      ['Europe/Copenhagen', new Date(2026, 2, 29, 12, 0, 0, 0), '2026-03-29T21:59:59.000Z'],
+      ['Europe/Copenhagen', SELECTED_DATE, '2026-06-15T21:59:59.000Z'],
+      ['UTC', SELECTED_DATE, '2026-06-15T23:59:59.000Z'],
+    ] as const) {
+      TestBed.resetTestingModule();
+      const { comp, update } = setup([], zone, day);
+      comp.startEdit();
+      comp.setFrom(0, entered(9, 0));
+      comp.save();
+      expect(savedPeriods(update)[0].toDate, `${zone} ${day.toDateString()}`).toBe(end);
+    }
+  });
+
   it('keeps the selected day for a zone west of the browser, where the day ends after midnight UTC', () => {
     const { comp, update } = setup([], HALIFAX);
     comp.startEdit();

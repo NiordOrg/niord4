@@ -76,7 +76,7 @@ image::FiringAreaScheduleEdit.png[An area's firing periods being edited, 460]
   added, taken out or changed a line, Niord first asks whether to leave without saving.
 
 A firing period is entered on the day it starts. A period without a start time starts at midnight,
-and one without an end time lasts until 23:59; a line with neither is left out. To fire until
+and one without an end time lasts until the end of the day; a line with neither is left out. To fire until
 midnight, enter 00:00 (12:00 AM) as the end: the period then lasts until midnight at the end of the
 day shown, and the firing exercise message reads, for example, "hours 09:00 - 24:00". For an
 exercise that goes on past midnight, enter one period until 00:00 and another from 00:00 on the

@@ -51,7 +51,7 @@ let nextEditorId = 0;
  * from/to time-picker list (Add/Remove/Clear/Cancel/Save). Cancel asks the app's usual
  * "unsaved changes" question first when a row was added, removed or changed. Save normalises each
  * changed or new interval onto the selected date (missing from → 00:00:00, missing
- * to → 23:59:59, an end of 00:00 → 00:00 of the next day, both-empty dropped), PUTs,
+ * to → the last second of the day, an end of 00:00 → 00:00 of the next day, both-empty dropped), PUTs,
  * and shows the saved periods on success. A working copy keeps the source row
  * untouched until save.
  *
@@ -136,11 +136,7 @@ export class TimeScheduleEditor {
     const zone = this.timeZone();
     const date = this.date();
     if (!zone) return this.draft().map(() => null);
-    const nextDayStart = shiftDaysInZone(
-      wallClockToInstant(date, 0, 0, 0, zone),
-      1,
-      zone,
-    ).getTime();
+    const nextDayStart = startOfNextDay(date, zone).getTime();
     return this.draft().map((row): RowErrorLine | null => {
       if (row.locked) return null;
       const period = resolveRow(date, row, zone);
@@ -316,10 +312,15 @@ function instantOf(value: string | undefined): number {
 /**
  * Rebases a time-of-day onto the selected date, in `timeZone`: an entered time keeps its
  * hour:minute (seconds/ms zeroed); a missing `start` defaults to 00:00:00, a missing `end`
- * to 23:59:59. An entered `end` of 00:00 means "until midnight" and is 00:00 of the next day,
- * resolved in the zone (on a day the zone changes offset that is not 24 hours on). The calendar
- * day is taken from the date the user is looking at and only the clock is resolved in the zone,
- * so the day they chose is the day they get. Returns an ISO datetime.
+ * to the last second of the day (the next day's 00:00 in the zone, one second back). An entered
+ * `end` of 00:00 means "until midnight" and is 00:00 of the next day, resolved in the zone (on a
+ * day the zone changes offset that is not 24 hours on). The calendar day is taken from the date
+ * the user is looking at and only the clock is resolved in the zone, so the day they chose is the
+ * day they get. Returns an ISO datetime.
+ *
+ * A missing end is not the clock 23:59:59: a zone that changes its clock at 23:00 local
+ * (Greenland's, on the EU rule) has no 23:59:59 on its spring day, which would resolve into the
+ * next day, and two on its autumn day, the first of which ends the day an hour early.
  */
 function rebaseOntoDate(
   date: Date,
@@ -330,15 +331,17 @@ function rebaseOntoDate(
   // A time field carries a bare wall clock, so its hours/minutes come off the carrier as they
   // were typed and are reinterpreted as belonging to the zone.
   const clock = time ? wallClockOf(time) : null;
-  if (edge === 'end' && clock?.hour === 0 && clock.minute === 0) {
-    return shiftDaysInZone(wallClockToInstant(date, 0, 0, 0, timeZone), 1, timeZone).toISOString();
+  if (edge === 'end' && (!clock || (clock.hour === 0 && clock.minute === 0))) {
+    const nextDayStart = startOfNextDay(date, timeZone);
+    return (clock ? nextDayStart : new Date(nextDayStart.getTime() - 1000)).toISOString();
   }
-  const [hour, minute, second] = clock
-    ? [clock.hour, clock.minute, 0]
-    : edge === 'end'
-      ? [23, 59, 59]
-      : [0, 0, 0];
-  return wallClockToInstant(date, hour, minute, second, timeZone).toISOString();
+  const [hour, minute] = clock ? [clock.hour, clock.minute] : [0, 0];
+  return wallClockToInstant(date, hour, minute, 0, timeZone).toISOString();
+}
+
+/** 00:00 of the day after the selected date, in `timeZone`. */
+function startOfNextDay(date: Date, timeZone: string): Date {
+  return shiftDaysInZone(wallClockToInstant(date, 0, 0, 0, timeZone), 1, timeZone);
 }
 
 /**

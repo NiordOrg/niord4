@@ -145,7 +145,7 @@ early hours) or 08:00 to 23:00 of the day before is listed on its start day only
 | ----------------------------------------- | ------------------------------------------------------------------------ |
 | both ends blank                           | dropped silently                                                         |
 | `from` blank                              | `00:00:00` on the selected day, in the domain zone                       |
-| `to` blank                                | `23:59:59` on the selected day, in the domain zone                       |
+| `to` blank                                | the last second of the selected day, in the domain zone                  |
 | `to` is 00:00                             | `00:00:00` of the next day in the domain zone ("until midnight")         |
 | a time entered                            | its hour and minute on the selected day, seconds and milliseconds zeroed |
 | an end at or before its start (not 00:00) | refused inline: nothing is sent                                          |
@@ -153,7 +153,9 @@ early hours) or 08:00 to 23:00 of the day before is listed on its start day only
 The calendar day always comes from the day the user is looking at; only the clock is resolved in the
 zone. That is what keeps a zone west of the browser from rolling a period onto the neighbouring day.
 The next day's 00:00 is resolved in the zone too, so on a day the zone changes offset it is not
-24 hours on.
+24 hours on. A blank `to` is that 00:00 one second back, not the clock 23:59:59: a zone that changes
+its clock at 23:00 local, as Greenland's does, has no 23:59:59 on its spring day and two on its
+autumn day.
 
 **Order check.** A row that, as it would be saved, does not end after it starts gets an inline
 `role="alert"` line ("The period must end after it starts. To fire until midnight, enter 00:00 as
