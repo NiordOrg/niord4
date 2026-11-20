@@ -825,7 +825,10 @@ Templates include one another across the two groups: data templates `<#include "
   and have no id, so the Parameter Types list tracks its rows by name (`track paramType.name`; names are
   unique). The parameter-type import (`BatchParamTypeImportProcessor`) skips an item with a standard type's
   name and writes a line to the job log; the rest of the file imports. Without the skip, the id-less in-memory
-  type `getParamTypeByName` returns would turn the item's update into the create of a second row.
+  type `getParamTypeByName` returns would turn the item's update into the create of a second row. Since
+  2026-11-21 the refusals and the import's skip compare a standard type's name without regard to case
+  (`isStandardParamType`), while the type a name reads, and so the in-memory type that wins, is still
+  decided by the exact name.
 
 ### 6.3 Data templates and scripts
 

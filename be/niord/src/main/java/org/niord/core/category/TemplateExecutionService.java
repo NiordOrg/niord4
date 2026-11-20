@@ -90,12 +90,44 @@ public class TemplateExecutionService extends BaseService {
      */
 
     /**
-     * Returns whether the name is a standard parameter type's
+     * Returns whether the name is a standard parameter type's, without regard to case: a type of one's own may not be
+     * called "Text" beside the standard "text". It decides what the administration and the parameter-type import
+     * refuse or skip; which type a name reads is decided exactly ({@link #isInMemoryStandardType}).
      * @param name the name
-     * @return whether the name is a standard parameter type's
+     * @return whether the name is a standard parameter type's, without regard to case
      */
     public static boolean isStandardParamType(String name) {
+        return name != null && Arrays.stream(StandardParamType.STANDARD_PARAM_TYPES).anyMatch(name::equalsIgnoreCase);
+    }
+
+    /**
+     * Returns whether the name is exactly a standard parameter type's, so the in-memory type is read for it. This
+     * stays exact: a template parameter names its type exactly, and a row an earlier version let be called "Text"
+     * stays a type of its own, listed and readable by its name, until it is renamed.
+     * @param name the name
+     * @return whether the name is exactly a standard parameter type's
+     */
+    private static boolean isInMemoryStandardType(String name) {
         return name != null && Arrays.asList(StandardParamType.STANDARD_PARAM_TYPES).contains(name);
+    }
+
+    /**
+     * Refuses a name another parameter type has without regard to case: the names are unique without regard to case
+     * when a type is created or renamed. A standard type's name is refused before this ({@link #isStandardParamType}).
+     *
+     * @param name the name of the new or renamed type
+     * @param id the id of the type being renamed, which may have its own name in other capital letters; null for a new type
+     * @throws IllegalArgumentException if another type has the name without regard to case
+     */
+    private void refuseTakenParamTypeName(String name, Integer id) {
+        boolean taken = em.createNamedQuery("ParamType.findByNameIgnoreCase", ParamType.class)
+                .setParameter("name", name)
+                .getResultList()
+                .stream()
+                .anyMatch(other -> !Objects.equals(other.getId(), id));
+        if (taken) {
+            throw new IllegalArgumentException("Another parameter type has the name " + name);
+        }
     }
 
     /**
@@ -111,7 +143,7 @@ public class TemplateExecutionService extends BaseService {
         em.createNamedQuery("ParamType.findAll", ParamType.class)
                 .getResultList()
                 .stream()
-                .filter(type -> !isStandardParamType(type.getName()))
+                .filter(type -> !isInMemoryStandardType(type.getName()))
                 .forEach(types::add);
         return types;
     }
@@ -128,12 +160,17 @@ public class TemplateExecutionService extends BaseService {
     /**
      * Returns the parameter type with the given name. Returns null if the parameter type does not exist.
      * A standard type's name returns the in-memory type, which has no id.
+     * <p>
+     * The name is matched exactly, as a template parameter names its type. The parameter-type import finds the type an
+     * item updates with this look-up, and it must stay exact: with a look-up that ignored case, an item named "lights"
+     * would find the type "Lights" and rename it, and the template parameters that name "Lights" would lose their
+     * type. Only the checks that a new or renamed type's name is free ignore case ({@link #refuseTakenParamTypeName}).
      * @param name the name
      * @return the parameter type with the given name
      * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public ParamType getParamTypeByName(String name) {
-        if (isStandardParamType(name)) {
+        if (isInMemoryStandardType(name)) {
             return new StandardParamType(name);
         }
         try {
@@ -166,10 +203,9 @@ public class TemplateExecutionService extends BaseService {
         if (isStandardParamType(type.getName())) {
             throw new IllegalArgumentException("Parameter type " + type.getName() + " is a standard type");
         }
-        // The name is unique: a taken one is refused with a sentence (400), not left to the unique key (500)
-        if (getParamTypeByName(type.getName()) != null) {
-            throw new IllegalArgumentException("Another parameter type has the name " + type.getName());
-        }
+        // The name is unique without regard to case: a taken one is refused with a sentence (400), not left to the
+        // unique key (500), which counts case
+        refuseTakenParamTypeName(type.getName(), null);
         refuseIncompleteTemplateParams(type);
 
         // Replace the dictionary entry values with the persisted once
@@ -199,10 +235,12 @@ public class TemplateExecutionService extends BaseService {
         if (isStandardParamType(type.getName())) {
             throw new IllegalArgumentException("Parameter type " + type.getName() + " is a standard type");
         }
-        // Checked before anything is copied into the managed row, so the lookup cannot flush a half-made change
-        ParamType other = getParamTypeByName(type.getName());
-        if (other != null && !Objects.equals(other.getId(), original.getId())) {
-            throw new IllegalArgumentException("Another parameter type has the name " + type.getName());
+        // Checked before anything is copied into the managed row, so the lookup cannot flush a half-made change. Only
+        // a renamed type is checked: a type keeping its name keeps it even where an earlier version let another type
+        // have it in other capital letters, and the unique key holds the exact name. Another spelling of its own name
+        // is no other type's
+        if (!Objects.equals(type.getName(), original.getName())) {
+            refuseTakenParamTypeName(type.getName(), original.getId());
         }
         refuseIncompleteTemplateParams(type);
 

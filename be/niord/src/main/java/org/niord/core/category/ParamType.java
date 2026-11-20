@@ -37,7 +37,9 @@ import jakarta.persistence.Transient;
         @NamedQuery(name  = "ParamType.findAll",
                 query = "select t from ParamType t order by t.name asc"),
         @NamedQuery(name  = "ParamType.findByName",
-                query = "select t from ParamType t where t.name = :name")
+                query = "select t from ParamType t where t.name = :name"),
+        @NamedQuery(name  = "ParamType.findByNameIgnoreCase",
+                query = "select t from ParamType t where lower(t.name) = lower(:name)")
 })
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class ParamType extends BaseEntity<Integer> {
