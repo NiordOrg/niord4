@@ -3174,7 +3174,7 @@
         "S-20": "The owner domain must carry a readable timezone. The cut-offs of a series with a cadence are read in it, and there is no other source for one.",
         "S-21": "A series has to say where its cut-off falls by default, and only a yearly series may be cut off at a period boundary. Everything else is cut off at the release.",
         "S-22": "Automatic release is not available yet. Every series releases through the manual gate.",
-        "S-23": "week, weekTo, year, edition, yearNumber and weekNumber are supplied by the issue being rendered and cannot be typed as report parameters. Remove the row.",
+        "S-23": "week, weekTo, weeks, year, edition, yearNumber and weekNumber are supplied by the issue being rendered and cannot be typed as report parameters. Remove the row.",
         "S-24": "A source series is named exactly when the series is compiled from another one, and a compilation carries neither criteria nor a liveness filter: each source issue decided both at its own cut-off.",
         "S-25": "The source must be another series, generated from a query, and not itself a compilation. A series cannot compile itself, and compilations cannot be chained.",
         "D-7": "A language carrying a reference format must carry a name as well: without one the whole row is dropped on save, and the format goes with it.",
@@ -3397,7 +3397,7 @@
         "paramIssueColumn": "This issue",
         "paramFollows": "Follows the series",
         "paramValueFor": "Value of {{key}} for this issue",
-        "paramsHint": "week, weekTo, year, edition, yearNumber and weekNumber come from Numbering above — the report is given them automatically.",
+        "paramsHint": "week, weekTo, weeks, year, edition, yearNumber and weekNumber come from Numbering above — the report is given them automatically.",
         "addParam": "Add parameter",
         "removeParam": "Remove parameter",
         "fact": {

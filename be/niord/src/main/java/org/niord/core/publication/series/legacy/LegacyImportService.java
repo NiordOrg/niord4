@@ -208,11 +208,10 @@ public class LegacyImportService extends BaseService {
     /**
      * How long the import is allowed to hold its transaction, in seconds.
      *
-     * The budget itself is declared on
-     * {@link org.niord.core.publication.series.PublicationTxRunner#callWithImportBudget},
-     * which is what actually opens the transaction; this constant is the same number,
-     * reported in the log line below so the run says what ceiling it ran under. The
-     * two have to agree, and neither is derived from the other.
+     * The budget itself is {@link PublicationTxRunner#IMPORT_TIMEOUT_SECONDS}, declared
+     * on {@link PublicationTxRunner#callWithImportBudget}, which is what actually opens
+     * the transaction; this constant is that number, reported in the log line below so
+     * the run says what ceiling it ran under.
      *
      * WHY IT IS GENEROUS. On the previous deployment the operation died twice just
      * past a 240s container default, and the cost was structural: every id came from
@@ -241,7 +240,7 @@ public class LegacyImportService extends BaseService {
      * timeout is another import window and the cost of a generous ceiling is
      * nothing at all.
      */
-    static final int IMPORT_TIMEOUT_SECONDS = 1800;
+    static final int IMPORT_TIMEOUT_SECONDS = PublicationTxRunner.IMPORT_TIMEOUT_SECONDS;
 
     /**
      * S19. Plans, and applies only if the plan is clean.

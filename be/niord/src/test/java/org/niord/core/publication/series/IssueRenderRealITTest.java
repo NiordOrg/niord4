@@ -222,6 +222,14 @@ public class IssueRenderRealITTest extends ITTest {
 
     /** An OPEN issue of a query-backed weekly on the given report, configured for Danish and English. */
     private PublicationIssue anIssueInTwoLanguages(String reportId) {
+        return anIssueInTwoLanguages(reportId, Map.of());
+    }
+
+    /**
+     * The same, with the series' name pattern in each language the map names (a language it does not name has
+     * none).
+     */
+    private PublicationIssue anIssueInTwoLanguages(String reportId, Map<String, String> namePatterns) {
         PublicationCategory c = new PublicationCategory();
         c.setCategoryId(TestIds.category());
         em.persist(c);
@@ -247,6 +255,7 @@ public class IssueRenderRealITTest extends ITTest {
             // Without a pattern every language falls back to the issue's public id, and the two
             // documents would be written to one path -- a collision that would hide the render.
             d.setFileNamePattern(String.format(FILE_NAME_PATTERN, lang));
+            d.setNameSuggestionPattern(namePatterns.get(lang));
         }
         em.persist(s);
 
@@ -475,6 +484,134 @@ public class IssueRenderRealITTest extends ITTest {
             byte[] bytes = Files.readAllBytes(preview.path());
             assertEquals("%PDF", header(bytes), "the preview of " + preview.lang() + " is not a PDF");
             assertTrue(trailer(bytes).contains("%%EOF"), "the preview of " + preview.lang() + " is truncated");
+        }
+    }
+
+    /**
+     * RENDER11, through the real renderer: a released issue of two weeks or of three, of a series whose name
+     * patterns write no week, is headed by all its weeks in the pair form, "45+46, 2023" and "44-46, 2023", in both
+     * languages' documents, where the templates printed the first week alone. The heading is read from the PDF's
+     * first page, which prints it under the title and on the "NtM 45+46 2023" line. The other cells check the model
+     * and the templates with stubbed texts; this one reads what the engine wrote.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = {2, 3})
+    @Transactional
+    public void aReleasedIssueOfSeveralWeeksIsHeadedByAllItsWeeks(int weeks) throws Exception {
+        PublicationIssue issue = anIssueInTwoLanguages();
+        writtenFolder = issue.getRepoPath();
+        // The release closes the issue on 14 November 2023, in ISO week 46; the interval opens the given number
+        // of weeks before it, as the injection test makes a range.
+        long cutoff = 1_700_000_000_000L;
+        issue.setIntervalFrom(new Date(cutoff - weeks * 7L * 24 * 3600 * 1000));
+        em.flush();
+
+        publishService.publish(issue.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(cutoff)));
+        em.flush();
+
+        PublicationIssue published = em.find(PublicationIssue.class, issue.getId());
+        assertEquals(IssueStatus.PUBLISHED, published.getStatus());
+        assertEquals(Integer.valueOf(47 - weeks), published.getWeek(), "the issue's first week");
+        assertEquals(Integer.valueOf(46), published.getWeekTo(), "the issue's closing week");
+        String expected = (weeks == 2 ? "45+46" : "44-46") + ", 2023";
+
+        for (String lang : List.of("da", "en")) {
+            byte[] bytes = store.readAll(store.stat(filePathOf(published, lang)).orElseThrow());
+            String firstPage = firstPageText(bytes);
+            assertTrue(firstPage.contains(expected),
+                    "the " + lang + " document of an issue of weeks " + (47 - weeks) + " to 46 is not headed '"
+                            + expected + "':\n" + firstPage);
+            assertTrue(firstPage.contains(expected.replace(",", "")),
+                    "the " + lang + " document's NtM line does not name all the weeks:\n" + firstPage);
+        }
+    }
+
+    /**
+     * The same release, of a series whose name patterns write the weeks, and differently in each language: each
+     * document is headed by the weeks its own language's name writes. Danish "Uge ${week} og ${weekTo}, ${year}"
+     * names the issue of weeks 45 and 46 "Uge 45 og 46, 2023", English "Week ${week}, ${year}" names it
+     * "Week 45, 2023", and the two PDFs are headed "45 og 46, 2023" and "45, 2023", under the title and on the NtM
+     * line. FAILS on the rule that headed both "45+46, 2023" whatever the names said.
+     */
+    @Test
+    @Transactional
+    public void eachLanguagesDocumentIsHeadedByTheWeeksOfItsName() throws Exception {
+        PublicationIssue issue = anIssueInTwoLanguages(REPORT_ID, Map.of(
+                "da", "Uge ${week} og ${weekTo}, ${year}",
+                "en", "Week ${week}, ${year}"));
+        writtenFolder = issue.getRepoPath();
+        long cutoff = 1_700_000_000_000L;
+        issue.setIntervalFrom(new Date(cutoff - 2 * 7L * 24 * 3600 * 1000));
+        em.flush();
+
+        publishService.publish(issue.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(cutoff)));
+        em.flush();
+
+        PublicationIssue published = em.find(PublicationIssue.class, issue.getId());
+        assertEquals(Integer.valueOf(45), published.getWeek(), "the issue's first week");
+        assertEquals(Integer.valueOf(46), published.getWeekTo(), "the issue's closing week");
+
+        for (Map.Entry<String, String> expected : Map.of("da", "45 og 46", "en", "45").entrySet()) {
+            String lang = expected.getKey();
+            byte[] bytes = store.readAll(store.stat(filePathOf(published, lang)).orElseThrow());
+            String firstPage = firstPageText(bytes);
+            assertTrue(firstPage.contains(expected.getValue() + ", 2023"),
+                    "the " + lang + " document is not headed by the weeks of its name, '" + expected.getValue()
+                            + ", 2023':\n" + firstPage);
+            assertTrue(firstPage.contains(expected.getValue() + " 2023"),
+                    "the " + lang + " document's NtM line does not name the weeks of its name:\n" + firstPage);
+            assertFalse(firstPage.contains("45+46"),
+                    "the " + lang + " document is headed by the pair form its name does not use:\n" + firstPage);
+        }
+    }
+
+    /**
+     * A single week of a series whose name patterns write the closing week, "Uge ${week}+${weekTo}, ${year}" and
+     * "Week ${week} and ${weekTo}, ${year}": the closing week expands to nothing, and the names keep the text before
+     * it ("Uge 46+, 2023", ISSUE13), but the PDFs are headed by the week alone, "46, 2023", under the title and on
+     * the NtM line. FAILS on the rule that expanded the whole week part, which headed them "46+, 2023" and
+     * "46 and , 2023".
+     */
+    @Test
+    @Transactional
+    public void aSingleWeekIsHeadedByItsWeekWithoutAJoiner() throws Exception {
+        PublicationIssue issue = anIssueInTwoLanguages(REPORT_ID, Map.of(
+                "da", "Uge ${week}+${weekTo}, ${year}",
+                "en", "Week ${week} and ${weekTo}, ${year}"));
+        writtenFolder = issue.getRepoPath();
+        long cutoff = 1_700_000_000_000L;
+        issue.setIntervalFrom(new Date(cutoff - 7L * 24 * 3600 * 1000));
+        em.flush();
+
+        publishService.publish(issue.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(cutoff)));
+        em.flush();
+
+        PublicationIssue published = em.find(PublicationIssue.class, issue.getId());
+        assertEquals(Integer.valueOf(46), published.getWeek(), "the issue's week");
+        assertNull(published.getWeekTo(), "a single week has no closing week");
+
+        for (String lang : List.of("da", "en")) {
+            byte[] bytes = store.readAll(store.stat(filePathOf(published, lang)).orElseThrow());
+            String firstPage = firstPageText(bytes);
+            assertTrue(firstPage.contains(" 46, 2023"),
+                    "the " + lang + " document is not headed by its week, '46, 2023':\n" + firstPage);
+            assertTrue(firstPage.contains(" 46 2023"),
+                    "the " + lang + " document's NtM line does not name its week:\n" + firstPage);
+            assertFalse(firstPage.contains("46+") || firstPage.contains("46 and"),
+                    "the " + lang + " document is headed by a joiner with no second week:\n" + firstPage);
+        }
+    }
+
+    /** The text of a PDF's first page, as the reader extracts it. */
+    private static String firstPageText(byte[] bytes) throws IOException {
+        com.itextpdf.text.pdf.PdfReader reader = new com.itextpdf.text.pdf.PdfReader(bytes);
+        try {
+            return com.itextpdf.text.pdf.parser.PdfTextExtractor.getTextFromPage(reader, 1);
+        } finally {
+            reader.close();
         }
     }
 

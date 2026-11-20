@@ -463,8 +463,9 @@ class MailingListExecutionServiceITTest extends ITTest {
     }
 
     /**
-     * A trigger written in a language the mail texts lack (the base product's are English only) takes the
-     * date formats of {@code ${date-short}} and {@code ${date-long}} from the default language. FAILS on the
+     * A trigger written in a language the mail texts lack takes the date formats of {@code ${date-short}} and
+     * {@code ${date-long}} from the default language. German: the base product's texts are English, and the test
+     * tree's stand-in Danish pack gives Danish mail texts of its own. FAILS on the
      * pre-fix code, which read the trigger's language only and threw a NullPointerException from
      * {@code new SimpleDateFormat(null)}, so the scheduler failed the trigger every minute.
      */
@@ -474,7 +475,7 @@ class MailingListExecutionServiceITTest extends ITTest {
         MailingList ml = persistActiveMailingList();
         addContactRecipient(ml, "Dora", "dora-" + System.nanoTime() + "@example.com");
         MailingListTrigger trigger = persistTrigger(ml, TriggerType.SCHEDULED);
-        trigger.createDesc("da").setSubject("Oplæsning ${date-short} / ${date-long}");
+        trigger.createDesc("de").setSubject("Lesung ${date-short} / ${date-long}");
         addItTemplate(trigger);
         trigger.setMessageQuery("messageSeries=__none__&status=PUBLISHED");
         em.flush();
@@ -483,9 +484,9 @@ class MailingListExecutionServiceITTest extends ITTest {
 
         assertEquals(1, mails.size(), "the one recipient of a single-language trigger must get one mail");
         java.util.Date today = new java.util.Date();
-        java.util.Locale danish = java.util.Locale.forLanguageTag("da");
-        String expected = "Oplæsning " + new java.text.SimpleDateFormat("dd-MM-yyyy", danish).format(today)
-                + " / " + new java.text.SimpleDateFormat("d. MMMM yyyy", danish).format(today);
+        java.util.Locale german = java.util.Locale.forLanguageTag("de");
+        String expected = "Lesung " + new java.text.SimpleDateFormat("dd-MM-yyyy", german).format(today)
+                + " / " + new java.text.SimpleDateFormat("d MMMM yyyy", german).format(today);
         assertEquals(expected, mails.get(0).getSubject(),
                 "the dates must be formatted with the default language's mail.date_format texts, "
                         + "in the trigger's language");
@@ -614,8 +615,10 @@ class MailingListExecutionServiceITTest extends ITTest {
         java.util.Date after = new java.util.Date();
 
         assertEquals(1, mails.size());
+        // Each language's own long date: the base product's English one, or the test tree's stand-in Danish pack's
+        String longDate = "da".equals(language) ? "d. MMMM yyyy" : "d MMMM yyyy";
         assertSubjectIsTheDate(mails.get(0).getSubject(), before, after,
-                "d. MMMM yyyy", locale, java.time.ZoneId.systemDefault());
+                longDate, locale, java.time.ZoneId.systemDefault());
     }
 
     @Test

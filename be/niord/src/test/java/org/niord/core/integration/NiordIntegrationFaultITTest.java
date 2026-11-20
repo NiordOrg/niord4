@@ -350,6 +350,35 @@ class NiordIntegrationFaultITTest extends ITTest {
         }
     }
 
+    /**
+     * CG10. A warning the other server serves with a coordinate of {@code null} was read as latitude 0 and imported
+     * there; it is refused as a coordinate that is not a number, and skipped as the one off the globe is.
+     */
+    @Test
+    void aWarningWithANullCoordinateIsSkippedAndTheRestOfTheRunGoesOn() throws Exception {
+        try (HttpStub stub = HttpStub.start()) {
+            String source = "it-cg10-src-" + System.nanoTime();
+            String nullCoordinate = legacyId();
+            String good = legacyId();
+            NiordIntegrationVo vo = integration(stub.baseUrl(), source);
+
+            String withNull = remoteMessage(nullCoordinate, source, System.currentTimeMillis(), "").replace(
+                    "\"parts\":[{\"type\":\"DETAILS\",",
+                    "\"parts\":[{\"type\":\"DETAILS\",\"geometry\":{\"type\":\"FeatureCollection\",\"features\":["
+                            + "{\"type\":\"Feature\",\"properties\":{},"
+                            + "\"geometry\":{\"type\":\"Point\",\"coordinates\":[10.0,null]}}]},");
+            assertTrue(withNull.contains("[10.0,null]"), "precondition: the warning carries the null coordinate");
+            stub.respondJson("[" + withNull + "," + remoteMessage(good, source, System.currentTimeMillis(), "") + "]");
+
+            List<String> warnings = warningsOf(() -> executionService.processNiordIntegration(vo));
+
+            assertEquals(List.of(), statusesOf(nullCoordinate), "the warning with the null coordinate is not imported");
+            assertEquals(List.of(Status.PUBLISHED), statusesOf(good), "the warning after it is imported");
+            assertTrue(warnings.stream().anyMatch(w -> w.contains(nullCoordinate) && w.contains("is not a number")),
+                    "a WARN names the skipped warning: " + warnings);
+        }
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // INT6: unresolvable areas, categories and charts
     // ------------------------------------------------------------------------------------------- //

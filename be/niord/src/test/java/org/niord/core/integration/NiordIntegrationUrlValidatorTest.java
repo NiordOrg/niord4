@@ -15,10 +15,21 @@
  */
 package org.niord.core.integration;
 
+import org.apache.http.HttpHost;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
+import org.apache.http.ProtocolException;
+import org.apache.http.client.RedirectStrategy;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.protocol.HttpCoreContext;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -92,6 +103,24 @@ public class NiordIntegrationUrlValidatorTest {
 
         // A path is still fine - it is what the endpoint path legitimately appends to.
         NiordIntegrationUrlValidator.validateUrl("https://peer.example.com/niord");
+    }
+
+    /**
+     * A refusal names no part of the URL that can carry a credential: an address that is not hierarchical has no
+     * user info to the parser, and a query may hold a password, so neither refusal repeats the URL.
+     */
+    @Test
+    public void validateUrl_refusalsDoNotRepeatACredentialTheUrlCarries() {
+        String scheme = assertThrows(IllegalArgumentException.class,
+                () -> NiordIntegrationUrlValidator.validateUrl("ftp:user:xyzzy@peer.example.com")).getMessage();
+        assertTrue(scheme.contains("http or https"), scheme);
+        assertFalse(scheme.contains("xyzzy"), scheme);
+
+        String query = assertThrows(IllegalArgumentException.class,
+                () -> NiordIntegrationUrlValidator.validateUrl("https://peer.example.com/?password=xyzzy"))
+                .getMessage();
+        assertTrue(query.contains("query or fragment"), query);
+        assertFalse(query.contains("xyzzy"), query);
     }
 
     /**
@@ -176,5 +205,56 @@ public class NiordIntegrationUrlValidatorTest {
 
         assertEquals(1, NiordIntegrationUrlValidator.dnsResolver(true).resolve("127.0.0.1").length,
                 "with niordIntegrationAllowPrivateHosts on, the address is resolved as usual");
+    }
+
+    /**
+     * INT8. No refusal names a credential that stands in the URL, whatever else is wrong with it: the message is
+     * returned to the caller and logged. A foreign scheme was refused first, with the whole URL.
+     */
+    @Test
+    public void validateUrl_namesNoCredential_inAnyRefusal() {
+        for (String url : List.of(
+                "ftp://user:secret@peer.example.org",
+                "http://user:secret@peer.example.org/x?a=b",
+                "http://user:secret@peer_host.example.org",
+                "http://user:secret@peer .example.org")) {
+            IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+                    () -> NiordIntegrationUrlValidator.validateUrl(url), url);
+            assertFalse(refused.getMessage().contains("secret"), url + ": " + refused.getMessage());
+        }
+        assertEquals("http://peer.example.org", NiordIntegrationUrlValidator.withoutUserInfo(
+                "http://user:secret@peer.example.org"));
+    }
+
+    /** INT8. A fetch that starts on https follows no redirect to http; the other redirects are followed. */
+    @Test
+    public void redirectStrategy_refusesAHopFromHttpsToHttp() throws Exception {
+        RedirectStrategy strategy = NiordIntegrationUrlValidator.redirectStrategy();
+
+        ProtocolException refused = assertThrows(ProtocolException.class, () -> strategy.getRedirect(
+                new HttpGet("https://peer.example.org/rest/public/v1/messages"),
+                redirectTo("http://peer.example.org/rest/public/v1/messages"), context("https")));
+        assertTrue(refused.getMessage().contains("https to http"), refused.getMessage());
+
+        assertEquals(URI.create("https://other.example.org/rest/public/v1/messages"), strategy.getRedirect(
+                new HttpGet("https://peer.example.org/rest/public/v1/messages"),
+                redirectTo("https://other.example.org/rest/public/v1/messages"), context("https")).getURI());
+        assertEquals(URI.create("https://peer.example.org/rest/public/v1/messages"), strategy.getRedirect(
+                new HttpGet("http://peer.example.org/rest/public/v1/messages"),
+                redirectTo("https://peer.example.org/rest/public/v1/messages"), context("http")).getURI());
+        assertEquals("https", strategy.getRedirect(new HttpGet("https://peer.example.org/rest"),
+                redirectTo("/niord/rest"), context("https")).getURI().getScheme(), "a relative location stays on https");
+    }
+
+    private static HttpResponse redirectTo(String location) {
+        HttpResponse response = new BasicHttpResponse(HttpVersion.HTTP_1_1, 302, "Found");
+        response.setHeader("Location", location);
+        return response;
+    }
+
+    private static HttpClientContext context(String scheme) {
+        HttpClientContext context = HttpClientContext.create();
+        context.setAttribute(HttpCoreContext.HTTP_TARGET_HOST, new HttpHost("peer.example.org", -1, scheme));
+        return context;
     }
 }

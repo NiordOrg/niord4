@@ -236,8 +236,9 @@ public class IssueEditService extends BaseService {
         }
 
         // S-23, judged before anything is written and on this side of the fence
-        // too. week, weekTo, year and edition are what the edition IS, and the
-        // render injects them after the parameter map is laid down -- so one
+        // too. The names S-23 reserves (SeriesValidator.RESERVED_REPORT_PARAMS)
+        // are what the edition IS, and the render injects them after the
+        // parameter map is laid down -- so one
         // typed here is not merely redundant: the parameter table would show a
         // value under a heading saying it applies while the document ignored it.
         List<String> reserved = reservedParamsIntroducedBy(issue, edit.reportParams());

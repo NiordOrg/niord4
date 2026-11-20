@@ -217,6 +217,52 @@ public class IssueReportParamInjectionITTest extends ITTest {
     }
 
     /**
+     * RENDER11. The report is handed the weeks, which the weekly reports print in their heading and page header:
+     * for a series whose name pattern writes no week, the pair form, a single week alone and three weeks as a
+     * range. FAILS where the model carries only the first and the closing week, and the heading said the first week
+     * alone.
+     */
+    @Test
+    @Transactional
+    public void theweeksAreInjectedAsTheNamePrintsThem() {
+        PublicationIssue single = issue(series());
+        em.flush();
+        assertEquals("36", paramsFromPublishing(single).get("weeks"));
+
+        PublicationIssue three = issue(series());
+        three.setIntervalFrom(new Date(CUTOFF - 3 * WEEK));
+        em.flush();
+        Map<String, Object> params = paramsFromPublishing(three);
+        assertEquals("34", params.get("week"));
+        assertEquals("36", params.get("weekTo"));
+        assertEquals("34-36", params.get("weeks"),
+                "an issue of weeks 34 to 36 is not headed by all its weeks");
+    }
+
+    /**
+     * And for a series whose name pattern writes the weeks, the weeks as that pattern writes them: under
+     * "Uge ${week} og ${weekTo}, ${year}" an issue of weeks 34 to 36 is named "Uge 34 og 36, 2026" and headed
+     * "34 og 36"; under "Uge ${week}, ${year}" it is named "Uge 34, 2026" and headed "34". FAILS on the rule that
+     * handed every report the pair form, "34-36", whatever the name said.
+     */
+    @Test
+    @Transactional
+    public void theweeksAreTheWeeksOfTheIssuesNameAsTheSeriesPatternWritesThem() {
+        for (Map.Entry<String, String> expected : Map.of(
+                "Uge ${week} og ${weekTo}, ${year}", "34 og 36",
+                "Uge ${week}, ${year}", "34").entrySet()) {
+            PublicationSeries s = series();
+            s.getDescs().get(0).setNameSuggestionPattern(expected.getKey());
+            PublicationIssue three = issue(s);
+            three.setIntervalFrom(new Date(CUTOFF - 3 * WEEK));
+            em.flush();
+
+            assertEquals(expected.getValue(), paramsFromPublishing(three).get("weeks"),
+                    "an issue of a series named by " + expected.getKey() + " is headed by other weeks than its name");
+        }
+    }
+
+    /**
      * And the numbers the issue was DERIVED with travel beside the labels.
      *
      * A document may have to compute from a year rather than print it -- the
@@ -350,6 +396,51 @@ public class IssueReportParamInjectionITTest extends ITTest {
         assertEquals(IssueEditService.REPORT_PARAM_RESERVED, e.code());
     }
 
+    /**
+     * weeks is reserved like the six: the render injects it, so typing it on the issue is refused. FAILS while
+     * S-23 left weeks out, when the typed value was stored and then overwritten by the injected one at the release.
+     */
+    @Test
+    @Transactional
+    public void atypedWeeksIsRefusedOnTheIssue() {
+        PublicationIssue i = issue(series());
+        em.flush();
+
+        IssueLifecycleService.TransitionRefusedException e =
+                assertThrows(IssueLifecycleService.TransitionRefusedException.class,
+                        () -> editService.update(i, new IssueEditService.IssueEdit(
+                                null, null, null, Map.of("Weeks", "36+37")), user()));
+        assertEquals(IssueEditService.REPORT_PARAM_RESERVED, e.code());
+    }
+
+    /**
+     * A weeks parameter a series and an issue stored before it was reserved is met as the six are: the issue stays
+     * editable while the row comes back unchanged, and the release still goes out, with the injected weeks over the
+     * stored one. Only a save of the series refuses it (S-23 is a hard rule), until the row is removed.
+     */
+    @Test
+    @Transactional
+    public void astoredWeeksParameterNeitherBlocksAnEditNorTheRelease() {
+        PublicationSeries s = series();
+        s.getReportParams().put("weeks", "typed on the series");
+        PublicationIssue i = issue(s);
+        i.getReportParams().put("weeks", "typed on the issue");
+        em.flush();
+
+        Map<String, Object> roundTripped = new LinkedHashMap<>();
+        roundTripped.put("weeks", "typed on the issue");
+        editService.update(i, new IssueEditService.IssueEdit(
+                Map.of("da", "Et nyt navn"), null, null, roundTripped), user());
+        em.flush();
+        assertEquals("Et nyt navn", i.getDescs().get(0).getName(),
+                "the rename was refused over a weeks parameter the request did not change");
+
+        assertEquals("36", paramsFromPublishing(i).get("weeks"),
+                "the release did not put the issue's own weeks over the stored parameter");
+        assertEquals(List.of("weeks"), SeriesValidator.reservedReportParams(s.getReportParams()),
+                "a save of the series is to refuse the stored row, as it refuses the six");
+    }
+
     /** And an edit that says nothing about the parameters never asks the question. */
     @Test
     @Transactional
@@ -392,7 +483,7 @@ public class IssueReportParamInjectionITTest extends ITTest {
     /** And the reserved set is exactly what the numbering supplies. */
     @Test
     public void thereservedSetIsTheNumbering() {
-        assertEquals(java.util.Set.of("week", "weekto", "year", "edition",
+        assertEquals(java.util.Set.of("week", "weekto", "weeks", "year", "edition",
                         "yearnumber", "weeknumber"),
                 SeriesValidator.RESERVED_REPORT_PARAMS,
                 "the reserved set moved; every one of these is injected from the edition's "

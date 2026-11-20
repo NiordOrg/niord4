@@ -95,6 +95,19 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   (`IndexIncompleteNotice`, the `pdf` text `pdf.list.index_incomplete`), and the administration app shows the list's
   warning in the mail dialog and asks before an export, whose archive drops the mark to keep its form. What is left is
   in [`potential-errors.md`](./potential-errors.md), LUCENE-7.
+- Each index says when it is complete, for a person or a script that prepares a database: the first time after a
+  start or a re-index that its state turns complete, it logs one INFO line, `Message search index complete: Lucene,
+  <n> messages indexed in this fill` (or `PostgreSQL`), also when the fill found nothing to do, and no line after
+  that; and `GET /rest/monitor/message-index` (system administrators) answers `{"lucene":…,"postgres":…,"complete":…}`
+  from the two flags in memory. `MessagePostgresIndex.allMessagesIndexed()` is set once the completing pass has
+  committed (it used to be set when the pass had found its messages, before it wrote them) and is false after a
+  start until the first pass, about a minute; a pass that commits after a re-index began does not mark the re-index's
+  table complete. A re-index (`recreateIndex` of either index) is started by code and tests only: no page or endpoint
+  starts one. The Lucene line after a start counts the whole rebuild; the PostgreSQL line after a restart counts only
+  what the table lacked, so `0 messages` there means nothing was missing, and its figure counts the passes that
+  committed. The state is the backend process's: with several backend pods, each answers for itself. The Lucene line
+  follows the line of the pass that completed the index. The operators' guide (`country-kit/docs/operators-guide.md`,
+  _Cut-over_) tells how to wait for it.
 - Both passes also look five minutes behind their marker (`MessageQueryService.INDEX_LOOK_BACK`, a constant).
   A message's `updated` time is stamped when its transaction writes it, and transactions commit in another
   order: a message stamped before the time a pass read up to, and committed after that pass, lay below the
@@ -112,7 +125,7 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   the log tells of it. A failure of the database while a message is read (a dropped connection, a pool timeout, an
   SQL error after which the transaction refuses every later statement) is not skipped: it would fail every later
   message of the batch too, so the pass fails as a whole, the marker stays, and the next pass tries the same
-  messages again. The re-index of the admin page runs the same pass. A transaction that takes longer than five minutes from
+  messages again. A re-index (`recreateIndex`, started by code and tests only) runs the same pass. A transaction that takes longer than five minutes from
   writing a message to its commit is still missed.
 - `disableLucene` therefore only routes which index a free-text **search** reads. Both indexes are always
   populated, so the two can be compared at any time and the switch is effectively instant.

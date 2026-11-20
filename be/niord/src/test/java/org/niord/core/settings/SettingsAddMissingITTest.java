@@ -122,6 +122,39 @@ class SettingsAddMissingITTest extends ITTest {
         assertEquals("it-operator@example.org", row(SENDER).getValue(), "adoption never changes a row");
     }
 
+    /**
+     * A row a database holds before its key is declared, made by hand, is adopted as it is: start-up never changes
+     * its value, type or flags. One whose {@code web} flag is false is therefore still not served at
+     * {@code /rest/settings/web}, and one whose {@code editable} flag is false is still not on the Settings page. To
+     * use such a row, give it the catalog's flags, or delete it before the first start on the version that declares
+     * the key, so start-up adds it.
+     */
+    @Test
+    void aRowMadeByHandIsAdoptedWithItsOwnFlags() throws SQLException {
+        String key = FrontendSettings.WMS_LAYER_ENABLED_BY_DEFAULT.getKey();
+        removeLedgerRow(key);
+        Tx.requiringNew().run(() -> {
+            Setting row = em.find(Setting.class, key);
+            row.setValue(true);
+            row.setWeb(false);
+            row.setEditable(false);
+        });
+        settingsService.evictFromCache(key);
+
+        assertEquals(0, addMissing(), "adoption adds no row");
+
+        Setting adopted = row(key);
+        assertEquals(Boolean.TRUE, adopted.getValue(), "the value made by hand");
+        assertFalse(adopted.isWeb(), "its own web flag, not the catalog's");
+        assertFalse(adopted.isEditable(), "its own editable flag, not the catalog's");
+        assertEquals(java.util.Arrays.asList(DefaultsLedger.SOURCE_ADOPTED, null), ledgerRow(key),
+                "recorded as adopted, without a hash: its value is not the default");
+        assertFalse(Tx.requiringNew().call(() -> settingsService.getAllForWeb()).stream()
+                .anyMatch(s -> s.getKey().equals(key)), "not served to the web applications");
+        assertFalse(Tx.requiringNew().call(() -> settingsService.getAllEditable()).stream()
+                .anyMatch(s -> s.getKey().equals(key)), "not on the Settings page");
+    }
+
     @Test
     void aKeyWhoseRowWasRemovedIsNotAddedAgain() throws SQLException {
         removeRow(CONTACT);

@@ -92,14 +92,55 @@ describe('zoned-date', () => {
       const utc = zonedDateToUtc(2026, 2, 29, 3, 30, 0, 'Europe/Copenhagen');
       expect(utc.toISOString()).toBe('2026-03-29T01:30:00.000Z');
     });
+  });
 
-    it('handles DST fall-back ambiguous wall-clock by picking the post-transition instant', () => {
-      // 2026 fall-back in Europe/Copenhagen: last Sunday of October → 2026-10-25.
-      // Clocks fall from 03:00 (UTC+2) to 02:00 (UTC+1). 02:30 wall-clock occurs twice.
-      // Pre-transition: 02:30 UTC+2 = 00:30 UTC. Post-transition: 02:30 UTC+1 = 01:30 UTC.
-      // Convention: pick post-transition (matches Java ZonedDateTime, luxon, date-fns-tz).
-      const utc = zonedDateToUtc(2026, 9, 25, 2, 30, 0, 'Europe/Copenhagen');
-      expect(utc.toISOString()).toBe('2026-10-25T01:30:00.000Z');
+  describe('zonedDateToUtc on the days the clocks change, as Java’s ZonedDateTime.of resolves', () => {
+    // A typed time in the hour a clock change skips resolves to the instant the clock reads an
+    // hour later; one in the hour it repeats resolves to its first occurrence, before the clocks
+    // go back. Nuuk (UTC−2 on the EU rule) changes at 23:00 local, on the Saturday evening, so its
+    // gap ends a local day: west of UTC the gap must still move forward, never back.
+    it.each([
+      // Copenhagen, spring 29 March 2026: 02:00 (UTC+1) becomes 03:00 (UTC+2).
+      ['Europe/Copenhagen', 2026, 2, 29, 1, 59, '2026-03-29T00:59:00.000Z'],
+      ['Europe/Copenhagen', 2026, 2, 29, 2, 0, '2026-03-29T01:00:00.000Z'], // the gap → 03:00
+      ['Europe/Copenhagen', 2026, 2, 29, 2, 30, '2026-03-29T01:30:00.000Z'], // the gap → 03:30
+      ['Europe/Copenhagen', 2026, 2, 29, 3, 0, '2026-03-29T01:00:00.000Z'],
+      // Copenhagen, autumn 25 October 2026: 03:00 (UTC+2) becomes 02:00 (UTC+1).
+      ['Europe/Copenhagen', 2026, 9, 25, 1, 59, '2026-10-24T23:59:00.000Z'],
+      ['Europe/Copenhagen', 2026, 9, 25, 2, 0, '2026-10-25T00:00:00.000Z'], // first of two
+      ['Europe/Copenhagen', 2026, 9, 25, 2, 30, '2026-10-25T00:30:00.000Z'], // first of two
+      ['Europe/Copenhagen', 2026, 9, 25, 3, 0, '2026-10-25T02:00:00.000Z'],
+      // Nuuk, spring 28 March 2026: 23:00 (UTC−2) becomes 00:00 on the 29th (UTC−1).
+      ['America/Nuuk', 2026, 2, 28, 22, 59, '2026-03-29T00:59:00.000Z'],
+      ['America/Nuuk', 2026, 2, 28, 23, 0, '2026-03-29T01:00:00.000Z'], // the gap → 00:00
+      ['America/Nuuk', 2026, 2, 28, 23, 30, '2026-03-29T01:30:00.000Z'], // the gap → 00:30
+      ['America/Nuuk', 2026, 2, 29, 0, 0, '2026-03-29T01:00:00.000Z'],
+      // Nuuk, autumn 24 October 2026: 00:00 on the 25th (UTC−1) becomes 23:00 on the 24th (UTC−2).
+      ['America/Nuuk', 2026, 9, 24, 22, 59, '2026-10-24T23:59:00.000Z'],
+      ['America/Nuuk', 2026, 9, 24, 23, 0, '2026-10-25T00:00:00.000Z'], // first of two
+      ['America/Nuuk', 2026, 9, 24, 23, 30, '2026-10-25T00:30:00.000Z'], // first of two
+      ['America/Nuuk', 2026, 9, 25, 0, 0, '2026-10-25T02:00:00.000Z'],
+      // A zone without clock changes: the same offset on both days.
+      ['Asia/Kolkata', 2026, 2, 29, 2, 30, '2026-03-28T21:00:00.000Z'],
+      ['Asia/Kolkata', 2026, 9, 25, 2, 30, '2026-10-24T21:00:00.000Z'],
+      ['UTC', 2026, 2, 29, 2, 30, '2026-03-29T02:30:00.000Z'],
+    ])(
+      '%s: %d, month index %d, day %d, %d:%d resolves to %s',
+      (zone, year, month, day, hour, minute, expected) => {
+        expect(zonedDateToUtc(year, month, day, hour, minute, 0, zone).toISOString()).toBe(
+          expected,
+        );
+      },
+    );
+
+    it('resolves the typed clock of a firing period or a date-time field the same way', () => {
+      // wallClockToInstant is the path the schedule editor saves through.
+      expect(
+        wallClockToInstant(new Date(2026, 2, 28), 23, 30, 0, 'America/Nuuk').toISOString(),
+      ).toBe('2026-03-29T01:30:00.000Z');
+      expect(
+        wallClockToInstant(new Date(2026, 9, 25), 2, 30, 0, 'Europe/Copenhagen').toISOString(),
+      ).toBe('2026-10-25T00:30:00.000Z');
     });
   });
 

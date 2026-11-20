@@ -42,6 +42,35 @@ describe('formatHtml', () => {
     );
   });
 
+  it('keeps a comment beside a block as the comment, never as "undefined"', () => {
+    expect(formatHtml('<div><!-- c --><p>x</p></div>')).toBe(
+      '<div>\n  <!-- c -->\n  <p>x</p>\n</div>',
+    );
+    expect(formatHtml('<p>a</p><!-- between --><p>b</p>')).toBe(
+      '<p>a</p>\n<!-- between -->\n<p>b</p>',
+    );
+  });
+
+  it('keeps the conditional comments of pasted Word HTML as they were', () => {
+    const word =
+      '<div><!--[if gte mso 9]><xml><o:OfficeDocumentSettings></o:OfficeDocumentSettings></xml><![endif]-->' +
+      '<p class="MsoListParagraph"><!--[if !supportLists]-->·<!--[endif]-->One</p>' +
+      'Note <!--[if !mso]>hidden<![endif]--><b>bold</b><p>Two</p></div>';
+    const formatted = formatHtml(word);
+    expect(formatted).not.toContain('undefined');
+    expect(formatted).toBe(
+      [
+        '<div>',
+        '  <!--[if gte mso 9]><xml><o:OfficeDocumentSettings></o:OfficeDocumentSettings></xml><![endif]-->',
+        '  <p class="MsoListParagraph"><!--[if !supportLists]-->·<!--[endif]-->One</p>',
+        '  Note <!--[if !mso]>hidden<![endif]--><b>bold</b>',
+        '  <p>Two</p>',
+        '</div>',
+      ].join('\n'),
+    );
+    expect(formatHtml(formatted)).toBe(formatted);
+  });
+
   it('is idempotent — formatting already-formatted HTML is a no-op', () => {
     const once = formatHtml('<table><tbody><tr><td>a</td><td>b</td></tr></tbody></table>');
     expect(formatHtml(once)).toBe(once);

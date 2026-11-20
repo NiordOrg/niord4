@@ -187,6 +187,14 @@ public class NavtexTextAssemblyTest {
     }
 
     @Test
+    public void aLinkInsideNiord_leavesItsWordsAndNothingAfterThem() throws Exception {
+        // A link to another warning has no address the plain text can show; it left " <>" after its words,
+        // which the alphabet turned into a space before the full stop.
+        String text = generate("<p>Replaces <a href=\"#/message/NW-001-26\">NW-001-26</a>.</p>");
+        assertEquals("REPLACES NW-001-26.", text);
+    }
+
+    @Test
     public void aNoBreakSpaceInTheDetails_becomesASpace() throws Exception {
         // The ",&nbsp;" the geometry templates write between positions reaches the generated text as a space.
         String nbsp = generate("<p>Firing in pos. 57° 01.7'N - 003° 30.6'E,&nbsp;57° 02.0'N - 003° 31.0'E.</p>");

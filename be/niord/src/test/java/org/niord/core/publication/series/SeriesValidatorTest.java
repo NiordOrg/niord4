@@ -599,7 +599,7 @@ public class SeriesValidatorTest {
         assertDoesNotFire("S-23", s);
 
         for (String key : List.of("week", "weekTo", "WEEKTO", " year ", "Edition",
-                "yearNumber", "WeekNumber")) {
+                "yearNumber", "WeekNumber", "weeks", " Weeks ")) {
             PublicationSeries t = valid();
             t.getReportParams().put(key, "1");
             assertFires("S-23", t);

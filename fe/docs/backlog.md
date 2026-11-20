@@ -505,14 +505,6 @@ Background: [`features/editor.md`](features/editor.md).
   which the message-HTML sanitiser drops: the editing surface shows the colour, the preview, the message details,
   the comment cards and the public site do not. Either the picker goes, or `color` joins the sanitiser's two kept
   declarations.
-- A time typed into the date-time field in a clock change resolves differently from the backend.
-  `zonedDateToUtc` (`shared/utils/zoned-date.ts`) says a clock in a spring-forward gap moves forward and one in a
-  fall-back hour is its second occurrence, "as Java does"; Java takes the first occurrence, and west of UTC the
-  gap moves backward: in `America/Nuuk`, 23:30 on the spring day resolves to 22:30. The public site's copy
-  resolves both as Java's `ZonedDateTime.of` does. (The inclusive end of a day in the same file, which had the
-  same fault on the autumn day, is derived from the next day's start since 2026-11-13, in the frontend and in the
-  backend's `TimeUtils.endOfDay`.) When it is fixed, this item's allow entry in `country-kit/country-words.json`
-  goes too.
 - A save the backend refuses with 400 shows only the general `editor.save.error` toast, never the reason the
   backend gives. Since the rulings of 2026-09-26 a short id or referenced message id holding `<`, `>`, `"` or `&`
   is refused so (`docs/security-review-2026-09.md` §8); the editor could show the problem detail, or check the
@@ -541,12 +533,6 @@ Background: [`features/editor.md`](features/editor.md).
   officer may take the period start for the day it came out. The full name as the span's title (or wrapping
   instead of cutting), and a word for the date (or the period's two ends, `intervalFrom`/`intervalTo`, which the
   answer carries) close it. Found by the error hunt's live check (2026-11-13); read in the code.
-- **The source view's _Format_ writes an HTML comment beside a block as the word "undefined".** `inlineOf`
-  (`ui-apps/admin/src/app/shared/forms/rich-text-editor/html-format.ts` 61-65) treats every inline node that is
-  not text as an element and takes its `outerHTML`, which a comment does not have, so
-  `<div><!-- c --><p>x</p></div>` (pasted Word HTML can hold such comments) comes out with `undefined` in place
-  of the comment. Writing a comment node as `<!--…-->`, or dropping it, closes it. Met by the error hunt's phase 2
-  fix stage (2026-11-16, cluster P3-11), read in the code; Low.
 - **The date picker's calendar does not take focus when it opens** (WCAG 2.4.3). Enter on a date field opens the
   calendar (`ui-apps/admin/src/app/shared/forms/date-picker/date-picker.ts`, `toggle`) and leaves the focus on the
   field. The calendar is drawn in the overlay container at the end of the page, so Tab reaches its days only after
@@ -742,7 +728,6 @@ Background: [`features/schedule.md`](features/schedule.md).
 
 - The selected day is component state, not a URL parameter: a day cannot be linked to or bookmarked, and a refresh
   returns to today.
-- Cancelling the inline period editor discards unsaved rows with no prompt.
 - Pressing Add appends an empty row but leaves keyboard focus where it was.
 - **A firing period's time fields have no visible label and cut their placeholder.** The From and To fields of a
   period are named by their aria-labels only

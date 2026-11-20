@@ -262,6 +262,11 @@ Details and the harness traps are in [`testing.md`](./testing.md). The bar:
 - Tradeoffs and assumptions are written down where they apply.
 - Documentation under `docs/` is updated **in the same change** whenever a rule, an invariant or a
   contract it describes moved. A doc that describes yesterday's code is worse than no doc.
+- **The guides are updated in the same change** whenever what a user, an API client, a country or
+  an operator sees or does moved: the manuals and integration documents of the repository's
+  `guides/` folder and the kit's guides. The chapter on the changed thing was read, and the pull
+  request says which guide pages changed or that none describes it. Which guide serves which
+  reader is in [the guides' README](../../guides/README.md#keeping-the-guides-level-with-the-product).
 - Source files carry no per-file copyright header; do not add one. Ownership is stated once, in the
   appendix of `LICENSE` at the repository root, and nowhere else in the source tree.
 - Anything deliberately left undone is a row in [`backlog.md`](./backlog.md) with enough context for

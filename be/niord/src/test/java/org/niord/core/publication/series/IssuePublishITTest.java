@@ -1586,6 +1586,75 @@ public class IssuePublishITTest extends ITTest {
     }
 
     /**
+     * Each section names its weeks as the source's own series pattern writes them (RENDER11): by the week part of
+     * the SOURCE series' name pattern in the render language, or the source's week label whole. Under
+     * "Uge ${week} og ${weekTo}, ${year}" a source of weeks 44 and 45 is "44 og 45"; a source whose editor wrote a
+     * label is that label. FAILS on the rule that named every source in the pair form ("44+45"), and on the one that
+     * ignored a source's label ("46+47" where the label says otherwise).
+     */
+    @Test
+    @Transactional
+    public void eachSectionNamesItsWeeksAsTheSourcesOwnNameWritesThem() {
+        Compiled e = compiledEstate();
+        e.source().getDescs().get(0).setNameSuggestionPattern("Uge ${week} og ${weekTo}, ${year}");
+        e.week1().setWeek(44);
+        e.week1().setWeekTo(45);
+        e.week1().setYear(2023);
+        e.week2().setWeek(46);
+        e.week2().setWeekTo(47);
+        e.week2().setYear(2023);
+        e.week2().setWeekLabel("46 & 47");
+        PublicationIssue annualIssue = issue(e.annual(), new Date(1_698_900_000_000L));
+        em.flush();
+
+        StubIssueRenderService.reset();
+        publishService.publish(annualIssue.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS,
+                        null, new Date(1_699_300_000_000L)));
+        em.flush();
+
+        List<IssueRenderService.RenderGroup> groups = StubIssueRenderService.lastRequest().groups();
+        assertEquals(List.of(e.week1().getPublicId(), e.week2().getPublicId()),
+                groups.stream().map(IssueRenderService.RenderGroup::publicId).toList());
+        assertEquals("44 og 45", groups.get(0).weeks(),
+                "the first source is not named for its weeks as its own series' pattern writes them");
+        assertEquals("46 & 47", groups.get(1).weeks(), "the second source's week label is not its weeks");
+    }
+
+    /**
+     * Under a source pattern that names the first week alone, as the previous system's "EfS uge ${week} - ${year}"
+     * does, a section still names every week its source covered: a source of weeks 44 and 45 is "44+45", a single
+     * week "46". FAILS on the rule that named it "44", as its weekly is headed, which printed no closing week
+     * anywhere on the line where the template printed "44 - 45" before.
+     */
+    @Test
+    @Transactional
+    public void aSectionNamesEveryWeekOfASourceWhosePatternNamesTheFirstWeekAlone() {
+        Compiled e = compiledEstate();
+        e.source().getDescs().get(0).setNameSuggestionPattern("EfS uge ${week} - ${year}");
+        e.week1().setWeek(44);
+        e.week1().setWeekTo(45);
+        e.week1().setYear(2023);
+        e.week2().setWeek(46);
+        e.week2().setWeekTo(null);
+        e.week2().setYear(2023);
+        PublicationIssue annualIssue = issue(e.annual(), new Date(1_698_900_000_000L));
+        em.flush();
+
+        StubIssueRenderService.reset();
+        publishService.publish(annualIssue.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS,
+                        null, new Date(1_699_300_000_000L)));
+        em.flush();
+
+        List<IssueRenderService.RenderGroup> groups = StubIssueRenderService.lastRequest().groups();
+        assertEquals(List.of(e.week1().getPublicId(), e.week2().getPublicId()),
+                groups.stream().map(IssueRenderService.RenderGroup::publicId).toList());
+        assertEquals("44+45", groups.get(0).weeks(), "the source of two weeks is not named by both");
+        assertEquals("46", groups.get(1).weeks(), "a single week is named by its week");
+    }
+
+    /**
      * A SOURCE WEEK THAT FILED NOTHING IS STILL A SECTION.
      *
      * The sections are the record of what the year covered, not of what happened

@@ -22,8 +22,11 @@ import freemarker.cache.StringTemplateLoader;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
+import freemarker.template.SimpleScalar;
 import freemarker.template.Template;
+import freemarker.template.TemplateHashModel;
 import freemarker.template.TemplateMethodModelEx;
+import freemarker.template.TemplateModel;
 import org.junit.jupiter.api.Test;
 import org.niord.model.message.MessageVo;
 import org.niord.model.message.Type;
@@ -39,6 +42,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -68,6 +72,10 @@ public class WeeklyReportTemplateTest {
 
     private static final String TEMPLATE = "nm-report-pdf.ftl";
 
+    /** The text the report templates date a document by, and its English value */
+    private static final String DATE_FORMAT_KEY = "msg.time.date_format";
+    private static final String ENGLISH_DATE_FORMAT = "d MMMM yyyy";
+
     /** The shared macros, stood in for: this is a test about the cover line. */
     private static final String MESSAGE_SUPPORT_STUB = """
             <#macro pageSizeStyle frontPage=true></#macro>
@@ -82,11 +90,21 @@ public class WeeklyReportTemplateTest {
             """;
 
     /** Every label answers with its own key, and with its arguments in brackets. */
-    private static class KeyText implements TemplateMethodModelEx {
+    private static class KeyText implements TemplateMethodModelEx, TemplateHashModel {
+        /** The pattern the language's date text holds, which the templates date the document by */
+        private final String dateFormat;
+
+        KeyText(String dateFormat) {
+            this.dateFormat = dateFormat;
+        }
+
         @Override
         public Object exec(List arguments) {
             if (arguments.isEmpty()) {
                 return "";
+            }
+            if (arguments.size() == 1 && DATE_FORMAT_KEY.equals(String.valueOf(arguments.get(0)))) {
+                return dateFormat;
             }
             StringBuilder out = new StringBuilder(String.valueOf(arguments.get(0)));
             for (int i = 1; i < arguments.size(); i++) {
@@ -94,9 +112,24 @@ public class WeeklyReportTemplateTest {
             }
             return arguments.size() > 1 ? out.append(")").toString() : out.toString();
         }
+
+        /** Read as a hash too, {@code text['key']}, as the dictionary model is */
+        @Override
+        public TemplateModel get(String key) {
+            return new SimpleScalar(key);
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return false;
+        }
     }
 
     private String render(Map<String, Object> model) throws Exception {
+        return render(TEMPLATE, model);
+    }
+
+    private String render(String templateName, Map<String, Object> model) throws Exception {
         StringTemplateLoader stubs = new StringTemplateLoader();
         stubs.putTemplate("message-support.ftl", MESSAGE_SUPPORT_STUB);
 
@@ -111,9 +144,9 @@ public class WeeklyReportTemplateTest {
         cfg.setObjectWrapper(new DefaultObjectWrapper(Configuration.VERSION_2_3_31));
         cfg.setLocalizedLookup(false);
 
-        model.put("text", new KeyText());
+        model.putIfAbsent("text", new KeyText(ENGLISH_DATE_FORMAT));
 
-        Template template = cfg.getTemplate(TEMPLATE);
+        Template template = cfg.getTemplate(templateName);
         StringWriter out = new StringWriter();
         template.process(model, out);
         return out.toString();
@@ -187,10 +220,36 @@ public class WeeklyReportTemplateTest {
 
         // Formatted the way the template formats it, in the same default locale
         // FreeMarker is configured with here.
-        String today = new SimpleDateFormat("dd. MMMM yyyy", Locale.getDefault())
+        String today = new SimpleDateFormat(ENGLISH_DATE_FORMAT, Locale.getDefault())
                 .format(new Date());
         assertTrue(html.contains(today),
                 "the cover no longer says which day the document was printed on");
+    }
+
+    /**
+     * Every report dates its first page by the pattern of the language's
+     * date text ({@code msg.time.date_format}, "d MMMM yyyy" in English), not by
+     * the Danish "dd. MMMM yyyy" written into the template. Asserted with a pattern
+     * no template holds, so a template that keeps a pattern of its own fails here.
+     * FAILS on the templates that wrote "dd. MMMM yyyy".
+     */
+    @Test
+    public void everyReportDatesItsFirstPageByTheLanguagesDateText() throws Exception {
+        String isoToday = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        for (String template : List.of(TEMPLATE, "nm-tp-report-pdf.ftl", "nm-almanac-report-pdf.ftl",
+                "nm-annex-report-pdf.ftl", "fa-list-pdf.ftl")) {
+            Map<String, Object> model = aWeek();
+            model.put("text", new KeyText("'dated' yyyy-MM-dd"));
+            if (template.startsWith("nm-almanac")) {
+                // The cover is what is asserted: the almanac's contents need more of a message than these have
+                model.put("messages", new ArrayList<>());
+            }
+
+            String html = render(template, model);
+
+            assertTrue(html.contains("dated " + isoToday),
+                    template + " does not date its first page by the language's date text: " + html);
+        }
     }
 
     /**
@@ -226,5 +285,55 @@ public class WeeklyReportTemplateTest {
         assertTrue(html.contains("pdf.volume(141)"),
                 "the label reached the volume arithmetic, which fails the whole render the first "
                         + "time a year is written out in words");
+    }
+
+    // ------------------------------------------------------ the weeks of the issue
+
+    /** The number of times the text occurs in the document */
+    private static int occurrences(String html, String needle) {
+        int count = 0;
+        for (int at = html.indexOf(needle); at >= 0; at = html.indexOf(needle, at + 1)) {
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * RENDER11. An issue named for weeks 36 to 38 is headed by those weeks, on its first page and in its page
+     * header, in both weekly reports, and so is a pair, in whatever form the series' name pattern writes them. The
+     * release hands the report the weeks so written ({@code weeks}); the templates printed {@code week} alone,
+     * so "Uge 36-38, 2026" was headed "Uge 36". FAILS on the templates that print {@code week}.
+     */
+    @Test
+    public void bothWeeklyReportsAreHeadedByTheWeeksTheIssuesNameSays() throws Exception {
+        for (String weeks : List.of("36-38", "36+37", "36 og 37")) {
+            Map<String, Object> model = aWeek();
+            model.put("weekTo", weeks.substring(weeks.length() - 2));
+            model.put("weeks", weeks);
+
+            String nm = render(model);
+            assertEquals(2, occurrences(nm, "pdf.week " + weeks + ", 2025"),
+                    "the NtM report's heading and page header do not both say weeks " + weeks + ": " + nm);
+
+            String tp = render("nm-tp-report-pdf.ftl", model);
+            assertEquals(2, occurrences(tp, "pdf.week " + weeks + ", 2025"),
+                    "the T&P report's heading and page header do not both say weeks " + weeks + ": " + tp);
+            assertTrue(tp.contains("pdf.nm_abbrev  " + weeks + " 2025"),
+                    "the T&P report's first-page line does not say weeks " + weeks);
+        }
+    }
+
+    /** A single week, and the legacy print dialog's model, which hands the week alone, print the week. */
+    @Test
+    public void aSingleWeekAndAPrintWithoutWeeksPrintTheWeek() throws Exception {
+        Map<String, Object> single = aWeek();
+        single.put("weeks", "36");
+        assertEquals(2, occurrences(render(single), "pdf.week 36, 2025"));
+
+        Map<String, Object> dialog = aWeek();
+        dialog.remove("weekTo");
+        assertEquals(2, occurrences(render(dialog), "pdf.week 36, 2025"),
+                "a render with no weeks lost the week; the print dialog hands only the week");
+        assertEquals(2, occurrences(render("nm-tp-report-pdf.ftl", dialog), "pdf.week 36, 2025"));
     }
 }

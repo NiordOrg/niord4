@@ -58,10 +58,20 @@ function escapeText(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/**
+ * An inline node as markup, written as it came in. A comment (pasted Word HTML holds conditional
+ * ones such as `<!--[if !supportLists]-->`) has no `outerHTML`, so it is written back as a comment;
+ * any other node that is not an element is written as its text.
+ */
 function inlineOf(node: Node): string {
-  return node.nodeType === Node.TEXT_NODE
-    ? escapeText(node.textContent ?? '')
-    : (node as Element).outerHTML;
+  switch (node.nodeType) {
+    case Node.ELEMENT_NODE:
+      return (node as Element).outerHTML;
+    case Node.COMMENT_NODE:
+      return `<!--${(node as Comment).data}-->`;
+    default:
+      return escapeText(node.textContent ?? '');
+  }
 }
 
 /** Emit a block element's own line(s); recurse only when it actually holds block children. */

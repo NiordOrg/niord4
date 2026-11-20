@@ -78,6 +78,64 @@ public final class PrintedNumbering {
         return asText(issue == null ? null : issue.getWeekTo());
     }
 
+    /**
+     * The weeks the report names the issue for, and what it is handed as {@code weeks}: the week label where one
+     * is written, which holds the whole span as the publication writes it ("36 og 37"); else the derived weeks as
+     * its series' name pattern in the report's language writes them, in the name the series suggests for the issue:
+     * "36" under "Uge ${week}, ${year}", "36 og 37" under "Uge ${week} og ${weekTo}, ${year}", "36+37" or "36-38"
+     * under "Uge ${week}+${weekTo}, ${year}", and that last form where the pattern writes no week; a single week
+     * under a pattern that writes the closing week is its week alone ({@link IssueNaming#weeksText}). The pattern is
+     * read as it stands now, not the name stored on the issue: an issue renamed by hand, or named before the
+     * pattern changed, is headed by the pattern's weeks, and the week label is the way to head it otherwise. Null
+     * where the issue has no week.
+     *
+     * @param lang the language the report is drawn in, whose name pattern is read
+     */
+    public static String printedWeeks(PublicationIssue issue, String lang) {
+        return printedWeeks(issue, lang, false);
+    }
+
+    /**
+     * The weeks a compiled document names the issue by, as one of its sources ({@code group.weeks}): as
+     * {@link #printedWeeks}, except that a source of several weeks whose pattern does not write both its first and
+     * its closing week is named in the pair form, "36+37" or "36-38" ({@link IssueNaming#allWeeksText}), so the
+     * source's line names every week it covered.
+     */
+    public static String printedSourceWeeks(PublicationIssue issue, String lang) {
+        return printedWeeks(issue, lang, true);
+    }
+
+    private static String printedWeeks(PublicationIssue issue, String lang, boolean everyWeek) {
+        if (issue == null) {
+            return null;
+        }
+        String label = trimmed(issue.getWeekLabel());
+        if (label != null) {
+            return label;
+        }
+        String pattern = namePatternOf(issue.getSeries(), lang);
+        return everyWeek
+                ? IssueNaming.allWeeksText(pattern, issue.getWeek(), issue.getWeekTo(), issue.getYear())
+                : IssueNaming.weeksText(pattern, issue.getWeek(), issue.getWeekTo(), issue.getYear());
+    }
+
+    /**
+     * The series' name pattern in the language, as a new issue's name is suggested from it, or null where the
+     * series has none there.
+     */
+    static String namePatternOf(PublicationSeries series, String lang) {
+        if (series == null || lang == null || series.getDescs() == null) {
+            return null;
+        }
+        for (PublicationSeriesDesc desc : series.getDescs()) {
+            if (lang.equals(desc.getLang())) {
+                String pattern = desc.getNameSuggestionPattern();
+                return pattern == null || pattern.isBlank() ? null : pattern;
+            }
+        }
+        return null;
+    }
+
     /** What ${year} prints: the label, else the derived year. */
     public static String printedYear(PublicationIssue issue) {
         return printed(issue == null ? null : issue.getYearLabel(),

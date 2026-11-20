@@ -39,6 +39,9 @@ import java.util.function.Supplier;
 @Service
 public class PublicationTxRunner {
 
+    /** The legacy import's budget, in seconds: its transaction's timeout (see {@link #callWithImportBudget}) */
+    public static final int IMPORT_TIMEOUT_SECONDS = 1800;
+
     /** Runs the work in its own transaction, committed when this method returns */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public <T> T call(Supplier<T> work) {
@@ -63,7 +66,7 @@ public class PublicationTxRunner {
      * is far more than it needs, and the cost of a generous ceiling is nothing at
      * all.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = 1800)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, timeout = IMPORT_TIMEOUT_SECONDS)
     public <T> T callWithImportBudget(Supplier<T> work) {
         return work.get();
     }

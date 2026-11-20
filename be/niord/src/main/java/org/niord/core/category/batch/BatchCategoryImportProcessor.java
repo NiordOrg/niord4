@@ -71,12 +71,13 @@ public class BatchCategoryImportProcessor extends AbstractItemHandler {
         for (Category c = category; c != null; c = c.getParent()) {
             chain.addFirst(new FileDomains(c, domainIds(c)));
         }
+        // The entry carries its whole chain of parents, so an entry without a parent is a root and matches a root only
         Category imported = categoryService.importCategory(category, true, true, BootstrapRun.scopeOf(bootstrapRun, job),
                 additions -> {
                     if (logged.add(additions.entry() + additions.notes())) {
                         getLog().info(additions.line());
                     }
-                });
+                }, true);
         for (FileDomains f : chain) {
             logLeftOutDomains(f.template(), f.template() == category ? imported : null, f.ids());
         }

@@ -22,11 +22,13 @@ import org.junit.jupiter.api.Test;
 import org.niord.test.ITTest;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -373,6 +375,25 @@ class ChartRestServiceITTest extends ITTest {
     }
 
     @Test
+    void createChartWithANullCoordinate_isRefusedAndMakesNoChart() {
+        // CG10: a coordinate sent as null was read as 0 and stored; it is refused as not a number, as a NaN is
+        Map<String, Object> body = chartBody("IT-REST-NullCoord-1", "IT-REST-NullCoord-Name");
+        body.put("geometry", Map.of("type", "Point", "coordinates", Arrays.asList(10.0, null)));
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(body)
+                .when().post("/rest/charts/chart/")
+                .then().statusCode(400)
+                .body("detail", containsString("is not a number"));
+        createdChartNumbers.add("IT-REST-NullCoord-1");
+
+        given()
+                .when().get("/rest/charts/search/IT-REST-NullCoord-1")
+                .then().statusCode(200)
+                .body("size()", is(0));
+    }
+
+    @Test
     void intersectingChartsAsEditorWithEmptyCollectionReturnsEmptyList() {
         // sysadmin carries the editor role; an empty feature collection yields an empty geometry and
         // therefore an empty result list, which still proves the EDITOR-protected endpoint returns 200.
@@ -382,5 +403,18 @@ class ChartRestServiceITTest extends ITTest {
                 .when().post("/rest/charts/intersecting-charts")
                 .then().statusCode(200)
                 .body("size()", is(0));
+    }
+
+    @Test
+    void intersectingChartsWithANullCoordinate_isRefused() {
+        // A coordinate sent as null is refused as the save refuses it, not searched as not a number
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(Map.of("type", "FeatureCollection", "features", List.of(Map.of(
+                        "type", "Feature", "properties", Map.of(),
+                        "geometry", Map.of("type", "Point", "coordinates", Arrays.asList(10.0, null))))))
+                .when().post("/rest/charts/intersecting-charts")
+                .then().statusCode(400)
+                .body("detail", containsString("is not a number"));
     }
 }

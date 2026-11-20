@@ -293,6 +293,197 @@ public final class IssueNaming {
         return WEEK_PAIR_JOIN.matcher(pattern).replaceAll("$1-");
     }
 
+    /** The four tokens a name writes its weeks with: the first week and the closing week, each in both variants. */
+    private static final Set<String> WEEK_TOKENS = Set.of("week", "week-2-digits", "weekTo", "weekTo-2-digits");
+
+    /** The weeks of a pattern that writes none: the pair form, which prints a range for three weeks or more. */
+    private static final String PAIR_FORM = "${week}+${weekTo}";
+
+    /**
+     * The week part of a name pattern: the stretch from its first week token to its last ({@code ${week}},
+     * {@code ${weekTo}} and their two-digit variants), with the text between them, or null where the pattern
+     * writes no week.
+     *
+     * The stretch ends at the first token of another kind ({@code ${year}}, a month, a day, the edition): a week
+     * token after it is not part of the weeks. So "Uge ${week} og ${weekTo}, ${year}" gives
+     * "${week} og ${weekTo}", "Uge ${week}, ${year}" gives "${week}", and "Uge ${week}, ${year} (${weekTo})" gives
+     * "${week}" too, where taking every week token would print the year inside the weeks. Within the stretch the
+     * tokens may stand in any order and any one may stand twice: "${weekTo} back to ${week}" is taken as written.
+     *
+     * Text before the first week token and after the last is not part of the weeks, with one exception: a bracket,
+     * round or square, that the stretch opens and the pattern's text closes after it (before any further token) is
+     * taken up to its closing bracket, and one the stretch closes that the text before it opens is taken from its
+     * opening bracket. So "Week ${week} (${week-2-digits}) ${year}" gives "${week} (${week-2-digits})", which prints
+     * "36 (36)", and never the half-open "36 (36". A bracket the pattern leaves open is left as it is.
+     */
+    public static String weekSpanOf(String pattern) {
+        if (pattern == null) {
+            return null;
+        }
+        Matcher m = TOKEN.matcher(pattern);
+        int start = -1;
+        int end = -1;
+        int before = 0;
+        int after = pattern.length();
+        while (m.find()) {
+            if (WEEK_TOKENS.contains(m.group(1))) {
+                if (start < 0) {
+                    start = m.start();
+                }
+                end = m.end();
+            } else if (start >= 0) {
+                after = m.start();
+                break;
+            } else {
+                before = m.end();
+            }
+        }
+        if (start < 0) {
+            return null;
+        }
+        for (char[] pair : BRACKETS) {
+            int open = 0;
+            int unopened = 0;
+            for (int i = start; i < end; i++) {
+                char c = pattern.charAt(i);
+                if (c == pair[0]) {
+                    open++;
+                } else if (c == pair[1]) {
+                    if (open > 0) {
+                        open--;
+                    } else {
+                        unopened++;
+                    }
+                }
+            }
+            end = closedAfter(pattern, end, after, pair, open);
+            start = openedBefore(pattern, start, before, pair, unopened);
+        }
+        return pattern.substring(start, end);
+    }
+
+    /** The brackets {@link #weekSpanOf} keeps whole, each as its opening and its closing character. */
+    private static final char[][] BRACKETS = {{'(', ')'}, {'[', ']'}};
+
+    /** The end of the span taken up to where the text after it closes {@code open} brackets, or as it was. */
+    private static int closedAfter(String pattern, int end, int limit, char[] pair, int open) {
+        for (int i = end; open > 0 && i < limit; i++) {
+            char c = pattern.charAt(i);
+            if (c == pair[0]) {
+                open++;
+            } else if (c == pair[1] && --open == 0) {
+                return i + 1;
+            }
+        }
+        return end;
+    }
+
+    /** The start of the span taken back to where the text before it opens {@code unopened} brackets, or as it was. */
+    private static int openedBefore(String pattern, int start, int limit, char[] pair, int unopened) {
+        for (int i = start - 1; unopened > 0 && i >= limit; i--) {
+            char c = pattern.charAt(i);
+            if (c == pair[1]) {
+                unopened++;
+            } else if (c == pair[0] && --unopened == 0) {
+                return i;
+            }
+        }
+        return start;
+    }
+
+    /** Whether a week part names the closing week: holds {@code ${weekTo}} in either variant. */
+    private static boolean namesClosingWeek(String weekPart) {
+        return weekPart.contains("${weekTo}") || weekPart.contains("${weekTo-2-digits}");
+    }
+
+    /** The first token of a week part that names the first week, as written, or null where it names none. */
+    private static String firstWeekTokenOf(String weekPart) {
+        Matcher m = TOKEN.matcher(weekPart);
+        while (m.find()) {
+            if (m.group(1).equals("week") || m.group(1).equals("week-2-digits")) {
+                return m.group();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The weeks an issue is named for, as the series' name pattern writes them, in the name the series suggests for
+     * the issue: the week part of the pattern ({@link #weekSpanOf}) expanded for this issue by {@link #expand}, the
+     * code that expands the name, so the weeks the report prints are the same characters as the weeks in that name.
+     * "Uge ${week}, ${year}" gives "36" for an issue of weeks 36 to 38, as the name "Uge 36, 2026" says;
+     * "Uge ${week} og ${weekTo}, ${year}" gives "36 og 37" for a pair; "Uge ${week}+${weekTo}, ${year}" gives
+     * "36+37" for a pair and "36-38" for three weeks or more ({@link #joined}), across a year's end "52+1" and
+     * "52-2". Null where there is no week.
+     *
+     * ONE PLACE WHERE THE WEEKS LEAVE THE NAME: a single week under a week part that writes the closing week. The
+     * closing week expands to nothing there, so the name keeps the text before it, "Uge 36+, 2026" and
+     * "Uge 36 og , 2026" (ISSUE13 in be/docs/potential-errors.md). A name is a suggestion an editor sees and can
+     * retype, a heading is not, so the weeks are then the first week's token alone, as the pattern writes it ("36",
+     * or "07" for {@code ${week-2-digits}}), until the name itself is settled.
+     *
+     * A pattern that writes no week (or none at all, or one whose week part expands to nothing, as a lone
+     * {@code ${weekTo}} does for a single week) gives the pair form, "${week}+${weekTo}": the week alone, "36+37"
+     * or "36-38". So a report is always headed by a week, and by all the weeks where its name cannot say them.
+     *
+     * The weekly reports print it in their heading and page header (the report's {@code weeks}); each source's line
+     * in the accumulated report ({@code group.weeks}) takes {@link #allWeeksText}, which differs only where the
+     * pattern cannot say a span. A closing week equal to the first is a single week. A week label is not this
+     * method's: it is printed whole, in its place ({@code PrintedNumbering.printedWeeks}).
+     *
+     * @param namePattern the series' name pattern in the report's language, or null
+     * @param week the first week, or null
+     * @param weekTo the closing week, or null for a single week
+     * @param year the week-based year the issue is named for, which places a span across a year's end; null reads
+     *             as a span within one year
+     */
+    public static String weeksText(String namePattern, Integer week, Integer weekTo, Integer year) {
+        if (week == null) {
+            return null;
+        }
+        boolean span = weekTo != null && !weekTo.equals(week);
+        Numbers numbers = new Numbers(week, span ? weekTo : null, year == null ? 0 : year, 1, 1, null);
+        String weekPart = weekSpanOf(namePattern);
+        if (weekPart != null && !span && namesClosingWeek(weekPart)) {
+            weekPart = firstWeekTokenOf(weekPart);
+        }
+        if (weekPart != null) {
+            try {
+                String weeks = expand(weekPart, numbers);
+                if (!weeks.isBlank()) {
+                    return weeks;
+                }
+            } catch (RuntimeException e) {
+                // A pattern that does not expand names no issue either (S-14 refuses it on the series); the pair
+                // form below still heads the document by its weeks.
+            }
+        }
+        return expand(span ? PAIR_FORM : "${week}", numbers);
+    }
+
+    /**
+     * The weeks a compiled document names one of its sources by: {@link #weeksText}, except for a source of several
+     * weeks whose pattern's week part does not write both its first and its closing week, which gets the pair form
+     * ("36+37", "36-38").
+     *
+     * The sections of a compiled document are the record of what its period covered, so a source's line names
+     * every week the source covered. A pattern that names the first week alone, "EfS uge ${week} - ${year}", as
+     * every pattern restored from the previous system does (that system had no closing-week token), names a double
+     * issue by its first week, and {@link #weeksText} heads the weekly itself so; its line in the compiled document
+     * would then say "Week 36" for a source of weeks 36 and 37, where the template printed "Week 36 - 37" before.
+     * A pattern that writes both weeks, and a single week, are as {@link #weeksText} gives them.
+     */
+    public static String allWeeksText(String namePattern, Integer week, Integer weekTo, Integer year) {
+        boolean span = week != null && weekTo != null && !weekTo.equals(week);
+        if (span) {
+            String weekPart = weekSpanOf(namePattern);
+            if (weekPart == null || !namesClosingWeek(weekPart) || firstWeekTokenOf(weekPart) == null) {
+                return weeksText(null, week, weekTo, year);
+            }
+        }
+        return weeksText(namePattern, week, weekTo, year);
+    }
+
     /** The values each token expands to, for a given set of numbers. */
     public static Map<String, String> valuesOf(Numbers n) {
         Map<String, String> v = new LinkedHashMap<>();

@@ -20,7 +20,9 @@ in the repository's `AGENTS.md` (section _Working here_), `README.md` (section _
 * Each new push to a pull request starts its checks again and cancels the run in progress, so push
   when a piece of work is done rather than after every commit.
 * A change to the base product that changes what a country may use or must do is recorded in
-  `country-kit/API-CHANGES.md` in the same pull request (<<building-a-country>>).
+  `country-kit/API-CHANGES.md` (<<building-a-country>>). Until the first production deployment the
+  record is paused, and a pull request adds an entry only when the base product's upgrade test
+  demands one (the kit's `README.md`, _Paused until production_).
 * A bug you find outside the task at hand is written down, not fixed in passing: backend findings
   in `be/docs/potential-errors.md`, frontend ones in `fe/docs/backlog.md`.
 

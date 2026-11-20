@@ -612,11 +612,41 @@ prints it when it is not the first.
 
 ### Reserved report parameters
 
-Six names are **injected from the issue** at render time and are refused as parameter keys, case- and
+Seven names are **injected from the issue** at render time and are refused as parameter keys, case- and
 whitespace-insensitively, on both sides: `week`, `weekTo`, `year` and `edition`, which carry what the
-issue **prints**, and `yearNumber` and `weekNumber`, which carry what the numbering **derived**. A row
-repeating one of them would be a second source for the same value that can disagree with the first.
-Issue-level parameters are merged **over** the series' map key by key; the numbering is injected last.
+issue **prints**, `yearNumber` and `weekNumber`, which carry what the numbering **derived**, and `weeks`,
+the issue's weeks as the series' name pattern writes them. A row repeating one of them would be a second source for the
+same value that can disagree with the first. Issue-level parameters are merged **over** the series' map key
+by key; the numbering is injected last.
+`weeks` is what the weekly reports print in their heading and page header. It is the week part of the
+series' name pattern in the report's language, the stretch from its first week token to its last (`${week}`,
+`${weekTo}` and their two-digit variants, with the text between them, ending at the first token of another
+kind, and with a bracket it opens or closes taken whole), expanded for the issue by the code that expands
+the name, so the heading says the weeks in the same characters as the name the series suggests for the
+issue: `36` under
+`Uge ${week}, ${year}` (for an issue of weeks 36 to 38 too, as its name says), `36 og 37` under
+`Uge ${week} og ${weekTo}, ${year}`, `36+37` or `36-38` under `Uge ${week}+${weekTo}, ${year}`. A pattern
+that writes no week (or none at all) gives that last form, the pair form, so a document is headed by all its
+weeks where its name cannot say them; a week label is printed whole. One case leaves the name: a single week
+under a week part that writes the closing week is headed by the first week's token alone (`36`), where the
+name keeps the text before the empty closing week (`Uge 36+, 2026`, ISSUE13 in
+`be/docs/potential-errors.md`), until that name is settled. The pattern is read as it stands at the render,
+not the name stored on the issue, and the two part where an editor renamed the issue by hand without a week
+label, where the issue was named before the pattern changed (an amendment or a new release after the change
+is headed by the new pattern), and where the report's language has no pattern (the pair form, while another
+language follows its own); the week label is the way to head one issue otherwise. The accumulated report's
+sections carry the same as `group.weeks`, each by its source issue's own series pattern and label, with one
+difference: a source of several weeks whose pattern cannot say the span (it names the first week alone, as
+every pattern restored from the previous system does, or no week) is in the pair form, `36+37` or `36-38`,
+because the sections are the record of what the compilation covered and a line must name every week its
+source covered.
+
+A series or an issue that stored one of the seven before it was refused is met as follows: a save of the
+series is refused (S-23 is a hard rule) until the row is removed, and so is its activation; an issue edit is
+refused only where it adds or changes the key, so a row sent back unchanged passes, and the issue drawer
+neither shows nor sends a reserved key, so its next save drops it; a release reads no rule and puts the
+injected value over the stored one; the series import skips a file row that carries one, and the import from the
+previous system drops the key.
 
 The series editor **suggests** the parameter names the chosen report declares and the series does not carry
 yet, each as a control that appends an empty row: a hint and never a check, because a template may read a

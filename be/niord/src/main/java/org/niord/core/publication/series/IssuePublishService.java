@@ -1202,6 +1202,16 @@ public class IssuePublishService extends BaseService {
         params.put("timeZone", series.cutoffZone().getId());
         params.put("week", PrintedNumbering.printedWeek(issue));
         params.put("weekTo", PrintedNumbering.printedWeekTo(issue));
+        // The issue's weeks as the series' name pattern writes them in this language,
+        // in the name the series suggests for the issue ("36" under
+        // "Uge ${week}, ${year}", "36 og 37" under "Uge ${week} og ${weekTo}", "36+37"
+        // or "36-38" under the pair form, and the pair form where the pattern writes
+        // no week; a single week under a pattern that writes the closing week is its
+        // week alone), or the week label whole: what the weekly reports print in
+        // their heading and page header (IssueNaming.weeksText). Reserved by S-23 as
+        // the four above are, and put over a parameter of the same name that a row
+        // stored before the rule still holds.
+        params.put("weeks", PrintedNumbering.printedWeeks(issue, lang));
         params.put("year", PrintedNumbering.printedYear(issue));
         params.put("edition", issue.getEdition());
         params.put("yearNumber", issue.getYear());
@@ -1296,18 +1306,18 @@ public class IssuePublishService extends BaseService {
                 ids.add(s.publicId());
             }
         }
-        Map<String, org.niord.core.publication.series.vo.SourceIssueRefVo> named =
-                memberList.sourceRefsOf(ids, lang);
+        Map<String, IssueMemberListService.SourceHeading> named = memberList.sourceHeadingsOf(ids, lang);
 
         List<IssueRenderService.RenderGroup> groups = new ArrayList<>(sections.size());
         for (IssueRenderService.RenderGroup s : sections) {
-            org.niord.core.publication.series.vo.SourceIssueRefVo ref =
-                    s.publicId() == null ? null : named.get(s.publicId());
+            IssueMemberListService.SourceHeading heading = s.publicId() == null ? null : named.get(s.publicId());
+            org.niord.core.publication.series.vo.SourceIssueRefVo ref = heading == null ? null : heading.ref();
             groups.add(new IssueRenderService.RenderGroup(
                     s.publicId(),
                     ref == null ? null : ref.getName(),
                     ref == null ? null : ref.getWeek(),
                     ref == null ? null : ref.getWeekTo(),
+                    heading == null ? null : heading.weeks(),
                     ref == null ? null : ref.getYear(),
                     ref == null ? null : ref.getCutoff(),
                     ref == null ? null : ref.getIntervalFrom(),
@@ -1358,14 +1368,14 @@ public class IssuePublishService extends BaseService {
 
         List<IssueRenderService.RenderGroup> sections = new ArrayList<>();
         for (Map.Entry<String, List<String>> e : bySource.entrySet()) {
-            sections.add(new IssueRenderService.RenderGroup(e.getKey(), null, null, null, null, null, null,
+            sections.add(new IssueRenderService.RenderGroup(e.getKey(), null, null, null, null, null, null, null,
                     List.copyOf(e.getValue()), false));
         }
         // Last, and headed as what it is. These members came from no earlier
         // document, so filing them under a week would print them under a heading
         // that says a week contained them when it did not.
         if (!byHand.isEmpty()) {
-            sections.add(new IssueRenderService.RenderGroup(null, null, null, null, null, null, null,
+            sections.add(new IssueRenderService.RenderGroup(null, null, null, null, null, null, null, null,
                     List.copyOf(byHand), true));
         }
         return sections;

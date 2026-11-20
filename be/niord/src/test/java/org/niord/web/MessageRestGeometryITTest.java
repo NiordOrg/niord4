@@ -275,6 +275,24 @@ class MessageRestGeometryITTest extends ITTest {
     }
 
     @Test
+    void formatMessageGeometryWithANullCoordinate_isRefused() {
+        // A coordinate sent as null is refused (400) as the save refuses it, not formatted as not a number; on a
+        // ring's closing position it was a 500
+        for (String coordinates : new String[] {
+                "[[[10.0,55.0],[11.0,null],[11.0,56.0],[10.0,55.0]]]",
+                "[[[null,55.0],[11.0,55.0],[11.0,56.0],[null,55.0]]]"}) {
+            given()
+                    .contentType(ContentType.JSON)
+                    .queryParam("template", "numbered-list")
+                    .body("{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},"
+                            + "\"geometry\":{\"type\":\"Polygon\",\"coordinates\":" + coordinates + "}}]}")
+                    .when().post("/rest/messages/format-message-geometry")
+                    .then().statusCode(400)
+                    .body("detail", containsString("is not a number"));
+        }
+    }
+
+    @Test
     void formatMessageGeometryReachableAnonymouslyWithoutToken() {
         given()
                 .contentType(ContentType.JSON)
@@ -399,6 +417,29 @@ class MessageRestGeometryITTest extends ITTest {
                     .when().post("/rest/messages/message")
                     .then().statusCode(400)
                     .body("detail", containsString("95.0"));
+
+            assertEquals(0L, countMessages(uid), "a refused message must not be saved");
+        } finally {
+            deleteMessage(uid);
+            store.deleteFolder(repoPath);
+            store.deleteFolder(editRepoPath);
+        }
+    }
+
+    @Test
+    void aMessageSavedWithANullLatitude_isRefusedAndNotSaved() {
+        // CG10: a coordinate sent as null was read as 0 and stored as latitude 0; it is refused as not a number
+        String uid = UidUtils.newUid();
+        String repoPath = UidUtils.uidToHashedFolderPath("messages", uid);
+        String editRepoPath = newTempDir();
+        try {
+            given().auth().oauth2(accessToken())
+                    .header("NiordDomain", "niord-nw")
+                    .contentType(ContentType.JSON)
+                    .body(draftWithGeometry(uid, repoPath, editRepoPath, Arrays.asList(10.5, null)))
+                    .when().post("/rest/messages/message")
+                    .then().statusCode(400)
+                    .body("detail", containsString("is not a number"));
 
             assertEquals(0L, countMessages(uid), "a refused message must not be saved");
         } finally {

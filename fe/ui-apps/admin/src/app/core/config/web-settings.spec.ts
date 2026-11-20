@@ -134,6 +134,25 @@ describe('mergeWebSettings', () => {
     expect(applied).toHaveLength(4);
   });
 
+  it("supplies wmsLayerEnabledByDefault, the sea-chart layer's start, which no environment file sets", () => {
+    const config = baseConfig();
+    expect(config.map?.wmsLayerEnabledByDefault).toBeUndefined();
+    // Absent, as from a backend that serves no such key: the maps read undefined as off.
+    expect(mergeWebSettings(config, { wmsLayerEnabled: true })).not.toContain(
+      'map.wmsLayerEnabledByDefault',
+    );
+    expect(config.map?.wmsLayerEnabledByDefault).toBeUndefined();
+
+    // As /rest/settings/web serves the row: a JSON boolean, or the text a String-typed row gives.
+    const applied = mergeWebSettings(config, { wmsLayerEnabledByDefault: true });
+    expect(applied).toEqual(['map.wmsLayerEnabledByDefault']);
+    expect(config.map?.wmsLayerEnabledByDefault).toBe(true);
+
+    const fromText = baseConfig();
+    mergeWebSettings(fromText, { wmsLayerEnabledByDefault: 'true' });
+    expect(fromText.map?.wmsLayerEnabledByDefault).toBe(true);
+  });
+
   it('supplies the computed s124Enabled, which no environment file sets', () => {
     const config = baseConfig();
     expect(config.s124Enabled).toBeUndefined();

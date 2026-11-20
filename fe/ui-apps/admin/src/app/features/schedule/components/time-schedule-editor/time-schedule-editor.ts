@@ -5,6 +5,7 @@ import { Icon } from '../../../../shared/icons/icon';
 import { TimeField } from '../../../../shared/forms/time-field/time-field';
 import { DomainService } from '../../../../core/domain/services/domain.service';
 import { NotificationService } from '../../../../core/notifications/notification.service';
+import { DiscardConfirmService } from '../../../../shared/services/discard-confirm.service';
 import {
   shiftDaysInZone,
   wallClockOf,
@@ -47,9 +48,10 @@ let nextEditorId = 0;
 /**
  * Inline (expand-in-row) firing-period editor for one area on the selected date.
  * View mode lists the formatted intervals + a pencil; edit mode is a repeating
- * from/to time-picker list (Add/Remove/Clear/Cancel/Save). Save normalises each
+ * from/to time-picker list (Add/Remove/Clear/Cancel/Save). Cancel asks the app's usual
+ * "unsaved changes" question first when the rows differ in substance (see `draftChanged`). Save normalises each
  * changed or new interval onto the selected date (missing from → 00:00:00, missing
- * to → 23:59:59, an end of 00:00 → 00:00 of the next day, both-empty dropped), PUTs,
+ * to → the last second of the day, an end of 00:00 → 00:00 of the next day, both-empty dropped), PUTs,
  * and shows the saved periods on success. A working copy keeps the source row
  * untouched until save.
  *
@@ -92,6 +94,7 @@ export class TimeScheduleEditor {
   private readonly notifications = inject(NotificationService);
   private readonly formatter = inject(FiringPeriodFormatter);
   private readonly domain = inject(DomainService);
+  private readonly discardConfirm = inject(DiscardConfirmService);
 
   readonly firingAreaPeriods = input.required<FiringAreaPeriods>();
   readonly date = input.required<Date>();
@@ -110,6 +113,18 @@ export class TimeScheduleEditor {
       .filter((id): id is number => typeof id === 'number'),
   );
   protected readonly draft = signal<readonly DraftInterval[]>([]);
+  /** The rows the edit opened with. */
+  private readonly seededDraft = signal<readonly DraftInterval[]>([]);
+  /**
+   * The rows differ in substance from the ones the edit opened with: a row with a time was added
+   * or taken out, or a row shows another time. A new row with no time carries nothing (a save
+   * drops it), and a time picked again as it was changes nothing, so neither counts.
+   */
+  protected readonly draftChanged = computed(() => {
+    const draft = this.draft().filter(carriesSomething);
+    const seeded = this.seededDraft().filter(carriesSomething);
+    return draft.length !== seeded.length || draft.some((row, i) => !sameRow(row, seeded[i]));
+  });
 
   /** The zone the entered times are read and written in. */
   protected readonly timeZone = computed(() => this.domain.sessionDomain()?.timeZone);
@@ -125,11 +140,7 @@ export class TimeScheduleEditor {
     const zone = this.timeZone();
     const date = this.date();
     if (!zone) return this.draft().map(() => null);
-    const nextDayStart = shiftDaysInZone(
-      wallClockToInstant(date, 0, 0, 0, zone),
-      1,
-      zone,
-    ).getTime();
+    const nextDayStart = startOfNextDay(date, zone).getTime();
     return this.draft().map((row): RowErrorLine | null => {
       if (row.locked) return null;
       const period = resolveRow(date, row, zone);
@@ -163,8 +174,7 @@ export class TimeScheduleEditor {
     effect(() => {
       const fap = this.firingAreaPeriods();
       untracked(() => {
-        this.editing.set(false);
-        this.draft.set([]);
+        this.closeEditor();
         this.periods.set(fap.firingPeriods);
       });
     });
@@ -191,7 +201,9 @@ export class TimeScheduleEditor {
       };
       return instantOf(p.fromDate) < dayStart ? { ...row, locked: true } : row;
     });
-    this.draft.set(seed.length > 0 ? seed : [{ from: null, to: null }]);
+    const rows = seed.length > 0 ? seed : [{ from: null, to: null }];
+    this.draft.set(rows);
+    this.seededDraft.set(rows);
     this.editing.set(true);
   }
 
@@ -220,9 +232,16 @@ export class TimeScheduleEditor {
     );
   }
 
-  protected cancel(): void {
+  /** Closes the editor; rows that were changed are given up only when the person confirms it. */
+  protected async cancel(): Promise<void> {
+    if (this.draftChanged() && !(await this.discardConfirm.confirmDiscard())) return;
+    this.closeEditor();
+  }
+
+  private closeEditor(): void {
     this.editing.set(false);
     this.draft.set([]);
+    this.seededDraft.set([]);
   }
 
   protected save(): void {
@@ -248,7 +267,7 @@ export class TimeScheduleEditor {
       next: (saved) => {
         this.periods.set(saved.firingPeriods);
         this.saving.set(false);
-        this.cancel();
+        this.closeEditor();
       },
       error: () => {
         // The editor stays open with the rows as typed, so a failed save can be tried again.
@@ -283,6 +302,28 @@ function resolveRow(date: Date, row: DraftInterval, timeZone: string): FiringPer
   return original ? { ...original, fromDate, toDate } : { fromDate, toDate };
 }
 
+/** False for a new row with neither time, which a save drops. */
+function carriesSomething(row: DraftInterval): boolean {
+  return !!row.original || !!row.from || !!row.to;
+}
+
+/** The same stored period (or none), the same lock and the same two clocks shown. */
+function sameRow(a: DraftInterval, b: DraftInterval): boolean {
+  return (
+    a.original === b.original &&
+    !!a.locked === !!b.locked &&
+    sameClock(a.from, b.from) &&
+    sameClock(a.to, b.to)
+  );
+}
+
+/** Both empty, or both showing the same hour and minute. */
+function sameClock(a: Date | null, b: Date | null): boolean {
+  if (!a || !b) return a === b;
+  const [x, y] = [wallClockOf(a), wallClockOf(b)];
+  return x.hour === y.hour && x.minute === y.minute;
+}
+
 /** True unless both ends are known and the end is at or before the start. */
 function endsAfterItStarts(period: FiringPeriod): boolean {
   if (!period.fromDate || !period.toDate) return true;
@@ -297,10 +338,15 @@ function instantOf(value: string | undefined): number {
 /**
  * Rebases a time-of-day onto the selected date, in `timeZone`: an entered time keeps its
  * hour:minute (seconds/ms zeroed); a missing `start` defaults to 00:00:00, a missing `end`
- * to 23:59:59. An entered `end` of 00:00 means "until midnight" and is 00:00 of the next day,
- * resolved in the zone (on a day the zone changes offset that is not 24 hours on). The calendar
- * day is taken from the date the user is looking at and only the clock is resolved in the zone,
- * so the day they chose is the day they get. Returns an ISO datetime.
+ * to the last second of the day (the next day's 00:00 in the zone, one second back). An entered
+ * `end` of 00:00 means "until midnight" and is 00:00 of the next day, resolved in the zone (on a
+ * day the zone changes offset that is not 24 hours on). The calendar day is taken from the date
+ * the user is looking at and only the clock is resolved in the zone, so the day they chose is the
+ * day they get. Returns an ISO datetime.
+ *
+ * A missing end is not the clock 23:59:59: a zone that changes its clock at 23:00 local
+ * (Greenland's, on the EU rule) has no 23:59:59 on its spring day, which would resolve into the
+ * next day, and two on its autumn day, the first of which ends the day an hour early.
  */
 function rebaseOntoDate(
   date: Date,
@@ -311,15 +357,17 @@ function rebaseOntoDate(
   // A time field carries a bare wall clock, so its hours/minutes come off the carrier as they
   // were typed and are reinterpreted as belonging to the zone.
   const clock = time ? wallClockOf(time) : null;
-  if (edge === 'end' && clock?.hour === 0 && clock.minute === 0) {
-    return shiftDaysInZone(wallClockToInstant(date, 0, 0, 0, timeZone), 1, timeZone).toISOString();
+  if (edge === 'end' && (!clock || (clock.hour === 0 && clock.minute === 0))) {
+    const nextDayStart = startOfNextDay(date, timeZone);
+    return (clock ? nextDayStart : new Date(nextDayStart.getTime() - 1000)).toISOString();
   }
-  const [hour, minute, second] = clock
-    ? [clock.hour, clock.minute, 0]
-    : edge === 'end'
-      ? [23, 59, 59]
-      : [0, 0, 0];
-  return wallClockToInstant(date, hour, minute, second, timeZone).toISOString();
+  const [hour, minute] = clock ? [clock.hour, clock.minute] : [0, 0];
+  return wallClockToInstant(date, hour, minute, 0, timeZone).toISOString();
+}
+
+/** 00:00 of the day after the selected date, in `timeZone`. */
+function startOfNextDay(date: Date, timeZone: string): Date {
+  return shiftDaysInZone(wallClockToInstant(date, 0, 0, 0, timeZone), 1, timeZone);
 }
 
 /**

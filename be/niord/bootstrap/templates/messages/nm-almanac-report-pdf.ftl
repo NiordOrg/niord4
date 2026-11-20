@@ -32,7 +32,7 @@
 <table class="first-page-info-line" style="margin-top: 5mm">
     <tr>
         <td>
-            ${.now?string['dd. MMMM yyyy']}
+            ${.now?string(text('msg.time.date_format'))}
             <#if edition?? && edition != '1'> - Version ${edition}</#if>
         </td>
         <td align="right">${text("pdf.nm_almanac.subtitle")}</td>

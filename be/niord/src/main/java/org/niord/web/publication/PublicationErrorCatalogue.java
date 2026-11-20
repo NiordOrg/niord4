@@ -158,9 +158,9 @@ public final class PublicationErrorCatalogue {
         // unchecked it fails at step 10 of the publish, after the cut-off has been
         // stamped.
         put(IssueEditService.REPORT_NOT_FOUND, 400);
-        // week, weekTo, year and edition come from the edition's own numbering and
-        // are injected into every report; typed as parameters they are a second
-        // answer the document ignores. Same rule as S-23 on the series form.
+        // The names S-23 reserves (SeriesValidator.RESERVED_REPORT_PARAMS) come from
+        // the edition's own numbering and are injected into every report; typed as
+        // parameters they are a second answer the document ignores. Same rule as S-23 on the series form.
         put(IssueEditService.REPORT_PARAM_RESERVED, 400);
 
         // The upload (I24). All 400 -- the multipart body itself is wrong, and

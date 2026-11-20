@@ -143,6 +143,38 @@ Before a kit guide goes public it is read for internal host names and staff name
 fail the build the day a guide left out for SECOM loses that mention; names are a reviewer's eye).
 Change the kit's guides in `../country-kit/`, never in `_kit/`.
 
+## Keeping the guides level with the product
+
+A guide describes the product as it is in the commit it is built from. So a change to what its
+reader sees or does changes the guide in the same pull request (the repository's `AGENTS.md`,
+_Working here_), not in a later one.
+
+| What the change touches | Read and update |
+|---|---|
+| A page, dialog, button, message or print an editor uses | `editor-manual/` |
+| The Admin pages: areas, charts, categories, publications, mailing lists and the rest | `admin-manual/` |
+| The Sysadmin pages, the settings, release folders and imports, and what the log tells the person who runs one deployment | `sysadmin-manual/` |
+| The public site | `public-site/` |
+| The message model, the public REST API, how a client presents a message | `model/`, `public-api/`, `presentation/` |
+| How the product is built, tested or contributed to | `dev-guide-v4/` |
+| What a country builds on, or an operator runs | the kit's guides, `../country-kit/docs/`, and `../be/docs/country-api.md` |
+
+- **Find the passages.** Search the guides for the thing's name on the screen, its setting, its
+  text key and its address, and read the chapter that describes it. Only then say that no guide
+  needs a change.
+- **Say it in the pull request:** which guide pages changed, or that none describes the changed
+  thing. A fix that only makes the guide true changes no guide.
+- **Write what the product does,** not what changed: a guide has no history. `whats-new/` compares
+  with the old Niord and takes a change only when the change alters that comparison.
+- **A known fault the reader meets is described as it is,** and the fault's entry in the record
+  (`../be/docs/potential-errors.md`, `../fe/docs/backlog.md`) says that the guide changes with the
+  fix.
+- **A picture that no longer shows what the product shows** is not left as it is: the text is
+  corrected in the change itself, and the picture's manifest entry gets a disposition the rig
+  takes (`retake`, or `new` or `replace` where it already has one), so the next run of the rig
+  takes it again (below).
+- SECOM and S-124 stay out of the guides (step 7 above).
+
 ## Pictures
 
 Every screenshot is taken by the screenshot rig, `../fe/guides-shots/` (its README), from the

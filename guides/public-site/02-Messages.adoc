@@ -203,8 +203,9 @@ The printed list is grouped by sea area, as the _Details_ view is, and says at i
 made.
 
 The server makes only a few documents at a time for the public. When many readers print at the
-same moment, the new tab may show an error instead of the document: close it and try again a
-little later.
+same moment, the new tab says instead: _Documents are being prepared for other readers just now.
+Please try again in a moment._ Click _Print_ on that page a little later, and the document is asked
+for again.
 
 [#when-the-list-does-not-load]
 === When the list does not load

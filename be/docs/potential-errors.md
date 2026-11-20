@@ -36,10 +36,6 @@ for completeness remain below.
   lines 67–80, audio 105–120) — no null-guard on `direction`. Benign because callers always supply one.
   Pinned by `PositionAssemblerTest.navtexWithNullDirectionAppendsLiteralNull_documentsBehavior` and
   `audioEnglishNullDirectionFallsBackToLiteralNull_documentsBehavior`.
-- **`HtmlToPlainText` renders a relative anchor parsed without a base URI as `link <>`** (the `tail()`
-  `"a"` branch) — `absUrl("href")` returns `""`, dropping the href. Correct usage parses with a base URI
-  (then it renders `link <http://…>`). Pinned by
-  `HtmlToPlainTextTest.anchorWithoutBaseUriResolvesRelativeHrefToEmptyAngleBrackets`.
 
 ---
 
@@ -305,23 +301,6 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
   resolve to generic-ish paths) but fragile.
 - **Exposed by:** `FileTypesTest` asserts the *actual* mappings (including unknown-extension → `null`).
 - **Severity:** Low.
-
-## REPO5 — A message PDF may leave out an image attachment whose name holds `%` or `;`
-
-- **Location:** `be/niord/bootstrap/templates/messages/message-support.ftl`, macro `renderAttachment`
-  (`<img src="/rest/repo/file/${att.path}">`, the path written unencoded), fetched by the PDF renderer over HTTP
-  from the backend's own origin (`org/niord/core/script/pdf/SameOriginUserAgent`). The same line is in the
-  Greenland repository's copy of the template.
-- **Description:** since the request firewall accepts `%25` and `%3B` on a repository file's path, a file whose
-  name holds `%` or `;` opens in the administration app and on the public site. The
-  template does not encode the path, so the renderer asks for a raw `%` (an invalid escape) or a raw `;` (a path
-  parameter, refused by the firewall), and the image is presumably missing from the PDF. Not checked by running it.
-- **Why it looks wrong:** the attachment shows in the admin app and on the public site but not in the printed
-  message.
-- **Exposed by:** reading the template while the firewall was opened for such names, 2026-11-18; no test.
-- **Severity:** Low — an image attachment whose name holds one of these characters is rare. The template is data:
-  a fix (`?url` on each segment, or a path the code encodes) ships in a release folder and reaches a database only
-  by import.
 
 ## REPO6 — A link stored with a raw `;` in a repository file name still does not open
 
@@ -784,26 +763,8 @@ test
 `MonitorRestService`, `S124RestService` and `AtonIconRestService` to satisfy that guard makes their
 pre-existing anonymous exposure *explicit* — it is not a fix.
 
-What the audit's fixes left open is below: INT8, from its finding on the Niord integration's address and TLS
-checks, and the mass-assignment entries, from its sweep of the `@RequestBody` handlers.
-
-## INT8 — An integration address with a credential in it is logged once, and the fetch follows a redirect from https to http *(LOW · OPEN)*
-
-- **Location:** `niord/src/main/java/org/niord/web/NiordIntegrationRestService.java` (`createNiordIntegration`
-  logs `integration.getUrl()` at INFO before the service checks the address);
-  `niord/src/main/java/org/niord/core/integration/NiordIntegrationExecutionService.java` (`newHttpClient`:
-  `HttpClients.custom()` keeps the default redirect strategy).
-- **Description:** an address such as `http://user:password@host` is refused at create, but the controller has
-  written it to the application log the line before. And the fetch follows a redirect from https to http: the
-  address check (`NiordIntegrationUrlValidator.dnsResolver`) checks every hop's address, not its scheme, so a
-  peer that redirects its own answer to http has the imported messages fetched without TLS.
-- **Why it looks wrong:** a refused credential should not reach the log, and a fetch that starts on https
-  should not end on http. The endpoint is SYSADMIN only, so the first needs a system administrator to type a
-  credential into the address; the second needs a trusted peer that downgrades its own redirects.
-- **Exposed by:** the security audit of every `@RestController` (2026-09), as what its fix of the
-  integration's SSRF and disabled TLS checks left open.
-- **Severity:** Low. Fix: log the integration's id or host only, and set a redirect strategy that refuses an
-  https-to-http hop (which could stop a peer that really redirects to http).
+What the audit's fixes left open is below: the mass-assignment entries, from its sweep of the `@RequestBody`
+handlers.
 
 ## MASSASSIGN-1 — `BaseService.saveEntity()` merges on any client-supplied id *(LOW · OPEN)*
 
@@ -875,28 +836,6 @@ checks, and the mass-assignment entries, from its sweep of the `@RequestBody` ha
 - **Why it looks wrong:** it is the only test of the Danish NAV-warn date formatting; it should pin the expected
   output strings.
 - **Exposed by:** a review of the two Danish unit tests — neither carried a meaningful assertion.
-
-## TESTQ5. `SecomProtocolITTest.cancelledDatasetsRequireATemporalExtentOrDataReference` expects an empty database-wide summary
-
-- **Location:** `niord/src/test/java/org/niord/secom/SecomProtocolITTest.java`,
-  `cancelledDatasetsRequireATemporalExtentOrDataReference`: after cancelling its own dataset, the test calls
-  `GET /api/secom/v2/object/summary` with no parameters and asserts `summaryObject` has size 0, and
-  `GET /api/secom/v2/object` with no parameters and asserts 404.
-- **Description:** without a temporal extent the summary serves every *active* S-124 dataset in the shared
-  database, not only this test's. The assertion therefore requires that no other test has left a published,
-  uncancelled dataset behind at that moment. Backend CI on `main` (2026-10-06)
-  found one — `NW-112-01`, data reference `8a0980ce-65a7-8ea0-98a0-3662403d8e11`, committed by
-  another IT class that ran earlier — and the step failed with "Expected: a collection with size <0>, Actual:
-  <[{dataReference=8a0980ce-…, info_identifier=NW-112-01, …}]>"; the same commit's suite was green on the pull
-  request and green on the rerun. The second summary assertion (`validFrom=1970-01-01`, `hasSize(1)`) has the
-  same exposure.
-- **Why it looks wrong:** the test's own dataset is identifiable (its `dataReference`), and the test checks it
-  individually in its last step; the two database-wide assertions pin the state of the whole shared database
-  instead, which depends on run order and on which earlier classes clean up after themselves — the coupling
-  that once made two other tests' database-wide counts green on a developer machine and red on CI.
-- **What exposed it:** a red `main` after a merge whose change could not touch SECOM (a registry URL in
-  the pom and a workflow), with a green rerun of the same job. A fix would filter the summary assertions to
-  the test's own dataset (or assert that it is absent/present by `dataReference`), not pin the collection size.
 
 ## TESTQ4. `IssuePreviewAndFileITTest` reads two pool-thread names as proof of overlap, which the pool does not promise
 
@@ -987,26 +926,6 @@ was changed in production code.
   publications error catalogue.
 - **Why it looks wrong:** one rule, two wire shapes on two methods of the same class. Kept deliberately
   during the port; worth one ruling once the catalogue advice is the only publications error shape.
-
-## PORT-10. Two independent literals carry the legacy import's 1800 s budget
-
-- **Location:** `LegacyImportService.IMPORT_TIMEOUT_SECONDS` (reported in the run's log line only)
-  and `PublicationTxRunner.callWithImportBudget` (`@Transactional(timeout = 1800)`, the one enforced).
-- **Why it looks wrong:** changing one silently makes the log lie about the budget. The number itself
-  was argued from MySQL's shared `hibernate_sequence`, which this schema does not have. On PostgreSQL
-  the import has been timed once, on a workstation, well inside the budget, and never on a cluster.
-
-## PORT-13. `IssuePublicWindowService.set()` marks the caller's transaction rollback-only on a refusal
-
-- **Location:** `org/niord/core/publication/series/IssuePublicWindowService.java` (`set`, and its javadoc).
-- **Description:** the javadoc says the method deliberately does not open its own transaction so a refusal cannot
-  mark the caller rollback-only. In this tree the class extends `BaseService`, whose class-level Spring
-  `@Transactional` advises `set()` as a participating transaction; a `TransitionRefusedException` therefore
-  sets rollback-only (`globalRollbackOnParticipationFailure` defaults to true).
-- **Why it looks wrong:** a caller that catches the refusal and continues writing gets an `UnexpectedRollbackException`
-  at commit instead of its own result. Ported verbatim; the javadoc no longer describes the mechanism. The scheduled
-  publication sweep and the hourly firing run had the same mechanism (the error hunt of 2026-11-12); their fix of
-  2026-11-13 (a transaction of its own per message or per area, `MessageTxRunner`) does not reach this method.
 
 ## RENDER4. `PublicationIssueDesc.fileSize`, `fileHash` and `fileGeneratedAt` are never written
 
@@ -1099,18 +1018,21 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   in `Area.hasChanged` (fields left out of the comparison) was fixed on 2026-11-13. Pre-existing; recorded, not
   fixed.
 
-## CATEGORY2. A root category template is matched by name at any depth
+## CATEGORY2. A message's or a domain's category is matched by name at any depth
 
-- **Location:** `niord/src/main/java/org/niord/core/category/CategoryService.java:123-128` (`searchCategories`
-  adds the parent predicate only when `parentId` is not null), `:394-410` (`findByName`: the first of an
-  unordered result of at most one row), called by `importCategory` for each of the template's names.
-- **Description:** for a root category of an import file, `findByName(name, lang, null)` searches every category,
-  so a root can be found as a same-named category elsewhere in the tree, and which one is found is not defined
-  when several share the name (no ordering, `maxSize 1`). The import then updates that category, or, within one
-  bootstrap run, adds to it [inferred from the code; not run].
-- **Why it looks wrong:** an import file's root is meant to match a root. A `parent IS NULL` predicate when no
-  parent is given closes it; the firing-exercises lookup (`getFiringExercisesCategory`) reads the same way.
-- **Exposed by:** a review of 2026-10-22. Pre-existing; recorded, not fixed.
+- **Location:** `niord/src/main/java/org/niord/core/category/CategoryService.java` (`importCategory` without
+  `wholeChain`: a template without a parent is looked up by `findByName(name, lang, null)`, every category, the first
+  of an unordered result of at most one row), called by `MessageBaseDataResolver.resolve` (the archive import and the
+  integration), `BatchMessageImportProcessor` and `BatchDomainImportProcessor`.
+- **Description:** `new Message(vo)`, `new Domain(vo)` and `DomainMapper` build a category without its parent, even
+  when the file or the other Niord gives one, so the import has only the category's name: when several categories
+  share it at different depths, which one a message or a domain is linked to is not defined [inferred from the code;
+  not run]. The category file's import is not affected: its entries carry their parents, and one without a parent
+  matches a root only (fixed on 2026-11-20).
+- **Why it looks wrong:** the file names the category's place in the tree, and the import drops it. Building those
+  categories with their parents (a filter with `Category.parent`; the public API's message details carry it), and
+  then matching a parentless template among the roots only, closes it.
+- **Exposed by:** a review of 2026-10-22, narrowed on 2026-11-20. Pre-existing; recorded, not fixed.
 
 ## SCRIPT8. A deployment's `common.js` or `fetch-firing-exercises.js` row copied from a pre-port deployment may predate the port
 
@@ -1137,45 +1059,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   `niord_test` holds the same trigger and due time. There the failed run is now retried every hour and leaves a
   mail in status Error in the Mail Queue once a day, which does not mend the row; the test environment's
   row is replaced only by a sysadmin's release import with the overwrite ticked, on a human's say-so. Open.
-
-## TZ1. Time-dependent ITs fail by exactly one hour when they run in the hour the clocks go back
-
-- **Location:** the timestamp columns of `niord/src/main/resources/db/changelog/changes/V001__baseline_schema.sql`,
-  every one `timestamp(6) without time zone`; `niord/src/main/resources/config/niord-core-defaults.yml:45-64`
-  (`spring.jpa.properties.hibernate`), which sets no `hibernate.jdbc.time_zone`, so Hibernate reads and writes
-  them in the JVM's default zone. The ITs that failed are under `niord/src/test/java/org/niord/core/`:
-  `publication/series/EntityCriteriaResolutionITTest`, `OneOffWindowITTest`, `IssuePublishITTest`,
-  `IssueWorkMarkerITTest`, `AmendAndOverlapITTest`, `MemberResolutionDifferentialITTest`,
-  `integration/NiordIntegrationImportITTest`, `mail/ScheduledMailServiceITTest` and
-  `message/MessageTagServiceITTest`.
-- **Description:** in the hour that happens twice when the clocks go back (02:00-03:00 local in
-  Europe/Copenhagen), an instant written as a local time without a zone does not round-trip: read back, the
-  local time is taken as its other occurrence, one hour off. Seventeen ITs failed that way, each by exactly one
-  hour: `EntityCriteriaResolutionITTest` 8 of its 13, `OneOffWindowITTest` 2,
-  `IssuePublishITTest.concurrentPublishesProduceExactlyOneStamp` ("expected Sun Oct 25 02:01:36 CEST but was
-  2026-10-25 02:01:36.793"), one each of `IssueWorkMarkerITTest`, `AmendAndOverlapITTest` and
-  `MemberResolutionDifferentialITTest`, `NiordIntegrationImportITTest.importDefaultsMissingPublishDateFromToAboutNow`,
-  `ScheduledMailServiceITTest.getPendingMailsExcludesFutureAndSentMails` and
-  `MessageTagServiceITTest.createTempMessageTagDefaultsTtlWhenNull`. A re-run after the hour passed. Cause:
-  the columns without a zone, read and written in the JVM's zone [inferred; not traced]. The two regeneration
-  scripts pin the zone themselves (`niord/scripts/regen-sample.sh:304` and
-  `niord/scripts/regen-test-seed-postgres.sh:178-180`, `-Duser.timezone=UTC`); Surefire and Failsafe do not.
-- **Why it looks wrong:** a stored instant that moves by an hour once a year is a wrong value, not only a test
-  artefact: whatever the ITs check (publish stamps, publication windows, a tag's expiry, a mail's due time) is
-  stored the same way in a deployment. Whether a deployment is exposed depends on its JVM's zone: the image
-  (`k8s/docker/Dockerfile`, `ENV TZ=UTC`) and the chart (`k8s/helm/niord/templates/app/deployment.yaml`, a fixed
-  `TZ: UTC` entry in the app container's environment, outside `app.javaOpts`, so a values file that replaces
-  that value keeps it) pin the pod's JVM to UTC; only an explicit `-Duser.timezone` in `app.javaOpts` would
-  override it, which the chart's README and the operators' guide say not to add. In UTC there is no repeated
-  hour; a developer's or a test server's JVM in a zone with summer time has one each year, and so has an
-  integration-test run.
-- **Exposed by:** the first `./verify-local` of the country split's P7-bs, which ran at 02:04 local on
-  2026-10-25, in the repeated hour.
-- **Decided (the owner, 2026-10-25):** the JVM runs in UTC; the chart and the images set it at the deploy step
-  (e.g. `TZ`/`-Duser.timezone=UTC` in `k8s/docker/Dockerfile` and `k8s/helm/niord/values.yaml`'s
-  `app.javaOpts`), and the operators' guide states it (`docs/fe-country-split-plan.md` §5 step 9). Built in the
-  image and the chart on 2026-11-18 (`TZ=UTC`, not in `app.javaOpts`); the entry stays open for the tests' zone,
-  which Surefire and Failsafe still do not pin.
 
 ## BATCH5. Sysadmin > Batch Jobs forgets every execution at a restart, and the bootstrap's job logs with it
 
@@ -1292,21 +1175,23 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low — test hygiene. Fix: leave the provider empty in the test settings, so the no-provider branch
   is the one tested, and correct the Javadoc if a provider stays.
 
-## RENDER6. The message-list PDF prints "Series ID's" and an American time stamp
+## RENDER6. The message-list PDF's first page is English in every language, its criteria line Java's
 
-- **Location:** `MessageSearchParams` (the search description, `String.format("Series ID's: %s", ...)`) and
-  `bootstrap/templates/messages/message-list-pdf.ftl` (`${.now?datetime}`, in the "Generated" row and the header).
+- **Location:** `MessageSearchParams.toString` (the search description, `"Statuses: %s"` and the rest) and
+  `bootstrap/templates/messages/message-list-pdf.ftl` (the labels `Generated`, `Criteria`, `Result` and
+  `messages`, written into the template).
 - **Description:** the first page of the message-list report reads "Criteria: Domain: niord-nw, Statuses:
-  [PUBLISHED], Kinds: [WARNING], Series ID's: [dma-nw-local, dma-nw]" and "Generated: Nov 11, 2026, 11:28:28AM".
-  The criteria line is the search's English debug description, with a greengrocer's apostrophe and Java's list
-  brackets, printed whatever the report's language; the time stamp is FreeMarker's default `?datetime` format,
-  US order and a 12-hour clock with no space before AM, where every other date in the reports is formatted on
-  purpose (`dd. MMMM yyyy` in the accumulated report).
+  [PUBLISHED], Kinds: [WARNING], Series IDs: [dma-nw-local, dma-nw]". The criteria line is the search's English
+  debug description, with Java's list brackets, and the labels around it are English, printed whatever the
+  report's language. Since 2026-11-20 the description writes "Series IDs", "Area IDs" and "Category IDs" (it wrote
+  "Series ID's"), and the time stamp is printed by `msg.time.date_time_format` in the print's zone, as the message
+  PDFs print a time (it was FreeMarker's default "Nov 11, 2026, 11:28:28AM"); the template ships in the release
+  folder `be/niord/bootstrap/releases/2026-11-20-report-template-fixes/`.
 - **Why it looks wrong:** it is the first thing a reader sees on a printed report, and the user guides' picture of
   that page shows it.
 - **Exposed by:** the user guides' screenshot rig (2026-11-11, `fe/guides-shots/`, `pilot/report-first-page.png`).
-- **Severity:** Low, cosmetic. Fix: a criteria line made from the report's own texts in its language, and a
-  formatted time stamp in the domain's zone.
+- **Severity:** Low, cosmetic. Fix: a criteria line made from the report's own texts in its language, and the
+  labels as texts; new texts and a template change, which ships as a release import.
 
 ## PROM7. The Twitter settings of a type answer 500, and the dialog then offers an empty form whose save is refused
 
@@ -1402,25 +1287,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   guard) reads 1, 2, 3; the release import's path is the one to re-check.
 - **Severity:** Low. Fix: number an entry one above the resource's highest history version, and key the dialog on
   the entry's id.
-
-## RENDER7. The base product's report PDFs print their date the Danish way in English
-
-- **Location:** the base product's templates `bootstrap/templates/messages/nm-report-pdf.ftl:78`,
-  `nm-tp-report-pdf.ftl:53`, `nm-almanac-report-pdf.ftl:35`, `nm-annex-report-pdf.ftl:40`, `fa-list-pdf.ftl:40`
-  (`${.now?string["dd. MMMM yyyy"]}`) and `nm-accumulated-report-pdf.ftl:249,251` (the period lines); the English
-  value of `mail.date_format.long` in `bootstrap/texts.json` (`d. MMMM yyyy`).
-- **Description:** the pattern is written into the templates, not taken from the report's language, so the English
-  NM report prints "11. November 2026": the day with a full stop is the Danish form. The base product's own English
-  date formats elsewhere are `d MMMM yyyy` (`msg.time.date_format`).
-- **Why it looks wrong:** the base product publishes English only, and since the owner's ruling of 2026-11-11 (no
-  Danish in English texts) the user guides' guard treats the date as Danish; RENDER6 is the same kind of fault on
-  the message-list PDF, which calls the accumulated report's pattern deliberate.
-- **Exposed by:** the user guides' screenshot rig (2026-11-11): its guard refuses the copy's NM report as Danish,
-  so `guides/sysadmin-manual/11-PrintReports.adoc` shows the Standard report instead (`PrintReportExample.png`).
-- **Severity:** Low, cosmetic. Fix: a date-format text per language read by the templates; the templates are data
-  a deployment receives by a release import (`docs/code-data-config-plan.md`), so a fix ships as one. The error
-  hunt's fix of 2026-11-13 to line 53 of `nm-almanac-report-pdf.ftl` ships that template in the release folder
-  `be/niord/bootstrap/releases/2026-11-12-error-hunt-templates/` and leaves line 35, this entry's, as it was.
 
 ## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
 
@@ -1793,6 +1659,26 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Severity:** Low. Fix: refuse New edition on an issue that a published edition already supersedes, or make the
   edition from the latest edition.
 
+## ISSUE13. A single week of a series named by `${week}+${weekTo}` is named with the "+" left over
+
+- **Location:** `org/niord/core/publication/series/resolve/IssueNaming.java` (`expand`, `valuesOf`: `${weekTo}`
+  expands to the empty text for a single week).
+- **Description:** a series whose name pattern writes the pair form, as the admin manual describes it
+  ("Uge ${week}+${weekTo}, ${year}"), names every single-week issue "Uge 36+, 2026"; a pattern
+  "Uge ${week} og ${weekTo}" names it "Uge 36 og , 2026", and the file-name pattern does the same. The admin app's
+  `expandIssuePattern` suggests no name at all there (it returns nothing for a single week under `${weekTo}`). The
+  weekly reports' heading, which prints the weeks as the name pattern writes them since 2026-11-20, is the one place
+  that leaves the name here: `IssueNaming.weeksText` heads such a week by the first week's token alone, "36".
+- **Why it looks wrong:** a name and a file name with a joiner and no second week.
+- **Exposed by:** fix round 2 of the recorded faults, 2026-11-20, while the weekly heading was made to follow the
+  name pattern (read in the code; `IssueNamingTest#theWeeksOfASingleWeekNeverEndInAJoiner` asserts both the name as
+  it is and the heading without the joiner).
+- **Severity:** Low, cosmetic. Fix: drop the text between the first week and an empty `${weekTo}` when the issue
+  has a single week, in `IssueNaming.expand` and the admin app's `expandIssuePattern` alike. It changes suggested
+  names and file names, and so the links of documents published after it; the special case in `weeksText` can then
+  go, as the heading and the name agree again by themselves. The admin manual (`guides/admin-manual/05-Publications.adoc`,
+  the paragraph on the patterns' tokens) describes it as it is; change it with the fix.
+
 ## CONTACT3. Changing a contact's address to one another contact has answers 500
 
 - **Location:** `org/niord/core/user/ContactService.java` `updateContact`, which copies the new address without
@@ -2070,28 +1956,10 @@ path is from the repository root.
 - **Exposed by:** the error hunt's phase 2, 2026-11-15, read in the templates (G2-2). Confirmed by a second reader.
 - **Severity:** Low (the cover only). Fix: take the base year from a text that a deployment sets, with no volume
   printed when it is unset, or drop the volume from the base product's covers and leave it to a country's own
-  templates; either ships as a release import. Could break: the two tests that pin `year - 1884`. RENDER7 is its
-  sibling in the same templates.
+  templates; either ships as a release import. Could break: the two tests that pin `year - 1884`.
 - **Decision first:** a text that a deployment sets, or no volume in the base product? Recommended: the text, with
   no volume printed when it is unset.
 - **Left by the owner (2026-11-15):** 1884 stays in the base templates; the entry stays open as the record.
-
-## RENDER11. The weekly report PDFs head an issue of two or more weeks with its first week alone
-
-- **Location:** `be/niord/bootstrap/templates/messages/nm-report-pdf.ftl` 66 and 73 and `nm-tp-report-pdf.ftl` 41,
-  47 and 57 (`${week}` alone); `IssuePublishService` hands the report `week` and `weekTo` as two values (~1203),
-  and the templates read only the first.
-- **Description:** an issue named for weeks 36 to 38 ("36-38", or "36+37" for a pair) gets a PDF whose page header
-  and heading say week 36. The accumulated report already prints a group's `week` and `weekTo`
-  (`nm-accumulated-report-pdf.ftl` 239).
-- **Why it looks wrong:** the PDF's heading names a different issue than the issue's name and file name do.
-- **Exposed by:** the review of round 1 of the recorded faults, 2026-11-20, read in the templates. True of a pair
-  before that round; the range form of 2026-11-20 did not cause it.
-- **Severity:** Low (the heading and page header only). Fix: print `weekTo` after `week` when it is set, joined by
-  `+` for a pair and `-` for three weeks or more as the name is (`IssueNaming`), or hand the templates the joined
-  text; it ships as a release import, since the templates are data (`docs/code-data-config-plan.md`). Could break:
-  `WeeklyReportTemplateTest`.
-- **Decision first:** should the weekly report templates print the weeks the way the name does? Recommended: yes.
 
 ## DICT7. The required-texts list names a template reader no shipped template uses
 
@@ -2153,22 +2021,6 @@ path is from the repository root.
 The fix stage of phase 2 met these while it fixed other entries, in its integration's check, or in the review of
 its riskiest fixes; none was fixed. Each says how it was found. Java paths are under `be/niord/src/main/java/` unless
 they say otherwise; every other path is from the repository root.
-
-## CG10. A coordinate sent as JSON null is stored as 0
-
-- **Location:** the coordinate arrays of the GeoJSON value objects (`org/niord/model/geojson/PointVo.java` 34,
-  `LineStringVo.java` 34, `MultiPointVo.java` 34 and the others), read by the REST JSON mapper; the save paths
-  that build an entity from them (`Feature.fromGeoJson`, `Area(vo)`, `Chart(vo)`).
-- **Description:** a coordinate of `null` in a geometry the backend receives is read as 0 before any check runs:
-  `POST /rest/messages/message` with the coordinates `[10.5, null]` answered 200 and stored `[10.5, 0.0]`. A
-  latitude beyond 90 is refused on every save path since 2026-11-16, but one typed in the admin editor's
-  edit-as-text view reaches the backend as `null` (the map's projection has no number for it) and is stored as
-  latitude 0, without a word.
-- **Why it looks wrong:** a value the client did not send is stored as a position.
-- **Exposed by:** the error hunt's phase 2 fix stage, 2026-11-16, cluster P1-12: seen in its red run and again in
-  its check's run on the fixed code.
-- **Severity:** Low. Fix: refuse a null coordinate with 400, in the value objects' coordinate fields or in the
-  REST mapper. Could break: a client that relies on `null` being read as 0.
 
 ## FIRING10. A firing-period save that names a period another tab deleted answers 500
 

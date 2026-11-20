@@ -42,6 +42,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -193,6 +194,32 @@ class BatchCategoryImportProcessorITTest extends ITTest {
                 .setParameter("name", name)
                 .getSingleResult();
         assertEquals(1L, count, "re-importing must not create a duplicate category row");
+    }
+
+    @Test
+    @Transactional
+    void aTopLevelEntryDoesNotMatchASameNamedCategoryDeeperDown() throws Exception {
+        // A file's entry carries its whole chain, so one without a parent is a root and matches a root only: the
+        // same-named child below is neither found nor changed, and a root is made
+        String name = "IT Category " + UUID.randomUUID();
+        Category holder = categoryService.createCategory(newCategory("IT Holder " + UUID.randomUUID()), null);
+        Category child = categoryService.createCategory(newCategory(name), holder.getId());
+        em.flush();
+
+        Category imported = (Category) freshProcessor().processItem(topLevelCategoryVo(name));
+
+        assertNotEquals(child.getId(), imported.getId(), "the top-level entry must not match the nested category");
+        assertNull(imported.getParent(), "the imported category is a root");
+        em.flush();
+        em.clear();
+        assertEquals(holder.getId(), em.find(Category.class, child.getId()).getParent().getId(),
+                "the nested category stays where it was");
+    }
+
+    private static Category newCategory(String englishName) {
+        Category category = new Category();
+        category.checkCreateDesc("en").setName(englishName);
+        return category;
     }
 
     // ------------------------------------------------------------------------------------------- //

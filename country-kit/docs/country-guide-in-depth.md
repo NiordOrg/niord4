@@ -729,10 +729,19 @@ carries needs no entry, and a country with no address in its code writes no file
 
 ### The administration app's environments
 
-**When it applies:** if a build needs values other than the base product's, such as a map WMS or
-the map's opening view. Write the seam `admin/environments/environment.<configuration>.ts`. Each
-has `production: true` for a deployed build and same-origin addresses (`apiBaseUrl`,
-`keycloak.url` and `map.wmsUrl` each start with a single `/`).
+**When it applies:** if a build needs values other than the base product's, such as the map's WMS
+address. Write the seam `admin/environments/environment.<configuration>.ts`. Each has
+`production: true` for a deployed build and same-origin addresses (`apiBaseUrl`, `keycloak.url`
+and `map.wmsUrl` each start with a single `/`).
+
+A key the backend serves among its web settings (`/rest/settings/web`) replaces the file's value
+when the app loads, so set it in your [settings file](#the-settings-file) or on Sysadmin > Settings,
+not here. Among them are the map's opening view (`mapDefaultLatitude`, `mapDefaultLongitude`,
+`mapDefaultZoomLevel`) and `wmsLayerEnabledByDefault`, whether the maps start with the sea-chart
+layer switched on where `wmsLayerEnabled` shows it. The backend serves `wmsLayerEnabledByDefault`
+as `false` unless your settings file sets it in `values`, which it may even though the base
+product's file does not list it. A deployment that already holds the row keeps its value; a
+sysadmin switches it on the Settings page.
 
 ### The public site's index page
 
@@ -864,6 +873,15 @@ each deployment after its preview. Nothing in it arrives by itself, and a folder
 merged. Every one of these folders' READMEs starts with the same words as `be/bootstrap/README.md`:
 "Data, not code. …". Put no README directly in `releases/`: the archive accepts only files inside a
 release's folder there.
+
+**When it applies: a base product release folder changes a template you hold a copy of.** Your copy
+is a path of your `be/bootstrap/templates/` that the base product's bootstrap also holds, or a
+language variant of one (`x_<ll>.ftl`), which a print in that language reads in place of the base
+product's. The base product's folder does not change your copy: a fresh deployment gets yours, and a
+running one keeps the row it has. Read the folder's `README.md` for what changed, carry the change
+into your copy, and ship it in a release folder of your own. When your sysadmins import the base
+product's folder, they tick no overwrite of a path your bootstrap holds itself: it would replace your
+template, your own languages' parts included, with the base product's English one.
 
 ### Template paths
 
@@ -1144,6 +1162,11 @@ cd be
 NIORD_HOME=<a folder of your own> ./mvnw spring-boot:run -Dspring-boot.run.profiles=local \
   -Dspring-boot.run.jvmArguments="-Duser.timezone=UTC -Dserver.port=8888"
 ```
+
+Your tests run in UTC too: `niord-parent` sets the property `argLine` to `-Duser.timezone=UTC`,
+which Surefire and Failsafe read, and your pom inherits it. An `argLine` of your own, in your pom
+(for a memory option or a coverage agent) or with `-DargLine=` on the command line, replaces it, so
+keep `-Duser.timezone=UTC` in that value.
 
 Never edit `start-local.sh`. At every bump of the base product, after set-up, copy the kit's
 template over it again from the repository root:

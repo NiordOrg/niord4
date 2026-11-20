@@ -149,6 +149,8 @@ public class ChartRestService extends AbstractBatchableRestService {
             produces = "application/json;charset=UTF-8")
     @RolesAllowed(Roles.EDITOR)
     public List<SystemChartVo> computeIntersectingCharts(@RequestBody FeatureCollectionVo featureCollection) {
+        // A coordinate sent as null is refused (400), as the save refuses it, not searched as not a number
+        JtsConverter.requireNumbers(featureCollection);
         GeometryVo geometryVo = featureCollection.toGeometry();
         if (geometryVo == null) {
             return Collections.emptyList();

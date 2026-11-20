@@ -16,6 +16,7 @@
 package org.niord.model.geojson;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.util.function.Consumer;
@@ -31,6 +32,7 @@ import java.util.function.Consumer;
 @XmlRootElement(name = "polygon")
 public class PolygonVo extends GeometryVo {
 
+    @JsonDeserialize(using = CoordinatesDeserializer.PositionLists.class)
     double[][][] coordinates;
 
     @SuppressWarnings("unused")

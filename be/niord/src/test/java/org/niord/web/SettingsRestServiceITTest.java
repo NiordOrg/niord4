@@ -349,6 +349,44 @@ class SettingsRestServiceITTest extends ITTest {
                 .body("mapDefaultZoomLevel", is(6));
     }
 
+    /**
+     * Whether the administration app's maps start with the sea-chart layer on ({@code map.wmsLayerEnabledByDefault} in
+     * the app, which takes the key of the flat map as a JSON boolean or the text "true"). Start-up adds the row, off;
+     * the Settings page lists it; and once that row holds true, as the Settings page leaves it, it is served as the
+     * JSON boolean true. Before the key was declared, no catalog named it: start-up added no row, and /web left out a
+     * row written by hand. A row written by hand before then is kept with its own flags
+     * ({@code SettingsAddMissingITTest.aRowMadeByHandIsAdoptedWithItsOwnFlags}).
+     */
+    @Test
+    void theSeaChartLayersStartIsAWebSettingTheSettingsPageEdits() {
+        String key = "wmsLayerEnabledByDefault";
+        given().auth().oauth2(accessToken())
+                .when().get("/rest/settings/setting/" + key)
+                .then().statusCode(200)
+                .body("value", is(false));
+        given().auth().oauth2(accessToken())
+                .when().get("/rest/settings/editable-settings")
+                .then().statusCode(200)
+                .body("find { it.key == '" + key + "' }.type", is("Boolean"))
+                .body("find { it.key == '" + key + "' }.description", notNullValue());
+        given()
+                .when().get("/rest/settings/web")
+                .then().statusCode(200)
+                .body(key, is(false));
+
+        Object stored = Tx.requiringNew().call(() -> em.find(Setting.class, key).getValue());
+        Tx.requiringNew().run(() -> em.find(Setting.class, key).setValue(true));
+        try {
+            given()
+                    .when().get("/rest/settings/web")
+                    .then().statusCode(200)
+                    .body(key, is(true))
+                    .body("wmsLayerEnabled", is(true));
+        } finally {
+            Tx.requiringNew().run(() -> em.find(Setting.class, key).setValue(stored));
+        }
+    }
+
     @Test
     void webSettingsCarryThePublicSiteLanguagesAsTheSiteReadsThem() {
         // Not in the seed: start-up adds them (SettingsService.addMissing) from the test tree's root

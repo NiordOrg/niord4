@@ -407,7 +407,7 @@ public class NiordIntegrationExecutionService extends BaseService {
      * are published locally, so a trusted certificate matching the host name is the only thing tying the import to
      * the intended Niord server. If the remote certificate does not chain to a public root, add its CA to the JVM
      * trust store. The DNS resolver additionally keeps the fetch - and any redirect it follows - away from
-     * non-public addresses.
+     * non-public addresses, and the redirect strategy follows no redirect from https to http.
      */
     private CloseableHttpClient newHttpClient() {
         RequestConfig config = RequestConfig.custom()
@@ -417,6 +417,7 @@ public class NiordIntegrationExecutionService extends BaseService {
         return HttpClients.custom()
                 .setDefaultRequestConfig(config)
                 .setDnsResolver(NiordIntegrationUrlValidator.dnsResolver(allowPrivateHosts))
+                .setRedirectStrategy(NiordIntegrationUrlValidator.redirectStrategy())
                 .build();
     }
 

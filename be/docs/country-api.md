@@ -26,7 +26,7 @@ All of one base product version, `4.0.<run>`, from the product's Maven registry 
 
 | Artefact | What the country does with it |
 |---|---|
-| `org.niord:niord-parent:<v>` (pom) | its `<parent>`: the dependency management niord-base was tested with, the repositories, and the Surefire and Failsafe configuration with the country build group |
+| `org.niord:niord-parent:<v>` (pom) | its `<parent>`: the dependency management niord-base was tested with, the repositories, and the Surefire and Failsafe configuration with the country build group and the test JVMs' zone (the property `argLine`, `-Duser.timezone=UTC`, which a country's own `argLine` replaces) |
 | `org.niord.base:niord-base:<v>` | its dependency: the library |
 | `org.niord.base:niord-base:<v>:test-jar:tests` | a test dependency: the IT harness (`ITTest`, the containers, the token helpers), the settings and text checkers and the country build group |
 | `org.niord:niord-bootstrap:<v>:zip` | the base product's bootstrap, applied to a fresh database before the country's own (§ Bootstrap and release folders) |
@@ -340,9 +340,8 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
 
   An addition names its base product entry as the import finds it: a template by its path, a dictionary entry by
   the dictionary's name and its key, a category by its MRN, or else by one of its names in that name's language,
-  case-insensitively, under the same parent (a root: by name at any depth, CATEGORY2 in
-  `be/docs/potential-errors.md`; the base product's 45 English names are unique, case-insensitively, so a root's
-  lookup finds the intended category), so an addition carries the English name, and the parents' too, and a
+  case-insensitively, under the same parent (a root among the roots only), so an addition carries the English
+  name, and the parents' too, and a
   `da`-only entry creates a second category; a parameter type by its name and a template parameter by its `paramId`
   (then by its order among equal ones), a promulgation type by its `typeId` and a report by its `reportId`. A whole
   restatement of a base product entry is applied by the same rule: its values replace the base product's where they

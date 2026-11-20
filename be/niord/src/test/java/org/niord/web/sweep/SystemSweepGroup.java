@@ -567,6 +567,23 @@ class SystemSweepGroup implements SweepGroup {
                     ctx.checkEquals("success", db.text(), "the answer", db);
                 }));
 
+        cases.add("messageIndex", SweepCase
+                .of((ctx, row) -> SweepRequest.get("/rest/monitor/message-index"))
+                .sweep((ctx, as) -> {
+                    SweepResponse state = ctx.ok(as, SweepRequest.get("/rest/monitor/message-index"));
+                    if (state.is2xx()) {
+                        JsonPath json = state.json();
+                        Boolean lucene = json.get("lucene");
+                        Boolean postgres = json.get("postgres");
+                        Boolean complete = json.get("complete");
+                        ctx.check(lucene != null && postgres != null && complete != null,
+                                "a flag per index and one for both", state);
+                        if (lucene != null && postgres != null && complete != null) {
+                            ctx.checkEquals(lucene && postgres, complete, "complete is both indexes", state);
+                        }
+                    }
+                }));
+
         cases.add("buildVersion", SweepCase
                 .of((ctx, row) -> SweepRequest.get("/rest/version/build-version"))
                 .sweep((ctx, as) -> {

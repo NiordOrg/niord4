@@ -1171,6 +1171,22 @@
       ]
     },
     {
+      "key": "wmsLayerEnabledByDefault",
+      "type": "Boolean",
+      "codeDefault": false,
+      "baseValue": null,
+      "scope": "operator",
+      "web": true,
+      "editable": true,
+      "required": false,
+      "cached": true,
+      "introducedIn": "4.0.221",
+      "description": "Whether the sea-chart (WMS) layer starts switched on in the administration app's maps. It takes effect only where wmsLayerEnabled shows the layer; when off, the layer starts switched off",
+      "declaredIn": [
+        "org.niord.core.settings.FrontendSettings"
+      ]
+    },
+    {
       "key": "wmsLayers",
       "type": "String",
       "codeDefault": "",

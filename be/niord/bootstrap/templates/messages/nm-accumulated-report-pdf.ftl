@@ -64,7 +64,7 @@
         <#elseif group.name?has_content>
             ${group.name}
         <#elseif group.week??>
-            ${text('pdf.week')} ${group.week?c}
+            ${text('pdf.week')} ${group.weeks!(group.week?c)}
         <#else>
             ${text('pdf.nm')}
         </#if>
@@ -235,8 +235,12 @@
             <table class="group-info-line" width="100%">
                 <tr>
                     <td width="40%" align="left">
+                        <#-- group.weeks is the source's weeks as its series' name pattern
+                             writes them ("36 og 37", "36+37", "36-38"), in the pair form where
+                             the pattern cannot say a span of several weeks, so the line names
+                             every week the source covered, or its week label whole. -->
                         <#if !group.manual && group.week??>
-                            ${text('pdf.week')} ${group.week?c}<#if group.weekTo?? && group.weekTo != group.week> - ${group.weekTo?c}</#if><#if group.year??>, ${group.year?c}</#if>
+                            ${text('pdf.week')} ${group.weeks!(group.week?c)}<#if group.year??>, ${group.year?c}</#if>
                         </#if>
                     </td>
                     <td width="30%" align="center">
@@ -246,9 +250,9 @@
                              cut-off alone. ?datetime because a Date arrives without a
                              declared kind. -->
                         <#if group.cutoff?? && group.intervalFrom??>
-                            ${text('pdf.accumulated.period')}: ${group.intervalFrom?datetime?string["dd. MMMM yyyy"]} - ${group.cutoff?datetime?string["dd. MMMM yyyy"]}
+                            ${text('pdf.accumulated.period')}: ${group.intervalFrom?datetime?string(text("msg.time.date_format"))} - ${group.cutoff?datetime?string(text("msg.time.date_format"))}
                         <#elseif group.cutoff??>
-                            ${text('pdf.accumulated.cutoff')}: ${group.cutoff?datetime?string["dd. MMMM yyyy"]}
+                            ${text('pdf.accumulated.cutoff')}: ${group.cutoff?datetime?string(text("msg.time.date_format"))}
                         </#if>
                     </td>
                     <#-- No range where there are no numbers to range over. -->

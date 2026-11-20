@@ -174,6 +174,10 @@ must be online to fetch the JUnit provider.
 - Change as little as possible; a change should look like the code around it. Do not alter behaviour that
   the task does not name.
 - `pom.xml` changes are deliberate: say why in the change, never as a side effect.
+- A change to what a user, an API client, a country or an operator sees or does updates the guide that describes
+  it in the same pull request (`../guides/`, `../country-kit/docs/`, [docs/country-api.md](docs/country-api.md)):
+  the rule is in the [root AGENTS.md](../AGENTS.md) (_Working here_), and which guide serves which reader in
+  [`../guides/README.md`](../guides/README.md#keeping-the-guides-level-with-the-product).
 - `../fe/shared-map/portrayal/` (the portrayal definition and its symbols) is copied by Maven into niord-base
   (`niord/pom.xml`), where the map-image renderer reads it (`PortrayalDefinition`): a change there runs Backend CI
   and is measured in both web applications and in the server-made map images.

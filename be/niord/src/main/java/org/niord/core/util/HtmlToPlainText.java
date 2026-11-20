@@ -116,11 +116,18 @@ public class HtmlToPlainText {
             if (StringUtil.in(name, "br", "dd", "dt", "p", "h1", "h2", "h3", "h4", "h5", "h6"))
                 append("\n");
             else if (name.equals("a"))
-                append(String.format(" <%s>", node.absUrl("href")));
+                appendAddress(node.absUrl("href"));
             else if (StringUtil.in(name, lineBlocks))
                 owe('\n');
             else if (StringUtil.in(name, "td", "th"))
                 owe(' ');
+        }
+
+        // a link's address after its words; nothing where the address does not resolve, as a link inside Niord
+        // ("#/message/...", a repository path) does not when the text is parsed without a base URI
+        private void appendAddress(String url) {
+            if (!url.isEmpty())
+                append(String.format(" <%s>", url));
         }
 
         // a line break owed is not lowered to a space

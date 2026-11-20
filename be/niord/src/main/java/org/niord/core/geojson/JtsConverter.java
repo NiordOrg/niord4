@@ -124,6 +124,7 @@ public class JtsConverter {
      *         geometry wider than the globe
      */
     public static Geometry toJtsOnGlobe(GeometryVo g) {
+        requireNumbers(g);
         Geometry geometry = toJts(g);
         if (geometry == null || geometry.isEmpty()) {
             return geometry;
@@ -132,10 +133,7 @@ public class JtsConverter {
         double minLon = Double.POSITIVE_INFINITY;
         double maxLon = Double.NEGATIVE_INFINITY;
         for (Coordinate c : geometry.getCoordinates()) {
-            if (!Double.isFinite(c.x) || !Double.isFinite(c.y)) {
-                throw new IllegalArgumentException("Invalid position: latitude " + c.y + ", longitude " + c.x
-                        + " is not a number");
-            }
+            requireNumbers(c.y, c.x);
             if (c.y < -90.0 || c.y > 90.0) {
                 throw new IllegalArgumentException("Invalid latitude " + c.y + ": a latitude lies between -90 and 90");
             }
@@ -210,6 +208,29 @@ public class JtsConverter {
             return fromJtsGeometryCollection((GeometryCollection) g);
         } else {
             throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * Refuses a GeoJSON value with a position whose latitude or longitude is not a finite number, such as a coordinate
+     * sent as JSON {@code null} ({@code CoordinatesDeserializer}). Checked on the value object, before JTS builds a
+     * geometry: a ring whose first and last positions are not numbers never closes, and JTS would refuse it with a
+     * message that does not name the position.
+     *
+     * @param g the GeoJSON value; null is accepted
+     * @throws IllegalArgumentException for a position that is not a number
+     */
+    public static void requireNumbers(GeoJsonVo g) {
+        if (g != null) {
+            g.visitCoordinates(c -> requireNumbers(c[1], c[0]));
+        }
+    }
+
+    /** Refuses a position whose latitude or longitude is not a finite number */
+    private static void requireNumbers(double lat, double lon) {
+        if (!Double.isFinite(lon) || !Double.isFinite(lat)) {
+            throw new IllegalArgumentException("Invalid position: latitude " + lat + ", longitude " + lon
+                    + " is not a number");
         }
     }
 

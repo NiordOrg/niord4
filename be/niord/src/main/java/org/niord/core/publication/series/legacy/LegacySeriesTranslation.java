@@ -395,9 +395,11 @@ public final class LegacySeriesTranslation {
      * TWO KINDS ARE DROPPED, and both are dropped because the new model answers
      * them itself rather than because anything is wrong with the row.
      *
-     * The first is a RESERVED NAME. week, weekTo, year and edition are injected
-     * into every report from the issue being rendered, and typing one beside the
-     * derived value is refused outright by S-23 -- so copying them across
+     * The first is a RESERVED NAME. The names S-23 reserves
+     * (SeriesValidator.RESERVED_REPORT_PARAMS: week, weekTo, year and edition among
+     * them) are injected into every report from the issue being rendered, and
+     * typing one beside the derived value is refused outright by S-23 -- so
+     * copying them across
      * produces a series that cannot be activated at all until an operator
      * hand-edits it. Both weekly templates carry exactly that pair. The reserved
      * names are asked of the validator rather than listed a second time here, so

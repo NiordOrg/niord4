@@ -79,6 +79,17 @@ public final class FrontendSettings {
                     .web(true)
                     .editable(true);
 
+    // Read by the administration app's maps (fe/ui-apps/admin/src/app/shared/components/ol-map/base-map-layers.ts);
+    // false: the layer starts switched off. The value /web serves replaces the app's environment file's, so an
+    // environment file that sets it true no longer decides; a country that wants it on sets it in its settings file
+    public static final Setting WMS_LAYER_ENABLED_BY_DEFAULT =
+            new Setting("wmsLayerEnabledByDefault", false)
+                    .description("Whether the sea-chart (WMS) layer starts switched on in the administration app's "
+                            + "maps. It takes effect only where wmsLayerEnabled shows the layer; when off, the layer "
+                            + "starts switched off")
+                    .web(true)
+                    .editable(true);
+
     public static final Setting OPEN_SEA_MAP_LAYER_ENABLED =
             new Setting("openSeaMapLayerEnabled", false)
                     .description("Whether or not to display the OpenSeaMap layer in maps")

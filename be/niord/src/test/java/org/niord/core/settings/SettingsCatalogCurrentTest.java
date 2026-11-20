@@ -87,7 +87,7 @@ class SettingsCatalogCurrentTest {
     /** What the base product's catalog holds since C3a: guards against a generation that missed declarations */
     private static void assertTheCatalogsContent(SettingsCatalog catalog) {
         Map<String, SettingsCatalog.Entry> byKey = catalog.byKey();
-        assertEquals(73, byKey.size(), "the catalog has " + byKey.size() + " keys: when a declaration was added or "
+        assertEquals(74, byKey.size(), "the catalog has " + byKey.size() + " keys: when a declaration was added or "
                 + "removed on purpose, update the expected count in SettingsCatalogCurrentTest.assertTheCatalogsContent"
                 + "; otherwise the generation missed declarations. The keys: " + byKey.keySet());
 
@@ -127,7 +127,16 @@ class SettingsCatalogCurrentTest {
         secom.forEach(key -> assertTrue(byKey.get(key).declaredIn().stream().allMatch(c -> c.startsWith("org.niord.secom.")),
                 key + " is declared only in SECOM's conditional code: " + byKey.get(key).declaredIn()));
         Set<String> frontend = keys(catalog, e -> e.declaredIn().equals(List.of(FrontendSettings.class.getName())));
-        assertEquals(11, frontend.size(), "the eleven FrontendSettings keys: " + frontend);
+        assertEquals(12, frontend.size(), "the twelve FrontendSettings keys: " + frontend);
+
+        // Whether the administration app's maps start with the sea-chart layer on: served to the web applications
+        // and shown on the Settings page, off by default (the value served replaces the app's environment file's)
+        SettingsCatalog.Entry wmsByDefault = byKey.get("wmsLayerEnabledByDefault");
+        assertTrue(wmsByDefault != null && wmsByDefault.web() && wmsByDefault.editable(),
+                "wmsLayerEnabledByDefault is a web setting the Settings page edits");
+        assertEquals(Setting.Type.Boolean, wmsByDefault.type(), "a Boolean, as wmsLayerEnabled");
+        assertEquals(Boolean.FALSE, wmsByDefault.codeDefault(), "the sea-chart layer starts switched off by default");
+        assertEquals(Setting.Scope.operator, wmsByDefault.scope(), "an operator setting");
         for (String key : List.of("wmsProvider", "wmsPassword", "wmsLayers", "wmsProtected")) {
             assertEquals(List.of("org.niord.web.wms.WmsProxyServlet"), byKey.get(key).declaredIn(), key);
         }

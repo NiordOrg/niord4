@@ -97,4 +97,6 @@ server itself, so that an integration point cannot be used to reach into the net
 other Niord server really is on a private network, turn on the setting `niordIntegrationAllowPrivateHosts`. Niord
 reads this setting when the server starts, so restart the server after you change it.
 
-The other server's certificate must be one this server trusts, and must match its host name.
+The other server's certificate must be one this server trusts, and must match its host name. Niord follows a
+redirect from `http` to `https`, but never one from `https` to `http`: such a fetch fails, with an error in the
+server's log.

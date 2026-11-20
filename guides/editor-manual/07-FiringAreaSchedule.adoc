@@ -72,10 +72,11 @@ image::FiringAreaScheduleEdit.png[An area's firing periods being edited, 460]
 * *Clear* takes out all the lines, except a period that started on an earlier day (see below).
 * *Save* stores the lines as the area's firing periods, for that area and that day only, and closes
   the row. Nothing is stored before you click *Save*: *Clear* followed by *Save* deletes all the
-  periods of the day. *Cancel* closes the row and leaves the periods as they were.
+  periods of the day. *Cancel* closes the row and leaves the periods as they were; when you have
+  taken out a line or entered or changed a time, Niord first asks whether to leave without saving.
 
 A firing period is entered on the day it starts. A period without a start time starts at midnight,
-and one without an end time lasts until 23:59; a line with neither is left out. To fire until
+and one without an end time lasts until the end of the day; a line with neither is left out. To fire until
 midnight, enter 00:00 (12:00 AM) as the end: the period then lasts until midnight at the end of the
 day shown, and the firing exercise message reads, for example, "hours 09:00 - 24:00". For an
 exercise that goes on past midnight, enter one period until 00:00 and another from 00:00 on the
@@ -109,8 +110,9 @@ day it starts you can change its start time, and it keeps its end on the next da
 time is read on the day shown, so an end before the start makes the line say "The period must end
 after it starts. It runs past midnight: to keep firing after midnight, end it at 00:00 and add a
 period from 00:00 on the next day." Times and dates are shown on both ends of such a period, and of
-a period until midnight. A period you do not change is saved as it was. When Niord cannot store the periods it says "Error updating firing
-periods".
+a period until midnight. A period you do not change is saved as it was. When Niord cannot store the
+periods it says "Error updating firing periods", and the row stays open with the lines as you left
+them, so you can click *Save* again.
 
 The times are read in the time zone of the domain you are working in. When the domain has no time
 zone, the pencil cannot be used ("No time zone — choose a domain first").

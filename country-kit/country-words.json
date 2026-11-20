@@ -40,11 +40,6 @@
       "reason": "the time-zone rule's accepted case: Node's ICU resolves America/Nuuk to its old name and Intl.supportedValuesOf lacks it, while Java's tz database holds it, so the validator must accept the current IANA name; permanent"
     },
     {
-      "word": "Nuuk",
-      "path": "docs/backlog.md",
-      "reason": "the clock-change item of the date-time field: the bug shows only in Greenland's zone, whose spring gap ends a local day; the item and this entry go together when the bug is fixed"
-    },
-    {
       "word": "Beredskab",
       "path": "docs/coding-standards.md",
       "reason": "the licence's copyright holder, as in LICENSE; permanent"
@@ -92,7 +87,12 @@
     {
       "word": "Nuuk",
       "path": "ui-apps/admin/src/app/shared/utils/zoned-date.spec.ts",
-      "reason": "the end of a day on the days the clocks change, in Greenland's zone: its clocks change at 23:00 local, so its spring day has no 23:59:59 and its autumn day has it twice; no zone outside Greenland reproduces it, and GL's deployments run in it; permanent"
+      "reason": "the end of a day and a typed time on the days the clocks change, in Greenland's zone: its clocks change at 23:00 local, so its spring day has no 23:59:59 and its autumn day has it twice, and its spring gap ends a local day, so a typed time in it must still move forward; no zone outside Greenland reproduces it, and GL's deployments run in it; permanent"
+    },
+    {
+      "word": "Nuuk",
+      "path": "ui-apps/admin/src/app/features/schedule/components/time-schedule-editor/time-schedule-editor.spec.ts",
+      "reason": "a firing period without an end time on the days the clocks change, in Greenland's zone: its clocks change at 23:00 local, so its spring day has no 23:59:59 and its autumn day has it twice, and the period must still end at the last second of the selected day; no zone outside Greenland reproduces it, and GL's deployments run in it; permanent"
     },
     {
       "word": "Nuuk",

@@ -62,14 +62,20 @@ export function getZonedDateParts(instant: Date, timeZone: string): ZonedDatePar
  * Convert a wall-clock time (Y/M/D/h/m/s) — interpreted as a moment IN `timeZone` —
  * to the corresponding UTC `Date`.
  *
- * DST handling uses a two-pass approach: first guess assuming `timeZone` has the
- * naive offset, then refine using the actual offset at the first-guess instant. This
- * is correct everywhere except for two pathological DST cases:
- *   - Spring-forward "missing" hour (e.g. 02:30 on a spring-forward day in some zones
- *     doesn't exist). We return the post-transition instant matching the same
- *     wall-clock + 1 hour later.
- *   - Fall-back "ambiguous" hour (e.g. 01:30 occurs twice). We return the second
- *     (post-transition) occurrence, which matches Java/`luxon`/`date-fns-tz` convention.
+ * A zone changes its offset at most once in two days, so the wall clock can only be read with
+ * the offset the zone has a day before it or the one it has a day after it. Each gives a
+ * candidate instant, and a candidate holds when the zone has that very offset at that instant.
+ * Away from a clock change the two offsets are the same, and so is the answer.
+ *
+ * Near a clock change the rule is the one Java's `ZonedDateTime.of` applies, so a typed time
+ * resolves to the instant the backend and the public site resolve it to: where exactly one
+ * candidate holds, it is the answer; otherwise the offset in force before the change is kept.
+ *   - A clock in a spring-forward gap does not exist — 02:30 on the day Copenhagen's 02:00
+ *     becomes 03:00, 23:30 in a zone whose 23:00 becomes 00:00, as UTC−2 does on the EU rule —
+ *     and resolves to the instant the clock reads an hour later (the length of the gap):
+ *     03:30 and 00:30. West of UTC too, never an hour earlier.
+ *   - A clock in a fall-back hour exists twice and resolves to its first occurrence, the one
+ *     before the clocks go back.
  */
 export function zonedDateToUtc(
   year: number,
@@ -80,19 +86,20 @@ export function zonedDateToUtc(
   second: number,
   timeZone: string,
 ): Date {
-  // First pass: pretend the wall-clock is UTC, then correct via the target-zone offset.
-  const naiveUtc = Date.UTC(year, month, day, hour, minute, second);
-  const offsetMs1 = zonedOffsetMs(new Date(naiveUtc), timeZone);
-  const candidate1Ms = naiveUtc - offsetMs1;
-
-  // Second pass: at the first-guess instant, recompute the offset. If it differs we
-  // crossed a DST boundary — re-apply with the corrected offset.
-  const offsetMs2 = zonedOffsetMs(new Date(candidate1Ms), timeZone);
-  if (offsetMs2 === offsetMs1) {
-    return new Date(candidate1Ms);
+  const wallClock = Date.UTC(year, month, day, hour, minute, second);
+  const offsetBefore = zonedOffsetMs(new Date(wallClock - DAY_MS), timeZone);
+  const offsetAfter = zonedOffsetMs(new Date(wallClock + DAY_MS), timeZone);
+  const withOffsetBefore = wallClock - offsetBefore;
+  if (offsetBefore === offsetAfter) {
+    return new Date(withOffsetBefore);
   }
-  return new Date(naiveUtc - offsetMs2);
+  const withOffsetAfter = wallClock - offsetAfter;
+  const beforeHolds = zonedOffsetMs(new Date(withOffsetBefore), timeZone) === offsetBefore;
+  const afterHolds = zonedOffsetMs(new Date(withOffsetAfter), timeZone) === offsetAfter;
+  return new Date(afterHolds && !beforeHolds ? withOffsetAfter : withOffsetBefore);
 }
+
+const DAY_MS = 86_400_000;
 
 /**
  * Start-of-day (00:00:00) in the target zone, as a UTC `Date`, derived from the

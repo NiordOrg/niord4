@@ -33,6 +33,8 @@ import jakarta.persistence.FlushModeType;
 import jakarta.persistence.Query;
 import jakarta.persistence.TemporalType;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -108,7 +110,26 @@ public class MessagePostgresIndex extends BaseService {
 
     /** Taken by every writer of the table; package-private so a test can keep the scheduled pass out */
     final ReentrantLock lock = new ReentrantLock();
-    boolean allMessagesIndexed;
+
+    /**
+     * Whether the table holds every message: set once a pass that found fewer messages after the marker than it may
+     * index has committed, and cleared by a re-index. In memory only, so false after a start until the first pass.
+     * Read on other threads than the passes ({@code GET /rest/monitor/message-index}).
+     */
+    volatile boolean allMessagesIndexed;
+
+    /**
+     * The messages the committed passes indexed since the start or the last re-index: the count the line that says
+     * the table is complete gives ({@link #markComplete(int)}). Written when a pass has committed
+     * ({@link #passCommitted}).
+     */
+    volatile int indexedInFill;
+
+    /**
+     * Counts the re-indexes, so that a pass's commit that ends after a re-index has begun does not mark the table the
+     * re-index is filling as complete
+     */
+    volatile int fill;
 
     /**
      * Called every minute to incrementally maintain the PostgreSQL search table. It always runs (symmetric
@@ -128,9 +149,82 @@ public class MessagePostgresIndex extends BaseService {
         }
     }
 
-    /** Returns if all messages have been indexed */
+    /**
+     * Returns if all messages have been indexed: false after a start until the first pass has committed, and from a
+     * re-index until it has committed
+     */
     public boolean allMessagesIndexed() {
         return allMessagesIndexed;
+    }
+
+    /**
+     * Once the pass's transaction has committed (at once when no transaction runs), counts its messages into the fill
+     * and, when the pass completes the table, marks it complete: the table is never reported complete while its rows
+     * cannot yet be read, and a pass that rolls back is not counted. The caller holds {@link #lock}.
+     *
+     * @param completesTheIndex whether the pass found fewer messages after the marker than it may index
+     * @param indexed           the messages the pass indexed
+     */
+    void passEnded(boolean completesTheIndex, int indexed) {
+        if (!completesTheIndex && indexed == 0) {
+            return;
+        }
+        int passFill = fill;
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    passCommitted(passFill, completesTheIndex, indexed);
+                }
+            });
+        } else {
+            passCommitted(passFill, completesTheIndex, indexed);
+        }
+    }
+
+    /**
+     * A pass has committed: its messages count into the fill it belonged to, and it marks the table complete when it
+     * completes it. A pass that committed after a re-index began counts into neither: the re-index's fill counts its
+     * own passes.
+     *
+     * @param passFill          the fill the pass belonged to
+     * @param completesTheIndex whether the pass found fewer messages after the marker than it may index
+     * @param indexed           the messages the pass indexed
+     */
+    synchronized void passCommitted(int passFill, boolean completesTheIndex, int indexed) {
+        if (passFill != fill) {
+            return;
+        }
+        indexedInFill += indexed;
+        if (completesTheIndex) {
+            markComplete(passFill);
+        }
+    }
+
+    /**
+     * Begins a new fill (a re-index, {@link #recreateIndex()}, which code and tests start; no page or endpoint does):
+     * the table is not complete until a pass of this fill has committed
+     */
+    synchronized void startFill() {
+        fill++;
+        allMessagesIndexed = false;
+        indexedInFill = 0;
+    }
+
+    /**
+     * Marks the table complete, unless a re-index has begun since the pass that completed it. The first time after a
+     * start or a re-index, it logs one INFO line that names the index and the messages this fill indexed, also when the
+     * fill found nothing to do, so a person who prepares a database can see in the log when the searches answer in
+     * full; the passes after that log nothing. After a restart the table is kept, so the figure counts only what it
+     * lacked: 0 means nothing was missing. The state is this backend process's.
+     *
+     * @param passFill the fill the completing pass belonged to
+     */
+    synchronized void markComplete(int passFill) {
+        if (passFill == fill && !allMessagesIndexed) {
+            allMessagesIndexed = true;
+            log.info("Message search index complete: PostgreSQL, " + indexedInFill + " messages indexed in this fill");
+        }
     }
 
     /**
@@ -143,7 +237,7 @@ public class MessagePostgresIndex extends BaseService {
         lock.lock();
         try {
             searchTableStatement("delete from message_search_text").executeUpdate();
-            allMessagesIndexed = false;
+            startFill();
             return updateIndex(Integer.MAX_VALUE);
         } finally {
             lock.unlock();
@@ -170,13 +264,13 @@ public class MessagePostgresIndex extends BaseService {
         List<Message> updatedMessages = messageQueryService.findUpdatedMessagesAfter(
                 marker.updated(), marker.messageId(), maxIndexCount);
 
-        // The first time fewer than the maximum number of messages are found, indexing is complete.
-        if (updatedMessages.size() < maxIndexCount) {
-            allMessagesIndexed = true;
-        }
+        // Fewer messages after the marker than a pass may index: once this pass has committed, the table holds every
+        // message
+        boolean completesTheIndex = updatedMessages.size() < maxIndexCount;
 
         List<Message> missedMessages = findMissedMessages(marker, maxIndexCount);
         if (updatedMessages.isEmpty() && missedMessages.isEmpty()) {
+            passEnded(completesTheIndex, 0);
             return 0;
         }
 
@@ -201,6 +295,7 @@ public class MessagePostgresIndex extends BaseService {
 
         log.info("Indexed " + indexed + " messages (" + (indexed - updatedMessages.size())
                 + " behind the marker) (PostgreSQL) in " + (System.currentTimeMillis() - t0) + " ms");
+        passEnded(completesTheIndex, indexed);
         return indexed;
     }
 

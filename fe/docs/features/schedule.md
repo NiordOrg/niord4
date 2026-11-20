@@ -93,9 +93,12 @@ area-heading component.
 Each data row carries an `app-time-schedule-editor` for that area on the selected day. It is
 **commit-on-save** over a working copy: entering edit seeds a draft from the row's periods (one
 blank interval when the area has none), Add / Remove / Clear mutate only the draft, Cancel discards
-it, Save PUTs the whole per-area list and replaces the shown periods with the server response. The
-source row is never mutated before a successful save. A new search result resets the row: the editor
-closes and adopts the fresh server periods.
+it (when a row with a time was added, a row was removed or a time was changed, only after the app's
+usual unsaved-changes question, `shared.discard.*` through `DiscardConfirmService`; answered no, the
+rows stay as typed; a blank row added, or a time picked again as it was, asks nothing), Save PUTs
+the whole per-area list and replaces the shown periods with the server response. The source row is
+never mutated before a successful save. A new search result resets the row: the editor closes and
+adopts the fresh server periods.
 
 **Zone.** A firing period is announced in the **session domain's** zone, so that is the zone the
 entered times belong to — not the browser's. A stored instant is seeded into the time fields as the
@@ -143,7 +146,7 @@ early hours) or 08:00 to 23:00 of the day before is listed on its start day only
 | ----------------------------------------- | ------------------------------------------------------------------------ |
 | both ends blank                           | dropped silently                                                         |
 | `from` blank                              | `00:00:00` on the selected day, in the domain zone                       |
-| `to` blank                                | `23:59:59` on the selected day, in the domain zone                       |
+| `to` blank                                | the last second of the selected day, in the domain zone                  |
 | `to` is 00:00                             | `00:00:00` of the next day in the domain zone ("until midnight")         |
 | a time entered                            | its hour and minute on the selected day, seconds and milliseconds zeroed |
 | an end at or before its start (not 00:00) | refused inline: nothing is sent                                          |
@@ -151,7 +154,9 @@ early hours) or 08:00 to 23:00 of the day before is listed on its start day only
 The calendar day always comes from the day the user is looking at; only the clock is resolved in the
 zone. That is what keeps a zone west of the browser from rolling a period onto the neighbouring day.
 The next day's 00:00 is resolved in the zone too, so on a day the zone changes offset it is not
-24 hours on.
+24 hours on. A blank `to` is that 00:00 one second back, not the clock 23:59:59: a zone that changes
+its clock at 23:00 local, as Greenland's does, has no 23:59:59 on its spring day and two on its
+autumn day.
 
 **Order check.** A row that, as it would be saved, does not end after it starts gets an inline
 `role="alert"` line ("The period must end after it starts. To fire until midnight, enter 00:00 as
@@ -255,7 +260,6 @@ in-place reset path.
 
 | Limit                   | Note                                                                                   |
 | ----------------------- | -------------------------------------------------------------------------------------- |
-| No dirty-cancel confirm | Cancel discards the draft immediately                                                  |
 | Add does not move focus | the new row's `from` field is not focused (the shared time field exposes no focus API) |
 | No deep-linkable day    | adding one means introducing a `date` query param, which does not exist today          |
 | No inactive areas       | `inactive` is never sent                                                               |

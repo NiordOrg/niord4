@@ -65,16 +65,20 @@ class FmTemplatePdfMapCreditTest {
     private Map<String, ScriptResource> rows;
     private FmTemplateService templateService;
 
-    /** The dictionary: the date format the message template uses, and the key itself for the rest */
+    /** The dictionary: the date formats the list template uses, and the key itself for the rest */
     private static class Texts extends ResourceBundle {
+        private static final Map<String, String> FORMATS = Map.of(
+                "msg.time.date_format", "d MMMM yyyy",
+                "msg.time.date_time_format", "d MMMM yyyy, 'hours' HH:mm");
+
         @Override
         protected Object handleGetObject(String key) {
-            return "msg.time.date_format".equals(key) ? "d MMMM yyyy" : key;
+            return FORMATS.getOrDefault(key, key);
         }
 
         @Override
         public Enumeration<String> getKeys() {
-            return Collections.enumeration(List.of("msg.time.date_format"));
+            return Collections.enumeration(FORMATS.keySet());
         }
     }
 

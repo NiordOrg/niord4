@@ -534,7 +534,18 @@ version needs and the old database never had is missing until you import it.
   release file that carries the current one and ticks its overwrite.
 - **The message index**: an index the backend cannot read in the home folder's `message-index` folder (one of
   an older Lucene format, or a damaged one) is removed at the start, with a WARN that names the folder, and
-  rebuilt from the database.
+  rebuilt from the database. After a start the backend rebuilds the Lucene index from the first message
+  (`messageIndexDeleteOnStartup`, `true` by default), 5,000 messages a minute. The PostgreSQL search table
+  is kept in the database and catches up from the last message it holds; it fills from the first message
+  only when it is empty, as in a copy restored from the old system. Each index reads incomplete until its
+  first pass after the start has caught up, and until then a free-text search answers from part of the
+  messages. Each logs one INFO line when it is complete, such as
+  `Message search index complete: Lucene, <n> messages indexed in this fill` (and the same for
+  `PostgreSQL`, where `0 messages` after a restart means none was missing), and a system administrator's
+  `GET /rest/monitor/message-index` answers `{"lucene":true,"postgres":true,"complete":true}` once both
+  are: a script that prepares a copy polls it until `complete` is true before it checks the searches or
+  hands the copy over. The answer is that of the backend process that answers; with several backend pods,
+  ask each.
 - **The jobs that act on the copied data.** From its first minute the backend publishes the messages
   the database holds as due, expires those past their end, runs the firing schedules, sends the Mail
   Queue's pending mails and runs the mailing lists' due triggers. To start on the data without that,

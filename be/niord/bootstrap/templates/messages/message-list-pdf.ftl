@@ -14,7 +14,10 @@
 <body>
 
 
-<@renderDefaultHeaderAndFooter headerText="Generated ${.now?datetime}" frontPage=frontPage!true/>
+<#-- The moment the list was made, by the language's date-and-time text, in the zone the print is dated in -->
+<#assign generated = .now?string(text('msg.time.date_time_format'))/>
+
+<@renderDefaultHeaderAndFooter headerText="Generated ${generated}" frontPage=frontPage!true/>
 
 
 <#if frontPage!true>
@@ -25,7 +28,7 @@
         <table border="0">
             <tr>
                 <th align="right" valign="top" nowrap>Generated: &nbsp;</th>
-                <td>${.now?datetime}</td>
+                <td>${generated}</td>
             </tr>
             <tr>
                 <th align="right" valign="top" nowrap>Criteria: &nbsp;</th>

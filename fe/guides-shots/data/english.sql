@@ -70,7 +70,7 @@ INSERT INTO english_base_text VALUES
   -- <BASE_TEXTS>
   ('mail', 'mail.active_nav_warnings', 'Active Navigational Warnings'),
   ('mail', 'mail.comment.subject', 'Comment from'),
-  ('mail', 'mail.date_format.long', 'd. MMMM yyyy'),
+  ('mail', 'mail.date_format.long', 'd MMMM yyyy'),
   ('mail', 'mail.date_format.short', 'dd-MM-yyyy'),
   ('mail', 'mail.dear.user', 'Dear {0}'),
   ('mail', 'mail.field.date', 'Date'),

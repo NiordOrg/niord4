@@ -641,9 +641,10 @@ RENDER6 are removed, because the sweep closed them; and U6, SECAUD-9, LUCENE-2, 
 now describe the code as the sweep left it. Since then LUCENE-2 was fixed and removed from that file,
 and in November 2026 TMPL6 and REPO3 were too (what is still open of REPO3, a link stored earlier
 with a raw semicolon, is REPO6 there now); and the open RENDER6 there now (the message-list
-PDF's labels and time stamp) is a later, unrelated entry under the reused code. Later in November 2026
+PDF's labels and criteria line) is a later, unrelated entry under the reused code. Later in November 2026
 SECAUD-9 and SECAUD-12 left that file too: what SECAUD-9's fix left open (the address logged once
-before it is checked, and a redirect from https to http) is INT8 there now, and SECAUD-12 was closed
+before it is checked, and a redirect from https to http) became INT8 there, fixed and removed on
+2026-11-20 (the address is logged only after its check, and no redirect from https to http is followed), and SECAUD-12 was closed
 as covered by the guards, with F-X64 accepted here. SECAUD-13, the ticket filter registered only
 under some profiles, left as fixed; a one-time ticket in a download link's address is the accepted
 design.

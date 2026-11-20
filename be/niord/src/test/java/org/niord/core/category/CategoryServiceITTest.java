@@ -21,12 +21,14 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.Test;
+import org.niord.core.bootstrap.BootstrapRun;
 import org.niord.test.ITTest;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -685,6 +687,68 @@ class CategoryServiceITTest extends ITTest {
         Category reloaded = em.find(Category.class, imported.getId());
         assertEquals("IT-ImpParent", reloaded.getParent().getDesc("en").getName(),
                 "the recursively created parent must be persisted and linked");
+    }
+
+    @Test
+    @Transactional
+    void importOfAWholeChainRootTemplate_doesNotMatchASameNamedCategoryDeeperDown() {
+        // A category file's root entry was looked up by name at any depth, so it was found as the child below and
+        // that child was updated. With its whole chain it matches a root only, and here there is none, so a root is
+        // created.
+        Category holder = categoryService.createCategory(newCategory("IT-Cat2-Holder", "en"), null);
+        Category child = categoryService.createCategory(newCategory("IT-Cat2-Twin", "en"), holder.getId());
+        em.flush();
+
+        Category imported = importWholeChain(newCategory("IT-Cat2-Twin", "en"), true, true);
+
+        assertNotEquals(child.getId(), imported.getId(), "the root template must not match the child");
+        assertNull(imported.getParent(), "the imported category is a root");
+        em.flush();
+        em.clear();
+        assertEquals(holder.getId(), em.find(Category.class, child.getId()).getParent().getId(),
+                "the child stays where it was");
+    }
+
+    @Test
+    @Transactional
+    void importOfAParentlessTemplate_stillFindsANestedCategoryByName() {
+        // A message's or a domain's category is read without its parent: its name alone must find the nested
+        // category it names, and no root of that name is made
+        Category holder = categoryService.createCategory(newCategory("IT-Cat2-Holder", "en"), null);
+        Category child = categoryService.createCategory(newCategory("IT-Cat2-Nested", "en"), holder.getId());
+        em.flush();
+
+        assertEquals(child.getId(),
+                categoryService.importCategory(newCategory("IT-Cat2-Nested", "en"), false, false).getId(),
+                "without create, the nested category is found");
+        assertEquals(child.getId(),
+                categoryService.importCategory(newCategory("IT-Cat2-Nested", "en"), true, false).getId(),
+                "with create, the nested category is found and no root is made");
+        assertNull(categoryService.findRootByName("IT-Cat2-Nested", "en"), "no root of that name is made");
+    }
+
+    @Test
+    @Transactional
+    void importMatchesTheCategoryOfItsNameUnderTheSameParent_atEachDepth() {
+        // Two categories of one name, a root and a child; each entry of a category file finds its own
+        Category root = categoryService.createCategory(newCategory("IT-Cat2-Same", "en"), null);
+        Category holder = categoryService.createCategory(newCategory("IT-Cat2-Parent", "en"), null);
+        Category child = categoryService.createCategory(newCategory("IT-Cat2-Same", "en"), holder.getId());
+        em.flush();
+
+        assertEquals(root.getId(),
+                importWholeChain(newCategory("IT-Cat2-Same", "en"), false, false).getId(),
+                "the root template finds the root");
+
+        Category childTemplate = newCategory("IT-Cat2-Same", "en");
+        childTemplate.setParent(newCategory("IT-Cat2-Parent", "en"));
+        assertEquals(child.getId(), importWholeChain(childTemplate, false, false).getId(),
+                "the child template finds the child under its parent");
+    }
+
+    /** Imports a template as a category file's entry: one that carries its whole chain of parents */
+    private Category importWholeChain(Category template, boolean create, boolean update) {
+        return categoryService.importCategory(template, create, update, BootstrapRun.Scope.NONE, a -> { }, true);
     }
 
     @Test

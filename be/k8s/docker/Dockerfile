@@ -50,8 +50,8 @@ COPY --chown=1000:1000 --from=app app.jar /app/app.jar
 COPY --chown=1000:1000 --from=web . /app/web/
 ENV NIORD_WEB_APP_DIR=/app/web
 # The JVM runs in UTC: the database stores times without a zone, written and read in the
-# JVM's zone, and the data is in UTC (TZ1 in be/docs/potential-errors.md). The chart sets
-# it on the pod too. ENV is image metadata, so the dependency layer keeps its digest.
+# JVM's zone, and the data is in UTC (the owner's ruling of 2026-10-25; be/README.md, its
+# time-zone paragraph). The chart sets it on the pod too. ENV is image metadata, so the dependency layer keeps its digest.
 ENV TZ=UTC
 
 USER 1000:1000

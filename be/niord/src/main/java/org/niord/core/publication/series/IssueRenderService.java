@@ -135,12 +135,18 @@ public class IssueRenderService {
      * {@code manual} marks the one section that belongs to no source: the members
      * somebody added to the issue by hand, which came from no earlier document and
      * are printed under a heading that says so.
+     *
+     * {@code weeks} is the source's weeks as its own series' name pattern in the render language writes them, in
+     * the pair form where that pattern cannot say a span of several weeks, or its week label whole
+     * (PrintedNumbering.printedSourceWeeks): what the accumulated report prints for the source as
+     * {@code group.weeks}.
      */
     public record RenderGroup(
             String publicId,
             String name,
             Integer week,
             Integer weekTo,
+            String weeks,
             Integer year,
             java.util.Date cutoff,
             java.util.Date intervalFrom,
@@ -414,7 +420,7 @@ public class IssueRenderService {
      * members are LOOKED UP IN THAT LIST rather than carried alongside it, so a
      * section still cannot name anything the document does not print.
      */
-    private static List<Map<String, Object>> modelGroups(List<RenderGroup> groups,
+    static List<Map<String, Object>> modelGroups(List<RenderGroup> groups,
                                                          List<MessageVo> orderedMessages) {
         if (groups == null) {
             return null;
@@ -442,6 +448,9 @@ public class IssueRenderService {
             model.put("name", g.name());
             model.put("week", g.week());
             model.put("weekTo", g.weekTo());
+            // The source's weeks as its series' pattern writes them ("36 og 37", "36+37", "36-38"), the pair form
+            // where the pattern cannot say its span, or its week label.
+            model.put("weeks", g.weeks());
             model.put("year", g.year());
             model.put("cutoff", g.cutoff());
             model.put("intervalFrom", g.intervalFrom());

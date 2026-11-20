@@ -38,23 +38,28 @@
 </head>
 <body>
 
-<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_tp')} - ${text('pdf.week')} ${week!''}, ${year!''}"/>
+<#-- ${weeks} is the issue's weeks as the series' name pattern writes them, by the
+     week part of the pattern ("36 og 37", "36+37", "36-38"; the pair form where the
+     pattern writes no week; a single week alone, without a joiner the pattern
+     writes before ${weekTo}), or the week label whole. The legacy print dialog
+     hands only ${week}, which then prints alone. -->
+<@renderDefaultHeaderAndFooter headerText="${text('pdf.nm_tp')} - ${text('pdf.week')} ${weeks!week!''}, ${year!''}"/>
 
 <#-- First page -->
 <h1>${text("pdf.nm_tp")}</h1>
 
 <div class="week-year-header">
-    ${text("pdf.week")} ${week!""}, ${year!""}
+    ${text("pdf.week")} ${weeks!week!""}, ${year!""}
 </div>
 
 <table class="first-page-info-line" style="margin-bottom: 1cm">
     <tr>
         <td width="50%" align="left">
-            ${.now?string["dd. MMMM yyyy"]}
+            ${.now?string(text("msg.time.date_format"))}
             <#if edition?? && edition != '1'> - Version ${edition}</#if>
         </td>
         <td width="50%" align="right">
-            ${text("pdf.nm_abbrev")}  ${week!""} ${year!""}
+            ${text("pdf.nm_abbrev")}  ${weeks!week!""} ${year!""}
         </td>
     </tr>
 </table>

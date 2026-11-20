@@ -915,10 +915,10 @@ public class MessageSearchParamsTest {
         assertTrue(s.contains("Statuses:"), s);
         assertTrue(s.contains("Main types:"), s);
         assertTrue(s.contains("Types:"), s);
-        assertTrue(s.contains("Area ID's:"), s);
-        assertTrue(s.contains("Category ID's:"), s);
+        assertTrue(s.contains("Area IDs:"), s);
+        assertTrue(s.contains("Category IDs:"), s);
         assertTrue(s.contains("Chart Numbers:"), s);
-        assertTrue(s.contains("Series ID's:"), s);
+        assertTrue(s.contains("Series IDs:"), s);
         assertTrue(s.contains("Tags:"), s);
         assertTrue(s.contains("Publications:"), s);
         assertTrue(s.contains("Promulgation Types:"), s);
@@ -927,6 +927,8 @@ public class MessageSearchParamsTest {
         assertTrue(s.contains("Updated from:"), s);
         assertTrue(s.contains("Updated to:"), s);
         assertTrue(s.contains("Extent:"), s);
+        // RENDER6: the message-list PDF prints this line, so the plural takes no apostrophe
+        assertFalse(s.contains("ID's"), s);
         // Fields are joined with ", "
         assertTrue(s.contains(", "), s);
     }
