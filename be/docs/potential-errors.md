@@ -1017,19 +1017,6 @@ was changed in production code.
   let a released document be verified against its record, or tell two generations apart without reading the archive,
   are permanently NULL.
 
-## NAMING-2. A week released about five days late is named for its cut-off week alone, so the week before it is named by no issue
-
-- **Location:** `org/niord/core/publication/series/resolve/IssueNaming.java` (`derive`: the day count
-  `floor(days / 7.0 + 0.25)` decides whether a window is one week before the ISO weeks are counted).
-- **Description:** a window from Wednesday of week 35 to Monday of week 37 is 12 whole days, one period by the
-  day count, so the issue is named `37` alone, although the issue before it closed week 35 and nothing closed
-  week 36. Week 36 is named by no issue and week 37 by two, once the next issue closes in it.
-- **Why it is left:** the quarter-period tolerance is the documented rule that a single week released up to five
-  days late is still one week (`API-CONTRACT.md`, "Weekly naming"); naming such an issue `36+37` would change
-  that rule, which is the owner's choice. Until then the editor types the week label by hand for such a release.
-- **Exposed by:** the check of NAMING-1's fix, 2026-11-19 (read in the code; no test pins it).
-- **Severity:** Low — a release that late is rare, and the label can be typed.
-
 ## PORT-17. An amend re-orders the whole issue, where the data model says surviving members keep their order
 
 - **Location:** `org/niord/core/publication/series/IssuePublishService.java` (`amend` →
