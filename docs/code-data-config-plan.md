@@ -2028,7 +2028,8 @@ script-resource history dialog has a Source column.
   reads `pending`.
 
 Open entries of `be/docs/potential-errors.md` that belong to these rules: CDI1 (`CdiUtils`' static
-last-started context) and SETTINGS-5 (`mailSender`'s code default).
+last-started context), SETTINGS-5 (`mailSender`'s code default) and SCRIPT8 (a deployment's stored script
+row that predates the port, which only a sysadmin's release import replaces).
 
 ---
 

@@ -787,7 +787,7 @@ pre-existing anonymous exposure *explicit* — it is not a fix.
 What the audit's fixes left open is below: INT8, from its finding on the Niord integration's address and TLS
 checks, and the mass-assignment entries, from its sweep of the `@RequestBody` handlers.
 
-## INT8 — An integration address with a credential in it is logged once, and the fetch follows a redirect from https to http
+## INT8 — An integration address with a credential in it is logged once, and the fetch follows a redirect from https to http *(LOW · OPEN)*
 
 - **Location:** `niord/src/main/java/org/niord/web/NiordIntegrationRestService.java` (`createNiordIntegration`
   logs `integration.getUrl()` at INFO before the service checks the address);
