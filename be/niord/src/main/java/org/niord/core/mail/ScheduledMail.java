@@ -294,8 +294,10 @@ public class ScheduledMail extends BaseEntity<Integer> {
 
     /**
      * The mail's Reply-To: the sender, when it holds an e-mail address. A sender without one (the bare name of a user
-     * whose login has no e-mail address) or one that cannot be read as an address gives the mail no Reply-To: the
-     * Reply-To is a convenience, and the mail is sent without it rather than not at all.
+     * whose login has no e-mail address) or one that cannot be read as one address gives no Reply-To from the sender:
+     * the Reply-To is a convenience, and the mail is made without it rather than not at all. The Mail Queue
+     * ({@link MailService#sendScheduledMail(Integer)}) then sets the mail's first recipient as its Reply-To, as it does
+     * for a mailing-list mail, which has no sender.
      *
      * @param sender the sender of the mail, as stored
      * @return the Reply-To address, or null for none

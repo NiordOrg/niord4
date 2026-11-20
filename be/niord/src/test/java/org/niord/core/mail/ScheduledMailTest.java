@@ -395,8 +395,9 @@ public class ScheduledMailTest {
     }
 
     /**
-     * toMail: the sender of a user without an e-mail address is the bare name. The mail is made without a Reply-To,
-     * for a name of two words as for one of one word, and goes to its recipient. FAILS on the code that parsed every
+     * toMail: the sender of a user without an e-mail address is the bare name. The mail is made with no Reply-To from
+     * the sender, for a name of two words as for one of one word, and goes to its recipient (the Mail Queue then sets
+     * the first recipient as the Reply-To: MailDeliveryITTest). FAILS on the code that parsed every
      * sender strictly as the Reply-To: a name of two words was refused, so the mail could not be made at all and
      * ended in Error after its retries, and a name of one word became a Reply-To that is no address.
      */
@@ -411,7 +412,7 @@ public class ScheduledMailTest {
 
             Mail result = mail.toMail("http://localhost/", HtmlMail.StyleHandling.INLINE_STYLES, false);
 
-            assertTrue(result.getReplyTo().isEmpty(), "no Reply-To for the sender '" + sender + "'");
+            assertTrue(result.getReplyTo().isEmpty(), "no Reply-To from the sender '" + sender + "'");
             assertEquals(1, result.getRecipients().size(), "the mail goes to its recipient");
             assertEquals(sender, mail.getSender(), "the stored sender is kept, for the sender's own list of mails");
         }
@@ -435,6 +436,28 @@ public class ScheduledMailTest {
         InternetAddress replyTo = (InternetAddress) result.getReplyTo().get(0);
         assertEquals("editor@example.com", replyTo.getAddress());
         assertEquals("Test Editor", replyTo.getPersonal());
+    }
+
+    /**
+     * toMail: a sender that holds an '@' but cannot be read as one address (a name with a comma reads as two
+     * addresses; an address with two '@') gives no Reply-To from the sender, and the mail is still made and goes to
+     * its recipient. FAILS on the code that parsed every sender strictly as the Reply-To, where such a sender was
+     * refused and the mail ended in Error.
+     */
+    @Test
+    public void toMailWithASenderThatIsNotOneAddressHasNoReplyTo() throws Exception {
+        for (String sender : List.of("Editor, Test <editor@example.com>", "editor@example.com@example.org")) {
+            ScheduledMail mail = new ScheduledMail();
+            mail.setSubject("Subject-" + System.nanoTime());
+            mail.setSender(sender);
+            mail.setHtmlContents("<html><body><p>Hi</p></body></html>");
+            mail.addRecipient(new ScheduledMailRecipient(RecipientType.TO, "to@example.com"));
+
+            Mail result = mail.toMail("http://localhost/", HtmlMail.StyleHandling.INLINE_STYLES, false);
+
+            assertTrue(result.getReplyTo().isEmpty(), "no Reply-To from the sender '" + sender + "'");
+            assertEquals(1, result.getRecipients().size(), "the mail goes to its recipient");
+        }
     }
 
     /**

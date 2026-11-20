@@ -227,9 +227,10 @@ class MessageMailServiceITTest extends ITTest {
 
     /**
      * A staff member whose login has no e-mail address sends a mail: the stored sender is the bare name, which the
-     * sender's own list of mails matches on, and the mail made from it to be sent goes to its recipient without a
-     * Reply-To. FAILS on the code that parsed the sender strictly as the Reply-To: the name of two words was refused,
-     * so the mail could not be made and ended in Error after its retries, and nobody got it.
+     * sender's own list of mails matches on, and the mail made from it to be sent goes to its recipient with no
+     * Reply-To from the sender (the Mail Queue then sets the first recipient as the Reply-To: MailDeliveryITTest).
+     * FAILS on the code that parsed the sender strictly as the Reply-To: the name of two words was refused, so the
+     * mail could not be made and ended in Error after its retries, and nobody got it.
      */
     @Test
     @Transactional
@@ -259,7 +260,7 @@ class MessageMailServiceITTest extends ITTest {
         assertEquals("Test Editor", mail.getSender(), "the sender is the user's name, as the sender's list matches it");
 
         Mail sent = mail.toMail(app.getBaseUri(), HtmlMail.StyleHandling.INLINE_STYLES, false);
-        assertTrue(sent.getReplyTo().isEmpty(), "the mail has no Reply-To");
+        assertTrue(sent.getReplyTo().isEmpty(), "the mail has no Reply-To from the sender");
         assertEquals(1, sent.getRecipients().size(), "and goes to its recipient");
         assertEquals("no-sender-address@example.com",
                 ((InternetAddress) sent.getRecipients().get(0).getAddress()).getAddress());
