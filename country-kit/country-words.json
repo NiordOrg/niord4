@@ -91,6 +91,11 @@
     },
     {
       "word": "Nuuk",
+      "path": "ui-apps/admin/src/app/features/schedule/components/time-schedule-editor/time-schedule-editor.spec.ts",
+      "reason": "a firing period without an end time on the days the clocks change, in Greenland's zone: its clocks change at 23:00 local, so its spring day has no 23:59:59 and its autumn day has it twice, and the period must still end at the last second of the selected day; no zone outside Greenland reproduces it, and GL's deployments run in it; permanent"
+    },
+    {
+      "word": "Nuuk",
       "path": "ui-apps/admin/src/app/shared/utils/date-interval-wall-clock.spec.ts",
       "reason": "the wall-clock grid the backend's date formatter pins too (NavWarnDateFormatterZoneGridTest's SHARED_WALL_CLOCKS), whose rows must match it, with Greenland's zone for its clock changes at 23:00 and 00:00 local; no zone outside Greenland reproduces them, and GL's deployments run in it; permanent"
     },
