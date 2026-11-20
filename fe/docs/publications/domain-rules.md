@@ -617,10 +617,13 @@ whitespace-insensitively, on both sides: `week`, `weekTo`, `year` and `edition`,
 issue **prints**, and `yearNumber` and `weekNumber`, which carry what the numbering **derived**. A row
 repeating one of them would be a second source for the same value that can disagree with the first.
 Issue-level parameters are merged **over** the series' map key by key; the numbering is injected last.
-Beside the six the render injects `weeks`, the weeks as the issue's name prints them (`36`, `36+37` for a
-pair, `36-38` for three weeks or more, or the week label whole), which the weekly reports print in their
-heading and page header; it is made from the six and is not refused as a key, so a typed `weeks` is
-overwritten by the injected one. The accumulated report's sections carry the same as `group.weeks`.
+Beside the six the render injects `weeks`, the issue's weeks in the pair form the name patterns use (`36`,
+`36+37` for a pair, `36-38` for three weeks or more, or the week label whole), which the weekly reports print
+in their heading and page header. It is that form whatever the series' own name pattern says, so a series
+named by `Uge ${week}, ${year}` or `Uge ${week} og ${weekTo}` is headed otherwise than it is named (`36-38`
+where the name says `36`, `36+37` where it says `36 og 37`). It is made from the six and is not refused as
+a key, so a typed `weeks` is overwritten by the injected one. The accumulated report's sections carry the
+same as `group.weeks`.
 
 The series editor **suggests** the parameter names the chosen report declares and the series does not carry
 yet, each as a control that appends an empty row: a hint and never a check, because a template may read a

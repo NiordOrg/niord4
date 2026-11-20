@@ -443,7 +443,7 @@ public class IssueRenderService {
             model.put("name", g.name());
             model.put("week", g.week());
             model.put("weekTo", g.weekTo());
-            // The source's weeks as its name prints them: "36+37" for a pair, "36-38" for three or more.
+            // The source's weeks in the pair form the name patterns use: "36+37" for a pair, "36-38" for three or more.
             model.put("weeks", IssueNaming.weeksText(g.week(), g.weekTo(), g.year()));
             model.put("year", g.year());
             model.put("cutoff", g.cutoff());

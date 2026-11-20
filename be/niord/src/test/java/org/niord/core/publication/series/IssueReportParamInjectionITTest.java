@@ -217,8 +217,8 @@ public class IssueReportParamInjectionITTest extends ITTest {
     }
 
     /**
-     * RENDER11. The report is handed the weeks as the issue's name prints them, which the weekly reports print in
-     * their heading and page header: a single week alone, three weeks as a range. FAILS where the model carries
+     * RENDER11. The report is handed the weeks in the pair form the name patterns use, which the weekly reports
+     * print in their heading and page header: a single week alone, three weeks as a range. FAILS where the model carries
      * only the first and the closing week, and the heading said the first week alone.
      */
     @Test
@@ -235,7 +235,7 @@ public class IssueReportParamInjectionITTest extends ITTest {
         assertEquals("34", params.get("week"));
         assertEquals("36", params.get("weekTo"));
         assertEquals("34-36", params.get("weeks"),
-                "an issue named for weeks 34 to 36 is headed by other weeks than its name says");
+                "an issue of weeks 34 to 36 is not headed by all its weeks");
     }
 
     /**

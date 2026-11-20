@@ -484,7 +484,7 @@ public class IssueNamingTest {
 
     /**
      * The weeks the report templates print (RENDER11): the span as a name with the pair form prints it, so a
-     * weekly's heading and an accumulated report's source line say what the issue's name says. Across a year's end
+     * weekly's heading and an accumulated report's source line say what a name with the pair form says. Across a year's end
      * the year decides: 2025 has 52 ISO weeks, so weeks 52 to 1 of an issue named for 2026 are a pair, while 2026
      * has a week 53, so weeks 52 to 1 of 2027 are three.
      */

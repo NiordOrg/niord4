@@ -28,8 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * RENDER11: the weeks a report names an issue for, as the report's model carries them. The weekly reports print the
  * issue's {@code weeks} in their heading and page header, and the accumulated report each source's
- * {@code group.weeks}, so that both say the weeks the issue's name says: "36+37" for a pair, "36-38" for three weeks
- * or more. Before, the model carried the first and the closing week only, and the templates had no way to tell a
+ * {@code group.weeks}, so that both say all the issue's weeks in the pair form the name patterns use: "36+37" for a
+ * pair, "36-38" for three weeks or more. Before, the model carried the first and the closing week only, and the templates had no way to tell a
  * pair from a range across a year's end.
  */
 class ReportWeeksModelTest {

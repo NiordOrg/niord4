@@ -300,7 +300,11 @@ public final class IssueNaming {
      *
      * The report templates print it where they name the issue's weeks: the weekly reports' heading and page header
      * (the report's {@code weeks}) and each source's line in the accumulated report ({@code group.weeks}), so a
-     * document says the weeks its name says. A closing week equal to the first is a single week.
+     * document is headed by all its weeks. It is this pair form whatever the series' own name pattern says, so the
+     * heading and the name agree only for a pattern that writes the pair this way: a series named by
+     * "Uge ${week}, ${year}" names a three-week issue "Uge 36, 2026", and one named by "Uge ${week} og ${weekTo}"
+     * a pair "Uge 36 og 37", while their headings say "36-38" and "36+37". A closing week equal to the first is a
+     * single week.
      *
      * @param week the first week, or null
      * @param weekTo the closing week, or null for a single week

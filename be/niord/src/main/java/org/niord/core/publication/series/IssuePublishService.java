@@ -1202,9 +1202,9 @@ public class IssuePublishService extends BaseService {
         params.put("timeZone", series.cutoffZone().getId());
         params.put("week", PrintedNumbering.printedWeek(issue));
         params.put("weekTo", PrintedNumbering.printedWeekTo(issue));
-        // The weeks as the issue's name prints them ("36", "36+37", "36-38"), or the
-        // week label whole: what the weekly reports print in their heading and page
-        // header, so the document is headed by the weeks its name says. Put over a
+        // The issue's weeks in the pair form the name patterns use ("36", "36+37",
+        // "36-38"), or the week label whole: what the weekly reports print in their
+        // heading and page header, so a document is headed by all its weeks. Put over a
         // series or issue parameter of the same name, as the four above are.
         params.put("weeks", PrintedNumbering.printedWeeks(issue));
         params.put("year", PrintedNumbering.printedYear(issue));

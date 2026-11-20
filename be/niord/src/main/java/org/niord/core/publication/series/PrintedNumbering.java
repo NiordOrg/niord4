@@ -80,8 +80,8 @@ public final class PrintedNumbering {
 
     /**
      * The weeks the report names the issue for, and what it is handed as {@code weeks}: the week label where one
-     * is written, which holds the whole span as the publication writes it ("36 og 37"); else the derived weeks as
-     * the name prints them, "36", "36+37" for a pair and "36-38" for three weeks or more
+     * is written, which holds the whole span as the publication writes it ("36 og 37"); else the derived weeks in the
+     * pair form the name patterns use, "36", "36+37" for a pair and "36-38" for three weeks or more
      * ({@link IssueNaming#weeksText}). Null where the issue has no week.
      */
     public static String printedWeeks(PublicationIssue issue) {
