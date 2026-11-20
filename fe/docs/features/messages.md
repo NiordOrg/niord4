@@ -239,7 +239,8 @@ and refresh.
   area-sort dialog and the home page (no free text). The print, export and mail of the list search on
   the server: the printed PDF carries a line at its top that says messages may be missing; for the
   mail and the export, which carry no mark, the action menu hands the list's mark on: the mail dialog
-  shows the same warning above its form, and Export and Export selection ask first, with the warning
+  shows the same warning above its form, the dialog described by it so a screen reader announces it
+  on open, and Export and Export selection ask first, with the warning
   in a neutral confirm, and export only when it is accepted.
 
 A **publication filter refusal** is reported per chip, not as a broken list: a `400` whose
