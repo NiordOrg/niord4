@@ -535,7 +535,9 @@ failed, sent again and failing again is not announced a second time (its id is a
 shows under My mails.
 
 **Export** produces a ZIP: ticket, plus either the filter string or `tag=<temporaryTagId>` for the
-selection path.
+selection path. An archive holds at most 1000 messages (`MESSAGE_EXPORT_LIMIT`, kept equal to the
+backend's `maxSize`), the first of the search in its order; when the search or the selection holds
+more, a warning (`messages.export.truncated`) says so with the download and stays until it is closed.
 
 **Import** is a ZIP upload (admin-gated) posting a two-part `FormData` — the file plus a JSON `data`
 part carrying the target series, an optional tag and four flags (assign new UIDs, preserve status,
