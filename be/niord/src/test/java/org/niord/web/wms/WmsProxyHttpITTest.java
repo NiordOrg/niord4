@@ -55,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Because {@code SettingsService.get(...)} consults {@link System#getProperty(String)} before the
  * DB/default, the servlet's {@code @Setting}-injected {@code wmsProvider} resolves to the stub, so an
  * authenticated request makes the proxy perform a genuine outbound fetch, decode the upstream image,
- * and stream a re-encoded PNG straight back (no redirect).
+ * and stream a re-encoded PNG straight back.
  *
  * <p><b>Shared-context note.</b> In the Spring port the servlet is wired lazily and cached by
  * {@code WmsServletConfig.DelegatingWmsServlet}; because the {@code @SpringBootTest} context is shared
@@ -68,8 +68,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code NiordDomain: niord-nw} header to mirror the sibling suite (the servlet only inspects the
  * presence of a principal, not its roles).
  *
- * <p><b>Oracles.</b> (a) the response is {@code 200} (not the {@code 302} blank-image fallback), carries a
- * {@code Content-Type: image/png} header (WEB5) and a body that is a decodable image. (b) the upstream request the
+ * <p><b>Oracles.</b> (a) the response is {@code 200}, carries a {@code Content-Type: image/png} header (WEB5) and a
+ * body that is the provider's image, 16 pixels wide, not the one-pixel blank picture the fallback answers. (b) the upstream request the
  * proxy made carries the configured token ({@code TOKEN=tok-123}) and layers ({@code LAYERS=layerA}) that
  * the servlet appends to the query string, and no parameter a tile does not need. (The stub records the
  * decoded query, so how the values are encoded is {@code WmsProxyServletTest}'s to show.) (c) the tile cache,
@@ -116,7 +116,7 @@ class WmsProxyHttpITTest extends ITTest {
 
     // ------------------------------------------------------------------------------------------- //
     // (a) Happy path: authenticated request -> upstream fetch -> 200 with a decodable image body.
-    //     NOT a 302 redirect (the provider IS configured, so the blank-image fallback is skipped).
+    //     The provider's image, not the blank picture (the provider IS configured and answers).
     // ------------------------------------------------------------------------------------------- //
 
     @Test
@@ -130,6 +130,7 @@ class WmsProxyHttpITTest extends ITTest {
 
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(body));
         assertNotNull(image, "Response body should be a decodable image streamed back by the proxy");
+        assertEquals(16, image.getWidth(), "the provider's image, not the one-pixel blank picture");
     }
 
     // ------------------------------------------------------------------------------------------- //

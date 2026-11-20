@@ -15,6 +15,7 @@
  */
 package org.niord.web.wms;
 
+import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -25,8 +26,14 @@ import org.niord.test.ITTest;
 import org.niord.test.Tx;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Integration tests for {@link org.niord.web.wms.WmsProxyServlet}: the HTTP contract and authorization
@@ -42,11 +49,12 @@ import static org.hamcrest.Matchers.containsString;
  * (never the container's {@code 401}). Any authenticated principal — regardless of role tier — passes the
  * gate, so both the lowest tier ({@code user}) and the highest ({@code sysadmin}) get through.
  *
- * <p><b>Blank-image fallback oracle.</b> The test application configures no {@code wmsProvider}, so once
- * an authenticated request passes the gate the servlet finds a blank provider, skips the outbound WMS
- * fetch entirely, and {@code sendRedirect}s to {@link org.niord.web.wms.WmsProxyServlet#BLANK_IMAGE}
- * ({@code /img/blank.png}). RestAssured is told not to follow redirects so the {@code 302} status and the
- * {@code Location} header can be asserted directly.
+ * <p><b>Blank-image fallback oracle.</b> Once an authenticated request passes the gate and no tile can be had,
+ * the servlet answers the blank picture itself: status {@code 200}, {@code image/png} and the bytes of
+ * {@code /img/blank.png}, with no {@code Location} header, and with the day-long {@code Cache-Control} of the path
+ * without the tile cache (WMS1 in be/docs/potential-errors.md, recorded and not fixed). RestAssured is told not to
+ * follow redirects, so a redirect would show as itself. The test settings name a provider that gives no tile, so
+ * the answer comes from the failed fetch (WMS2 in be/docs/potential-errors.md).
  *
  * <p><b>Untestable area.</b> The actual outbound WMS fetch, the colour-masking transform, and the
  * binary-image response path cannot be exercised here because no upstream WMS provider is configured (and
@@ -66,8 +74,8 @@ class WmsProxyServletITTest extends ITTest {
     /** Bare servlet path — note: NOT under the {@code /rest} base path. */
     private static final String WMS = "/wms/foo";
 
-    /** The blank-image target the servlet redirects to when no WMS provider is configured. */
-    private static final String BLANK_IMAGE = "/img/blank.png";
+    /** The blank picture, as the application serves it at /img/blank.png */
+    private static final String BLANK_IMAGE = "META-INF/resources/img/blank.png";
 
     /** The setting the gate reads */
     private static final String PROTECTED = "wmsProtected";
@@ -97,30 +105,39 @@ class WmsProxyServletITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // Highest tier passes the gate; no provider configured -> 302 redirect to the blank image.
+    // Highest tier passes the gate; no tile to be had -> the blank image itself, no redirect.
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void sysadmin_passesGateAndRedirectsToBlankImage() {
-        as(accessToken())
-                .redirects().follow(false)
-                .when().get(WMS + "?x=1")
-                .then().statusCode(302)
-                .header("Location", containsString(BLANK_IMAGE));
+    void sysadmin_passesGateAndGetsTheBlankImage() throws IOException {
+        assertTheBlankImage(as(accessToken()).redirects().follow(false).when().get(WMS + "?x=1"));
     }
 
     // ------------------------------------------------------------------------------------------- //
     // Lowest authenticated tier also passes the gate (the gate only checks for a principal, not a
-    // role); no provider configured -> 302 redirect to the blank image.
+    // role); no tile to be had -> the blank image itself, no redirect.
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void user_passesGateAndRedirectsToBlankImage() {
-        as(accessToken("user"))
-                .redirects().follow(false)
-                .when().get(WMS + "?x=1")
-                .then().statusCode(302)
-                .header("Location", containsString(BLANK_IMAGE));
+    void user_passesGateAndGetsTheBlankImage() throws IOException {
+        assertTheBlankImage(as(accessToken("user")).redirects().follow(false).when().get(WMS + "?x=1"));
+    }
+
+    /**
+     * "No tile" answered directly: 200, a PNG, the blank picture's bytes and no Location header, which behind a
+     * proxy could name another origin; the path without the tile cache keeps its day-long header.
+     */
+    private static void assertTheBlankImage(Response response) throws IOException {
+        response.then().statusCode(200)
+                .contentType(containsString("image/png"))
+                .header("Location", nullValue())
+                .header("Cache-Control", containsString("max-age=86400"));
+        byte[] blank;
+        try (InputStream in = WmsProxyServletITTest.class.getClassLoader().getResourceAsStream(BLANK_IMAGE)) {
+            assertNotNull(in, "the blank picture is on the class path");
+            blank = in.readAllBytes();
+        }
+        assertArrayEquals(blank, response.asByteArray(), "the body is the blank picture");
     }
 
     // ------------------------------------------------------------------------------------------- //
@@ -129,17 +146,14 @@ class WmsProxyServletITTest extends ITTest {
     // ------------------------------------------------------------------------------------------- //
 
     @Test
-    void switchingProtectionOffAndOnAppliesToTheNextRequest() {
+    void switchingProtectionOffAndOnAppliesToTheNextRequest() throws IOException {
         Object original = rowValue(PROTECTED);
         // The servlet is created on its first request; this one makes sure it exists before the change
         given().when().get(WMS + "?x=1").then().statusCode(403);
         try {
             settingsService.set(PROTECTED, false);
 
-            given().redirects().follow(false)
-                    .when().get(WMS + "?x=1")
-                    .then().statusCode(302)
-                    .header("Location", containsString(BLANK_IMAGE));
+            assertTheBlankImage(given().redirects().follow(false).when().get(WMS + "?x=1"));
 
             settingsService.set(PROTECTED, true);
 
@@ -153,7 +167,7 @@ class WmsProxyServletITTest extends ITTest {
 
     /** A row stored as the text "true", as some databases hold it (SETTINGS-8), protects; a text "False" opens */
     @Test
-    void aRowStoredAsTextIsReadByItsMeaning() {
+    void aRowStoredAsTextIsReadByItsMeaning() throws IOException {
         Object original = rowValue(PROTECTED);
         given().when().get(WMS + "?x=1").then().statusCode(403);
         try {
@@ -161,9 +175,7 @@ class WmsProxyServletITTest extends ITTest {
             given().when().get(WMS + "?x=1").then().statusCode(403);
 
             writeRow(PROTECTED, "False");
-            given().redirects().follow(false)
-                    .when().get(WMS + "?x=1")
-                    .then().statusCode(302);
+            assertTheBlankImage(given().redirects().follow(false).when().get(WMS + "?x=1"));
         } finally {
             writeRow(PROTECTED, original);
         }

@@ -49,10 +49,6 @@ no new data after the backup, and stands.
   the wrong name), and stored links with a raw `;` after `/rest/repo/file/` (in the publication descs' `link`
   and in message texts), which the backend refuses. The counts decide whether these need a fix of their own; see
   REPO6 in [`be/docs/potential-errors.md`](../../be/docs/potential-errors.md).
-- **Protected-WMS redirect flood.** The WMS answers a no-data tile with a redirect to a blank image; because the
-  protected loader fetches tiles with auth headers, the redirect fails the CORS preflight and a pan or zoom
-  floods the console. The fix belongs at the gateway or the proxy servlet — a frontend workaround was tried and
-  deliberately reverted.
 - **The deferred security findings.** The security review of September 2026 deferred its nine findings about
   the deployment — the Helm chart, the Keycloak it runs and the realm it imports — because the deployment was
   still being built. Each is rechecked against the finished deployment before production go-live, together

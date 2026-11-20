@@ -35,8 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The consumers fetch them over HTTP, never from the classpath: the PDF renderer and the mail CSS
  * inliner resolve {@code /css/templates/*.css}, {@code /img/company-logo.png} and
  * {@code /img/flags/{lang}.png} against {@code baseUri}; and the REST layer redirects to
- * {@code /img/blank.png} (WMS), {@code /img/aton/aton.png} and the {@code /img/filetypes} icons. The redirect
- * tests assert only the {@code Location} header, so this is the test that proves the targets resolve.
+ * {@code /img/aton/aton.png} and the {@code /img/filetypes} icons. The redirect tests assert only the
+ * {@code Location} header, so this is the test that proves the targets resolve. {@code /img/blank.png} is the
+ * picture the WMS proxy answers, from the class path, when it has no tile; it stays served at its address too.
  * {@code /img/map_image_placeholder.png} stays served for the pages that link it; the map-image endpoint answers
  * the same image itself.
  * <p>

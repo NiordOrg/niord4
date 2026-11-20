@@ -1104,14 +1104,15 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 ## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
 
 - **Location:** `org.niord.web.wms.WmsProxyServlet.doGet`: `WebUtils.cache(response, CACHE_TIMEOUT)` runs before
-  the provider is asked, so the redirect to `/img/blank.png` that answers a missing provider or a failed fetch
-  carries `Cache-Control: max-age=86400` and `Expires`.
-- **Description:** a browser may keep a redirect that carries a lifetime. One failed request for a tile, a
-  hiccup of the provider's for instance, then gives that browser the blank image for that tile for 24 hours,
-  whatever the provider does meanwhile.
+  the provider is asked, so the blank image (`sendBlankImage`, status 200 and the bytes of `/img/blank.png`) that
+  answers a missing provider or a failed fetch carries `Cache-Control: max-age=86400` and `Expires`.
+- **Description:** a browser keeps the blank image as it keeps a tile. One failed request for a tile, a hiccup of
+  the provider's for instance, then gives that browser the blank image for that tile for 24 hours, whatever the
+  provider does meanwhile.
 - **Why it looks wrong:** the day is meant for a tile, not for the absence of one. With the tile cache switched on
-  (`wmsCacheDays`), the servlet answers a failed tile with the same redirect kept for five minutes; the two paths
-  differ only because the path without the cache was left exactly as it was.
+  (`wmsCacheDays`), the servlet answers a failed tile with the same blank image kept for five minutes; the two paths
+  differ only because the path without the cache keeps the header it always had. (Until 2026-11-21 both paths
+  answered with a redirect to `/img/blank.png`; the blank image is now answered directly, with the same headers.)
 - **Exposed by:** the sea-chart tile cache (2026-11-12, `docs/sea-chart-tile-cache-plan.md`, decision 6: recorded,
   not fixed).
 - **Severity:** Low — blank tiles in one browser until the next day or a forced reload. The header also keeps
@@ -1126,7 +1127,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Description:** the two authenticated tests of `WmsProxyServletITTest` do not take the no-provider branch they
   describe. The servlet asks that host with the placeholder as its token, the host answers 404 (the Failsafe
   output has `Failed loading WMS image for URL http://kortforsyningen.kms.dk/?TOKEN=***: FileNotFoundException`,
-  once per test), and the blank redirect the tests assert comes from the failure branch.
+  once per test), and the blank image the tests assert comes from the failure branch.
 - **Why it looks wrong:** a test run makes requests to a third party's host, depends on that host and the network
   (a host that does not answer costs each test up to 40 s), and asserts another branch than the one it names.
   `WmsProxyHttpITTest` shows the way: a local stub.
