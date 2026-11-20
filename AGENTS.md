@@ -45,6 +45,14 @@ The nested files own everything specific to a half. This file holds only what is
   pull request, where a full local run beforehand (`./verify-local`) only repeats what CI does
   (backend ~7 min locally, ~10 min on CI). Commit as often as useful but push when the work is done:
   every push to a PR restarts its CI and cancels the run in flight.
+- **The guides follow the product, in the same change.** A change to what an editor, an administrator, a
+  system administrator, a mariner on the public site, an API client, a country's developer or an operator
+  sees or does updates the guide that describes it, in the same pull request: the manuals and integration
+  documents under `guides/`, the country kit's guides under `country-kit/docs/`, and the contract documents
+  (`be/docs/country-api.md`, `fe/docs/`). Read the chapter on the changed thing before deciding that no
+  guide needs a change, and say in the pull request which guide pages changed, or that none describes the
+  changed thing. A picture the change makes stale is marked to be taken again in `guides/manifest/`. Which
+  guide serves which reader, and how: [`guides/README.md`](guides/README.md#keeping-the-guides-level-with-the-product).
 - **This repository is public.** No file, commit message or pull request (its title, body and comments)
   names the earlier private repository this product was developed in, its address, or a pull request,
   commit or branch of it: where the fact is needed, write "the earlier private repository" and no name.
