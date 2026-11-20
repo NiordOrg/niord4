@@ -39,8 +39,10 @@ import { categoryName, fetchHydratedTemplates, isPerPosition } from './template-
  * /categories/search?type=TEMPLATE` (list, domain-scoped), `getTemplateDetails` (hydration) and
  * `GET /messages/message/{id}` (example).
  *
- * A failed read of the tree or the list says so in the list pane, with a retry, rather than
- * reading as "no templates"; a failed read of an example says so in the example pane.
+ * A failed read says so in its own pane, with a retry that reads that part again, rather than
+ * reading as "no categories" or "no templates": the tree's failure in the tree pane, the list's in
+ * the list pane, an example's in the example pane. Each failure is kept apart, so one read that
+ * failed never hides another that worked, and a new search does not clear the tree's failure.
  */
 @Component({
   selector: 'app-template-selection-drawer',
@@ -75,8 +77,10 @@ export class TemplateSelectionDrawer {
   protected readonly searchName = signal('');
   protected readonly results = signal<readonly SystemCategory[]>([]);
   protected readonly loading = signal(false);
-  /** The category tree or the template list could not be read. */
-  protected readonly loadFailed = signal(false);
+  /** The category tree could not be read; set and cleared only by {@link loadRoots}. */
+  protected readonly rootsFailed = signal(false);
+  /** The template list could not be read; set and cleared only by {@link fetch}. */
+  protected readonly listFailed = signal(false);
   protected readonly checkedIds = signal<ReadonlySet<number>>(new Set());
 
   /** The template whose example is shown in the right pane (on hover). */
@@ -125,9 +129,13 @@ export class TemplateSelectionDrawer {
     this.fetch();
   }
 
-  /** Read the tree and the list again after a failed read. */
-  protected retry(): void {
+  /** Read the category tree again after a failed read. */
+  protected retryRoots(): void {
     this.loadRoots();
+  }
+
+  /** Read the template list again after a failed read. */
+  protected retryList(): void {
     this.fetch();
   }
 
@@ -136,6 +144,7 @@ export class TemplateSelectionDrawer {
       return;
     }
     this.rootsLoaded = true;
+    this.rootsFailed.set(false);
     this.categoriesApi
       .getRoots({ language: this.lang() })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -145,7 +154,7 @@ export class TemplateSelectionDrawer {
         next: (roots) => this.roots.set(pruneToCategories(roots)),
         error: () => {
           this.rootsLoaded = false; // read again by the retry or the next open
-          this.loadFailed.set(true);
+          this.rootsFailed.set(true);
         },
       });
   }
@@ -154,7 +163,7 @@ export class TemplateSelectionDrawer {
   private fetch(): void {
     const seq = ++this.fetchSeq;
     this.loading.set(true);
-    this.loadFailed.set(false);
+    this.listFailed.set(false);
     fetchHydratedTemplates(this.categoriesApi, {
       domainId: this.domain.sessionDomain()?.domainId,
       language: this.lang(),
@@ -176,7 +185,7 @@ export class TemplateSelectionDrawer {
           }
           this.results.set([]);
           this.loading.set(false);
-          this.loadFailed.set(true);
+          this.listFailed.set(true);
         },
       });
   }

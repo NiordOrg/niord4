@@ -20,8 +20,11 @@ interface DrawerHandle {
   readonly results: WritableSignal<readonly SystemCategory[]>;
   readonly checkedIds: WritableSignal<ReadonlySet<number>>;
   readonly hovered: WritableSignal<SystemCategory | undefined>;
-  readonly loadFailed: () => boolean;
-  retry(): void;
+  readonly rootsFailed: () => boolean;
+  readonly listFailed: () => boolean;
+  retryRoots(): void;
+  retryList(): void;
+  onSearch(name: string): void;
   isPerPosition(cat: SystemCategory): boolean;
   isChecked(cat: SystemCategory): boolean;
   toggle(cat: SystemCategory): void;
@@ -107,23 +110,68 @@ describe('TemplateSelectionDrawer', () => {
     req.flush({ id: 'ex-1', descs: [] });
   });
 
-  it('a failed read of the template list says so, and Retry reads the tree and the list again', () => {
+  it('a failed read of the template list says so in the list pane, and Retry reads the list again', () => {
     let calls = 0;
     const search = vi.fn(() =>
       calls++ === 0 ? throwError(() => new Error('offline')) : of<readonly SystemCategory[]>([]),
     );
+    const roots = vi.fn(() => of([]));
+    const { fixture, handle } = setup(search, roots);
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+    const host = document.body; // the drawer renders in an overlay
+    expect(handle.listFailed()).toBe(true);
+    expect(handle.rootsFailed()).toBe(false);
+    expect(host.querySelector('[data-testid="template-drawer-list-error"]')).not.toBeNull();
+
+    handle.retryList();
+    fixture.detectChanges();
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(roots).toHaveBeenCalledTimes(1); // the tree, read correctly, is not read again
+    expect(handle.listFailed()).toBe(false);
+    expect(host.querySelector('[data-testid="template-drawer-list-error"]')).toBeNull();
+  });
+
+  it('a failed read of the tree says so in the tree pane and keeps the list that was read', () => {
+    const search = vi.fn(() => of<readonly SystemCategory[]>([perPosition, templateLevel]));
     const roots = vi.fn(() =>
       roots.mock.calls.length === 1 ? throwError(() => new Error('offline')) : of([]),
     );
     const { fixture, handle } = setup(search, roots);
     fixture.componentRef.setInput('visible', true);
     fixture.detectChanges();
-    expect(handle.loadFailed()).toBe(true);
+    const host = document.body; // the drawer renders in an overlay
+    expect(handle.rootsFailed()).toBe(true);
+    expect(host.querySelector('[data-testid="template-drawer-roots-error"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="template-drawer-list-error"]')).toBeNull();
+    expect(host.querySelectorAll('ul input[type=checkbox]')).toHaveLength(2);
 
-    handle.retry();
+    handle.retryRoots();
+    fixture.detectChanges();
     expect(roots).toHaveBeenCalledTimes(2);
-    expect(search).toHaveBeenCalledTimes(2);
-    expect(handle.loadFailed()).toBe(false);
+    expect(search).toHaveBeenCalledTimes(1); // the list, read correctly, is not read again
+    expect(handle.rootsFailed()).toBe(false);
+    expect(host.querySelector('[data-testid="template-drawer-roots-error"]')).toBeNull();
+  });
+
+  it("a new search does not clear the tree's failure", async () => {
+    vi.useFakeTimers();
+    try {
+      const roots = vi.fn(() => throwError(() => new Error('offline')));
+      const { fixture, handle } = setup(() => of([]), roots);
+      fixture.componentRef.setInput('visible', true);
+      fixture.detectChanges();
+      expect(handle.rootsFailed()).toBe(true);
+
+      handle.onSearch('wreck');
+      await vi.advanceTimersByTimeAsync(300); // the typed name is read after the debounce
+      fixture.detectChanges();
+      expect(handle.rootsFailed()).toBe(true);
+      const host = document.body; // the drawer renders in an overlay
+      expect(host.querySelector('[data-testid="template-drawer-roots-error"]')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('a failed read of the example is an error, not "no example"', async () => {
