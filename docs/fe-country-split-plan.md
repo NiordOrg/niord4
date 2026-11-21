@@ -1264,6 +1264,11 @@ country — hence split tokens, hash pins and, later, attestations.
      branch's copy of a workflow, which the environment's secret could not. At the split: the machine user and
      its two tokens in `publish` and `retract`, the deploy steps back to `secrets.NIORD_PUBLISH_TOKEN` and
      `vars.NIORD_PUBLISH_USER`, the repository secrets deleted and the old token revoked (`fe/docs/backlog.md`).
+     Present state (read 2026-11-21): `NIORDORG_PACKAGES_USER` / `NIORDORG_PACKAGES_TOKEN` have since moved,
+     under the same names, from the repository to the `publish` environment, so a branch's copy can no longer
+     name them; `retract` exists, main only, without `NIORD_DELETE_TOKEN`, so a run gets past `authorise` and
+     its Packages step fails for want of a token; the machine user, its two tokens and the steps' names are
+     still to come.
    - **As built.** `publish.yml` starts after Backend CI, Frontend CI and Info CI,
      and its gate requires each that ran for the commit to have succeeded (one its path filter skipped counts as
      not run), because the zip carries the public site's sources: a merge confined to the public site
@@ -1300,10 +1305,11 @@ country — hence split tokens, hash pins and, later, attestations.
      job — and verified by its consumer.
    - The kit uses Node built-ins only, is covered by the base product's lockfile and audit, and runs only after
      the hash check. `setup.mjs` is a stub that checks the kit's hash. What runs before that check, or holds a
-     token without one, is accepted residual trust: Node, the Maven wrapper's distribution (no
-     `distributionSha256Sum` in `be/.mvn/wrapper/maven-wrapper.properties`, here and in the country repositories'
-     wrappers, so the distribution is pinned by TLS alone) and Maven's plugins. Pinning the wrapper's checksum is
-     a go-live item (`fe/docs/backlog.md`).
+     token without one, is accepted residual trust: Node, the Maven wrapper's distribution and Maven's plugins.
+     This repository's wrapper pins its distribution by `distributionSha256Sum`
+     (`be/.mvn/wrapper/maven-wrapper.properties`, since 2026-11-04); the country repositories' wrappers had no
+     checksum when last read, so theirs is pinned by TLS alone, and pinning it there is a go-live item
+     (`fe/docs/backlog.md`).
    - Every build writes `niord-build-report.json` — base product version, packs, escape hatch, overrides (protected
      ones flagged), backend overrides, the bootstrap and release import files, the packs' backend half, country dependencies, the text overrides counted per language, the accepted audit findings counted (the entries stay in `audit-accepted.json` and in set-up's output: the report is served without sign-in), provenance (pinned, or
      `local: <path> @ <sha>`). Its one writer is `setup.mjs`, at step 4 (§3.2), into `fe/.niord/build/`: by then

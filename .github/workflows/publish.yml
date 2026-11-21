@@ -148,8 +148,9 @@ name: Publish
 # NIORDORG_PACKAGES_USER / NIORDORG_PACKAGES_TOKEN (a classic personal access token of a NiordOrg
 # account with write:packages), handed to the deploy steps as NIORD_PUBLISH_USER /
 # NIORD_PUBLISH_TOKEN, the names setup-java writes into the settings.xml server `github`. The
-# token lives on that environment (main only) and nowhere else, under the names it had as a
-# repository secret, the owner's choice of 2026-10-22. Still to come: a NiordOrg machine user's
+# names are those chosen on 2026-10-22, when the owner kept the token a repository secret until
+# the country split; the token has since moved to that environment (main only) and is nowhere
+# else. Still to come: a NiordOrg machine user's
 # publish-only token as the secret NIORD_PUBLISH_TOKEN of `publish` (its login in the variable
 # NIORD_PUBLISH_USER), the deploy steps moved to those names, its delete-only token as
 # NIORD_DELETE_TOKEN of `retract`, both rotated yearly (docs/fe-country-split-plan.md §4.11

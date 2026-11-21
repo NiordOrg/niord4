@@ -64,10 +64,13 @@ no new data after the backup, and stands.
   §4.11 rule 1).
 - **The publishing token's final form.** In `publish.yml` the jobs that deploy to GitHub Packages, `build` and
   `web-publish`, name the `publish` environment (main only), as the `bump` job does, and their six deploy steps
-  read the secrets `NIORDORG_PACKAGES_USER` / `NIORDORG_PACKAGES_TOKEN`: the token lives on that environment,
-  under the names it had as a repository secret (owner, 2026-10-22). `retract-version.yml`'s `retract` job names
-  a `retract` environment and reads `NIORD_DELETE_TOKEN` from it, and its `authorise` job refuses every run while
-  that environment is missing or allows another branch than main. Still to come: a NiordOrg machine user with
+  read the secrets `NIORDORG_PACKAGES_USER` / `NIORDORG_PACKAGES_TOKEN`: names chosen on 2026-10-22, when the
+  owner kept the token a repository secret until the country split; the token has since moved to that
+  environment. `retract-version.yml`'s `retract` job names a `retract` environment and reads `NIORD_DELETE_TOKEN`
+  from it, and its `authorise` job refuses every run while that environment is missing or allows another branch
+  than main. `retract` exists, main only, but holds no `NIORD_DELETE_TOKEN` yet (read 2026-11-21): a maintainer's
+  run from main passes `authorise`, its Packages step has no token and fails, and the steps after it still delete
+  the release and the tag, so a version cannot be retracted whole. Still to come: a NiordOrg machine user with
   admin on `NiordOrg/niord`; its classic tokens, `write:packages` as `NIORD_PUBLISH_TOKEN` in `publish` (its login
   as the variable `NIORD_PUBLISH_USER`) and `delete:packages` + `read:packages` as `NIORD_DELETE_TOKEN` in
   `retract`, main only; the six deploy steps moved to those names; then the old token revoked, and both new
