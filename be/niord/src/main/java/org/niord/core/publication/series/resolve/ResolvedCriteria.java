@@ -43,7 +43,11 @@ import java.util.Set;
  * and it can fail -- an MRN naming nothing must refuse rather than drop out of
  * an OR and leave a disjunction over nothing. Keeping them as written also keeps
  * this record portable, which is what lets it be frozen into a published issue's
- * snapshot header and read back years later.
+ * snapshot header and read back years later. The look-up ignores case, so the
+ * resolver decides membership on a copy whose areaIds and categoryIds are the
+ * MRNs of the rows the operands found, as stored: the facts compared against them
+ * below carry the stored MRNs, and an operand compared as written would find its
+ * row and then match none of its messages.
  */
 public record ResolvedCriteria(
         TimeRelation timeRelation,

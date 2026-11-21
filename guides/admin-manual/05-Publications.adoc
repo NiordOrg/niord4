@@ -394,6 +394,10 @@ criterion with the temporary and preliminary notices select the temporary and pr
 of that message series. Within one criterion, any of the ticked values matches. Each kind of criterion can be used once, a series can
 hold at most eight criteria, and every series needs at least one message series or domain, so that
 it does not reach every message in the installation. Remove a criterion with its bin.
+An _Area_ or _Category_ criterion holds the MRN of each area or category, and that MRN is matched
+without regard to case: one given in other capital letters in an imported file selects the same
+messages, and so does a series whose area or category later has its MRN re-typed in other
+capital letters.
 
 _What this would select_ tries the criteria on the messages as you change them and shows how many
 messages they would select now, with a sample of their numbers and any warnings, for example
