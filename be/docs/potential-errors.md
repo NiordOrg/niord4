@@ -2065,6 +2065,21 @@ they say otherwise; every other path is from the repository root.
   whole run, reproduced by its check with the repair taken out).
 - **Severity:** Low, tests only. Fix: let the two classes count only the messages they make.
 
+## TESTQ9. `BootstrapRunnerTest.aStatusThatCannotBeReadIsAskedForAgain` fails on a loaded machine
+
+- **Location:** `be/niord/src/test/java/org/niord/core/bootstrap/BootstrapRunnerTest.java`: the set-up gives the
+  runner a job deadline of 50 ms and a poll of 5 ms, and this case answers the first two polls with an exception
+  before it answers COMPLETED.
+- **Description:** three polls, two of them logging a failure, have to fit in 50 ms of wall-clock time. On a
+  workstation running the frontend's unit suite and the guides' build beside the backend's unit suite
+  (2026-11-21), they did not: "did not end within 50 ms (status null; execution 7); it then ended COMPLETED". The
+  class alone passed at once on the same machine.
+- **Why it looks wrong:** the case is about a status that cannot be read, not about the deadline, yet its result
+  depends on how busy the machine is.
+- **Exposed by:** a whole unit-suite run on a workstation, 2026-11-21; not seen on CI.
+- **Severity:** Low, tests only. Fix: give this case a deadline far above its polls (a second, say), as only the
+  deadline cases need the short one.
+
 ## PUBSERIES3. A publication series' sharing list comes back in no defined order
 
 - **Location:** `org/niord/core/publication/series/PublicationSeries.java` `availableDomains` (212-216), a
