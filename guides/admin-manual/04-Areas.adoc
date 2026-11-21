@@ -241,8 +241,9 @@ link:../sysadmin-manual/manual.html#batch-jobs[Batch Jobs] page.
 
 The file holds the root areas at its top level, and each area's sub-areas in its `children`. The
 imported areas are merged into the tree: an area with an MRN is matched with the existing area of
-the same MRN, whatever its capital letters (an exact match first); otherwise a sub-area is matched with the existing area under the same parent that has
-the same name in one of the languages. An area at the top level of the file without a matching MRN
+the same MRN, whatever its capital letters (an exact match first); otherwise a sub-area is matched
+with the existing area under the same parent that has the same name in one of the languages. An
+area at the top level of the file without a matching MRN
 is matched by name with any area of the tree, not only a root area, so give a root area an MRN, or
 a name no other area has. A matched area is updated, and any other area is added.
 
