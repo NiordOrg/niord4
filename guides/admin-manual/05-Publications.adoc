@@ -290,9 +290,10 @@ The patterns can use these tokens, which the _Insert_ button beside each field a
 from the issue's cut-off: an issue is named after the week, month and year in which its content
 period ends, read in the time zone of the series' domain. `${weekTo}` is the closing week of an
 issue that covers more than one week, such as a double issue over a holiday; for a single week
-it is left out together with the text that joins it to `${week}` (see below). A pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
-an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
-prints as a hyphen). A single week under such a pattern leaves `${weekTo}` out together with the
+it is left out together with the text that joins it to `${week}` (see below). A pattern writes
+the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and an issue of
+three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens prints as a
+hyphen). A single week under such a pattern leaves `${weekTo}` out together with the
 text between it and `${week}`: "Week ${week}+${weekTo}" names it "Week 36", and "Week ${week} and
 ${weekTo}" does too, in the name, the file name and the reference format alike. A bracket around
 the closing week goes with it ("Week ${week} (${weekTo})" is "Week 36"), and a `${weekTo}` with
@@ -713,7 +714,9 @@ _Publication actions_ the other actions:
 * *Amend* runs the selection again against the same cut-off and replaces the document where it
   stands, with the same links, the same public period and the same cut-off. Use it when something
   has to be corrected: messages cancelled, retyped or corrected since, or a change to the series'
-  criteria or report. Amending asks for a reason; the replaced document is archived and can still
+  criteria or report. The messages are put in order again by the series' sort as it stands now,
+  so a change to the sort since the release shows in the amended document. Amending asks for a
+  reason; the replaced document is archived and can still
   be opened from the issue's history (_Replaced document_). An issue carried over from the
   previous system cannot be amended: its messages and document are a historical record.
 +
