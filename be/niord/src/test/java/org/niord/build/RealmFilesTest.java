@@ -99,10 +99,33 @@ class RealmFilesTest {
             Map<String, Object> roles = clientRoles(read(realm), "niord-client-master");
             assertTrue(roles.containsKey("user"), realm + ": niord-client-master has a user role");
             assertEquals(Set.of("editor", "user"), expand(roles, "editor"), realm + ": editor");
-            assertEquals(Set.of("admin", "editor", "user", "publication-curate"), expand(roles, "admin"),
-                    realm + ": admin");
-            assertEquals(Set.of("sysadmin", "admin", "editor", "user", "publication-curate"),
-                    expand(roles, "sysadmin"), realm + ": sysadmin");
+            assertEquals(Set.of("admin", "editor", "user"), expand(roles, "admin"), realm + ": admin");
+            assertEquals(Set.of("sysadmin", "admin", "editor", "user"), expand(roles, "sysadmin"),
+                    realm + ": sysadmin");
+        }
+    }
+
+    /**
+     * Every client of the three realms has the four roles of the ladder and no other Niord role: an administrator of
+     * the domain that owns a publication curates it, and there is no separate curation role. A realm that was imported
+     * before the change may still hold the old {@code publication-curate} role, which the backend no longer reads.
+     */
+    @Test
+    void noRealmCarriesARoleBesideTheLadder() throws Exception {
+        for (Path realm : List.of(TEST_REALM, CHART_REALM, LOCAL_REALM)) {
+            String text = Files.readString(realm, StandardCharsets.UTF_8);
+            assertTrue(!text.contains("publication-curate"), realm + " still names the role publication-curate");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> byClient = (Map<String, Object>) ((Map<String, Object>) read(realm).get("roles"))
+                    .get("client");
+            for (String client : byClient.keySet()) {
+                if (NOT_DOMAINS.contains(client)) {
+                    continue;
+                }
+                Set<String> roles = clientRoles(read(realm), client).keySet();
+                assertEquals(Set.of("user", "editor", "admin", "sysadmin"), new TreeSet<>(roles),
+                        realm + ": the roles of " + client);
+            }
         }
     }
 

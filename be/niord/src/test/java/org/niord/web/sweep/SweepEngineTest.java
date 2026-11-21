@@ -172,12 +172,11 @@ class SweepEngineTest {
 
     @Test
     void identitiesHoldTheRolesOfTheRealm() {
-        assertEquals(Cell.OK, SweepIdentity.parse("curator").derived("RolesAllowed(PUBLICATION_CURATE,ADMIN)"));
-        assertEquals(Cell.status(403, null), SweepIdentity.parse("curator").derived("RolesAllowed(EDITOR)"));
+        // An administrator curates; the realm has no curation role and the table no curator identity
+        assertThrows(IllegalArgumentException.class, () -> SweepIdentity.parse("curator"));
         assertEquals(Cell.OK, SweepIdentity.parse("domainEditor").derived("RolesAllowed(EDITOR)"));
         assertEquals(Cell.status(403, null), SweepIdentity.parse("adminElsewhere").derived("RolesAllowed(ADMIN)"));
         assertEquals(Cell.status(403, null), SweepIdentity.parse("userOtherDomain").derived("RolesAllowed(USER)"));
-        assertEquals("curator", SweepIdentity.lowestAllowed("RolesAllowed(PUBLICATION_CURATE,ADMIN)").name());
         assertEquals("admin", SweepIdentity.lowestAllowed("RolesAllowed(ADMIN)").name());
         assertEquals("anonymous", SweepIdentity.lowestAllowed("PermitAll").name());
 

@@ -90,14 +90,9 @@ that is still _in force_ at the cut-off, however old it is (see <<publication-cr
 | Administrator
 | Everything in this chapter and the next: creating and changing series, one-off publications and
   categories, preparing, publishing, amending and withdrawing issues, and adding or leaving out
-  messages by hand. An administrator changes the publications of the domains he or she
-  administers; a publication of another domain can be read but not changed (see
-  <<publication-domains>>).
-
-| _publication-curate_
-| A separate role that allows adding and leaving out messages by hand on an open issue. Since the
-  pages for publications are in the _Admin_ area, the role is only useful together with the
-  administrator role.
+  messages by hand; no other role allows adding or leaving out messages. An administrator changes
+  the publications of the domains he or she administers; a publication of another domain can be
+  read but not changed (see <<publication-domains>>).
 
 | Editor
 | Cites published issues in a message, through the _Publications_ field of the message editor, and

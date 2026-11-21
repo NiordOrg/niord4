@@ -184,10 +184,8 @@ and every change is kept in its history.
 ==== Adding or leaving out a message by hand
 
 On an open issue, a message can be added by hand or left out of the issue, always with a reason
-that is kept in the history. An administrator may do this from the issue's page in the _Admin_
-area. The server also accepts a separate role for it, _publication-curate_, but because the pages
-for publications are in the _Admin_ area, that role on its own gives no page to work from; see
-<<sysadmin-roles>>.
+that is kept in the history. An administrator of the domain that owns the publication does this
+from the issue's page in the _Admin_ area; there is no separate role for it.
 
 [#administrators-publications-domains]
 ==== Publications belong to a domain

@@ -656,14 +656,14 @@ public class PublicationIssueRestService {
     /**
      * I4. The system shape of one issue.
      *
-     * Open to a curator as well as an admin, because the curation screen is built
-     * on it: deciding whether a message belongs in an issue needs the issue's own
-     * criteria, its cut-off and its interval, and a curator refused this read can
-     * only curate blind. It is the same tier the member list, the trail and the
-     * standing decisions carry, so the whole curation surface answers one gate.
+     * The curation screen is built on it: deciding whether a message belongs in an
+     * issue needs the issue's own criteria, its cut-off and its interval. It is the
+     * same tier the member list, the trail, the standing decisions and the curation
+     * writes carry, admin, so the whole curation surface answers one gate. An
+     * administrator curates; there is no separate curation role.
      */
     @GetMapping(value = "/editable-issue/{publicId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     public SystemPublicationIssueVo getEditable(@PathVariable("publicId") String publicId) {
         return required(publicId).toVo(SystemPublicationIssueVo.class);
     }
@@ -835,8 +835,8 @@ public class PublicationIssueRestService {
      * behaviour -- the web layer has no container tests, so anything decided here
      * is decided where nothing can pin it.
      *
-     * Open to a curator, who otherwise has three endpoints that CHANGE the member
-     * set and none that shows it.
+     * The same tier as the three endpoints that CHANGE the member set, so whoever
+     * may change it may also see it.
      *
      * `lang` names the language the rows are TITLED in, and nothing else. It does
      * not narrow, reorder or otherwise decide the member set -- which messages are
@@ -846,7 +846,7 @@ public class PublicationIssueRestService {
      * with no name is unusable and the wrong language is still a name.
      */
     @GetMapping(value = "/issue/{publicId}/members", produces = MediaType.APPLICATION_JSON_VALUE)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     public List<IssueMemberVo> members(@PathVariable("publicId") String publicId,
                                        @RequestParam(name = "lang", required = false) String lang) {
         return memberList.members(required(publicId), lang);
@@ -866,11 +866,10 @@ public class PublicationIssueRestService {
      * window other than the issue's own as of now can cost a second, for the
      * members published after the planned cut-off.
      *
-     * THE CURATOR TIER, which is the least-privileged of the five it composes. The
-     * checklist half is admin, and it is narrowed in the BODY rather than by a
-     * second annotation: a stricter gate here would refuse the whole screen, which
-     * is what a non-admin curator got before -- the rail's 403 had no branch of its
-     * own and blanked the page. Now they get the screen and no rail.
+     * ADMIN TIER, the tier of every one of the five parts it composes. The body
+     * still asks for the admin role before it adds the release rail, so the core
+     * service never hands the rail to a reader without the role; every caller this
+     * gate admits holds it.
      *
      * `lang` names the language the member rows are TITLED in and nothing else,
      * exactly as on the member list. Every other part is language-independent.
@@ -909,7 +908,7 @@ public class PublicationIssueRestService {
      * member, so the list is always taken from the as-of-now membership.
      */
     @GetMapping(value = "/issue/{publicId}/workbench", produces = MediaType.APPLICATION_JSON_VALUE)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     public IssueWorkbenchVo workbench(@PathVariable("publicId") String publicId,
                                       @RequestParam(name = "lang", required = false) String lang,
                                       @RequestParam(name = "at", required = false) Long at,
@@ -926,12 +925,12 @@ public class PublicationIssueRestService {
     /**
      * I11. The Historik panel.
      *
-     * A curator reads it too: every curation decision writes a line here, and a
-     * curator who cannot see the trail cannot tell whether the exclusion they are
-     * about to make has already been made and withdrawn once.
+     * The tier of the curation writes: every curation decision writes a line here,
+     * and an administrator who cannot see the trail cannot tell whether the
+     * exclusion they are about to make has already been made and withdrawn once.
      */
     @GetMapping(value = "/issue/{publicId}/audit", produces = MediaType.APPLICATION_JSON_VALUE)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     public List<IssueAuditEntryVo> auditTrail(@PathVariable("publicId") String publicId) {
         // The line-by-line mapping, the actor rule included, belongs to the entity:
         // this module has no container tests, so anything decided here cannot be
@@ -1596,12 +1595,16 @@ public class PublicationIssueRestService {
 
     // ------------------------------------------------------------------ curation
 
-    /** I12, I13, I14. Curation requires the curate permission, not merely edit rights. */
+    /**
+     * I12, I13, I14. Curation is an administrator's, not merely an editor's, and
+     * only in the domain that owns the issue's series (the guard in curate and in
+     * clearOverride). There is no separate curation role.
+     */
     @PutMapping(value = "/issue/{publicId}/overrides/include",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     @DomainScoped
     @VersionChecked
     public void includeMember(@PathVariable("publicId") String publicId,
@@ -1613,7 +1616,7 @@ public class PublicationIssueRestService {
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     @DomainScoped
     @VersionChecked
     public void excludeMember(@PathVariable("publicId") String publicId,
@@ -1631,7 +1634,7 @@ public class PublicationIssueRestService {
      * entries and no decision, and a screen reading the trail as a state shows a
      * withdrawn exclusion as though it were still in force.
      *
-     * Curator tier, matching the writes it describes: it carries the author and
+     * Admin tier, matching the writes it describes: it carries the author and
      * the reason, which is the admin-only half of a why-line.
      *
      * Each row is NAMED -- short id and title -- because an excluded message is
@@ -1640,7 +1643,7 @@ public class PublicationIssueRestService {
      * numbered yet, and the title is what names it then.
      */
     @GetMapping(value = "/issue/{publicId}/overrides", produces = MediaType.APPLICATION_JSON_VALUE)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     public List<IssueOverrideVo> overrides(@PathVariable("publicId") String publicId,
                                            @RequestParam(name = "lang", required = false) String lang) {
         return memberList.standingDecisions(required(publicId), lang);
@@ -1656,7 +1659,7 @@ public class PublicationIssueRestService {
     @DeleteMapping(value = "/issue/{publicId}/overrides/{messageUid}",
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @RolesAllowed({Roles.PUBLICATION_CURATE, Roles.ADMIN})
+    @RolesAllowed(Roles.ADMIN)
     @DomainScoped
     @VersionChecked
     public void clearOverride(@PathVariable("publicId") String publicId,

@@ -306,11 +306,10 @@ public abstract class ITTest {
             case "editor"   -> KeycloakTestTokens.editorAccessToken();
             case "user"     -> KeycloakTestTokens.userAccessToken();
             // The endpoint sweep's identities, whose roles sit on a domain client only (see KeycloakTestTokens)
-            case "curator"        -> KeycloakTestTokens.curatorAccessToken();
             case "domainEditor"   -> KeycloakTestTokens.domainEditorAccessToken();
             case "adminElsewhere" -> KeycloakTestTokens.adminElsewhereAccessToken();
             default -> throw new IllegalArgumentException("Unknown role '" + role
-                    + "' (expected sysadmin, admin, editor, user, curator, domainEditor or adminElsewhere)");
+                    + "' (expected sysadmin, admin, editor, user, domainEditor or adminElsewhere)");
         };
     }
 

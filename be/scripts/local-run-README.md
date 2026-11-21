@@ -38,9 +38,9 @@ The backend contract for a country, `country-api.md`, is not here: it is in the 
 - When: at the bootstrap step of every start, before anything is posted, whatever the database holds.
 - What: for each domain of `be/bootstrap/domains.json` with `"active": true` whose client the shared local realm
   lacks, the library creates the client (its client ID is the domain id, bearer-only like the realm's own domain
-  clients), its roles `user`, `editor`, `admin`, `sysadmin` and `publication-curate` (`editor` holds `user`;
-  `admin` holds `editor` and `publication-curate`; `sysadmin` holds `editor`, `admin` and `publication-curate`),
-  and gives `sysadmin` and `publication-curate` to the group `Sysadmin`.
+  clients), its roles `user`, `editor`, `admin` and `sysadmin` (`editor` holds `user`; `admin` holds `editor`;
+  `sysadmin` holds `editor` and `admin`), and gives `sysadmin` to the group `Sysadmin`. A client made by an earlier
+  version of the library also has the role `publication-curate`, which Niord does not read; it is left as it is.
 - Only the local `sysadmin` is given a role in the new domain; give `admin`, `editor` and `user` theirs in the
   admin console when needed.
 - Once and never more: a client that exists is left exactly as it is, nothing in Keycloak is updated or deleted,

@@ -85,9 +85,8 @@ public class PublicationTierMatrixTest {
      *
      * The role constants are COMPOSITE in Keycloak -- sysadmin implies admin
      * implies editor implies user -- so a tier names the weakest role that gets
-     * in and every stronger one follows. PUBLICATION_CURATE sits outside that
-     * ladder: it is a client role granted on top, so a curator is modelled here
-     * as an ordinary user who has been given it.
+     * in and every stronger one follows. There is no tier beside the ladder: an
+     * administrator of the owning domain curates a publication issue.
      */
     private enum Tier {
         /** No credential at all. */
@@ -96,8 +95,6 @@ public class PublicationTierMatrixTest {
         EDITOR,
         /** Admin and above. */
         ADMIN,
-        /** Admin, or a user holding the curation role. */
-        CURATOR,
         /**
          * Sysadmin only. The estate-wide legacy import and its undo declare it:
          * each reaches every domain at once, so no single domain's administrator
@@ -106,11 +103,18 @@ public class PublicationTierMatrixTest {
         SYSADMIN
     }
 
-    /** The five callers the matrix is asserted over. */
+    /**
+     * The five callers the matrix is asserted over.
+     *
+     * FORMER_CURATOR is a user who holds the client role publication-curate, which
+     * the curation endpoints accepted beside admin until 2026-11-21. A realm set up
+     * before then may still carry the role; holding it must admit nothing an
+     * ordinary user is refused.
+     */
     private enum Caller {
         ANONYMOUS(Set.of()),
         USER(Set.of(Roles.USER)),
-        CURATE(Set.of(Roles.USER, Roles.PUBLICATION_CURATE)),
+        FORMER_CURATOR(Set.of(Roles.USER, "publication-curate")),
         ADMIN(Set.of(Roles.USER, Roles.EDITOR, Roles.ADMIN)),
         SYSADMIN(Set.of(Roles.USER, Roles.EDITOR, Roles.ADMIN, Roles.SYSADMIN));
 
@@ -127,8 +131,6 @@ public class PublicationTierMatrixTest {
             case ANONYMOUS -> true;
             case EDITOR -> caller.roles.contains(Roles.USER);
             case ADMIN -> caller.roles.contains(Roles.ADMIN);
-            case CURATOR -> caller.roles.contains(Roles.ADMIN)
-                    || caller.roles.contains(Roles.PUBLICATION_CURATE);
             case SYSADMIN -> caller.roles.contains(Roles.SYSADMIN);
         };
     }
@@ -172,10 +174,10 @@ public class PublicationTierMatrixTest {
         // named in the request header and this endpoint is about a second one.
         t.put("PUT /publication-series/series/{seriesId}/owner", Tier.ADMIN);
         t.put("DELETE /publication-series/series/{seriesId}", Tier.ADMIN);
-        // The series-level trail. ADMIN and not CURATOR, unlike the issue trail:
-        // the entries here name the desk a publication moved between and carry the
-        // reason somebody typed for the administrator receiving it, and one of
-        // them is the only surviving record of a deleted issue.
+        // The series-level trail. ADMIN, like the issue trail: the entries here
+        // name the desk a publication moved between and carry the reason somebody
+        // typed for the administrator receiving it, and one of them is the only
+        // surviving record of a deleted issue.
         t.put("GET /publication-series/{seriesId}/history", Tier.ADMIN);
         t.put("POST /publication-series/validate", Tier.ADMIN);
         t.put("POST /publication-series/import-legacy/validate", Tier.ADMIN);
@@ -207,17 +209,18 @@ public class PublicationTierMatrixTest {
         // caller was not already holding.
         t.put("GET /publication-issues/by-ids", Tier.ANONYMOUS);
         // The curation surface: the three writes, the standing decisions, and
-        // the three reads a curator needs to make a decision at all.
-        t.put("GET /publication-issues/editable-issue/{publicId}", Tier.CURATOR);
-        t.put("GET /publication-issues/issue/{publicId}/members", Tier.CURATOR);
-        // The whole issue screen in one response. Curator like the parts it
-        // composes; the admin-only part (the checklist) is withheld in the body.
-        t.put("GET /publication-issues/issue/{publicId}/workbench", Tier.CURATOR);
-        t.put("GET /publication-issues/issue/{publicId}/audit", Tier.CURATOR);
-        t.put("GET /publication-issues/issue/{publicId}/overrides", Tier.CURATOR);
-        t.put("PUT /publication-issues/issue/{publicId}/overrides/include", Tier.CURATOR);
-        t.put("PUT /publication-issues/issue/{publicId}/overrides/exclude", Tier.CURATOR);
-        t.put("DELETE /publication-issues/issue/{publicId}/overrides/{messageUid}", Tier.CURATOR);
+        // the three reads a curation decision needs. ADMIN: an administrator of
+        // the owning domain curates (the writes ask the domain guard), and there
+        // is no separate curation role.
+        t.put("GET /publication-issues/editable-issue/{publicId}", Tier.ADMIN);
+        t.put("GET /publication-issues/issue/{publicId}/members", Tier.ADMIN);
+        // The whole issue screen in one response, the tier of the parts it composes.
+        t.put("GET /publication-issues/issue/{publicId}/workbench", Tier.ADMIN);
+        t.put("GET /publication-issues/issue/{publicId}/audit", Tier.ADMIN);
+        t.put("GET /publication-issues/issue/{publicId}/overrides", Tier.ADMIN);
+        t.put("PUT /publication-issues/issue/{publicId}/overrides/include", Tier.ADMIN);
+        t.put("PUT /publication-issues/issue/{publicId}/overrides/exclude", Tier.ADMIN);
+        t.put("DELETE /publication-issues/issue/{publicId}/overrides/{messageUid}", Tier.ADMIN);
         // Everything that decides what the public reads.
         t.put("GET /publication-issues/series/{seriesId}", Tier.ADMIN);
         t.put("POST /publication-issues/issue", Tier.ADMIN);

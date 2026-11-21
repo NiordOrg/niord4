@@ -541,7 +541,7 @@
     "steps": "Clients; search niord-nw; niord-nw; Roles tab",
     "crop": "viewport",
     "needsData": "Local realm",
-    "note": "The shared local Keycloak's niord-* clients have no publication-curate role (its volume predates the realm file's role; only test clients such as xr-nw have it), and Niord does not create it for a new domain: the text says to add it by hand."
+    "note": "The four roles the text names. A client made from an earlier realm file (test clients such as xr-nw) may also list publication-curate, which Niord does not read; the text says so, so take the picture on a niord-* client."
   },
   {
     "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 80, "file": "KeycloakUsers.png", "caption": "Keycloak Users", "inline": false,

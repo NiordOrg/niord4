@@ -1270,26 +1270,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low. Fix: number an entry one above the resource's highest history version, and key the dialog on
   the entry's id.
 
-## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
-
-- **Location:** `niord/src/main/java/org/niord/core/keycloak/KeycloakIntegrationService.java` `createKeycloakDomain`
-  (259-323): the roles created for the new client are `user`, `editor`, `admin` and `sysadmin` (296-301); and
-  `niord/src/main/java/org/niord/core/user/Roles.java` (35-53), whose ADMIN fallback on the curation endpoints is
-  "to be removed one release after the deployed realms are re-imported".
-- **Description:** the realm files in the repository carry `publication-curate` on every domain client, but a domain
-  created from Sysadmin > Domains with the Keycloak integration has no such role, so a curator cannot be given the
-  right in it until a system administrator creates the role by hand in Keycloak. Today the ADMIN fallback lets an
-  administrator curate there; once it is removed, as `Roles.java` plans, the curation endpoints of such a domain
-  admit nobody until the role is added [read in the code; not run].
-- **Why it looks wrong:** the integration exists to set up a domain's client completely, and the role it leaves out
-  is the only one the publication curation needs.
-- **Exposed by:** the user guides' writers (2026-11-11, the system administrators' manual, part 2). The manuals
-  (`guides/sysadmin-manual/A1-KeycloakIntegration.adoc` and `guides/whats-new/05-SystemAdministrators.adoc`) tell the
-  reader to add the role by hand; change them with the fix. Related: the go-live row "No curator role" in
-  `fe/docs/backlog.md`.
-- **Severity:** Low today; Medium once the ADMIN fallback is removed. Fix: create `publication-curate` (not part of
-  the composite ladder) with the other four roles, before the fallback goes.
-
 ## KEYCLOAK3. The integration tests sign in against Keycloak 22.0.5, a version no environment runs
 
 - **Location:** `niord/src/test/java/org/niord/test/NiordTestContainers.java` `KEYCLOAK_IMAGE` (57,

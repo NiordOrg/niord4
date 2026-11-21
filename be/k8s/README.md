@@ -270,7 +270,7 @@ the test realm and `admin`/`admin`.
 - **The realm** is the test realm, derived by the template helper `niord.keycloak.realmJson`. It
   keeps the clients, roles and the `Sysadmin` group, and no user. With `keycloak.testUsers: true` it
   keeps the test users (`sysadmin`/`sysadmin`, and `testuser`, `testeditor`, `testadmin`,
-  `testcurator`, `testdomaineditor` and `testadminelsewhere` with the password `test`), whose
+  `testdomaineditor` and `testadminelsewhere` with the password `test`), whose
   passwords are in this public repository. It drops the
   `niord-web-admin` client with its service account and every client secret. The app's admin calls
   carry the signed-in user's own token, so nothing uses that client. Keycloak generates new secrets

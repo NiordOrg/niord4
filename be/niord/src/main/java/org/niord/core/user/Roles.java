@@ -31,24 +31,4 @@ public interface Roles {
     String EDITOR = "editor";
     String ADMIN = "admin";
     String SYSADMIN = "sysadmin";
-
-    /**
-     * The right to add or remove a publication issue's members by hand.
-     * <p>
-     * Not part of the composite ladder above: it is a Keycloak client role granted
-     * per domain, and it is named here so the endpoints that gate on it spell it
-     * once rather than repeating the literal at every annotation.
-     * <p>
-     * The endpoints that require it accept ADMIN alongside it. That pairing is a
-     * transitional fallback added on 2026-08-22, because the realms the running
-     * deployments authenticate against do not carry this role yet: without the
-     * fallback the curation endpoints would be callable by nobody. The realm
-     * exports in this repository (keycloak/niord-realm-local.json,
-     * k8s/helm/niord/files/niord-realm.json and the test realm under
-     * niord/src/test/resources/keycloak) do carry it, so the fallback is to be
-     * removed one release after the deployed realms are re-imported, by dropping
-     * ADMIN from the annotations that name both. Which endpoints those are, and
-     * who each one admits, is asserted in full by the tier-matrix test.
-     */
-    String PUBLICATION_CURATE = "publication-curate";
 }

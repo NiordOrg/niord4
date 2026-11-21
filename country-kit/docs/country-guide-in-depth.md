@@ -1090,9 +1090,9 @@ domain pickers of a firing schedule, which offer only the domains whose clients 
 role on. At every start, the launcher creates in the shared local realm `niord` the missing client of each domain of
 `be/bootstrap/domains.json` with `"active": true`. The client's ID is the domain's `domainId`, and
 it is bearer-only, like the realm's other domain clients. It holds the roles `user`, `editor`,
-`admin`, `sysadmin` and `publication-curate`: `editor` holds `user`; `admin` holds `editor` and
-`publication-curate`; `sysadmin` holds `editor`, `admin` and `publication-curate`. The group
-`Sysadmin` is given `sysadmin` and `publication-curate`.
+`admin` and `sysadmin`: `editor` holds `user`; `admin` holds `editor`; `sysadmin` holds `editor`
+and `admin`. The group `Sysadmin` is given `sysadmin`. A client an earlier launcher made also
+has the role `publication-curate`; Niord does not read it, and it can stay.
 
 The launcher never updates or deletes anything in Keycloak: a client that exists is left exactly as
 it is, and a second start adds nothing. You see one `>> Creating the local Keycloak client <id>`
@@ -1119,17 +1119,15 @@ $K create clients -r niord -s clientId=<domainId> -s enabled=true -s bearerOnly=
   -s publicClient=false -s protocol=openid-connect -s standardFlowEnabled=true \
   -s directAccessGrantsEnabled=true -s fullScopeAllowed=false
 CID=$($K get clients -r niord -q clientId=<domainId> --fields id --format csv --noquotes)
-for role in user editor admin sysadmin publication-curate; do
+for role in user editor admin sysadmin; do
   $K create clients/$CID/roles -r niord -s name=$role
 done
 rid() { $K get clients/$CID/roles/$1 -r niord --fields id --format csv --noquotes; }
 $K add-roles -r niord --rid "$(rid editor)" --cclientid <domainId> --rolename user
-$K add-roles -r niord --rid "$(rid admin)" --cclientid <domainId> \
-  --rolename editor --rolename publication-curate
+$K add-roles -r niord --rid "$(rid admin)" --cclientid <domainId> --rolename editor
 $K add-roles -r niord --rid "$(rid sysadmin)" --cclientid <domainId> \
-  --rolename editor --rolename admin --rolename publication-curate
-$K add-roles -r niord --gname Sysadmin --cclientid <domainId> \
-  --rolename sysadmin --rolename publication-curate
+  --rolename editor --rolename admin
+$K add-roles -r niord --gname Sysadmin --cclientid <domainId> --rolename sysadmin
 ```
 
 The realm lives in the shared container's volume, so the client stays for every later run on this

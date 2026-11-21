@@ -99,7 +99,7 @@ public class IssueMemberListService {
      * decision, and reading the trail as a state is how a withdrawn exclusion
      * comes back to life on a screen.
      *
-     * CURATOR TIER, like the writes it describes. It carries the author and the
+     * ADMIN TIER, like the writes it describes. It carries the author and the
      * reason, which is the admin-only half of a why-line.
      *
      * IT TAKES NO RESOLVE. The decisions are rows; answering them needs the

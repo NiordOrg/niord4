@@ -534,7 +534,7 @@ the generator's suggestion from the bytecode, two levels deep, with `codeCheckEv
 (`"<SweepGroup class>#<name>"`), `coveredBy`, `expect` (`rows` the fixture declares, `at`, `minBytes`,
 `contentType`), `expectedLog`, `knownFault`, `exempt`, `reviewed`. A cell name is an identity, optionally `@` and a
 fixture row: `anonymous`, `anonymous+header`, `user`, `userOtherDomain` (the user's token with `NiordDomain:
-niord-nm`), `editor`, `admin`, `sysadmin`, `curator`, `domainEditor`, `adminElsewhere` (the last three hold their
+niord-nm`), `editor`, `admin`, `sysadmin`, `domainEditor`, `adminElsewhere` (the last two hold their
 roles on a domain client only; `KeycloakTestTokens` lists the realm), and `ticket(<identity>)` or
 `ticket(<identity>:<role>)`, a ticket that identity mints just before the request. An entry with no code check runs
 one anonymous call when it is `@RolesAllowed`, and its sweep as the least privileged identity the annotation admits;

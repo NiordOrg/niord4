@@ -199,8 +199,8 @@ through a separate bean that runs it, as `PublicationTxRunner` does for publicat
 Sign-in is Keycloak's. The backend accepts a bearer token Keycloak issued, and a request names the
 domain the user works in with the `NiordDomain` header; the user's roles in that domain are added
 to the request by `NiordDomainFilter`. The roles are `user`, `editor`, `admin` and `sysadmin`
-(`org.niord.core.user.Roles`), plus `publication-curate`, the right to add or remove the members
-of a publication issue by hand.
+(`org.niord.core.user.Roles`), and no other: adding or removing the members of a publication issue
+by hand is an `admin`'s, in the domain that owns the publication.
 
 The HTTP layer lets every request through (`SecurityConfig`); method security is the whole guard.
 So every handler method of every controller resolves to exactly one of the JSR-250 annotations,

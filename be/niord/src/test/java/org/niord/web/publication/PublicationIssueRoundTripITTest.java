@@ -785,6 +785,68 @@ class PublicationIssueRoundTripITTest extends PublicationHttpFixture {
     }
 
     // ------------------------------------------------------------------------------------------- //
+    // Curation is an administrator's of the owning domain
+    // ------------------------------------------------------------------------------------------- //
+
+    /**
+     * The eight endpoints of the curation surface (five reads, three writes) answer an administrator and a system
+     * administrator of the domain that owns the series, and refuse an editor, a plain user and an administrator of
+     * another domain. There is no separate curation role: the role publication-curate that a realm set up earlier may
+     * still carry gives nothing, and the test realm no longer has it.
+     */
+    @Test
+    void theCurationSurfaceIsAnAdministratorsOfTheOwningDomain() {
+        String seriesId = activeWeekly();
+        String publicId = createIssue(seriesId, SEP_1, SEP_30);
+        String issue = ISSUES + "/issue/" + publicId;
+        List<String> reads = List.of(ISSUES + "/editable-issue/" + publicId, issue + "/members", issue + "/workbench",
+                issue + "/audit", issue + "/overrides");
+
+        // An editor, an editor of this domain only, a plain user, and an administrator of niord-nm working in niord-nw
+        for (String role : List.of("editor", "domainEditor", "user", "adminElsewhere")) {
+            for (String read : reads) {
+                refused(as(role).get(read), 403, role + " reading " + read);
+            }
+            Map<String, Object> curation = Map.of("messageUid", NW_001, "reason", "Not allowed",
+                    "version", version(publicId));
+            refused(as(role).body(curation).put(issue + "/overrides/include"), 403, role + " including");
+            refused(as(role).body(curation).put(issue + "/overrides/exclude"), 403, role + " excluding");
+            refused(as(role).delete(issue + "/overrides/" + NW_001 + "?reason=nope"), 403, role + " withdrawing");
+        }
+        assertEquals(0, overrideRows(publicId), "no override was written");
+
+        // An administrator of the owning domain, and a system administrator, may do each of the eight
+        for (String role : List.of("admin", "sysadmin")) {
+            for (String read : reads) {
+                as(role).get(read).then().statusCode(200);
+            }
+            as(role).body(Map.of("messageUid", NW_001, "reason", role + " includes", "version", version(publicId)))
+                    .put(issue + "/overrides/include").then().statusCode(204);
+            assertEquals(Map.of(NW_001, "INCLUDE"), decisions(publicId), role + "'s inclusion stands");
+            as(role).delete(issue + "/overrides/" + NW_001 + "?reason=" + role + " withdraws&version="
+                    + version(publicId)).then().statusCode(204);
+            as(role).body(Map.of("messageUid", NM_002, "reason", role + " excludes", "version", version(publicId)))
+                    .put(issue + "/overrides/exclude").then().statusCode(204);
+            assertEquals(Map.of(NM_002, "EXCLUDE"), decisions(publicId), role + "'s exclusion stands");
+            as(role).delete(issue + "/overrides/" + NM_002 + "?reason=" + role + " withdraws&version="
+                    + version(publicId)).then().statusCode(204);
+            assertEquals(Map.of(), decisions(publicId), role + "'s decisions withdrawn");
+        }
+
+        // The same administrator, sitting at the other desk, may change nothing of this domain's issue
+        Map<String, Object> curation = Map.of("messageUid", NM_002, "reason", "Another desk",
+                "version", version(publicId));
+        refusedWith(as("admin", OTHER_DOMAIN).body(curation).put(issue + "/overrides/include"), 403, "NOT_IN_DOMAIN",
+                "another desk including");
+        refusedWith(as("admin", OTHER_DOMAIN).body(curation).put(issue + "/overrides/exclude"), 403, "NOT_IN_DOMAIN",
+                "another desk excluding");
+        curate(publicId, "exclude", List.of(NM_002), "Stands for the next check");
+        refusedWith(as("admin", OTHER_DOMAIN).delete(issue + "/overrides/" + NM_002 + "?reason=nope&version="
+                + version(publicId)), 403, "NOT_IN_DOMAIN", "another desk withdrawing");
+        assertEquals(Map.of(NM_002, "EXCLUDE"), decisions(publicId), "the decision another desk tried to withdraw");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
     // Fixture series, created through the API
     // ------------------------------------------------------------------------------------------- //
 

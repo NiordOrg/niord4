@@ -96,9 +96,8 @@ public class RestControllerSecurityAnnotationTest {
      */
     static final SecurityAnnotationScanner<Annotation> JSR250 = CountryContractGuard.JSR250;
 
-    /** Every role an {@code @RolesAllowed} may name. */
-    static final Set<String> KNOWN_ROLES =
-            Set.of(Roles.USER, Roles.EDITOR, Roles.ADMIN, Roles.SYSADMIN, Roles.PUBLICATION_CURATE);
+    /** Every role an {@code @RolesAllowed} may name: the four of the ladder, and nothing beside them. */
+    static final Set<String> KNOWN_ROLES = Set.of(Roles.USER, Roles.EDITOR, Roles.ADMIN, Roles.SYSADMIN);
 
     @Test
     public void everyRestHandlerMethodResolvesAnExplicitSecurityAnnotation() throws Exception {

@@ -1859,8 +1859,8 @@ definition of done and _Before go-live_. An AI agent can do steps 1, 2 and 9 fro
    `spring-boot:run`, the `local` profile, UTC, port 8888, the development mode, `adminAppUrl`, and the Niord
    home `~/.niord-local/<database>` as `niord.home` and `NIORD_HOME`; at its bootstrap step, on every start, gives
    each active domain of the country's `be/bootstrap/domains.json` that has no client in the shared local realm its
-   client (the five roles user, editor, admin, sysadmin and publication-curate, editor, admin and
-   sysadmin composite, and the Sysadmin group's mapping; a client that exists is never changed, and nothing is
+   client (the four roles user, editor, admin and sysadmin, editor, admin and sysadmin composite, and
+   the Sysadmin group's mapping; a client that exists is never changed, and nothing is
    deleted); on a database whose marker reads pending posts the bootstrap (`POST /rest/bootstrap` with a
    sysadmin's token, through `bootstrap.sh`, which waits for the marker): first the base product's archive, then
    the country's, `be/bootstrap/` zipped with that folder as the archive's root, in one run

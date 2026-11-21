@@ -102,11 +102,11 @@ public class IssueWorkbenchService {
      * @param lang             the language the member rows are TITLED in; it
      *                         decides nothing else, and every other part here is
      *                         language-independent
-     * @param mayReadChecklist whether the caller is an admin. The endpoint's gate
-     *                         is the curator tier -- four of the five parts are
-     *                         curator reads -- and the rail is narrowed here
-     *                         rather than by a second annotation, because a
-     *                         second gate would refuse the whole screen
+     * @param mayReadChecklist whether the caller is an admin. The endpoint is
+     *                         admin tier, so every caller it admits holds the
+     *                         role; the flag stays so that a caller of this
+     *                         service that is not an admin is never handed the
+     *                         release rail
      */
     @Transactional
     public IssueWorkbenchVo forIssue(PublicationIssue issue, String lang, boolean mayReadChecklist) {

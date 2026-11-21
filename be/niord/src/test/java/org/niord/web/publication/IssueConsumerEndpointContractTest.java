@@ -349,15 +349,16 @@ public class IssueConsumerEndpointContractTest {
     // ------------------------------------------------------------------ curation
 
     /**
-     * The standing curation decisions are readable, at the curator tier.
+     * The standing curation decisions are readable, at the admin tier.
      *
      * Same tier as the writes that produce them, because the payload carries the
      * author and the reason -- the admin-only half of a why-line. Without a read
      * endpoint the exclusions are visible from no surface at all: an excluded
-     * message is not a member, so nothing in the member list can show it.
+     * message is not a member, so nothing in the member list can show it. An
+     * administrator curates; no other role is named.
      */
     @Test
-    public void theStandingCurationDecisionsAreReadableAtTheCuratorTier() {
+    public void theStandingCurationDecisionsAreReadableAtTheAdminTier() {
         Method overrides = endpoint("overrides");
         assertTrue(isVerb(overrides, RequestMethod.GET));
         assertEquals(List.of("/issue/{publicId}/overrides"), pathsOf(overrides));
@@ -366,9 +367,8 @@ public class IssueConsumerEndpointContractTest {
                 "the curation decisions carry an author and a reason; they are not anonymous");
         RolesAllowed roles = overrides.getAnnotation(RolesAllowed.class);
         assertNotNull(roles);
-        assertTrue(Arrays.asList(roles.value()).contains("publication-curate")
-                        && Arrays.asList(roles.value()).contains("admin"),
-                "expected the curator tier, got " + Arrays.toString(roles.value()));
+        assertEquals(List.of("admin"), Arrays.asList(roles.value()),
+                "expected the admin tier and no other role, got " + Arrays.toString(roles.value()));
     }
 
     // ------------------------------------------------------------------ catalogue

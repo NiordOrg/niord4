@@ -1935,8 +1935,8 @@ prerequisite exits 1, both before any docker call but `docker info`.
    for it to answer.
 10. **The bootstrap.** First, at every start and whatever the database holds, the library creates
     in the shared local realm the missing client of each domain of `be/bootstrap/domains.json` with
-    `"active": true`, with the roles `user`, `editor`, `admin`, `sysadmin` and `publication-curate`,
-    and gives `sysadmin` and `publication-curate` to the group `Sysadmin`; a client that exists is
+    `"active": true`, with the roles `user`, `editor`, `admin` and `sysadmin`, and gives `sysadmin`
+    to the group `Sysadmin`; a client that exists is
     left as it is, nothing in Keycloak is updated or deleted, and the base product's archive and a
     `--sample` run are never read
     ([Your sysadmin in your own domain](docs/country-guide-in-depth.md#your-sysadmin-in-your-own-domain)).

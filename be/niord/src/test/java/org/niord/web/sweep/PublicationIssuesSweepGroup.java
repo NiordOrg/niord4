@@ -40,13 +40,13 @@ import java.util.TreeMap;
  * on the issue's (or, for the create, the series') domain: a caller whose {@code NiordDomain} is not the series'
  * owner is refused 403 {@code NOT_IN_DOMAIN}, whatever its roles, so each write has a cell {@code admin@<a row of
  * niord-nm>} (the test realm's admin holds admin in every domain, so only the guard refuses it). The three curation
- * writes ask the same guard, under the curator tier: {@code curator@<a row of niord-nm>}. The workbench is open to the
- * curator and adds the release rail only for an admin ({@code isCallerInRole(ADMIN)}); the hydration by ids is
- * anonymous and withholds the document link of an unreleased issue from a caller without the user role; the archived
- * document is {@code @PermitAll} with the admin role checked in the body, so a ticket minted with the admin role opens
- * it and nothing else does. The other reads and the publish rail are annotation-only: one anonymous call, the sweep as
+ * writes are admin tier and ask the same guard: an administrator curates, and there is no separate curation role. The
+ * workbench adds the release rail for an admin ({@code isCallerInRole(ADMIN)}), which every caller it admits is; the
+ * hydration by ids is anonymous and withholds the document link of an unreleased issue from a caller without the user
+ * role; the archived document is {@code @PermitAll} with the admin role checked in the body, so a ticket minted with
+ * the admin role opens it and nothing else does. The other reads and the publish rail are annotation-only: one anonymous call, the sweep as
  * the least privileged identity the annotation admits ({@code PublicationTierMatrixTest} holds their tiers), and the
- * curator cell of the five curate-tier reads written out.
+ * editor, adminElsewhere and admin cells of the four curation reads written out.
  *
  * <p><b>The state-builder.</b> The fixture, made through the API as admin: a weekly query-backed series in niord-nw
  * with a published issue (amended once, so its trail holds an archived generation), a retired one and an open one
@@ -1004,7 +1004,7 @@ class PublicationIssuesSweepGroup implements SweepGroup {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // The curate-tier reads
+    // The curation reads (admin tier)
     // ------------------------------------------------------------------------------------------- //
 
     private void curateReadCases(SweepCases cases) {
@@ -1039,16 +1039,11 @@ class PublicationIssuesSweepGroup implements SweepGroup {
         cases.add("workbench", SweepCase
                 .of((ctx, row) -> workbench(issueOf(ctx, row, OPEN)))
                 .sweep((ctx, as) -> {
-                    // The curator gets the screen and no release rail; an admin gets the rail too
-                    SweepResponse curator = ctx.ok(as, workbench(ctx.row(OPEN)));
-                    if (curator.is2xx()) {
-                        ctx.checkEquals(null, curator.json().get("checklist"), "the rail in the curator's screen",
-                                curator);
-                        ctx.check(curator.json().getList("members.messageUid").contains(NW_001),
-                                "the curator's screen lists the members", curator);
-                    }
-                    SweepResponse admin = ctx.ok("admin", workbench(ctx.row(OPEN)));
+                    // An administrator, the only caller the gate admits, gets the screen with its release rail
+                    SweepResponse admin = ctx.ok(as, workbench(ctx.row(OPEN)));
                     if (admin.is2xx()) {
+                        ctx.check(admin.json().getList("members.messageUid").contains(NW_001),
+                                "the admin's screen lists the members", admin);
                         ctx.check(admin.json().get("checklist.rows") instanceof List<?> rows && !rows.isEmpty(),
                                 "the admin's screen carries the release rail", admin);
                     }
@@ -1557,7 +1552,7 @@ class PublicationIssuesSweepGroup implements SweepGroup {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // The curation writes: include, exclude, withdraw (curator tier, the owner's domain)
+    // The curation writes: include, exclude, withdraw (admin tier, the owner's domain)
     // ------------------------------------------------------------------------------------------- //
 
     private void curationCases(SweepCases cases) {

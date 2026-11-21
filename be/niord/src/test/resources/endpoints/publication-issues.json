@@ -61,7 +61,7 @@
       "handler": "PublicationIssueRestService.getEditable",
       "alsoAt": [],
       "kind": "read",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "none-found",
       "codeCheckEvidence": [
         "not followed: ActorName, EffectiveCriteria, EffectiveReport, FileSource, IntervalBoundSource, IssueFileNaming, IssuePublicationMapping, IssuePublishService, IssueStatus, MembershipProvenance, PrintedNumbering, PublicationIssueDesc, PublicationSeries, TimeRelation"
@@ -69,7 +69,7 @@
       "params": ["publicId"],
       "rules": [],
       "realmRole": null,
-      "answers": {"curator": "ok"},
+      "answers": {"editor": {"status": 403, "detail": null}, "adminElsewhere": {"status": 403, "detail": null}, "admin": "ok"},
       "case": "PublicationIssuesSweepGroup#getEditable",
       "coveredBy": null,
       "expect": {"rows": ["sweep-publication-issues-open"]},
@@ -99,7 +99,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -134,7 +133,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -192,7 +190,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -228,7 +225,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -261,7 +257,6 @@
         "anonymous": {"status": 403, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "ticket(admin:admin)": "ok",
@@ -282,13 +277,13 @@
       "handler": "PublicationIssueRestService.auditTrail",
       "alsoAt": [],
       "kind": "read",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "none-found",
       "codeCheckEvidence": ["not followed: ActorKind, ActorName, AuditAction, IssueArchiveService"],
       "params": ["publicId"],
       "rules": [],
       "realmRole": null,
-      "answers": {"curator": "ok"},
+      "answers": {"editor": {"status": 403, "detail": null}, "adminElsewhere": {"status": 403, "detail": null}, "admin": "ok"},
       "case": "PublicationIssuesSweepGroup#auditTrail",
       "coveredBy": null,
       "expect": {"rows": ["sweep-publication-issues-amended"]},
@@ -318,7 +313,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -353,7 +347,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -388,7 +381,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -407,7 +399,7 @@
       "handler": "PublicationIssueRestService.members",
       "alsoAt": [],
       "kind": "read",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "none-found",
       "codeCheckEvidence": [
         "not followed: ActorName, CompilationResolver, Domain, IssueListService, IssueMember, IssueMemberListService, IssueOrdering, IssueOverride, IssueResolutionService, MemberResolutionService, MemberSource, MembershipReason, MessageNaming, OverrideKind, PublicationIssue, PublicationSeries, Status"
@@ -415,7 +407,7 @@
       "params": ["publicId", "lang"],
       "rules": [],
       "realmRole": null,
-      "answers": {"curator": "ok"},
+      "answers": {"editor": {"status": 403, "detail": null}, "adminElsewhere": {"status": 403, "detail": null}, "admin": "ok"},
       "case": "PublicationIssuesSweepGroup#members",
       "coveredBy": null,
       "expect": {"minBytes": 50},
@@ -446,7 +438,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -465,13 +456,13 @@
       "handler": "PublicationIssueRestService.overrides",
       "alsoAt": [],
       "kind": "read",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "none-found",
       "codeCheckEvidence": ["not followed: ActorName, IssueOverride, IssueResolutionService, MessageNaming, OverrideKind"],
       "params": ["publicId", "lang"],
       "rules": [],
       "realmRole": null,
-      "answers": {"curator": "ok"},
+      "answers": {"editor": {"status": 403, "detail": null}, "adminElsewhere": {"status": 403, "detail": null}, "admin": "ok"},
       "case": "PublicationIssuesSweepGroup#overrides",
       "coveredBy": null,
       "expect": {"rows": ["sweep-publication-issues-decision"]},
@@ -485,7 +476,7 @@
       "handler": "PublicationIssueRestService.excludeMember",
       "alsoAt": [],
       "kind": "write",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "found",
       "codeCheckEvidence": [
         "assertWritable in PublicationIssueRestService.curate",
@@ -507,9 +498,8 @@
         "editor": {"status": 403, "detail": null},
         "domainEditor": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
-        "curator": "ok",
         "admin": "ok",
-        "curator@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
+        "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
       },
       "case": "PublicationIssuesSweepGroup#excludeMember",
       "coveredBy": null,
@@ -517,7 +507,7 @@
       "expectedLog": [],
       "knownFault": [],
       "exempt": null,
-      "note": "code check confirmed: the curator tier, and PublicationDomainGuard.assertWritable: a caller whose NiordDomain is not the series' owner is refused 403 NOT_IN_DOMAIN whatever its roles (the test realm's admin holds admin in every domain, so the cell admin@<niord-nm row> is refused by the guard alone) (here curator@<niord-nm row>: the curator holds publication-curate in niord-nw only); assertOpen and assertReason are input checks (probes)",
+      "note": "code check confirmed: PublicationDomainGuard.assertWritable: a caller whose NiordDomain is not the series' owner is refused 403 NOT_IN_DOMAIN whatever its roles (the test realm's admin holds admin in every domain, so the cell admin@<niord-nm row> is refused by the guard alone); assertOpen and assertReason are input checks (probes)",
       "reviewed": true
     },
     {
@@ -525,7 +515,7 @@
       "handler": "PublicationIssueRestService.includeMember",
       "alsoAt": [],
       "kind": "write",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "found",
       "codeCheckEvidence": [
         "assertWritable in PublicationIssueRestService.curate",
@@ -547,9 +537,8 @@
         "editor": {"status": 403, "detail": null},
         "domainEditor": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
-        "curator": "ok",
         "admin": "ok",
-        "curator@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
+        "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
       },
       "case": "PublicationIssuesSweepGroup#includeMember",
       "coveredBy": null,
@@ -557,7 +546,7 @@
       "expectedLog": [],
       "knownFault": [],
       "exempt": null,
-      "note": "code check confirmed: the curator tier, and PublicationDomainGuard.assertWritable: a caller whose NiordDomain is not the series' owner is refused 403 NOT_IN_DOMAIN whatever its roles (the test realm's admin holds admin in every domain, so the cell admin@<niord-nm row> is refused by the guard alone) (here curator@<niord-nm row>); assertOpen and assertReason are input checks (probes)",
+      "note": "code check confirmed: PublicationDomainGuard.assertWritable: a caller whose NiordDomain is not the series' owner is refused 403 NOT_IN_DOMAIN whatever its roles (the test realm's admin holds admin in every domain, so the cell admin@<niord-nm row> is refused by the guard alone); assertOpen and assertReason are input checks (probes)",
       "reviewed": true
     },
     {
@@ -565,7 +554,7 @@
       "handler": "PublicationIssueRestService.clearOverride",
       "alsoAt": [],
       "kind": "write",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "found",
       "codeCheckEvidence": [
         "assertWritable in PublicationIssueRestService.clearOverride",
@@ -586,9 +575,8 @@
         "editor": {"status": 403, "detail": null},
         "domainEditor": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
-        "curator": "ok",
         "admin": "ok",
-        "curator@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
+        "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
       },
       "case": "PublicationIssuesSweepGroup#clearOverride",
       "coveredBy": null,
@@ -596,7 +584,7 @@
       "expectedLog": [],
       "knownFault": [],
       "exempt": null,
-      "note": "code check confirmed: the curator tier, and PublicationDomainGuard.assertWritable: a caller whose NiordDomain is not the series' owner is refused 403 NOT_IN_DOMAIN whatever its roles (the test realm's admin holds admin in every domain, so the cell admin@<niord-nm row> is refused by the guard alone) (here curator@<niord-nm row>)",
+      "note": "code check confirmed: PublicationDomainGuard.assertWritable: a caller whose NiordDomain is not the series' owner is refused 403 NOT_IN_DOMAIN whatever its roles (the test realm's admin holds admin in every domain, so the cell admin@<niord-nm row> is refused by the guard alone)",
       "reviewed": true
     },
     {
@@ -619,7 +607,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -674,7 +661,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -732,7 +718,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -768,7 +753,6 @@
         "anonymous": {"status": 401, "detail": null},
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
-        "curator": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
         "admin": "ok",
         "admin@sweep-publication-issues-elsewhere-open": {"status": 403, "detail": "NOT_IN_DOMAIN"}
@@ -787,7 +771,7 @@
       "handler": "PublicationIssueRestService.workbench",
       "alsoAt": [],
       "kind": "read",
-      "guard": "RolesAllowed(PUBLICATION_CURATE,ADMIN)",
+      "guard": "RolesAllowed(ADMIN)",
       "codeCheck": "found",
       "codeCheckEvidence": [
         "isCallerInRole(ADMIN) in PublicationIssueRestService.workbench",
@@ -801,7 +785,6 @@
         "user": {"status": 403, "detail": null},
         "editor": {"status": 403, "detail": null},
         "adminElsewhere": {"status": 403, "detail": null},
-        "curator": "ok",
         "admin": "ok"
       },
       "case": "PublicationIssuesSweepGroup#workbench",
@@ -810,7 +793,7 @@
       "expectedLog": [],
       "knownFault": [],
       "exempt": null,
-      "note": "code check confirmed: isCallerInRole(ADMIN) decides whether the release rail is in the answer, not the status; the sweep reads it as curator (no rail) and as admin (the rail)",
+      "note": "code check confirmed: isCallerInRole(ADMIN) decides whether the release rail is in the answer, not the status; every caller the annotation admits holds admin, so the sweep reads the rail as admin",
       "reviewed": true
     },
     {

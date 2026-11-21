@@ -37,9 +37,8 @@ import java.util.regex.Pattern;
  *   <tr><td>{@code user}</td><td>testuser</td><td>niord-nw</td><td>user</td></tr>
  *   <tr><td>{@code userOtherDomain}</td><td>testuser</td><td>niord-nm</td><td>none (authenticated)</td></tr>
  *   <tr><td>{@code editor}</td><td>testeditor</td><td>niord-nw</td><td>user, editor (editor on the base client too)</td></tr>
- *   <tr><td>{@code admin}</td><td>testadmin</td><td>niord-nw</td><td>user, editor, admin, publication-curate</td></tr>
+ *   <tr><td>{@code admin}</td><td>testadmin</td><td>niord-nw</td><td>user, editor, admin</td></tr>
  *   <tr><td>{@code sysadmin}</td><td>sysadmin</td><td>niord-nw</td><td>every role, and Keycloak's manage-users</td></tr>
- *   <tr><td>{@code curator}</td><td>testcurator</td><td>niord-nw</td><td>user, publication-curate (niord-nw only)</td></tr>
  *   <tr><td>{@code domainEditor}</td><td>testdomaineditor</td><td>niord-nw</td><td>user, editor (niord-nw only)</td></tr>
  *   <tr><td>{@code adminElsewhere}</td><td>testadminelsewhere</td><td>niord-nw</td><td>user (admin in niord-nm only)</td></tr>
  * </table>
@@ -63,10 +62,8 @@ public record SweepIdentity(String name, String tokenRole, String domain, SweepI
         base("user", "user", DOMAIN, Roles.USER);
         base("userOtherDomain", "user", OTHER_DOMAIN);
         base("editor", "editor", DOMAIN, Roles.USER, Roles.EDITOR);
-        base("admin", "admin", DOMAIN, Roles.USER, Roles.EDITOR, Roles.ADMIN, Roles.PUBLICATION_CURATE);
-        base("sysadmin", "sysadmin", DOMAIN, Roles.USER, Roles.EDITOR, Roles.ADMIN, Roles.SYSADMIN,
-                Roles.PUBLICATION_CURATE);
-        base("curator", "curator", DOMAIN, Roles.USER, Roles.PUBLICATION_CURATE);
+        base("admin", "admin", DOMAIN, Roles.USER, Roles.EDITOR, Roles.ADMIN);
+        base("sysadmin", "sysadmin", DOMAIN, Roles.USER, Roles.EDITOR, Roles.ADMIN, Roles.SYSADMIN);
         base("domainEditor", "domainEditor", DOMAIN, Roles.USER, Roles.EDITOR);
         base("adminElsewhere", "adminElsewhere", DOMAIN, Roles.USER);
     }
@@ -80,10 +77,10 @@ public record SweepIdentity(String name, String tokenRole, String domain, SweepI
     public static final List<String> TIERS = List.of("anonymous", "user", "editor", "admin", "sysadmin");
 
     /** The identities whose realm users the owner's realm change added */
-    public static final List<String> ADDED = List.of("curator", "domainEditor", "adminElsewhere");
+    public static final List<String> ADDED = List.of("domainEditor", "adminElsewhere");
 
     /**
-     * The three added identities are in the test realm ({@code keycloak/niord-realm.json}): a token of one that
+     * The two added identities are in the test realm ({@code keycloak/niord-realm.json}): a token of one that
      * cannot be fetched fails the run. Set it to false to run against a realm without them; their cells are then
      * listed as not run.
      */
@@ -154,7 +151,7 @@ public record SweepIdentity(String name, String tokenRole, String domain, SweepI
 
     /** The least privileged identity the guard admits (anonymous for PermitAll) */
     public static SweepIdentity lowestAllowed(String guard) {
-        for (String name : List.of("anonymous", "user", "curator", "editor", "admin", "sysadmin")) {
+        for (String name : List.of("anonymous", "user", "editor", "admin", "sysadmin")) {
             SweepIdentity identity = BASE.get(name);
             if (identity.derived(guard).isOk()) {
                 return identity;
