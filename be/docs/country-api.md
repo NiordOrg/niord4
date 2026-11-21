@@ -96,7 +96,10 @@ the method or on the class declaring it, resolved as Spring Security's `Jsr250Au
 layer is `permitAll` and method security is the whole guard, so a handler without an annotation would be public. The
 check covers every handler method of Spring MVC's `RequestMappingHandlerMapping` beans, in any package; the reviewed
 framework handlers are exempt: `BasicErrorController` (the `/error` page). The guard does not check role names (a
-misspelt role fails closed); niord-base's `RestControllerSecurityAnnotationTest` does, for its own controllers.
+misspelt role fails closed). The country build group does: `RestControllerSecurityAnnotationTest` and
+`RestHandlerSecurityITTest` hold every `@RolesAllowed` of a handler under `org.niord`, a country's included, to
+`user`, `editor`, `admin` and `sysadmin`, and a handler naming any other role fails the country's build with
+`<Controller>.<method>: unknown role '<name>'`: give such a handler one of the four.
 
 Outside the guard, and refused by review (`docs/fe-country-split-plan.md` §4.11 rule 3): an HTTP endpoint that
 is not such a handler method, that is a servlet or `ServletRegistrationBean`, a servlet filter, a `RouterFunction`, an
