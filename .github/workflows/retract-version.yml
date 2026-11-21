@@ -210,7 +210,7 @@ jobs:
           # Without the token the Packages step would fail and the release and the tag would
           # still go: half a retraction. Refused whole instead, before anything is deleted.
           if [ "$HAS_DELETE_TOKEN" != "true" ]; then
-            echo "::error::The retract environment holds no NIORD_DELETE_TOKEN; nothing was retracted."
+            echo "::error::The retract environment holds no NIORD_DELETE_TOKEN; nothing was retracted. Add the machine user's delete-only token (delete:packages, read:packages) as the secret NIORD_DELETE_TOKEN of the environment retract (Settings → Environments), then start the workflow again."
             exit 1
           fi
           {

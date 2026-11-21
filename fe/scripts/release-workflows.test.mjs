@@ -1033,7 +1033,9 @@ const validate = (hasToken, { actor = MAINTAINER, authorised = MAINTAINER } = {}
   });
 
 const NO_TOKEN =
-  '::error::The retract environment holds no NIORD_DELETE_TOKEN; nothing was retracted.';
+  '::error::The retract environment holds no NIORD_DELETE_TOKEN; nothing was retracted. ' +
+  "Add the machine user's delete-only token (delete:packages, read:packages) as the secret " +
+  'NIORD_DELETE_TOKEN of the environment retract (Settings → Environments), then start the workflow again.';
 
 /**
  * The retract job's steps in order, each as `{ name, id, if, uses }` from its own keys (the
