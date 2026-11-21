@@ -53,6 +53,10 @@ no new data after the backup, and stands.
   with ingress rate limiting and the realm pattern (Niord roles as client roles; logins through `niord-web` or
   a client listed in `niord.oidc.allowed-clients`). What to check for each is in section 5 of
   [`security-review-2026-09.md`](../../docs/security-review-2026-09.md).
+- **The databases' character locale.** Each environment's database has its character locale read before
+  go-live (a read of `pg_database`): one made with `C`/`POSIX` under the libc provider does not fold Æ, Ø and Å,
+  so the look-ups that ignore case would count case for those letters. DB3 in
+  [`be/docs/potential-errors.md`](../../be/docs/potential-errors.md) explains it and holds the query.
 
 ### The repository and the backend settings
 
@@ -138,7 +142,10 @@ Background: [`niord-info-integration-plan.md`](niord-info-integration-plan.md).
 - The teaser's `?area=` is matched against the country's root areas letter for letter for the map's starting
   view (`initialMapView` in `shared/utils/root-area-view.ts`), while the backend matches an area's MRN without regard to case since 2026-11-21. An MRN given in other capital
   letters finds the area's messages, but the teaser's map starts on the country's first root area until the
-  messages frame it. Comparing an MRN without regard to case there closes it.
+  messages frame it. Comparing an MRN without regard to case there closes it. The messages page's remembered
+  root area (`selectedRootArea` in `features/messages/messages.store.ts`) also compares an MRN letter for letter,
+  and stays so: the value is the reader's own earlier pick, written by this site or carried over from the
+  previous system's site, never typed, so it holds the id or the MRN as a backend sent it.
 - The print route (`/messages/print`) and the teaser render outside the site's layout, so neither has a main
   landmark and a screen reader's jump to the main content finds nothing there. Wrapping each view's content in
   `<main>` closes it.
