@@ -1243,7 +1243,10 @@ country — hence split tokens, hash pins and, later, attestations.
      app's private key and id live only in the base product's main-only `publish` environment, and the gate warns
      when the key is a repository secret.
      The list is `.github/maintainers`, read from `main` whatever ref a run comes from, and
-     checked against the run's triggering actor (a re-run by someone else is checked too). Until a rule on `main`
+     checked against the run's triggering actor (a "Re-run all jobs" by someone else is checked too; a
+     "Re-run failed jobs" does not repeat the check, so `retract-version.yml` refuses one started by anyone
+     but the login its `authorise` job checked, since 2026-11-21, while in `publish.yml` it completes the jobs
+     a maintainer's break-glass run had started). Until a rule on `main`
      requires review, whoever may write `main` may also
      edit `.github/maintainers` or the two workflows in the same push, so who may retract or break-glass is in
      effect who may write `main`: write access only for named maintainers carries the rule (required review

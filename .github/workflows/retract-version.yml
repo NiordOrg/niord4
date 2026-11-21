@@ -51,7 +51,11 @@ name: Retract version
 # the dispatched ref's copy), and a run while the `retract` environment is missing or allows any
 # other branch than main (GitHub would create a missing one, with no rule, for the retract job).
 # A dispatch runs the dispatched ref's own copy of this file; what holds for every copy is that
-# environment's deployment branch rule, main only, a repository setting.
+# environment's deployment branch rule, main only, a repository setting. "Re-run all jobs" checks
+# the person re-running it again; "Re-run failed jobs" does not run a succeeded authorise again,
+# so the retract job's validation refuses an attempt started by anyone but the login authorise
+# checked (since 2026-11-21: a run refused for want of NIORD_DELETE_TOKEN is a failed run with
+# nothing deleted, and re-running it is the natural next act once the token is there).
 #
 # The packages belong to NiordOrg/niord, so the GITHUB_TOKEN cannot touch them: the Packages step
 # uses NIORD_DELETE_TOKEN, a secret of the `retract` environment — a classic personal access token
@@ -98,8 +102,13 @@ jobs:
     permissions:
       contents: read    # read .github/maintainers from main
       actions: read     # read the retract environment and its branch rules
+    # The login checked, for the retract job: a "Re-run failed jobs" keeps this job's outputs
+    # from the attempt that ran it.
+    outputs:
+      actor: ${{ steps.check.outputs.actor }}
     steps:
       - name: Maintainer, main, and a main-only environment
+        id: check
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -158,6 +167,7 @@ jobs:
           fi
           require_maintainer "retract a version"
           require_main_only retract
+          echo "actor=$ACTOR" >> "$GITHUB_OUTPUT"
 
   retract:
     name: Retract ${{ inputs.version }}
@@ -169,7 +179,8 @@ jobs:
     permissions:
       contents: write   # delete the tag and the release
     # The inputs reach the scripts as environment variables (VERSION above, REASON below), never
-    # as template expressions inside a script, so they stay data. The validation also refuses the
+    # as template expressions inside a script, so they stay data. The validation also refuses an
+    # attempt started by anyone but the login authorise checked (a "Re-run failed jobs"), and the
     # run while the environment holds no NIORD_DELETE_TOKEN. Every step after the validation runs
     # only once it succeeded; the later ones also after a failed Packages step (a token the registry
     # refuses, a server error), so the release and the tag go and the Harbor list is written
@@ -179,6 +190,9 @@ jobs:
         id: validate
         env:
           REASON: ${{ inputs.reason }}
+          # The login authorise checked, and who started this attempt.
+          AUTHORISED: ${{ needs.authorise.outputs.actor }}
+          ACTOR: ${{ github.triggering_actor }}
           # Whether the environment holds the delete token, as true or false: the token itself
           # never enters this step.
           HAS_DELETE_TOKEN: ${{ secrets.NIORD_DELETE_TOKEN != '' }}
@@ -186,6 +200,11 @@ jobs:
           set -euo pipefail
           if ! [[ "$VERSION" =~ ^4\.0\.[0-9]+$ ]]; then
             echo "::error::'$VERSION' is not a 4.0.<run> version"
+            exit 1
+          fi
+          # A "Re-run failed jobs" runs this job without authorise: whoever started it was not checked.
+          if [ -z "$AUTHORISED" ] || [ "$ACTOR" != "$AUTHORISED" ]; then
+            echo "::error::'$ACTOR' started this attempt, but authorise checked '$AUTHORISED': use Re-run all jobs, or start a new run; nothing was retracted."
             exit 1
           fi
           # Without the token the Packages step would fail and the release and the tag would

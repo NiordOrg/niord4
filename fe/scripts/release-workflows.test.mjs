@@ -9,7 +9,8 @@
  * niord-local-run and niord-country-kit among them; the local-run zip no image job is given, and
  * the kit package is built and checked before the first deploy; both deploys with a stub
  * ./mvnw), the authorisation, validation and package steps of the retraction (a run refused
- * whole, before any deleting step, without its delete token), the bump job (its shape read
+ * whole, before any deleting step, without its delete token or when someone other than the login
+ * authorise checked started the attempt), the bump job (its shape read
  * from the text, its skip without the app's id or key, its one command, and once against the fake
  * GitHub of github-api-stub.mjs in a worker) and the gate's check of where the bump app's key is;
  * and that the helper removes each run's folder. What runs is the text of the
@@ -1016,10 +1017,19 @@ const AUTHORISE = stepRun(RETRACT, { job: 'authorise', step: 'Maintainer, main' 
 const VALIDATE = { job: 'retract', step: 'Validate input' };
 const PACKAGES = stepRun(RETRACT, { job: 'retract', step: 'GitHub Packages of NiordOrg/niord' });
 
-/** The validation step's bash for 4.0.140, `hasToken` the true or false its env hands it. */
-const validate = (hasToken) =>
+/**
+ * The validation step's bash for 4.0.140, `hasToken` the true or false its env hands it, `actor`
+ * who started the attempt and `authorised` the login the authorise job checked.
+ */
+const validate = (hasToken, { actor = MAINTAINER, authorised = MAINTAINER } = {}) =>
   runBash(stepRun(RETRACT, VALIDATE), {
-    env: { VERSION: '4.0.140', REASON: 'a bad build', HAS_DELETE_TOKEN: hasToken },
+    env: {
+      VERSION: '4.0.140',
+      REASON: 'a bad build',
+      AUTHORISED: authorised,
+      ACTOR: actor,
+      HAS_DELETE_TOKEN: hasToken,
+    },
   });
 
 const NO_TOKEN =
@@ -1117,6 +1127,36 @@ describe('retract-version.yml', () => {
   it('lets a maintainer retract from main while retract allows main only', () => {
     const result = authorise();
     assert.equal(result.status, 0, show(result));
+    assert.equal(result.outputs.actor, MAINTAINER, show(result));
+  });
+
+  it('refuses an attempt started by anyone but the login authorise checked (Re-run failed jobs)', () => {
+    for (const [actor, authorised] of [
+      ['someone-else', MAINTAINER],
+      [MAINTAINER, ''],
+    ]) {
+      const result = validate('true', { actor, authorised });
+      assert.equal(result.status, 1, show(result));
+      assert.deepEqual(outputLines(result.stdout), [
+        `::error::'${actor}' started this attempt, but authorise checked '${authorised}': use Re-run all jobs, or start a new run; nothing was retracted.`,
+      ]);
+      assert.equal(result.summary, '');
+    }
+  });
+
+  it("hands the login authorise checked to the retract job's validation, beside who started the attempt", () => {
+    assert.match(
+      code(jobText(RETRACT, 'authorise')),
+      /^ {4}outputs:\r?\n {6}actor: \$\{\{ steps\.check\.outputs\.actor \}\}\r?$/m,
+    );
+    assert.equal(
+      stepEnv(RETRACT, { job: 'authorise', step: 'Maintainer, main' }).ACTOR,
+      '${{ github.triggering_actor }}',
+    );
+    assert.match(code(jobText(RETRACT, 'authorise')), /^ {8}id: check\r?$/m);
+    const env = stepEnv(RETRACT, VALIDATE);
+    assert.equal(env.AUTHORISED, '${{ needs.authorise.outputs.actor }}');
+    assert.equal(env.ACTOR, '${{ github.triggering_actor }}');
   });
 
   it('refuses a login not on the maintainer list', () => {
