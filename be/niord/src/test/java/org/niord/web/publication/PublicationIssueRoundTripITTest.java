@@ -790,9 +790,11 @@ class PublicationIssueRoundTripITTest extends PublicationHttpFixture {
 
     /**
      * The eight endpoints of the curation surface (five reads, three writes) answer an administrator and a system
-     * administrator of the domain that owns the series, and refuse an editor, a plain user and an administrator of
-     * another domain. There is no separate curation role: the role publication-curate that a realm set up earlier may
-     * still carry gives nothing, and the test realm no longer has it.
+     * administrator of the domain that owns the series, and refuse a caller who is not an administrator in the domain
+     * the request names: an editor, a plain user, and an administrator of another domain while the request names this
+     * one. The writes also refuse an administrator sitting at another domain; the reads answer that administrator there, as they are
+     * not scoped by domain (security review F-X129, accepted). There is no separate curation role: the test realm no
+     * longer has the role publication-curate, and the tier matrix shows that holding it admits nothing.
      */
     @Test
     void theCurationSurfaceIsAnAdministratorsOfTheOwningDomain() {
@@ -833,7 +835,11 @@ class PublicationIssueRoundTripITTest extends PublicationHttpFixture {
             assertEquals(Map.of(), decisions(publicId), role + "'s decisions withdrawn");
         }
 
-        // The same administrator, sitting at the other desk, may change nothing of this domain's issue
+        // The same administrator, sitting at the other desk, may read the curation surface (unscoped, F-X129) ...
+        for (String read : reads) {
+            as("admin", OTHER_DOMAIN).get(read).then().statusCode(200);
+        }
+        // ... but may change nothing of this domain's issue
         Map<String, Object> curation = Map.of("messageUid", NM_002, "reason", "Another desk",
                 "version", version(publicId));
         refusedWith(as("admin", OTHER_DOMAIN).body(curation).put(issue + "/overrides/include"), 403, "NOT_IN_DOMAIN",
