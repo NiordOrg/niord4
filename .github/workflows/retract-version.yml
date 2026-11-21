@@ -27,8 +27,8 @@ name: Retract version
 #   git               the v4.0.<run> tag
 #   Harbor            NOT deleted here: niord/niord-app-en and charts/niord are listed in the
 #                     summary for deletion by hand in the Harbor UI, and after them, as history,
-#                     niord/niord-app-dk and niord/niord-app-gl (which niord-ng built from 4.0.50
-#                     until the country modules left on 2026-10-06) and the names up to 4.0.49
+#                     niord/niord-app-dk and niord/niord-app-gl (which the earlier private
+#                     repository built from 4.0.50 until the country modules left on 2026-10-06) and the names up to 4.0.49
 #                     (niord/niord-app-be, niord/niord-dk-be, niord/niord-gl-be), which a
 #                     retraction of an old version may need. A country's own images are tagged
 #                     <base>.<run> and are retracted in its repository. The `github-push` robot
@@ -272,8 +272,8 @@ jobs:
             echo "Project \`$HARBOR_PROJECT\` on https://$REGISTRY — each repository's artifact tagged \`$VERSION\`, where present:"
             echo ""
             # The current set first: niord-app-en and the chart. Then the history: niord-app-dk
-            # and niord-app-gl, which niord-ng built from 4.0.50 until the country modules left
-            # on 2026-10-06, and the niord/<module>-be names up to 4.0.49
+            # and niord-app-gl, which the earlier private repository built from 4.0.50 until the
+            # country modules left on 2026-10-06, and the niord/<module>-be names up to 4.0.49
             # (docs/image-split-plan.md, step 2). They stay for a retraction of an old version, and
             # go out of this list when their repositories are deleted (step 4). A country's own
             # images are tagged <base>.<run> and are retracted in its repository.

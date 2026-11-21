@@ -133,7 +133,7 @@ describe('publish.yml: the gate', () => {
     );
   });
 
-  it('numbers run 1 4.0.182, after the 4.0.181 SIFA-DK/niord-ng published last', () => {
+  it('numbers run 1 4.0.182, after the 4.0.181 the earlier private repository published last', () => {
     const result = gate({ env: { GITHUB_RUN_NUMBER: '1' } });
     assert.equal(result.status, 0, show(result));
     assert.equal(result.outputs.version, '4.0.182', show(result));

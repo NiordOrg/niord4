@@ -89,8 +89,8 @@ name: Publish
 # ---------------------------------------------------------------------------------------------
 # `4.0.<run number of THIS workflow + 181>` (design §3) — monotonic and sortable, which is all a
 # pin needs (devops-niord's staging bump and a country's <parent>). The 181: this repository, NiordOrg/niord4,
-# started on 2026-11-17 with no history and its run numbers at 1, and SIFA-DK/niord-ng, where this
-# workflow ran before, published up to 4.0.181; so run 1 is 4.0.182 and the sequence goes on. An
+# started on 2026-11-17 with no history and its run numbers at 1, and the earlier private
+# repository, where this workflow ran before, published up to 4.0.181; so run 1 is 4.0.182 and the sequence goes on. An
 # expression cannot add, so the run's name shows the run number; the gate's summary, the tag and
 # the release carry the version. Every "4.0.<run>" below means that version. It is passed to Maven
 # as -Drevision (be/pom.xml declares <version>${revision}</version>), so nothing in the tree is
@@ -271,7 +271,7 @@ jobs:
           ACTOR: ${{ github.triggering_actor }}
         run: |
           set -euo pipefail
-          # + 181: SIFA-DK/niord-ng published up to 4.0.181 (header, "Version and tag").
+          # + 181: the earlier private repository published up to 4.0.181 (header, "Version and tag").
           version="4.0.$((GITHUB_RUN_NUMBER + 181))"
 
           skip() {

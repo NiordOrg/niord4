@@ -105,6 +105,10 @@ no new data after the backup, and stands.
   reports, so the stored value stays hidden behind it. A row stored with
   `web` off, as that data also carries, never reaches the web-settings endpoint at all, so neither frontend shows
   a ribbon for it.
+- **A person's first name in the publications API contract.** `docs/publications/API-CONTRACT.md` names a
+  person by first name sixteen times, in text from before 2026-11-17, where the repository's rule for public
+  text (AGENTS.md, "This repository is public") now asks for the decision or the role instead. A clean-up of
+  its own: each mention is reworded to say what was decided, with no behaviour or contract changed.
 
 ### Before the public site's first release
 
