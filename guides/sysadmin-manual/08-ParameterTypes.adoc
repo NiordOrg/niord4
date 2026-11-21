@@ -121,9 +121,10 @@ parameters of an existing one. The copy opens with an empty name, which you give
 [#deleting-a-parameter-type]
 === Deleting a Parameter Type
 
-Click the bin of a row (*Delete*) and confirm with *Yes*. Niord does not check whether the type is
-in use, so first make sure that no template (see <<categories,Categories>>) and no composite
-parameter type has a parameter of the type.
+Click the bin of a row (*Delete*) and confirm with *Yes*. Niord refuses to delete a type that is in
+use, that is one that a template (see <<categories,Categories>>) or a composite parameter type has a
+parameter of, and says that the type could not be deleted: first remove those parameters, or give
+them another type.
 
 [#importing-and-exporting-parameter-types]
 === Importing and Exporting Parameter Types

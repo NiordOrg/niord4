@@ -343,7 +343,8 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   by one of its names in that name's language,
   case-insensitively, under the same parent (a root among the roots only), so an addition carries the English
   name, and the parents' too, and a
-  `da`-only entry creates a second category; a parameter type by its name and a template parameter by its `paramId`
+  `da`-only entry creates a second category; a parameter type by its exact name (an entry whose name differs from an existing type's
+  only in capital letters is refused, and one with a standard type's name in any capitals is skipped) and a template parameter by its `paramId`
   (then by its order among equal ones), a promulgation type by its `typeId` and a report by its `reportId`. A whole
   restatement of a base product entry is applied by the same rule: its values replace the base product's where they
   differ, and an addition that gives only the matching key and what it adds gives the same rows as a restatement
