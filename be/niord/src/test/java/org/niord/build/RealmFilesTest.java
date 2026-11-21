@@ -108,7 +108,8 @@ class RealmFilesTest {
     /**
      * Every client of the three realms has the four roles of the ladder and no other Niord role: an administrator of
      * the domain that owns a publication curates it, and there is no separate curation role. A realm that was imported
-     * before the change may still hold the old {@code publication-curate} role, which the backend no longer reads.
+     * before the change may still hold the old {@code publication-curate} role: no endpoint asks for it, and the
+     * Users &amp; Contacts page's group access counts only the four ({@code UserServiceGroupAccessTest}).
      */
     @Test
     void noRealmCarriesARoleBesideTheLadder() throws Exception {

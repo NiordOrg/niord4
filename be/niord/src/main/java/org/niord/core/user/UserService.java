@@ -382,11 +382,18 @@ public class UserService extends BaseService {
         }
     }
 
-    /** Determine which of the groups (and sub-groups) the user has access to **/
+    /** The domain roles a group's mapping is weighed by: any other client role of the domain gives nothing */
+    private static final Set<String> DOMAIN_ROLES = Set.of(Roles.USER, Roles.EDITOR, Roles.ADMIN, Roles.SYSADMIN);
+
+    /**
+     * Determine which of the groups (and sub-groups) the user has access to: a group is active when it maps one of
+     * the four domain roles of the domain's client and the caller holds that role. A client role outside the four
+     * (such as one a realm kept from an earlier version) does not make a group active, even for a caller who holds it.
+     **/
     private void resolveKeycloakGroupAccess(Domain domain, GroupVo group) {
         try {
             List<String> roles = keycloakIntegrationService.getKeycloakRoles(domain, group.getId());
-            group.setActive(roles.stream().anyMatch(this::isCallerInRole));
+            group.setActive(roles.stream().filter(DOMAIN_ROLES::contains).anyMatch(this::isCallerInRole));
         } catch (Exception e) {
             group.setActive(false);
             log.debug("Error reading Keycloak group access : " + e.getMessage());

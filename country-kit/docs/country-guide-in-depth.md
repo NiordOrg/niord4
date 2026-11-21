@@ -1092,7 +1092,10 @@ role on. At every start, the launcher creates in the shared local realm `niord` 
 it is bearer-only, like the realm's other domain clients. It holds the roles `user`, `editor`,
 `admin` and `sysadmin`: `editor` holds `user`; `admin` holds `editor`; `sysadmin` holds `editor`
 and `admin`. The group `Sysadmin` is given `sysadmin`. A client an earlier launcher made also
-has the role `publication-curate`; Niord does not read it, and it can stay.
+has the role `publication-curate`, given to the group `Sysadmin` too. No endpoint asks for it,
+and the Users & Contacts page does not count it when it decides which groups an administrator
+may hand out; the launcher leaves it, so delete it from the client in Keycloak's admin console,
+which also takes it off the composites and the group.
 
 The launcher never updates or deletes anything in Keycloak: a client that exists is left exactly as
 it is, and a second start adds nothing. You see one `>> Creating the local Keycloak client <id>`

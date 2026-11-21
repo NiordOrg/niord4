@@ -40,7 +40,9 @@ The backend contract for a country, `country-api.md`, is not here: it is in the 
   lacks, the library creates the client (its client ID is the domain id, bearer-only like the realm's own domain
   clients), its roles `user`, `editor`, `admin` and `sysadmin` (`editor` holds `user`; `admin` holds `editor`;
   `sysadmin` holds `editor` and `admin`), and gives `sysadmin` to the group `Sysadmin`. A client made by an earlier
-  version of the library also has the role `publication-curate`, which Niord does not read; it is left as it is.
+  version of the library also has the role `publication-curate`: no endpoint asks for it, and the Users & Contacts
+  page does not count it when it decides which groups an administrator may hand out. The library leaves it; delete
+  it from the client in the admin console, which also takes it off the composites and the group `Sysadmin`.
 - Only the local `sysadmin` is given a role in the new domain; give `admin`, `editor` and `user` theirs in the
   admin console when needed.
 - Once and never more: a client that exists is left exactly as it is, nothing in Keycloak is updated or deleted,
