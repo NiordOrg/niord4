@@ -28,7 +28,8 @@ name: Retract version
 #   Harbor            NOT deleted here: niord/niord-app-en and charts/niord are listed in the
 #                     summary for deletion by hand in the Harbor UI, and after them, as history,
 #                     niord/niord-app-dk and niord/niord-app-gl (which the earlier private
-#                     repository built from 4.0.50 until the country modules left on 2026-10-06) and the names up to 4.0.49
+#                     repository built from 4.0.50 until the country modules left on 2026-10-06)
+#                     and the names up to 4.0.49
 #                     (niord/niord-app-be, niord/niord-dk-be, niord/niord-gl-be), which a
 #                     retraction of an old version may need. A country's own images are tagged
 #                     <base>.<run> and are retracted in its repository. The `github-push` robot
