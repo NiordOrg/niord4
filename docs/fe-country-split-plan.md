@@ -1254,7 +1254,9 @@ country — hence split tokens, hash pins and, later, attestations.
      secret; `NIORD_DELETE_TOKEN` (`delete:packages`, `read:packages`) is a secret of `retract`. Both
      environments allow `main` only, like `harbor`, and because GitHub creates an environment a job names
      without any rule, `publish.yml`'s gate and `retract-version.yml`'s first job fail a run while `publish`,
-     `harbor` or `retract` is missing or allows another branch, before any job enters one.
+     `harbor` or `retract` is missing or allows another branch, before any job enters one; and
+     `retract-version.yml` refuses a run whole, before it deletes anything, while `retract` holds no
+     `NIORD_DELETE_TOKEN`.
    - **Until the country split (owner, 2026-10-22).** "When full repo is changed and everything is split up to
      each country, then we will rotate keys and setup proper accounts": until then the build and `web-publish`
      jobs deploy with the repository secrets `NIORDORG_PACKAGES_USER` / `NIORDORG_PACKAGES_TOKEN`,
@@ -1267,8 +1269,9 @@ country — hence split tokens, hash pins and, later, attestations.
      Present state (read 2026-11-21): `NIORDORG_PACKAGES_USER` / `NIORDORG_PACKAGES_TOKEN` have since moved,
      under the same names, from the repository to the `publish` environment, so a branch's copy can no longer
      name them; `retract` exists, main only, without `NIORD_DELETE_TOKEN`, so a run gets past `authorise` and
-     its Packages step fails for want of a token; the machine user, its two tokens and the steps' names are
-     still to come.
+     the `retract` job's first step refuses it whole, before anything is deleted (since 2026-11-21; until then
+     its Packages step failed for want of a token and the release and the tag still went); the machine user,
+     its two tokens and the steps' names are still to come.
    - **As built.** `publish.yml` starts after Backend CI, Frontend CI and Info CI,
      and its gate requires each that ran for the commit to have succeeded (one its path filter skipped counts as
      not run), because the zip carries the public site's sources: a merge confined to the public site

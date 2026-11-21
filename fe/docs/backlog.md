@@ -73,9 +73,10 @@ no new data after the backup, and stands.
   environment. `retract-version.yml`'s `retract` job names a `retract` environment and reads `NIORD_DELETE_TOKEN`
   from it, and its `authorise` job refuses every run while that environment is missing or allows another branch
   than main. `retract` exists, main only, but holds no `NIORD_DELETE_TOKEN` yet (read 2026-11-21): a maintainer's
-  run from main passes `authorise`, its Packages step has no token and fails, and the steps after it still delete
-  the release and the tag, so a version cannot be retracted whole. Still to come: a NiordOrg machine user with
-  admin on `NiordOrg/niord`; its classic tokens, `write:packages` as `NIORD_PUBLISH_TOKEN` in `publish` (its login
+  run from main passes `authorise`, and the `retract` job's first step refuses it whole, before anything is
+  deleted, while the token is missing (since 2026-11-21; until then the Packages step failed and the steps after
+  it still deleted the release and the tag), so no version can be retracted until the token is there. Still to
+  come: a NiordOrg machine user with admin on `NiordOrg/niord`; its classic tokens, `write:packages` as `NIORD_PUBLISH_TOKEN` in `publish` (its login
   as the variable `NIORD_PUBLISH_USER`) and `delete:packages` + `read:packages` as `NIORD_DELETE_TOKEN` in
   `retract`, main only; the six deploy steps moved to those names; then the old token revoked, and both new
   tokens rotated yearly ([fe-country-split-plan](../../docs/fe-country-split-plan.md) §4.11 rule 1).

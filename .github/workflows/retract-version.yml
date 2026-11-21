@@ -56,7 +56,10 @@ name: Retract version
 # The packages belong to NiordOrg/niord, so the GITHUB_TOKEN cannot touch them: the Packages step
 # uses NIORD_DELETE_TOKEN, a secret of the `retract` environment — a classic personal access token
 # of the NiordOrg machine user publish.yml deploys as, with delete:packages and read:packages only
-# (publish.yml's token cannot delete). Rotated at the repository move and yearly. The release
+# (publish.yml's token cannot delete). Rotated at the repository move and yearly. While the
+# environment holds no NIORD_DELETE_TOKEN, the retract job's first step refuses the run whole,
+# before anything is deleted (since 2026-11-21: until then the Packages step failed for want of it
+# and the release and the tag still went). The release
 # and the tag go with the workflow token, the release first (deleting a release leaves its tag).
 # A version that is the last one of a package cannot be deleted on its own — the package is
 # deleted instead.
@@ -166,18 +169,29 @@ jobs:
     permissions:
       contents: write   # delete the tag and the release
     # The inputs reach the scripts as environment variables (VERSION above, REASON below), never
-    # as template expressions inside a script, so they stay data. Every step after the validation runs
-    # only once it succeeded; the later ones also after a failed Packages step, so the release and
-    # the tag go and the Harbor list is written whatever happened to the Maven versions.
+    # as template expressions inside a script, so they stay data. The validation also refuses the
+    # run while the environment holds no NIORD_DELETE_TOKEN. Every step after the validation runs
+    # only once it succeeded; the later ones also after a failed Packages step (a token the registry
+    # refuses, a server error), so the release and the tag go and the Harbor list is written
+    # whatever happened to the Maven versions.
     steps:
       - name: Validate input
         id: validate
         env:
           REASON: ${{ inputs.reason }}
+          # Whether the environment holds the delete token, as true or false: the token itself
+          # never enters this step.
+          HAS_DELETE_TOKEN: ${{ secrets.NIORD_DELETE_TOKEN != '' }}
         run: |
           set -euo pipefail
           if ! [[ "$VERSION" =~ ^4\.0\.[0-9]+$ ]]; then
             echo "::error::'$VERSION' is not a 4.0.<run> version"
+            exit 1
+          fi
+          # Without the token the Packages step would fail and the release and the tag would
+          # still go: half a retraction. Refused whole instead, before anything is deleted.
+          if [ "$HAS_DELETE_TOKEN" != "true" ]; then
+            echo "::error::The retract environment holds no NIORD_DELETE_TOKEN; nothing was retracted."
             exit 1
           fi
           {

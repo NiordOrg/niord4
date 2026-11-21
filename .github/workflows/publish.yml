@@ -155,7 +155,8 @@ name: Publish
 # NIORD_PUBLISH_USER), the deploy steps moved to those names, its delete-only token as
 # NIORD_DELETE_TOKEN of `retract`, both rotated yearly (docs/fe-country-split-plan.md §4.11
 # rule 1). `publish` itself, main only, is required already: the gate checks it. Until `retract`
-# exists, retract-version.yml refuses every run. Decided 2026-10-06 (be/pom.xml,
+# exists, main only, and holds NIORD_DELETE_TOKEN, retract-version.yml refuses every run, before
+# it deletes anything. Decided 2026-10-06 (be/pom.xml,
 # github.repository): the Maven registry is repository-scoped, so packages published here, from a
 # private repository, were readable by no other repository's workflow; packages of the public
 # NiordOrg/niord are readable with any token and cost no storage. Apart from the bump job, nothing
