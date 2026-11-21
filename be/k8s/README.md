@@ -309,7 +309,7 @@ the test realm and `admin`/`admin`.
   domain has those ids, so no role on them counted in any domain. The realm file now names them
   after the domains (`niord-nw` ...). A dev-mode Keycloak imports the new file at its next start,
   and the upgrade to this chart restarts it (the realm's checksum changes): it then has the new
-  clients and the three further test users, and the old clients are gone, as is everything made
+  clients and the further test users, and the old clients are gone, as is everything made
   in its console since its last start. A production-mode realm, and a realm made by hand on a
   shared Keycloak, are not imported again and keep the old clients: in the admin console rename
   each (Clients, the client, Settings, *Client ID*, Save). Its roles and every user's and group's
@@ -334,6 +334,17 @@ the test realm and `admin`/`admin`.
   admin console: Clients, `niord-client-master`, Roles, Create role `user`; then the role
   `editor`, Associated roles, Assign role, the client role `user` of `niord-client-master`. The
   next token of each person with `editor`, `admin` or `sysadmin` there carries `user`.
+- **A realm imported from a chart of before 21 November 2026 has a client role
+  `publication-curate`** on each domain client and on `niord-client-master`, held through `admin`
+  and `sysadmin` and given to some test users directly, and, where the test users were kept, the
+  test user `testcurator` (password `test`, with `user` and that role on `niord-nw`). The realm
+  file now has neither, and nothing in Niord asks for the role. The upgrade to the chart that
+  drops them restarts Keycloak once (the realm's checksum changes): a dev-mode Keycloak then
+  imports the new file, without the role and the user, and loses what was made in its console
+  since its last start. A production-mode realm, and a realm on a shared Keycloak, are not
+  imported again and keep both: in the admin console delete the role from each client that has it
+  (Clients, the client, Roles, the role, Delete), which also takes it off the composite roles and
+  every user's and group's role mappings, and delete the user `testcurator` (Users).
 
 The production-mode realm holds no test user: their passwords are in this repository, which is
 public. `keycloak.testUsers: true` keeps them, for a staging with no real data on a closed network
