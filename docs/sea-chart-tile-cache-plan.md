@@ -334,8 +334,8 @@ location is left as it is.
 - The provider's real answers: no token was at hand while building, so that it answers a
   256 x 256 PNG is assumed, and the tests use a stub. A provider that answers otherwise shows as
   `failed` in the line and as blank tiles.
-- The console no longer floods on a pan (the backlog's _Protected-WMS redirect flood_ came from
-  the cross-origin `wmsUrl`; to be confirmed once step 3 is in). Since 2026-11-21 the servlet
+- The console no longer floods on a pan (the flood came from the cross-origin `wmsUrl` and from
+  the blank-tile redirect; to be confirmed once step 3 is in). Since 2026-11-21 the servlet
   answers "no tile" with the blank picture itself, no redirect, so no redirect can name another
   origin either.
 
