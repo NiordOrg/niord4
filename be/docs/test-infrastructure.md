@@ -251,12 +251,14 @@ containers' dynamic coordinates into the Spring `Environment` via a `@DynamicPro
 It registers the standard Spring keys the application reads — `spring.datasource.url`/`username`/`password`,
 `spring.liquibase.change-log`, `spring.security.oauth2.resourceserver.jwt.issuer-uri`,
 `spring.mail.host`/`port` (and `niord.smtp.host`/`port`) — each resolved lazily from the shared
-`NiordTestContainers` singletons, so no fixed/hardcoded ports are used anywhere. The base class also
-sets a `NIORD_HOME` system property to a throwaway temp dir (which `niord.home` itself resolves to, ahead of
-the row, in `SettingsService.override`, and which is also the value of the `${NIORD_HOME}` token of `niord.home`
-in the test tree's `niord.json`, which the IT start writes as settings; the fixture holds no `Setting` row), so
-the app's startup services have a writable home
-for the Lucene index, batch jobs and repo paths. The folder (`java.io.tmpdir/niord`, or the exported
+`NiordTestContainers` singletons, so no fixed/hardcoded ports are used anywhere. When `NIORD_HOME` is
+neither a system property nor an environment variable, or is set blank, the base class sets a `NIORD_HOME`
+system property to a throwaway temp dir (which `niord.home` itself resolves to, ahead of the row, in
+`SettingsService.override`, and which is also the value of the `${NIORD_HOME}` token of `niord.home` in the test
+tree's `niord.json`, which the IT start writes as settings; the fixture holds no `Setting` row), so the app's
+startup services have a writable home for its cache (the Lucene index, previews, thumbnails, map images and
+tiles) and the batch jobs; without one, the start is refused (`SettingsService.refuseAnUnresolvableHome`). The
+repository's files are rows of the database, not files under the home. The folder (`java.io.tmpdir/niord`, or the exported
 `NIORD_HOME`) is not emptied between runs: `IssuePreviewAndFileITTest.theSweepRemovesOnlyExpiredGenerations`
 counts the issue previews under it and is red in a full run once earlier runs have left generations older
 than the preview TTL (seven days) there. The failing sweep removes them, so the test is green when run

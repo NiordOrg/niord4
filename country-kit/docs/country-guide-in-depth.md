@@ -1169,7 +1169,8 @@ NIORD_HOME=<a folder of your own> ./mvnw spring-boot:run -Dspring-boot.run.profi
 
 Without `NIORD_HOME` the start is refused, since your settings give `niord.home` as
 `${NIORD_HOME}`: the log says
-`niord.home cannot be resolved: its value is "${NIORD_HOME}" (from the settings file) and no NIORD_HOME is set; set the environment variable NIORD_HOME or start with -Dniord.home=<folder>`.
+`niord.home cannot be resolved: its value is "${NIORD_HOME}" (from the settings file) and no NIORD_HOME is set; set the environment variable NIORD_HOME or start with -Dniord.home=<folder>`
+(or `from the database's niord.home setting`, on a database your backend has started before).
 
 Your tests run in UTC too: `niord-parent` sets the property `argLine` to `-Duser.timezone=UTC`,
 which Surefire and Failsafe read, and your pom inherits it. An `argLine` of your own, in your pom
