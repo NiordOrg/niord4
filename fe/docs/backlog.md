@@ -21,7 +21,7 @@ They came from a defect of the Quarkus backend the redesign was built on, fixed 
 measured: every read of a series or an issue rewrote the rows it had loaded, so two reads at once collided
 on them. This backend's reads write nothing (`PublicationReadsWriteNothingITTest`). Two go-live rules
 rested on that defect alone, "nobody on the system during the import" and verification in sequence
-afterwards; both were dropped on 2026-11-21, because the defect they guarded against is fixed and that
+afterwards; both were dropped as rules of their own on 2026-11-21, because the defect they guarded against is fixed and that
 test holds it. Keeping users off production from the final rehearsal's
 backup until the window closes, which the process and the sheet's D1 both require, has a reason of its own,
 no new data after the backup, and stands.

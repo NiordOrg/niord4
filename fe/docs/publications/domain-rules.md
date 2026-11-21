@@ -1023,7 +1023,10 @@ There is no per-series switch, no estate-wide switch and no readiness gate; undo
 full database restore, which is a decision taken outside these screens.
 
 **Until go-live, the go-live process documents are binding**: the ruled process, the mechanics underneath
-it, the re-run rules and the outstanding task list, all kept outside this repository. Production is
+it, the re-run rules and the outstanding task list, all kept outside this repository. Two of their rules are
+not: "nobody on the system during the import" and verification in sequence rested on the concurrent-read
+defect alone, and were dropped as rules of their own on 2026-11-21 ([backlog §1](../backlog.md#1-before-production-go-live)); the freeze
+from the final backup until the window closes stands. Production is
 **one window**, not a passive period: import, verify and activate happen together, rehearsed identically
 on test from a fresh production restore, with the restore rehearsed and the image frozen after the final
 rehearsal.
