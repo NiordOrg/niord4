@@ -164,8 +164,13 @@ and Failsafe read) set `-Duser.timezone=UTC`; `./run.sh` and `spring-boot:run` s
 `-Dspring-boot.run.jvmArguments=-Duser.timezone=UTC`. The pom sets no `jvmArguments`, so nothing is replaced, and
 `mode=development` is an environment variable and stays (below).
 
-Neither command needs `NIORD_HOME`; the repository root defaults to `~/.niord`, and follows `NIORD_HOME` when it is
-exported and no `-Dniord.home` is given. To run against services you started yourself:
+Neither command needs `NIORD_HOME` on a database only the generic application has started: the Niord home
+(`niord.home`) defaults to `~/.niord`, and follows `NIORD_HOME` when it is exported and no `-Dniord.home` is given. A
+database a country's application has started holds the setting `niord.home` as the token `${NIORD_HOME}`, which wins
+over that default: on such a database export `NIORD_HOME` or pass `-Dniord.home=<folder>`, or the start is refused
+with a message that says so. A home that names no folder (a token nothing sets, or a blank value) always refuses the
+start, before anything is written under it; a `niord.home` property or variable, even a blank one, hides `NIORD_HOME`,
+so give that a folder. To run against services you started yourself:
 
 ```bash
 ./run.sh -Dspring-boot.run.jvmArguments="-Duser.timezone=UTC -Dspring.docker.compose.enabled=false \
@@ -185,8 +190,8 @@ The Danish and Greenland applications left this reactor on 2026-10-06 for `SIFA-
 `NiordOrg/niord`; their READMEs say how to build and run them against the same `docker-compose.yml`
 services as here. A country's launcher uses the same services and the same project `be`, through the same
 `start_services`, so it never touches a running shared container either. What a local run of a country application needs beyond `niord-app` — `NIORD_HOME`,
-because its settings file sets `niord.home` to the token `${NIORD_HOME}` — is documented
-there. A country's local command runs its JVM in UTC too (*The JVM's time zone*, above).
+because its settings file sets `niord.home` to the token `${NIORD_HOME}`, and a start without it is refused — is
+documented there. A country's local command runs its JVM in UTC too (*The JVM's time zone*, above).
 
 ## What the backend serves, and message links
 

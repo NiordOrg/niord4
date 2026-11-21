@@ -1935,8 +1935,8 @@ prerequisite exits 1, both before any docker call but `docker info`.
    for it to answer.
 10. **The bootstrap.** First, at every start and whatever the database holds, the library creates
     in the shared local realm the missing client of each domain of `be/bootstrap/domains.json` with
-    `"active": true`, with the roles `user`, `editor`, `admin`, `sysadmin` and `publication-curate`,
-    and gives `sysadmin` and `publication-curate` to the group `Sysadmin`; a client that exists is
+    `"active": true`, with the roles `user`, `editor`, `admin` and `sysadmin`, and gives `sysadmin`
+    to the group `Sysadmin`; a client that exists is
     left as it is, nothing in Keycloak is updated or deleted, and the base product's archive and a
     `--sample` run are never read
     ([Your sysadmin in your own domain](docs/country-guide-in-depth.md#your-sysadmin-in-your-own-domain)).
@@ -1986,10 +1986,12 @@ prerequisite exits 1, both before any docker call but `docker info`.
   still waits for one, its tables made or not: the next run bootstraps it, with no `dropdb`.
 - **`--sample`**: `niord_sample_<cc>`. It is the launcher's by its name, without a mark, and
   `--sample --reset` is its remedy.
-- **The Niord home** of each database is `~/.niord-local/<database>`: its repository files and its
-  message index belong to that database. It is made when the backend starts, so a refused database
-  gets none, and it is never `~/.niord`, where an older backend's message index makes this one fail
-  at start-up.
+- **The Niord home** of each database is `~/.niord-local/<database>`: the cache it holds (the
+  message index, the issues' previews, the thumbnails, the map images and the map tiles) and the
+  batch jobs' files belong to that database; the repository's files are rows of the database. It
+  is made when the backend starts, so a refused database gets none, and it is never `~/.niord`,
+  where an older backend's message index makes this one fail at start-up. A backend started
+  without a home is refused: its log says `niord.home cannot be resolved`, with the cure.
 
 The plain run is the country's real bootstrap: the base product's archive and the country's own, no
 messages. `--sample` is the base product's archive and the base product's sample, with the country's

@@ -347,14 +347,12 @@ json_find() {
         });' "$1" "$2" "$3"
 }
 
-# Gives the new domain client $1 (its Keycloak id $2) the five roles as the local realm's niord-client-master has
-# them: user and publication-curate plain, editor holding user, admin holding editor and publication-curate, sysadmin
-# holding editor, admin and publication-curate; then the group Sysadmin sysadmin and publication-curate. Fails at the
-# first call that fails, and what was made stays as it is.
+# Gives the new domain client $1 (its Keycloak id $2) the four roles as the local realm's niord-client-master has
+# them: user plain, editor holding user, admin holding editor, sysadmin holding editor and admin; then the group
+# Sysadmin sysadmin. Fails at the first call that fails, and what was made stays as it is.
 domain_client_roles() {
     local client="$1" cid="$2" role roles editor admin sysadmin
-    for role in user:User editor:Editor admin:Administrator 'sysadmin:System administrator' \
-            'publication-curate:Publication curator'; do
+    for role in user:User editor:Editor admin:Administrator 'sysadmin:System administrator'; do
         keycloak_admin create "clients/$cid/roles" -r niord -s "name=${role%%:*}" -s "description=${role#*:}" -i \
             >/dev/null || return 1
     done
@@ -364,18 +362,16 @@ domain_client_roles() {
     sysadmin=$(json_find name sysadmin id <<< "$roles") || return 1
     # A composite takes its client roles through the role's id (--rid); --rname would name a realm role
     keycloak_admin add-roles -r niord --rid "$editor" --cclientid "$client" --rolename user || return 1
-    keycloak_admin add-roles -r niord --rid "$admin" --cclientid "$client" --rolename editor \
-        --rolename publication-curate || return 1
+    keycloak_admin add-roles -r niord --rid "$admin" --cclientid "$client" --rolename editor || return 1
     keycloak_admin add-roles -r niord --rid "$sysadmin" --cclientid "$client" --rolename editor --rolename admin \
-        --rolename publication-curate || return 1
+        || return 1
     # The group by its name, not its path, so that no argument starts with a slash
-    keycloak_admin add-roles -r niord --gname Sysadmin --cclientid "$client" --rolename sysadmin \
-        --rolename publication-curate || return 1
+    keycloak_admin add-roles -r niord --gname Sysadmin --cclientid "$client" --rolename sysadmin || return 1
 }
 
 # Makes the local Keycloak client of each active domain of the domains.json $1 (a country's be/bootstrap/) that the
 # shared local realm niord lacks: shaped as the realm's own domain clients are (its client ID the domain id,
-# bearer-only), with its five roles and the group Sysadmin's (domain_client_roles), so the local sysadmin sees the
+# bearer-only), with its four roles and the group Sysadmin's (domain_client_roles), so the local sysadmin sees the
 # domain's Sysadmin menu. A client that exists is left exactly as it is, and nothing in Keycloak is ever updated or
 # deleted, so a second start adds nothing. Through kcadm.sh in niord-keycloak, signed in at the container's own
 # loopback as Keycloak's local administrator. A failure is reported and never fatal: the next start tries again.
@@ -421,7 +417,7 @@ ensure_domain_clients() {
                 return 0
                 ;;
         esac
-        echo ">> Creating the local Keycloak client $id: the roles user, editor, admin, sysadmin and publication-curate, the last two for the group Sysadmin"
+        echo ">> Creating the local Keycloak client $id: the roles user, editor, admin and sysadmin, the last for the group Sysadmin"
         create=(-s "clientId=$id")
         if [[ -n "$name" ]]; then create+=(-s "name=$name"); fi
         create+=(-s enabled=true -s bearerOnly=true -s publicClient=false -s protocol=openid-connect

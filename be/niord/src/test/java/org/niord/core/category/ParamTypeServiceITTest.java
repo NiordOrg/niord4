@@ -345,6 +345,91 @@ class ParamTypeServiceITTest extends ITTest {
         assertTrue(ex.getMessage().contains("IT-dup-name"), ex.getMessage());
     }
 
+    @Test
+    @Transactional
+    void createParamType_aNameTakenInOtherCapitalLettersIsRefused() {
+        ListParamType lights = new ListParamType();
+        lights.setName("IT-Lights");
+        templateExecutionService.createParamType(lights);
+        em.flush();
+
+        ListParamType twin = new ListParamType();
+        twin.setName("it-lights");
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> templateExecutionService.createParamType(twin),
+                "a name another type has in other capital letters is taken");
+        assertEquals("Another parameter type has the name it-lights", ex.getMessage());
+    }
+
+    @Test
+    @Transactional
+    void createParamType_refusesAStandardTypesNameInOtherCapitalLetters() {
+        ListParamType list = new ListParamType();
+        list.setName("Text");
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> templateExecutionService.createParamType(list));
+        assertEquals("Parameter type Text is a standard type", ex.getMessage());
+        assertTrue(TemplateExecutionService.isStandardParamType("NUMBER"), "the standard-type check ignores case");
+        assertInstanceOf(StandardParamType.class, templateExecutionService.getParamTypeByName("text"));
+        assertNull(templateExecutionService.getParamTypeByName("TEXT"),
+                "which type a name reads stays exact: 'TEXT' is no type's name");
+    }
+
+    @Test
+    @Transactional
+    void updateParamType_aRenameToANameTakenInOtherCapitalLettersIsRefusedAndAnotherSpellingOfItsOwnIsAllowed() {
+        ListParamType lights = new ListParamType();
+        lights.setName("IT-Lights");
+        Integer lightsId = templateExecutionService.createParamType(lights).getId();
+        ListParamType buoys = new ListParamType();
+        buoys.setName("IT-Buoys");
+        Integer buoysId = templateExecutionService.createParamType(buoys).getId();
+        em.flush();
+
+        ListParamType rename = new ListParamType();
+        rename.setId(buoysId);
+        rename.setName("it-LIGHTS");
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> templateExecutionService.updateParamType(rename));
+        assertEquals("Another parameter type has the name it-LIGHTS", ex.getMessage());
+
+        ListParamType ownSpelling = new ListParamType();
+        ownSpelling.setId(lightsId);
+        ownSpelling.setName("IT-LIGHTS");
+        templateExecutionService.updateParamType(ownSpelling);
+        em.flush();
+        em.clear();
+        assertEquals("IT-LIGHTS", em.find(ParamType.class, lightsId).getName(),
+                "a type may be renamed to another spelling of its own name");
+        assertEquals("IT-Buoys", em.find(ParamType.class, buoysId).getName(), "the refused rename changed nothing");
+    }
+
+    @Test
+    @Transactional
+    void updateParamType_typesWhoseNamesDifferOnlyInCaseCanStillBeSavedUnderTheirNames() {
+        // Rows an earlier version let be made: the names differ only in case
+        ListParamType upper = new ListParamType();
+        upper.setName("IT-Twin");
+        em.persist(upper);
+        ListParamType lower = new ListParamType();
+        lower.setName("it-twin");
+        em.persist(lower);
+        em.flush();
+
+        ListParamType keep = new ListParamType();
+        keep.setId(upper.getId());
+        keep.setName("IT-Twin");
+        templateExecutionService.updateParamType(keep);
+        em.flush();
+        em.clear();
+        assertEquals("IT-Twin", em.find(ParamType.class, upper.getId()).getName(),
+                "a type keeping its name is saved, though another has it in other capital letters");
+        assertEquals(upper.getId(), templateExecutionService.getParamTypeByName("IT-Twin").getId(),
+                "the look-up by name is exact");
+        assertEquals(lower.getId(), templateExecutionService.getParamTypeByName("it-twin").getId(),
+                "the look-up by name is exact");
+    }
+
     /**
      * A composite type's parameters are keyed by their id when a template is executed, so two parameters with one id
      * would share one value. The editor's create and update (TemplateExecutionRestService) refuse a body that holds

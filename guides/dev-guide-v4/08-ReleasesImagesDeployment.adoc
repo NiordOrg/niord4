@@ -72,7 +72,8 @@ the one artifact that carries the sample, on purpose, for a local run.
 A published version can be withdrawn with the workflow `.github/workflows/retract-version.yml`. It
 removes the version's Maven artifacts, its release and its tag; the image and the chart in the
 container registry it only lists, and they are deleted there by hand. A country that pinned the
-version is then told to move on.
+version is then told to move on. While the workflow's environment holds no token to delete the
+Maven artifacts with, a run is refused before anything is removed.
 
 [#the-images]
 === The images

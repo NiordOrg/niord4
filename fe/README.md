@@ -45,15 +45,18 @@ No component library is installed, and none is to be added — see
 - Node `^22.22.3 || ^24.15.0 || ^26.0.0` (`package.json` → `engines`); `.nvmrc` pins 24, which is
   also what CI uses.
 - npm 11 (`packageManager` in `package.json`). `.npmrc` sets `legacy-peer-deps=true` because the
-  ESLint TypeScript plugin has not yet widened its peer range to TypeScript 6 — `npm ci` needs no
-  extra flags.
+  `@tiptap` packages are at two versions, whose peer ranges strict resolution refuses (the file
+  says which) — `npm ci` needs no extra flags.
 - npm overrides (`overrides` in `package.json`). A patched version of a transitive package goes
   into the lock with `npm update <package>` when every dependant's range allows it; an override is
   only for a package some dependant pins below the fix, and each one is listed here with the
   advisory, why the lock cannot move, and when it goes. The `zod` and `undici` advisories of October
   2026 (GHSA-mrhx-c7xc-m3w5; GHSA-4qv8-2p9j-2685, GHSA-f72v-6w45-q472, GHSA-xjj6-f33q-929c) need
   none: `@angular/cli` 22.2.4 declares `zod` 4.6.6, and `jsdom`'s range allows `undici` 7.30.1, so
-  both are lock moves. Today there is one override:
+  both are lock moves. Nor does the `minimatch` advisory of November 2026 (GHSA-g3hv-75wg-m249,
+  fixed in 11.0.1), which only the lint tools bring in: ESLint 10.15 declares `minimatch` ^11.0.5
+  and typescript-eslint 8.73 ^11.0.1, so ESLint was a lock move and typescript-eslint's pin moved
+  from 8.56.1. Today there is one override:
   - `vite` 8.3.4: `@angular/build` 22.2.x declares `vite` 8.3.0 exactly, which carries the
     launch-editor advisories GHSA-587h-7wmj-h5pm (high, Windows), GHSA-r825-w8mm-5pxw and
     GHSA-698v-4r3x-3vcv and Vite's own GHSA-9jrq-w75r-8gcw, GHSA-rq7h-c2jc-7f22 and
@@ -184,11 +187,13 @@ From `angular.json`, for `niord-app`. All four configurations are standalone.
 | `production`  | `environment.production.ts`  | —                                                     | yes            | `npm run build` (default)                 |
 | `development` | `environment.development.ts` | — (no optimisation, no budgets, source maps)          | no             | `npm start`, `npm run watch`              |
 | `local`       | `environment.local.ts`       | — (unoptimised), `/rest` proxied to the `be/` backend | no             | `npm run start:local`                     |
-| `test`        | `environment.test.ts`        | — (optimised)                                         | no             | `ng build niord-app --configuration test` |
+| `test`        | `environment.test.ts`        | — (optimised, `production: true`, the TEST badge)     | no             | `ng build niord-app --configuration test` |
 
 The files in `ui-apps/admin/src/environments/` are the base product's and name no deployment:
 `environment.production.ts` and `environment.test.ts` take the API at `/rest` and Keycloak at `/auth`
-on the page's own origin, the single origin a deployment serves the app, the API and Keycloak from;
+on the page's own origin, the single origin a deployment serves the app, the API and Keycloak from,
+and both set `production: true`, so neither build registers the dev routes or lets the e2e token
+stub stand in for Keycloak;
 the development and local files take `/rest` through the dev proxy and the local stack's Keycloak on
 `localhost:8080`, with a world map and no WMS. A country's environments and configurations come
 from its own repository, generated in its workspace by the kit

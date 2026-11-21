@@ -277,17 +277,17 @@ class SweepSelfTest {
 
     @Test
     void anAddedIdentityWhoseTokenCannotBeFetchedFailsTheRun() throws Throwable {
-        assertTrue(SweepIdentity.ADDED_IN_REALM, "the three identities are in the test realm");
+        assertTrue(SweepIdentity.ADDED_IN_REALM, "the two identities are in the test realm");
         try {
             List<DynamicNode> nodes = SweepRun.nodes(0, null, role -> {
-                if (role.equals("curator")) {
+                if (role.equals("domainEditor")) {
                     throw new IllegalStateException("invalid_grant");
                 }
                 return "token-" + role;
             }, null).toList();
             DynamicTest settings = (DynamicTest) nodes.getFirst();
             AssertionError failed = assertThrows(AssertionError.class, () -> settings.getExecutable().execute());
-            assertTrue(failed.getMessage().contains("curator"), failed.getMessage());
+            assertTrue(failed.getMessage().contains("domainEditor"), failed.getMessage());
         } finally {
             SweepRun.detachTheLog();
         }

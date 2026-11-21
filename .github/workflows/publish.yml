@@ -89,8 +89,8 @@ name: Publish
 # ---------------------------------------------------------------------------------------------
 # `4.0.<run number of THIS workflow + 181>` (design §3) — monotonic and sortable, which is all a
 # pin needs (devops-niord's staging bump and a country's <parent>). The 181: this repository, NiordOrg/niord4,
-# started on 2026-11-17 with no history and its run numbers at 1, and SIFA-DK/niord-ng, where this
-# workflow ran before, published up to 4.0.181; so run 1 is 4.0.182 and the sequence goes on. An
+# started on 2026-11-17 with no history and its run numbers at 1, and the earlier private
+# repository, where this workflow ran before, published up to 4.0.181; so run 1 is 4.0.182 and the sequence goes on. An
 # expression cannot add, so the run's name shows the run number; the gate's summary, the tag and
 # the release carry the version. Every "4.0.<run>" below means that version. It is passed to Maven
 # as -Drevision (be/pom.xml declares <version>${revision}</version>), so nothing in the tree is
@@ -132,9 +132,9 @@ name: Publish
 # copy that still contains them. What holds for every copy is the deployment branch rule of the
 # `publish` and `harbor` environments — main only — a repository setting (Settings →
 # Environments), not this file: a branch's copy then never gets the robot credentials, so it
-# pushes no image or chart and no tag (the tag job needs the jobs that use them), and from the
-# country split never the publishing token either; until then that token is a repository secret,
-# which a branch's copy can name (Secrets, below). GitHub creates an environment a job names if
+# pushes no image or chart and no tag (the tag job needs the jobs that use them), and never the
+# publishing token either, which the jobs that deploy read as a secret of `publish` (Secrets,
+# below). GitHub creates an environment a job names if
 # it does not exist, with no rule at all, so the gate refuses (red) to publish while `publish` or
 # `harbor` is missing or allows any other branch, before a job enters either.
 #
@@ -144,16 +144,19 @@ name: Publish
 # The one job that pushes to Harbor declares `environment: harbor` and logs in with the
 # environment secrets HARBOR_ROBOT_USER / HARBOR_ROBOT_PASSWORD. GitHub Packages is another
 # organisation's registry, NiordOrg/niord's, which no token of this repository can write: the
-# build and web-publish jobs declare `environment: publish` and deploy with the repository
-# secrets NIORDORG_PACKAGES_USER / NIORDORG_PACKAGES_TOKEN (a classic personal access token of a
-# NiordOrg account with write:packages), handed to the deploy steps as NIORD_PUBLISH_USER /
-# NIORD_PUBLISH_TOKEN, the names setup-java writes into the settings.xml server `github`. That is
-# the owner's choice of 2026-10-22, until the country split: then a NiordOrg machine user's
-# publish-only token becomes a secret of `publish` (NIORD_PUBLISH_TOKEN, its login in the variable
-# NIORD_PUBLISH_USER), its delete-only token one of `retract`, both are rotated at the repository
-# move and yearly, and the repository secrets are deleted (docs/fe-country-split-plan.md §4.11
+# build and web-publish jobs declare `environment: publish` and deploy with its secrets
+# NIORDORG_PACKAGES_USER / NIORDORG_PACKAGES_TOKEN (a classic personal access token of a NiordOrg
+# account with write:packages), handed to the deploy steps as NIORD_PUBLISH_USER /
+# NIORD_PUBLISH_TOKEN, the names setup-java writes into the settings.xml server `github`. The
+# names are those chosen on 2026-10-22, when the owner kept the token a repository secret until
+# the country split; the token has since moved to that environment (main only) and is nowhere
+# else. Still to come: a NiordOrg machine user's
+# publish-only token as the secret NIORD_PUBLISH_TOKEN of `publish` (its login in the variable
+# NIORD_PUBLISH_USER), the deploy steps moved to those names, its delete-only token as
+# NIORD_DELETE_TOKEN of `retract`, both rotated yearly (docs/fe-country-split-plan.md §4.11
 # rule 1). `publish` itself, main only, is required already: the gate checks it. Until `retract`
-# exists, retract-version.yml refuses every run. Decided 2026-10-06 (be/pom.xml,
+# exists, main only, and holds NIORD_DELETE_TOKEN, retract-version.yml refuses every run, before
+# it deletes anything. Decided 2026-10-06 (be/pom.xml,
 # github.repository): the Maven registry is repository-scoped, so packages published here, from a
 # private repository, were readable by no other repository's workflow; packages of the public
 # NiordOrg/niord are readable with any token and cost no storage. Apart from the bump job, nothing
@@ -268,7 +271,7 @@ jobs:
           ACTOR: ${{ github.triggering_actor }}
         run: |
           set -euo pipefail
-          # + 181: SIFA-DK/niord-ng published up to 4.0.181 (header, "Version and tag").
+          # + 181: the earlier private repository published up to 4.0.181 (header, "Version and tag").
           version="4.0.$((GITHUB_RUN_NUMBER + 181))"
 
           skip() {

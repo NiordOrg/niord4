@@ -45,6 +45,9 @@ import java.util.stream.Collectors;
                 query = "select distinct a from Area a left join fetch a.descs where a.id in (:ids)"),
         @NamedQuery(name  = "Area.findByMrn",
                 query = "select a from Area a left join fetch a.descs where a.mrn = :mrn"),
+        @NamedQuery(name  = "Area.findByMrnIgnoreCase",
+                query = "select a from Area a left join fetch a.descs where lower(a.mrn) = lower(:mrn) "
+                        + "order by a.id"),
         @NamedQuery(name  = "Area.findLastUpdated",
                 query = "select max(a.updated) from Area a")
 })

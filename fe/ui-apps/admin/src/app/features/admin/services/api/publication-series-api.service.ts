@@ -393,7 +393,7 @@ export interface IssueWorkbench {
   readonly members: readonly IssueMember[];
   readonly audit: readonly IssueAuditEntry[];
   readonly overrides: readonly IssueOverride[];
-  /** Absent on a published or retired issue, and for a curator who is not an admin. */
+  /** Absent on a published or retired issue. */
   readonly checklist?: PublishChecklist;
   /** Absent where nothing was resolved (a frozen issue, or a series without membership). */
   readonly omissions?: IssueOmissions;
@@ -2441,9 +2441,8 @@ export class PublicationSeriesApiService {
    * a withdrawn exclusion as though it were still in force — which is a message
    * an admin then tries to reinstate and the server refuses.
    *
-   * CURATOR TIER, matching the writes it describes: it carries the author and
-   * the reason, which is the admin-only half of a why-line. It therefore 403s
-   * where the rest of the workbench does not.
+   * ADMIN TIER, matching the writes it describes: it carries the author and
+   * the reason, which is the admin-only half of a why-line.
    *
    * `lang` picks the language each decision's message is titled in, exactly as
    * it does on the member list; the decisions themselves never depend on it.
@@ -2653,8 +2652,8 @@ export class PublicationSeriesApiService {
    * or none, and names every unresolvable uid in a single refusal rather than
    * making the curator discover them one round-trip at a time.
    *
-   * Curation needs the `publication-curate` permission rather than plain edit
-   * rights, so these can 403 where the rest of the screen does not.
+   * Curation is an administrator's, in the domain that owns the series, not an
+   * editor's; a desk that does not own the series is refused with NOT_IN_DOMAIN.
    *
    * `version` is THE ISSUE's, not the override's: a curation is a decision about
    * the member set, the member set belongs to the issue, and a curation forces

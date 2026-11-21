@@ -1243,7 +1243,10 @@ country — hence split tokens, hash pins and, later, attestations.
      app's private key and id live only in the base product's main-only `publish` environment, and the gate warns
      when the key is a repository secret.
      The list is `.github/maintainers`, read from `main` whatever ref a run comes from, and
-     checked against the run's triggering actor (a re-run by someone else is checked too). Until a rule on `main`
+     checked against the run's triggering actor (a "Re-run all jobs" by someone else is checked too; a
+     "Re-run failed jobs" does not repeat the check, so `retract-version.yml` refuses one started by anyone
+     but the login its `authorise` job checked, since 2026-11-21, while in `publish.yml` it completes the jobs
+     a maintainer's break-glass run had started). Until a rule on `main`
      requires review, whoever may write `main` may also
      edit `.github/maintainers` or the two workflows in the same push, so who may retract or break-glass is in
      effect who may write `main`: write access only for named maintainers carries the rule (required review
@@ -1254,7 +1257,9 @@ country — hence split tokens, hash pins and, later, attestations.
      secret; `NIORD_DELETE_TOKEN` (`delete:packages`, `read:packages`) is a secret of `retract`. Both
      environments allow `main` only, like `harbor`, and because GitHub creates an environment a job names
      without any rule, `publish.yml`'s gate and `retract-version.yml`'s first job fail a run while `publish`,
-     `harbor` or `retract` is missing or allows another branch, before any job enters one.
+     `harbor` or `retract` is missing or allows another branch, before any job enters one; and
+     `retract-version.yml` refuses a run whole, before it deletes anything, while `retract` holds no
+     `NIORD_DELETE_TOKEN`.
    - **Until the country split (owner, 2026-10-22).** "When full repo is changed and everything is split up to
      each country, then we will rotate keys and setup proper accounts": until then the build and `web-publish`
      jobs deploy with the repository secrets `NIORDORG_PACKAGES_USER` / `NIORDORG_PACKAGES_TOKEN`,
@@ -1264,6 +1269,12 @@ country — hence split tokens, hash pins and, later, attestations.
      branch's copy of a workflow, which the environment's secret could not. At the split: the machine user and
      its two tokens in `publish` and `retract`, the deploy steps back to `secrets.NIORD_PUBLISH_TOKEN` and
      `vars.NIORD_PUBLISH_USER`, the repository secrets deleted and the old token revoked (`fe/docs/backlog.md`).
+     Present state (read 2026-11-21): `NIORDORG_PACKAGES_USER` / `NIORDORG_PACKAGES_TOKEN` have since moved,
+     under the same names, from the repository to the `publish` environment, so a branch's copy can no longer
+     name them; `retract` exists, main only, without `NIORD_DELETE_TOKEN`, so a run gets past `authorise` and
+     the `retract` job's first step refuses it whole, before anything is deleted (since 2026-11-21; until then
+     its Packages step failed for want of a token and the release and the tag still went); the machine user,
+     its two tokens and the steps' names are still to come.
    - **As built.** `publish.yml` starts after Backend CI, Frontend CI and Info CI,
      and its gate requires each that ran for the commit to have succeeded (one its path filter skipped counts as
      not run), because the zip carries the public site's sources: a merge confined to the public site
@@ -1300,10 +1311,11 @@ country — hence split tokens, hash pins and, later, attestations.
      job — and verified by its consumer.
    - The kit uses Node built-ins only, is covered by the base product's lockfile and audit, and runs only after
      the hash check. `setup.mjs` is a stub that checks the kit's hash. What runs before that check, or holds a
-     token without one, is accepted residual trust: Node, the Maven wrapper's distribution (no
-     `distributionSha256Sum` in `be/.mvn/wrapper/maven-wrapper.properties`, here and in the country repositories'
-     wrappers, so the distribution is pinned by TLS alone) and Maven's plugins. Pinning the wrapper's checksum is
-     a go-live item (`fe/docs/backlog.md`).
+     token without one, is accepted residual trust: Node, the Maven wrapper's distribution and Maven's plugins.
+     This repository's wrapper pins its distribution by `distributionSha256Sum`
+     (`be/.mvn/wrapper/maven-wrapper.properties`, since 2026-11-04); the country repositories' wrappers had no
+     checksum when last read, so theirs is pinned by TLS alone, and pinning it there is a go-live item
+     (`fe/docs/backlog.md`).
    - Every build writes `niord-build-report.json` — base product version, packs, escape hatch, overrides (protected
      ones flagged), backend overrides, the bootstrap and release import files, the packs' backend half, country dependencies, the text overrides counted per language, the accepted audit findings counted (the entries stay in `audit-accepted.json` and in set-up's output: the report is served without sign-in), provenance (pinned, or
      `local: <path> @ <sha>`). Its one writer is `setup.mjs`, at step 4 (§3.2), into `fe/.niord/build/`: by then
@@ -1847,8 +1859,8 @@ definition of done and _Before go-live_. An AI agent can do steps 1, 2 and 9 fro
    `spring-boot:run`, the `local` profile, UTC, port 8888, the development mode, `adminAppUrl`, and the Niord
    home `~/.niord-local/<database>` as `niord.home` and `NIORD_HOME`; at its bootstrap step, on every start, gives
    each active domain of the country's `be/bootstrap/domains.json` that has no client in the shared local realm its
-   client (the five roles user, editor, admin, sysadmin and publication-curate, editor, admin and
-   sysadmin composite, and the Sysadmin group's mapping; a client that exists is never changed, and nothing is
+   client (the four roles user, editor, admin and sysadmin, editor, admin and sysadmin composite, and
+   the Sysadmin group's mapping; a client that exists is never changed, and nothing is
    deleted); on a database whose marker reads pending posts the bootstrap (`POST /rest/bootstrap` with a
    sysadmin's token, through `bootstrap.sh`, which waits for the marker): first the base product's archive, then
    the country's, `be/bootstrap/` zipped with that folder as the archive's root, in one run

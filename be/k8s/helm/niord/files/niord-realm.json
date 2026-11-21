@@ -301,15 +301,6 @@
       "security-admin-console": [],
       "niord-annex": [
         {
-          "id": "bfdcccdd-d0aa-4520-8f1f-dd66eff4d4a6",
-          "name": "publication-curate",
-          "description": "Publication curator",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "14a9488b-a3f1-4e9d-b0cb-5a56e71e3ece",
-          "attributes": {}
-        },
-        {
           "id": "f69e7a89-1b02-47b3-88fe-b761aca95e3c",
           "name": "sysadmin",
           "description": "System administrator",
@@ -319,8 +310,7 @@
               "niord-annex": [
                 "admin",
                 "editor",
-                "user",
-                "publication-curate"
+                "user"
               ]
             }
           },
@@ -337,8 +327,7 @@
             "client": {
               "niord-annex": [
                 "editor",
-                "user",
-                "publication-curate"
+                "user"
               ]
             }
           },
@@ -374,15 +363,6 @@
       ],
       "niord-almanac": [
         {
-          "id": "02978435-6a24-4b05-8b32-ba0615b099f6",
-          "name": "publication-curate",
-          "description": "Publication curator",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "07c56267-3f4f-4a0b-8f2e-828bed74e257",
-          "attributes": {}
-        },
-        {
           "id": "1280ea03-a382-4bb1-aa75-a6eceadb12e6",
           "name": "editor",
           "description": "Editor",
@@ -417,8 +397,7 @@
               "niord-almanac": [
                 "user",
                 "editor",
-                "admin",
-                "publication-curate"
+                "admin"
               ]
             }
           },
@@ -435,8 +414,7 @@
             "client": {
               "niord-almanac": [
                 "user",
-                "editor",
-                "publication-curate"
+                "editor"
               ]
             }
           },
@@ -460,23 +438,13 @@
       "niord-web-admin": [],
       "niord-client-master": [
         {
-          "id": "6acf5864-1041-45aa-806d-a14acae6a124",
-          "name": "publication-curate",
-          "description": "Publication curator",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "ca72597e-606b-44e5-a6e5-d3aa62f9bd91",
-          "attributes": {}
-        },
-        {
           "id": "b5c7dbbb-a291-4695-b693-6bc70344b633",
           "name": "admin",
           "composite": true,
           "composites": {
             "client": {
               "niord-client-master": [
-                "editor",
-                "publication-curate"
+                "editor"
               ]
             }
           },
@@ -514,8 +482,7 @@
           "composites": {
             "client": {
               "niord-client-master": [
-                "admin",
-                "publication-curate"
+                "admin"
               ]
             }
           },
@@ -525,15 +492,6 @@
         }
       ],
       "niord-nw": [
-        {
-          "id": "0694aa5e-b78a-4189-803f-2c98a526b363",
-          "name": "publication-curate",
-          "description": "Publication curator",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "671d0fe6-5032-4285-9edc-e2ce55e5451d",
-          "attributes": {}
-        },
         {
           "id": "0854fb93-f0b0-43ff-9f6c-d4195c931e6a",
           "name": "user",
@@ -569,8 +527,7 @@
               "niord-nw": [
                 "user",
                 "editor",
-                "admin",
-                "publication-curate"
+                "admin"
               ]
             }
           },
@@ -587,8 +544,7 @@
             "client": {
               "niord-nw": [
                 "user",
-                "editor",
-                "publication-curate"
+                "editor"
               ]
             }
           },
@@ -599,15 +555,6 @@
       ],
       "niord-nm": [
         {
-          "id": "5e52dada-ee84-4db9-8598-4306942993e6",
-          "name": "publication-curate",
-          "description": "Publication curator",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "2abbe645-f595-4c03-ab40-c48cd027de91",
-          "attributes": {}
-        },
-        {
           "id": "9777a350-7599-4199-8158-0d15baa7aa27",
           "name": "sysadmin",
           "description": "System administrator",
@@ -617,8 +564,7 @@
               "niord-nm": [
                 "admin",
                 "editor",
-                "user",
-                "publication-curate"
+                "user"
               ]
             }
           },
@@ -635,8 +581,7 @@
             "client": {
               "niord-nm": [
                 "editor",
-                "user",
-                "publication-curate"
+                "user"
               ]
             }
           },
@@ -732,15 +677,6 @@
       ],
       "niord-fa": [
         {
-          "id": "827aaded-a830-4a9d-85f5-e743273eff57",
-          "name": "publication-curate",
-          "description": "Publication curator",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "5e035483-5475-44df-8af5-3e7c00a96ea3",
-          "attributes": {}
-        },
-        {
           "id": "ce3945b0-5847-4b69-a42d-03c0952702e4",
           "name": "sysadmin",
           "description": "System administrator",
@@ -750,8 +686,7 @@
               "niord-fa": [
                 "editor",
                 "user",
-                "admin",
-                "publication-curate"
+                "admin"
               ]
             }
           },
@@ -793,8 +728,7 @@
             "client": {
               "niord-fa": [
                 "editor",
-                "user",
-                "publication-curate"
+                "user"
               ]
             }
           },
@@ -1093,27 +1027,8 @@
       "requiredActions" : [ ],
       "realmRoles" : [ "uma_authorization", "offline_access" ],
       "clientRoles" : {
-        "niord-client-master" : [ "admin", "publication-curate" ],
-        "niord-nw" : [ "admin", "publication-curate" ]
-      },
-      "groups" : [ ]
-    },
-    {
-      "id" : "44444444-4444-4444-4444-444444444444",
-      "createdTimestamp" : 1662534213302,
-      "username" : "testcurator",
-      "enabled" : true,
-      "totp" : false,
-      "emailVerified" : true,
-      "credentials" : [ {
-        "type" : "password",
-        "value" : "test",
-        "temporary" : false
-      } ],
-      "requiredActions" : [ ],
-      "realmRoles" : [ "uma_authorization", "offline_access" ],
-      "clientRoles" : {
-        "niord-nw" : [ "user", "publication-curate" ]
+        "niord-client-master" : [ "admin" ],
+        "niord-nw" : [ "admin" ]
       },
       "groups" : [ ]
     },

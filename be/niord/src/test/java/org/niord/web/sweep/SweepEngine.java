@@ -857,13 +857,9 @@ public final class SweepEngine {
         return new ArrayList<>(cells.values());
     }
 
-    /** The identities the full run derives cells for: the four tiers and anonymous, and the curator where named */
+    /** The identities the full run derives cells for: the four tiers and anonymous */
     static List<String> derivedIdentities(EndpointEntry entry) {
-        List<String> identities = new ArrayList<>(SweepIdentity.TIERS);
-        if (entry.guard.contains("PUBLICATION_CURATE")) {
-            identities.add("curator");
-        }
-        return identities;
+        return new ArrayList<>(SweepIdentity.TIERS);
     }
 
     private static CellRun cellRun(String name, Cell expected, boolean derived) {

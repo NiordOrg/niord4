@@ -374,7 +374,7 @@ keycloak:
   # the default; a deployment on the shared Keycloak has a realm of its own (niord-dk, niord-gl).
   realm: niord
   # production mode: whether the rendered realm keeps the test realm's users (sysadmin/sysadmin, and
-  # testuser, testeditor, testadmin, testcurator, testdomaineditor and testadminelsewhere with the
+  # testuser, testeditor, testadmin, testdomaineditor and testadminelsewhere with the
   # password test), whose passwords are in this public repository and one of whom is a Niord sysadmin who may manage the realm's users and clients. false = the realm
   # has no user: the first administrator is made in the admin console and put in the group Sysadmin
   # (README, "Keycloak in production mode"). true is for a staging with no real data on a closed

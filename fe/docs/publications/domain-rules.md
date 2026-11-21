@@ -19,7 +19,7 @@ pinned by specs. The screens themselves are described in [`../features/admin.md`
 | **Series**              | A publication as a standing thing — "Notices to Mariners", "Firing practice areas". Holds the settings every one of its issues follows. Key: `seriesId`, an authored slug, frozen at create. |
 | **Issue** (_udgave_)    | One released document of a series — "NtM week 27, 2026". Key: `publicId`, a UUID; it is what a citation points at, forever.                                                                  |
 | **Member**              | A message that is in an issue. Keyed by message `uid`, never by short id.                                                                                                                    |
-| **Override / curation** | An audited decision, behind the `publication-curate` permission, to include or exclude a message against the query's answer.                                                                 |
+| **Override / curation** | An audited decision, made by an administrator of the domain that owns the series, to include or exclude a message against the query's answer.                                                |
 | **One-off**             | A publication that came out once. Stored as a series holding a single issue; `kind = ONE_OFF`.                                                                                               |
 | **Category**            | What a series points at. Shared across series, and carries the flag that decides whether a whole group reaches the public site.                                                              |
 | **Content period**      | The stretch of time whose messages an issue carries.                                                                                                                                         |
@@ -257,15 +257,15 @@ question only against a concrete series the vocabulary cannot express.
 
 ### Curation overrides
 
-Audited, and gated on a permission of their own. Every override carries author, timestamp and reason;
-every member always shows why it is included.
+Audited, and an administrator's. Every override carries author, timestamp and reason; every member
+always shows why it is included.
 
-**Curation is a tier, not a role.** The curation writes and the standing-overrides read are gated on
-`publication-curate`, a named permission sitting between edit rights and admin. It is granted to admins
-today, which is why curation looks admin-only — but the tier is real: those calls **403 where the rest of
-the issue screen loads**, and the author-and-reason half of a why-line is absent below it. Widening
-curation to another audience is a role change in the identity provider that touches no stored data, because
-every override records its author regardless of who is allowed to write one.
+**Curation is an administrator's.** The curation writes, the standing-overrides read and the reads the
+issue screen is built on are admin tier, and the writes are refused to an administrator sitting at another
+domain's desk (`NOT_IN_DOMAIN`). There is no separate curation role: the owner decided on 2026-11-21 to
+remove `publication-curate`, which the endpoints had accepted beside admin while the pages were open to
+administrators only. Widening curation to another audience later is a change of gate that touches no
+stored data, because every override records its author regardless of who is allowed to write one.
 
 - **Reason mandatory, 3–512 characters**, on include, exclude and clear alike — the same bounds
   server-side.
@@ -550,7 +550,22 @@ cut-off's week-year, and the earlier year's 52 or 53 weeks are counted (the owne
 pattern writes the pair as `${week}+${weekTo}`, and that `+`, and only that one, prints as a hyphen for an
 issue of three weeks or more, in the name, the file name and the citation alike (`IssueNaming.expand`, and
 the admin app's `issueNumberText` and `expandIssuePattern`; pinned by `IssueNamingTest` and
-`issue-number.spec.ts`). A released or imported issue keeps the name and file name it has. A year prints its
+`issue-number.spec.ts`). **A single week leaves its closing week out.** An issue of one week has no closing
+week, so each closing-week token (`${weekTo}`, `${weekTo-2-digits}`) leaves the pattern together with the text
+that joins it to the first week: the name is `Uge 36, 2026` under `Uge ${week}+${weekTo}, ${year}` and under
+`Uge ${week} og ${weekTo}, ${year}` alike, and a file name and a citation the same. The token is joined to the
+first week when the token next to it, with only text between them, is `${week}` or `${week-2-digits}`: the one
+before it, else the one after it (`NtM ${weekTo} back to ${week}` is `NtM 36`). A bracket is never left half:
+one the dropped text opens goes up to where it closes (`Week ${week} (${weekTo}) ${year}` is `Week 36 2026`),
+one it closes goes back to where it opens, a bracket that holds the first week stays
+(`Week (${week}+${weekTo})` is `Week (36)`), and where the bracket closes or opens only beyond another token
+it stays and only the text inside it goes. A closing-week token with no first-week token next to it is the
+single week's closing week, which is that week, and prints as the first week in its own variant
+(`Uge ${weekTo}, ${year}` is `Uge 36, 2026`). The tokens are taken from left to right; a pair and a range are
+untouched; a closing week equal to the first is one week. The server's `IssueNaming.singleWeek` and the admin
+app's `expandIssuePattern` hold the same rule (pinned by `IssueNamingTest` and `issue-overrides.spec.ts`), so
+the suggestion the drawer offers is the name the server writes. A released or imported issue keeps the name and
+file name it has. A year prints its
 edition only when the edition is not the first; `(1)` beside a yearly invites the reader to look for a second
 edition that does not exist.
 
@@ -627,10 +642,9 @@ issue: `36` under
 `Uge ${week}, ${year}` (for an issue of weeks 36 to 38 too, as its name says), `36 og 37` under
 `Uge ${week} og ${weekTo}, ${year}`, `36+37` or `36-38` under `Uge ${week}+${weekTo}, ${year}`. A pattern
 that writes no week (or none at all) gives that last form, the pair form, so a document is headed by all its
-weeks where its name cannot say them; a week label is printed whole. One case leaves the name: a single week
-under a week part that writes the closing week is headed by the first week's token alone (`36`), where the
-name keeps the text before the empty closing week (`Uge 36+, 2026`, ISSUE13 in
-`be/docs/potential-errors.md`), until that name is settled. The pattern is read as it stands at the render,
+weeks where its name cannot say them; a week label is printed whole. A single week is headed by its week
+alone under all three (`36`), as its name leaves the closing week out (`Uge 36, 2026`, above). The pattern is
+read as it stands at the render,
 not the name stored on the issue, and the two part where an editor renamed the issue by hand without a week
 label, where the issue was named before the pattern changed (an amendment or a new release after the change
 is headed by the new pattern), and where the report's language has no pattern (the pair form, while another
@@ -1009,7 +1023,10 @@ There is no per-series switch, no estate-wide switch and no readiness gate; undo
 full database restore, which is a decision taken outside these screens.
 
 **Until go-live, the go-live process documents are binding**: the ruled process, the mechanics underneath
-it, the re-run rules and the outstanding task list, all kept outside this repository. Production is
+it, the re-run rules and the outstanding task list, all kept outside this repository. Two of their rules are
+not: "nobody on the system during the import" and verification in sequence rested on the concurrent-read
+defect alone, and were dropped as rules of their own on 2026-11-21 ([backlog §1](../backlog.md#1-before-production-go-live)); the freeze
+from the final backup until the window closes stands. Production is
 **one window**, not a passive period: import, verify and activate happen together, rehearsed identically
 on test from a fresh production restore, with the restore rehearsed and the image frozen after the final
 rehearsal.
@@ -1023,7 +1040,7 @@ Each of these is a considered decision, not an oversight. Re-proposing one needs
 | Not done                                                 | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **No message tag is minted per issue**                   | A tag is a writable, unaudited, colliding side channel into an official record — three publications once pointed at one tag, so filtering by any of them returned the others' contents. Membership is resolved through the issue; rendering uses a temp tag that is discarded inside the publish transaction, and nothing ever reads membership from it. **The consequence, which is the operative half:** most of the public tags in the archive were minted by a publication, and from this model on none are — so printing, exporting, mailing or filtering a **new** issue by a tag name stops working, and a saved filter keyed on a tag name a future issue would have carried silently matches nothing. Every existing tag survives untouched as history, and tags keep all their other uses. |
-| **Curation is behind its own permission**                | Curation needs `publication-curate`, held by admins today, so nobody below that tier adds or removes members — losing bulk add/remove of publication membership from the messages list, the same actions from the message editor's action menu, and the one-click last-used-tag shortcut. Measured exercise of that right across nine years was roughly one event; the editor's real lever over membership — _when they publish the notice_ — is untouched. Pointing a publication at a hand-made tag is dropped with it.                                                                                                                                                                                                                                                                            |
+| **Curation is an administrator's**                       | Curation needs the admin role in the domain that owns the series, so nobody below that tier adds or removes members — losing bulk add/remove of publication membership from the messages list, the same actions from the message editor's action menu, and the one-click last-used-tag shortcut. Measured exercise of that right across nine years was roughly one event; the editor's real lever over membership — _when they publish the notice_ — is untouched. Pointing a publication at a hand-made tag is dropped with it.                                                                                                                                                                                                                                                                     |
 | **Mail cannot act on an issue**                          | Print, export, the message list, the public API and the SOAP API all reach an issue's messages through the publication filter, because they consume the same opaque filter string. Mail is the one surface that only ever took a tag, so it still mails a **selection** via a temp tag. Closing it is small and additive; nothing depends on it.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | **Delete is narrower than before**                       | A hard-deleted published issue takes its `publicId` with it and dangles every stored citation, and there is no join table to find them. Accepted as a real reduction.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | **No advanced-expression criteria**                      | Nothing in the archive needs one, and arbitrary expressions are unverifiable — which is why the filters they would replace were a lookup table in the first place.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |

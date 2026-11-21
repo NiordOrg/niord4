@@ -551,7 +551,7 @@ class DeliverySweepGroup implements SweepGroup {
                 .sweep((ctx, as) -> {
                     // Each signed-in identity reads its own mails: a list, never the fixture's mail, whose sender
                     // is no identity's address (the IT holds one user's own mails to that user's answer)
-                    for (String identity : List.of("user", "editor", "admin", "sysadmin", "curator", "domainEditor",
+                    for (String identity : List.of("user", "editor", "admin", "sysadmin", "domainEditor",
                             "adminElsewhere")) {
                         SweepResponse mine = ctx.ok(identity, SweepRequest.get("/rest/scheduled-mails/mine")
                                 .query("days", 30));

@@ -54,11 +54,14 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.regex.Matcher;
 
 /**
  * Interface for accessing settings.
@@ -151,7 +154,10 @@ public class SettingsService extends BaseService {
      * Called when the system starts up, before every other {@code ApplicationReadyEvent} listener: adds the operator
      * settings the database lacks ({@link #addMissing()}).
      *
-     * <p>First, when no {@code niord.home} property or variable and no {@code NIORD_HOME} is set ({@link #override})
+     * <p>First it refuses the start when {@code niord.home} names no folder ({@link #refuseAnUnresolvableHome()}),
+     * before any listener creates a folder under the home and before anything is added.
+     *
+     * <p>Then, when no {@code niord.home} property or variable and no {@code NIORD_HOME} is set ({@link #override})
      * and the database's {@code niord.home} row names another folder than the one the constructor read the server's
      * {@code niord.json} from, the overlay is read again from that folder: the row wins over the file, as it always
      * has.
@@ -165,9 +171,141 @@ public class SettingsService extends BaseService {
     @EventListener(ApplicationReadyEvent.class)
     void init() {
         log.info("Starting Initialization Settings");
+        refuseAnUnresolvableHome();
         readOverlayFromTheDatabasesHome();
         addMissing();
         log.info("Finished Initializing Settings");
+    }
+
+    /**
+     * Stops the start, with the cause and the cure logged at ERROR and as the exception's text, when {@code niord.home}
+     * names no folder: its own value, as a read takes it ({@link #homeValue}), still holds a {@code ${...}} token that
+     * nothing resolves, or comes out blank ({@link #homeRefusal}). An unresolved token would otherwise read as empty
+     * text, and the folders under the home ({@code ${niord.home}/message-index} and the others) would land at the root
+     * of the disk. Only {@code niord.home} is checked; the listeners that create folders under it
+     * ({@code MessageLuceneIndex}, {@code PublicationPathService}) run after this one.
+     *
+     * @throws IllegalStateException when {@code niord.home} cannot be resolved
+     */
+    void refuseAnUnresolvableHome() {
+        String key = NIORD_HOME.getKey();
+        String override = override(key);
+        Setting row = override == null ? em.find(Setting.class, key) : null;
+        boolean homeSettingSet = System.getProperty(key) != null || System.getenv(key) != null;
+        HomeValue home = homeValue(override, homeSettingSet, row, unexpandedDefault(NIORD_HOME));
+        String refusal = homeRefusal(home, this::tokenValue);
+        if (refusal != null) {
+            log.error(refusal);
+            throw new IllegalStateException(refusal);
+        }
+    }
+
+    /** The cure of a home read from the database's row or the settings file, whose tokens are expanded */
+    static final String HOME_CURE = "set the environment variable " + HOME_VARIABLE
+            + " or start with -Dniord.home=<folder>";
+
+    /**
+     * The cure of a home set by a {@code niord.home} system property or environment variable, which hides
+     * {@code NIORD_HOME} even when it is blank ({@link #overrideOf})
+     */
+    static final String HOME_SETTING_CURE = "give the niord.home system property or environment variable a folder ("
+            + HOME_VARIABLE + " is not read while niord.home is set)";
+
+    /** The cure of a home set by {@code NIORD_HOME} itself */
+    static final String HOME_VARIABLE_CURE = "give " + HOME_VARIABLE + " a folder";
+
+    /**
+     * The value of {@code niord.home} as a read takes it, its tokens not expanded, where it comes from and how to cure
+     * it when it names no folder
+     *
+     * @param value    the value, null for none
+     * @param origin   where it comes from, for the refusal's text
+     * @param override whether it is an override ({@link #override}), which is used as it is, its tokens not expanded,
+     *                 as {@link #get(Setting)} returns it
+     * @param cure     what makes it name a folder, for the refusal's text
+     */
+    record HomeValue(String value, String origin, boolean override, String cure) {
+    }
+
+    /**
+     * Returns the value of {@code niord.home} as a read takes it: the override ({@link #override}), else the
+     * database's row, which wins over the settings file, else the settings file's value
+     *
+     * @param override       the override, or null
+     * @param homeSettingSet whether a {@code niord.home} system property or environment variable is set, blank or
+     *                       not: the override is then that, else it is {@code NIORD_HOME}
+     * @param row            the database's row, or null
+     * @param fileValue      the settings file's value, its tokens not expanded
+     * @return the value, where it comes from and its cure
+     */
+    static HomeValue homeValue(String override, boolean homeSettingSet, Setting row, Object fileValue) {
+        if (override != null) {
+            return homeSettingSet
+                    ? new HomeValue(override, "from the niord.home system property or environment variable", true,
+                            HOME_SETTING_CURE)
+                    : new HomeValue(override, "from " + HOME_VARIABLE, true, HOME_VARIABLE_CURE);
+        }
+        if (row != null) {
+            return new HomeValue(row.getValue() instanceof String s ? s : null,
+                    "from the database's niord.home setting", false, HOME_CURE);
+        }
+        return new HomeValue(fileValue instanceof String s ? s : null, "from the settings file", false, HOME_CURE);
+    }
+
+    /**
+     * Returns why {@code niord.home} names no folder, as the text the start stops with, or null when it names one:
+     * each {@code ${token}} of its value is expanded with {@code tokens}, and a token that resolves to nothing or to
+     * blank text, or that is left in the value, is unresolved. The value is refused when a token is unresolved or
+     * when it comes out blank. An override's tokens are not expanded: any token in it is unresolved, and the text says
+     * so rather than that nothing sets it.
+     *
+     * @param home   the value, where it comes from and its cure
+     * @param tokens the value of a token, or null when nothing sets it
+     * @return the refusal's text, or null
+     */
+    static String homeRefusal(HomeValue home, Function<String, String> tokens) {
+        String value = home.value() != null ? home.value() : "";
+        Set<String> unresolved = new LinkedHashSet<>();
+        SettingValueExpander expander = new SettingValueExpander(value);
+        String token;
+        int liveLockControlCount = 500;
+        while ((token = expander.nextToken()) != null && liveLockControlCount-- > 0) {
+            String resolved = home.override() ? null : tokens.apply(token);
+            if (StringUtils.isBlank(resolved)) {
+                unresolved.add(token);
+                expander.replaceToken(token, "");
+            } else {
+                expander.replaceToken(token, resolved);
+            }
+        }
+        String expanded = Objects.toString(expander.getValue(), "");
+        Matcher left = SettingValueExpander.TOKEN_FORMAT.matcher(expanded);
+        while (left.find()) {
+            unresolved.add(left.group("token"));
+        }
+        if (unresolved.isEmpty() && StringUtils.isNotBlank(expanded)) {
+            return null;
+        }
+        String cause = unresolved.isEmpty() ? ", which names no folder"
+                : home.override() ? ", which is used as it is: a value set this way has its ${...} tokens not expanded"
+                : unresolved.size() == 1 ? " and no " + unresolved.iterator().next() + " is set"
+                : " and none of " + String.join(", ", unresolved) + " is set";
+        return "niord.home cannot be resolved: its value is \"" + value + "\" (" + home.origin() + ")" + cause
+                + "; " + home.cure();
+    }
+
+    /** The value of a token in niord.home, as {@link #expandSettingValue} finds it; null when it is unset or blank */
+    private String tokenValue(String token) {
+        Object setting = peek(token);
+        if (setting != null && StringUtils.isNotBlank(setting.toString())) {
+            return setting.toString();
+        }
+        String property = System.getProperty(token);
+        if (StringUtils.isNotBlank(property)) {
+            return property;
+        }
+        String variable = System.getenv(token);
+        return StringUtils.isNotBlank(variable) ? variable : null;
     }
 
     /**

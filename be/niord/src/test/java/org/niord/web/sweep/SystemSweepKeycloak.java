@@ -323,8 +323,7 @@ final class SystemSweepKeycloak {
                     .withGroup(KC_GROUP_ID, KC_GROUP, "/" + KC_GROUP);
             stub.withGroupClientRoles(KC_GROUP_ID, stub.clientUuid(SweepIdentity.DOMAIN), "user");
             // A second group maps a role the sweep's sysadmin does not hold (the test realm's sysadmin composite
-            // holds every Niord role, publication-curate included, so the role is one no one has): it is listed,
-            // but not active for the caller
+            // holds every Niord role, so the role is one no one has): it is listed, but not active for the caller
             stub.withGroup(KC_UNHELD_ID, KC_UNHELD, "/" + KC_UNHELD);
             stub.withGroupClientRoles(KC_UNHELD_ID, stub.clientUuid(SweepIdentity.DOMAIN), UNHELD_ROLE);
             GroupRepresentation group = new GroupRepresentation();

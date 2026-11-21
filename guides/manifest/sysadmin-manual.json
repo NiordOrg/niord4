@@ -541,10 +541,10 @@
     "steps": "Clients; search niord-nw; niord-nw; Roles tab",
     "crop": "viewport",
     "needsData": "Local realm",
-    "note": "The shared local Keycloak's niord-* clients have no publication-curate role (its volume predates the realm file's role; only test clients such as xr-nw have it), and Niord does not create it for a new domain: the text says to add it by hand."
+    "note": "The four roles the text names. A client made from an earlier realm file (test clients such as xr-nw) may also list publication-curate, which the text says to delete; take the picture on a niord-* client."
   },
   {
-    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 80, "file": "KeycloakUsers.png", "caption": "Keycloak Users", "inline": false,
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 84, "file": "KeycloakUsers.png", "caption": "Keycloak Users", "inline": false,
     "shows": "Users list of realm niord",
     "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/users", "role": "sysadmin",
     "steps": "Realm niord; Users",
@@ -553,7 +553,7 @@
     "note": ""
   },
   {
-    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 106, "file": "KeycloakGroups.png", "caption": "Keycloak Groups", "inline": false,
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 110, "file": "KeycloakGroups.png", "caption": "Keycloak Groups", "inline": false,
     "shows": "Groups list of realm niord",
     "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/groups", "role": "sysadmin",
     "steps": "Realm niord; Groups",
@@ -562,7 +562,7 @@
     "note": "The text lists the groups of the realm in the pictures (the shared Keycloak, its MAS-vagt renamed MAS duty), all seven with their roles as the console has them."
   },
   {
-    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 111, "file": "KeycloakGroupRoles.png", "caption": "Keycloak Group Roles", "inline": false,
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 115, "file": "KeycloakGroupRoles.png", "caption": "Keycloak Group Roles", "inline": false,
     "shows": "Role mapping of group MAS duty showing the editor role of client niord-nw; the tab Role mapping readable",
     "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/groups", "role": "sysadmin",
     "steps": "Groups; MAS duty; close the console's menu (the navigation button), or the tab scroller cuts the Role mapping tab; Role mapping tab",
@@ -571,7 +571,7 @@
     "note": ""
   },
   {
-    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 130, "file": "KeycloakClientMapper.png", "caption": "Keycloak Client Mapper", "inline": false,
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 134, "file": "KeycloakClientMapper.png", "caption": "Keycloak Client Mapper", "inline": false,
     "shows": "User Attribute mapper 'editor fields NW' (attribute and claim editorFieldsNw) on client niord-web",
     "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/clients", "role": "sysadmin",
     "steps": "Clients; niord-web; Client scopes; niord-web-dedicated; mapper 'editor fields NW'; the focus taken off the User Attribute field the console focuses",
@@ -580,7 +580,7 @@
     "note": "The picture ends below 'Add to userinfo', above the form's Save: the text is about the attribute and the claim. Retaken after the review (2026-11-12) without the focus ring on User Attribute."
   },
   {
-    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 137, "file": "KeycloakGroupAttribute.png", "caption": "Keycloak Group Attribute", "inline": false,
+    "manual": "sysadmin-manual", "chapterFile": "A1-KeycloakIntegration.adoc", "line": 141, "file": "KeycloakGroupAttribute.png", "caption": "Keycloak Group Attribute", "inline": false,
     "shows": "Attributes tab of group MAS duty with its editorFieldsNw JSON value, whole",
     "kind": "external", "disposition": "retake", "app": "keycloak", "route": "http://localhost:8080/auth/admin/master/console/#/niord/groups", "role": "sysadmin",
     "steps": "Groups; MAS duty; close the console's menu (the navigation button), as for KeycloakGroupRoles; Attributes tab",

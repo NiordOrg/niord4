@@ -463,24 +463,39 @@ public class AreaService extends TreeBaseService<Area> {
     /**
      * Returns the area with the given MRN. Returns null if the area is not found.
      * <p>
+     * The MRN is matched without regard to case, exact match first: the area whose MRN is exactly the given one, and
+     * only when there is none, the area whose MRN differs from it only in case.
+     * <p>
      * The MRN is not unique in the schema: when several areas have it (restored data), none is returned, as when
-     * there is none, and a WARN names the MRN.
+     * there is none, and a WARN names the MRN. So it is when no area has the MRN exactly and several have it in
+     * different case, and the WARN names theirs.
      *
      * @param mrn the MRN of the area
      * @return the area with the given MRN or null if not found
      * @throws jakarta.persistence.PersistenceException if the look-up fails: a failure is not reported as "not found"
      */
     public Area findByMrn(String mrn) {
-        try {
-            return em.createNamedQuery("Area.findByMrn", Area.class)
-                    .setParameter("mrn", mrn)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        } catch (NonUniqueResultException e) {
+        List<Area> exact = em.createNamedQuery("Area.findByMrn", Area.class)
+                .setParameter("mrn", mrn)
+                .getResultList();
+        if (exact.size() > 1) {
             log.warn("Several areas have the MRN '{}'; the look-up by MRN answers none of them", mrn);
             return null;
         }
+        if (exact.size() == 1) {
+            return exact.getFirst();
+        }
+        List<Area> folded = em.createNamedQuery("Area.findByMrnIgnoreCase", Area.class)
+                .setParameter("mrn", mrn)
+                .getResultList();
+        if (folded.size() > 1) {
+            log.warn("No area has the MRN '{}' exactly and several have it in different case ({}); the look-up by "
+                    + "MRN answers none of them", mrn, folded.stream()
+                    .map(a -> "'" + a.getMrn() + "' (id " + a.getId() + ")")
+                    .collect(Collectors.joining(", ")));
+            return null;
+        }
+        return folded.isEmpty() ? null : folded.getFirst();
     }
 
     /**

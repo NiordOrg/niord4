@@ -25,6 +25,7 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -283,7 +284,8 @@ public final class IssueNaming {
      * that closed three weeks or more has only its first and its last week to print, and "36+38" reads as weeks 36
      * and 38. So the "+" between the two tokens prints as a hyphen there, "36-38", and across a year's end "52-2"
      * beside the later year. Only that "+" is touched: any other text of the pattern is printed as written, and a
-     * pair or a single week expands exactly as before. The admin app's issueNumberText and expandIssuePattern
+     * pair expands exactly as before (a single week is {@link #singleWeek}'s). The admin app's issueNumberText and
+     * expandIssuePattern
      * follow the same rule, so the strip, the drawer and the name agree.
      */
     private static String joined(String pattern, Numbers numbers) {
@@ -291,6 +293,217 @@ public final class IssueNaming {
             return pattern;
         }
         return WEEK_PAIR_JOIN.matcher(pattern).replaceAll("$1-");
+    }
+
+    /**
+     * The pattern as the issue's weeks write it: {@link #singleWeek} for an issue of one week, {@link #joined} for
+     * one of three weeks or more, and as written for a pair.
+     */
+    private static String written(String pattern, Numbers numbers) {
+        if (pattern == null) {
+            return null;
+        }
+        return weeksNamed(numbers) == 1 ? singleWeek(pattern) : joined(pattern, numbers);
+    }
+
+    /**
+     * The pattern as a single week writes it: without its closing week.
+     *
+     * THE RULE. An issue of one week has no closing week, so each closing-week token ({@code ${weekTo}} or
+     * {@code ${weekTo-2-digits}}) leaves the pattern together with the text that joins it to the first week, and
+     * the name is "Uge 36, 2026" under "Uge ${week}+${weekTo}, ${year}" and under "Uge ${week} og ${weekTo}, ${year}"
+     * alike, where it was "Uge 36+, 2026" and "Uge 36 og , 2026". The closing-week token is joined to the first week
+     * when the token next to it, with only text between them, is a first-week token ({@code ${week}} or
+     * {@code ${week-2-digits}}): the one before it, else the one after it. Joined to the one before, the text from
+     * that first week to the closing week goes ("+", " og ", " - "); joined to the one after, the text from the
+     * closing week to that first week ("NtM ${weekTo} back to ${week}" is "NtM 36"). A bracket is never left half: a
+     * bracket the dropped text opens goes with the text after the closing week up to where it closes ("Week ${week}
+     * (${weekTo}) ${year}" is "Week 36 2026"), one it closes goes with the text before the closing week from where
+     * it opens ("Uge (${weekTo}) ${week}" is "Uge 36"), and a bracket that holds the first week stays ("Week
+     * (${week}) + (${weekTo})" is "Week (36)", "Week (${week}+${weekTo})" is "Week (36)"); where that bracket is
+     * closed or opened only beyond another token, the bracket stays and only the text inside it goes. A
+     * closing-week token with no first-week token next to it stands alone, and is the closing week of a single
+     * week, which is that week: it prints as the first week in the same variant ("Uge ${weekTo}, ${year}" is "Uge
+     * 36, 2026"). The tokens are taken from left to right, so a second closing-week token is joined to the first week
+     * the first one left beside it. A pair and a range are not touched by this, and the admin app's
+     * expandIssuePattern follows the same rule, so the name it offers is the name the server writes.
+     */
+    static String singleWeek(String pattern) {
+        String p = pattern;
+        while (true) {
+            List<int[]> spans = new ArrayList<>();
+            List<String> names = new ArrayList<>();
+            Matcher m = TOKEN.matcher(p);
+            while (m.find()) {
+                spans.add(new int[]{m.start(), m.end()});
+                names.add(m.group(1));
+            }
+            int c = -1;
+            for (int i = 0; i < names.size(); i++) {
+                if (isClosingWeek(names.get(i))) {
+                    c = i;
+                    break;
+                }
+            }
+            if (c < 0) {
+                return p;
+            }
+            int cs = spans.get(c)[0];
+            int ce = spans.get(c)[1];
+            if (c > 0 && isFirstWeek(names.get(c - 1))) {
+                int limit = c + 1 < spans.size() ? spans.get(c + 1)[0] : p.length();
+                p = dropAfterFirstWeek(p, spans.get(c - 1)[1], cs, ce, limit);
+            } else if (c + 1 < spans.size() && isFirstWeek(names.get(c + 1))) {
+                int limit = c > 0 ? spans.get(c - 1)[1] : 0;
+                p = dropBeforeFirstWeek(p, limit, cs, ce, spans.get(c + 1)[0]);
+            } else {
+                String first = names.get(c).equals("weekTo") ? "${week}" : "${week-2-digits}";
+                p = p.substring(0, cs) + first + p.substring(ce);
+            }
+        }
+    }
+
+    private static boolean isFirstWeek(String token) {
+        return token.equals("week") || token.equals("week-2-digits");
+    }
+
+    private static boolean isClosingWeek(String token) {
+        return token.equals("weekTo") || token.equals("weekTo-2-digits");
+    }
+
+    /**
+     * The pattern without a closing-week token at [cs, ce) and the text from the first week's end {@code from} to
+     * it, bracket by bracket as {@link #singleWeek} says; {@code limit} is where the next token starts.
+     */
+    private static String dropAfterFirstWeek(String p, int from, int cs, int ce, int limit) {
+        // A bracket the joiner closes without opening it holds the first week, and stays.
+        int start = from;
+        for (char[] pair : BRACKETS) {
+            int open = 0;
+            for (int i = from; i < cs; i++) {
+                char ch = p.charAt(i);
+                if (ch == pair[0]) {
+                    open++;
+                } else if (ch == pair[1]) {
+                    if (open > 0) {
+                        open--;
+                    } else {
+                        start = Math.max(start, i + 1);
+                    }
+                }
+            }
+        }
+        // A bracket the rest of the joiner opens goes up to where the text after the closing week closes it.
+        int end = ce;
+        int keepTo = start;
+        boolean closed = true;
+        for (char[] pair : BRACKETS) {
+            List<Integer> opened = new ArrayList<>();
+            for (int i = start; i < cs; i++) {
+                char ch = p.charAt(i);
+                if (ch == pair[0]) {
+                    opened.add(i);
+                } else if (ch == pair[1] && !opened.isEmpty()) {
+                    opened.remove(opened.size() - 1);
+                }
+            }
+            if (opened.isEmpty()) {
+                continue;
+            }
+            keepTo = Math.max(keepTo, opened.get(opened.size() - 1) + 1);
+            int at = closingAfter(p, ce, limit, pair, opened.size());
+            if (at < 0) {
+                closed = false;
+            } else {
+                end = Math.max(end, at);
+            }
+        }
+        return closed ? p.substring(0, start) + p.substring(end) : p.substring(0, keepTo) + p.substring(ce);
+    }
+
+    /**
+     * The pattern without a closing-week token at [cs, ce) and the text from it to the first week's start
+     * {@code to}, bracket by bracket as {@link #singleWeek} says; {@code limit} is where the token before it ends.
+     */
+    private static String dropBeforeFirstWeek(String p, int limit, int cs, int ce, int to) {
+        // A bracket the joiner opens without closing it holds the first week, and stays.
+        int end = to;
+        for (char[] pair : BRACKETS) {
+            int depth = 0;
+            for (int i = to - 1; i >= ce; i--) {
+                char ch = p.charAt(i);
+                if (ch == pair[1]) {
+                    depth++;
+                } else if (ch == pair[0]) {
+                    if (depth > 0) {
+                        depth--;
+                    } else {
+                        end = Math.min(end, i);
+                    }
+                }
+            }
+        }
+        // A bracket the rest of the joiner closes goes back to where the text before the closing week opens it.
+        int start = cs;
+        int keepFrom = end;
+        boolean opened = true;
+        for (char[] pair : BRACKETS) {
+            int open = 0;
+            int unopened = 0;
+            int firstUnopened = -1;
+            for (int i = ce; i < end; i++) {
+                char ch = p.charAt(i);
+                if (ch == pair[0]) {
+                    open++;
+                } else if (ch == pair[1]) {
+                    if (open > 0) {
+                        open--;
+                    } else {
+                        unopened++;
+                        if (firstUnopened < 0) {
+                            firstUnopened = i;
+                        }
+                    }
+                }
+            }
+            if (unopened == 0) {
+                continue;
+            }
+            keepFrom = Math.min(keepFrom, firstUnopened);
+            int at = openingBefore(p, cs, limit, pair, unopened);
+            if (at < 0) {
+                opened = false;
+            } else {
+                start = Math.min(start, at);
+            }
+        }
+        return opened ? p.substring(0, start) + p.substring(end) : p.substring(0, cs) + p.substring(keepFrom);
+    }
+
+    /** Just after the closer that closes {@code open} brackets, searching [from, limit), or -1 where none does. */
+    private static int closingAfter(String p, int from, int limit, char[] pair, int open) {
+        for (int i = from; i < limit; i++) {
+            char ch = p.charAt(i);
+            if (ch == pair[0]) {
+                open++;
+            } else if (ch == pair[1] && --open == 0) {
+                return i + 1;
+            }
+        }
+        return -1;
+    }
+
+    /** The opener that opens {@code unopened} brackets, searching back from {@code from} to limit, or -1. */
+    private static int openingBefore(String p, int from, int limit, char[] pair, int unopened) {
+        for (int i = from - 1; i >= limit; i--) {
+            char ch = p.charAt(i);
+            if (ch == pair[1]) {
+                unopened++;
+            } else if (ch == pair[0] && --unopened == 0) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /** The four tokens a name writes its weeks with: the first week and the closing week, each in both variants. */
@@ -414,17 +627,12 @@ public final class IssueNaming {
      * "Uge ${week}, ${year}" gives "36" for an issue of weeks 36 to 38, as the name "Uge 36, 2026" says;
      * "Uge ${week} og ${weekTo}, ${year}" gives "36 og 37" for a pair; "Uge ${week}+${weekTo}, ${year}" gives
      * "36+37" for a pair and "36-38" for three weeks or more ({@link #joined}), across a year's end "52+1" and
-     * "52-2". Null where there is no week.
+     * "52-2". A single week is written without its closing week, as its name is ({@link #singleWeek}): "36" under
+     * all three, "Uge 36, 2026" and never "Uge 36+, 2026". Null where there is no week.
      *
-     * ONE PLACE WHERE THE WEEKS LEAVE THE NAME: a single week under a week part that writes the closing week. The
-     * closing week expands to nothing there, so the name keeps the text before it, "Uge 36+, 2026" and
-     * "Uge 36 og , 2026" (ISSUE13 in be/docs/potential-errors.md). A name is a suggestion an editor sees and can
-     * retype, a heading is not, so the weeks are then the first week's token alone, as the pattern writes it ("36",
-     * or "07" for {@code ${week-2-digits}}), until the name itself is settled.
-     *
-     * A pattern that writes no week (or none at all, or one whose week part expands to nothing, as a lone
-     * {@code ${weekTo}} does for a single week) gives the pair form, "${week}+${weekTo}": the week alone, "36+37"
-     * or "36-38". So a report is always headed by a week, and by all the weeks where its name cannot say them.
+     * A pattern that writes no week (or none at all, or one whose week part does not expand) gives the pair form,
+     * "${week}+${weekTo}": the week alone, "36+37" or "36-38". So a report is always headed by a week, and by all
+     * the weeks where its name cannot say them.
      *
      * The weekly reports print it in their heading and page header (the report's {@code weeks}); each source's line
      * in the accumulated report ({@code group.weeks}) takes {@link #allWeeksText}, which differs only where the
@@ -444,9 +652,6 @@ public final class IssueNaming {
         boolean span = weekTo != null && !weekTo.equals(week);
         Numbers numbers = new Numbers(week, span ? weekTo : null, year == null ? 0 : year, 1, 1, null);
         String weekPart = weekSpanOf(namePattern);
-        if (weekPart != null && !span && namesClosingWeek(weekPart)) {
-            weekPart = firstWeekTokenOf(weekPart);
-        }
         if (weekPart != null) {
             try {
                 String weeks = expand(weekPart, numbers);
@@ -548,7 +753,7 @@ public final class IssueNaming {
         }
         Map<String, String> values = valuesOf(numbers, labels);
 
-        Matcher m = TOKEN.matcher(joined(pattern, numbers));
+        Matcher m = TOKEN.matcher(written(pattern, numbers));
         StringBuilder out = new StringBuilder();
         while (m.find()) {
             String token = m.group(1);
@@ -606,7 +811,7 @@ public final class IssueNaming {
         }
         Map<String, String> values = valuesOf(numbers, labels);
 
-        Matcher m = TOKEN.matcher(joined(pattern, numbers));
+        Matcher m = TOKEN.matcher(written(pattern, numbers));
         StringBuilder out = new StringBuilder();
         while (m.find()) {
             String token = m.group(1);

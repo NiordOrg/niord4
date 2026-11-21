@@ -71,7 +71,8 @@ public class WmsProxyServlet extends HttpServlet {
     final static int        CACHE_TIMEOUT   =  24 * 60 * 60; // 24 hours
     /** How long a browser keeps an answer of the tile cache that is no fresh tile: an older copy, or none */
     static final int        RETRY_TIMEOUT   =  5 * 60; // 5 minutes
-    static final String     BLANK_IMAGE     = "/img/blank.png";
+    /** The picture answered when there is no tile, as a resource on the class path */
+    static final String     BLANK_IMAGE     = "META-INF/resources/img/blank.png";
     /** The response header that says where a tile of the tile cache came from: HIT, MISS or STALE */
     static final String     CACHE_HEADER    = "X-Niord-Cache";
 
@@ -85,6 +86,9 @@ public class WmsProxyServlet extends HttpServlet {
     static final String     TOKEN_MASK      = "***";
 
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WmsProxyServlet.class);
+
+    /** The bytes of {@link #BLANK_IMAGE}, read once; declared after the logger, which reading it may use */
+    static final byte[] BLANK_PNG = readBlankImage();
 
         @Setting(value="wmsProvider", description="The WMS provider. Read at start-up.")
     String wmsProvider;
@@ -164,7 +168,7 @@ public class WmsProxyServlet extends HttpServlet {
 
         // Check that the WMS provider has been defined using system properties
         if (StringUtils.isBlank(wmsProvider)) {
-            response.sendRedirect(BLANK_IMAGE);
+            sendBlankImage(response);
             return;
         }
 
@@ -193,7 +197,7 @@ public class WmsProxyServlet extends HttpServlet {
 
         // Fall back to return a blank image
         try {
-            response.sendRedirect(BLANK_IMAGE);
+            sendBlankImage(response);
         } catch (Exception e) {
             log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e));
         }
@@ -236,8 +240,8 @@ public class WmsProxyServlet extends HttpServlet {
      * A browser may keep a fresh tile for a day, as it may keep a proxied one, and an older copy served because the
      * provider fails for five minutes; no cache between the browser and here may keep either
      * ({@code Cache-Control: private}). {@code Last-Modified} is when the tile was fetched from the provider, and a
-     * browser that already has that copy is answered 304. When there is no tile at all the answer is the redirect
-     * to the blank image, kept for five minutes, so the next look at the place asks again.
+     * browser that already has that copy is answered 304. When there is no tile at all the answer is the blank
+     * image, kept for five minutes, so the next look at the place asks again.
      *
      * @param request the request
      * @param response the response
@@ -267,7 +271,7 @@ public class WmsProxyServlet extends HttpServlet {
         if (tile == null) {
             response.setHeader("Cache-Control", "private, max-age=" + RETRY_TIMEOUT);
             try {
-                response.sendRedirect(BLANK_IMAGE);
+                sendBlankImage(response);
             } catch (Exception e) {
                 log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e));
             }
@@ -287,6 +291,46 @@ public class WmsProxyServlet extends HttpServlet {
         OutputStream out = response.getOutputStream();
         out.write(tile.bytes());
         out.close();
+    }
+
+    /**
+     * Answers "no tile": status 200 and the blank picture's bytes, on the request's own address. No redirect, so
+     * behind a proxy no other origin is named, and a loader that fetches the tile itself gets the picture at once.
+     * The headers already set on the response, its {@code Cache-Control} among them, are left as they are.
+     *
+     * @param response the response
+     */
+    static void sendBlankImage(HttpServletResponse response) throws IOException {
+        // Whatever a failed answer had put in the buffer is dropped, as the redirect dropped it
+        response.resetBuffer();
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.setContentType("image/png");
+        response.setContentLength(BLANK_PNG.length);
+        OutputStream out = response.getOutputStream();
+        out.write(BLANK_PNG);
+        out.close();
+    }
+
+    /**
+     * Reads the blank picture from the class path. Should it be missing, a transparent PNG of one pixel, which is
+     * what the file holds, is made in its place, so the servlet still starts.
+     */
+    private static byte[] readBlankImage() {
+        try (InputStream in = WmsProxyServlet.class.getClassLoader().getResourceAsStream(BLANK_IMAGE)) {
+            if (in != null) {
+                return in.readAllBytes();
+            }
+            log.warn("The blank image " + BLANK_IMAGE + " is not on the class path; a transparent pixel is used");
+        } catch (IOException e) {
+            log.warn("Could not read the blank image " + BLANK_IMAGE + "; a transparent pixel is used: " + e);
+        }
+        try {
+            ByteArrayOutputStream png = new ByteArrayOutputStream();
+            ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB), "png", png);
+            return png.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not make a blank PNG", e);
+        }
     }
 
     /** Whether the browser says, with {@code If-Modified-Since}, that it holds this copy of the tile or a later one */

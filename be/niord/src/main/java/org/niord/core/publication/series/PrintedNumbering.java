@@ -73,7 +73,11 @@ public final class PrintedNumbering {
                 issue == null ? null : issue.getWeek());
     }
 
-    /** What ${weekTo} prints: the derived closing week, or nothing where there is none. */
+    /**
+     * What ${weekTo} prints: the derived closing week, or nothing where there is none (where a pattern writes it
+     * for a single week, the token goes from the pattern with the text that joins it to the first week:
+     * IssueNaming.expand).
+     */
     public static String printedWeekTo(PublicationIssue issue) {
         return asText(issue == null ? null : issue.getWeekTo());
     }
@@ -83,8 +87,8 @@ public final class PrintedNumbering {
      * is written, which holds the whole span as the publication writes it ("36 og 37"); else the derived weeks as
      * its series' name pattern in the report's language writes them, in the name the series suggests for the issue:
      * "36" under "Uge ${week}, ${year}", "36 og 37" under "Uge ${week} og ${weekTo}, ${year}", "36+37" or "36-38"
-     * under "Uge ${week}+${weekTo}, ${year}", and that last form where the pattern writes no week; a single week
-     * under a pattern that writes the closing week is its week alone ({@link IssueNaming#weeksText}). The pattern is
+     * under "Uge ${week}+${weekTo}, ${year}", and that last form where the pattern writes no week; a single week is
+     * its week alone under all three, as its name is ({@link IssueNaming#weeksText}). The pattern is
      * read as it stands now, not the name stored on the issue: an issue renamed by hand, or named before the
      * pattern changed, is headed by the pattern's weeks, and the week label is the way to head it otherwise. Null
      * where the issue has no week.

@@ -8,7 +8,9 @@
  * (what publish.yml deploys is what retract-version.yml retracts and the release notes name,
  * niord-local-run and niord-country-kit among them; the local-run zip no image job is given, and
  * the kit package is built and checked before the first deploy; both deploys with a stub
- * ./mvnw), the authorisation and package steps of the retraction, the bump job (its shape read
+ * ./mvnw), the authorisation, validation and package steps of the retraction (a run refused
+ * whole, before any deleting step, without its delete token or when someone other than the login
+ * authorise checked started the attempt), the bump job (its shape read
  * from the text, its skip without the app's id or key, its one command, and once against the fake
  * GitHub of github-api-stub.mjs in a worker) and the gate's check of where the bump app's key is;
  * and that the helper removes each run's folder. What runs is the text of the
@@ -131,7 +133,7 @@ describe('publish.yml: the gate', () => {
     );
   });
 
-  it('numbers run 1 4.0.182, after the 4.0.181 SIFA-DK/niord-ng published last', () => {
+  it('numbers run 1 4.0.182, after the 4.0.181 the earlier private repository published last', () => {
     const result = gate({ env: { GITHUB_RUN_NUMBER: '1' } });
     assert.equal(result.status, 0, show(result));
     assert.equal(result.outputs.version, '4.0.182', show(result));
@@ -1012,7 +1014,43 @@ function deployFile(where, { artifact, file, env = {} }) {
 // ---------------------------------------------------------------------------------------------
 
 const AUTHORISE = stepRun(RETRACT, { job: 'authorise', step: 'Maintainer, main' });
+const VALIDATE = { job: 'retract', step: 'Validate input' };
 const PACKAGES = stepRun(RETRACT, { job: 'retract', step: 'GitHub Packages of NiordOrg/niord' });
+
+/**
+ * The validation step's bash for 4.0.140, `hasToken` the true or false its env hands it, `actor`
+ * who started the attempt and `authorised` the login the authorise job checked.
+ */
+const validate = (hasToken, { actor = MAINTAINER, authorised = MAINTAINER } = {}) =>
+  runBash(stepRun(RETRACT, VALIDATE), {
+    env: {
+      VERSION: '4.0.140',
+      REASON: 'a bad build',
+      AUTHORISED: authorised,
+      ACTOR: actor,
+      HAS_DELETE_TOKEN: hasToken,
+    },
+  });
+
+const NO_TOKEN =
+  '::error::The retract environment holds no NIORD_DELETE_TOKEN; nothing was retracted. ' +
+  "Add the machine user's delete-only token (delete:packages, read:packages) as the secret " +
+  'NIORD_DELETE_TOKEN of the environment retract (Settings → Environments), then start the workflow again.';
+
+/**
+ * The retract job's steps in order, each as `{ name, id, if, uses }` from its own keys (the
+ * name of a `uses:` step without one is its action).
+ */
+function retractSteps() {
+  const steps = [];
+  for (const line of code(jobText(RETRACT, 'retract')).replaceAll('\r', '').split('\n')) {
+    const item = /^ {6}- ([a-z-]+):\s*(.*)$/.exec(line);
+    const key = item ?? /^ {8}([a-z-]+):\s*(.*)$/.exec(line);
+    if (item) steps.push({});
+    if (key && steps.length) steps.at(-1)[key[1]] = key[2].trim();
+  }
+  return steps.map((step) => ({ ...step, name: step.name ?? step.uses }));
+}
 
 function authorise({ actor = MAINTAINER, environment = 'false true' } = {}) {
   return runBash(AUTHORISE, {
@@ -1091,6 +1129,36 @@ describe('retract-version.yml', () => {
   it('lets a maintainer retract from main while retract allows main only', () => {
     const result = authorise();
     assert.equal(result.status, 0, show(result));
+    assert.equal(result.outputs.actor, MAINTAINER, show(result));
+  });
+
+  it('refuses an attempt started by anyone but the login authorise checked (Re-run failed jobs)', () => {
+    for (const [actor, authorised] of [
+      ['someone-else', MAINTAINER],
+      [MAINTAINER, ''],
+    ]) {
+      const result = validate('true', { actor, authorised });
+      assert.equal(result.status, 1, show(result));
+      assert.deepEqual(outputLines(result.stdout), [
+        `::error::'${actor}' started this attempt, but authorise checked '${authorised}': use Re-run all jobs, or start a new run; nothing was retracted.`,
+      ]);
+      assert.equal(result.summary, '');
+    }
+  });
+
+  it("hands the login authorise checked to the retract job's validation, beside who started the attempt", () => {
+    assert.match(
+      code(jobText(RETRACT, 'authorise')),
+      /^ {4}outputs:\r?\n {6}actor: \$\{\{ steps\.check\.outputs\.actor \}\}\r?$/m,
+    );
+    assert.equal(
+      stepEnv(RETRACT, { job: 'authorise', step: 'Maintainer, main' }).ACTOR,
+      '${{ github.triggering_actor }}',
+    );
+    assert.match(code(jobText(RETRACT, 'authorise')), /^ {8}id: check\r?$/m);
+    const env = stepEnv(RETRACT, VALIDATE);
+    assert.equal(env.AUTHORISED, '${{ needs.authorise.outputs.actor }}');
+    assert.equal(env.ACTOR, '${{ github.triggering_actor }}');
   });
 
   it('refuses a login not on the maintainer list', () => {
@@ -1103,6 +1171,45 @@ describe('retract-version.yml', () => {
     const result = authorise({ environment: null });
     assert.equal(result.status, 1, show(result));
     assert.match(result.stdout, /Environment 'retract' does not exist or cannot be read/);
+  });
+
+  it('refuses the whole run, before anything is deleted, while retract holds no NIORD_DELETE_TOKEN', () => {
+    const result = validate('false');
+    assert.equal(result.status, 1, show(result));
+    assert.deepEqual(outputLines(result.stdout), [NO_TOKEN]);
+    assert.equal(result.summary, '');
+  });
+
+  it('goes on to the deleting steps while the token is there', () => {
+    const result = validate('true');
+    assert.equal(result.status, 0, show(result));
+    assert.equal(result.stdout, '');
+    assert.match(result.summary, /^## Retract 4\.0\.140\n/);
+  });
+
+  it("checks the token's presence only, through env, in the first step, which every deleting step needs", () => {
+    assert.equal(
+      stepEnv(RETRACT, VALIDATE).HAS_DELETE_TOKEN,
+      "${{ secrets.NIORD_DELETE_TOKEN != '' }}",
+    );
+    assert.ok(!stepRun(RETRACT, VALIDATE).includes('${{'));
+    const steps = retractSteps();
+    assert.equal(steps[0]?.id, 'validate', JSON.stringify(steps));
+    // A step without if: runs only when every step before it succeeded; one with this if: runs
+    // after the validation succeeded, a failed Packages step (a token the registry refuses) or not.
+    const afterValidation = "${{ !cancelled() && steps.validate.outcome == 'success' }}";
+    for (const step of steps.slice(1))
+      assert.ok(
+        step.if === undefined || step.if === afterValidation,
+        `${step.name}: if: ${step.if}`,
+      );
+    for (const deleting of ['GitHub Packages of NiordOrg/niord', 'GitHub release', 'Tag'])
+      assert.ok(
+        steps.slice(1).some((step) => step.name === deleting),
+        `no step ${deleting} after the validation`,
+      );
+    assert.equal(steps.find((step) => step.name === 'GitHub release')?.if, afterValidation);
+    assert.equal(steps.find((step) => step.name === 'Tag')?.if, afterValidation);
   });
 
   it('finds a version on the second page of a package and deletes it', () => {

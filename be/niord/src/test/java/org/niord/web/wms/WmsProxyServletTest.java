@@ -97,9 +97,7 @@ class WmsProxyServletTest {
     }
 
     private HttpServletResponse responseWithWriter() throws Exception {
-        HttpServletResponse resp = mock(HttpServletResponse.class);
-        when(resp.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
-        return resp;
+        return new Answer().response;
     }
 
     @Test
@@ -136,12 +134,58 @@ class WmsProxyServletTest {
         protect(servlet, Boolean.FALSE); // gate explicitly disabled
 
         HttpServletRequest req = anonymousRequest();
-        HttpServletResponse resp = responseWithWriter();
+        Answer answer = new Answer();
 
-        // The gate does not fire; with a blank wmsProvider the servlet redirects to the blank image and
+        // The gate does not fire; with a blank wmsProvider the servlet answers the blank image and
         // never issues the 403 the protected branch would.
-        servlet.doGet(req, resp);
-        verify(resp, never()).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        servlet.doGet(req, answer.response);
+        verify(answer.response, never()).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        assertTheBlankImage(answer);
+        // The path without the cache keeps its day-long header on the blank image (WMS1, recorded and not fixed)
+        verify(answer.response).addHeader("Cache-Control", "max-age=86400");
+        verify(answer.response).setDateHeader(eq("Expires"), anyLong());
+        verify(answer.response, never()).setHeader(eq("Cache-Control"), anyString());
+    }
+
+    @Test
+    void aFailedFetchWithoutTheCacheIsAnsweredWithTheBlankImage() throws Exception {
+        try (HttpStub provider = HttpStub.start()) {
+            provider.respondStatus(500);
+            WmsProxyServlet servlet = new WmsProxyServlet();
+            protect(servlet, Boolean.FALSE);
+            servlet.wmsProvider = provider.baseUrl() + "/wms";
+            HttpServletRequest req = anonymousRequest(params("BBOX", "1,2,3,4", "WIDTH", "256", "HEIGHT", "256"));
+
+            Answer answer = new Answer();
+            servlet.doGet(req, answer.response);
+
+            assertEquals(1, provider.requestCount(), "the provider was asked");
+            assertTheBlankImage(answer);
+            verify(answer.response).addHeader("Cache-Control", "max-age=86400");
+            verify(answer.response, never()).setHeader(eq("Cache-Control"), anyString());
+        }
+    }
+
+    /** The bytes of the blank picture, as the application serves it at /img/blank.png */
+    private static byte[] blankPicture() throws IOException {
+        try (var in = WmsProxyServletTest.class.getClassLoader()
+                .getResourceAsStream("META-INF/resources/img/blank.png")) {
+            assertTrue(in != null, "the blank picture is on the class path");
+            return in.readAllBytes();
+        }
+    }
+
+    /**
+     * The answer is "no tile" given directly: status 200, a PNG and the blank picture's bytes, and no redirect, so
+     * no Location header that could name another origin behind a proxy.
+     */
+    private static void assertTheBlankImage(Answer answer) throws IOException {
+        verify(answer.response, never()).sendRedirect(anyString());
+        verify(answer.response, never()).setHeader(eq("Location"), anyString());
+        verify(answer.response, never()).addHeader(eq("Location"), anyString());
+        verify(answer.response).setStatus(HttpServletResponse.SC_OK);
+        verify(answer.response).setContentType("image/png");
+        assertArrayEquals(blankPicture(), answer.body.toByteArray(), "the body is the blank picture");
     }
 
     /** Gives the servlet a settings service whose {@code wmsProtected} reads as the given value */
@@ -623,7 +667,7 @@ class WmsProxyServletTest {
                 Answer answer = new Answer();
                 servlet.doGet(userRequest(tileParams()), answer.response);
 
-                verify(answer.response).sendRedirect(WmsProxyServlet.BLANK_IMAGE);
+                assertTheBlankImage(answer);
                 verify(answer.response).setHeader("Cache-Control", "private, max-age=300");
                 verify(answer.response, never()).addHeader(eq("Cache-Control"), anyString());
                 verify(answer.response, never()).setHeader(eq(WmsProxyServlet.CACHE_HEADER), anyString());
@@ -648,7 +692,7 @@ class WmsProxyServletTest {
             for (int request = 0; request < 4; request++) {
                 Answer refused = new Answer();
                 servlet.doGet(userRequest(unknownStyle), refused.response);
-                verify(refused.response).sendRedirect(WmsProxyServlet.BLANK_IMAGE);
+                assertTheBlankImage(refused);
             }
             provider.respondBytes("image/png", png(256));
             Answer tile = new Answer();
@@ -673,7 +717,7 @@ class WmsProxyServletTest {
             Answer paused = new Answer();
             servlet.doGet(userRequest(tileParams()), paused.response);
 
-            verify(paused.response).sendRedirect(WmsProxyServlet.BLANK_IMAGE);
+            assertTheBlankImage(paused);
             assertEquals(3, provider.requestCount(), "the fourth request did not reach the provider");
         }
     }
@@ -698,8 +742,9 @@ class WmsProxyServletTest {
             Answer answer = new Answer();
             servlet.doGet(userRequest(tileParams()), answer.response);
 
-            verify(answer.response).sendRedirect(WmsProxyServlet.BLANK_IMAGE);
-            assertEquals(0, answer.body.size());
+            // The provider's 16 x 16 image is not passed on: the caller gets the blank picture
+            assertTheBlankImage(answer);
+            verify(answer.response).setHeader("Cache-Control", "private, max-age=300");
             assertEquals(List.of(), cachedFiles(), "an image that is no tile is not stored under a tile's name");
         }
     }

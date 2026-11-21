@@ -81,10 +81,11 @@ public abstract class ITTest {
 
     static {
         // The test tree's niord.json, which the IT start writes as settings (the fixture holds no Setting row),
-        // references ${NIORD_HOME}; SettingsService resolves such tokens from an environment variable or system
-        // property (else its expander live-locks — the documented S1 landmine). Provide a writable temp
-        // directory, mirroring the NIORD_HOME the Quarkus deployment set.
-        if (System.getenv("NIORD_HOME") == null && System.getProperty("NIORD_HOME") == null) {
+        // gives niord.home = ${NIORD_HOME}; SettingsService resolves such tokens from an environment variable or
+        // system property, and refuses the start when nothing does. Provide a writable temp directory when neither
+        // is set, or is set blank (a blank NIORD_HOME is no home to SettingsService either), as a deployment's
+        // NIORD_HOME does.
+        if (homeVariable() == null) {
             System.setProperty("NIORD_HOME", System.getProperty("java.io.tmpdir") + "/niord");
         }
         emptyTheBatchJobFolders();
@@ -94,6 +95,22 @@ public abstract class ITTest {
         // property in a static singleton on first class-load, so it must be set this early, from the base
         // class every integration test loads. See TwitterApiStub for the full rationale.
         TwitterApiStub.bootstrap();
+    }
+
+    /**
+     * Returns {@code NIORD_HOME} as the application reads it ({@code SettingsService.overrideOf}): the system
+     * property, else the environment variable, each only when not blank, trimmed. The classes that start on a fresh
+     * database of their own set the {@code niord.home} property from it.
+     *
+     * @return the home the variable names, or null when it is unset or blank
+     */
+    public static String homeVariable() {
+        String property = System.getProperty("NIORD_HOME");
+        if (property != null && !property.isBlank()) {
+            return property.trim();
+        }
+        String variable = System.getenv("NIORD_HOME");
+        return variable != null && !variable.isBlank() ? variable.trim() : null;
     }
 
     /**
@@ -289,11 +306,10 @@ public abstract class ITTest {
             case "editor"   -> KeycloakTestTokens.editorAccessToken();
             case "user"     -> KeycloakTestTokens.userAccessToken();
             // The endpoint sweep's identities, whose roles sit on a domain client only (see KeycloakTestTokens)
-            case "curator"        -> KeycloakTestTokens.curatorAccessToken();
             case "domainEditor"   -> KeycloakTestTokens.domainEditorAccessToken();
             case "adminElsewhere" -> KeycloakTestTokens.adminElsewhereAccessToken();
             default -> throw new IllegalArgumentException("Unknown role '" + role
-                    + "' (expected sysadmin, admin, editor, user, curator, domainEditor or adminElsewhere)");
+                    + "' (expected sysadmin, admin, editor, user, domainEditor or adminElsewhere)");
         };
     }
 

@@ -42,8 +42,9 @@ import java.util.List;
  *
  * Two parts are conditional, and both absences are facts rather than failures:
  * a frozen issue carries no rail and no omissions, because both describe a
- * release that has already happened; and a curator who is not an admin gets the
- * screen without the rail, where before the rail's 403 blanked the whole screen.
+ * release that has already happened; and a reader without the admin role gets
+ * the screen without the rail. The endpoint admits admins only, so over the wire
+ * the second absence does not occur.
  */
 public class IssueWorkbenchVo implements IJsonSerializable {
 
@@ -181,7 +182,7 @@ public class IssueWorkbenchVo implements IJsonSerializable {
      */
     private IssueInFlightVo inFlight;
 
-    /** Absent on a frozen issue, and for a curator who is not an admin. */
+    /** Absent on a frozen issue, and for a reader without the admin role. */
     private PublishChecklistVo checklist;
 
     /** Absent where nothing was resolved -- a frozen issue, or one with no query. */

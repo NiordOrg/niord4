@@ -1,6 +1,6 @@
 # Generated from DATA-MODEL.md section 8 by gen-rule-ids.js. Do not hand-edit.
 # Every id here must be bound to a test, or the build fails.
-# source-sha256: 4d0a2ab951d4074e73fb5d5776b1550164a1071e6b0cc38d0e7860868e678fd3
+# source-sha256: dc784fa1b5b53a0ad49565e75e66520d073c8c73b0e77ceb48c9558f6dad77a8
 S-1
 S-2
 S-3

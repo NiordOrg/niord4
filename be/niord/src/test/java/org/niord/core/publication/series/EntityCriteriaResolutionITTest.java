@@ -302,6 +302,60 @@ public class EntityCriteriaResolutionITTest extends ITTest {
                 "the NM message is not in the other area, so the conjunction must select nothing");
     }
 
+    // ------------------------------------------------------------ capital letters
+
+    /**
+     * An area or category operand in other capital letters selects what the MRN as
+     * stored selects.
+     *
+     * The look-up by MRN ignores case, so such an operand finds its row and the
+     * query narrows on that row's lineage; the rule then has to compare the found
+     * row's MRN with the facts, not the operand as written, or every candidate is
+     * rejected and the issue resolves empty with no error.
+     */
+    @Test
+    @Transactional
+    public void anOperandInOtherCapitalLettersSelectsWhatTheStoredMrnSelects() {
+        String areaOperand = parentAreaMrn.toUpperCase(java.util.Locale.ROOT);
+        String categoryOperand = parentCategoryMrn.toUpperCase(java.util.Locale.ROOT);
+
+        assertEquals(membersOf(criteria(Set.of(), Set.of(parentAreaMrn), Set.of(), Set.of())),
+                membersOf(criteria(Set.of(), Set.of(areaOperand), Set.of(), Set.of())),
+                "an area operand in other capital letters selected other members than the stored MRN");
+        assertEquals(Set.of(matchingUid),
+                membersOf(criteria(Set.of(), Set.of(areaOperand), Set.of(), Set.of())));
+
+        assertEquals(membersOf(criteria(Set.of(), Set.of(), Set.of(parentCategoryMrn), Set.of())),
+                membersOf(criteria(Set.of(), Set.of(), Set.of(categoryOperand), Set.of())),
+                "a category operand in other capital letters selected other members than the stored MRN");
+        assertEquals(Set.of(matchingUid),
+                membersOf(criteria(Set.of(), Set.of(), Set.of(categoryOperand), Set.of())));
+    }
+
+    /**
+     * Saved criteria keep their members when the area's or the category's MRN is
+     * later re-typed in other capital letters in its editor.
+     */
+    @Test
+    @Transactional
+    public void savedCriteriaKeepTheirMembersWhenAnMrnIsRetypedInOtherCapitals() {
+        ResolvedCriteria byArea = criteria(Set.of(), Set.of(parentAreaMrn), Set.of(), Set.of());
+        ResolvedCriteria byCategory = criteria(Set.of(), Set.of(), Set.of(parentCategoryMrn), Set.of());
+
+        Area area = em.createQuery("SELECT a FROM Area a WHERE a.mrn = :mrn", Area.class)
+                .setParameter("mrn", parentAreaMrn).getSingleResult();
+        area.setMrn(parentAreaMrn.toUpperCase(java.util.Locale.ROOT));
+        Category category = em.createQuery("SELECT c FROM Category c WHERE c.mrn = :mrn", Category.class)
+                .setParameter("mrn", parentCategoryMrn).getSingleResult();
+        category.setMrn(parentCategoryMrn.toUpperCase(java.util.Locale.ROOT));
+        em.flush();
+
+        assertEquals(Set.of(matchingUid), membersOf(byArea),
+                "criteria naming an area whose MRN was re-typed in other capital letters lost their members");
+        assertEquals(Set.of(matchingUid), membersOf(byCategory),
+                "criteria naming a category whose MRN was re-typed in other capital letters lost their members");
+    }
+
     // ------------------------------------------------------------------ RI-6
 
     /**

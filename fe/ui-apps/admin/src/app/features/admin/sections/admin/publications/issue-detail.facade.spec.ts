@@ -148,15 +148,13 @@ describe('IssueDetailFacade', () => {
   });
 
   /**
-   * The release gate is an administrator's; the screen is not.
+   * An answer without a release rail is still the whole screen.
    *
-   * A curator decides what goes INTO an issue, and whether it may be released is
-   * not their decision — so the payload reaches them without a checklist and with
-   * everything else exactly as an admin sees it. Refusing them the screen over
-   * the half they may not act on would hide an issue from somebody allowed to
-   * curate it.
+   * The rail is the one optional part of the payload: a frozen issue carries
+   * none, and the backend leaves it out for a reader without the admin role.
+   * Everything else renders exactly as it does beside a rail.
    */
-  it('renders the whole screen for a curator who gets no release rail', () => {
+  it('renders the whole screen when the answer carries no release rail', () => {
     const { facade, httpTesting } = setup();
     load(facade);
 

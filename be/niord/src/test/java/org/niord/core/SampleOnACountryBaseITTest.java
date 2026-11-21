@@ -107,9 +107,7 @@ class SampleOnACountryBaseITTest {
             throw new ExceptionInInitializerError(e);
         }
         if (System.getProperty("niord.home") == null) {
-            String home = System.getenv("NIORD_HOME") != null
-                    ? System.getenv("NIORD_HOME") : System.getProperty("NIORD_HOME");
-            System.setProperty("niord.home", home);
+            System.setProperty("niord.home", ITTest.homeVariable());
         }
     }
 

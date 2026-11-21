@@ -363,18 +363,19 @@ Each is pinned (or noted) by a test that asserts the **actual** current behavior
 - **Exposed by:** `NiordIntegrationExecutionGapITTest.failedReimportLeavesOldCopyPublishedAndImportsNoReplacement`
   asserts the post-INT3-fix safe end-state (old copy stays `PUBLISHED`, no replacement imported, failure
   swallowed) — the swallow itself is the residual documented here.
-- **Severity:** Medium — surfacing the failure (per-message transactions, or recording a failure on the
-  integration) is the natural follow-up during the transaction/event rewrite. The error hunt of 2026-11-12 found two
-  more faults that this catch kept silent (two own copies with one `legacyId`, and references an import left out
-  without a word); the fix stage of 2026-11-13 fixed both, and each now writes a WARN line to the log only, so the
-  failure record asked for here is still missing. Since 2026-11-16 (the review of the phase 2 fix stage, R6) one
-  kind of malformed source message no longer ends the run: a message whose content this Niord refuses as it builds
-  it (a position off the globe, an `IllegalArgumentException` before anything is written) is skipped with a WARN
-  that names it, the rest of the run goes on, and an updated message's old copy stays (`importOrSkip`, 259-272).
-  Every other failure of an import, such as the test's message without a type (a `NullPointerException`), still
-  ends the run as (b) says. Since the fix stage of 2026-11-13, a failed cancellation inside
-  `processNiordIntegration` rolls the whole run back (`MessageService.cancelMessage` and `updateStatus` roll back for
-  any exception): the run's catch logs it, the commit throws `UnexpectedRollbackException` and
+- **Severity:** Low (the owner, 2026-11-20): no deployment known to the base product's developers has an active
+  integration point, and the entry is not planned to be fixed. Surfacing the failure (per-message transactions, or
+  recording a failure on the integration) would be the natural follow-up during the transaction/event rewrite. The
+  error hunt of 2026-11-12 found two more faults that this catch kept silent (two own copies with one `legacyId`, and
+  references an import left out without a word); the fix stage of 2026-11-13 fixed both, and each now writes a WARN
+  line to the log only, so the failure record asked for here is still missing. Since 2026-11-16 (the review of the
+  phase 2 fix stage, R6) one kind of malformed source message no longer ends the run: a message whose content this
+  Niord refuses as it builds it (a position off the globe, an `IllegalArgumentException` before anything is written)
+  is skipped with a WARN that names it, the rest of the run goes on, and an updated message's old copy stays
+  (`importOrSkip`, 259-272). Every other failure of an import, such as the test's message without a type (a
+  `NullPointerException`), still ends the run as (b) says. Since the fix stage of 2026-11-13, a failed cancellation
+  inside `processNiordIntegration` rolls the whole run back (`MessageService.cancelMessage` and `updateStatus` roll
+  back for any exception): the run's catch logs it, the commit throws `UnexpectedRollbackException` and
   `NiordIntegrationService` logs that, where the part before the failure used to be committed. The one transaction
   spans every target series of the integration (the loop at 133 runs inside the `REQUIRES_NEW` at 116-117); the
   per-message transaction the scheduled publication and the hourly firing run now use, `MessageTxRunner`
@@ -413,31 +414,53 @@ suffixed `_documentsBug` / `_documentsBehavior` where practical._
 - **Exposed by:** `JpaJsonAttributeConverterTest.nullHandlingDiffersFromPropertiesConverter_documentsBehavior`.
 - **Severity:** Low — latent inconsistency; the two near-identical converters should agree on a contract.
 
-## DB3 — un-audited `equals`/`like` predicates are silently case- and accent-sensitive
+## DB3 — What is left of text comparisons and case: exact identifiers, unique rules that count case, unindexed folded look-ups, accents and the locale
 
-- **Location:** equality/`LIKE` predicates on text columns throughout the criteria layer — `CriteriaHelper`
-  `equals`/`like` (`niord/src/main/java/org/niord/core/db/CriteriaHelper.java`), the area lineage-prefix
-  `like(lineage, parent.lineage + '%')`, and the ~101 `@NamedQuery` call sites that compare strings.
-- **Description:** `equals` emits a plain SQL `=` (`cb.equal`), so its case-sensitivity is the column's
-  collation, not the helper's. Under PostgreSQL's default collation `=` and `LIKE` are **case- and
-  accent-sensitive**: `equals(name, "alpha")` does *not* match a stored `"Alpha"`.
-  `equalsIgnoreCase`/`like` (which fold case explicitly via `cb.lower`) are the ones that do.
-- **Why it looks wrong:** the codebase inherits its lookup shapes from an era where the database collation
-  was case- and accent-*insensitive*, so a call site could rely on a forgiving match without saying so.
-  Nothing enforces that callers pass canonically-cased values (usernames, short ids are typically
-  lower-/upper-cased upstream, but not by contract). A lookup that used to succeed on a differently-cased
-  value now silently returns empty — and the suite does not catch it, because the tests assert exact-case
-  matches, which pass either way.
-- **Concretely-surfaced sites are handled** — `Message.findByShortId` and the `MessageSearchService`
-  creator/updater username match have been switched to case-insensitive matching. This umbrella stays open
-  for the **un-audited remainder**.
-- **Recommended action:** decide per column family whether case-insensitive matching is required; if so,
-  either fold both sides in the query (`lower(col) = lower(:v)`) or declare the affected columns with a
-  case-insensitive collation (`citext`, or an ICU `und-x-icu` case-insensitive collation) in the Liquibase
-  changelog. Do **not** silently accept the case-sensitive default without an explicit decision.
-- **Exposed by:** `CriteriaHelperITTest.equalsIsCaseSensitiveUnderPostgresDefaultCollation_documentsBehavior`
-  pins the helper's behaviour; the broad audit is not exercised by any single test.
-- **Severity:** Medium — latent, collation-dependent correctness across an unaudited set of predicates.
+- **Location:** `CriteriaHelper.equals` (`niord/src/main/java/org/niord/core/db/CriteriaHelper.java`, a plain
+  `cb.equal`), the named queries that compare text, the unique keys of `V001__baseline_schema.sql`, and the two
+  message index back ends (`MessageLuceneIndex`, `MessagePostgresIndex`).
+- **Description:** A text a person types is matched without regard to case: the free-text message search in both
+  back ends, user, contact, source, area and category names, chart and series search, tag and publication titles,
+  short ids, a saved message filter's name, an area's or a category's MRN (an exact match first) and a parameter
+  type's name when a type is created or renamed. What still compares exactly, or differs, is this:
+  - **Exact on purpose.** The identifiers Niord writes itself and reads back (message series ids, dictionary keys,
+    setting keys, uids, domain ids, a template parameter's type name) are compared letter for letter, and
+    `CriteriaHelper.equals` is passed only such ids, enums, booleans and language codes. The publication series id
+    (`PublicationSeriesService`, `IssuePickerService`) is compared exactly because it is a segment of the series'
+    address and its citation handle. The publication category id (`PublicationCategory.findByCategoryId`) is
+    compared exactly for the same reason: it is a segment of the category's address.
+  - **Unique rules that count case under look-ups that do not.** Contact `UNIQUE(email)`, NAVTEX transmitter
+    `UNIQUE(name)`, SafetyNET area `UNIQUE(name)` and script resource `UNIQUE(path)` treat "A" and "a" as different
+    rows, while their look-ups ignore case and answer the exact match among case twins. The saved message filter's
+    `UNIQUE(name, user_id)` and the parameter type's `UNIQUE(name)` are the same since their checks ignore case:
+    the code refuses or replaces a case twin, the database would accept one.
+  - **Folded look-ups without an index to serve them.** `Message.findByShortId` (`lower(shortId)`),
+    `Message.findByMessageId` (`lower(uid)` and `lower(shortId)`) and `Message.findByReference`
+    (`lower(ref.messageId)`) read the whole message or reference table each time: the existing indexes on those
+    columns are plain btrees, which `lower()` cannot use.
+  - **Accents differ between the index back ends.** Lucene, the default, removes the accents of a fixed list of 44
+    letters on both sides (`LuceneUtils`), so "cafe" finds "café"; the database back end (`disableLucene`) does not,
+    so it does not. Neither folds æ, ø or å. `be/docs/lucene-postgres-toggle.md` records the difference; no test
+    pins the database back end's side.
+  - **Chart numbers are compared exactly** (`Chart.findByChartNumber`, `MessageSearchService` chart filter,
+    `MemberResolutionService`, documented on `ChartCriterionVo`). Whether that matters depends on whether any
+    national chart catalogue holds a number with letters, which is not known.
+  - **The database's locale decides what `lower()` folds.** PostgreSQL's `lower()` and `to_tsvector` follow the
+    database's character locale (`LC_CTYPE`). Under a language locale they fold Æ, Ø, Å and accented capitals;
+    under `C`/`POSIX` with the libc provider they fold A-Z only. The repository sets no locale, and the stagings'
+    and a hosted database's have not been checked.
+- **Why it looks wrong:** none of these is a wrong answer today, but each is a place where the rule "a typed text
+  is matched without regard to case" depends on data or set-up rather than on the code: a case twin the unique key
+  lets in, a chart number with letters, a database made with the `C` locale.
+- **Recommended action:** before go-live, run `SELECT datname, datctype, datlocprovider FROM pg_database` (a read)
+  on each environment's database; one on `C`/`POSIX` with libc needs a database made with a language locale. Decide
+  the rest when they are wanted: unique indexes on `lower(col)` for the six rules (a changeset that first refuses and
+  names existing case twins, in V013's shape), expression indexes for the three look-ups, the `unaccent` extension
+  for the database back end, and the chart-number question with the catalogue owners.
+- **Exposed by:** `CriteriaHelperITTest.equalsIsCaseSensitiveUnderPostgresDefaultCollation_documentsBehavior` pins
+  `CriteriaHelper.equals`; `LookupFaultITTest.pathsAndAddressesThatDifferOnlyInCaseAnswerTheExactOne` the case
+  twins under folded look-ups.
+- **Severity:** Low.
 
 ## DB4 — `AtonService.search` / `searchPositions` swallow all exceptions and return "no matches"
 
@@ -664,6 +687,7 @@ _Pinned by tests asserting the ACTUAL behavior (method names end `_documentsBug`
   files, and a fresh local build here still needs GRAD or a warm cache, so the entry stays open.
 - **Exposed by:** niord-dk's CI, 2026-10-23.
 - **Severity:** Medium — availability of every build that has no warm cache, outside our control.
+- **Left by the owner (2026-11-20):** a fault that touches no running system.
 
 ## ERR8 — Two `IllegalStateException` sites that cannot be reached in normal use would answer a server fault with 409
 
@@ -881,33 +905,6 @@ Suspected issues surfaced while porting the publications redesign (`org.niord.co
 `org.niord.web.publication`) from the Quarkus branch. The port kept the source behaviour; nothing below
 was changed in production code.
 
-## PORT-15. An unresolvable `${niord.home}` expands to the empty string, so a fresh database boots with its roots at the filesystem root
-
-- **Location:** `niord/src/main/java/org/niord/core/settings/SettingsService.java` (`expandSettingValue`, the
-  final `replaceToken(token, "")`), consumed through `SettingInjectionBeanPostProcessor` by every `@Setting`
-  that defaults under `${niord.home}` — `PublicationPathService` (`publicationPreviewRootPath`), the Lucene index
-  folders, and whatever else names a directory.
-- **Description:** `niord.home` resolves from a system property `niord.home`, an environment variable
-  literally named `niord.home`, a `NIORD_HOME` system property or environment variable, or the `Setting` row.
-  In the IT suite the row comes from the test tree's `niord.json` (`niord.home = ${NIORD_HOME}`), which the IT
-  start writes (the fixture holds no `Setting` row since C4b); a database built from the bare master changelog
-  has no `Setting` rows, and the token resolves to nothing when neither a `niord.home` nor a `NIORD_HOME`
-  system property or environment variable is set. The token is then replaced with nothing,
-  so `${niord.home}/repo` becomes `/repo`. Observed on CI (2026-09-15, `LiquibaseBootstrapITTest`, which
-  boots exactly that fresh database): `PublicationPathService` refused to start with
-  `could not create /publication-archive`, a permission error at the filesystem root. Running as root in a
-  container it would instead create `/repo` and `/publication-archive` at the root and serve from there. On
-  Windows it creates `C:\repo`, `C:\publication-archive`, `C:\publication-preview` and `C:\message-index` —
-  all four are present on the development machine from local runs of that test, which is why it stayed green
-  there.
-- **Why it looks wrong:** a token nothing can resolve should refuse, or at least say so, rather than vanish
-  into a valid-looking absolute path. The code before the port tolerated it silently (the Lucene index logs
-  `Failed to open Lucene Index in folder /message-index` on every sweep); the publications containment check
-  turns the same condition into a boot failure whose message names a directory nobody configured.
-- **Workaround:** pass `-Dniord.home=...` (what `start-local.sh` does) or deploy with the seeded changelog.
-  `LiquibaseBootstrapITTest` now sets the system property in its static bootstrap. **Exposed by:** the first
-  CI run of the merged publications port.
-
 ## PORT-5. `WebUtils.getMultipartFiles` keys parts by file name, so two parts with one name collapse
 
 - **Location:** `niord/src/main/java/org/niord/core/util/WebUtils.java` (`getMultipartFiles`,
@@ -935,22 +932,6 @@ was changed in production code.
   `IssueFileService.upload` (uploaded) — record only `fileName`, `filePath` and `fileSource`, so the columns that would
   let a released document be verified against its record, or tell two generations apart without reading the archive,
   are permanently NULL.
-
-## PORT-17. An amend re-orders the whole issue, where the data model says surviving members keep their order
-
-- **Location:** `org/niord/core/publication/series/IssuePublishService.java` (`amend` →
-  `resolveFreezeAndWrite`, step 5: `MemberResolutionService.orderFor` and `IssueOrdering.assignSortIndex` over
-  every member) against `fe/docs/publications/DATA-MODEL.md` §6.6 rule 5.
-- **Description:** rule 5 says an amend does not recompute `sortIndex` for surviving members: they keep their
-  relative order, an added member is placed by the recorded sort key and the indices are re-densified. The code
-  sorts the whole post-override union again with the series' current sort, so a surviving member moves whenever
-  its sort key (its area's place in the tree, its number, a date) changed since the release, or the sort itself
-  did (an issue sorted by id is ordered by year and number since 2026-11-19, PORT-9).
-- **Why it looks wrong:** the stored order exists so a re-issued document does not re-order an unchanged list;
-  either the rule or the code is wrong, and nothing says which.
-- **Exposed by:** the check of PORT-9's fix, 2026-11-19 (read in the code).
-- **Severity:** Low — an amend replaces a document by a deliberate act with a reason, and the new document is
-  ordered consistently; only the promise that survivors keep their places is broken.
 
 # Potential errors — security review and fix sweep (2026-09)
 
@@ -1145,14 +1126,15 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 ## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
 
 - **Location:** `org.niord.web.wms.WmsProxyServlet.doGet`: `WebUtils.cache(response, CACHE_TIMEOUT)` runs before
-  the provider is asked, so the redirect to `/img/blank.png` that answers a missing provider or a failed fetch
-  carries `Cache-Control: max-age=86400` and `Expires`.
-- **Description:** a browser may keep a redirect that carries a lifetime. One failed request for a tile, a
-  hiccup of the provider's for instance, then gives that browser the blank image for that tile for 24 hours,
-  whatever the provider does meanwhile.
+  the provider is asked, so the blank image (`sendBlankImage`, status 200 and the bytes of `/img/blank.png`) that
+  answers a missing provider or a failed fetch carries `Cache-Control: max-age=86400` and `Expires`.
+- **Description:** a browser keeps the blank image as it keeps a tile. One failed request for a tile, a hiccup of
+  the provider's for instance, then gives that browser the blank image for that tile for 24 hours, whatever the
+  provider does meanwhile.
 - **Why it looks wrong:** the day is meant for a tile, not for the absence of one. With the tile cache switched on
-  (`wmsCacheDays`), the servlet answers a failed tile with the same redirect kept for five minutes; the two paths
-  differ only because the path without the cache was left exactly as it was.
+  (`wmsCacheDays`), the servlet answers a failed tile with the same blank image kept for five minutes; the two paths
+  differ only because the path without the cache keeps the header it always had. (Until 2026-11-21 both paths
+  answered with a redirect to `/img/blank.png`; the blank image is now answered directly, with the same headers.)
 - **Exposed by:** the sea-chart tile cache (2026-11-12, `docs/sea-chart-tile-cache-plan.md`, decision 6: recorded,
   not fixed).
 - **Severity:** Low — blank tiles in one browser until the next day or a forced reload. The header also keeps
@@ -1167,7 +1149,7 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Description:** the two authenticated tests of `WmsProxyServletITTest` do not take the no-provider branch they
   describe. The servlet asks that host with the placeholder as its token, the host answers 404 (the Failsafe
   output has `Failed loading WMS image for URL http://kortforsyningen.kms.dk/?TOKEN=***: FileNotFoundException`,
-  once per test), and the blank redirect the tests assert comes from the failure branch.
+  once per test), and the blank image the tests assert comes from the failure branch.
 - **Why it looks wrong:** a test run makes requests to a third party's host, depends on that host and the network
   (a host that does not answer costs each test up to 40 s), and asserts another branch than the one it names.
   `WmsProxyHttpITTest` shows the way: a local stub.
@@ -1287,26 +1269,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   guard) reads 1, 2, 3; the release import's path is the one to re-check.
 - **Severity:** Low. Fix: number an entry one above the resource's highest history version, and key the dialog on
   the entry's id.
-
-## KEYCLOAK1. A domain whose client the Keycloak integration creates gets no `publication-curate` role
-
-- **Location:** `niord/src/main/java/org/niord/core/keycloak/KeycloakIntegrationService.java` `createKeycloakDomain`
-  (259-323): the roles created for the new client are `user`, `editor`, `admin` and `sysadmin` (296-301); and
-  `niord/src/main/java/org/niord/core/user/Roles.java` (35-53), whose ADMIN fallback on the curation endpoints is
-  "to be removed one release after the deployed realms are re-imported".
-- **Description:** the realm files in the repository carry `publication-curate` on every domain client, but a domain
-  created from Sysadmin > Domains with the Keycloak integration has no such role, so a curator cannot be given the
-  right in it until a system administrator creates the role by hand in Keycloak. Today the ADMIN fallback lets an
-  administrator curate there; once it is removed, as `Roles.java` plans, the curation endpoints of such a domain
-  admit nobody until the role is added [read in the code; not run].
-- **Why it looks wrong:** the integration exists to set up a domain's client completely, and the role it leaves out
-  is the only one the publication curation needs.
-- **Exposed by:** the user guides' writers (2026-11-11, the system administrators' manual, part 2). The manuals
-  (`guides/sysadmin-manual/A1-KeycloakIntegration.adoc` and `guides/whats-new/05-SystemAdministrators.adoc`) tell the
-  reader to add the role by hand; change them with the fix. Related: the go-live row "No curator role" in
-  `fe/docs/backlog.md`.
-- **Severity:** Low today; Medium once the ADMIN fallback is removed. Fix: create `publication-curate` (not part of
-  the composite ladder) with the other four roles, before the fallback goes.
 
 ## KEYCLOAK3. The integration tests sign in against Keycloak 22.0.5, a version no environment runs
 
@@ -1659,26 +1621,6 @@ code by the developer or the checker of the cluster named; most were not run.
 - **Severity:** Low. Fix: refuse New edition on an issue that a published edition already supersedes, or make the
   edition from the latest edition.
 
-## ISSUE13. A single week of a series named by `${week}+${weekTo}` is named with the "+" left over
-
-- **Location:** `org/niord/core/publication/series/resolve/IssueNaming.java` (`expand`, `valuesOf`: `${weekTo}`
-  expands to the empty text for a single week).
-- **Description:** a series whose name pattern writes the pair form, as the admin manual describes it
-  ("Uge ${week}+${weekTo}, ${year}"), names every single-week issue "Uge 36+, 2026"; a pattern
-  "Uge ${week} og ${weekTo}" names it "Uge 36 og , 2026", and the file-name pattern does the same. The admin app's
-  `expandIssuePattern` suggests no name at all there (it returns nothing for a single week under `${weekTo}`). The
-  weekly reports' heading, which prints the weeks as the name pattern writes them since 2026-11-20, is the one place
-  that leaves the name here: `IssueNaming.weeksText` heads such a week by the first week's token alone, "36".
-- **Why it looks wrong:** a name and a file name with a joiner and no second week.
-- **Exposed by:** fix round 2 of the recorded faults, 2026-11-20, while the weekly heading was made to follow the
-  name pattern (read in the code; `IssueNamingTest#theWeeksOfASingleWeekNeverEndInAJoiner` asserts both the name as
-  it is and the heading without the joiner).
-- **Severity:** Low, cosmetic. Fix: drop the text between the first week and an empty `${weekTo}` when the issue
-  has a single week, in `IssueNaming.expand` and the admin app's `expandIssuePattern` alike. It changes suggested
-  names and file names, and so the links of documents published after it; the special case in `weeksText` can then
-  go, as the heading and the name agree again by themselves. The admin manual (`guides/admin-manual/05-Publications.adoc`,
-  the paragraph on the patterns' tokens) describes it as it is; change it with the fix.
-
 ## CONTACT3. Changing a contact's address to one another contact has answers 500
 
 - **Location:** `org/niord/core/user/ContactService.java` `updateContact`, which copies the new address without
@@ -1922,7 +1864,8 @@ path is from the repository root.
 - **Decision first:** may declared settings take their flags from the catalogue, once each staging's stored `mode`
   value has been read? Recommended: yes, in one change with SETTINGS-10.
 - **Left by the owner (2026-11-15):** no change to where the flags come from, and no read of the stagings' rows;
-  the entry stays open as the record.
+  the entry stays open as the record. A deployment whose settings are written by the countries' restore from the
+  previous system gets each kept row's flags from the catalogue there, so the fault is left to a row made by hand.
 
 ## SETTINGS-10. A setting marked not editable is still written by the settings API and the settings import
 
@@ -2121,6 +2064,21 @@ they say otherwise; every other path is from the repository root.
 - **Exposed by:** the integration of the error hunt's phase 2 fix stage, 2026-11-16 (five failures in its first
   whole run, reproduced by its check with the repair taken out).
 - **Severity:** Low, tests only. Fix: let the two classes count only the messages they make.
+
+## TESTQ9. `BootstrapRunnerTest.aStatusThatCannotBeReadIsAskedForAgain` fails on a loaded machine
+
+- **Location:** `be/niord/src/test/java/org/niord/core/bootstrap/BootstrapRunnerTest.java`: the set-up gives the
+  runner a job deadline of 50 ms and a poll of 5 ms, and this case answers the first two polls with an exception
+  before it answers COMPLETED.
+- **Description:** three polls, two of them logging a failure, have to fit in 50 ms of wall-clock time. On a
+  workstation running the frontend's unit suite and the guides' build beside the backend's unit suite
+  (2026-11-21), they did not: "did not end within 50 ms (status null; execution 7); it then ended COMPLETED". The
+  class alone passed at once on the same machine.
+- **Why it looks wrong:** the case is about a status that cannot be read, not about the deadline, yet its result
+  depends on how busy the machine is.
+- **Exposed by:** a whole unit-suite run on a workstation, 2026-11-21; not seen on CI.
+- **Severity:** Low, tests only. Fix: give this case a deadline far above its polls (a second, say), as only the
+  deadline cases need the short one.
 
 ## PUBSERIES3. A publication series' sharing list comes back in no defined order
 

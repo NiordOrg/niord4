@@ -90,14 +90,9 @@ that is still _in force_ at the cut-off, however old it is (see <<publication-cr
 | Administrator
 | Everything in this chapter and the next: creating and changing series, one-off publications and
   categories, preparing, publishing, amending and withdrawing issues, and adding or leaving out
-  messages by hand. An administrator changes the publications of the domains he or she
-  administers; a publication of another domain can be read but not changed (see
-  <<publication-domains>>).
-
-| _publication-curate_
-| A separate role that allows adding and leaving out messages by hand on an open issue. Since the
-  pages for publications are in the _Admin_ area, the role is only useful together with the
-  administrator role.
+  messages by hand; no other role allows adding or leaving out messages. An administrator changes
+  the publications of the domains he or she administers; a publication of another domain can be
+  read but not changed (see <<publication-domains>>).
 
 | Editor
 | Cites published issues in a message, through the _Publications_ field of the message editor, and
@@ -288,14 +283,19 @@ The patterns can use these tokens, which the _Insert_ button beside each field a
 `${week}`, `${week-2-digits}`, `${weekTo}`, `${weekTo-2-digits}`, `${year}`, `${year-2-digits}`,
 `${month}`, `${month-2-digits}`, `${day}`, `${day-2-digits}` and `${edition}`. They are filled in
 from the issue's cut-off: an issue is named after the week, month and year in which its content
-period ends, read in the time zone of the series' domain. `${weekTo}` is used by an issue that
-covers more than one week, such as a double issue over a holiday; it is empty otherwise. A
-pattern writes the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and
-an issue of three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens
-prints as a hyphen). A single week under such a pattern keeps the `+` in its name, "Week 36+",
-and in its file name where the file name pattern writes `${weekTo}` as well; so a series whose
-issues are double only now and then names them by `${week}` alone, and the weeks of a double issue
-are written under _Numbering_ (see <<publication-tailor>>).
+period ends, read in the time zone of the series' domain. `${weekTo}` is the closing week of an
+issue that covers more than one week, such as a double issue over a holiday; for a single week
+it is left out together with the text that joins it to `${week}` (see below). A pattern writes
+the two weeks as `${week}+${weekTo}`: a double issue then reads "Week 51+52", and an issue of
+three weeks or more reads as a range, "Week 36-38" (the `+` between the two tokens prints as a
+hyphen). A single week under such a pattern leaves `${weekTo}` out together with the
+text between it and `${week}`: "Week ${week}+${weekTo}" names it "Week 36", and "Week ${week} and
+${weekTo}" does too, in the name, the file name and the reference format alike. A bracket around
+the closing week goes with it ("Week ${week} (${weekTo})" is "Week 36"), and a `${weekTo}` with
+no `${week}` beside it prints the single week ("Week ${weekTo}" is "Week 36"). So a pattern that
+writes both weeks serves a series whose issues are double only now and then. A published issue
+keeps the name and file name it was given; an open issue that follows the series gets the new
+name when its numbers are next worked out.
 
 The weekly reports print the weeks in their heading as the series' name pattern writes them when
 the document is generated: under `${week}+${weekTo}` a double issue is headed "Week 51+52" and a
@@ -389,6 +389,10 @@ criterion with the temporary and preliminary notices select the temporary and pr
 of that message series. Within one criterion, any of the ticked values matches. Each kind of criterion can be used once, a series can
 hold at most eight criteria, and every series needs at least one message series or domain, so that
 it does not reach every message in the installation. Remove a criterion with its bin.
+An _Area_ or _Category_ criterion holds the MRN of each area or category, and that MRN is matched
+without regard to case: one given in other capital letters in an imported file selects the same
+messages, and so does a series whose area or category later has its MRN re-typed in other
+capital letters.
 
 _What this would select_ tries the criteria on the messages as you change them and shows how many
 messages they would select now, with a sample of their numbers and any warnings, for example
@@ -709,7 +713,9 @@ _Publication actions_ the other actions:
 * *Amend* runs the selection again against the same cut-off and replaces the document where it
   stands, with the same links, the same public period and the same cut-off. Use it when something
   has to be corrected: messages cancelled, retyped or corrected since, or a change to the series'
-  criteria or report. Amending asks for a reason; the replaced document is archived and can still
+  criteria or report. The messages are put in order again by the series' sort as it stands now,
+  so a change to the sort since the release shows in the amended document. Amending asks for a
+  reason; the replaced document is archived and can still
   be opened from the issue's history (_Replaced document_). An issue carried over from the
   previous system cannot be amended: its messages and document are a historical record.
 +

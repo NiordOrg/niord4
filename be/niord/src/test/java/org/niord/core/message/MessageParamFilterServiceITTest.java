@@ -176,6 +176,62 @@ class MessageParamFilterServiceITTest extends ITTest {
 
     @Test
     @Transactional
+    void saveUnderANameThatDiffersOnlyInCaseReplacesTheFilter() {
+        User a = persistUser(uniqueUsername());
+        loginAs(a);
+
+        String suffix = UUID.randomUUID().toString();
+        MessageParamFilter first = filterService.createOrUpdateMessageFilter(
+                newFilter("baltic drafts " + suffix, "status=DRAFT"));
+        Integer firstId = first.getId();
+        em.flush();
+
+        // The admin app's save sends a name and no id: another spelling of the name replaces the filter
+        MessageParamFilter second = filterService.createOrUpdateMessageFilter(
+                newFilter("Baltic Drafts " + suffix.toUpperCase(), "status=PUBLISHED"));
+        assertEquals(firstId, second.getId(),
+                "saving under a name that differs only in case must replace the filter, keeping its id");
+
+        em.flush();
+        em.clear();
+
+        List<MessageParamFilter> all = filterService.getMessageFiltersForUser();
+        assertEquals(1, all.size(), "saving under another spelling of a name must not make a second filter");
+        assertEquals("Baltic Drafts " + suffix.toUpperCase(), all.get(0).getName(),
+                "the replaced filter takes the name as typed now");
+        assertEquals("status=PUBLISHED", all.get(0).getParameters(),
+                "the replaced filter takes the new parameters");
+    }
+
+    @Test
+    @Transactional
+    void aUserWithFiltersWhoseNamesDifferOnlyInCaseGetsTheExactOneOrElseTheOldest() {
+        User a = persistUser(uniqueUsername());
+        loginAs(a);
+
+        // Two filters whose names differ only in case, as data saved before the look-up ignored case can hold
+        String suffix = UUID.randomUUID().toString();
+        MessageParamFilter older = newFilter("north sea " + suffix, "q=older");
+        older.setUser(a);
+        em.persist(older);
+        em.flush();
+        MessageParamFilter newer = newFilter("NORTH SEA " + suffix.toUpperCase(), "q=newer");
+        newer.setUser(a);
+        em.persist(newer);
+        em.flush();
+
+        assertEquals(older.getId(), filterService.findByCurrentUserAndName("north sea " + suffix).getId(),
+                "the filter whose name is exactly the given one is found");
+        assertEquals(newer.getId(),
+                filterService.findByCurrentUserAndName("NORTH SEA " + suffix.toUpperCase()).getId(),
+                "the filter whose name is exactly the given one is found, even when it is the newer");
+        MessageParamFilter neither = filterService.findByCurrentUserAndName("North Sea " + suffix);
+        assertNotNull(neither, "a spelling that matches neither exactly finds one of them");
+        assertEquals(older.getId(), neither.getId(), "without an exact match the oldest filter is found");
+    }
+
+    @Test
+    @Transactional
     void createWithIdUpdatesExistingFilter() {
         User a = persistUser(uniqueUsername());
         loginAs(a);

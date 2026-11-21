@@ -719,16 +719,16 @@ asserted; the paths below are the parts that could not be reasonably exercised i
 - **Why it is hard to test:** the success path opens a `URLConnection` to the configured `wmsProvider`,
   reads a tile image and re-encodes it as PNG. No WMS provider is configured in the test app, so the servlet
   takes its blank-image fallback. `WmsProxyServletITTest` asserts the auth gate (anonymous → 403) and the
-  blank-image fallback (authenticated → 302 to `/img/blank.png`); the actual proxying + colour-masking is
-  untestable without an outbound HTTP stub.
+  blank-image fallback (authenticated → 200 with the bytes of `/img/blank.png`, no redirect); the actual
+  proxying + colour-masking is untestable without an outbound HTTP stub.
 - **What would make it testable:** the missing outbound-HTTP stub fixture (WireMock/MockWebServer) plus a
   `System.setProperty("wmsProvider", stubUrl)` test-resource (the same `@Setting`-override trick the mail
   wire tests use), then assert the returned PNG.
 - **Covered:** **closed.** The new `org.niord.test.http.HttpStub` (JDK
   `HttpServer`, no new dependency) is exactly that fixture. `WmsProxyHttpITTest` + `WmsProviderStubResource`
   set `wmsProvider`/`wmsPassword`/`wmsLayers` at a PNG-serving stub and assert the authenticated request
-  returns `200` with a decodable image (not the `302` fallback) and that the proxy appends `TOKEN=`/`LAYERS=`
-  to the upstream request. (The colour-masking `transformWhiteToTransparent` is dead — commented out at the
+  returns `200` with the provider's image (not the one-pixel blank fallback) and that the proxy appends
+  `TOKEN=`/`LAYERS=` to the upstream request. (The colour-masking `transformWhiteToTransparent` is dead — commented out at the
   call site — so it is intentionally not exercised. The omitted response `Content-Type` is filed as WEB5 in
   potential-errors.md.)
 

@@ -141,7 +141,8 @@ export interface AppConfig {
    * dev routes and the e2e Keycloak stub at module scope, which no runtime
    * setting can reach). The header badge prefers the runtime `mode` above and
    * only falls back to this flag. Only an explicit `true` (environment.
-   * production.ts) suppresses the badge in the absence of `mode`.
+   * production.ts, and environment.test.ts, whose `mode: 'test'` keeps the
+   * badge) suppresses the badge in the absence of `mode`.
    */
   readonly production?: boolean;
   /**

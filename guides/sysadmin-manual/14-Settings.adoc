@@ -102,6 +102,10 @@ the database, for as long as it is set. For the home folder, `niord.home`, the e
 works too. For example, start Niord with `-Dniord.home=/srv/niord`, or with the environment variable
 `NIORD_HOME=/srv/niord`.
 
+Niord does not start when the home folder names no folder: its value is empty, or names an environment variable
+that is not set, as `${NIORD_HOME}` does without `NIORD_HOME`. The log then says `niord.home cannot be resolved`,
+with the value, where it came from and how to set it.
+
 The _Settings_ page still shows and saves the value in the database, but while such a system property or
 environment variable is set, Niord uses that instead.
 
