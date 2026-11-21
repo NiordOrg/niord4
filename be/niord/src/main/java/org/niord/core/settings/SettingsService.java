@@ -191,50 +191,75 @@ public class SettingsService extends BaseService {
         String key = NIORD_HOME.getKey();
         String override = override(key);
         Setting row = override == null ? em.find(Setting.class, key) : null;
-        HomeValue home = homeValue(override, row, unexpandedDefault(NIORD_HOME));
-        // An override is used as it is, unexpanded, as get() returns it: a token left in it resolves to nothing
-        String refusal = homeRefusal(home, override != null ? token -> null : this::tokenValue);
+        boolean homeSettingSet = System.getProperty(key) != null || System.getenv(key) != null;
+        HomeValue home = homeValue(override, homeSettingSet, row, unexpandedDefault(NIORD_HOME));
+        String refusal = homeRefusal(home, this::tokenValue);
         if (refusal != null) {
             log.error(refusal);
             throw new IllegalStateException(refusal);
         }
     }
 
+    /** The cure of a home read from the database's row or the settings file, whose tokens are expanded */
+    static final String HOME_CURE = "set the environment variable " + HOME_VARIABLE
+            + " or start with -Dniord.home=<folder>";
+
     /**
-     * The value of {@code niord.home} as a read takes it, its tokens not expanded, and where it comes from
-     *
-     * @param value  the value, null for none
-     * @param origin where it comes from, for the refusal's text
+     * The cure of a home set by a {@code niord.home} system property or environment variable, which hides
+     * {@code NIORD_HOME} even when it is blank ({@link #overrideOf})
      */
-    record HomeValue(String value, String origin) {
+    static final String HOME_SETTING_CURE = "give the niord.home system property or environment variable a folder ("
+            + HOME_VARIABLE + " is not read while niord.home is set)";
+
+    /** The cure of a home set by {@code NIORD_HOME} itself */
+    static final String HOME_VARIABLE_CURE = "give " + HOME_VARIABLE + " a folder";
+
+    /**
+     * The value of {@code niord.home} as a read takes it, its tokens not expanded, where it comes from and how to cure
+     * it when it names no folder
+     *
+     * @param value    the value, null for none
+     * @param origin   where it comes from, for the refusal's text
+     * @param override whether it is an override ({@link #override}), which is used as it is, its tokens not expanded,
+     *                 as {@link #get(Setting)} returns it
+     * @param cure     what makes it name a folder, for the refusal's text
+     */
+    record HomeValue(String value, String origin, boolean override, String cure) {
     }
 
     /**
      * Returns the value of {@code niord.home} as a read takes it: the override ({@link #override}), else the
      * database's row, which wins over the settings file, else the settings file's value
      *
-     * @param override  the override, or null
-     * @param row       the database's row, or null
-     * @param fileValue the settings file's value, its tokens not expanded
-     * @return the value and where it comes from
+     * @param override       the override, or null
+     * @param homeSettingSet whether a {@code niord.home} system property or environment variable is set, blank or
+     *                       not: the override is then that, else it is {@code NIORD_HOME}
+     * @param row            the database's row, or null
+     * @param fileValue      the settings file's value, its tokens not expanded
+     * @return the value, where it comes from and its cure
      */
-    static HomeValue homeValue(String override, Setting row, Object fileValue) {
+    static HomeValue homeValue(String override, boolean homeSettingSet, Setting row, Object fileValue) {
         if (override != null) {
-            return new HomeValue(override, "from the niord.home system property or environment variable");
+            return homeSettingSet
+                    ? new HomeValue(override, "from the niord.home system property or environment variable", true,
+                            HOME_SETTING_CURE)
+                    : new HomeValue(override, "from " + HOME_VARIABLE, true, HOME_VARIABLE_CURE);
         }
         if (row != null) {
-            return new HomeValue(row.getValue() instanceof String s ? s : null, "from the database's niord.home setting");
+            return new HomeValue(row.getValue() instanceof String s ? s : null,
+                    "from the database's niord.home setting", false, HOME_CURE);
         }
-        return new HomeValue(fileValue instanceof String s ? s : null, "from the settings file");
+        return new HomeValue(fileValue instanceof String s ? s : null, "from the settings file", false, HOME_CURE);
     }
 
     /**
      * Returns why {@code niord.home} names no folder, as the text the start stops with, or null when it names one:
      * each {@code ${token}} of its value is expanded with {@code tokens}, and a token that resolves to nothing or to
      * blank text, or that is left in the value, is unresolved. The value is refused when a token is unresolved or
-     * when it comes out blank.
+     * when it comes out blank. An override's tokens are not expanded: any token in it is unresolved, and the text says
+     * so rather than that nothing sets it.
      *
-     * @param home   the value and where it comes from
+     * @param home   the value, where it comes from and its cure
      * @param tokens the value of a token, or null when nothing sets it
      * @return the refusal's text, or null
      */
@@ -245,7 +270,7 @@ public class SettingsService extends BaseService {
         String token;
         int liveLockControlCount = 500;
         while ((token = expander.nextToken()) != null && liveLockControlCount-- > 0) {
-            String resolved = tokens.apply(token);
+            String resolved = home.override() ? null : tokens.apply(token);
             if (StringUtils.isBlank(resolved)) {
                 unresolved.add(token);
                 expander.replaceToken(token, "");
@@ -262,10 +287,11 @@ public class SettingsService extends BaseService {
             return null;
         }
         String cause = unresolved.isEmpty() ? ", which names no folder"
+                : home.override() ? ", which is used as it is: a value set this way has its ${...} tokens not expanded"
                 : unresolved.size() == 1 ? " and no " + unresolved.iterator().next() + " is set"
                 : " and none of " + String.join(", ", unresolved) + " is set";
         return "niord.home cannot be resolved: its value is \"" + value + "\" (" + home.origin() + ")" + cause
-                + "; set the environment variable " + HOME_VARIABLE + " or start with -Dniord.home=<folder>";
+                + "; " + home.cure();
     }
 
     /** The value of a token in niord.home, as {@link #expandSettingValue} finds it; null when it is unset or blank */

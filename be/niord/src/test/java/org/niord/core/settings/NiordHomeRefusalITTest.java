@@ -104,8 +104,10 @@ class NiordHomeRefusalITTest {
     void aBlankHomeStopsTheStart() {
         String refusal = refusedStart("");
 
+        // A niord.home property hides NIORD_HOME even when blank, so the cure is to give it a folder
         assertEquals("niord.home cannot be resolved: its value is \"\" (from the niord.home system property or "
-                + "environment variable), which names no folder" + CURE, refusal);
+                + "environment variable), which names no folder; give the niord.home system property or environment "
+                + "variable a folder (NIORD_HOME is not read while niord.home is set)", refusal);
     }
 
     @Test

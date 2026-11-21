@@ -137,7 +137,7 @@ class SettingsServiceHomeTest {
     }
 
     private static SettingsService.HomeValue fromTheFile(String value) {
-        return SettingsService.homeValue(null, null, value);
+        return SettingsService.homeValue(null, false, null, value);
     }
 
     @Test
@@ -151,9 +151,9 @@ class SettingsServiceHomeTest {
     @Test
     void aBlankValueIsRefused() {
         assertEquals("niord.home cannot be resolved: its value is \"\" (from the niord.home system property or "
-                        + "environment variable), which names no folder; set the environment variable NIORD_HOME or "
-                        + "start with -Dniord.home=<folder>",
-                refusal(SettingsService.homeValue("", null, "${user.home}/.niord")));
+                        + "environment variable), which names no folder; give the niord.home system property or "
+                        + "environment variable a folder (NIORD_HOME is not read while niord.home is set)",
+                refusal(SettingsService.homeValue("", true, null, "${user.home}/.niord")));
         assertNotNull(refusal(fromTheFile("   ")));
         assertNotNull(refusal(fromTheFile(null)));
     }
@@ -180,14 +180,14 @@ class SettingsServiceHomeTest {
     void aResolvedValueIsAccepted() {
         assertNull(refusal(fromTheFile("${user.home}/.niord")));
         assertNull(refusal(fromTheFile("/srv/niord")));
-        assertNull(refusal(SettingsService.homeValue("/niord-home", null, "${NIORD_HOME}")));
+        assertNull(refusal(SettingsService.homeValue("/niord-home", false, null, "${NIORD_HOME}")));
     }
 
     @Test
     void theStoredRowsTokenWinsOverTheFileAndIsRefused() {
         Setting row = new Setting(HOME, "${NIORD_HOME}");
 
-        String refusal = refusal(SettingsService.homeValue(null, row, "${user.home}/.niord"));
+        String refusal = refusal(SettingsService.homeValue(null, false, row, "${user.home}/.niord"));
 
         assertEquals("niord.home cannot be resolved: its value is \"${NIORD_HOME}\" (from the database's niord.home "
                         + "setting) and no NIORD_HOME is set; set the environment variable NIORD_HOME or start with "
@@ -199,15 +199,41 @@ class SettingsServiceHomeTest {
     void aStoredRowThatNamesAFolderWinsOverTheFilesToken() {
         Setting row = new Setting(HOME, "/srv/niord");
 
-        assertNull(refusal(SettingsService.homeValue(null, row, "${NIORD_HOME}")));
+        assertNull(refusal(SettingsService.homeValue(null, false, row, "${NIORD_HOME}")));
     }
 
     @Test
     void anOverrideWinsOverTheStoredRowsToken() {
-        SettingsService.HomeValue home = SettingsService.homeValue("/niord-home", new Setting(HOME, "${NIORD_HOME}"),
-                "${NIORD_HOME}");
+        SettingsService.HomeValue home = SettingsService.homeValue("/niord-home", true,
+                new Setting(HOME, "${NIORD_HOME}"), "${NIORD_HOME}");
 
         assertNull(SettingsService.homeRefusal(home, token -> null));
+    }
+
+    @Test
+    void aTokenInTheHomeSettingIsNotExpandedAndItsCureIsTheSettingItself() {
+        // NIORD_HOME is set, but a niord.home property or variable hides it and is used as it is
+        String refusal = SettingsService.homeRefusal(
+                SettingsService.homeValue("${NIORD_HOME}", true, null, "${user.home}/.niord"),
+                token -> "/niord-home");
+
+        assertEquals("niord.home cannot be resolved: its value is \"${NIORD_HOME}\" (from the niord.home system "
+                        + "property or environment variable), which is used as it is: a value set this way has its "
+                        + "${...} tokens not expanded; give the niord.home system property or environment variable a "
+                        + "folder (NIORD_HOME is not read while niord.home is set)",
+                refusal);
+    }
+
+    @Test
+    void aTokenInNiordHomeVariableIsNotExpandedAndItsCureIsThatVariable() {
+        String refusal = SettingsService.homeRefusal(
+                SettingsService.homeValue("${NIORD_DRIVE}/niord", false, null, "${NIORD_HOME}"),
+                token -> "/drive");
+
+        assertEquals("niord.home cannot be resolved: its value is \"${NIORD_DRIVE}/niord\" (from NIORD_HOME), which "
+                        + "is used as it is: a value set this way has its ${...} tokens not expanded; give NIORD_HOME "
+                        + "a folder",
+                refusal);
     }
 
     @Test

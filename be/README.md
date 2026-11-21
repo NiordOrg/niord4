@@ -169,7 +169,8 @@ Neither command needs `NIORD_HOME` on a database only the generic application ha
 database a country's application has started holds the setting `niord.home` as the token `${NIORD_HOME}`, which wins
 over that default: on such a database export `NIORD_HOME` or pass `-Dniord.home=<folder>`, or the start is refused
 with a message that says so. A home that names no folder (a token nothing sets, or a blank value) always refuses the
-start, before anything is written under it. To run against services you started yourself:
+start, before anything is written under it; a `niord.home` property or variable, even a blank one, hides `NIORD_HOME`,
+so give that a folder. To run against services you started yourself:
 
 ```bash
 ./run.sh -Dspring-boot.run.jvmArguments="-Duser.timezone=UTC -Dspring.docker.compose.enabled=false \
