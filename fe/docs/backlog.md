@@ -19,10 +19,10 @@ of it that lives in code or needs a decision outside the sheet.
 One item of that set is not open: the HTTP 500s on concurrent GETs (the sheet's E4, the runbook's §9).
 They came from a defect of the Quarkus backend the redesign was built on, fixed the morning after they were
 measured: every read of a series or an issue rewrote the rows it had loaded, so two reads at once collided
-on them. This backend's reads write nothing (`PublicationReadsWriteNothingITTest`). What rests on that finding
-alone is what the go-live process carries into every rehearsal
-because of it: its repeat of "nobody on the system during the import", and verification in sequence
-afterwards. Those are the owner's to reconsider. Keeping users off production from the final rehearsal's
+on them. This backend's reads write nothing (`PublicationReadsWriteNothingITTest`). Two go-live rules
+rested on that defect alone, "nobody on the system during the import" and verification in sequence
+afterwards; both were dropped on 2026-11-21, because the defect they guarded against is fixed and that
+test holds it. Keeping users off production from the final rehearsal's
 backup until the window closes, which the process and the sheet's D1 both require, has a reason of its own,
 no new data after the backup, and stands.
 
