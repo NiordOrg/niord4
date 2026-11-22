@@ -71,6 +71,7 @@ const CLOSED_TO = Date.UTC(2017, 11, 31, 22, 59);
 
 const PUBLICATION: OneOffPublication = {
   series: UPLOADED_SERIES,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- the server still sends the field, and the type requires it
   active: true,
   issuePublicId: ISSUE_ID,
   // Deliberately different from the issue read's own revision below, so a test

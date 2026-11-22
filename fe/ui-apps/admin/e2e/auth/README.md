@@ -149,6 +149,7 @@ it every authenticated API call of the run answers 401 although the login itself
 4. `AuthService.init()` reads `tokenParsed.realm_access.roles` and friends as normal.
 
 The production gate in step 3 is belt-and-suspenders: production builds use
-`environment.production.ts` which sets `production: true`, so the test branch is dead code
-in prod even if the window key were somehow set. A country's set-up holds its production
-environment to `production: true` the same way (`country-kit/lib/environment-check.mjs`).
+`environment.production.ts` and test builds `environment.test.ts`, which both set
+`production: true`, so the test branch is dead code on a deployment even if the window key were
+somehow set; only the development and local builds reach the stub. A country's set-up holds its
+production environment to `production: true` the same way (`country-kit/lib/environment-check.mjs`).

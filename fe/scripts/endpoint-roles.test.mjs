@@ -140,9 +140,8 @@ export const IDENTITY_ROLES = {
   user: ['user'],
   userOtherDomain: [],
   editor: ['user', 'editor'],
-  admin: ['user', 'editor', 'admin', 'publication-curate'],
-  sysadmin: ['user', 'editor', 'admin', 'sysadmin', 'publication-curate'],
-  curator: ['user', 'publication-curate'],
+  admin: ['user', 'editor', 'admin'],
+  sysadmin: ['user', 'editor', 'admin', 'sysadmin'],
   domainEditor: ['user', 'editor'],
   adminElsewhere: ['user'],
 };
@@ -152,7 +151,6 @@ const ROLE_CONSTANTS = {
   EDITOR: 'editor',
   ADMIN: 'admin',
   SYSADMIN: 'sysadmin',
-  PUBLICATION_CURATE: 'publication-curate',
 };
 
 /** What the annotation alone answers an identity: ok, 401 (no token) or 403. */

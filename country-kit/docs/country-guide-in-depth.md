@@ -267,7 +267,10 @@ check holds the file to:
 - The languages match the manifest: `siteLanguages`, `modelLanguages`, `defaultLanguage`,
   `infoSiteLanguages` and `infoDefaultLanguage`. Set-up compares them.
 - `"niord.home": "${NIORD_HOME}"`. Without it the base product's `${user.home}/.niord` wins over
-  `NIORD_HOME`, and the server writes its index, files and archives outside the folder you meant.
+  `NIORD_HOME`, and the server writes its cache (the message index, previews, thumbnails, map
+  images and tiles) and its batch jobs' files outside the folder you meant. With it, a backend
+  started without `NIORD_HOME` (or `-Dniord.home`) does not start: its log says
+  `niord.home cannot be resolved` and how to set it.
 - No secret. A password setting stays empty here; the real value is set on the Settings page.
 - Your own settings are declared in your code, with keys in your namespace (`<cc>.…`).
 - Every value is a default: start-up adds a key a deployment lacks and never changes one it has.
@@ -1087,9 +1090,12 @@ domain pickers of a firing schedule, which offer only the domains whose clients 
 role on. At every start, the launcher creates in the shared local realm `niord` the missing client of each domain of
 `be/bootstrap/domains.json` with `"active": true`. The client's ID is the domain's `domainId`, and
 it is bearer-only, like the realm's other domain clients. It holds the roles `user`, `editor`,
-`admin`, `sysadmin` and `publication-curate`: `editor` holds `user`; `admin` holds `editor` and
-`publication-curate`; `sysadmin` holds `editor`, `admin` and `publication-curate`. The group
-`Sysadmin` is given `sysadmin` and `publication-curate`.
+`admin` and `sysadmin`: `editor` holds `user`; `admin` holds `editor`; `sysadmin` holds `editor`
+and `admin`. The group `Sysadmin` is given `sysadmin`. A client an earlier launcher made also
+has the role `publication-curate`, given to the group `Sysadmin` too. No endpoint asks for it,
+and the Users & Contacts page does not count it when it decides which groups an administrator
+may hand out; the launcher leaves it, so delete it from the client in Keycloak's admin console,
+which also takes it off the composites and the group.
 
 The launcher never updates or deletes anything in Keycloak: a client that exists is left exactly as
 it is, and a second start adds nothing. You see one `>> Creating the local Keycloak client <id>`
@@ -1116,17 +1122,15 @@ $K create clients -r niord -s clientId=<domainId> -s enabled=true -s bearerOnly=
   -s publicClient=false -s protocol=openid-connect -s standardFlowEnabled=true \
   -s directAccessGrantsEnabled=true -s fullScopeAllowed=false
 CID=$($K get clients -r niord -q clientId=<domainId> --fields id --format csv --noquotes)
-for role in user editor admin sysadmin publication-curate; do
+for role in user editor admin sysadmin; do
   $K create clients/$CID/roles -r niord -s name=$role
 done
 rid() { $K get clients/$CID/roles/$1 -r niord --fields id --format csv --noquotes; }
 $K add-roles -r niord --rid "$(rid editor)" --cclientid <domainId> --rolename user
-$K add-roles -r niord --rid "$(rid admin)" --cclientid <domainId> \
-  --rolename editor --rolename publication-curate
+$K add-roles -r niord --rid "$(rid admin)" --cclientid <domainId> --rolename editor
 $K add-roles -r niord --rid "$(rid sysadmin)" --cclientid <domainId> \
-  --rolename editor --rolename admin --rolename publication-curate
-$K add-roles -r niord --gname Sysadmin --cclientid <domainId> \
-  --rolename sysadmin --rolename publication-curate
+  --rolename editor --rolename admin
+$K add-roles -r niord --gname Sysadmin --cclientid <domainId> --rolename sysadmin
 ```
 
 The realm lives in the shared container's volume, so the client stays for every later run on this
@@ -1145,7 +1149,8 @@ English: its language list switches it.
   launcher refuses a database it did not make.
 - The ports are 4200 (administration app), 4400 (public site) and 8888 (backend). Pick others with
   `FE_PORT`, `INFO_PORT` and `BE_PORT`.
-- Each database has its own Niord home, `~/.niord-local/<database>`.
+- Each database has its own Niord home, `~/.niord-local/<database>`: a cache that is made again
+  when it is missing, and the batch jobs' files.
 
 ### The backend's time zone and a start by hand
 
@@ -1162,6 +1167,11 @@ cd be
 NIORD_HOME=<a folder of your own> ./mvnw spring-boot:run -Dspring-boot.run.profiles=local \
   -Dspring-boot.run.jvmArguments="-Duser.timezone=UTC -Dserver.port=8888"
 ```
+
+Without `NIORD_HOME` the start is refused, since your settings give `niord.home` as
+`${NIORD_HOME}`: the log says
+`niord.home cannot be resolved: its value is "${NIORD_HOME}" (from the settings file) and no NIORD_HOME is set; set the environment variable NIORD_HOME or start with -Dniord.home=<folder>`
+(or `from the database's niord.home setting`, on a database your backend has started before).
 
 Your tests run in UTC too: `niord-parent` sets the property `argLine` to `-Duser.timezone=UTC`,
 which Surefire and Failsafe read, and your pom inherits it. An `argLine` of your own, in your pom

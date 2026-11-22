@@ -49,6 +49,9 @@ import java.util.stream.Collectors;
                 query = "select distinct c from Category c left join fetch c.descs where c.id in (:ids)"),
         @NamedQuery(name  = "Category.findByMrn",
                 query = "select c from Category c left join fetch c.descs where c.mrn = :mrn"),
+        @NamedQuery(name  = "Category.findByMrnIgnoreCase",
+                query = "select c from Category c left join fetch c.descs where lower(c.mrn) = lower(:mrn) "
+                        + "order by c.id"),
         @NamedQuery(name  = "Category.findLastUpdated",
                 query = "select max(c.updated) from Category c")
 })

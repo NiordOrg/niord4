@@ -137,8 +137,7 @@ class LocalRunLibraryTest {
                 + "                exit 0 ;;\n"
                 + "            'get clients/'*'/roles')\n"
                 + "                echo '[ {\"id\":\"rid-user\",\"name\":\"user\"}, {\"id\":\"rid-editor\",\"name\":\"editor\"},"
-                + " {\"id\":\"rid-admin\",\"name\":\"admin\"}, {\"id\":\"rid-sysadmin\",\"name\":\"sysadmin\"},"
-                + " {\"id\":\"rid-publication-curate\",\"name\":\"publication-curate\"} ]'\n"
+                + " {\"id\":\"rid-admin\",\"name\":\"admin\"}, {\"id\":\"rid-sysadmin\",\"name\":\"sysadmin\"} ]'\n"
                 + "                exit 0 ;;\n"
                 + "            'add-roles '*) exit 0 ;;\n"
                 + "            *) exit 1 ;;\n"
@@ -461,13 +460,11 @@ class LocalRunLibraryTest {
             "create clients/id-yy-nw/roles -r niord -s name=editor -s description=Editor -i",
             "create clients/id-yy-nw/roles -r niord -s name=admin -s description=Administrator -i",
             "create clients/id-yy-nw/roles -r niord -s name=sysadmin -s description=System administrator -i",
-            "create clients/id-yy-nw/roles -r niord -s name=publication-curate -s description=Publication curator -i",
             "get clients/id-yy-nw/roles -r niord --fields id,name",
             "add-roles -r niord --rid rid-editor --cclientid yy-nw --rolename user",
-            "add-roles -r niord --rid rid-admin --cclientid yy-nw --rolename editor --rolename publication-curate",
-            "add-roles -r niord --rid rid-sysadmin --cclientid yy-nw --rolename editor --rolename admin"
-                    + " --rolename publication-curate",
-            "add-roles -r niord --gname Sysadmin --cclientid yy-nw --rolename sysadmin --rolename publication-curate");
+            "add-roles -r niord --rid rid-admin --cclientid yy-nw --rolename editor",
+            "add-roles -r niord --rid rid-sysadmin --cclientid yy-nw --rolename editor --rolename admin",
+            "add-roles -r niord --gname Sysadmin --cclientid yy-nw --rolename sysadmin");
 
     @Test
     void theDomainClientsAreMadeByOneFunctionCalledFromTheBootstrapStep() throws IOException {

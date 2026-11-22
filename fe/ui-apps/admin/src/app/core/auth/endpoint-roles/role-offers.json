@@ -39,15 +39,15 @@
       "username": "testadmin",
       "sessionDomain": "niord-nw",
       "resourceAccess": {
-        "niord-client-master": ["admin", "editor", "publication-curate", "user"],
-        "niord-nw": ["admin", "editor", "publication-curate", "user"]
+        "niord-client-master": ["admin", "editor", "user"],
+        "niord-nw": ["admin", "editor", "user"]
       }
     },
     "adminElsewhere": {
       "username": "testadminelsewhere",
       "sessionDomain": "niord-nw",
       "resourceAccess": {
-        "niord-nm": ["admin", "editor", "publication-curate", "user"],
+        "niord-nm": ["admin", "editor", "user"],
         "niord-nw": ["user"]
       }
     },
@@ -56,13 +56,13 @@
       "sessionDomain": "niord-nw",
       "resourceAccess": {
         "realm-management": ["manage-clients", "manage-users"],
-        "niord-nm": ["admin", "editor", "publication-curate", "sysadmin", "user"],
-        "niord-annex": ["admin", "editor", "publication-curate", "sysadmin", "user"],
-        "niord-almanac": ["admin", "editor", "publication-curate", "sysadmin", "user"],
+        "niord-nm": ["admin", "editor", "sysadmin", "user"],
+        "niord-annex": ["admin", "editor", "sysadmin", "user"],
+        "niord-almanac": ["admin", "editor", "sysadmin", "user"],
         "niord-web": ["admin", "editor", "sysadmin", "user"],
-        "niord-fa": ["admin", "editor", "publication-curate", "sysadmin", "user"],
-        "niord-client-master": ["admin", "editor", "publication-curate", "sysadmin", "user"],
-        "niord-nw": ["admin", "editor", "publication-curate", "sysadmin", "user"]
+        "niord-fa": ["admin", "editor", "sysadmin", "user"],
+        "niord-client-master": ["admin", "editor", "sysadmin", "user"],
+        "niord-nw": ["admin", "editor", "sysadmin", "user"]
       }
     }
   },

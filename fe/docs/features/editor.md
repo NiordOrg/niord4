@@ -620,7 +620,8 @@ GeoJSON `properties: null` must be normalised to `{}` before it reaches the back
 ### The sandbox
 
 `/dev/geo-editor` hosts the geometry editor standalone and is registered only when
-`environment.production` is false, so it never ships. It is the editor's regression harness — the
+`environment.production` is false: in the development and local builds, never in a production or a
+test build. It is the editor's regression harness — the
 spec that drives it documents what is deliberately left manual (vertex modify, shift-delete,
 box-select, translate and file drop all need canvas-pixel precision).
 

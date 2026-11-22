@@ -413,6 +413,7 @@ _Clear Filters_ at the bottom of the _Filter_ menu switches every filter off.
 
 _Save Filter..._ at the bottom of the _Filter_ menu saves the filters you have set, so you can use
 them again. Give the filter a name in the _Save filter_ dialog and click _Save_.
+Saving under the name of one of your saved filters, whatever its capital letters, replaces that filter.
 
 image::SaveFilterDialog.png[Save Filter Dialog, 240]
 

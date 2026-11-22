@@ -478,28 +478,27 @@ public class IssueWorkbenchITTest extends ITTest {
     }
 
     /**
-     * A curator gets the screen; only an admin gets the rail.
+     * Only an admin gets the rail; the rest of the screen does not depend on it.
      *
-     * The endpoint's gate is the curator tier because four of the five parts are
-     * curator reads. Narrowing the rail with a second annotation would refuse the
-     * whole response, which is what happened before: the checklist's 403 had no
-     * branch of its own on the client and blanked the entire screen for a curator
-     * who is not an admin.
+     * The endpoint is admin tier, so every caller it admits gets the rail. The
+     * service still takes the flag, so that a caller of it without the admin role
+     * is handed everything but the release rail.
      */
     @Test
     @Transactional
-    public void theRailIsTheOnlyPartAnAdminSeesAndACuratorDoesNot() {
+    public void theRailIsTheOnlyPartThatNeedsTheAdminRole() {
         PublicationSeries s = series();
         PublicationIssue i = lifecycle.create(s, OPENS, IntervalBoundSource.STAMPED, user());
         message("NM-001", Status.PUBLISHED);
         em.flush();
 
-        IssueWorkbenchVo asCurator = workbench.forIssue(i, "da", false);
-        assertNull(asCurator.getChecklist(), "a curator who is not an admin was handed the release rail");
-        assertEquals(1, asCurator.getMembers().size(), "a curator was refused the member list");
-        assertNotNull(asCurator.getAudit());
-        assertNotNull(asCurator.getOmissions(),
-                "a curator was refused the panel saying what the criteria left out");
+        IssueWorkbenchVo withoutAdmin = workbench.forIssue(i, "da", false);
+        assertNull(withoutAdmin.getChecklist(), "a reader without the admin role was handed the release rail");
+        assertEquals(1, withoutAdmin.getMembers().size(),
+                "a reader without the admin role was refused the member list");
+        assertNotNull(withoutAdmin.getAudit());
+        assertNotNull(withoutAdmin.getOmissions(),
+                "a reader without the admin role was refused the panel saying what the criteria left out");
 
         IssueWorkbenchVo asAdmin = workbench.forIssue(i, "da", true);
         assertNotNull(asAdmin.getChecklist(), "an admin was not given the release rail");
@@ -722,10 +721,10 @@ public class IssueWorkbenchITTest extends ITTest {
 
         previews.record(i, "da", "test.pdf", "bytes".getBytes(StandardCharsets.UTF_8));
 
-        IssueWorkbenchVo asCurator = workbench.forIssue(i, "da", false);
-        assertNotNull(asCurator.getPreviews(), "the previews list is absent rather than empty");
-        assertTrue(asCurator.getPreviews().isEmpty(),
-                "a reader without the admin role was handed " + asCurator.getPreviews().size()
+        IssueWorkbenchVo withoutAdmin = workbench.forIssue(i, "da", false);
+        assertNotNull(withoutAdmin.getPreviews(), "the previews list is absent rather than empty");
+        assertTrue(withoutAdmin.getPreviews().isEmpty(),
+                "a reader without the admin role was handed " + withoutAdmin.getPreviews().size()
                         + " preview rows whose download the server refuses");
 
         IssueWorkbenchVo asAdmin = workbench.forIssue(i, "da", true);

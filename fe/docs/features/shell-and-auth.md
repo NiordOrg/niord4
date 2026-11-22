@@ -45,8 +45,9 @@ It is a `CanMatch` guard, not `CanActivate`: a refused route falls through to th
 (home) instead of raising. Every area is lazily loaded, home included, so the OpenLayers stack the
 landing map pulls in stays out of the initial bundle.
 
-Non-production builds additionally expose `/dev/geo-editor`, a standalone sandbox for the geometry
-editor; the route is compiled out when `environment.production` is `true`.
+The development and local builds additionally expose `/dev/geo-editor`, a standalone sandbox for the
+geometry editor; the route is not registered when `environment.production` is `true`, as it is in the
+production and the test builds (its lazy chunk is still emitted, and nothing can reach it).
 
 **Frontend role gating is an affordance, never a security control.** The backend re-checks roles on
 every call and narrows results by the domain header regardless of what the UI offers.

@@ -205,7 +205,7 @@ describe('AuthFacade', () => {
 
     it('asks for the user role itself, as the backend does, not any role', () => {
       // A realm whose editor role is not composite of user: the backend refuses USER endpoints.
-      auth.setResourceRoles({ 'niord-dk': ['publication-curate'], [BASE_CLIENT_ID]: ['editor'] });
+      auth.setResourceRoles({ 'niord-dk': ['editor'], [BASE_CLIENT_ID]: ['editor'] });
       domain.setSessionDomain('niord-dk');
       expect(facade.hasDomainUserRole()).toBe(false);
     });

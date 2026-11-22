@@ -877,9 +877,9 @@ describe('SeriesDetailFacade', () => {
   /**
    * A refusal here is not the page's failure.
    *
-   * The gate is a curator-tier read and the rest of the screen is not, so an
-   * admin who may not ask still gets the series, the card and the archive — with
-   * the one clause that needed the answer left off.
+   * The gate is a read of its own, so a refused one still leaves the series,
+   * the card and the archive — with the one clause that needed the answer left
+   * off.
    */
   it('leaves the clause empty when the read is refused, and keeps the page', () => {
     const { facade, httpTesting } = setup();

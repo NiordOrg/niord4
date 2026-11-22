@@ -68,9 +68,10 @@ R5. The other half does not hold up:
   is keyed on the tile's address, not on the caller: an anonymous caller would get any tile a
   logged-in user had fetched in the last minute, and no check in this repository would fail.
 - It needs backend code after all: an endpoint for `auth_request` that honours `wmsProtected`, and
-  an error status where the servlet today answers a provider failure with a redirect to a blank
-  image. That redirect carries `max-age=86400`, and nginx takes a response's lifetime from its
-  headers whatever its status, so it would keep the redirect for a day.
+  an error status where the servlet answers a provider failure with a blank image (a redirect to
+  it when this was decided, the picture itself since 2026-11-21). That answer carries
+  `max-age=86400`, and nginx takes a response's lifetime from its headers whatever its status, so
+  it would keep the blank for a day.
 - A hit from nginx is faster (an estimated 0.1 ms against 1 to 3 ms through the application). With
   tens of editors and about thirty tiles a view, nobody would see the difference.
 - It is a chart release rolled through the devops repositories; the cache in the backend is an
@@ -137,8 +138,10 @@ an error document from the provider can never be stored.
 - One fetch per tile at a time: a second request for a tile being fetched waits for the first.
   The map cancels and repeats its requests at every pan, so this happens constantly.
 - When the provider fails, the older copy is served if there is one, up to 30 days old; otherwise
-  the redirect to the blank image, kept for five minutes. With `wmsCacheDays` at 30 or more there is
-  no older copy to serve: a tile is fresh until it is older than that.
+  the blank image, kept for five minutes. With `wmsCacheDays` at 30 or more there is
+  no older copy to serve: a tile is fresh until it is older than that. (The blank image was a
+  redirect to `/img/blank.png` when this was built; since 2026-11-21 it is answered directly,
+  status 200 with the picture's bytes, on every path that answers one.)
 - After three failed fetches in a row the provider is not asked for 2 minutes; then one request is
   let through, and its failure pauses the provider again. Without the pause each tile of a view
   holds a request thread for up to 40 seconds while the provider is down.
@@ -295,7 +298,7 @@ tile of it is blank.
 | 3 | How is the space measured? | **2026-11-12, the owner: an hourly log line and a Grafana dashboard** (section 5). Not metrics from the application on Prometheus; not the volume's fill alone, which cannot tell the cache from the rest |
 | 4 | What cap do the stagings start with? | **2026-11-12, the owner: 1000 MB** of the 5Gi volume. If the dashboard shows evictions the cap is raised, and the measuring starts again. 2000 MB and a larger volume were the alternatives |
 | 5 | Is the cache on by default? | **2026-11-12, the owner: no.** `wmsCacheDays` defaults to 0 in the base product; DK and GL switch it on in their settings files |
-| 6 | Is the day-long cache header on the uncached path's blank redirect fixed here? | **2026-11-12, the owner: no.** That path stays byte for byte as it was; the defect is WMS1 in `be/docs/potential-errors.md` |
+| 6 | Is the day-long cache header on the uncached path's blank redirect fixed here? | **2026-11-12, the owner: no.** That path stays byte for byte as it was; the defect is WMS1 in `be/docs/potential-errors.md`. Since 2026-11-21 the blank image is answered directly instead of by a redirect, on this path too, and its headers are still those it had |
 | 7 | What does an editor get when the provider is down? | **2026-11-12, the owner: the older copy, up to 30 days old, and the provider paused for 2 minutes after three failures in a row.** Never serving an older copy, and serving it without the pause, were the alternatives |
 | 8 | Where is the chart's address set? | **2026-11-12, the owner: per country.** A line in DK's production environment file, an environment file of its own for GL. A default in the base product's deployed build was the alternative |
 
@@ -331,8 +334,10 @@ location is left as it is.
 - The provider's real answers: no token was at hand while building, so that it answers a
   256 x 256 PNG is assumed, and the tests use a stub. A provider that answers otherwise shows as
   `failed` in the line and as blank tiles.
-- The console no longer floods on a pan (the backlog's _Protected-WMS redirect flood_ came from
-  the cross-origin `wmsUrl`; to be confirmed once step 3 is in).
+- The console no longer floods on a pan (the flood came from the cross-origin `wmsUrl` and from
+  the blank-tile redirect; to be confirmed once step 3 is in). Since 2026-11-21 the servlet
+  answers "no tile" with the blank picture itself, no redirect, so no redirect can name another
+  origin either.
 
 ## 11. Execution record
 

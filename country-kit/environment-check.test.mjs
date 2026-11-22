@@ -98,6 +98,21 @@ describe('the production environment check', () => {
     assert.deepEqual(checkEnvironment(example, 'environment.production.ts'), []);
   });
 
+  it("holds the base product's and the example country's test environments to a production build with the TEST mode", () => {
+    // Set-up checks a country's production file only; a country's own test file is its own to
+    // change. These two are the base product's: a test build of either registers no dev route,
+    // refuses the e2e token stub, and keeps the TEST badge.
+    const kit = path.dirname(fileURLToPath(import.meta.url));
+    for (const file of [
+      path.join(kit, '../fe/ui-apps/admin/src/environments/environment.test.ts'),
+      path.join(kit, 'example/fe/admin/environments/environment.test.ts'),
+    ]) {
+      assert.ok(fs.existsSync(file), file);
+      assert.deepEqual(checkEnvironment(file, 'environment.test.ts'), [], file);
+      assert.match(fs.readFileSync(file, 'utf8'), /^\s*mode: 'test',$/m, file);
+    }
+  });
+
   it('checks nothing when the country has no production environment', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'niord-env-'));
     assert.deepEqual(checkEnvironment(path.join(dir, 'environment.production.ts')), []);

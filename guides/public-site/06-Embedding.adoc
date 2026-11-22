@@ -34,7 +34,7 @@ normally in the site's own language, so name the language you want.
 
 `area`::
 The sea area whose messages the teaser shows, by the area's id in Niord or by its MRN, a name of the
-form `urn:mrn:...`. Ask the authority that runs the site which areas it has. Without it, the teaser
+form `urn:mrn:...`, which is matched without regard to case. Ask the authority that runs the site which areas it has. Without it, the teaser
 shows the messages of the first area the site has, or every message when the site has no areas of
 its own.
 

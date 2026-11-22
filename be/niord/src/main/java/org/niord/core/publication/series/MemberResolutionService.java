@@ -275,8 +275,12 @@ public class MemberResolutionService extends BaseService {
 
         List<MessageFacts> candidates = narrow(criteria, operands, interval);
 
+        // Decided on the MRNs of the rows the operands found, not on the operands
+        // as written: the look-up ignores case, the facts carry the stored MRNs,
+        // and an operand in other capital letters would otherwise find its row,
+        // select its candidates and then reject every one of them as a miss.
         Map<String, MemberDecision> decisions =
-                MembershipPredicate.decideAll(candidates, criteria, interval);
+                MembershipPredicate.decideAll(candidates, operands.deciding(criteria), interval);
         Set<String> members =
                 MembershipPredicate.applyOverrides(decisions, manualIncludes, manualExcludes);
 
@@ -670,6 +674,7 @@ public class MemberResolutionService extends BaseService {
         guardOperands(criteria);
 
         List<String> areaLineages = new ArrayList<>();
+        Set<String> areaMrns = new LinkedHashSet<>();
         for (String mrn : criteria.areaIds()) {
             Area area = areaService.findByAreaId(mrn);
             if (area == null) {
@@ -683,9 +688,11 @@ public class MemberResolutionService extends BaseService {
                         + "it would select nothing");
             }
             areaLineages.add(area.getLineage());
+            areaMrns.add(area.getMrn() != null ? area.getMrn() : mrn);
         }
 
         List<String> categoryLineages = new ArrayList<>();
+        Set<String> categoryMrns = new LinkedHashSet<>();
         for (String mrn : criteria.categoryIds()) {
             Category category = categoryService.findByCategoryId(mrn);
             if (category == null) {
@@ -699,6 +706,7 @@ public class MemberResolutionService extends BaseService {
                         + "it would select nothing");
             }
             categoryLineages.add(category.getLineage());
+            categoryMrns.add(category.getMrn() != null ? category.getMrn() : mrn);
         }
 
         // Charts match on the number itself, so nothing has to be expanded -- but a
@@ -713,11 +721,30 @@ public class MemberResolutionService extends BaseService {
             }
         }
 
-        return new EntityOperands(areaLineages, categoryLineages);
+        return new EntityOperands(areaLineages, categoryLineages, areaMrns, categoryMrns);
     }
 
-    /** The lineage prefixes an area or category criterion has been expanded to. */
-    private record EntityOperands(List<String> areaLineages, List<String> categoryLineages) {
+    /**
+     * The lineage prefixes an area or category criterion has been expanded to, and
+     * the stored MRNs of the rows its operands found.
+     *
+     * The look-up by MRN ignores case (an exact match first), while the facts a
+     * message is judged on carry the MRNs as stored. Both sides of the decision
+     * therefore have to speak of the same rows: the query narrows on the found
+     * rows' lineages, and the rule compares the found rows' MRNs. Comparing the
+     * operands as written would accept an operand in other capital letters --
+     * or one whose area was later re-typed in other capitals -- and then reject
+     * every candidate it selected, with no error anywhere.
+     */
+    private record EntityOperands(List<String> areaLineages, List<String> categoryLineages,
+                                  Set<String> areaMrns, Set<String> categoryMrns) {
+
+        /** The criteria the rule decides on: the operands replaced by the found rows' MRNs. */
+        ResolvedCriteria deciding(ResolvedCriteria criteria) {
+            return new ResolvedCriteria(criteria.timeRelation(), criteria.messageSeriesIds(),
+                    criteria.types(), criteria.mainTypes(), areaMrns, categoryMrns,
+                    criteria.chartNumbers(), criteria.aliveAtCutoff());
+        }
     }
 
     /**

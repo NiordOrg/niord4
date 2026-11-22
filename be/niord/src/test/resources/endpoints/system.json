@@ -1336,7 +1336,6 @@
         "editor@sweep-system-role-editor": "ok",
         "editor@sweep-system-role-admin": {"status": 403, "detail": null},
         "domainEditor@sweep-system-role-editor": "ok",
-        "curator@sweep-system-role-user": "ok",
         "admin@sweep-system-role-admin": "ok",
         "admin@sweep-system-role-sysadmin": {"status": 403, "detail": null},
         "adminElsewhere@sweep-system-role-admin": {"status": 403, "detail": null},

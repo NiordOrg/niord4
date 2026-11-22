@@ -177,20 +177,6 @@ messages are generated from the _Areas_ page. See
 link:../sysadmin-manual/manual.html#firing-schedules[Firing Schedules] in the system administrator
 manual.
 
-[#sysadmin-roles]
-==== A new role for publications
-
-Besides _user_, _editor_, _admin_ and _sysadmin_, the server knows a new client role,
-_publication-curate_, which allows a user to add a message to a publication issue by hand or leave
-one out. An administrator may do the same without it. Two things limit the role for now. Niord
-does not create it: when Niord creates a domain's client in the sign-in service, together with
-the domain or with _Create in Keycloak_ on the _Domains_ page, the client gets only _user_, _editor_, _admin_ and _sysadmin_, so the
-role exists only where the realm's set-up file has it or a system administrator has added it to the
-client by hand. And the pages for publications are in the _Admin_ area, which needs the _admin_ or
-_sysadmin_ role, so a user who holds only _publication-curate_ has no page to work from. A role
-counts only when it is held as a client role for the domain; a realm role with the same name gives
-nothing.
-
 [#sysadmin-integration]
 === Integration With Other Systems
 

@@ -107,7 +107,7 @@ no host of a country, no WMS, a world map.
 | `environment.ts`             | the local stack: the `be/` backend through the dev server's `/rest` proxy, Keycloak on 8080 | `false`      | base file; the target of every `fileReplacements` swap |
 | `environment.development.ts` | the local stack, as `environment.ts`                                                        | `false`      | `ng serve niord-app` (`npm start`)                     |
 | `environment.local.ts`       | the local stack, as `environment.ts`                                                        | `false`      | the `local` build (`start:local`)                      |
-| `environment.test.ts`        | the deployment's own origin: `/rest` and Keycloak at `/auth`                                | `false`      | the `test` build                                       |
+| `environment.test.ts`        | the deployment's own origin: `/rest` and Keycloak at `/auth`                                | `true`       | the `test` build                                       |
 | `environment.production.ts`  | the deployment's own origin: `/rest` and Keycloak at `/auth`                                | `true`       | `npm run build`; the generic image                     |
 
 The local stack's Keycloak is addressed as `http://localhost:8080/auth`, not through the proxy, because
@@ -133,9 +133,12 @@ Rules:
   overlay should still be able to supply needs an `OPTIONAL_LEAVES` entry — which is exactly why
   that list names `mode`, `documentationUrl` and the `map.*` leaves. See below.
 - The `production` configuration is the shipped build: `publish.yml` builds it (`npm run build`)
-  into the bundle the generic image serves, and Frontend CI builds the same. The `test` build is the
-  one that sets `production` to `false`, so never gate runtime behaviour on
-  `environment.production` expecting every deployed build to match.
+  into the bundle the generic image serves, and Frontend CI builds the same. The `test` build is a
+  production build too (`production: true`: the dev routes are not registered and the e2e token stub
+  is refused), which differs
+  only in its `mode: 'test'` and in having no service worker; the local builds set `production` to
+  `false`. A country's own `environment.test.ts` is its own to set, and may still say `false`, so
+  never gate runtime behaviour on `environment.production` expecting every deployed build to match.
 
 ### `APP_CONFIG` is a runtime clone
 
@@ -220,7 +223,7 @@ substitute a stub. When the
 bundle is not a production build and an e2e fixture has seeded a token bundle on `window`, the
 factory returns a pre-authenticated stub instead of a real client; the `production` guard makes that
 path unreachable in a production build. The guard is only as good as the environment's flag: the base
-product's production environment sets `production: true`, and a country's set-up refuses a production
+product's production and test environments set `production: true`, and a country's set-up refuses a production
 environment that does not (`country-kit/lib/environment-check.mjs`), since that bundle would otherwise
 let the stub replace Keycloak and compile in the dev routes.
 
@@ -485,8 +488,9 @@ Both halves of that gate are load-bearing:
   `ng serve niord-app -c test` would register a real worker against `http://localhost:4200`, cache
   a dev shell, and outlive the session.
 - **Never gate on `environment.production`** — it says which environment file was built, not where
-  the app runs: the shipped `production` build sets it `true`, while the optimized `test` build and
-  the local ones set it `false`. The worker's gate asks where the app runs.
+  the app runs: the shipped `production` build and the base product's `test` build set it `true`,
+  the local ones `false`, and a country's own test file may say either. The worker's gate asks
+  where the app runs.
 
 `ui-apps/admin/ngsw-config.json` invariants:
 
@@ -536,7 +540,7 @@ The banner it feeds sits in the shell on every page and is the only sanctioned u
 | `production`  | `environment.production.ts`  | yes            | default of `ng build niord-app`; the shipped bundle (`publish.yml`); Frontend CI |
 | `development` | `environment.development.ts` | no             | `ng serve niord-app` (budgets emptied — unoptimized output always exceeds them)  |
 | `local`       | `environment.local.ts`       | no             | `npm run start:local`, against the `be/` backend                                 |
-| `test`        | `environment.test.ts`        | no             | optimized build for a deployment's own origin                                    |
+| `test`        | `environment.test.ts`        | no             | production build with the TEST badge, for a deployment's own origin              |
 
 A country's configurations are generated in its workspace by the kit's set-up
 ([country-kit/README.md](../../country-kit/README.md)), each standalone rather than composed onto
@@ -663,8 +667,9 @@ runner minutes for a minute or so less of waiting. Run a shard locally with
 Playwright is deliberately excluded: it needs a live backend and a real identity provider
 ([testing.md](./testing.md)).
 
-`npm ci` relies on the relaxed peer resolution configured in `.npmrc` (the ESLint TypeScript plugin
-has not yet widened its peer range to the TypeScript version in use). Drop that file once it does.
+`npm ci` relies on the relaxed peer resolution configured in `.npmrc`: the `@tiptap` packages are
+at two versions, whose peer ranges strict resolution refuses (the file says which). Drop that file
+once they are at one version.
 
 ### Dev servers: cross-origin or proxied
 

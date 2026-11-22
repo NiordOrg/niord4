@@ -62,12 +62,16 @@ image::KeycloakClientRoles.png[Keycloak Client Roles, 800]
 The roles are _composite_: each includes the roles below it. A user with the _sysadmin_ role also has the _admin_
 role, a user with _admin_ also has _editor_, and a user with _editor_ also has _user_.
 
-One more client role, _publication-curate_, gives a user the right to add messages to, and remove them from, a
-publication issue by hand (see the link:../admin-manual/manual.html#publications[Publications] chapter of the
-administrators' manual). It is not part of the ladder above: give it to the users who curate publications. Niord
-does not create it for a new domain: add it to the domain's client in Keycloak (*Create role*, named
-`publication-curate`), and give it to a group. For the time being, Niord also lets a user with the _admin_ role
-curate publications, so that the function works in a realm that does not have the role yet.
+These four are the only roles of a domain's client that Niord reads. A role counts only when it is held as a client
+role for the domain; a realm role with the same name gives nothing. Adding messages to, and removing them from, a
+publication issue by hand is part of the _admin_ role in the domain that owns the publication (see the
+link:../admin-manual/manual.html#publications[Publications] chapter of the administrators' manual).
+
+A realm set up from an earlier version of Niord's realm files may still have a client role _publication-curate_ on
+its domain clients, which every administrator holds through the _admin_ role and which some groups may be given. No
+part of Niord asks for it, and the Users & Contacts page does not count it when it decides which groups an
+administrator may add a user to. Delete it from each domain client that has it: Keycloak then also removes it from
+the composite roles and from the groups' role mappings.
 
 [#niord-users]
 === Niord Users

@@ -23,9 +23,12 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.ListableBeanFactory;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
@@ -34,7 +37,8 @@ import static org.mockito.Mockito.mock;
  * {@code niord.home} system property or environment variable, else {@code NIORD_HOME}, the deployments' variable and
  * the token the countries' settings files give the key, so the generic {@code niord-app}, which has no settings file
  * of its own, follows it as DK and GL do. A blank {@code NIORD_HOME} is no home, and no other key gains an upper-case
- * alias.
+ * alias. And the refusal of a home that names no folder ({@link SettingsService#homeRefusal}): a token nothing
+ * resolves, with or without a suffix, or a blank value, from the settings file, the database's row or an override.
  */
 class SettingsServiceHomeTest {
 
@@ -121,5 +125,122 @@ class SettingsServiceHomeTest {
 
         assertNull(service.override("mode"));
         assertEquals(tempHome(), service.override("NIORD_HOME"));
+    }
+
+    // ------------------------------------------------------------------ the refusal of a home that names no folder
+
+    /** The tokens of a machine that sets user.home and nothing else */
+    private static final Map<String, String> MACHINE = Map.of("user.home", "/home/mariner");
+
+    private static String refusal(SettingsService.HomeValue home) {
+        return SettingsService.homeRefusal(home, MACHINE::get);
+    }
+
+    private static SettingsService.HomeValue fromTheFile(String value) {
+        return SettingsService.homeValue(null, false, null, value);
+    }
+
+    @Test
+    void anUnresolvedTokenIsRefusedWithTheCauseAndTheCure() {
+        assertEquals("niord.home cannot be resolved: its value is \"${NIORD_HOME}\" (from the settings file) and no "
+                        + "NIORD_HOME is set; set the environment variable NIORD_HOME or start with "
+                        + "-Dniord.home=<folder>",
+                refusal(fromTheFile("${NIORD_HOME}")));
+    }
+
+    @Test
+    void aBlankValueIsRefused() {
+        assertEquals("niord.home cannot be resolved: its value is \"\" (from the niord.home system property or "
+                        + "environment variable), which names no folder; give the niord.home system property or "
+                        + "environment variable a folder (NIORD_HOME is not read while niord.home is set)",
+                refusal(SettingsService.homeValue("", true, null, "${user.home}/.niord")));
+        assertNotNull(refusal(fromTheFile("   ")));
+        assertNotNull(refusal(fromTheFile(null)));
+    }
+
+    @Test
+    void aTokenWithASuffixIsRefusedThoughTheValueIsNotBlank() {
+        String refusal = refusal(fromTheFile("${NIORD_HOME}/niord"));
+
+        assertNotNull(refusal);
+        assertTrue(refusal.contains("its value is \"${NIORD_HOME}/niord\""), refusal);
+        assertTrue(refusal.contains("and no NIORD_HOME is set"), refusal);
+    }
+
+    @Test
+    void aTokenThatResolvesToBlankTextIsUnresolved() {
+        String refusal = SettingsService.homeRefusal(fromTheFile("${NIORD_HOME}/niord"),
+                token -> "NIORD_HOME".equals(token) ? "  " : null);
+
+        assertNotNull(refusal);
+        assertTrue(refusal.contains("and no NIORD_HOME is set"), refusal);
+    }
+
+    @Test
+    void aResolvedValueIsAccepted() {
+        assertNull(refusal(fromTheFile("${user.home}/.niord")));
+        assertNull(refusal(fromTheFile("/srv/niord")));
+        assertNull(refusal(SettingsService.homeValue("/niord-home", false, null, "${NIORD_HOME}")));
+    }
+
+    @Test
+    void theStoredRowsTokenWinsOverTheFileAndIsRefused() {
+        Setting row = new Setting(HOME, "${NIORD_HOME}");
+
+        String refusal = refusal(SettingsService.homeValue(null, false, row, "${user.home}/.niord"));
+
+        assertEquals("niord.home cannot be resolved: its value is \"${NIORD_HOME}\" (from the database's niord.home "
+                        + "setting) and no NIORD_HOME is set; set the environment variable NIORD_HOME or start with "
+                        + "-Dniord.home=<folder>",
+                refusal);
+    }
+
+    @Test
+    void aStoredRowThatNamesAFolderWinsOverTheFilesToken() {
+        Setting row = new Setting(HOME, "/srv/niord");
+
+        assertNull(refusal(SettingsService.homeValue(null, false, row, "${NIORD_HOME}")));
+    }
+
+    @Test
+    void anOverrideWinsOverTheStoredRowsToken() {
+        SettingsService.HomeValue home = SettingsService.homeValue("/niord-home", true,
+                new Setting(HOME, "${NIORD_HOME}"), "${NIORD_HOME}");
+
+        assertNull(SettingsService.homeRefusal(home, token -> null));
+    }
+
+    @Test
+    void aTokenInTheHomeSettingIsNotExpandedAndItsCureIsTheSettingItself() {
+        // NIORD_HOME is set, but a niord.home property or variable hides it and is used as it is
+        String refusal = SettingsService.homeRefusal(
+                SettingsService.homeValue("${NIORD_HOME}", true, null, "${user.home}/.niord"),
+                token -> "/niord-home");
+
+        assertEquals("niord.home cannot be resolved: its value is \"${NIORD_HOME}\" (from the niord.home system "
+                        + "property or environment variable), which is used as it is: a value set this way has its "
+                        + "${...} tokens not expanded; give the niord.home system property or environment variable a "
+                        + "folder (NIORD_HOME is not read while niord.home is set)",
+                refusal);
+    }
+
+    @Test
+    void aTokenInNiordHomeVariableIsNotExpandedAndItsCureIsThatVariable() {
+        String refusal = SettingsService.homeRefusal(
+                SettingsService.homeValue("${NIORD_DRIVE}/niord", false, null, "${NIORD_HOME}"),
+                token -> "/drive");
+
+        assertEquals("niord.home cannot be resolved: its value is \"${NIORD_DRIVE}/niord\" (from NIORD_HOME), which "
+                        + "is used as it is: a value set this way has its ${...} tokens not expanded; give NIORD_HOME "
+                        + "a folder",
+                refusal);
+    }
+
+    @Test
+    void everyUnresolvedTokenIsNamed() {
+        String refusal = refusal(fromTheFile("${NIORD_DRIVE}/${NIORD_HOME}"));
+
+        assertNotNull(refusal);
+        assertTrue(refusal.contains("and none of NIORD_DRIVE, NIORD_HOME is set"), refusal);
     }
 }

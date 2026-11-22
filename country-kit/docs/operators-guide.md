@@ -483,9 +483,18 @@ maintainers give.
 
 ## The server's home folder
 
-The backend keeps its files in its home folder: the repository of attachments, the batch files, the
-archives and the message index. The setting `niord.home` names it. Your country's own defaults set
-it to `${NIORD_HOME}`, which the server reads as the folder the deployment mounts.
+The backend keeps a cache in its home folder: the message index, the issues' previews, the
+thumbnails, the map images and the map tiles, each made again when it is missing; and the files of
+the batch jobs. The repository's files and the published documents are rows of the database, which
+is the one thing to back up. The setting `niord.home` names the folder. Your country's own defaults
+set it to `${NIORD_HOME}`, which the server reads as the folder the deployment mounts; the base
+chart always sets `NIORD_HOME`.
+
+A backend whose `niord.home` names no folder does not start: `${NIORD_HOME}` with no `NIORD_HOME`
+set, or an empty value. Its log says, at ERROR,
+`niord.home cannot be resolved: its value is "${NIORD_HOME}" (from the settings file) and no NIORD_HOME is set; set the environment variable NIORD_HOME or start with -Dniord.home=<folder>`
+(or `from the database's niord.home setting`, the value a started database holds), and the start
+stops before anything is written under the home.
 
 How to see it worked: Sysadmin > Settings lists `niord.home` with the value `${NIORD_HOME}`. The
 backend's start log says `Default setting niord.home = ${NIORD_HOME} (country)`. Do not change the

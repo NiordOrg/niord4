@@ -1513,6 +1513,57 @@ public class IssuePublishITTest extends ITTest {
     }
 
     /**
+     * An amendment orders the whole issue again by the series' sort as it stands at the amendment, the data
+     * model's §6.6 rule 5 (decided 2026-11-20): surviving members do not keep their relative order. Released
+     * sorted by publish date ascending, the issue prints the earlier notice first; amended after the series was
+     * set to descending, it prints the later one first, and the header records the sort it was ordered by.
+     */
+    @Test
+    @Transactional
+    public void anAmendmentOrdersTheWholeIssueByTheSeriesCurrentSort() {
+        PublicationSeries s = series(SeriesCadence.WEEKLY, TimeRelation.PUBLISHED_IN_INTERVAL,
+                ReleaseMode.MANUAL_GATE, NextIssueCreation.MANUAL, SeriesStatus.ACTIVE);
+        s.setMessageSortBy("PUBLISH_DATE");
+        s.setMessageSortOrder(org.niord.model.search.PagedSearchParamsVo.SortOrder.ASC);
+        Message earlier = compiledMessage("NM-EARLIER");
+        earlier.setPublishDateFrom(new Date(1_699_000_000_000L));
+        Message later = compiledMessage("NM-LATER");
+        later.setPublishDateFrom(new Date(1_699_100_000_000L));
+        PublicationIssue i = issue(s, new Date(1_698_900_000_000L));
+        em.flush();
+
+        publishService.publish(i.getId(), new IssuePublishService.PublishRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, new Date(1_699_300_000_000L)));
+        em.flush();
+        assertEquals(List.of(earlier.getUid(), later.getUid()), ownRowsOf(i, earlier, later),
+                "released sorted by publish date ascending, the earlier notice is not printed first");
+
+        s.setMessageSortOrder(org.niord.model.search.PagedSearchParamsVo.SortOrder.DESC);
+        em.merge(s);
+        em.flush();
+        publishService.amend(i.getId(), new IssuePublishService.AmendRequest(
+                IssuePublishService.PublishRequest.ALL_WARNINGS, null, "the series is now sorted newest first"));
+        em.flush();
+
+        assertEquals(List.of(later.getUid(), earlier.getUid()), ownRowsOf(i, earlier, later),
+                "the amendment kept the released order where the series' sort now says otherwise");
+        assertEquals("DESC", i.getSnapshotSortOrder(), "the header does not record the sort the amendment used");
+        List<IssueMember> rows = frozenRowsOf(i);
+        for (int n = 0; n < rows.size(); n++) {
+            assertEquals(Integer.valueOf(n), rows.get(n).getSortIndex(), "the amended order is not dense from 0");
+        }
+    }
+
+    /** The uids of the given messages among an issue's frozen rows, in printed order. */
+    private List<String> ownRowsOf(PublicationIssue issue, Message... messages) {
+        Set<String> own = new java.util.HashSet<>();
+        for (Message m : messages) {
+            own.add(m.getUid());
+        }
+        return frozenRowsOf(issue).stream().map(IssueMember::getMessageUid).filter(own::contains).toList();
+    }
+
+    /**
      * What reaches the RENDERER is the document's sections, not a flat list.
      *
      * The renderer has no way to work out where a section begins: the ordered
@@ -1652,6 +1703,43 @@ public class IssuePublishITTest extends ITTest {
                 groups.stream().map(IssueRenderService.RenderGroup::publicId).toList());
         assertEquals("44+45", groups.get(0).weeks(), "the source of two weeks is not named by both");
         assertEquals("46", groups.get(1).weeks(), "a single week is named by its week");
+    }
+
+    /**
+     * A single week released under patterns that write two weeks is named, filed and linked by its one week: under
+     * "Uge ${week}+${weekTo}, ${year}" and "nm-uge-${week-2-digits}+${weekTo-2-digits}-${year}" the issue of week 46
+     * of 2023 is "Uge 46, 2023", its document "nm-uge-46-2023.pdf", and its link ends in that file name. FAILS on
+     * the expansion that printed the closing week as nothing and kept its joiner: "Uge 46+, 2023" and
+     * "nm-uge-46+-2023.pdf".
+     */
+    @Test
+    @Transactional
+    public void aSingleWeekIsNamedFiledAndLinkedWithoutItsClosingWeek() {
+        PublicationSeries s = series(SeriesCadence.WEEKLY, TimeRelation.PUBLISHED_IN_INTERVAL,
+                ReleaseMode.MANUAL_GATE, NextIssueCreation.MANUAL, SeriesStatus.ACTIVE);
+        s.getDescs().get(0).setNameSuggestionPattern("Uge ${week}+${weekTo}, ${year}");
+        s.getDescs().get(0).setFileNamePattern("nm-uge-${week-2-digits}+${weekTo-2-digits}-${year}");
+        // The cut-off on 14 November 2023 is in ISO week 46, and the window opens one week before it.
+        Date stamp = new Date(1_700_000_000_000L);
+        PublicationIssue i = issue(s, new Date(stamp.getTime() - 7 * 24 * 3600_000L));
+        em.flush();
+
+        publishService.publish(i.getId(),
+                new IssuePublishService.PublishRequest(IssuePublishService.PublishRequest.ALL_WARNINGS, null, stamp));
+        em.flush();
+        em.clear();
+
+        PublicationIssue after = em.find(PublicationIssue.class, i.getId());
+        assertEquals(IssueStatus.PUBLISHED, after.getStatus());
+        assertEquals(Integer.valueOf(46), after.getWeek(), "the issue's week");
+        assertNull(after.getWeekTo(), "a single week has no closing week");
+        PublicationIssueDesc desc = after.getDesc("da");
+        assertEquals("Uge 46, 2023", desc.getName(), "the name keeps the joiner of a closing week it does not have");
+        assertEquals("nm-uge-46-2023.pdf", desc.getFileName(),
+                "the file name keeps the joiner of a closing week it does not have");
+        assertEquals(after.getRepoPath() + "/nm-uge-46-2023.pdf", desc.getFilePath());
+        assertEquals("/rest/repo/file/" + after.getRepoPath() + "/nm-uge-46-2023.pdf",
+                IssuePublicationMapping.linkOf(desc), "the link is not the file's");
     }
 
     /**

@@ -204,6 +204,35 @@ class BatchParamTypeImportProcessorITTest extends ITTest {
         em.flush();
         assertEquals(textRows, countByName("text"), "no row named 'text' is created or removed");
         assertEquals(numberRows, countByName("number"), "no row named 'number' is created or removed");
+
+        ListParamTypeVo otherCase = new ListParamTypeVo();
+        otherCase.setName("Text");
+        assertNull(processor().processItem(otherCase), "a standard type's name in other capital letters is skipped");
+        em.flush();
+        assertEquals(0, countByName("Text"), "no row named 'Text' is created");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // A name an existing type has in other capital letters: refused, never a rename
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    @Transactional
+    void anItemWhoseNameAnExistingTypeHasInOtherCapitalLettersIsRefusedAndRenamesNothing() throws Exception {
+        String name = "IT-Lights-" + UUID.randomUUID();
+        ParamType existing = (ParamType) processor().processItem(standardVo(name));
+        em.flush();
+
+        // The look-up of the type to update is exact, so the item is a new type; names are unique without regard to
+        // case, so the new type is refused. A look-up that ignored case would rename the existing type instead
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> processor().processItem(standardVo(name.toLowerCase())));
+        assertEquals("Another parameter type has the name " + name.toLowerCase(), ex.getMessage());
+
+        em.flush();
+        em.clear();
+        assertEquals(name, em.find(ParamType.class, existing.getId()).getName(), "the existing type keeps its name");
+        assertEquals(0, countByName(name.toLowerCase()), "no second type is made");
     }
 
     // ------------------------------------------------------------------------------------------- //

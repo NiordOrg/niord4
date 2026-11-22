@@ -59,7 +59,8 @@ image::ParameterTypeAddBtn.png[The New Parameter Type menu, 141]
 
 To edit a list or composite type, click the pencil of its row (*Edit*). Either way the editor drawer
 opens, with the type's *Name*, which must be unique, and its values or parameters. Click *Save* to
-save the type.
+save the type. A name is unique without regard to case: _lights_ is refused beside _Lights_, and so
+is _Text_, the name of a standard type in other capital letters.
 
 [#list-parameter-type-edit-page]
 ==== List Parameter Type Edit Page
@@ -120,9 +121,10 @@ parameters of an existing one. The copy opens with an empty name, which you give
 [#deleting-a-parameter-type]
 === Deleting a Parameter Type
 
-Click the bin of a row (*Delete*) and confirm with *Yes*. Niord does not check whether the type is
-in use, so first make sure that no template (see <<categories,Categories>>) and no composite
-parameter type has a parameter of the type.
+Click the bin of a row (*Delete*) and confirm with *Yes*. Niord refuses to delete a type that is in
+use, that is one that a template (see <<categories,Categories>>) or a composite parameter type has a
+parameter of, and says that the type could not be deleted: first remove those parameters, or give
+them another type.
 
 [#importing-and-exporting-parameter-types]
 === Importing and Exporting Parameter Types
@@ -134,7 +136,10 @@ as a JSON file, and *Import...*, which uploads such a file and runs the _param-t
 The import adds the types Niord lacks and overwrites the ones it has, by name: a list type's values
 and a composite type's parameters become the file's. The values of a list type are dictionary
 entries, found by their keys; a value whose key no dictionary has is left out, so import the
-dictionary entries first. An item with the name of a standard type is skipped.
+dictionary entries first. An item with the name of a standard type, whatever its capital letters, is
+skipped. A type is found by its exact name, so an item whose name differs from an existing type's
+only in capital letters is a new type, and is refused, as the names are unique without regard to
+case.
 
 The file is a list of types, for example:
 

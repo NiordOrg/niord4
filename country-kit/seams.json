@@ -27,7 +27,7 @@
       "base": "ui-apps/admin/src/environments/environment.test.ts",
       "replaces": "ui-apps/admin/src/environments/environment.ts",
       "configurations": ["test"],
-      "description": "The test deployment's: /rest and /auth on its own origin."
+      "description": "The test deployment's: /rest and /auth on its own origin, mode test and production true, so a test build neither registers the dev routes nor lets the e2e test's Keycloak token stub take Keycloak's place. Set-up does not check it."
     },
     {
       "id": "admin.environment.production",

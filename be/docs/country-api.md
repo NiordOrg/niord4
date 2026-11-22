@@ -96,7 +96,10 @@ the method or on the class declaring it, resolved as Spring Security's `Jsr250Au
 layer is `permitAll` and method security is the whole guard, so a handler without an annotation would be public. The
 check covers every handler method of Spring MVC's `RequestMappingHandlerMapping` beans, in any package; the reviewed
 framework handlers are exempt: `BasicErrorController` (the `/error` page). The guard does not check role names (a
-misspelt role fails closed); niord-base's `RestControllerSecurityAnnotationTest` does, for its own controllers.
+misspelt role fails closed). The country build group does: `RestControllerSecurityAnnotationTest` and
+`RestHandlerSecurityITTest` hold every `@RolesAllowed` of a handler under `org.niord`, a country's included, to
+`user`, `editor`, `admin` and `sysadmin`, and a handler naming any other role fails the country's build with
+`<Controller>.<method>: unknown role '<name>'`: give such a handler one of the four.
 
 Outside the guard, and refused by review (`docs/fe-country-split-plan.md` §4.11 rule 3): an HTTP endpoint that
 is not such a handler method, that is a servlet or `ServletRegistrationBean`, a servlet filter, a `RouterFunction`, an
@@ -339,10 +342,12 @@ A country's data is never a resource in its jar (`docs/code-data-config-plan.md`
   stays active.
 
   An addition names its base product entry as the import finds it: a template by its path, a dictionary entry by
-  the dictionary's name and its key, a category by its MRN, or else by one of its names in that name's language,
+  the dictionary's name and its key, a category by its MRN (without regard to case, an exact match first), or else
+  by one of its names in that name's language,
   case-insensitively, under the same parent (a root among the roots only), so an addition carries the English
   name, and the parents' too, and a
-  `da`-only entry creates a second category; a parameter type by its name and a template parameter by its `paramId`
+  `da`-only entry creates a second category; a parameter type by its exact name (an entry whose name differs from an existing type's
+  only in capital letters is refused, and one with a standard type's name in any capitals is skipped) and a template parameter by its `paramId`
   (then by its order among equal ones), a promulgation type by its `typeId` and a report by its `reportId`. A whole
   restatement of a base product entry is applied by the same rule: its values replace the base product's where they
   differ, and an addition that gives only the matching key and what it adds gives the same rows as a restatement

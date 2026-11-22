@@ -3,8 +3,11 @@
 # starts a comment; case does not matter.
 #
 # Both workflows read this file from main, whatever ref they run from, and check it against the
-# run's triggering actor (so a re-run by someone else is checked too). Changing it is a change to
-# who may publish and delete a release: review it like a change to those two workflows.
+# run's triggering actor (so a "Re-run all jobs" by someone else is checked too). A "Re-run failed
+# jobs" does not repeat the check: the retract workflow refuses one started by anyone but the login
+# it checked, and in the publish workflow it completes the jobs a maintainer's break-glass run had
+# started. Changing it is a change to who may publish and delete a release: review it like a change
+# to those two workflows.
 #
 # Until a rule on main requires a review (not available to a private repository on GitHub Free),
 # who may retract or break-glass is in effect who may write main: a writer of main can change this

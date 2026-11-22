@@ -604,7 +604,7 @@
     "steps": "Open issue of 'Weekly NtM P&T': click 'Add message'; type '817-26'; pick NM-817-26 (a permanent notice, which the in-force list does not select) with the keyboard; type a reason; never 'Add to the issue'",
     "crop": "the dialog",
     "needsData": "a published message the criteria do not select",
-    "note": "Needs the publication-curate role or ADMIN; admin is enough. A pick whose label equals the typed text leaves the box empty (autocomplete.ts: the label is written back through a linked signal only when it changes), so only part of the number is typed."
+    "note": "Needs the admin role of the domain that owns the series. A pick whose label equals the typed text leaves the box empty (autocomplete.ts: the label is written back through a linked signal only when it changes), so only part of the number is typed."
   },
   {
     "manual": "admin-manual", "chapterFile": "05-Publications.adoc", "line": 589, "file": "PublicationExcludeDialog.png",

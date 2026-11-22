@@ -199,8 +199,8 @@ through a separate bean that runs it, as `PublicationTxRunner` does for publicat
 Sign-in is Keycloak's. The backend accepts a bearer token Keycloak issued, and a request names the
 domain the user works in with the `NiordDomain` header; the user's roles in that domain are added
 to the request by `NiordDomainFilter`. The roles are `user`, `editor`, `admin` and `sysadmin`
-(`org.niord.core.user.Roles`), plus `publication-curate`, the right to add or remove the members
-of a publication issue by hand.
+(`org.niord.core.user.Roles`), and no other: adding or removing the members of a publication issue
+by hand is an `admin`'s, in the domain that owns the publication.
 
 The HTTP layer lets every request through (`SecurityConfig`); method security is the whole guard.
 So every handler method of every controller resolves to exactly one of the JSR-250 annotations,
@@ -278,6 +278,8 @@ in the repository never holds a real secret: a password setting is empty there.
 * *Files.* The files of the repository, such as attachments and publication files, are rows of the
   database, read and written through `RepoStore`. The folder `niord.home` holds only what can be
   made again: thumbnails, map images, map tiles, the message index and the files of batch jobs.
-  Nothing writes a durable file to disk.
+  Nothing writes a durable file to disk. A start whose `niord.home` names no folder (a token such as
+  `${NIORD_HOME}` that nothing sets, or a blank value) is refused by `SettingsService`, before
+  anything is written under it.
 * *Time.* The JVM runs in UTC, and the time zone of the domain formats a time for display. No code
   may depend on the JVM's default time zone.

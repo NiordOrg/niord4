@@ -45,17 +45,16 @@ import static io.restassured.RestAssured.given;
  *   <tr><td>{@code testuser}/{@code test}</td><td>(none)</td><td>{@code user}</td></tr>
  * </table>
  *
- * <p>Three more users hold their roles on a domain client only (the endpoint sweep's identities): {@code testcurator}
- * ({@code user, publication-curate} on {@code niord-nw}), {@code testdomaineditor} ({@code editor, user} on
- * {@code niord-nw}) and {@code testadminelsewhere} ({@code admin} on {@code niord-nm}, {@code user} on
- * {@code niord-nw}); none holds a {@code niord-client-master} role.
+ * <p>Two more users hold their roles on a domain client only (the endpoint sweep's identities):
+ * {@code testdomaineditor} ({@code editor, user} on {@code niord-nw}) and {@code testadminelsewhere} ({@code admin} on
+ * {@code niord-nm}, {@code user} on {@code niord-nw}); neither holds a {@code niord-client-master} role.
  *
  * <p>Two features of the realm shape the matrix:
  * <ul>
  *   <li>{@code niord-client-master} has the same ladder as every domain client: {@code editor} holds
  *       {@code user}, {@code admin} holds {@code editor}, {@code sysadmin} holds {@code admin}. A base role
  *       counts in every domain, so {@code testeditor}, {@code testadmin} and {@code sysadmin} hold {@code user}
- *       with any {@code NiordDomain} header or none; {@code testuser} and the three domain-only users hold it
+ *       with any {@code NiordDomain} header or none; {@code testuser} and the two domain-only users hold it
  *       only through the augmentor (a {@code NiordDomain: niord-nw} header, which adds
  *       {@code resource_access.niord-nw.roles}).</li>
  *   <li>{@code testuser} holds no {@code niord-client-master} role at all, so its bare token is
@@ -81,7 +80,7 @@ public final class KeycloakTestTokens {
     /**
      * Returns a bearer access token for the {@code sysadmin} user, valid against the running
      * application's OIDC configuration. The token's {@code niord-client-master} roles are
-     * {@code {sysadmin, admin, editor, user, publication-curate}}.
+     * {@code {sysadmin, admin, editor, user}}.
      */
     public static String sysadminAccessToken() {
         return accessToken("sysadmin", "sysadmin");
@@ -114,16 +113,6 @@ public final class KeycloakTestTokens {
      */
     public static String userAccessToken() {
         return accessToken("testuser", "test");
-    }
-
-    /**
-     * Returns a bearer access token for the {@code testcurator} user: {@code user} and {@code publication-curate} on
-     * {@code niord-nw} only, nothing on {@code niord-client-master}. It holds its roles only with a
-     * {@code NiordDomain: niord-nw} header: a curator who is neither editor nor admin, for the
-     * {@code @RolesAllowed(PUBLICATION_CURATE, ADMIN)} handlers.
-     */
-    public static String curatorAccessToken() {
-        return accessToken("testcurator", "test");
     }
 
     /**

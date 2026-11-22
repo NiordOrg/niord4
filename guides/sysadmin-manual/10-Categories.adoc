@@ -43,7 +43,8 @@ The editor shows the attributes every category has:
 | MRN
 | Optionally, a _Maritime Resource Name_, a unique name (a URN) for the category. Categories with MRNs can be
   matched between Niord systems of different countries, and the category import uses the MRN to find an existing
-  category.
+  category. An MRN is matched without regard to case: the category whose MRN is exactly the one given, and only when
+  there is none, the category whose MRN differs from it only in capital letters.
 
 | Additional editor fields
 | Message editor fields that are shown when the category is assigned to a message. For example, a "Firing
@@ -215,7 +216,8 @@ The menu of the gear button (_Category actions_) has *Export…* and *Import…*
 The file is a JSON list of the root categories, each with its sub-categories in its _children_ field.
 
 An import is merged into the existing tree. Niord looks for an existing category with the MRN of an imported
-category, or, when it finds none, with one of its names under the same parent.
+category, whatever its capital letters (an exact match first), or, when it finds none, with one of its names under
+the same parent.
 
 Example:
 [source,json]

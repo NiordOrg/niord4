@@ -275,7 +275,7 @@ class EndpointTableFormatTest {
                 p.add(at + "rule ticket asks for a ticket cell (ticket(<identity>) or ticket(<identity>:<role>))");
             }
             if (e.realmRole != null && (!cellNames.contains("sysadmin") || cellNames.stream().noneMatch(n ->
-                    Set.of("admin", "editor", "user", "domainEditor", "adminElsewhere", "curator").contains(n)))) {
+                    Set.of("admin", "editor", "user", "domainEditor", "adminElsewhere").contains(n)))) {
                 p.add(at + "realmRole asks for the cell of an identity that holds it (sysadmin) and of one that does "
                         + "not (admin, editor, user, ...)");
             }

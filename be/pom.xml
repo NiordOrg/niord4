@@ -53,8 +53,8 @@
              2026-10-06: the Maven registry is repository-scoped, so packages published from this
              private repository could be read by no other repository's workflow token, while
              packages of a public repository are readable with any token and cost no storage. The
-             publish workflow writes with the repository secrets NIORDORG_PACKAGES_USER /
-             NIORDORG_PACKAGES_TOKEN until the country split (owner, 2026-10-22), then with a
+             publish workflow writes with NIORDORG_PACKAGES_USER / NIORDORG_PACKAGES_TOKEN, secrets of
+             the main-only `publish` environment under the names chosen on 2026-10-22, then with a
              NiordOrg machine user's publish-only token, NIORD_PUBLISH_TOKEN (the login in the
              variable NIORD_PUBLISH_USER), of the main-only `publish` environment, and
              retract-version.yml deletes with its NIORD_DELETE_TOKEN of the `retract` environment;

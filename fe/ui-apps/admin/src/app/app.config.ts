@@ -194,8 +194,9 @@ export const appConfig: ApplicationConfig = {
     // sets serviceWorker (production), which a country workspace's generated configurations
     // inherit; the hostname check covers any other.
     //
-    // Never gate on `environment.production`: environment.test.ts sets it false, and a deployed
-    // test build ships that file, so the worker would be off on the live site.
+    // Never gate on `environment.production`: it says which environment file was built, not where
+    // the app runs, and a country's own test file may still set it false while its deployed test
+    // build ships that file, so the worker would be off on the live site.
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode() && !LOCAL_HOSTNAMES.has(location.hostname),
       registrationStrategy: 'registerWhenStable:30000',
