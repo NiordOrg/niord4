@@ -342,7 +342,8 @@ class ParamTypeServiceITTest extends ITTest {
         // ERR4: refused with a sentence (400 over REST), not left to the unique key at the flush (500)
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> templateExecutionService.createParamType(new StandardParamType("IT-dup-name")));
-        assertTrue(ex.getMessage().contains("IT-dup-name"), ex.getMessage());
+        // The same spelling: the message names it once, as it always has
+        assertEquals("Another parameter type has the name IT-dup-name", ex.getMessage());
     }
 
     @Test
@@ -358,7 +359,8 @@ class ParamTypeServiceITTest extends ITTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> templateExecutionService.createParamType(twin),
                 "a name another type has in other capital letters is taken");
-        assertEquals("Another parameter type has the name it-lights", ex.getMessage());
+        assertEquals("Another parameter type has the name \"IT-Lights\" (given: \"it-lights\")", ex.getMessage(),
+                "both spellings are named, so the type in the way can be told from the name refused");
     }
 
     @Test
@@ -391,7 +393,7 @@ class ParamTypeServiceITTest extends ITTest {
         rename.setName("it-LIGHTS");
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> templateExecutionService.updateParamType(rename));
-        assertEquals("Another parameter type has the name it-LIGHTS", ex.getMessage());
+        assertEquals("Another parameter type has the name \"IT-Lights\" (given: \"it-LIGHTS\")", ex.getMessage());
 
         ListParamType ownSpelling = new ListParamType();
         ownSpelling.setId(lightsId);

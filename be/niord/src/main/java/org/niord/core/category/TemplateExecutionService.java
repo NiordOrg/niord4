@@ -117,17 +117,40 @@ public class TemplateExecutionService extends BaseService {
      *
      * @param name the name of the new or renamed type
      * @param id the id of the type being renamed, which may have its own name in other capital letters; null for a new type
-     * @throws IllegalArgumentException if another type has the name without regard to case
+     * @throws IllegalArgumentException if another type has the name without regard to case; the message names that
+     *         type's name, and the name given too when the two differ in capital letters
+     *         ({@link #takenParamTypeNameMessage})
      */
     private void refuseTakenParamTypeName(String name, Integer id) {
-        boolean taken = em.createNamedQuery("ParamType.findByNameIgnoreCase", ParamType.class)
+        List<String> taken = em.createNamedQuery("ParamType.findByNameIgnoreCase", ParamType.class)
                 .setParameter("name", name)
                 .getResultList()
                 .stream()
-                .anyMatch(other -> !Objects.equals(other.getId(), id));
-        if (taken) {
-            throw new IllegalArgumentException("Another parameter type has the name " + name);
+                .filter(other -> !Objects.equals(other.getId(), id))
+                .map(ParamType::getName)
+                .toList();
+        if (!taken.isEmpty()) {
+            // The other type's own spelling: the exact name when a type has it, else the first in other capital letters
+            String existing = taken.contains(name) ? name : taken.getFirst();
+            throw new IllegalArgumentException(takenParamTypeNameMessage(existing, name));
         }
+    }
+
+    /**
+     * The sentence that refuses a parameter type's name because another type has it without regard to case. When the
+     * two differ only in capital letters it names both, so an administrator can tell which type is in the way and
+     * which spelling was refused: {@code Another parameter type has the name "Lights" (given: "lights")}. When they
+     * are identical it is {@code Another parameter type has the name lights}.
+     *
+     * @param existing the other type's name
+     * @param given the name of the new or renamed type
+     * @return the message
+     */
+    static String takenParamTypeNameMessage(String existing, String given) {
+        if (Objects.equals(existing, given)) {
+            return "Another parameter type has the name " + given;
+        }
+        return "Another parameter type has the name \"" + existing + "\" (given: \"" + given + "\")";
     }
 
     /**

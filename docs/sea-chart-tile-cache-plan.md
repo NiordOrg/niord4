@@ -69,9 +69,9 @@ R5. The other half does not hold up:
   logged-in user had fetched in the last minute, and no check in this repository would fail.
 - It needs backend code after all: an endpoint for `auth_request` that honours `wmsProtected`, and
   an error status where the servlet answers a provider failure with a blank image (a redirect to
-  it when this was decided, the picture itself since 2026-11-21). That answer carries
-  `max-age=86400`, and nginx takes a response's lifetime from its headers whatever its status, so
-  it would keep the blank for a day.
+  it when this was decided, the picture itself since 2026-11-21). That answer carried
+  `max-age=86400` then (five minutes since 2026-11-22, decision 6), and nginx takes a response's
+  lifetime from its headers whatever its status, so it would have kept the blank for a day.
 - A hit from nginx is faster (an estimated 0.1 ms against 1 to 3 ms through the application). With
   tens of editors and about thirty tiles a view, nobody would see the difference.
 - It is a chart release rolled through the devops repositories; the cache in the backend is an
@@ -298,7 +298,7 @@ tile of it is blank.
 | 3 | How is the space measured? | **2026-11-12, the owner: an hourly log line and a Grafana dashboard** (section 5). Not metrics from the application on Prometheus; not the volume's fill alone, which cannot tell the cache from the rest |
 | 4 | What cap do the stagings start with? | **2026-11-12, the owner: 1000 MB** of the 5Gi volume. If the dashboard shows evictions the cap is raised, and the measuring starts again. 2000 MB and a larger volume were the alternatives |
 | 5 | Is the cache on by default? | **2026-11-12, the owner: no.** `wmsCacheDays` defaults to 0 in the base product; DK and GL switch it on in their settings files |
-| 6 | Is the day-long cache header on the uncached path's blank redirect fixed here? | **2026-11-12, the owner: no.** That path stays byte for byte as it was; the defect is WMS1 in `be/docs/potential-errors.md`. Since 2026-11-21 the blank image is answered directly instead of by a redirect, on this path too, and its headers are still those it had |
+| 6 | Is the day-long cache header on the uncached path's blank redirect fixed here? | **2026-11-12, the owner: no.** That path stays byte for byte as it was; the defect was recorded as WMS1 in `be/docs/potential-errors.md`. Since 2026-11-21 the blank image is answered directly instead of by a redirect, on this path too. **2026-11-22, the owner: fixed.** On the uncached path the blank image now carries five minutes in each of `Cache-Control: max-age`, `Last-Modified` and `Expires`, as on the cached path; a tile keeps its day, and WMS1 left the record |
 | 7 | What does an editor get when the provider is down? | **2026-11-12, the owner: the older copy, up to 30 days old, and the provider paused for 2 minutes after three failures in a row.** Never serving an older copy, and serving it without the pause, were the alternatives |
 | 8 | Where is the chart's address set? | **2026-11-12, the owner: per country.** A line in DK's production environment file, an environment file of its own for GL. A default in the base product's deployed build was the alternative |
 
@@ -314,8 +314,8 @@ location is left as it is.
 - [`fe/docs/backlog.md`](../fe/docs/backlog.md): the entry on caching the tiles on the proxies'
   disks became what stays open (steps 3 to 5).
 - `be/k8s/helm/niord/values.yaml`: the comment on `NIORD_HOME` names `wms-tiles/` and its cap.
-- [`be/docs/potential-errors.md`](../be/docs/potential-errors.md): WMS1 (decision 6) and WMS2
-  (section 11).
+- [`be/docs/potential-errors.md`](../be/docs/potential-errors.md): WMS1 (decision 6; fixed and
+  removed on 2026-11-22) and WMS2 (section 11).
 - `be/docs/country-api.md`: a row in its table of changes, with what a country does to switch the
   cache on.
 - `be/niord/src/main/resources/defaults/base/settings-catalog.json`, regenerated, with the two keys

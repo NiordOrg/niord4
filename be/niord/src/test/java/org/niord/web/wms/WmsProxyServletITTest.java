@@ -33,6 +33,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -51,8 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  *
  * <p><b>Blank-image fallback oracle.</b> Once an authenticated request passes the gate and no tile can be had,
  * the servlet answers the blank picture itself: status {@code 200}, {@code image/png} and the bytes of
- * {@code /img/blank.png}, with no {@code Location} header, and with the day-long {@code Cache-Control} of the path
- * without the tile cache (WMS1 in be/docs/potential-errors.md, recorded and not fixed). RestAssured is told not to
+ * {@code /img/blank.png}, with no {@code Location} header, and with the five-minute {@code Cache-Control} a blank
+ * gets on the path without the tile cache (a tile gets a day). RestAssured is told not to
  * follow redirects, so a redirect would show as itself. The test settings name a provider that gives no tile, so
  * the answer comes from the failed fetch (WMS2 in be/docs/potential-errors.md).
  *
@@ -125,13 +126,14 @@ class WmsProxyServletITTest extends ITTest {
 
     /**
      * "No tile" answered directly: 200, a PNG, the blank picture's bytes and no Location header, which behind a
-     * proxy could name another origin; the path without the tile cache keeps its day-long header.
+     * proxy could name another origin; a browser keeps it five minutes, in one {@code Cache-Control} header.
      */
     private static void assertTheBlankImage(Response response) throws IOException {
         response.then().statusCode(200)
                 .contentType(containsString("image/png"))
                 .header("Location", nullValue())
-                .header("Cache-Control", containsString("max-age=86400"));
+                .header("Cache-Control", "max-age=300");
+        assertEquals(1, response.headers().getValues("Cache-Control").size(), "one Cache-Control header");
         byte[] blank;
         try (InputStream in = WmsProxyServletITTest.class.getClassLoader().getResourceAsStream(BLANK_IMAGE)) {
             assertNotNull(in, "the blank picture is on the class path");

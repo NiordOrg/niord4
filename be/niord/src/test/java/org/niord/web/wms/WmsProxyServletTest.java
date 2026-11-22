@@ -86,7 +86,8 @@ import static org.mockito.Mockito.when;
  * <p>The last group pins the tile cache from the servlet's side, with a {@link WmsTileCache} on a temporary folder
  * and an {@link HttpStub} as the provider: a user's tile is fetched once and then answered from the cache; an
  * anonymous caller never gets a cached tile, whether the proxy is protected or not; and with the cache off, or for
- * a request that is no tile, the servlet answers as it did before the cache existed.
+ * a request that is no tile, the servlet answers as it did before the cache existed: a tile kept a day and the blank
+ * image, for no provider, a failed fetch or an answer that is no image, kept five minutes in every cache header.
  */
 class WmsProxyServletTest {
 
@@ -141,10 +142,8 @@ class WmsProxyServletTest {
         servlet.doGet(req, answer.response);
         verify(answer.response, never()).setStatus(HttpServletResponse.SC_FORBIDDEN);
         assertTheBlankImage(answer);
-        // The path without the cache keeps its day-long header on the blank image (WMS1, recorded and not fixed)
-        verify(answer.response).addHeader("Cache-Control", "max-age=86400");
-        verify(answer.response).setDateHeader(eq("Expires"), anyLong());
-        verify(answer.response, never()).setHeader(eq("Cache-Control"), anyString());
+        // A blank means no tile just now: a browser keeps it five minutes, not the day a tile gets
+        assertKeptFiveMinutes(answer.response);
     }
 
     @Test
@@ -161,9 +160,70 @@ class WmsProxyServletTest {
 
             assertEquals(1, provider.requestCount(), "the provider was asked");
             assertTheBlankImage(answer);
-            verify(answer.response).addHeader("Cache-Control", "max-age=86400");
-            verify(answer.response, never()).setHeader(eq("Cache-Control"), anyString());
+            assertKeptFiveMinutes(answer.response);
         }
+    }
+
+    @Test
+    void anAnswerThatIsNoImageWithoutTheCacheIsAnsweredWithTheBlankImageKeptFiveMinutes() throws Exception {
+        try (HttpStub provider = HttpStub.start()) {
+            provider.respondBytes("text/xml",
+                    "<ServiceExceptionReport/>".getBytes(StandardCharsets.UTF_8));
+            WmsProxyServlet servlet = new WmsProxyServlet();
+            protect(servlet, Boolean.FALSE);
+            servlet.wmsProvider = provider.baseUrl() + "/wms";
+            HttpServletRequest req = anonymousRequest(params("BBOX", "1,2,3,4", "WIDTH", "256", "HEIGHT", "256"));
+
+            Answer answer = new Answer();
+            servlet.doGet(req, answer.response);
+
+            assertEquals(1, provider.requestCount(), "the provider was asked");
+            assertTheBlankImage(answer);
+            assertKeptFiveMinutes(answer.response);
+        }
+    }
+
+    @Test
+    void aTileWithoutTheCacheIsKeptADay() throws Exception {
+        try (HttpStub provider = HttpStub.start()) {
+            provider.respondBytes("image/png", png(256));
+            WmsProxyServlet servlet = new WmsProxyServlet();
+            protect(servlet, Boolean.FALSE);
+            servlet.wmsProvider = provider.baseUrl() + "/wms";
+            HttpServletRequest req = anonymousRequest(params("BBOX", "1,2,3,4", "WIDTH", "256", "HEIGHT", "256"));
+
+            Answer answer = new Answer();
+            servlet.doGet(req, answer.response);
+
+            assertEquals(256, ImageIO.read(new ByteArrayInputStream(answer.body.toByteArray())).getWidth());
+            assertKeptADay(answer.response);
+        }
+    }
+
+    /**
+     * The blank image of the path without the tile cache: one {@code Cache-Control} of five minutes, and an
+     * {@code Expires} five minutes after its {@code Last-Modified}, so no header says a day.
+     */
+    private static void assertKeptFiveMinutes(HttpServletResponse response) {
+        verify(response).setHeader("Cache-Control", "max-age=" + WmsProxyServlet.RETRY_TIMEOUT);
+        verify(response, never()).addHeader(eq("Cache-Control"), anyString());
+        assertExpiresAfter(response, 300);
+    }
+
+    /** A tile of the path without the tile cache: one {@code Cache-Control} of a day, and {@code Expires} to match */
+    private static void assertKeptADay(HttpServletResponse response) {
+        verify(response).addHeader("Cache-Control", "max-age=86400");
+        verify(response, never()).setHeader(eq("Cache-Control"), anyString());
+        assertExpiresAfter(response, 86400);
+    }
+
+    /** {@code Last-Modified} and {@code Expires} are each set once, the given number of seconds apart */
+    private static void assertExpiresAfter(HttpServletResponse response, int seconds) {
+        ArgumentCaptor<Long> lastModified = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<Long> expires = ArgumentCaptor.forClass(Long.class);
+        verify(response).setDateHeader(eq("Last-Modified"), lastModified.capture());
+        verify(response).setDateHeader(eq("Expires"), expires.capture());
+        assertEquals(seconds * 1000L, expires.getValue() - lastModified.getValue());
     }
 
     /** The bytes of the blank picture, as the application serves it at /img/blank.png */
@@ -572,7 +632,7 @@ class WmsProxyServletTest {
             // The tile is in the cache, and the anonymous caller's answer still comes from the provider
             assertEquals(2, provider.requestCount(), "the provider is asked for the anonymous caller");
             verify(anonymous.response, never()).setHeader(eq(WmsProxyServlet.CACHE_HEADER), anyString());
-            verify(anonymous.response).addHeader("Cache-Control", "max-age=86400");
+            assertKeptADay(anonymous.response);
             assertEquals(256, ImageIO.read(new ByteArrayInputStream(anonymous.body.toByteArray())).getWidth());
             assertEquals(cachedAt, Files.getLastModifiedTime(cachedFiles().get(0)).toMillis(),
                     "the cached tile was not written again");
@@ -594,7 +654,7 @@ class WmsProxyServletTest {
 
             assertEquals(2, provider.requestCount(), "every request goes to the provider");
             for (Answer answer : List.of(first, second)) {
-                verify(answer.response).addHeader("Cache-Control", "max-age=86400");
+                assertKeptADay(answer.response);
                 verify(answer.response).setContentType("image/png");
                 verify(answer.response, never()).setHeader(anyString(), anyString());
                 verify(answer.response, never()).setContentLength(anyInt());
@@ -618,7 +678,7 @@ class WmsProxyServletTest {
             servlet.doGet(userRequest(params), new Answer().response);
 
             assertEquals(2, provider.requestCount());
-            verify(answer.response).addHeader("Cache-Control", "max-age=86400");
+            assertKeptADay(answer.response);
             verify(answer.response, never()).setHeader(eq(WmsProxyServlet.CACHE_HEADER), anyString());
             assertEquals(512, ImageIO.read(new ByteArrayInputStream(answer.body.toByteArray())).getWidth());
             assertEquals(List.of(), cachedFiles());
