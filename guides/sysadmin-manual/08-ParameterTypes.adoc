@@ -141,9 +141,11 @@ skipped. A type is found by its exact name, so an item whose name differs from a
 only in capital letters is a new type, and is refused, as the names are unique without regard to
 case. Such an item stops the import: the job becomes _failed_, and its log (*logs…* on the
 <<batch-jobs,Batch Jobs>> page) names both spellings, for example `Another parameter type has the
-name "Lights" (given: "lights")`. The types before it in the file may already be imported. Rename
-the existing type, or correct the name in the file, then import the file again; the types already
-imported are overwritten by name.
+name "Lights" (given: "lights")`. The types before it in the file may already be imported. Correct
+the name in the file to the existing spelling, then import the file again; the types already
+imported are overwritten by name. Renaming the existing type instead is right only when nothing uses
+it: a template and a composite type refer to a type by its exact name, and a rename is not carried
+over to them.
 
 The file is a list of types, for example:
 
