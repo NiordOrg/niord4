@@ -64,12 +64,15 @@ import jakarta.servlet.http.HttpServletResponse;
  * and asks for a tile of a web map's grid ({@link WmsTileKey}) is answered from the cache, which fetches from the
  * provider what it lacks. Every other request - an anonymous one when "wmsProtected" is off, one for another
  * image size or projection - is proxied as it is without the cache.
+ *
+ * On either path a browser may keep a tile for a day, and the blank image that answers "no tile" for five minutes
+ * ({@link #RETRY_TIMEOUT}): a blank means no tile just now, not that the place has none.
  */
 @WebServlet(value = "/wms/*")
 public class WmsProxyServlet extends HttpServlet {
 
     final static int        CACHE_TIMEOUT   =  24 * 60 * 60; // 24 hours
-    /** How long a browser keeps an answer of the tile cache that is no fresh tile: an older copy, or none */
+    /** How long a browser keeps an answer that is no fresh tile: the blank image, or the tile cache's older copy */
     static final int        RETRY_TIMEOUT   =  5 * 60; // 5 minutes
     /** The picture answered when there is no tile, as a resource on the class path */
     static final String     BLANK_IMAGE     = "META-INF/resources/img/blank.png";
@@ -134,6 +137,12 @@ public class WmsProxyServlet extends HttpServlet {
 
     /**
      * Main GET method
+     * <p>
+     * Without the tile cache, a browser may keep the provider's tile for a day ({@link #CACHE_TIMEOUT}), and the
+     * blank image, answered when no provider is set or its fetch fails or gives no image, for five minutes
+     * ({@link #RETRY_TIMEOUT}), so the next look at the place asks again. Both carry {@code Cache-Control: max-age},
+     * {@code Last-Modified} and {@code Expires}, one value each.
+     *
      * @param request servlet request
      * @param response servlet response
      */
@@ -163,11 +172,10 @@ public class WmsProxyServlet extends HttpServlet {
             cache.bypassed();
         }
 
-        // Cache for a day
-        WebUtils.cache(response, CACHE_TIMEOUT);
-
+        // The cache headers are set once the answer is known: a day for a tile, five minutes for the blank image.
         // Check that the WMS provider has been defined using system properties
         if (StringUtils.isBlank(wmsProvider)) {
+            keepFor(response, RETRY_TIMEOUT);
             sendBlankImage(response);
             return;
         }
@@ -182,6 +190,8 @@ public class WmsProxyServlet extends HttpServlet {
         try {
             BufferedImage image = fetchImage(url);
             if (image != null) {
+                // Cache for a day
+                WebUtils.cache(response, CACHE_TIMEOUT);
                 response.setContentType("image/png");
                 OutputStream out = response.getOutputStream();
                 ImageIO.write(image, "png", out);
@@ -195,8 +205,10 @@ public class WmsProxyServlet extends HttpServlet {
             log.warn("Failed loading WMS image for URL " + loggedUrl + ": " + redact(e));
         }
 
-        // Fall back to return a blank image
+        // Fall back to return a blank image, kept for five minutes. Should writing a tile have failed after its
+        // day-long headers were set, these replace them
         try {
+            keepFor(response, RETRY_TIMEOUT);
             sendBlankImage(response);
         } catch (Exception e) {
             log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e));
@@ -291,6 +303,21 @@ public class WmsProxyServlet extends HttpServlet {
         OutputStream out = response.getOutputStream();
         out.write(tile.bytes());
         out.close();
+    }
+
+    /**
+     * Sets the cache headers of the path without the tile cache, in the form {@link WebUtils#cache} gives a tile
+     * ({@code Cache-Control: max-age}, {@code Last-Modified} and {@code Expires}), but replacing each header rather
+     * than adding to it, so a response that already had a tile's day-long headers ends with one value of each.
+     *
+     * @param response the response
+     * @param seconds how long a browser may keep the answer
+     */
+    static void keepFor(HttpServletResponse response, int seconds) {
+        long now = System.currentTimeMillis();
+        response.setHeader("Cache-Control", "max-age=" + seconds);
+        response.setDateHeader("Last-Modified", now);
+        response.setDateHeader("Expires", now + seconds * 1000L);
     }
 
     /**

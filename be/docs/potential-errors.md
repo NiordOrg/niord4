@@ -1123,24 +1123,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
   client), and roles on the base client `niord-client-master` count in every domain. Fix: a chart value that adds
   domain clients to the realm the chart renders, or a dev-mode Keycloak with a lasting database.
 
-## WMS1. Without the tile cache, a failed sea-chart tile stays blank in the browser for a day
-
-- **Location:** `org.niord.web.wms.WmsProxyServlet.doGet`: `WebUtils.cache(response, CACHE_TIMEOUT)` runs before
-  the provider is asked, so the blank image (`sendBlankImage`, status 200 and the bytes of `/img/blank.png`) that
-  answers a missing provider or a failed fetch carries `Cache-Control: max-age=86400` and `Expires`.
-- **Description:** a browser keeps the blank image as it keeps a tile. One failed request for a tile, a hiccup of
-  the provider's for instance, then gives that browser the blank image for that tile for 24 hours, whatever the
-  provider does meanwhile.
-- **Why it looks wrong:** the day is meant for a tile, not for the absence of one. With the tile cache switched on
-  (`wmsCacheDays`), the servlet answers a failed tile with the same blank image kept for five minutes; the two paths
-  differ only because the path without the cache keeps the header it always had. (Until 2026-11-21 both paths
-  answered with a redirect to `/img/blank.png`; the blank image is now answered directly, with the same headers.)
-- **Exposed by:** the sea-chart tile cache (2026-11-12, `docs/sea-chart-tile-cache-plan.md`, decision 6: recorded,
-  not fixed).
-- **Severity:** Low — blank tiles in one browser until the next day or a forced reload. The header also keeps
-  browsers from asking a failing provider again, and this path has no pause of its own (a request waits up to
-  40 s for the provider), so a fix shortens the lifetime, to the cached path's five minutes, rather than drops it.
-
 ## WMS2. The integration suite asks a real WMS host on the internet
 
 - **Location:** `niord/src/test/resources/niord.json` sets `wmsProvider` to `http://kortforsyningen.kms.dk/` and
