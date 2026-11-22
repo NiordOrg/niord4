@@ -227,7 +227,8 @@ class BatchParamTypeImportProcessorITTest extends ITTest {
         // case, so the new type is refused. A look-up that ignored case would rename the existing type instead
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> processor().processItem(standardVo(name.toLowerCase())));
-        assertEquals("Another parameter type has the name " + name.toLowerCase(), ex.getMessage());
+        assertEquals("Another parameter type has the name \"" + name + "\" (given: \"" + name.toLowerCase() + "\")",
+                ex.getMessage(), "the item stops the import, and the message names both spellings");
 
         em.flush();
         em.clear();

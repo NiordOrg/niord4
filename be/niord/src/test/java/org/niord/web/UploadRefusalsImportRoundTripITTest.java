@@ -370,6 +370,29 @@ class UploadRefusalsImportRoundTripITTest extends ImportRoundTripSupport {
         assertEquals(List.of("COMPLETED", List.of(known)), List.of(job.status(), keys), job.log());
     }
 
+    /**
+     * A parameter type whose name another type has in other capital letters stops the import: the job ends FAILED,
+     * no second type is made, and the job's log, as the Batch Jobs page shows it, names the existing type's spelling
+     * and the one the file gave, so the administrator knows which type to rename or which line of the file to correct.
+     */
+    @Test
+    void aParamTypeWhoseNameIsTakenInOtherCapitalLettersStopsTheImportAndItsLogNamesBothSpellings() {
+        String name = "IT-imp Taken " + unique();
+        String given = name.toLowerCase(java.util.Locale.ROOT);
+        cleanups.add(() -> ints("SELECT id FROM public.\"ParamType\" WHERE lower(name) = ?1", given)
+                .forEach(id -> delete("sysadmin", "/rest/templates/parameter-type/" + id)));
+        JobEnd created = importRows("sysadmin", "/rest/templates/upload-param-types", "param-type-import",
+                List.of(map("type", "LIST", "name", name, "values", list())));
+        assertEquals("COMPLETED", created.status(), created.log());
+
+        JobEnd stopped = importRows("sysadmin", "/rest/templates/upload-param-types", "param-type-import",
+                List.of(map("type", "LIST", "name", given, "values", list())));
+        String log = logWithEnd(stopped);
+        assertEquals("FAILED", stopped.status(), log);
+        assertTrue(log.contains("Another parameter type has the name \"" + name + "\" (given: \"" + given + "\")"), log);
+        assertEquals(0L, count("SELECT count(*) FROM public.\"ParamType\" WHERE name = ?1", given), "no second type");
+    }
+
     /** A settings file naming a key no catalog declares: skipped, with a line in the job's log (the manual) */
     @Test
     void aSettingsFileNamingAnUnknownKeyIsSkippedWithALine() {

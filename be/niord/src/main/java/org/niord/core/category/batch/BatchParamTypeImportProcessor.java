@@ -63,7 +63,10 @@ public class BatchParamTypeImportProcessor extends AbstractItemHandler {
         // The type the item updates is found by its exact name, on purpose. A look-up that ignored case would let an
         // item named "lights" find the type "Lights" and rename it, and the template parameters that name their type
         // "Lights" (exactly, with no foreign key) would lose it. An item whose name differs from an existing type's
-        // only in case is a new type, which createParamType refuses, as names are unique without regard to case.
+        // only in case is a new type, which createParamType refuses, as names are unique without regard to case. The
+        // refusal stops the import, on purpose, and its message names both spellings; the job's end log
+        // (BatchJobListener) carries it to the Batch Jobs page, so the administrator renames the type or corrects
+        // the file and imports again.
         ParamType original = templateExecutionService.getParamTypeByName(paramType.getName());
         BootstrapRun.Scope scope = BootstrapRun.scopeOf(bootstrapRun, job);
 
