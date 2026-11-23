@@ -45,7 +45,8 @@ gives it these attributes:
   starts, and a value from the server replaces the value the application was built with.
 
 | Editable
-| Whether the setting is shown on this page and can be changed there.
+| Whether the setting is shown on this page and can be changed there. The running version of Niord decides this,
+  whatever an older row in the database says.
 
 | Scope
 | _operator_ for a value a system administrator sets; _state_ for a value only the system writes, which this page
@@ -119,11 +120,38 @@ The Niord program declares its settings in its code, with their type and default
 @Setting(value = "mailDeleteAfterDays", defaultValue = "30", type = Type.Integer,
          description = "Delete scheduled mails older than the given value. "
                      + "A non-positive value means never.")
-Integer mailDeleteAfterDays;
+volatile Integer mailDeleteAfterDays;
 ----
 
-Most settings declared this way are read when the server starts, so a change to one of them on this page takes
-effect when the server is restarted.
+A setting you save on this page takes effect at once, without a restart: the next mail, map picture, search or
+batch job uses the new value. Where several servers run one deployment, the others follow within about half a
+minute. A system property or an environment variable of the same name still wins over the saved value (see
+<<settings-from-environment-variables,Settings from Environment Variables>>).
+
+A few settings are worth knowing about before you change them:
+
+* `messageIndexDeleteOnStartup` acts only when the server starts, so a change to it applies at the next start. Its
+  description says so: "Applies at the next start."
+* `messageIndexIncludeDeletedMessages` decides whether the text search index holds deleted messages. A change builds
+  the search indexes again, which takes some minutes on a large database. Meanwhile the message list shows its
+  warning that the index is still being built, as it does after a restart, and `GET /rest/monitor/message-index`
+  answers `"complete":false`. A scheduled mailing-list trigger with a text term does not wait for the index then
+  (see <<mail-queue,Mail Queue>>), so change this setting outside the hours such triggers run.
+* `wmsProvider`, `wmsLayers` and `wmsPassword` (the provider's token) choose the sea chart. The server fetches the
+  next tile with the new value, and its own tile cache needs no emptying. A browser, however, keeps a tile it has
+  shown for up to a day, so a place a user has already looked at can show the old chart for up to a day, or until
+  the browser's cache is emptied. When you change both the provider and its token, the new provider is asked with
+  the old token between the two saves, and its tiles may fail for that moment.
+* `mapImageSize` is the size of the map pictures of messages. After a change, each picture is drawn again at the
+  new size the first time it is asked for.
+
+These settings are not on this page, because a change under a running server would do harm (a batch job would be
+split across two folders, or the search would answer from another folder's index): `authServerUrl` (the address of
+Keycloak), `batchJobRootPath`, `messageIndexPath` and `publicationPreviewRootPath` (the folders of the batch jobs, the
+text search index and the publication previews) and `vipsPath` (a program on the server that draws thumbnails
+faster). The deployment sets them, with a system property or an environment variable of the same name, or, for a
+new database, in "niord.json" (see <<settings-from-niord-json,Where Settings Come From>>). The server uses the
+value it had when it started, and the settings import skips them.
 
 [#settings-an-operator-sets]
 === Settings to Set for a New Deployment
@@ -143,7 +171,8 @@ Among the many settings, these are the ones a system administrator usually sets 
   use `baseUri`.
 
 | `authServerUrl`
-| The address of Keycloak (see <<keycloak-integration,Keycloak Integration>>).
+| The address of Keycloak (see <<keycloak-integration,Keycloak Integration>>). The deployment sets it, not this page
+  (see <<settings-from-code,Settings from Code>>).
 
 | `country` and `organisation`
 | The country and the organisation that run the deployment. Both are required.
@@ -184,8 +213,11 @@ You can change only the value. The field depends on the type of the setting:
   the syntax to save.");
 * a text field for the other types.
 
-Niord checks the value when you save: a value that does not fit the setting's type, or an empty value for a
-required setting, is refused ("Error saving setting"), and the setting keeps its value.
+Niord checks the value when you save: a value that does not fit the setting's type, an empty value for a
+required setting, or a value outside what the setting allows, is refused ("Error saving setting"), and the setting
+keeps its value. Since a saved value acts at once, a few settings are held to a range: `batchFileExpiryDays` and
+`firingExerciseScheduleDays` are at least 1, and `mapImageSize` and `mapImageZoomLevel` must give a map picture
+Niord can draw.
 
 [#importing-and-exporting-settings]
 === Importing and Exporting Settings
@@ -198,16 +230,16 @@ The file is a JSON list of settings, for example:
 ----
 [
   {
-    "description": "The Keycloak URL",
-    "key": "authServerUrl",
-    "type": "String",
-    "value": "https://niord.example.org/auth"
-  },
-  {
     "description": "The base application server URI",
     "key": "baseUri",
     "type": "String",
     "value": "https://niord.example.org"
+  },
+  {
+    "description": "The sender e-mail address.",
+    "key": "mailSender",
+    "type": "String",
+    "value": "niord@niord.example.org"
   },
   ...
 ]
@@ -215,5 +247,7 @@ The file is a JSON list of settings, for example:
 
 The import runs as the _settings-import_ batch job, which you follow on the <<batch-jobs,Batch Jobs>> page. It only
 changes the values of settings this deployment has. It skips, each with a line in the job's log, a key the running
-version of Niord does not declare, a _state_ setting, a key the database has no row for, a value that does not
-fit the setting's type, and a required setting that the file gives no value.
+version of Niord does not declare, a _state_ setting, a setting the deployment sets (see
+<<settings-from-code,Settings from Code>>), a key the database has no row for, a value that does not fit the
+setting's type, and a required setting that the file gives no value. The values it changes take effect at once,
+as a save on this page does.

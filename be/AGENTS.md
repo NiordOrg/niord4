@@ -114,8 +114,15 @@ repository; Spring-specific code and Spring-specific tests are correct, not a co
     sub-package: a new directive goes in that package; `DirectiveClassResolver`), and `?api` is off
     (`FmTemplateService.newConfiguration`).
   - Settings: `@Setting` fields are DB-backed and env/system-property overridable; they are not Spring
-    properties. They stay editable on the Settings page, and a repository settings file holds no real secret
-    (a password setting is empty there). A setting is declared in code, as an `@Setting` field or a static
+    properties. A saved setting takes effect at once: the save (Settings page or settings import) sets every
+    `@Setting` field of the key again after commit, other nodes follow at the change-count poll (about 30 s),
+    so an editable `@Setting` field is `volatile` and request code reads the field, not `SettingsService`. A
+    restart setting is the exception: on `SettingInjectionBeanPostProcessor.RESTART_KEYS` and on
+    `SettingsCatalogCurrentTest`'s list with its reason, its description ending "Applies at the next start."
+    A value that cannot change under a running server (a folder, the Keycloak address) is deployment
+    configuration, `editable = false`, not on the Settings page; the page and the save take `editable` from
+    the catalog, not the row. A repository settings file holds no real secret (a password setting is empty
+    there). A setting is declared in code, as an `@Setting` field or a static
     `Setting` constant (never only a bare key string), with its type, scope (`operator`, or `state` for a
     value the system writes), `web` and `editable`; a key only the frontends read goes into
     `FrontendSettings`. Start-up adds an operator setting only where the database lacks it and the code that

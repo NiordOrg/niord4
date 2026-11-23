@@ -255,7 +255,7 @@ deployment must set it (`required`):
 ----
 @Setting(value = "repoCacheTimeout", defaultValue = "5", type = Type.Integer,
          description = "Cache timeout of repo files in minutes")
-Integer cacheTimeout;
+volatile Integer cacheTimeout;
 ----
 
 The declared settings are listed in `be/niord/src/main/resources/defaults/base/settings-catalog.json`,
@@ -263,6 +263,18 @@ which is regenerated after a declaration changes; `SettingsCatalogCurrentTest` f
 stale. A setting only the frontends read goes into `FrontendSettings`. Start-up adds a setting a
 database lacks and never changes one that exists (<<code-data-and-configuration>>). A settings file
 in the repository never holds a real secret: a password setting is empty there.
+
+A saved setting takes effect at once. The code keeps reading its `@Setting` field, and the save
+(the Settings page or the settings import) sets every field that holds the key again after the
+commit, with the same resolution as the injection, so an environment variable or system property
+still wins; another node follows within about 30 seconds, when it sees the settings' change count
+move. So an editable `@Setting` field is `volatile`, and request code reads the field, never the
+settings service. A setting that needs a restart is the exception: it is on the restart list
+(`SettingInjectionBeanPostProcessor.RESTART_KEYS`, held with its reason by
+`SettingsCatalogCurrentTest`), and its description ends "Applies at the next start." A value that
+cannot change under a running server, such as a folder or the Keycloak address, is deployment
+configuration: `editable = false`, not on the Settings page, set by an environment variable, a
+system property or the settings file.
 
 [#database-json-time]
 === Database, JSON and time
