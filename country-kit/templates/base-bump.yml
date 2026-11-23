@@ -16,7 +16,8 @@ name: Base bump
 #            version (when it fails, the report compares by version), the lock, set-up at the new
 #            version with the pinned packs moved to each home's newest pack (again after copying a
 #            changed stub), the workflow files compared with the kit's, the bootstrap's new
-#            releases/ folders, and the comment with its checklist, a box ticked in the earlier
+#            releases/ folders, the country's bootstrap templates whose base product template
+#            changed, and the comment with its checklist, a box ticked in the earlier
 #            comment keeping its tick while what it is about is unchanged: its text, and for a
 #            template's box the kit template's content, which a hidden marker at the box's end
 #            names by its SHA-256. It hands the files to commit, the report, the comment and the
@@ -381,6 +382,73 @@ jobs:
             cp "$work/new-folders.txt" "$work/releases.txt"
             echo "bootstrap=no-old" >> "$GITHUB_OUTPUT"
           fi
+      # A file of the country's be/bootstrap/templates/ at a path the base product's bootstrap also
+      # holds replaces the base product's whole file in the bootstrap run, and a language variant,
+      # x_<ll>.ftl beside the base product's x.ftl, replaces it in its language: a change the base
+      # product makes to that file never reaches the country's. Each such pair whose base product
+      # file differs between the two zips, byte for byte (changed, added or removed), is an item;
+      # without OLD's zip, each pair NEW holds is, not compared.
+      # shadows: none (the country holds no template), listed, or by-hand (NEW's zip is not at hand).
+      - name: List the shadowed templates
+        id: shadows
+        if: steps.notes.outputs.notes == 'verified'
+        env:
+          OLD: ${{ steps.versions.outputs.old }}
+          NEW: ${{ steps.versions.outputs.new }}
+          BOOTSTRAP: ${{ steps.releases.outputs.bootstrap }}
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          out="$RUNNER_TEMP/bootstrap"
+          work="$RUNNER_TEMP/work"
+          own=be/bootstrap/templates
+          mkdir -p "$work"
+          : > "$work/shadowed.txt"
+          if [ ! -d "$own" ] || [ -z "$(find "$own" -type f -print -quit)" ]; then
+            echo "shadows=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The whole zip, small: a pattern's * does not cross a / in every unzip build.
+          unpack() {
+            rm -rf "$work/bootstrap-$1"
+            mkdir -p "$work/bootstrap-$1"
+            unzip -q -o "$out/niord-bootstrap-$1.zip" -d "$work/bootstrap-$1"
+          }
+          case "$BOOTSTRAP" in
+            both) unpack "$NEW" && unpack "$OLD" || BOOTSTRAP=failed ;;
+            no-old) unpack "$NEW" || BOOTSTRAP=failed ;;
+            *) BOOTSTRAP=failed ;;
+          esac
+          if [ "$BOOTSTRAP" = failed ]; then
+            echo "::warning::The bootstrap's templates could not be compared: the country's are an item to compare by hand."
+            echo "shadows=by-hand" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          variant='^(.*)_[a-z]{2}\.ftl$'
+          while IFS= read -r -d '' file; do
+            path="${file#"$own"/}"
+            bases=("$path")
+            [[ ! "$path" =~ $variant ]] || bases+=("${BASH_REMATCH[1]}.ftl")
+            for base in "${bases[@]}"; do
+              now="$work/bootstrap-$NEW/templates/$base"
+              before="$work/bootstrap-$OLD/templates/$base"
+              if [ "$BOOTSTRAP" = no-old ]; then
+                [ -f "$now" ] || continue
+                change=not-compared
+              elif [ -f "$now" ] && [ -f "$before" ]; then
+                ! cmp -s "$before" "$now" || continue
+                change=changed
+              elif [ -f "$now" ]; then
+                change=added
+              elif [ -f "$before" ]; then
+                change=removed
+              else
+                continue
+              fi
+              printf '%s\t%s\t%s\n' "$path" "$base" "$change" >> "$work/shadowed.txt"
+            done
+          done < <(find "$own" -type f -print0 | sort -z)
+          echo "shadows=listed" >> "$GITHUB_OUTPUT"
       # The comment, from the report's data: the pins and their source, the human actions as
       # boxes, what CI checks, and the whole report. A box ticked in this workflow's earlier comment
       # keeps its tick when its text is the same. A box about a kit template (a merge, a copy, a
@@ -392,7 +460,8 @@ jobs:
       # listed again, the branch's copy differs from the kit's. The ticks are those at the start
       # of compute: a box ticked while this run is in flight is asked again. Every other template
       # the kit changed since OLD (the report's otherTemplatesChanged) is one line above the
-      # boxes, with no box and no marker.
+      # boxes, with no box and no marker. Each template the country's bootstrap replaces whose base
+      # product file changed (List the shadowed templates) is a box.
       - name: Build the comment
         id: comment
         if: steps.notes.outputs.notes == 'verified'
@@ -405,6 +474,7 @@ jobs:
           STUB: ${{ steps.setup.outputs.stub }}
           UPDATE_PINS: ${{ steps.setup.outputs.update_pins }}
           BOOTSTRAP: ${{ steps.releases.outputs.bootstrap }}
+          SHADOWS: ${{ steps.shadows.outputs.shadows }}
           FE_SHA256: ${{ steps.zips.outputs.fe_sha256 }}
           KIT_SHA256: ${{ steps.zips.outputs.kit_sha256 }}
           REPO: ${{ github.repository }}
@@ -614,6 +684,36 @@ jobs:
           if (env.BOOTSTRAP === 'no-new')
             items.push(
               `Compare the ${code('releases/')} folders of the bootstrap of ${NEW} with ${OLD}'s by hand: its zip could not be fetched here.`,
+            );
+          // A base product template the country's bootstrap replaces, which the base product's
+          // change does not reach: the country's path, the base product's, and what changed.
+          const own = 'be/bootstrap/templates';
+          for (const line of (read(path.join(RUNNER_TEMP, 'work', 'shadowed.txt')) ?? '').split('\n')) {
+            const [file, base, change] = line.replace(/\r$/, '').split('\t');
+            if (!file || !base || !change) continue;
+            const ours = code(`${own}/${file}`);
+            const theirs = code(`templates/${base}`);
+            const replaces =
+              file === base
+                ? 'your copy replaces it'
+                : 'your language variant replaces it in its language';
+            const why = {
+              changed: `the base product changed it since ${OLD}`,
+              added: `the base product added it since ${OLD}`,
+              'not-compared': `the bootstrap of ${OLD} could not be fetched, so whether it changed is not known`,
+            }[change];
+            if (change === 'removed')
+              items.push(
+                `Look at ${ours}: the bootstrap of ${NEW} no longer has ${theirs}, which it ${file === base ? 'replaced' : 'is a language variant of'}, so it is now a template of your own.`,
+              );
+            else if (why)
+              items.push(
+                `Compare ${ours} with ${theirs} of the bootstrap of ${NEW}: ${why}, and ${replaces}, so no change of the base product's reaches it; carry any change into your file and ship it in a release folder of your own.`,
+              );
+          }
+          if (env.SHADOWS === 'by-hand')
+            items.push(
+              `Compare each file of ${code(`${own}/`)} with the bootstrap of ${NEW} by hand, the same path and the template a language variant (${code('x_<ll>.ftl')}) is of: the two bootstraps' templates could not be compared here.`,
             );
           if (env.BOOTSTRAP === 'no-old')
             notes.push(`The bootstrap of ${OLD} could not be fetched: every release folder of ${NEW} is listed.`);

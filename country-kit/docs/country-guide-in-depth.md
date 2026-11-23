@@ -882,7 +882,9 @@ is a path of your `be/bootstrap/templates/` that the base product's bootstrap al
 language variant of one (`x_<ll>.ftl`), which a print in that language reads in place of the base
 product's. The base product's folder does not change your copy: a fresh deployment gets yours, and a
 running one keeps the row it has. Read the folder's `README.md` for what changed, carry the change
-into your copy, and ship it in a release folder of your own. When your sysadmins import the base
+into your copy, and ship it in a release folder of your own. The Base bump comment names each such
+copy whose base product template differs between the two versions, as a box, whether or not a
+release folder carries the change. When your sysadmins import the base
 product's folder, they tick no overwrite of a path your bootstrap holds itself: it would replace your
 template, your own languages' parts included, with the base product's English one.
 
