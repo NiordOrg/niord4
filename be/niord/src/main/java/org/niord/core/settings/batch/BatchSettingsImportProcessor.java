@@ -30,8 +30,9 @@ import java.util.Objects;
  * Filters the imported settings down to those whose value changes (docs/code-data-config-plan.md §5.3). The import
  * never creates a row: a key no catalog declares, a {@code state} key, a key the catalog does not make editable
  * (deployment configuration, which an export made before it left the Settings page still holds), a key this
- * deployment has no row for and a value that does not fit the row's type (else the catalog's) are skipped, each with
- * a line in the job's log. The
+ * deployment has no row for, a value that does not fit the row's type (else the catalog's) and a value the code that
+ * reads the setting cannot use ({@link SettingsService#valueRefusal}) are skipped, each with a line in the job's log.
+ * The
  * row's stored value is compared with the item's, not the value a read would expand.
  */
 @Component
@@ -75,6 +76,11 @@ public class BatchSettingsImportProcessor extends AbstractItemHandler {
 
         if (entry.required() && SettingsService.isBlank(setting.getValue())) {
             getLog().info("Skipped " + key + ": required, and the file gives no value");
+            return null;
+        }
+        String refusal = settingsService.valueRefusal(key, setting.getValue());
+        if (refusal != null) {
+            getLog().info("Skipped " + key + ": " + refusal);
             return null;
         }
 

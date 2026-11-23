@@ -271,6 +271,26 @@ class BatchSettingsImportProcessorITTest extends ITTest {
                 processor.lines::toString);
     }
 
+    /**
+     * A value the code that reads the setting cannot use is skipped with the reason, as the Settings page refuses it: a
+     * saved setting takes effect at once
+     */
+    @Test
+    @Transactional
+    void aValueTheCodeCannotUseIsSkipped() throws Exception {
+        TestableProcessor processor = freshProcessor();
+
+        assertNull(processor.processItem(new Setting("batchFileExpiryDays", 0)));
+        assertNull(processor.processItem(new Setting("mapImageZoomLevel", 31)));
+
+        assertTrue(processor.lines.contains(
+                        "Skipped batchFileExpiryDays: batchFileExpiryDays takes a number of days of at least 1, not 0"),
+                processor.lines::toString);
+        assertTrue(processor.lines.contains(
+                        "Skipped mapImageZoomLevel: mapImageZoomLevel takes a zoom level from 0 to 30, not 31"),
+                processor.lines::toString);
+    }
+
     @Test
     @Transactional
     void aCatalogKeyWithoutARowIsSkippedAndNoRowIsCreated() throws Exception {

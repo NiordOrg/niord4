@@ -879,8 +879,9 @@ public class SettingsService extends BaseService {
      * (docs/code-data-config-plan.md §5.3). Refused with an {@link IllegalArgumentException}, which the REST layer
      * answers with 400, for a key no catalog declares (also one that has a row), a {@code state} key, a key the
      * catalog does not make editable (deployment configuration, whatever its row's {@code editable} column says), a
-     * key the database has no row for, a value that does not fit the row's type (else the catalog's), and a null or
-     * blank value for a {@code required} key (a row wins over the settings file, so such a row would read null).
+     * key the database has no row for, a value that does not fit the row's type (else the catalog's), a null or
+     * blank value for a {@code required} key (a row wins over the settings file, so such a row would read null), and a
+     * value the code that reads the setting cannot use ({@link #valueRefusal}).
      *
      * <p>A saved setting takes effect at once. The save adds one to {@link SettingsRefresher#CHANGE_COUNT}, which the
      * other nodes poll, and once it has committed the {@code @Setting} fields of the key on this node take the new
@@ -915,6 +916,10 @@ public class SettingsService extends BaseService {
         if (entry.required() && isBlank(template.getValue())) {
             throw new IllegalArgumentException(key + " is required: it takes a value, not an empty one");
         }
+        String refusal = valueRefusal(key, template.getValue());
+        if (refusal != null) {
+            throw new IllegalArgumentException(refusal);
+        }
 
         // Update the DB
         setting.setValue(template.getValue());
@@ -942,6 +947,23 @@ public class SettingsService extends BaseService {
         });
 
         return setting;
+    }
+
+    /**
+     * Returns why a save may not give a setting the value, by the checks of the code that reads it
+     * ({@link SettingValueCheck}): what {@link #set} refuses and the settings import skips. The value has the setting's
+     * type.
+     *
+     * @param key   the setting's key
+     * @param value the value
+     * @return why the value is refused, or null when it may be saved
+     */
+    public String valueRefusal(String key, Object value) {
+        return beanFactory.getBeanProvider(SettingValueCheck.class).orderedStream()
+                .map(check -> check.refusal(key, value))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     /**

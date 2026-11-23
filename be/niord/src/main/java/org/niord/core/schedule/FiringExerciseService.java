@@ -34,6 +34,7 @@ import org.niord.core.message.*;
 import org.niord.core.message.vo.SystemMessageVo;
 import org.niord.core.model.BaseEntity;
 import org.niord.core.service.BaseService;
+import org.niord.core.settings.SettingValueCheck;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.core.util.TimeUtils;
 import org.niord.model.message.*;
@@ -66,7 +67,7 @@ import static org.niord.core.settings.Setting.Type.Integer;
  */
 @Service
 @SuppressWarnings("unused")
-public class FiringExerciseService extends BaseService {
+public class FiringExerciseService extends BaseService implements SettingValueCheck {
 
     // Default number of schedule days to include in the firing exercise messages
         @Setting(value="firingExerciseScheduleDays",
@@ -74,6 +75,18 @@ public class FiringExerciseService extends BaseService {
             description="Default number of scheduled days to include in generated firing exercises.",
             type = Integer)
     private volatile int firingExerciseScheduleDays;
+
+    /**
+     * Refuses a save of {@code firingExerciseScheduleDays} below 1, as the firing schedule refuses its own days below 1:
+     * the run's window would end before today, so the next run would cancel the current firing exercises of every
+     * schedule without days of its own
+     */
+    @Override
+    public String refusal(String key, Object value) {
+        return "firingExerciseScheduleDays".equals(key)
+                ? SettingValueCheck.outside(key, value, 1, java.lang.Integer.MAX_VALUE, "a number of days of at least 1")
+                : null;
+    }
 
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(FiringExerciseService.class);
 

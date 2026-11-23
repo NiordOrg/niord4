@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tier-1 unit tests for {@link CustomThumbnailScaler#scale(byte[], int)}, to which
- * {@link MessageMapImageGenerator#scaleCustomThumbnail(byte[])} delegates —
+ * {@link MessageMapImageGenerator#scaleCustomThumbnail(byte[], int)} delegates —
  * the validate / scale / encode path behind the custom-thumbnail upload endpoints
  * ({@code PUT} base-64 data-URI and {@code POST} multipart, in {@link MessageMapImageRestService}). The REST
  * layer only ever asserts the <em>authorization</em> boundaries of those endpoints
@@ -239,13 +239,14 @@ public class CustomThumbnailScalerTest {
     // The generator's upload overload
     // --------------------------------------------------------------------------------------------------- //
 
-    /** The generator's {@code byte[]} method is this scaler at the generator's map-image size. */
+    /** The generator's {@code byte[]} method is this scaler at the map-image size the request read. */
     @Test
     public void theGeneratorScalesAnUploadToItsMapImageSize() throws Exception {
         MessageMapImageGenerator generator = new MessageMapImageGenerator();
         generator.mapImageSize = 64;
 
-        byte[] written = generator.scaleCustomThumbnail(MapImageTestSupport.solidPng(128, 128, Color.RED));
+        byte[] written = generator.scaleCustomThumbnail(MapImageTestSupport.solidPng(128, 128, Color.RED),
+                generator.getMapImageSize());
 
         assertNotNull(written);
         BufferedImage out = MapImageTestSupport.decode(written);

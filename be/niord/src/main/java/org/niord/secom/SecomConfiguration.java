@@ -18,6 +18,7 @@ package org.niord.secom;
 import org.grad.secomv2.core.models.enums.DigitalSignatureAlgorithmEnum;
 import org.jboss.resteasy.plugins.server.servlet.HttpServlet30Dispatcher;
 import org.niord.core.settings.Setting;
+import org.niord.core.settings.SettingValueCheck;
 import org.niord.core.settings.SettingsService;
 import org.niord.secom.pki.McpSecurityService;
 import org.niord.secom.pki.NiordSecomProviders;
@@ -34,6 +35,9 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Wires the SECOM protocol adapter when {@code niord.secom.enabled=true} (default off — with
@@ -90,6 +94,22 @@ public class SecomConfiguration {
             Setting.Type.String, "SECOM signature algorithm for outgoing signatures (SHA2_384_WITH_ECDSA or SHA3_384_WITH_ECDSA)."
                     + " Read at start-up.",
             true, false, true);
+
+    /** The names {@link #SIGNATURE_ALGORITHM} takes: the two algorithms outgoing signatures are made with */
+    static final Set<String> SIGNATURE_ALGORITHMS = Set.of(DigitalSignatureAlgorithmEnum.SHA2_384_WITH_ECDSA.name(),
+            DigitalSignatureAlgorithmEnum.SHA3_384_WITH_ECDSA.name());
+
+    /**
+     * Refuses a save of {@link #SIGNATURE_ALGORITHM} that names neither supported algorithm; a blank value keeps the
+     * default. Where SECOM runs, which is where the setting has its row.
+     */
+    @Bean
+    public SettingValueCheck secomSignatureAlgorithmCheck() {
+        return (key, value) -> SIGNATURE_ALGORITHM.getKey().equals(key)
+                && value instanceof String name && !name.isBlank() && !SIGNATURE_ALGORITHMS.contains(name.trim())
+                ? key + " takes " + String.join(" or ", new TreeSet<>(SIGNATURE_ALGORITHMS)) + ", not " + name
+                : null;
+    }
 
     @Bean
     public NiordSecomProviders niordSecomProviders(McpSecurityService pki, SettingsService settingsService) {

@@ -226,6 +226,48 @@ class SettingsRestServiceITTest extends ITTest {
     }
 
     /**
+     * A saved setting takes effect at once, so a value the code that reads it cannot use is refused with 400 and the
+     * reason, and the row is unchanged: a number of days below 1 (every batch job's files deleted at the next hourly
+     * pass, every firing exercise cancelled at the next run) and a map image size or zoom level the drawing does not
+     * accept (every new map image the placeholder). The bounds themselves are saved.
+     */
+    @Test
+    void aValueTheCodeCannotUseIsRefusedWith400AndLeavesTheRow() {
+        Map<String, List<Object>> refused = new LinkedHashMap<>();
+        refused.put("batchFileExpiryDays", List.of(0, -3));
+        refused.put("firingExerciseScheduleDays", List.of(0, -1));
+        refused.put("mapImageSize", List.of(0, 2049));
+        refused.put("mapImageZoomLevel", List.of(-1, 31));
+        refused.forEach((key, values) -> {
+            Object stored = getSettingValue(key);
+            for (Object value : values) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("key", key);
+                body.put("value", value);
+                given().auth().oauth2(accessToken())
+                        .contentType(ContentType.JSON)
+                        .body(body)
+                        .when().put("/rest/settings/setting/" + key)
+                        .then().statusCode(400)
+                        .body("detail", is(key + " takes " + switch (key) {
+                            case "mapImageSize" -> "a size in pixels from 1 to 2048";
+                            case "mapImageZoomLevel" -> "a zoom level from 0 to 30";
+                            default -> "a number of days of at least 1";
+                        } + ", not " + value));
+            }
+            assertEquals(stored, getSettingValue(key), key + ": the row is unchanged");
+        });
+
+        Object stored = getSettingValue("batchFileExpiryDays");
+        try {
+            putSettingValue("batchFileExpiryDays", 1);
+            assertEquals(1, getSettingValue("batchFileExpiryDays"), "the lowest number of days is saved");
+        } finally {
+            putSettingValue("batchFileExpiryDays", stored);
+        }
+    }
+
+    /**
      * Deployment configuration is not on the Settings page and a save of it is refused with 400, even where its row
      * says editable, as a restored database's rows do (they were written when the keys were still editable, and a
      * repository change never changes a deployment's rows): the page and the save take "editable" from the catalog,

@@ -32,6 +32,7 @@ import org.niord.core.sequence.Sequence;
 import org.niord.core.sequence.SequenceService;
 import org.niord.core.service.BaseService;
 import org.niord.core.settings.Setting.Type;
+import org.niord.core.settings.SettingValueCheck;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.core.user.UserService;
 import org.niord.core.util.JsonUtils;
@@ -82,7 +83,7 @@ import java.util.stream.Stream;
  */
 @Service
 @SuppressWarnings("unused")
-public class BatchService extends BaseService {
+public class BatchService extends BaseService implements SettingValueCheck {
 
     public static final String BATCH_REPO_FOLDER = "batch";
     public static final String BATCH_JOB_ENTITY = "batchJobEntity";
@@ -110,6 +111,17 @@ public class BatchService extends BaseService {
     // Delete execution files after 10 days
         @Setting(value="batchFileExpiryDays", defaultValue="10", description="Number of days after which batch job files are deleted.", type = Type.Integer)
     private volatile int batchFileExpiryDays;
+
+    /**
+     * Refuses a save of {@code batchFileExpiryDays} below 1: the hourly pass would delete the files of every batch job,
+     * a running job's too
+     */
+    @Override
+    public String refusal(String key, Object value) {
+        return "batchFileExpiryDays".equals(key)
+                ? SettingValueCheck.outside(key, value, 1, Integer.MAX_VALUE, "a number of days of at least 1")
+                : null;
+    }
 
     /****************************/
     /** Starting batch jobs    **/

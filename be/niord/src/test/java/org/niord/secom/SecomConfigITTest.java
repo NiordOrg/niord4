@@ -15,6 +15,7 @@
  */
 package org.niord.secom;
 
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 import org.niord.core.message.Message;
 import org.niord.core.settings.Setting;
@@ -24,6 +25,7 @@ import org.niord.test.Tx;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static io.restassured.RestAssured.given;
@@ -182,6 +184,30 @@ class SecomConfigITTest extends SecomITTest {
             assertEquals(Boolean.TRUE, settingValue("secomRevocationCheck"));
             assertEquals(Boolean.FALSE, settingValue("secomServiceRegistryInsecure"));
         });
+    }
+
+    /**
+     * A save of the signature algorithm that names neither supported algorithm is refused with 400 and the reason, and
+     * the row is unchanged: outgoing signatures would otherwise be made with a name SECOM cannot use
+     */
+    @Test
+    void aSignatureAlgorithmOutsideTheTwoSupportedIsRefused() {
+        try {
+            given().auth().oauth2(accessToken())
+                    .contentType(ContentType.JSON)
+                    .body(Map.of("key", "secomSignatureAlgorithm", "value", "SHA256_WITH_RSA"))
+                    .when().put("/rest/settings/setting/secomSignatureAlgorithm")
+                    .then().statusCode(400)
+                    .body("detail", is("secomSignatureAlgorithm takes SHA2_384_WITH_ECDSA or SHA3_384_WITH_ECDSA, "
+                            + "not SHA256_WITH_RSA"));
+
+            Tx.requiringNew().run(() -> assertEquals("SHA2_384_WITH_ECDSA", settingValue("secomSignatureAlgorithm"),
+                    "the row is unchanged"));
+        } finally {
+            // Should the save have gone through, the next test finds the default again
+            Tx.requiringNew().run(() -> em.find(Setting.class, "secomSignatureAlgorithm")
+                    .setValue("SHA2_384_WITH_ECDSA"));
+        }
     }
 
     @Test

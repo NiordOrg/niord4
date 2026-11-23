@@ -71,11 +71,12 @@ public class MessageMapImageSnapshots {
 
         /**
          * Returns the renderer's request for the message's map image.
+         * @param imageSize the size of the image, which the image file is named by
          * @param tiles resolves where the background tiles come from, on the thread that draws the image
          * @return the request
          */
-        public MapImageRequest request(Supplier<TileSource> tiles) {
-            return new MapImageRequest(geometry, mainType, type, updatedMillis, tiles);
+        public MapImageRequest request(int imageSize, Supplier<TileSource> tiles) {
+            return new MapImageRequest(geometry, mainType, type, updatedMillis, imageSize, tiles);
         }
     }
 
