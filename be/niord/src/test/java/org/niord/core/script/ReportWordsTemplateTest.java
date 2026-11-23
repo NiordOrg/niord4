@@ -54,7 +54,9 @@ import static org.mockito.Mockito.when;
  * The words the PDF reports printed in English whatever the report's language are texts of the {@code pdf}
  * dictionary: the edition's label of the six reports that print one ({@code pdf.edition}), and the message list's
  * "Generated" (its page header and front page), "Criteria", "Result" and its count of messages
- * ({@code pdf.list.generated}, {@code pdf.list.criteria}, {@code pdf.list.result}, {@code pdf.list.result_count}).
+ * ({@code pdf.list.generated}, {@code pdf.list.criteria}, {@code pdf.list.result}, {@code pdf.list.result_count}),
+ * and a draft report's status, which is the {@code message} dictionary's {@code msg.status.*} in lower case (it was
+ * the status's name in lower case, the same word in English).
  * A report in another language prints that language's value; a country that held a whole-file language variant of
  * a report for these words no longer needs it.
  *
@@ -75,6 +77,9 @@ class ReportWordsTemplateTest {
     private static final List<String> REPORTS = List.of("message-list-pdf", "fa-list-pdf", "nm-report-pdf",
             "nm-almanac-report-pdf", "nm-annex-report-pdf", "nm-tp-report-pdf", "nm-accumulated-report-pdf");
 
+    /** The template the reports include, which prints a draft report's status */
+    private static final String SUPPORT = "templates/messages/message-support.ftl";
+
     /** The six reports that print the edition's label */
     private static final List<String> EDITION_REPORTS = REPORTS.subList(1, REPORTS.size());
 
@@ -88,6 +93,9 @@ class ReportWordsTemplateTest {
 
     /** The keys this change added, which a deployment that has not got them yet lacks */
     private static final Set<String> NEW_KEYS = DANISH.keySet();
+
+    /** A second language's value of the status a draft report prints: test data, in no language pack */
+    private static final Map<String, String> DANISH_STATUS = Map.of("msg.status.PUBLISHED", "Publiceret");
 
     /** The English texts of the base product, by key */
     private static Map<String, String> englishTexts() throws IOException {
@@ -153,6 +161,8 @@ class ReportWordsTemplateTest {
         NiordApp app = mock(NiordApp.class);
         when(app.getLanguage(anyString())).thenAnswer(call -> call.getArgument(0));
         when(app.getDefaultLanguage()).thenReturn("en");
+        // The languages a draft report prints each message in: here only the report's own
+        when(app.getLanguages(anyString())).thenAnswer(call -> new String[] { call.getArgument(0) });
         when(app.getLocale(any())).thenAnswer(call -> Locale.of(call.<String>getArgument(0)));
 
         DictionaryService dictionaryService = mock(DictionaryService.class);
@@ -174,7 +184,8 @@ class ReportWordsTemplateTest {
     private static Map<String, ScriptResource> previousTemplates() {
         Map<String, ScriptResource> rows = BootstrapTemplates.rows();
         for (ScriptResourceVo previous : ReleaseFilesGenerator.readScriptResources(PREVIOUS_RELEASE)) {
-            if (REPORTS.stream().anyMatch(report -> previous.getPath().equals(path(report)))) {
+            if (previous.getPath().equals(SUPPORT)
+                    || REPORTS.stream().anyMatch(report -> previous.getPath().equals(path(report)))) {
                 rows.put(previous.getPath(), BootstrapTemplates.row(previous.getPath(), previous.getContent()));
             }
         }
@@ -212,12 +223,44 @@ class ReportWordsTemplateTest {
 
     private static String render(FmTemplateService templateService, String report, String language)
             throws Exception {
+        return render(templateService, report, model(report), language);
+    }
+
+    private static String render(FmTemplateService templateService, String report, Map<String, Object> model,
+                                 String language) throws Exception {
         return templateService.newFmTemplateBuilder()
                 .templatePath(path(report))
-                .data(model(report))
+                .data(model)
                 .dictionaryNames(DICTIONARIES.toArray(String[]::new))
                 .language(language)
                 .process();
+    }
+
+    /** The draft report: the message list over one published message, each message in the report's language */
+    private static String renderDraft(FmTemplateService templateService, String language) throws Exception {
+        Map<String, Object> desc = new LinkedHashMap<>();
+        desc.put("lang", language);
+        desc.put("title", "A warning");
+        Map<String, Object> message = new LinkedHashMap<>();
+        message.put("id", "uid-2");
+        message.put("status", "PUBLISHED");
+        message.put("mainType", "NW");
+        message.put("type", "COASTAL_WARNING");
+        message.put("descs", List.of(desc));
+
+        Map<String, Object> model = model("message-list-pdf");
+        model.put("messages", List.of(message));
+        model.put("draft", true);
+        model.put("frontPage", false);
+        model.put("mapThumbnails", false);
+        return render(templateService, "message-list-pdf", model, language);
+    }
+
+    /** The status line of a draft report, its label and its value with the white space between them made single */
+    private static String statusLine(String html) {
+        int at = html.indexOf("<td class=\"field-name\">Status</td>");
+        assertTrue(at >= 0, () -> "no status line:\n" + html);
+        return html.substring(at, html.indexOf("</tr>", at)).replaceAll("\\s+", " ");
     }
 
     /**
@@ -242,6 +285,46 @@ class ReportWordsTemplateTest {
         String word = report.equals("message-list-pdf") ? ">Generated: &nbsp;</th>" : "Version 2";
         assertTrue(before.contains(word),
                 () -> report + ": the previous template does not print " + word + ":\n" + before);
+    }
+
+    /** An English draft report prints the status as before, the status's name in lower case */
+    @Test
+    void anEnglishDraftPrintsTheStatusAsBefore() throws Exception {
+        DictionaryVo dictionary = dictionary(Map.of(), Set.of());
+        FmTemplateService previous = templateService(previousTemplates(), dictionary);
+        FmTemplateService current = templateService(currentTemplates(), dictionary);
+
+        String before = renderDraft(previous, "en");
+        String now = renderDraft(current, "en");
+        String after = renderDraft(previous, "en");
+
+        assertTrue(now.equals(before) || now.equals(after),
+                () -> "the draft prints English other than before:\n" + now + "\n---- before:\n" + before);
+        assertTrue(statusLine(before).contains("<td class=\"field-value\"> published </td>"), before);
+    }
+
+    /**
+     * A draft report in a second language prints the status in that language, in lower case. FAILS on the template
+     * that wrote the status's name.
+     */
+    @Test
+    void aDraftPrintsTheStatusInTheReportsLanguage() throws Exception {
+        Map<String, String> danish = new LinkedHashMap<>(DANISH);
+        danish.putAll(DANISH_STATUS);
+        String html = renderDraft(templateService(currentTemplates(), dictionary(danish, Set.of())), "da");
+
+        String line = statusLine(html);
+        assertTrue(line.contains("<td class=\"field-value\"> publiceret </td>"), line);
+        assertFalse(line.contains("published"), line);
+    }
+
+    /** A deployment whose dictionary lacks the status's text prints the status's name in lower case, as before */
+    @Test
+    void aDraftWithoutTheStatusTextPrintsTheStatusName() throws Exception {
+        String html = renderDraft(templateService(currentTemplates(),
+                dictionary(Map.of(), DANISH_STATUS.keySet())), "da");
+
+        assertTrue(statusLine(html).contains("<td class=\"field-value\"> published </td>"), html);
     }
 
     /** The edition's label in a second language. FAILS on the templates that wrote "Version". */
