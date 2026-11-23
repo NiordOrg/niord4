@@ -503,6 +503,8 @@ public class SecomCertificateRenewalService extends BaseService {
     }
 
     private boolean queueMail(String subject, String htmlBody) {
+        // Read once: a save may change it at any time
+        String alertEmails = this.alertEmails;
         if (StringUtils.isBlank(alertEmails)) {
             return false;
         }

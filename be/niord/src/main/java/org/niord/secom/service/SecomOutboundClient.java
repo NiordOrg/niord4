@@ -164,6 +164,10 @@ public class SecomOutboundClient {
             return cached.endpoint();
         }
 
+        // Each read once: a save may change them at any time
+        String serviceRegistryUrl = this.serviceRegistryUrl;
+        boolean serviceRegistryInsecure = this.serviceRegistryInsecure;
+        boolean allowInsecureEndpoints = this.allowInsecureEndpoints;
         if (serviceRegistryUrl == null || serviceRegistryUrl.isBlank()) {
             throw new IllegalStateException("The secomServiceRegistryUrl setting is not configured");
         }
@@ -340,6 +344,8 @@ public class SecomOutboundClient {
      * The sysadmin-configured registry URL does not go through here.
      */
     private void postToPeer(String url, Object body) throws Exception {
+        // Read once: a save may change it at any time
+        boolean allowInsecureEndpoints = this.allowInsecureEndpoints;
         URI uri = validatePeerEndpoint(url, allowInsecureEndpoints);
         requirePublicAddresses(uri, allowInsecureEndpoints);
         requireSuccess(url, doPost(uri, body, false));

@@ -87,6 +87,8 @@ public class MailService extends BaseService {
     public void sendMail(String content, String title, String... recipients) throws Exception {
         try {
             String baseUri = app.getBaseUri();
+            // Read once: a save may change it at any time
+            String mailSender = this.mailSender;
 
             Mail mail = HtmlMail.fromHtml(content, baseUri, HtmlMail.StyleHandling.INLINE_STYLES, true)
                     .sender(new InternetAddress(mailSender))
@@ -125,6 +127,8 @@ public class MailService extends BaseService {
         try {
             long t0 = System.currentTimeMillis();
 
+            // Read once: a save may change it at any time
+            String mailSender = this.mailSender;
             if (mail.getSender() == null) {
                 mail.setSender(new InternetAddress(mailSender));
             }

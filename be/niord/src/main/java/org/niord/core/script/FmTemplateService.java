@@ -105,8 +105,11 @@ public class FmTemplateService extends BaseService {
      * @return a PDF encryption
      */
     private String getPDFEncryptionPassword() {
-        if (pdfEncryptionEnabled != null && pdfEncryptionEnabled && StringUtils.isNotBlank(pdfEncryptionPassword)) {
-            return pdfEncryptionPassword;
+        // Each read once: a save may change them at any time
+        Boolean enabled = pdfEncryptionEnabled;
+        String password = pdfEncryptionPassword;
+        if (enabled != null && enabled && StringUtils.isNotBlank(password)) {
+            return password;
         }
         return null;
     }

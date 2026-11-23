@@ -305,6 +305,8 @@ public class SecomOutboxService extends BaseService {
      * so failures are logged and swallowed.
      */
     private void alertTerminalFailure(SecomOutboxEntry entry, String error) {
+        // Read once: a save may change it at any time
+        String alertEmails = this.alertEmails;
         if (alertEmails == null || alertEmails.isBlank()) {
             return;
         }

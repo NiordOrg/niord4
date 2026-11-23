@@ -152,6 +152,8 @@ public class SecomCertificateAlertService extends BaseService {
      * the dedup marker.
      */
     private boolean queueMail(X509Certificate cert, long days, Tier tier) {
+        // Read once: a save may change it at any time
+        String alertEmails = this.alertEmails;
         if (alertEmails == null || alertEmails.isBlank()) {
             return false;
         }
