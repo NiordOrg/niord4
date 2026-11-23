@@ -129,9 +129,9 @@ public class SettingsRefresher {
      * transaction: each read has its own, as in {@link #pollForChanges}, and most come from the settings cache. Every
      * field, not only the saved key's: another setting's value may name the saved key by a {@code ${...}} token, and
      * the other nodes' poll refreshes every field too. A field of another key that changes is published as found by
-     * the poll. When this node had followed every save before this one, it
-     * counts this save as followed, so its next poll refreshes nothing; otherwise the poll still catches the other
-     * node's save. A field whose setting could not be read is read again by the next poll.
+     * the poll. When this node had followed every save before this one, it counts this save as followed, so its next
+     * poll refreshes nothing; otherwise the poll still catches the other node's save. A field whose setting could not
+     * be read is read again by the next poll.
      *
      * @param key         the saved key
      * @param countBefore the change count the save found, null when there was none
