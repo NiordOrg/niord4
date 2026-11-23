@@ -112,7 +112,7 @@ class MapImageRegeneratorTest {
     }
 
     private static MapImageRequest request(long updatedMillis) {
-        return new MapImageRequest(new FeatureCollectionVo[0], "NW", "COASTAL_WARNING", updatedMillis, null);
+        return new MapImageRequest(new FeatureCollectionVo[0], "NW", "COASTAL_WARNING", updatedMillis, 256, null);
     }
 
     private int callsFor(Path target) {

@@ -15,15 +15,35 @@
  */
 package org.niord.web.wms;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceContext;
+import jakarta.servlet.http.HttpServlet;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.niord.core.settings.Setting;
 import org.niord.test.ITTest;
+import org.niord.test.Tx;
 import org.niord.test.WmsProviderStub;
 import org.niord.test.http.HttpStub;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.orm.jpa.JpaTransactionManager;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -32,8 +52,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
@@ -41,6 +64,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -75,7 +99,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * decoded query, so how the values are encoded is {@code WmsProxyServletTest}'s to show.) (c) the tile cache,
  * through the real security chain: with {@code wmsCacheDays} set on the {@link WmsTileCache} bean a user's tile is
  * fetched from the provider once and then served from the cache, to any logged-in user and to nobody else; left at
- * its default the cache is off and every request goes to the provider.
+ * its default the cache is off and every request goes to the provider. (d) a provider saved on the Settings page
+ * serves the next tile request, and ends the pause the old provider's failures had started. (e) a tile from the
+ * cache costs the servlet no database work: no statement, no connection taken from the pool and no transaction, so
+ * the request reads no setting from the database.
  *
  * <p>This is a framework-coupled test - see docs/framework-coupled-tests.md.
  */
@@ -92,6 +119,18 @@ class WmsProxyHttpITTest extends ITTest {
 
     @Autowired
     WmsTileCache cache;
+
+    @Autowired
+    EntityManagerFactory entityManagerFactory;
+
+    @Autowired
+    MeterRegistry meterRegistry;
+
+    @PersistenceContext
+    EntityManager em;
+
+    /** The setting that names the provider */
+    private static final String PROVIDER = "wmsProvider";
 
     /** The per-test WMS provider stub; points the servlet's {@code wmsProvider} at a local PNG. */
     private WmsProviderStub providerStub;
@@ -181,13 +220,27 @@ class WmsProxyHttpITTest extends ITTest {
 
     private static final String CACHE_HEADER = "X-Niord-Cache";
 
+    /** The parameters of the request a web map makes for one tile */
+    private static final Map<String, String> TILE_PARAMS = tileParams();
+
+    private static Map<String, String> tileParams() {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("SERVICE", "WMS");
+        params.put("VERSION", "1.3.0");
+        params.put("REQUEST", "GetMap");
+        params.put("FORMAT", "image/png");
+        params.put("TRANSPARENT", "TRUE");
+        params.put("STYLES", "");
+        params.put("WIDTH", "256");
+        params.put("HEIGHT", "256");
+        params.put("CRS", "EPSG:3857");
+        params.put("BBOX", TILE_BOX);
+        return params;
+    }
+
     /** The request a web map makes for one tile */
     private static RequestSpecification tile(RequestSpecification caller) {
-        return caller.redirects().follow(false)
-                .queryParam("SERVICE", "WMS").queryParam("VERSION", "1.3.0").queryParam("REQUEST", "GetMap")
-                .queryParam("FORMAT", "image/png").queryParam("TRANSPARENT", "TRUE").queryParam("STYLES", "")
-                .queryParam("WIDTH", "256").queryParam("HEIGHT", "256").queryParam("CRS", "EPSG:3857")
-                .queryParam("BBOX", TILE_BOX);
+        return caller.redirects().follow(false).queryParams(TILE_PARAMS);
     }
 
     private static byte[] png(int side) throws IOException {
@@ -202,14 +255,7 @@ class WmsProxyHttpITTest extends ITTest {
     }
 
     private void deleteProvidersFolder() throws IOException {
-        Path folder = providersFolder();
-        if (Files.isDirectory(folder)) {
-            try (Stream<Path> walk = Files.walk(folder)) {
-                for (Path file : walk.sorted(Comparator.reverseOrder()).toList()) {
-                    Files.deleteIfExists(file);
-                }
-            }
-        }
+        deleteFolder(providersFolder());
     }
 
     @Test
@@ -278,5 +324,175 @@ class WmsProxyHttpITTest extends ITTest {
 
         assertEquals(2, providerStub.stub().requestCount(), "the default: no cache");
         assertTrue(!Files.exists(providersFolder()), "and nothing on the volume");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // (d) A save on the Settings page: the next tile request uses the saved provider, and a pause
+    //     after the old provider's failures is over.
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    void aProviderSavedOnTheSettingsPageServesTheNextTileAndEndsThePause() throws Exception {
+        providerStub.stub().respondStatus(503);
+        Integer days = cache.wmsCacheDays;
+        cache.wmsCacheDays = 7;
+        Object original = rowValue(PROVIDER);
+        HttpStub saved = HttpStub.start();
+        saved.respondBytes("image/png", png(256));
+        try {
+            for (int request = 0; request < WmsTileCache.FAILURES_TO_PAUSE + 1; request++) {
+                tile(as(accessToken()))
+                        .when().get(WMS)
+                        .then().statusCode(200)
+                        .header("Cache-Control", "private, max-age=" + WmsProxyServlet.RETRY_TIMEOUT);
+            }
+            assertEquals(WmsTileCache.FAILURES_TO_PAUSE, providerStub.stub().requestCount(),
+                    "precondition: the failing provider is paused");
+
+            // The stub's system property would win over the saved row, as an override does
+            System.clearProperty(PROVIDER);
+            put(PROVIDER, saved.baseUrl());
+
+            tile(as(accessToken()))
+                    .when().get(WMS)
+                    .then().statusCode(200)
+                    .header(CACHE_HEADER, "MISS")
+                    .header("Cache-Control", "private, max-age=86400");
+            assertEquals(1, saved.requestCount(), "the next tile request asked the saved provider");
+            assertEquals(WmsTileCache.FAILURES_TO_PAUSE, providerStub.stub().requestCount(), "not the old one");
+            String query = saved.lastRequest().query();
+            assertTrue(query.contains("TOKEN=tok-123") && query.contains("LAYERS=layerA"),
+                    "with the token and layers as they were, but query was: " + query);
+        } finally {
+            put(PROVIDER, original);
+            System.setProperty(PROVIDER, providerStub.stub().baseUrl());
+            cache.wmsCacheDays = days;
+            deleteProvidersFolder();
+            deleteFolder(cache.folder().resolve("127.0.0.1_" + saved.port()));
+            saved.close();
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // (e) A tile served from the cache costs the database nothing: no statement, no connection
+    //     from the pool, no transaction. A request reads the servlet's fields, which a save sets,
+    //     and no setting through the settings service. Measured on the servlet, the way the
+    //     container hands it a request once the filters have run: the filters are not the tile's,
+    //     and one of them opens a transaction on every request (DOMAIN4 in
+    //     be/docs/potential-errors.md).
+    // ------------------------------------------------------------------------------------------- //
+
+    /** What the database did in a while: statements, connections and transactions */
+    private record DatabaseUse(long statements, long connections, long poolConnections, long transactions) {
+
+        DatabaseUse minus(DatabaseUse before) {
+            return new DatabaseUse(statements - before.statements, connections - before.connections,
+                    poolConnections - before.poolConnections, transactions - before.transactions);
+        }
+
+        long total() {
+            return statements + connections + poolConnections + transactions;
+        }
+    }
+
+    /**
+     * The database use so far: Hibernate's statements, connections and transactions, and the connections taken from
+     * the connection pool by anyone (its acquisition timer)
+     */
+    private DatabaseUse databaseUse(Statistics statistics) {
+        Collection<Timer> acquisitions = meterRegistry.find("hikaricp.connections.acquire").timers();
+        assertFalse(acquisitions.isEmpty(), "the pool's acquisitions are measured");
+        long poolConnections = acquisitions.stream().mapToLong(Timer::count).sum();
+        return new DatabaseUse(statistics.getPrepareStatementCount(), statistics.getConnectCount(), poolConnections,
+                statistics.getTransactionCount());
+    }
+
+    @Test
+    void aTileFromTheCacheCostsTheDatabaseNothing() throws Exception {
+        providerStub.stub().respondBytes("image/png", png(256));
+        Integer days = cache.wmsCacheDays;
+        cache.wmsCacheDays = 7;
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        boolean statisticsWereOn = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+        Logger transactionLog = (Logger) LoggerFactory.getLogger(JpaTransactionManager.class);
+        Level transactionLevel = transactionLog.getLevel();
+        ListAppender<ILoggingEvent> transactions = new ListAppender<>();
+        transactions.start();
+        transactionLog.addAppender(transactions);
+        transactionLog.setLevel(Level.DEBUG);
+        try {
+            // Over HTTP: the servlet is made at its first request, and the tile is fetched into the cache
+            tile(as(accessToken())).when().get(WMS).then().statusCode(200).header(CACHE_HEADER, "MISS");
+            HttpServlet wmsServlet = (HttpServlet) context
+                    .getBean("wmsProxyServletRegistration", ServletRegistrationBean.class).getServlet();
+
+            // The measures do count: a read of the settings table is one statement on one connection
+            DatabaseUse before = databaseUse(statistics);
+            Tx.requiringNew().call(() -> em.createQuery("select count(s) from Setting s").getSingleResult());
+            DatabaseUse aRead = databaseUse(statistics).minus(before);
+            assertTrue(aRead.statements() >= 1 && aRead.connections() >= 1 && aRead.poolConnections() >= 1
+                    && aRead.transactions() >= 1, "the measures see a read: " + aRead);
+
+            // The scheduled jobs of the application share the database and the measures; they can only add to a
+            // count, so the least of a few measurements is the tile's own. The transactions begun meanwhile are
+            // logged, so a failure names them
+            DatabaseUse least = null;
+            List<String> begun = List.of();
+            for (int attempt = 0; attempt < 5 && (least == null || least.total() > 0); attempt++) {
+                MockHttpServletRequest request = new MockHttpServletRequest("GET", WMS);
+                request.setUserPrincipal(() -> "user");
+                TILE_PARAMS.forEach(request::addParameter);
+                MockHttpServletResponse response = new MockHttpServletResponse();
+                transactions.list.clear();
+                DatabaseUse start = databaseUse(statistics);
+                wmsServlet.service(request, response);
+                DatabaseUse used = databaseUse(statistics).minus(start);
+                assertEquals(200, response.getStatus());
+                assertEquals("HIT", response.getHeader(CACHE_HEADER), "the tile came from the cache");
+                if (least == null || used.total() < least.total()) {
+                    least = used;
+                    begun = transactions.list.stream().map(ILoggingEvent::getFormattedMessage)
+                            .filter(m -> m.startsWith("Creating new transaction")).toList();
+                }
+            }
+            assertEquals(new DatabaseUse(0, 0, 0, 0), least,
+                    "a tile from the cache: no statement, no connection, no transaction, for a setting or else;"
+                            + " transactions begun meanwhile: " + begun);
+        } finally {
+            transactionLog.detachAppender(transactions);
+            transactionLog.setLevel(transactionLevel);
+            statistics.setStatisticsEnabled(statisticsWereOn);
+            cache.wmsCacheDays = days;
+            deleteProvidersFolder();
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+
+    /** Saves the value through the Settings page's endpoint, as a sysadmin */
+    private void put(String key, Object value) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("key", key);
+        body.put("value", value);
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(body)
+                .when().put("/rest/settings/setting/" + key)
+                .then().statusCode(200);
+    }
+
+    private Object rowValue(String key) {
+        return Tx.requiringNew().call(() -> em.find(Setting.class, key).getValue());
+    }
+
+    private static void deleteFolder(Path folder) throws IOException {
+        if (Files.isDirectory(folder)) {
+            try (Stream<Path> walk = Files.walk(folder)) {
+                for (Path file : walk.sorted(Comparator.reverseOrder()).toList()) {
+                    Files.deleteIfExists(file);
+                }
+            }
+        }
     }
 }

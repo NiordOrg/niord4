@@ -17,10 +17,12 @@ package org.niord.web.wms;
 
 import jakarta.inject.Inject;
 import org.niord.core.repo.RepoCache;
+import org.niord.core.settings.SettingChangedEvent;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.core.util.MdcContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -77,7 +80,10 @@ import static org.niord.core.settings.Setting.Type.Integer;
  * {@value #FAILURES_TO_PAUSE} failed fetches in a row the provider is not asked for {@link #PAUSE}, so an outage
  * costs each request a file read and not a network timeout; then one request tries the provider, and its failure
  * pauses it anew, its success ends the pause. An answer that is no tile ({@link NotATileException}) is no failure
- * of the provider.
+ * of the provider. A save of the {@code wmsProvider} or {@code wmsPassword} setting ends the pause too, and starts
+ * the count of failures again: they were the old provider's, or the old token's. Nothing in the folder is deleted
+ * then: the folders are named by the provider and the layers, so another provider's tiles go to folders of their
+ * own.
  *
  * <p><b>The bound.</b> The volume is shared with the search index and the batch files, so the folder is capped at
  * {@code wmsCacheMaxMb}. A file counts for at least {@link #MIN_CHARGE} towards the cap: an open-sea tile is a few
@@ -126,6 +132,9 @@ public class WmsTileCache {
     /** How long a paused provider is not asked */
     static final Duration PAUSE = Duration.ofMinutes(2);
 
+    /** The settings that name the provider and the access to it: a save of either ends the provider's pause */
+    static final Set<String> PROVIDER_SETTINGS = Set.of("wmsProvider", "wmsPassword");
+
     /** How long a request waits for another request's fetch of the same tile: a little more than a fetch takes */
     static final Duration FETCH_WAIT = Duration.ofSeconds(45);
 
@@ -169,13 +178,13 @@ public class WmsTileCache {
     @Setting(value = "wmsCacheDays", defaultValue = "0", type = Integer,
             description = "Days the backend keeps a sea-chart (WMS) tile on its volume before it asks the provider"
                     + " again; cached tiles go to logged-in users only. 0: no cache. Set it only when the provider's"
-                    + " licence allows a cache. Read at start-up.")
-    Integer wmsCacheDays;
+                    + " licence allows a cache.")
+    volatile Integer wmsCacheDays;
 
     @Setting(value = "wmsCacheMaxMb", defaultValue = "200", type = Integer,
             description = "The most space, in MB, the sea-chart (WMS) tile cache takes on the application's volume;"
-                    + " a tile counts for at least 16 KB, and the oldest go first. Read at start-up.")
-    Integer wmsCacheMaxMb;
+                    + " a tile counts for at least 16 KB, and the oldest go first.")
+    volatile Integer wmsCacheMaxMb;
 
     private final Clock clock;
     private final Path folder;
@@ -249,7 +258,8 @@ public class WmsTileCache {
     }
 
     private long maxAgeMillis() {
-        return Duration.ofDays(wmsCacheDays).toMillis();
+        Integer days = wmsCacheDays;
+        return days == null ? 0 : Duration.ofDays(days).toMillis();
     }
 
     /**
@@ -273,14 +283,16 @@ public class WmsTileCache {
      * @return the tile, or null when there is none to answer with
      */
     Tile get(WmsTileKey key, Callable<byte[]> fetch) {
+        // Read once: a save may change the setting while the request runs
+        long maxAge = maxAgeMillis();
         Path file = key.file(folder());
         Tile cached = read(file);
-        if (cached != null && clock.millis() - cached.fetchedAt() < maxAgeMillis()) {
+        if (cached != null && clock.millis() - cached.fetchedAt() < maxAge) {
             hits.increment();
             return cached;
         }
 
-        Tile fetched = fetchOnce(key, file, fetch);
+        Tile fetched = fetchOnce(key, file, fetch, maxAge);
         if (fetched != null) {
             (fetched.source() == Source.HIT ? hits : misses).increment();
             return fetched;
@@ -303,7 +315,7 @@ public class WmsTileCache {
      *
      * @return the tile, or null when the provider failed, is paused, or the other request's fetch took too long
      */
-    private Tile fetchOnce(WmsTileKey key, Path file, Callable<byte[]> fetch) {
+    private Tile fetchOnce(WmsTileKey key, Path file, Callable<byte[]> fetch, long maxAge) {
         CompletableFuture<Tile> mine = new CompletableFuture<>();
         CompletableFuture<Tile> running = inFlight.putIfAbsent(key, mine);
         if (running != null) {
@@ -319,7 +331,7 @@ public class WmsTileCache {
 
         Tile tile = null;
         try {
-            tile = fetchAndStore(file, fetch);
+            tile = fetchAndStore(file, fetch, maxAge);
         } finally {
             // The fetch leaves the map before it completes, so no request that comes after it joins a fetch that
             // is over: after a success the tile is in its file, after a failure the next request asks again
@@ -329,11 +341,11 @@ public class WmsTileCache {
         return tile;
     }
 
-    private Tile fetchAndStore(Path file, Callable<byte[]> fetch) {
+    private Tile fetchAndStore(Path file, Callable<byte[]> fetch, long maxAge) {
         // Another request may have fetched the tile between this one's look at the file and its turn
         Tile again = read(file);
         long now = clock.millis();
-        if (again != null && now - again.fetchedAt() < maxAgeMillis()) {
+        if (again != null && now - again.fetchedAt() < maxAge) {
             return again;
         }
         if (!providerMayBeAsked(now)) {
@@ -398,6 +410,31 @@ public class WmsTileCache {
                 log.warn("The WMS provider failed {} times in a row; it is not asked for {} s at a time until it"
                         + " answers, and a sea-chart tile comes from the cache or is blank",
                         consecutiveFailures, PAUSE.toSeconds());
+            }
+        }
+    }
+
+    /**
+     * A save of the provider or its token ends the provider's pause and starts the count of failures again, on every
+     * node: each node has a pause of its own. The servlet's fields hold the new value when this is called, so the next
+     * request asks the new provider.
+     *
+     * @param event the setting whose field a save, here or on another node, changed
+     */
+    @EventListener
+    void settingChanged(SettingChangedEvent event) {
+        if (PROVIDER_SETTINGS.contains(event.key())) {
+            providerChanged();
+        }
+    }
+
+    /** Ends the provider's pause and starts the count of failures again */
+    void providerChanged() {
+        synchronized (pauseLock) {
+            consecutiveFailures = 0;
+            if (paused) {
+                paused = false;
+                log.info("The WMS provider or its token was changed; sea-chart tiles are fetched again");
             }
         }
     }

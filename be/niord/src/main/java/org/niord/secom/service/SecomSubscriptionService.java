@@ -66,8 +66,8 @@ public class SecomSubscriptionService extends BaseService {
      */
     @Setting(value = "secomMaxSubscriptionsPerNode", defaultValue = "50", type = Type.Integer,
             description = "The max number of SECOM subscriptions one remote node may hold; further "
-                    + "(non-identical) subscription requests are rejected. Read at start-up.")
-    Integer maxSubscriptionsPerNode;
+                    + "(non-identical) subscription requests are rejected.")
+    volatile Integer maxSubscriptionsPerNode;
 
     private final SecomOutboxService outboxService;
 

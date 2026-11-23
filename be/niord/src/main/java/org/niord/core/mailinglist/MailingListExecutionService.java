@@ -29,6 +29,7 @@ import org.niord.core.mail.ScheduledMailRecipient;
 import org.niord.core.mailinglist.vo.MailingListReportVo;
 import org.niord.core.message.IndexIncompleteNotice;
 import org.niord.core.message.Message;
+import org.niord.core.message.MessageLuceneIndex;
 import org.niord.core.message.MessageQueryService;
 import org.niord.core.message.MessageSearchParams;
 import org.niord.core.message.MessageSearchService;
@@ -76,8 +77,9 @@ public class MailingListExecutionService extends BaseService {
     static final long FAILED_TRIGGER_RECORD_INTERVAL_MILLIS = 24L * 60L * 60L * 1000L;
 
     /**
-     * How long after the start a scheduled trigger whose free-text search was answered by an incomplete index waits
-     * for the index, rather than mail what was found so far
+     * How long after the start, or after the index began to be built again while the server runs, a scheduled trigger
+     * whose free-text search was answered by an incomplete index waits for the index, rather than mail what was found
+     * so far
      **/
     static final Duration INCOMPLETE_INDEX_WAIT = Duration.ofMinutes(30);
 
@@ -89,13 +91,16 @@ public class MailingListExecutionService extends BaseService {
 
     /**
      * When this backend started, as near as this service knows: when it was made, during the start. The free-text
-     * index is emptied at the start and filled again; {@link #INCOMPLETE_INDEX_WAIT} counts from here.
+     * index is emptied at the start and filled again; {@link #INCOMPLETE_INDEX_WAIT} counts from here, or from a later
+     * rebuild of the index ({@link MessageLuceneIndex#rebuildStartedAt()}).
      */
     volatile Instant startedAt = Instant.now();
 
     private final NiordApp app;
 
     private final MessageSearchService messageSearchService;
+
+    private final MessageLuceneIndex messageLuceneIndex;
 
     private final MessageQueryService messageQueryService;
 
@@ -111,9 +116,10 @@ public class MailingListExecutionService extends BaseService {
 
     private final IndexIncompleteNotice indexIncompleteNotice;
 
-    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService, MailingListStatusChangeOutbox statusChangeOutbox, IndexIncompleteNotice indexIncompleteNotice) {
+    MailingListExecutionService(NiordApp app, MessageSearchService messageSearchService, MessageLuceneIndex messageLuceneIndex, MessageQueryService messageQueryService, FmTemplateService templateService, JsResourceService javaScriptService, DictionaryService dictionaryService, MessageSeriesService messageSeriesService, MailingListStatusChangeOutbox statusChangeOutbox, IndexIncompleteNotice indexIncompleteNotice) {
         this.app = app;
         this.messageSearchService = messageSearchService;
+        this.messageLuceneIndex = messageLuceneIndex;
         this.messageQueryService = messageQueryService;
         this.templateService = templateService;
         this.javaScriptService = javaScriptService;
@@ -279,7 +285,8 @@ public class MailingListExecutionService extends BaseService {
         saveFailureRecord(mailingList, subject,
                 "<p>The scheduled trigger " + trigger.getId() + " of the mailing list "
                         + HtmlUtils.htmlEscape(mailingList.getMailingListId())
-                        + " waits for the text search index, which is being built again after a restart, so its"
+                        + " waits for the text search index, which is being built again after a restart or a change of"
+                        + " its settings, so its"
                         + " mail is not made yet. It is tried again every few minutes, and its mail is made once"
                         + " the index is complete, by " + wait.getWaitUntil().toInstant() + " at the latest."
                         + " This record is not sent.</p>",
@@ -563,11 +570,14 @@ public class MailingListExecutionService extends BaseService {
         // A failed search fails the trigger, which the scheduler logs and postpones, rather than mail an empty list
         PagedSearchResultVo<Message> messageResult = messageSearchService.searchOrFail(params);
 
-        // A search answered while the free-text index is still being filled after the start may miss messages, and
-        // a mail cannot say so: in the half hour after the start the run waits for the index, as for one that
-        // cannot be read; after it, a refill that stalls does not stop the mail
+        // A search answered while the free-text index is still being filled after the start, or after a rebuild that
+        // a change of its settings began, may miss messages, and a mail cannot say so: in the half hour after the
+        // later of the two the run waits for the index, as for one that cannot be read; after it, a refill that
+        // stalls does not stop the mail
         if (scheduledRun && Boolean.TRUE.equals(messageResult.getIndexIncomplete())) {
-            Instant waitUntil = startedAt.plus(INCOMPLETE_INDEX_WAIT);
+            Instant rebuildStartedAt = messageLuceneIndex.rebuildStartedAt();
+            Instant fillStartedAt = rebuildStartedAt.isAfter(startedAt) ? rebuildStartedAt : startedAt;
+            Instant waitUntil = fillStartedAt.plus(INCOMPLETE_INDEX_WAIT);
             Instant now = Instant.now();
             if (now.isBefore(waitUntil)) {
                 // Tried again every few minutes, so the mail follows soon after the index is complete
@@ -576,7 +586,8 @@ public class MailingListExecutionService extends BaseService {
                         Date.from(waitUntil));
             }
             log.warn("Scheduled mailing list trigger " + trigger.getId() + " is mailed although the free-text index "
-                    + "is still not complete " + INCOMPLETE_INDEX_WAIT.toMinutes() + " minutes after the start: "
+                    + "is still not complete " + INCOMPLETE_INDEX_WAIT.toMinutes() + " minutes after it began to be "
+                    + "built again: "
                     + "its mail may list too few messages");
         }
 

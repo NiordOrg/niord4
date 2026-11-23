@@ -94,8 +94,8 @@ publishes is cancelled. So give each integration point target series of its own,
 
 Niord does not fetch from an address on a private network (such as `10.x.x.x` or `192.168.x.x`) or from the
 server itself, so that an integration point cannot be used to reach into the network the server runs in. When the
-other Niord server really is on a private network, turn on the setting `niordIntegrationAllowPrivateHosts`. Niord
-reads this setting when the server starts, so restart the server after you change it.
+other Niord server really is on a private network, turn on the setting `niordIntegrationAllowPrivateHosts`. A
+change to it takes effect at once, from the next fetch on.
 
 The other server's certificate must be one this server trusts, and must match its host name. Niord follows a
 redirect from `http` to `https`, but never one from `https` to `http`: such a fetch fails, with an error in the

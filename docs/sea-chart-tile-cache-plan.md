@@ -189,8 +189,10 @@ A cached answer carries `Cache-Control: private, max-age=86400` (300 seconds for
 | `wmsCacheDays` | Integer | `0` | Days a tile is served before the provider is asked again; `0` switches the cache off |
 | `wmsCacheMaxMb` | Integer | `200` | The cap of the cache folder |
 
-Both are operator settings of `WmsTileCache`, editable, not sent to the web applications, and read
-once at start-up, so a change takes effect at a restart. The base product's default is off: a new
+Both are operator settings of `WmsTileCache`, editable and not sent to the web applications. A save
+takes effect at once, as for every setting since the settings took effect on save (2026-11-23): the
+next tile and the next sweep use the new value, and nothing in the cache is emptied (its folders are
+named by provider and layers). The base product's default is off: a new
 key must be inert, and whether a provider's licence allows a cache is each deployment's to know. A
 country switches it on in its own settings file.
 

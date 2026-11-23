@@ -61,13 +61,14 @@ public class SecomCertificateAlertService extends BaseService {
 
     @Setting(value = "secomCertExpiryWarnDays", defaultValue = "60", type = Type.Integer,
             description = "Days before SECOM service certificate expiry at which warning mails to the"
-                    + " secomAlertEmails recipients begin. Read at start-up.")
-    Integer warnDays;
+                    + " secomAlertEmails recipients begin.")
+    volatile Integer warnDays;
 
     @Setting(value = "secomAlertEmails", defaultValue = "",
-            description = "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally"
-                    + " (empty = no alerts). Read at start-up.")
-    String alertEmails;
+            description = "Comma-separated recipients of the SECOM alert mails: a delivery that fails for good, the"
+                    + " service certificate nearing expiry, a certificate renewal done or failed, and the key or trust"
+                    + " store reloaded or failing to reload (empty = no alerts).")
+    volatile String alertEmails;
 
     private final McpSecurityService pki;
     private final SecomTxRunner txRunner;
@@ -151,6 +152,8 @@ public class SecomCertificateAlertService extends BaseService {
      * the dedup marker.
      */
     private boolean queueMail(X509Certificate cert, long days, Tier tier) {
+        // Read once: a save may change it at any time
+        String alertEmails = this.alertEmails;
         if (alertEmails == null || alertEmails.isBlank()) {
             return false;
         }

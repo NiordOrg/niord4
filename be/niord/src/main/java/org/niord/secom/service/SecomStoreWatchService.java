@@ -55,9 +55,10 @@ public class SecomStoreWatchService extends BaseService {
     private static final Logger log = LoggerFactory.getLogger(SecomStoreWatchService.class);
 
     @Setting(value = "secomAlertEmails", defaultValue = "",
-            description = "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally"
-                    + " (empty = no alerts). Read at start-up.")
-    String alertEmails;
+            description = "Comma-separated recipients of the SECOM alert mails: a delivery that fails for good, the"
+                    + " service certificate nearing expiry, a certificate renewal done or failed, and the key or trust"
+                    + " store reloaded or failing to reload (empty = no alerts).")
+    volatile String alertEmails;
 
     private final McpSecurityService pki;
     private final SecomTxRunner txRunner;
@@ -167,6 +168,8 @@ public class SecomStoreWatchService extends BaseService {
     }
 
     private boolean queueMail(String subject, String htmlBody) {
+        // Read once: a save may change it at any time
+        String alertEmails = this.alertEmails;
         if (alertEmails == null || alertEmails.isBlank()) {
             return false;
         }

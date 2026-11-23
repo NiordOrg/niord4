@@ -39,9 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Settings that take effect at once when they are changed on the Settings page (SECOM-UI-1): the mail
  * recipients filter {@code mailValidRecipients} is read for every mail, so a sysadmin who narrows it in an incident
- * does not wait for a restart. Before, {@link MailService} read the value injected at start-up. The other two live
- * reads are tested where their code is: {@code wmsProtected} in {@code WmsProxyServletITTest} and
- * {@code mailDeleteAfterDays} in {@code ScheduledMailServiceITTest}.
+ * does not wait for a restart. Before, {@link MailService} read the value injected at start-up. The other live read,
+ * {@code mailDeleteAfterDays}, is tested where its code is, in {@code ScheduledMailServiceITTest}. The settings held in
+ * {@code @Setting} fields take effect on save too, by a refresh of the fields: {@code SettingRefreshITTest}.
  *
  * <p>The shared test application runs with the default {@code "LOG"}, which only simulates a send. A real send goes
  * to the test's MailHog. Every write commits, so each test puts the row back.

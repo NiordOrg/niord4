@@ -66,15 +66,13 @@ public class SecomOutboxDispatcher {
     private final NiordApp app;
 
     @Setting(value = "secomOutboxMaxPerRun", defaultValue = "20", type = Type.Integer,
-            description = "The max number of SECOM outbox entries dispatched per scheduler run (one run per minute)."
-                    + " Read at start-up.")
-    Integer maxPerRun;
+            description = "The max number of SECOM outbox entries dispatched per scheduler run (one run per minute).")
+    volatile Integer maxPerRun;
 
     /** Overrides the SECOM callback endpoint sent with uploads; default = baseUri + /api/secom */
     @Setting(value = "secomCallbackEndpoint", defaultValue = "",
-            description = "Overrides the SECOM callback endpoint sent with uploads (default: baseUri + /api/secom)."
-                    + " Read at start-up.")
-    String callbackEndpoint;
+            description = "Overrides the SECOM callback endpoint sent with uploads (default: baseUri + /api/secom).")
+    volatile String callbackEndpoint;
 
     public SecomOutboxDispatcher(SecomOutboxService outboxService, SecomOutboundClient outboundClient, NiordApp app) {
         this.outboxService = outboxService;

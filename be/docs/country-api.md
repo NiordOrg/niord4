@@ -265,6 +265,13 @@ backend half, and the root-bundle rule (above). While the class path has no `def
 A country generates its own catalog from its own code with `SettingsCatalogGenerator` (in the test-jar); its
 current-check, as niord-base's `SettingsCatalogCurrentTest`, is the country's own test, added with its first key.
 
+A saved setting takes effect at once, a country's own as well: the save (the Settings page or the settings import)
+sets every `@Setting` field of the key again after it commits, and another node follows at its poll of the change
+count, about 30 seconds later (`SettingInjectionBeanPostProcessor`, `SettingsRefresher`). So a country's editable
+`@Setting` field is `volatile`, and its code reads the field where it uses it. A value that cannot change under a
+running server, such as a folder, is deployment configuration: `editable = false`, which keeps it off the Settings
+page and out of a save.
+
 ## Bootstrap and release folders
 
 A country's data is never a resource in its jar (`docs/code-data-config-plan.md` §6.4, §7.1):

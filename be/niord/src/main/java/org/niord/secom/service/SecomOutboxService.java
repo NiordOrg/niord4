@@ -65,18 +65,19 @@ public class SecomOutboxService extends BaseService {
     private static final Logger log = LoggerFactory.getLogger(SecomOutboxService.class);
 
     @Setting(value = "secomOutboxMaxAttempts", defaultValue = "8", type = Type.Integer,
-            description = "Max delivery attempts for a SECOM outbox entry before it is marked FAILED. Read at start-up.")
-    Integer maxAttempts;
+            description = "Max delivery attempts for a SECOM outbox entry before it is marked FAILED.")
+    volatile Integer maxAttempts;
 
     @Setting(value = "secomOutboxBackoffMinutes", defaultValue = "1,5,30,120,720",
             description = "Comma-separated backoff delays (minutes) between SECOM delivery attempts; the last value"
-                    + " repeats. Read at start-up.")
-    String backoffMinutes;
+                    + " repeats.")
+    volatile String backoffMinutes;
 
     @Setting(value = "secomAlertEmails", defaultValue = "",
-            description = "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally"
-                    + " (empty = no alerts). Read at start-up.")
-    String alertEmails;
+            description = "Comma-separated recipients of the SECOM alert mails: a delivery that fails for good, the"
+                    + " service certificate nearing expiry, a certificate renewal done or failed, and the key or trust"
+                    + " store reloaded or failing to reload (empty = no alerts).")
+    volatile String alertEmails;
 
     /**
      * How long a claimed entry stays out of every other run's reach ({@link #claimNextDue}). A
@@ -304,6 +305,8 @@ public class SecomOutboxService extends BaseService {
      * so failures are logged and swallowed.
      */
     private void alertTerminalFailure(SecomOutboxEntry entry, String error) {
+        // Read once: a save may change it at any time
+        String alertEmails = this.alertEmails;
         if (alertEmails == null || alertEmails.isBlank()) {
             return;
         }

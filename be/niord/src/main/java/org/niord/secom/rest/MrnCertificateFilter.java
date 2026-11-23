@@ -41,6 +41,7 @@ import java.util.Base64;
 import java.util.Enumeration;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /**
  * Authenticates every SECOM request from the remote node's MCP certificate: this filter
@@ -82,11 +83,23 @@ public class MrnCertificateFilter implements ContainerRequestFilter {
     private final McpSecurityService pki;
     private final SecomSubscriptionService subscriptionService;
     private final boolean trustCertHeader;
-    private final boolean validateClientChain;
-    private final boolean revocationCheck;
+    private final BooleanSupplier validateClientChain;
+    private final BooleanSupplier revocationCheck;
 
+    /** A filter whose chain validation and revocation check are fixed */
     public MrnCertificateFilter(McpSecurityService pki, SecomSubscriptionService subscriptionService,
                                 boolean trustCertHeader, boolean validateClientChain, boolean revocationCheck) {
+        this(pki, subscriptionService, trustCertHeader, () -> validateClientChain, () -> revocationCheck);
+    }
+
+    /**
+     * A filter that asks at each request whether to validate the chain and check for revocation (the
+     * {@code secomValidateClientChain} and {@code secomRevocationCheck} settings), so a save applies to the next
+     * request
+     */
+    public MrnCertificateFilter(McpSecurityService pki, SecomSubscriptionService subscriptionService,
+                                boolean trustCertHeader, BooleanSupplier validateClientChain,
+                                BooleanSupplier revocationCheck) {
         this.pki = pki;
         this.subscriptionService = subscriptionService;
         this.trustCertHeader = trustCertHeader;
@@ -116,7 +129,7 @@ public class MrnCertificateFilter implements ContainerRequestFilter {
             throw new SecomNotAuthorisedException("Could not parse client certificate: " + e.getMessage());
         }
 
-        if (validateClientChain) {
+        if (validateClientChain.getAsBoolean()) {
             validateAgainstTrustStore(certificate);
         }
 
@@ -196,7 +209,7 @@ public class MrnCertificateFilter implements ContainerRequestFilter {
             throw new SecomNotAuthorisedException("Client certificate is not issued by a trusted MCP CA");
         }
 
-        if (revocationCheck) {
+        if (revocationCheck.getAsBoolean()) {
             checkRevocation(certificate);
         }
     }

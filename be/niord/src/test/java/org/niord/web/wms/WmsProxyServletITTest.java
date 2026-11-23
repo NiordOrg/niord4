@@ -21,6 +21,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.niord.core.settings.Setting;
+import org.niord.core.settings.SettingsRefresher;
 import org.niord.core.settings.SettingsService;
 import org.niord.test.ITTest;
 import org.niord.test.Tx;
@@ -84,6 +85,9 @@ class WmsProxyServletITTest extends ITTest {
     @Autowired
     SettingsService settingsService;
 
+    @Autowired
+    SettingsRefresher settingsRefresher;
+
     @PersistenceContext
     EntityManager em;
 
@@ -143,8 +147,9 @@ class WmsProxyServletITTest extends ITTest {
     }
 
     // ------------------------------------------------------------------------------------------- //
-    // The gate reads wmsProtected live (SECOM-UI-1): a change on the Settings page applies to
-    // the next request, without a restart. Every write commits, so each test puts the row back.
+    // A save of wmsProtected on the Settings page refreshes the servlet's field at once, though the
+    // servlet is created only at the first request after start-up: the change applies to the next
+    // request, without a restart. Every write commits, so each test puts the row back.
     // ------------------------------------------------------------------------------------------- //
 
     @Test
@@ -167,7 +172,10 @@ class WmsProxyServletITTest extends ITTest {
         }
     }
 
-    /** A row stored as the text "true", as some databases hold it (SETTINGS-8), protects; a text "False" opens */
+    /**
+     * A row stored as the text "true", as some databases hold it (SETTINGS-8), protects; a text "False" opens. The
+     * rows are written behind the cache, as another node's save is, and the field follows at the poll
+     */
     @Test
     void aRowStoredAsTextIsReadByItsMeaning() throws IOException {
         Object original = rowValue(PROTECTED);
@@ -187,9 +195,17 @@ class WmsProxyServletITTest extends ITTest {
         return Tx.requiringNew().call(() -> em.find(Setting.class, key).getValue());
     }
 
-    /** Writes the row's value as it is, past the type check of the Settings page, and empties the cache */
+    /**
+     * Writes the row's value as it is, past the type check of the Settings page, and counts the change as another
+     * node's save does; then runs this node's poll, which empties the cache and refreshes the fields
+     */
     private void writeRow(String key, Object value) {
-        Tx.requiringNew().run(() -> em.find(Setting.class, key).setValue(value));
-        settingsService.evictFromCache(key);
+        Tx.requiringNew().run(() -> {
+            em.find(Setting.class, key).setValue(value);
+            Setting count = em.find(Setting.class, SettingsRefresher.CHANGE_COUNT.getKey());
+            long before = count != null && count.getValue() instanceof Number n ? n.longValue() : 0L;
+            settingsService.writeState(SettingsRefresher.CHANGE_COUNT, before + 1);
+        });
+        settingsRefresher.pollForChanges();
     }
 }

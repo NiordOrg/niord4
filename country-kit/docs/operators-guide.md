@@ -397,8 +397,21 @@ maintainers how your deployment gets its AtoN records.
 pencil changes a value, and only the value. There is no reset and no delete. Only the keys the code
 declares are listed: a row of an earlier version that no code declares stays in the database,
 unlisted. A password value is never shown. **Import...** and **Export...** take a settings file.
+A saved value takes effect at once, without a restart. The folders (`batchJobRootPath`,
+`messageIndexPath`, `publicationPreviewRootPath`), `vipsPath` and Keycloak's address
+(`authServerUrl`) are not listed: the deployment sets them at the server's start (below).
+A database restored from another system keeps that system's rows for these five, and the page
+cannot correct them: a system property or environment variable of the key's name wins over the row,
+an empty one included. The chart's `app.settings` renders no empty value, so an empty one goes in
+`app.javaOpts`, as `-DvipsPath=`, which switches the program off. Never give a folder or
+`authServerUrl` an empty value (an empty folder is the server's working folder); to go back to the
+default, delete the row, and the next start applies the settings file's value, else the code's
+default. A row changed by SQL
+is taken at the next start; any other setting changed that way is taken within half a minute once
+the row `settingsChangeCount` is raised by one (the sysadmin manual's Settings chapter has the
+statement).
 
-Check at least the addresses (`baseUri`, `adminAppUrl`, `authServerUrl`), the mail sender
+Check at least the addresses (`baseUri`, `adminAppUrl`), the mail sender
 (`mailSender`), who mail really goes to (`mailValidRecipients`: `LOG`, the shipped value, only logs a
 mail and marks it Held in the Mail Queue, from where a sysadmin can send it again once the setting is
 open; `ALL` sends it to its recipients, and a list of addresses sends it only to those, any other

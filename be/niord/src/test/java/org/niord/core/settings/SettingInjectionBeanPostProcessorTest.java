@@ -18,6 +18,8 @@ package org.niord.core.settings;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -153,5 +155,68 @@ class SettingInjectionBeanPostProcessorTest {
         verify(svc, never()).getString(any(Setting.class));
         verify(svc, never()).getBoolean(any(Setting.class));
         assertEquals("file", bean.contact);
+    }
+
+    /**
+     * A bean created after start-up while the database cannot be read, as the sea-chart servlet is at its first
+     * request, gets the default, and the next refresh, the poll's every 30 seconds whatever the change count says,
+     * gives it the database's value, also for a key no save refreshes; that is not a change of the setting. FAILS
+     * without the reading again: the field keeps the default until its key is saved or the server restarts.
+     */
+    @Test
+    void aFieldInjectedWithoutTheDatabaseAfterStartUpGetsTheDatabasesValueAtTheNextRefresh() {
+        processor.reinjectDeferred(svc);
+        when(provider.getIfAvailable()).thenReturn(svc);
+        when(svc.getBoolean(any(Setting.class))).thenThrow(new IllegalStateException("database down"));
+        when(svc.getString(any(Setting.class))).thenThrow(new IllegalStateException("database down"));
+        when(svc.resolveDefault(any(Setting.class))).thenReturn(null);
+        EarlyBean bean = new EarlyBean();
+        processor.postProcessProperties(null, bean, "laterBean");
+        assertEquals("annotation", bean.contact, "precondition: the default");
+
+        reset(svc);
+        when(svc.getBoolean(any(Setting.class))).thenReturn(Boolean.TRUE);
+        when(svc.getString(any(Setting.class))).thenReturn("database");
+        SettingInjectionBeanPostProcessor.Refreshed refreshed = processor.refresh(svc, key -> false);
+
+        assertEquals("database", bean.contact, "the database's value at the next refresh");
+        assertEquals(Boolean.TRUE, bean.renewalEnabled);
+        assertEquals(Set.of(), refreshed.changed(), "the setting did not change");
+
+        reset(svc);
+        processor.refresh(svc, key -> false);
+        verify(svc, never()).getString(any(Setting.class));
+    }
+
+    /**
+     * A refresh that cannot read a setting, the database failing for a moment after a save, leaves the field as it
+     * is, and the next refresh reads it again whatever keys it is asked for, the poll's included, and reports the
+     * change. FAILS without the reading again: the field keeps the old value until the key is saved again or the
+     * server restarts, for the poll finds the change count it has seen.
+     */
+    @Test
+    void aFieldARefreshCouldNotReadIsReadAgainByTheNextRefresh() {
+        when(provider.getIfAvailable()).thenReturn(svc);
+        when(svc.getBoolean(any(Setting.class))).thenReturn(Boolean.TRUE);
+        when(svc.getString(any(Setting.class))).thenReturn("database");
+        EarlyBean bean = new EarlyBean();
+        processor.postProcessProperties(null, bean, "earlyBean");
+        SettingsCatalog.Entry editable = mock(SettingsCatalog.Entry.class);
+        when(editable.editable()).thenReturn(true);
+        when(svc.catalogEntry(any())).thenReturn(editable);
+
+        when(svc.getString(any(Setting.class))).thenThrow(new IllegalStateException("connection lost"));
+        SettingInjectionBeanPostProcessor.Refreshed failed = processor.refresh(svc, "fixtureContact"::equals);
+        assertEquals("database", bean.contact, "precondition: the field keeps its value");
+        assertEquals(Set.of("fixtureContact"), failed.failed());
+
+        reset(svc);
+        when(svc.catalogEntry(any())).thenReturn(editable);
+        when(svc.getString(any(Setting.class))).thenReturn("saved");
+        SettingInjectionBeanPostProcessor.Refreshed again = processor.refresh(svc, key -> false);
+
+        assertEquals("saved", bean.contact, "the next refresh read it again");
+        assertEquals(Set.of("fixtureContact"), again.changed(), "and reports the change");
+        assertEquals(Set.of(), again.failed());
     }
 }

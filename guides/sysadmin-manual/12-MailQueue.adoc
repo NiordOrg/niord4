@@ -66,6 +66,10 @@ A system administrator can also ask at any time at `GET /rest/monitor/message-in
 `{"lucene":true,"postgres":true,"complete":true}`; `lucene` is the index these triggers wait for. Where several
 servers run, each answers for itself.
 
+The index is also built again when a system administrator changes the setting
+`messageIndexIncludeDeletedMessages` (see <<settings-from-code,Settings from Code>>). The triggers wait for it then
+as they do after a restart, in the first half hour after the change.
+
 Niord notes every status change of a message in its database, together with the change, until the mails of the
 status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts
 just after the change: at once when the server is up again, or within a minute. Niord also notes, for each status
@@ -107,8 +111,8 @@ _Sent_ under a list cannot be told apart from a delivered one.
 Niord reads `mailValidRecipients` for every mail it sends, so a change to it applies within a minute.
 `mailDeleteAfterDays` is read at the clean-up, which runs once a day early in the morning, so a change to it deletes
 mails from the next clean-up on, though the note above the list shows the new value as soon as the page is opened
-again. `mailMaxPerMinute` and `mailSender` are read when the server starts, so a change to them
-takes effect at the next restart of the server.
+again. A change to `mailMaxPerMinute` or `mailSender` takes effect at once: the next mail is sent from the new
+sender, and the next minute's sending sends at most the new number.
 
 [#mail-filtering]
 === Mail Filtering

@@ -78,7 +78,9 @@ public class SettingsRestService extends AbstractBatchableRestService {
     /**
      * Returns the editable settings the code declares: the Settings page and its Export read this list, so an
      * editable row no settings catalog declares is not listed (it stays in the database, §5.6 of
-     * docs/code-data-config-plan.md). Security is checked programmatically.
+     * docs/code-data-config-plan.md). Whether a key is editable is its catalog entry's answer, not its row's
+     * ({@link SettingsService#getAllEditable()}): deployment configuration is not listed, whatever its row says.
+     * Security is checked programmatically.
      * Either the user must pass a ticket along, or else, usual security checks applies.
      *
      * The ticket can be requested via Ajax call to /rest/tickets/ticket?role=sysadmin
@@ -186,8 +188,9 @@ public class SettingsRestService extends AbstractBatchableRestService {
     }
 
     /**
-     * Updates the value of an operator setting. An unknown key (also one with a row no catalog declares), a
-     * {@code state} key, a key with no row and a value of the wrong type are refused with 400
+     * Updates the value of an operator setting, which takes effect at once. An unknown key (also one with a row no
+     * catalog declares), a {@code state} key, a key the catalog does not make editable (deployment configuration,
+     * whatever its row says), a key with no row and a value of the wrong type are refused with 400
      * ({@link SettingsService#set(Setting)}).
      *
      * @param key       the setting key

@@ -673,7 +673,9 @@ chart wires the app's embedded SECOM v2 service (`/api/secom`, see
 - **Runtime settings** (`secom.settings.*` in values) are injected as env vars under their
   exact camelCase setting names (SettingsService precedence: sysprop > env > DB > default)
   — e.g. `secomServiceRegistryUrl`, `secomSignatureAlgorithm` (`SHA3_384_WITH_ECDSA` for
-  legacy SHA3-only peers), `secomAlertEmails`. Read once at startup; restart to apply.
+  legacy SHA3-only peers), `secomAlertEmails`. An environment variable wins over the Settings
+  page and changes only with a new pod (a `helm upgrade` that changes it rolls the pods); a key
+  left out of the values is set on the Settings page instead, where a save takes effect at once.
 - **Rotation**: update the stores secret in place — the app polls the mounted files every
   minute and hot-reloads them automatically once the secret has propagated (a minute or
   two in total; confirmation mail to `secomAlertEmails`). For an immediate, synchronously

@@ -17,6 +17,7 @@ package org.niord.web.wms;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.niord.core.settings.SettingChangedEvent;
 import org.niord.web.wms.WmsTileCache.Source;
 import org.niord.web.wms.WmsTileCache.Tile;
 
@@ -289,6 +290,65 @@ class WmsTileCacheTest {
 
         assertEquals(Source.STALE, stale.source());
         assertEquals(asked, provider.fetches.get(), "served without asking the paused provider");
+    }
+
+    /** Pauses the cache's provider: three failures in a row, on tiles from the given column on */
+    private static void pause(WmsTileCache cache, Provider provider, int fromX) {
+        provider.failure = new IOException("HTTP 401");
+        for (int x = fromX; x < fromX + 3; x++) {
+            assertNull(cache.get(key(x), provider));
+        }
+        provider.failure = null;
+    }
+
+    @Test
+    void aSaveOfTheProviderOrItsTokenEndsThePause() {
+        int fromX = 0;
+        for (String setting : List.of("wmsProvider", "wmsPassword")) {
+            WmsTileCache cache = cache(200);
+            Provider provider = new Provider(png(300));
+            pause(cache, provider, fromX);
+            assertNull(cache.get(key(fromX + 3), provider), "precondition: paused");
+            assertEquals(3, provider.fetches.get());
+
+            // The servlet's field holds the saved value; here, or on another node, whose poll found the save
+            cache.settingChanged(new SettingChangedEvent(setting, fromX > 0));
+
+            assertEquals(Source.MISS, cache.get(key(fromX + 3), provider).source(),
+                    "the next request asks the provider after a save of " + setting);
+            assertEquals(4, provider.fetches.get());
+            fromX += 10;
+        }
+    }
+
+    @Test
+    void aSaveOfAnotherSettingLeavesThePause() {
+        WmsTileCache cache = cache(200);
+        Provider provider = new Provider(png(300));
+        pause(cache, provider, 0);
+
+        for (String setting : List.of("wmsLayers", "wmsCacheDays", "wmsProtected", "mailSender")) {
+            cache.settingChanged(new SettingChangedEvent(setting, true));
+        }
+
+        assertNull(cache.get(key(3), provider));
+        assertEquals(3, provider.fetches.get(), "still paused: the provider and its access are as they were");
+    }
+
+    @Test
+    void aSaveOfTheProviderStartsTheCountOfFailuresAgain() {
+        WmsTileCache cache = cache(200);
+        Provider provider = new Provider(png(300));
+        provider.failure = new IOException("HTTP 401");
+        assertNull(cache.get(key(0), provider));
+        assertNull(cache.get(key(1), provider));
+
+        cache.settingChanged(new SettingChangedEvent("wmsPassword", true));
+        assertNull(cache.get(key(2), provider));
+        assertNull(cache.get(key(3), provider));
+        assertNull(cache.get(key(4), provider));
+
+        assertEquals(5, provider.fetches.get(), "the old token's two failures do not count towards a pause");
     }
 
     // ------------------------------------------------------------------ one fetch per tile

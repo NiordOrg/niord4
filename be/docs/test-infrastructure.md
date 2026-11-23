@@ -90,6 +90,11 @@ context; the suite has several at once, and they share what a deployment never s
   listener's drain lock. The suite does not clean the table: a test that defines status-change triggers removes
   its messages' outbox rows before the messages (as `MailingListDeliveryFaultITTest` does), so no later drain runs
   a trigger for a message that is gone and leaves an ERROR mail that a later class may count.
+- **The settings' change count** (the `state` setting `settingsChangeCount`). Every save adds one, and each
+  context's poll (`SettingsRefresher.pollForChanges`) that finds it changed refreshes that context's `@Setting`
+  fields, so a save in one context would reach another's fields at a moment no test chooses. The suite switches the
+  poll off (`niord.settings.change-poll-cron=-` on `ITTest`); a save still refreshes the fields of its own context,
+  and a test that needs another context's save followed calls `pollForChanges()` itself.
 
 The class order differs between machines: Failsafe's default `runOrder` is `filesystem`, which is alphabetical on
 NTFS (Windows) and directory-hash order on Linux (CI). A class that passes after one set of classes can fail after

@@ -19,7 +19,8 @@ import java.util.Date;
 
 /**
  * A scheduled trigger's run waits for the free-text index: its search was answered while the index was still being
- * filled after the start, so its mail could list too few messages. The scheduler postpones the trigger to
+ * filled after the start or after a change of its settings, so its mail could list too few messages. The scheduler
+ * postpones the trigger to
  * {@link #getRetryAt()}, a few minutes on and never after {@link #getWaitUntil()}, when the run makes its mail
  * whatever the index holds. It is not a failure: the scheduler records it apart from the failed runs.
  */
@@ -34,8 +35,9 @@ public class IncompleteIndexException extends Exception {
      * @param waitUntil the end of the wait, when the trigger's mail is made at the latest
      */
     public IncompleteIndexException(Date retryAt, Date waitUntil) {
-        super("The text search index is being built again after a restart, so the message query's search may miss "
-                + "messages; the mail is made once the index is complete, by " + waitUntil.toInstant()
+        super("The text search index is being built again after a restart or a change of its settings, so the message "
+                + "query's search may miss messages; the mail is made once the index is complete, by "
+                + waitUntil.toInstant()
                 + " at the latest");
         this.retryAt = retryAt;
         this.waitUntil = waitUntil;
