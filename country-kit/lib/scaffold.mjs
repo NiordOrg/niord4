@@ -139,7 +139,7 @@ export const USE_BASE_DEFAULT_REASONS = Object.freeze({
   adminAppUrl:
     'empty, so the links in mails point at baseUri; a deployment that serves the administration app elsewhere sets it on the Settings page',
   authServerUrl:
-    "the local stack's address; a deployment sets its own on the Settings page or in its niord.json",
+    "the local stack's address; a deployment sets its own by an environment variable or in its niord.json",
   documentationUrl: "the base product's documentation, for a country with none of its own",
   editorFieldsBase: "the base product's message editor fields, the standard set",
   editorFieldsNw: "the base product's editor fields of a navigational warning, the standard set",

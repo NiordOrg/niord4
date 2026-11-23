@@ -163,8 +163,9 @@ app:
   # true/false; anything else fails the render. A list or object setting (type json: the
   # language lists, the editor fields, stdTemplateFields) cannot be pinned: the app takes the
   # variable as a text and does not parse it. Never a password or token (those reach the app
-  # from a Secret): the render refuses a key that names a password, secret or token. A setting
-  # the app reads at start-up takes effect at the next start. {} = nothing pinned.
+  # from a Secret): the render refuses a key that names a password, secret or token. A pinned
+  # value changes only with a new pod, started with the new value; a key left out is saved on
+  # the Settings page and takes effect at once. {} = nothing pinned.
   settings: {}
   # NIORD_HOME — the app's volume, a cache: the repository files (attachments, publication files,
   # the archive) are rows of the database, and the volume holds what is made again on a miss
@@ -506,7 +507,9 @@ secom:
   # DB-backed runtime settings (sysadmin Settings page), overridable at deploy time.
   # The keys are the EXACT setting names — SettingsService resolves overrides from
   # env vars matched case-sensitively (sysprop > env > DB > default). An empty value
-  # is not injected, keeping the app/DB default. Restart-to-apply, like all SECOM knobs.
+  # is not injected, keeping the app/DB default. A value pinned here changes only with a new
+  # pod, started with the new value; a key left empty is saved on the Settings page and takes
+  # effect at once.
   settings:
     secomServiceRegistryUrl: ""     # MSR endpoint used to resolve peer endpoints
     secomCallbackEndpoint: ""       # default in-app: the baseUri setting + /api/secom
