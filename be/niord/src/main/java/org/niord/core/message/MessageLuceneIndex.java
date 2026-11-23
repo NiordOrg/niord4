@@ -85,6 +85,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import jakarta.persistence.PersistenceException;
 import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -118,6 +119,7 @@ public class MessageLuceneIndex extends BaseService {
 
         @Setting(value = "messageIndexIncludeDeletedMessages", defaultValue = "false", type = Boolean,
             description = "Whether the message index should include deleted messages or not.")
+    // A change builds the index again (MessageIndexRebuilder); each pass reads it once
     volatile Boolean includeDeletedMessages;
 
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessageLuceneIndex.class);
@@ -566,6 +568,29 @@ public class MessageLuceneIndex extends BaseService {
     }
 
     /**
+     * Builds the index again, as a start that deletes it does: the index is deleted, so that a search is marked as
+     * answered from part of the messages ({@link #allMessagesIndexed()}) until the passes have indexed every message
+     * again, and the first pass runs at once; the minute passes index the rest, {@value #LUCENE_MAX_INDEX_COUNT}
+     * messages each. A search answers from more messages after each pass, and no pass holds the writer lock longer
+     * than a pass does. Called on a thread of its own when a setting that decides what the index holds has changed
+     * ({@link MessageIndexRebuilder}), on every node, since each node has its own index. It holds no transaction
+     * while it waits for the writer lock; the pass runs in a transaction of its own, through the proxy.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void rebuildIndex() {
+        ReentrantLock lock = writerLock(indexFolder);
+        lock.lock();
+        try {
+            deleteIndex();
+        } catch (IOException | RuntimeException e) {
+            log.error("Failed deleting the index to build it again", e);
+        } finally {
+            lock.unlock();
+        }
+        self.getObject().updateLuceneIndex();
+    }
+
+    /**
      * Deletes the current index. The caller holds the folder's {@link #writerLock(Path) writer lock}.
      */
     private void deleteIndex() throws IOException {
@@ -656,6 +681,8 @@ public class MessageLuceneIndex extends BaseService {
      */
     int updateLuceneIndex(int maxIndexCount) {
 
+        // Read once, so that a save while the pass runs does not index its messages by two rules
+        boolean includeDeleted = java.lang.Boolean.TRUE.equals(includeDeletedMessages);
         Marker marker = getMarker();
 
         long t0 = System.currentTimeMillis();
@@ -694,7 +721,7 @@ public class MessageLuceneIndex extends BaseService {
             int skipped = 0;
             for (Message message : updatedMessages) {
                 try {
-                    indexMessage(writer, message);
+                    indexMessage(writer, message, includeDeleted);
                 } catch (AlreadyClosedException ex) {
                     // The writer is gone (a disk failure): no later message can be indexed, the pass fails as a whole
                     throw ex;
@@ -713,7 +740,7 @@ public class MessageLuceneIndex extends BaseService {
             int indexedBehind = 0;
             for (Message message : missedMessages) {
                 try {
-                    indexMessage(writer, message);
+                    indexMessage(writer, message, includeDeleted);
                     handled.add(message);
                     indexedBehind++;
                 } catch (RuntimeException ex) {
@@ -795,9 +822,10 @@ public class MessageLuceneIndex extends BaseService {
      * whose values cannot be read throws before its earlier document is deleted.
      *
      * @param message the message to index
+     * @param includeDeleted whether a deleted message is indexed, as the pass read it
      */
-    private void indexMessage(IndexWriter writer, Message message) {
-        Document doc = shouldAddMessage(message) ? messageDocument(message) : null;
+    private void indexMessage(IndexWriter writer, Message message, boolean includeDeleted) {
+        Document doc = shouldAddMessage(message, includeDeleted) ? messageDocument(message) : null;
         // First delete the message
         deleteMessageFromIndex(writer, message);
         // Then add the message
@@ -809,15 +837,16 @@ public class MessageLuceneIndex extends BaseService {
     /**
      * By default, add all eligible messages.
      * @param message the message to check
+     * @param includeDeleted whether a deleted message is indexed, as the pass read it
      * @return whether to add the message to the index
      * @noinspection all
      */
-    private boolean shouldAddMessage(Message message) {
+    private boolean shouldAddMessage(Message message, boolean includeDeleted) {
         if (message.getMessageSeries().getExcludeFromMessageIndex() != null &&
                 message.getMessageSeries().getExcludeFromMessageIndex()) {
             return false;
         }
-        return includeDeletedMessages || message.getStatus() != Status.DELETED;
+        return includeDeleted || message.getStatus() != Status.DELETED;
     }
 
     /**
