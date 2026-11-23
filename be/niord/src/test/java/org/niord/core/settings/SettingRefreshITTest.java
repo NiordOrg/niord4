@@ -191,6 +191,34 @@ class SettingRefreshITTest extends ITTest {
         }
     }
 
+    /**
+     * A row the code cannot read, here text in an Integer row as SQL or a restore can leave it, keeps its field's
+     * value with a warning; the poll still refreshes the other fields and ends without an error. FAILS when the
+     * poll's reads share one transaction: the failed read marks it for rollback, and the poll ends with an
+     * UnexpectedRollbackException.
+     */
+    @Test
+    void aRowTheCodeCannotReadDoesNotFailThePollOrKeepTheOtherFieldsOld() {
+        settingsRefresher.pollForChanges();
+        String size = "mapImageSize";
+        Object sizeRow = rowValue(size);
+        Object original = rowValue(SENDER);
+        String elsewhere = "it-unreadable-" + System.nanoTime() + "@example.org";
+        try {
+            Tx.requiringNew().run(() -> em.find(Setting.class, size).setValue("not a number"));
+            saveAsAnotherNode(SENDER, elsewhere);
+
+            settingsRefresher.pollForChanges();
+
+            assertEquals(elsewhere, senderField(), "the other fields are refreshed");
+        } finally {
+            Tx.requiringNew().run(() -> em.find(Setting.class, size).setValue(sizeRow));
+            saveAsAnotherNode(SENDER, original);
+            settingsRefresher.pollForChanges();
+        }
+        assertEquals(original, senderField());
+    }
+
     // ------------------------------------------------------------------------------------------- //
 
     /** Saves the value through the Settings page's endpoint, as a sysadmin */

@@ -945,7 +945,7 @@ public class SettingsService extends BaseService {
                 beanFactory.getBeanProvider(SettingsRefresher.class)
                         .ifAvailable(refresher -> refresher.refreshSaved(key, countBefore, countAfter));
             } catch (RuntimeException e) {
-                // The save has committed; the next poll refreshes the fields
+                // The save has committed; the next poll reads what this refresh did not
                 log.warn("The fields of setting {} were not refreshed after its save: {}", key, e.toString());
             }
         });

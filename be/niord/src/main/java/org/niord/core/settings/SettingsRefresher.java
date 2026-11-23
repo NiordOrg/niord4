@@ -26,10 +26,12 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Makes a saved setting take effect at once, without slowing everyday use: the services keep reading their
@@ -47,7 +49,9 @@ import java.util.Set;
  * A field is set only when its setting's value changed; an environment variable or system property named like the key
  * still wins. After each refresh that gave a field of a key a new value, a {@link SettingChangedEvent} is published,
  * once per change: as saved here for a key saved on this node, whichever of the two refreshes moved its field
- * ({@link #savingHere(String)}), and as found by the poll for the others.
+ * ({@link #savingHere(String)}), and as found by the poll for the others. A field whose setting a refresh could not read,
+ * a database that failed for a moment, keeps its value and is read again at every poll until a read succeeds, whatever
+ * the change count says.
  */
 @Component
 public class SettingsRefresher {
@@ -80,6 +84,12 @@ public class SettingsRefresher {
      * here, so whichever refresh moves the field, the change is published as this node's.
      */
     private final Map<String, Integer> savingHere = new HashMap<>();
+
+    /**
+     * The keys saved on this node whose field the save's refresh could not read; guarded by {@link #savingHere}. The
+     * refresh that reads it later publishes the change as saved here.
+     */
+    private final Set<String> savedHereUnread = new HashSet<>();
 
     SettingsRefresher(SettingsService settingsService, SettingInjectionBeanPostProcessor processor,
                       SettingsCache settingsCache, ApplicationEventPublisher events) {
@@ -114,33 +124,38 @@ public class SettingsRefresher {
     }
 
     /**
-     * Refreshes the fields of a key saved on this node, after the save has committed, in a transaction of its own (the
-     * save's has committed). When this node had followed every save before this one, it counts this save as followed,
-     * so its next poll refreshes nothing; otherwise the poll still catches the other node's save.
+     * Refreshes the fields of a key saved on this node, after the save has committed, outside the save's transaction:
+     * each read has its own, as in {@link #pollForChanges}. When this node had followed every save before this one, it
+     * counts this save as followed, so its next poll refreshes nothing; otherwise the poll still catches the other
+     * node's save. A field whose setting could not be read is read again by the next poll.
      *
      * @param key         the saved key
      * @param countBefore the change count the save found, null when there was none
      * @param countAfter  the change count the save wrote
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void refreshSaved(String key, Long countBefore, long countAfter) {
         synchronized (this) {
             if (following && Objects.equals(seen, countBefore)) {
                 seen = countAfter;
             }
         }
-        publish(processor.refresh(settingsService, key::equals), true);
+        refreshAndPublish(key::equals, key);
     }
 
     /**
      * Reads the change count and, when another node saved a setting since the last poll, empties this node's settings
      * cache and refreshes every field. The first poll after a start refreshes every field once, so a save made by
-     * another node while this one started is followed too. {@code niord.settings.change-poll-cron} sets the schedule,
-     * and {@code -} switches the poll off (the integration suite switches it off and calls it directly).
+     * another node while this one started is followed too. Whatever the count, it reads again a field whose setting
+     * could not be read before, or that was injected without the database after start-up. Without a transaction of its
+     * own: each read has its own, so a read that fails neither spoils the others nor fails the poll.
+     * {@code niord.settings.change-poll-cron} sets the schedule, and {@code -} switches the poll off (the integration
+     * suite switches it off and calls it directly).
      */
     @Scheduled(cron = "${niord.settings.change-poll-cron:14/30 * * * * ?}")
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void pollForChanges() {
+        boolean savedElsewhere;
         // Read and compared under the monitor refreshSaved takes, so a count read before a save here committed never
         // replaces the count that save wrote
         synchronized (this) {
@@ -152,23 +167,42 @@ public class SettingsRefresher {
                         + "at the next poll that can: " + e);
                 return;
             }
-            if (following && Objects.equals(seen, count)) {
-                return;
-            }
+            savedElsewhere = !following || !Objects.equals(seen, count);
             following = true;
             seen = count;
         }
-        settingsCache.getCache().clear();
+        if (savedElsewhere) {
+            settingsCache.getCache().clear();
+        }
+        refreshAndPublish(key -> savedElsewhere, null);
+    }
+
+    /**
+     * Refreshes the fields of the keys the filter accepts, and those to be read again, and publishes each change: as
+     * saved here for a key saved on this node, whose save has not yet completed or whose field its save's refresh
+     * could not read; as found by the poll for the others.
+     *
+     * @param keys     which keys to refresh
+     * @param savedKey the key saved on this node, null for the poll
+     */
+    private void refreshAndPublish(Predicate<String> keys, String savedKey) {
         Set<String> changed;
         Set<String> savedHere = new LinkedHashSet<>();
         // A key still being saved here whose field this refresh moved (its save has committed, refreshSaved has not
         // yet run) is this node's change: the save's completion waits until it is sorted out
         synchronized (savingHere) {
-            changed = new LinkedHashSet<>(processor.refresh(settingsService, key -> true));
-            changed.stream().filter(savingHere::containsKey).forEach(savedHere::add);
+            SettingInjectionBeanPostProcessor.Refreshed refreshed = processor.refresh(settingsService, keys);
+            changed = new LinkedHashSet<>(refreshed.changed());
+            changed.stream()
+                    .filter(key -> key.equals(savedKey) || savingHere.containsKey(key) || savedHereUnread.contains(key))
+                    .forEach(savedHere::add);
+            savedHereUnread.retainAll(refreshed.failed());
+            if (savedKey != null && refreshed.failed().contains(savedKey)) {
+                savedHereUnread.add(savedKey);
+            }
         }
         changed.removeAll(savedHere);
-        if (!changed.isEmpty()) {
+        if (savedKey == null && !changed.isEmpty()) {
             log.info("Settings saved elsewhere followed: " + changed);
         }
         publish(savedHere, true);
