@@ -16,12 +16,16 @@
 package org.niord.secom;
 
 import io.restassured.http.ContentType;
+import org.grad.secomv2.core.models.enums.DigitalSignatureAlgorithmEnum;
 import org.junit.jupiter.api.Test;
 import org.niord.core.message.Message;
 import org.niord.core.settings.Setting;
 import org.niord.secom.model.S124SeriesConfig;
+import org.niord.secom.pki.NiordSecomProviders;
+import org.niord.secom.rest.MrnCertificateFilter;
 import org.niord.secom.service.SecomConfigService;
 import org.niord.test.Tx;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -42,9 +46,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the {@code secomS124Series} setting in phase 3 of docs/s124-cancellation-plan.md), with
  * the per-series S-124 language restriction they carry — and
  * for the phase-4 settings migration: the scalar SECOM knobs are ordinary {@code @Setting}s,
- * auto-registered with their defaults by the consuming beans at startup.
+ * auto-registered with their defaults by the consuming beans at startup, and a save of one applies to the next
+ * request or signature.
  */
 class SecomConfigITTest extends SecomITTest {
+
+    @Autowired
+    NiordSecomProviders providers;
 
     // ------------------------------------------------------------------------------------------- //
     // Per-series exposure
@@ -208,6 +216,52 @@ class SecomConfigITTest extends SecomITTest {
             Tx.requiringNew().run(() -> em.find(Setting.class, "secomSignatureAlgorithm")
                     .setValue("SHA2_384_WITH_ECDSA"));
         }
+    }
+
+    /**
+     * The chain validation is read at each request: a save on the Settings page applies to the next SECOM request,
+     * with no restart
+     */
+    @Test
+    void aSavedChainValidationSettingAppliesToTheNextRequest() {
+        given().header(MrnCertificateFilter.CERT_HEADER, untrustedCertHeader())
+                .get("/api/secom/v2/capability")
+                .then().statusCode(403);
+        try {
+            saveSetting("secomValidateClientChain", false);
+
+            given().header(MrnCertificateFilter.CERT_HEADER, untrustedCertHeader())
+                    .get("/api/secom/v2/capability")
+                    .then().statusCode(200);
+        } finally {
+            saveSetting("secomValidateClientChain", true);
+        }
+        given().header(MrnCertificateFilter.CERT_HEADER, untrustedCertHeader())
+                .get("/api/secom/v2/capability")
+                .then().statusCode(403);
+    }
+
+    /** The signature algorithm is read at each signature: a save applies to the next outgoing message */
+    @Test
+    void aSavedSignatureAlgorithmAppliesToTheNextSignature() {
+        assertEquals(DigitalSignatureAlgorithmEnum.SHA2_384_WITH_ECDSA, providers.getSignatureAlgorithm());
+        try {
+            saveSetting("secomSignatureAlgorithm", "SHA3_384_WITH_ECDSA");
+
+            assertEquals(DigitalSignatureAlgorithmEnum.SHA3_384_WITH_ECDSA, providers.getSignatureAlgorithm());
+        } finally {
+            saveSetting("secomSignatureAlgorithm", "SHA2_384_WITH_ECDSA");
+        }
+        assertEquals(DigitalSignatureAlgorithmEnum.SHA2_384_WITH_ECDSA, providers.getSignatureAlgorithm());
+    }
+
+    /** Saves a setting as the Settings page does */
+    private void saveSetting(String key, Object value) {
+        given().auth().oauth2(accessToken())
+                .contentType(ContentType.JSON)
+                .body(Map.of("key", key, "value", value))
+                .when().put("/rest/settings/setting/" + key)
+                .then().statusCode(200);
     }
 
     @Test

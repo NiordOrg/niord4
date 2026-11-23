@@ -74,8 +74,9 @@ public class SecomOutboxService extends BaseService {
     volatile String backoffMinutes;
 
     @Setting(value = "secomAlertEmails", defaultValue = "",
-            description = "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally"
-                    + " (empty = no alerts).")
+            description = "Comma-separated recipients of the SECOM alert mails: a delivery that fails for good, the"
+                    + " service certificate nearing expiry, a certificate renewal done or failed, and the key or trust"
+                    + " store reloaded or failing to reload (empty = no alerts).")
     volatile String alertEmails;
 
     /**

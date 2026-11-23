@@ -165,13 +165,6 @@ class SettingsCatalogCurrentTest {
             "messageIndexDeleteOnStartup",
             "by its meaning it acts only when the server starts: whether the start throws the search index away");
 
-    /**
-     * The keys declared by a static {@link Setting} that the code still reads once, when it creates its beans. They
-     * leave this list when they are read where they are used.
-     */
-    static final Set<String> CONSTANTS_NOT_YET_READ_AT_USE = Set.of("secomValidateClientChain", "secomRevocationCheck",
-            "secomSignatureAlgorithm");
-
     static final String APPLIES_AT_THE_NEXT_START = "Applies at the next start.";
 
     /** What a description says when a change needs a restart */
@@ -198,8 +191,7 @@ class SettingsCatalogCurrentTest {
                     wrong.add(entry.key() + " (a restart setting, editable, ending with '" + APPLIES_AT_THE_NEXT_START
                             + "'): '" + description + "'");
                 }
-            } else if (SAYS_RESTART.matcher(description).find()
-                    && !CONSTANTS_NOT_YET_READ_AT_USE.contains(entry.key())) {
+            } else if (SAYS_RESTART.matcher(description).find()) {
                 wrong.add(entry.key() + " (takes effect when saved, or is deployment configuration): '"
                         + description + "'");
             }

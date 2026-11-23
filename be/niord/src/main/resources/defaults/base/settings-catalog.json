@@ -786,7 +786,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally (empty = no alerts).",
+      "description": "Comma-separated recipients of the SECOM alert mails: a delivery that fails for good, the service certificate nearing expiry, a certificate renewal done or failed, and the key or trust store reloaded or failing to reload (empty = no alerts).",
       "declaredIn": [
         "org.niord.secom.service.SecomCertificateAlertService",
         "org.niord.secom.service.SecomCertificateRenewalService",
@@ -981,7 +981,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Check SECOM peer certificates for revocation, inbound and outbound (OCSP falling back to CRL; soft-fail). Read at start-up.",
+      "description": "Check SECOM peer certificates for revocation, inbound and outbound (OCSP falling back to CRL; soft-fail).",
       "declaredIn": [
         "org.niord.secom.SecomConfiguration"
       ]
@@ -1029,7 +1029,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "SECOM signature algorithm for outgoing signatures (SHA2_384_WITH_ECDSA or SHA3_384_WITH_ECDSA). Read at start-up.",
+      "description": "SECOM signature algorithm for outgoing signatures (SHA2_384_WITH_ECDSA or SHA3_384_WITH_ECDSA).",
       "declaredIn": [
         "org.niord.secom.SecomConfiguration"
       ]
@@ -1045,7 +1045,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Validate SECOM client certificate chains against the MCP truststore. Read at start-up.",
+      "description": "Validate SECOM client certificate chains against the MCP truststore.",
       "declaredIn": [
         "org.niord.secom.SecomConfiguration"
       ]

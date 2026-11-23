@@ -219,7 +219,8 @@ niord:
   #   secomRevocationCheck          soft-fail OCSP->CRL revocation checking, inbound client
   #                                 certs AND outbound connections (default true)
   #   secomAlertEmails              comma-separated recipients mailed on terminal delivery
-  #                                 failures and approaching certificate expiry
+  #                                 failures, approaching certificate expiry, certificate
+  #                                 renewals done or failed, and key/trust store reloads
   #                                 (default empty = no alerts)
   #   secomCertExpiryWarnDays       days before SECOM service certificate expiry at which
   #                                 warning mails to the alert recipients begin (default 60;

@@ -25,6 +25,8 @@ import org.niord.secom.pki.NiordSecomProviders;
 import org.niord.secom.rest.MrnCertificateFilter;
 import org.niord.secom.rest.SecomV2Application;
 import org.niord.secom.service.SecomSubscriptionService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,16 +61,18 @@ public class SecomConfiguration {
     /** The context path the SECOM servlet is mounted at */
     public static final String SECOM_BASE_PATH = "/api/secom";
 
+    private static final Logger log = LoggerFactory.getLogger(SecomConfiguration.class);
+
     /*
-     * DB-backed runtime settings (sysadmin Settings page), consumed once at bean creation -
-     * restart to apply. Read programmatically via SettingsService rather than @Setting field
-     * injection: this configuration class is instantiated at web-server init (for the SECOM
-     * servlet registration) before the settings layer is usable, whereas the consuming beans
-     * below are created in the normal singleton phase.
+     * DB-backed runtime settings (sysadmin Settings page), read through SettingsService where
+     * they are used - each SECOM request, delivery and signature - so a save applies to the next
+     * one. Read by name rather than by @Setting field injection: this configuration class is
+     * instantiated at web-server init (for the SECOM servlet registration) before the settings
+     * layer is usable.
      */
 
     static final Setting VALIDATE_CLIENT_CHAIN = new Setting("secomValidateClientChain", true,
-            Setting.Type.Boolean, "Validate SECOM client certificate chains against the MCP truststore. Read at start-up.",
+            Setting.Type.Boolean, "Validate SECOM client certificate chains against the MCP truststore.",
             true, false, true);
 
     /**
@@ -81,7 +85,7 @@ public class SecomConfiguration {
      */
     public static final Setting REVOCATION_CHECK = new Setting("secomRevocationCheck", true,
             Setting.Type.Boolean, "Check SECOM peer certificates for revocation, inbound and outbound (OCSP falling back to CRL;"
-                    + " soft-fail). Read at start-up.",
+                    + " soft-fail).",
             true, false, true);
 
     /**
@@ -91,8 +95,7 @@ public class SecomConfiguration {
      * signatures are accepted in either 384-bit variant regardless of this setting.
      */
     static final Setting SIGNATURE_ALGORITHM = new Setting("secomSignatureAlgorithm", "SHA2_384_WITH_ECDSA",
-            Setting.Type.String, "SECOM signature algorithm for outgoing signatures (SHA2_384_WITH_ECDSA or SHA3_384_WITH_ECDSA)."
-                    + " Read at start-up.",
+            Setting.Type.String, "SECOM signature algorithm for outgoing signatures (SHA2_384_WITH_ECDSA or SHA3_384_WITH_ECDSA).",
             true, false, true);
 
     /** The names {@link #SIGNATURE_ALGORITHM} takes: the two algorithms outgoing signatures are made with */
@@ -111,14 +114,39 @@ public class SecomConfiguration {
                 : null;
     }
 
+    /** The last unsupported {@link #SIGNATURE_ALGORITHM} value logged, so a value is logged once, not per signature */
+    private static volatile String loggedUnsupportedAlgorithm;
+
+    /** The providers read {@link #SIGNATURE_ALGORITHM} at each signature ({@link #signatureAlgorithm}) */
     @Bean
     public NiordSecomProviders niordSecomProviders(McpSecurityService pki, SettingsService settingsService) {
-        // A blanked-out setting falls back to the default; an invalid algorithm still fails fast
-        String algorithm = settingsService.getString(SIGNATURE_ALGORITHM);
-        if (algorithm == null || algorithm.isBlank()) {
-            algorithm = (String) SIGNATURE_ALGORITHM.getValue();
+        return new NiordSecomProviders(pki, () -> signatureAlgorithm(settingsService));
+    }
+
+    /**
+     * Resolves {@link #SIGNATURE_ALGORITHM} for an outgoing signature. A blank value is the default. So is a value
+     * that names neither supported algorithm, which a save refuses but a system property, an environment variable or
+     * an older row can still hold: it is logged once, and signatures go on with the default instead of failing.
+     *
+     * @param settingsService the settings
+     * @return the algorithm outgoing signatures are made with
+     */
+    static DigitalSignatureAlgorithmEnum signatureAlgorithm(SettingsService settingsService) {
+        String defaultName = (String) SIGNATURE_ALGORITHM.getValue();
+        Object value = settingsService.get(SIGNATURE_ALGORITHM);
+        String name = value == null ? "" : value.toString().trim();
+        if (name.isEmpty()) {
+            return DigitalSignatureAlgorithmEnum.valueOf(defaultName);
         }
-        return new NiordSecomProviders(pki, DigitalSignatureAlgorithmEnum.valueOf(algorithm.trim()));
+        if (!SIGNATURE_ALGORITHMS.contains(name)) {
+            if (!name.equals(loggedUnsupportedAlgorithm)) {
+                loggedUnsupportedAlgorithm = name;
+                log.warn("{} is {}, which is neither {}: outgoing SECOM signatures use {}", SIGNATURE_ALGORITHM.getKey(),
+                        name, String.join(" nor ", new TreeSet<>(SIGNATURE_ALGORITHMS)), defaultName);
+            }
+            return DigitalSignatureAlgorithmEnum.valueOf(defaultName);
+        }
+        return DigitalSignatureAlgorithmEnum.valueOf(name);
     }
 
     /**
@@ -126,19 +154,20 @@ public class SecomConfiguration {
      * deployment property, not a runtime setting: it describes what sits in front of the app
      * (a TLS-terminating proxy that verifies the client certificate and sets the header, and
      * nothing else reaching the app). Off by default since SECOM Edition 2 - see
-     * {@link MrnCertificateFilter}.
+     * {@link MrnCertificateFilter}. The filter reads {@link #VALIDATE_CLIENT_CHAIN} and
+     * {@link #REVOCATION_CHECK} at each request.
      */
     @Bean
     public MrnCertificateFilter mrnCertificateFilter(McpSecurityService pki, SecomSubscriptionService subscriptionService,
                                                      SettingsService settingsService,
                                                      @Value("${niord.secom.trust-cert-header:false}") boolean trustCertHeader) {
         return new MrnCertificateFilter(pki, subscriptionService, trustCertHeader,
-                booleanSetting(settingsService, VALIDATE_CLIENT_CHAIN),
-                booleanSetting(settingsService, REVOCATION_CHECK));
+                () -> booleanSetting(settingsService, VALIDATE_CLIENT_CHAIN),
+                () -> booleanSetting(settingsService, REVOCATION_CHECK));
     }
 
     /**
-     * Resolves a Boolean setting for the primitive filter parameters, honoring system-property/env
+     * Resolves a Boolean setting for the primitive filter and client checks, honoring system-property/env
      * overrides - which {@link SettingsService#get} surfaces as raw strings - read as
      * {@link SettingsService#getBoolean} reads them ({@link SettingsService#toBoolean}: the
      * true-ish and false-ish tokens). A value that is neither (missing, blank, a typo) is null

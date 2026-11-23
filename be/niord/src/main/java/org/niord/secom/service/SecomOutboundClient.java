@@ -33,6 +33,7 @@ import org.grad.secomv2.core.models.ServiceInstanceObject;
 import org.grad.secomv2.core.models.SubscriptionNotificationObject;
 import org.grad.secomv2.core.models.UploadObject;
 import org.niord.core.integration.NiordIntegrationUrlValidator;
+import org.niord.core.settings.SettingChangedEvent;
 import org.niord.core.settings.SettingsService;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.secom.SecomConfiguration;
@@ -42,6 +43,7 @@ import org.niord.secom.pki.NiordSecomProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import static org.niord.core.settings.Setting.Type;
@@ -113,6 +115,9 @@ public class SecomOutboundClient {
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+    /** The setting naming the service registry, {@link #serviceRegistryUrl} */
+    static final String REGISTRY_URL = "secomServiceRegistryUrl";
+
     @Setting(value = "secomServiceRegistryUrl", defaultValue = "",
             description = "URL of the SECOM service registry used to resolve peer endpoints.")
     volatile String serviceRegistryUrl;
@@ -132,16 +137,16 @@ public class SecomOutboundClient {
     private final Map<String, CachedEndpoint> endpointCache = new ConcurrentHashMap<>();
 
     /**
-     * Whether outbound server certificates are revocation-checked - the same knob as the
-     * inbound {@code MrnCertificateFilter}, consumed once at bean creation (restart to apply)
+     * Reads whether outbound server certificates are revocation-checked - the same knob as the
+     * inbound {@code MrnCertificateFilter} - at each https exchange, so a save applies to the next delivery
      */
-    private final boolean revocationCheck;
+    private final SettingsService settingsService;
 
     public SecomOutboundClient(McpSecurityService pki, NiordSecomProviders providers, SettingsService settingsService) {
         this.pki = pki;
         this.certificateProvider = providers;
         this.signatureProvider = providers;
-        this.revocationCheck = SecomConfiguration.booleanSetting(settingsService, SecomConfiguration.REVOCATION_CHECK);
+        this.settingsService = settingsService;
     }
 
     /***************************************/
@@ -200,6 +205,19 @@ public class SecomOutboundClient {
     /** Drops the cached endpoint resolution of the given MRN (used when deliveries fail) */
     public void evictEndpoint(String mrn) {
         endpointCache.remove(mrn);
+    }
+
+    /**
+     * A save of the registry URL drops the endpoints resolved before, on every node, so the next delivery asks the
+     * registry now named instead of using the old registry's answer for the rest of {@link #REGISTRY_CACHE_TTL}
+     *
+     * @param event the setting whose field a save, here or on another node, changed
+     */
+    @EventListener
+    void settingChanged(SettingChangedEvent event) {
+        if (REGISTRY_URL.equals(event.key())) {
+            endpointCache.clear();
+        }
     }
 
     /***************************************/
@@ -344,6 +362,11 @@ public class SecomOutboundClient {
         }
     }
 
+    /** {@return whether the server certificate of an https exchange is checked for revocation, as now saved} */
+    private boolean revocationCheck() {
+        return SecomConfiguration.booleanSetting(settingsService, SecomConfiguration.REVOCATION_CHECK);
+    }
+
     /**
      * Sends one POST on a fresh client and waits for the complete response for at most
      * {@link #requestTimeout}. When the deadline passes, the exchange is cancelled and the
@@ -354,7 +377,7 @@ public class SecomOutboundClient {
         String json = mapper.writeValueAsString(body);
         // By the scheme, case-insensitively: an "HTTPS:" URL must get the MCP client too
         HttpClient client = "https".equalsIgnoreCase(url.getScheme())
-                ? pki.newHttpClient(trustAll, revocationCheck)
+                ? pki.newHttpClient(trustAll, revocationCheck())
                 : HttpClient.newBuilder().build();
         try {
             HttpRequest request = HttpRequest.newBuilder()
