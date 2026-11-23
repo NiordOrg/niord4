@@ -40,7 +40,8 @@ import java.util.function.Predicate;
  * and once per poll.
  * <ul>
  *     <li>On the node that saves: {@link SettingsService#set} calls {@link #refreshSaved} once the save has committed,
- *     which refreshes the fields of the saved key.</li>
+ *     which refreshes every field, as the poll does: a value may name the saved key by a {@code ${...}} token, and only
+ *     the fields whose setting's value changed are set.</li>
  *     <li>On every other node: {@code set} also adds one to the {@code state} setting {@link #CHANGE_COUNT} in the
  *     save's transaction. {@link #pollForChanges} reads that one row about every 30 seconds, off every request; when
  *     it has changed, the node empties its settings cache (so a key read by name follows too, not only after the
@@ -124,8 +125,11 @@ public class SettingsRefresher {
     }
 
     /**
-     * Refreshes the fields of a key saved on this node, after the save has committed, outside the save's transaction:
-     * each read has its own, as in {@link #pollForChanges}. When this node had followed every save before this one, it
+     * Refreshes every field after a key was saved on this node, once the save has committed, outside the save's
+     * transaction: each read has its own, as in {@link #pollForChanges}, and most come from the settings cache. Every
+     * field, not only the saved key's: another setting's value may name the saved key by a {@code ${...}} token, and
+     * the other nodes' poll refreshes every field too. A field of another key that changes is published as found by
+     * the poll. When this node had followed every save before this one, it
      * counts this save as followed, so its next poll refreshes nothing; otherwise the poll still catches the other
      * node's save. A field whose setting could not be read is read again by the next poll.
      *
@@ -140,7 +144,8 @@ public class SettingsRefresher {
                 seen = countAfter;
             }
         }
-        refreshAndPublish(key::equals, key);
+        // Every field, as the poll refreshes them: a value may name the saved key by a ${...} token
+        refreshAndPublish(k -> true, key);
     }
 
     /**

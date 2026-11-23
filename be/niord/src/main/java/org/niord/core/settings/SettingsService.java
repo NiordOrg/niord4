@@ -884,7 +884,7 @@ public class SettingsService extends BaseService {
      * value the code that reads the setting cannot use ({@link #valueRefusal}).
      *
      * <p>A saved setting takes effect at once. The save adds one to {@link SettingsRefresher#CHANGE_COUNT}, which the
-     * other nodes poll, and once it has committed the {@code @Setting} fields of the key on this node take the new
+     * other nodes poll, and once it has committed the {@code @Setting} fields on this node take the new
      * value ({@link SettingsRefresher#refreshSaved}).
      *
      * @param template the setting to update

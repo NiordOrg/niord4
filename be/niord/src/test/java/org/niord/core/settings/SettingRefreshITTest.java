@@ -192,6 +192,31 @@ class SettingRefreshITTest extends ITTest {
     }
 
     /**
+     * A value may name another setting by a {@code ${...}} token. A save of that other setting reaches the field on
+     * the saving node too, as the other nodes' poll does, which refreshes every field. FAILS when the save refreshes
+     * only the saved key's fields: the saving node keeps the old expansion until it restarts, while the other nodes
+     * have the new one.
+     */
+    @Test
+    void aSaveReachesAFieldWhoseValueNamesTheSavedKey() {
+        String named = "documentationUrl";
+        Object original = rowValue(SENDER);
+        Object namedOriginal = rowValue(named);
+        try {
+            settingsService.set(SENDER, "it-${" + named + "}");
+            assertEquals("it-" + namedOriginal, senderField(), "precondition: the token is expanded");
+
+            settingsService.set(named, "http://it-named-" + System.nanoTime());
+
+            assertEquals("it-" + rowValue(named), senderField(), "the field follows the setting its value names");
+        } finally {
+            settingsService.set(named, namedOriginal);
+            settingsService.set(SENDER, original);
+        }
+        assertEquals(original, senderField());
+    }
+
+    /**
      * A row the code cannot read, here text in an Integer row as SQL or a restore can leave it, keeps its field's
      * value with a warning; the poll still refreshes the other fields and ends without an error. FAILS when the
      * poll's reads share one transaction: the failed read marks it for rollback, and the poll ends with an
