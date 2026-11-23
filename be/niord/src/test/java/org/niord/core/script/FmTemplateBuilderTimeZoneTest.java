@@ -67,12 +67,16 @@ class FmTemplateBuilderTimeZoneTest {
     private Map<String, ScriptResource> rows;
     private FmTemplateService templateService;
 
-    /** The dictionary: the date texts the message templates use, and the key itself for the rest */
+    /** The dictionary: the date texts and the list's own words the message templates use, and the key itself for the rest */
     private static class Texts extends ResourceBundle {
         private static final Map<String, String> TEXTS = Map.of(
                 "msg.field.published", "Published",
                 "msg.time.date_format", "d MMMM yyyy",
-                "msg.time.date_time_format", "d MMMM yyyy, 'hours' HH:mm");
+                "msg.time.date_time_format", "d MMMM yyyy, 'hours' HH:mm",
+                "pdf.list.generated", "Generated",
+                "pdf.list.criteria", "Criteria",
+                "pdf.list.result", "Result",
+                "pdf.list.result_count", "{0} messages");
 
         @Override
         protected Object handleGetObject(String key) {
