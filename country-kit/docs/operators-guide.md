@@ -397,8 +397,11 @@ maintainers how your deployment gets its AtoN records.
 pencil changes a value, and only the value. There is no reset and no delete. Only the keys the code
 declares are listed: a row of an earlier version that no code declares stays in the database,
 unlisted. A password value is never shown. **Import...** and **Export...** take a settings file.
+A saved value takes effect at once, without a restart. The folders (`batchJobRootPath`,
+`messageIndexPath`, `publicationPreviewRootPath`), `vipsPath` and Keycloak's address
+(`authServerUrl`) are not listed: the deployment sets them at the server's start (below).
 
-Check at least the addresses (`baseUri`, `adminAppUrl`, `authServerUrl`), the mail sender
+Check at least the addresses (`baseUri`, `adminAppUrl`), the mail sender
 (`mailSender`), who mail really goes to (`mailValidRecipients`: `LOG`, the shipped value, only logs a
 mail and marks it Held in the Mail Queue, from where a sysadmin can send it again once the setting is
 open; `ALL` sends it to its recipients, and a list of addresses sends it only to those, any other
