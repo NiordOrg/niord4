@@ -84,6 +84,9 @@ public class MessagePostgresIndex extends BaseService {
 
     static final int POSTGRES_MAX_INDEX_COUNT = 5000;
 
+    /** The messages a pass of {@link #recreateIndex()} indexes at most; package-private so a test can make it small */
+    int rebuildPassSize = POSTGRES_MAX_INDEX_COUNT;
+
     /** The search table, which no entity maps */
     static final String SEARCH_TABLE = "message_search_text";
 
@@ -233,7 +236,9 @@ public class MessagePostgresIndex extends BaseService {
      * Rebuilds the entire PostgreSQL search table and returns the number of indexed messages.
      * Unlike the scheduled maintainer this is unconditional, so it can prime the table right after the
      * backend is enabled (and is the entry point the integration tests drive). One transaction: until it commits, a
-     * search reads the table as it was.
+     * search reads the table as it was. Inside it the messages are indexed in passes of {@link #rebuildPassSize}, and
+     * the messages a pass read are let go before the next, so the memory a rebuild takes does not grow with the number
+     * of messages; each pass goes on from the rows the one before wrote.
      */
     @Transactional
     public int recreateIndex() {
@@ -241,7 +246,16 @@ public class MessagePostgresIndex extends BaseService {
         try {
             searchTableStatement("delete from message_search_text").executeUpdate();
             startFill();
-            return updateIndex(Integer.MAX_VALUE);
+            int total = 0;
+            int indexed;
+            do {
+                indexed = updateIndex(rebuildPassSize);
+                total += indexed;
+                // The passes write by native statements only; a caller's pending change is written before it is let go
+                em.flush();
+                em.clear();
+            } while (indexed >= rebuildPassSize);
+            return total;
         } finally {
             lock.unlock();
         }
