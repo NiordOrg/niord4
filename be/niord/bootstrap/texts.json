@@ -2029,6 +2029,15 @@
         ]
       },
       {
+        "key": "pdf.edition",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Version {0}"
+          }
+        ]
+      },
+      {
         "key": "pdf.fa",
         "descs": [
           {
@@ -2056,11 +2065,47 @@
         ]
       },
       {
+        "key": "pdf.list.criteria",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Criteria"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.generated",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Generated"
+          }
+        ]
+      },
+      {
         "key": "pdf.list.index_incomplete",
         "descs": [
           {
             "lang": "en",
             "value": "The search index is being rebuilt, for example after a restart of the server. Until it is complete, messages may be missing from this result."
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.result",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Result"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.result_count",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "{0} messages"
           }
         ]
       },

@@ -185,7 +185,8 @@
              is routinely rendered again years later, and a printing date would be
              the only part of the document that was not about its own year. -->
         <td width="25%" align="left">
-            <#if edition?? && edition != '1'>Version ${edition}</#if>
+            <#-- The edition's label is the text pdf.edition; a deployment without it prints the English word -->
+            <#if edition?? && edition != '1'><#attempt>${text('pdf.edition', edition)}<#recover>Version ${edition}</#attempt></#if>
         </td>
         <td width="25%" align="center">ISSN ${ISSN!""}</td>
         <td width="25%" align="center">
