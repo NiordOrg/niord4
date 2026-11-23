@@ -2125,3 +2125,27 @@ they say otherwise; every other path is from the repository root.
 - **Severity:** Low (a sysadmin rarely edits it; the deployments set it by `NIORD_HOME`, which wins). Fix, for the
   owner to decide: make it deployment configuration too (`editable(false)`, not listed, not saved), as the five
   folder and address keys are.
+
+## DICT9. Five backend default texts carry other placeholders than the administration app passes, so an edit that keeps them never shows
+
+- **Location:** `be/niord/src/main/resources/defaults/base/texts/en/web.properties` 62, 86, 98 and 107 and
+  `message.properties` 23, against the admin app's compiled `fe/languages/en/i18n/admin/en.json`:
+  `menu.action.tag.add_named` (`Add to "{{tag}}"`; the app passes `{{name}}`), `msg.list.load_more`
+  (`{{fromMessageNo}}`, `{{toMessageNo}}`, `{{totalMessageNo}}`; the app passes `{{from}}`, `{{to}}`, `{{total}}`),
+  `editor.section.message_part` (`{{part}}`; the app passes `{{n}}`), `editor.status.publish` (no placeholder; the
+  app passes `{{date}}`) and `msg.field.published` (no placeholder; the app passes `{{date}}`). The refusal is
+  `fe/ui-apps/admin/src/app/core/i18n/merge-dictionary-overrides.ts` 52-81, called from `transloco-loader.ts`.
+- **Description:** the admin app takes a Dictionary value of the `web` or `message` dictionary over its own text
+  only when both hold the same `{{…}}` placeholders. For these five keys the backend's default holds others, so the
+  default never shows (the app also skips a row unchanged since start-up added it), and an operator's rewording that
+  keeps the default's placeholders is refused without a word: the app shows its own text, and only a dev-mode
+  console warning names the key. A rewording that uses the app's placeholders does show.
+- **Why it looks wrong:** the Dictionary page offers a text to edit whose edit, made the obvious way, changes
+  nothing on screen.
+- **Exposed by:** a comparison of every backend `web` and `message` default with the admin bundle, made while the
+  default of `menu.action.tag.remove_named` (the same fault) was corrected, 2026-11-23. Read in the code; not
+  reproduced in a running app.
+- **Severity:** Low. Fix, per key: give the backend default the app's placeholders, as for `remove_named`, with
+  the stand-in test pack and `texts.json` following and a release folder for the changed text. Not for
+  `msg.field.published` as it is: the bootstrap's `messages/message-support.ftl` (289) reads it without a
+  parameter and puts the date after it, so it needs the template changed with it or a key of its own for the app.

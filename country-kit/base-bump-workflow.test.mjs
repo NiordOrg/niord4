@@ -457,6 +457,7 @@ describe("base-bump.yml: the template's shape", () => {
       record: 'Make the set-up record of the old version',
       setup: 'Set up the new version',
       releases: 'List the new release folders',
+      shadows: 'List the shadowed templates',
       comment: 'Build the comment',
       handover: 'Hand over the files',
     });
@@ -1367,6 +1368,123 @@ describe('base-bump.yml: List the new release folders', () => {
   });
 });
 
+describe('base-bump.yml: List the shadowed templates', () => {
+  // The two bootstraps' templates/, as their zips hold them below the archive root.
+  const ZIPS = {
+    [OLD]: {
+      'messages/a.ftl': 'a of 4.0.97\n',
+      'messages/b.ftl': 'b\n',
+      'messages/gone.ftl': 'gone\n',
+      'tmpl/same.ftl': 'same\n',
+      'tmpl/unheld.ftl': 'unheld of 4.0.97\n',
+    },
+    [NEW]: {
+      'messages/a.ftl': 'a of 4.0.110\n',
+      'messages/b.ftl': 'b\n',
+      'messages/new.ftl': 'new\n',
+      'tmpl/same.ftl': 'same\n',
+      'tmpl/unheld.ftl': 'unheld of 4.0.110\n',
+    },
+  };
+  // The country's be/bootstrap/templates/: copies, language variants, and files of its own.
+  const OWN = [
+    'mailinglist/own.ftl',
+    'messages/a.ftl',
+    'messages/a_kl.ftl',
+    'messages/a_kal.ftl',
+    'messages/a_kl.js',
+    'messages/b.ftl',
+    'messages/b_da.ftl',
+    'messages/gone.ftl',
+    'messages/new.ftl',
+    'tmpl/same_da.ftl',
+  ];
+  // unzip, faked: unpacks zips/<version>/ into the folder -d names, or exits FAIL for a version
+  // FAILING names.
+  const UNZIP = {
+    match: '-q -o */niord-bootstrap-*.zip -d *',
+    script: [
+      '    version="$(basename "$3" .zip)"; version="${version#niord-bootstrap-}"',
+      '    case " $FAILING " in *" $version "*) exit 9 ;; esac',
+      '    cp -R "zips/$version/." "$5/"',
+    ].join('\n'),
+  };
+  const shadows = ({ bootstrap = 'both', own = OWN, failing = '' } = {}) => {
+    const files = {};
+    for (const [version, templates] of Object.entries(ZIPS)) {
+      // A file beside templates/, which the country's path never meets.
+      files[`zips/${version}/categories.json`] = `[] of ${version}\n`;
+      for (const [name, text] of Object.entries(templates))
+        files[`zips/${version}/templates/${name}`] = text;
+    }
+    for (const name of own) files[`be/bootstrap/templates/${name}`] = `${name} of the country\n`;
+    return runListing(
+      'shadows',
+      files,
+      runOf('compute', 'List the shadowed templates'),
+      'shadowed.txt',
+      { env: { OLD, NEW, BOOTSTRAP: bootstrap, FAILING: failing }, fakes: { unzip: [UNZIP] } },
+    );
+  };
+  const rows = (list) =>
+    list
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => line.split('\t'));
+
+  it("lists each of the country's templates whose base product file changed, its language variants included", () => {
+    const result = shadows();
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.deepEqual(rows(result.list), [
+      ['messages/a.ftl', 'messages/a.ftl', 'changed'],
+      ['messages/a_kl.ftl', 'messages/a.ftl', 'changed'],
+      ['messages/gone.ftl', 'messages/gone.ftl', 'removed'],
+      ['messages/new.ftl', 'messages/new.ftl', 'added'],
+    ]);
+    assert.deepEqual(result.outputs, { shadows: 'listed' });
+    assert.equal(result.calls.length, 2);
+  });
+
+  it("lists every pair NEW holds, not compared, when OLD's zip could not be fetched", () => {
+    const result = shadows({ bootstrap: 'no-old' });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.deepEqual(rows(result.list), [
+      ['messages/a.ftl', 'messages/a.ftl', 'not-compared'],
+      ['messages/a_kl.ftl', 'messages/a.ftl', 'not-compared'],
+      ['messages/b.ftl', 'messages/b.ftl', 'not-compared'],
+      ['messages/b_da.ftl', 'messages/b.ftl', 'not-compared'],
+      ['messages/new.ftl', 'messages/new.ftl', 'not-compared'],
+      ['tmpl/same_da.ftl', 'tmpl/same.ftl', 'not-compared'],
+    ]);
+    assert.deepEqual(result.outputs, { shadows: 'listed' });
+    assert.equal(result.calls.length, 1);
+  });
+
+  it("asks for a comparison by hand when NEW's zip is not at hand or a zip cannot be unpacked", () => {
+    for (const [options, calls] of [
+      [{ bootstrap: 'no-new' }, 0],
+      [{ failing: OLD }, 2],
+      [{ failing: NEW, bootstrap: 'no-old' }, 1],
+    ]) {
+      const result = shadows(options);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.equal(result.list, '');
+      assert.deepEqual(result.outputs, { shadows: 'by-hand' });
+      assert.equal(result.calls.length, calls, JSON.stringify(options));
+      if (calls)
+        assert.match(result.stdout, /::warning::The bootstrap's templates could not be compared/);
+    }
+  });
+
+  it('lists nothing and unpacks nothing when the country holds no template', () => {
+    const result = shadows({ own: [] });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.list, '');
+    assert.deepEqual(result.outputs, { shadows: 'none' });
+    assert.deepEqual(result.calls, []);
+  });
+});
+
 describe('base-bump.yml: Build the comment', () => {
   // The report data's keys in the order upgrade-report.test.mjs's DATA_KEYS freezes: the contract
   // this workflow reads.
@@ -1432,6 +1550,7 @@ describe('base-bump.yml: Build the comment', () => {
     md = MD,
     drift = [],
     releases = [],
+    shadowed,
     env = {},
     earlier,
     comments = { out: earlier === undefined ? '' : '555\n' },
@@ -1450,6 +1569,8 @@ describe('base-bump.yml: Build the comment', () => {
       }
       files['temp/work/drift.txt'] = drift.map((line) => `${line}\n`).join('');
       files['temp/work/releases.txt'] = releases.map((line) => `${line}\n`).join('');
+      if (shadowed !== undefined)
+        files['temp/work/shadowed.txt'] = shadowed.map((row) => `${row.join('\t')}\n`).join('');
       if (baseLock !== undefined) files['temp/work/base-lock.json'] = baseLock;
       if (lock !== undefined) files['fe/niord-pins.lock.json'] = lock;
       write(dir, files);
@@ -1725,6 +1846,60 @@ describe('base-bump.yml: Build the comment', () => {
     );
     assert.ok(note > result.comment.indexOf('`releases/2026-10-30-harbours/`'));
     assert.ok(note < result.comment.indexOf('\nTick each box'));
+  });
+
+  it('asks for each template the country replaces whose base product file changed, after the release folders', () => {
+    const result = build({
+      report: data(),
+      releases: ['2026-10-30-harbours'],
+      shadowed: [
+        ['messages/a.ftl', 'messages/a.ftl', 'changed'],
+        ['messages/a_kl.ftl', 'messages/a.ftl', 'changed'],
+        ['messages/gone.ftl', 'messages/gone.ftl', 'removed'],
+        ['messages/new.ftl', 'messages/new.ftl', 'added'],
+        ['messages/x_da.ftl', 'messages/x.ftl', 'removed'],
+      ],
+      env: { SHADOWS: 'listed' },
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const tail =
+      "so no change of the base product's reaches it; carry any change into your file and ship it in a release folder of your own.";
+    assert.deepEqual(boxesOf(result.comment), [
+      '- [ ] Decide on `releases/2026-10-30-harbours/`, new in the bootstrap of 4.0.110: whether your bootstrap and each deployment take it (a sysadmin imports it).',
+      `- [ ] Compare \`be/bootstrap/templates/messages/a.ftl\` with \`templates/messages/a.ftl\` of the bootstrap of 4.0.110: the base product changed it since 4.0.97, and your copy replaces it, ${tail}`,
+      `- [ ] Compare \`be/bootstrap/templates/messages/a_kl.ftl\` with \`templates/messages/a.ftl\` of the bootstrap of 4.0.110: the base product changed it since 4.0.97, and your language variant replaces it in its language, ${tail}`,
+      '- [ ] Look at `be/bootstrap/templates/messages/gone.ftl`: the bootstrap of 4.0.110 no longer has `templates/messages/gone.ftl`, which it replaced, so it is now a template of your own.',
+      `- [ ] Compare \`be/bootstrap/templates/messages/new.ftl\` with \`templates/messages/new.ftl\` of the bootstrap of 4.0.110: the base product added it since 4.0.97, and your copy replaces it, ${tail}`,
+      '- [ ] Look at `be/bootstrap/templates/messages/x_da.ftl`: the bootstrap of 4.0.110 no longer has `templates/messages/x.ftl`, which it is a language variant of, so it is now a template of your own.',
+    ]);
+    assert.equal(result.outputs.unticked, '6');
+  });
+
+  it('says a template it could not compare is not known to have changed, and asks for a comparison by hand when none could be made', () => {
+    const notCompared = build({
+      report: data(),
+      shadowed: [['tmpl/wreck.ftl', 'tmpl/wreck.ftl', 'not-compared']],
+      env: { SHADOWS: 'listed', BOOTSTRAP: 'no-old' },
+    });
+    assert.equal(notCompared.status, 0, notCompared.stdout + notCompared.stderr);
+    assert.deepEqual(boxesOf(notCompared.comment), [
+      "- [ ] Compare `be/bootstrap/templates/tmpl/wreck.ftl` with `templates/tmpl/wreck.ftl` of the bootstrap of 4.0.110: the bootstrap of 4.0.97 could not be fetched, so whether it changed is not known, and your copy replaces it, so no change of the base product's reaches it; carry any change into your file and ship it in a release folder of your own.",
+    ]);
+    const byHand = build({ report: data(), env: { SHADOWS: 'by-hand', BOOTSTRAP: 'no-new' } });
+    assert.equal(byHand.status, 0, byHand.stdout + byHand.stderr);
+    assert.deepEqual(boxesOf(byHand.comment), [
+      "- [ ] Compare the `releases/` folders of the bootstrap of 4.0.110 with 4.0.97's by hand: its zip could not be fetched here.",
+      "- [ ] Compare each file of `be/bootstrap/templates/` with the bootstrap of 4.0.110 by hand, the same path and the template a language variant (`x_<ll>.ftl`) is of: the two bootstraps' templates could not be compared here.",
+    ]);
+  });
+
+  it('asks nothing about the bootstrap templates when the country replaces none that changed', () => {
+    for (const env of [{ SHADOWS: 'none' }, { SHADOWS: 'listed' }]) {
+      const result = build({ report: data(), shadowed: [], env });
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.deepEqual(boxesOf(result.comment), []);
+      assert.doesNotMatch(result.comment, /be\/bootstrap\/templates/);
+    }
   });
 
   it('says a pack the base branch did not pin moved from no pin', () => {

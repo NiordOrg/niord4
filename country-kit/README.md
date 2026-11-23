@@ -284,7 +284,8 @@ three jobs:
   base branch (when that fails, set-up runs with `--previous` and the report compares by version),
   writes the lock, runs set-up, copies a changed stub and the launcher, moves every pinned pack to
   its home's newest pack (`node setup.mjs --update-pins`), compares the workflow files with the
-  kit's, lists the bootstrap's new release folders and builds the comment.
+  kit's, lists the bootstrap's new release folders and the country's bootstrap templates whose base
+  product template changed, and builds the comment.
 - `apply`, with the write token and no code of the kit, verifies the artifact `base-bump` by the
   SHA-256 `compute` gave, commits the lock, `fe/setup.mjs` and `start-local.sh` as
   `github-actions[bot]` and pushes them, sets the status pending, cancels the branch's CI runs and
@@ -319,7 +320,14 @@ end names by its hash, so a template changed again at a later version is asked a
 each action of a new `API-CHANGES.md` section, each template the report names as changed, to copy
 or merge, a workflow file that differs from the kit's (`pack.yml`, `base-bump.yml`), and each new
 bootstrap release folder `releases/<yyyy-mm-dd>-<topic>/` to decide on: a sysadmin imports it, the
-workflow never does. Every other template the kit changed since `<old>` (`CODEOWNERS`,
+workflow never does; and each file of the country's `be/bootstrap/templates/` that replaces a base
+product template whose file differs between the two versions' bootstrap zips (changed, added or
+removed), to compare with the new one: a file at the template's own path, which replaces it whole
+in the bootstrap run, or a language variant of it, `x_<ll>.ftl` beside the base product's `x.ftl`,
+which replaces it in its language. A base product correction reaches neither, so without the item a
+stale copy would be found only by comparing databases. Without the old version's zip each such file
+the new one holds is named, not compared; without the new version's, one item asks for the
+comparison by hand. Every other template the kit changed since `<old>` (`CODEOWNERS`,
 `dependabot.yml`, the `be/` files `init` writes, a template added or removed) is named in one line
 above `## Human actions`, with no box: it asks nothing, and a country that keeps its own copy of one
 compares it. Green means no task: review, merge, deploy. The status `niord/upgrade-actions`

@@ -14,7 +14,9 @@
 <#assign posDecimals = (params.posDecimals!'1')?number> <#-- 1 decimals in position formatting -->
 
 <#-- ***************************************  -->
-<#-- Returns the desc for the given language  -->
+<#-- Returns the desc for the given language,
+     else the deployment's default language's,
+     else the first one                       -->
 <#-- ***************************************  -->
 <#function descForLang entity lang >
     <#if entity.descs?has_content>
@@ -25,6 +27,13 @@
         </#list>
     </#if>
     <#if entity.descs?has_content>
+        <#if defaultLanguage??>
+            <#list entity.descs as desc>
+                <#if desc.lang?? && desc.lang == defaultLanguage>
+                    <#return desc />
+                </#if>
+            </#list>
+        </#if>
         <#return entity.descs[0] />
     </#if>
 </#function>

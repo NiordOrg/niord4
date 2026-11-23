@@ -1847,7 +1847,7 @@ INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_i
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (148, 'en', NULL, 'Include reference to copied message', 148);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (149, 'en', NULL, 'Domain', 149);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (150, 'en', NULL, 'Sort area...', 150);
-INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (151, 'en', NULL, 'Remove from "{{tag}}"', 151);
+INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (151, 'en', NULL, 'Remove from...', 151);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (152, 'en', NULL, 'Show time', 152);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (153, 'en', NULL, 'AtoN', 153);
 INSERT INTO public."DictionaryEntryDesc" (id, lang, "longValue", value, entity_id) VALUES (154, 'en', NULL, 'Select Template', 154);
@@ -4528,7 +4528,9 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 
 
 <#-- ***************************************  -->
-<#-- Returns the desc for the given language  -->
+<#-- Returns the desc for the given language,
+     else the deployment''s default language''s,
+     else the first one                       -->
 <#-- ***************************************  -->
 <#function descForLang entity lang=language >
     <#if entity.descs?has_content>
@@ -4539,6 +4541,13 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
         </#list>
     </#if>
     <#if entity.descs?has_content>
+        <#if defaultLanguage??>
+            <#list entity.descs as desc>
+                <#if desc.lang?? && desc.lang == defaultLanguage>
+                    <#return desc />
+                </#if>
+            </#list>
+        </#if>
         <#return entity.descs[0] />
     </#if>
 </#function>
@@ -5820,7 +5829,9 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
 <#assign posDecimals = (params.posDecimals!''1'')?number> <#-- 1 decimals in position formatting -->
 
 <#-- ***************************************  -->
-<#-- Returns the desc for the given language  -->
+<#-- Returns the desc for the given language,
+     else the deployment''s default language''s,
+     else the first one                       -->
 <#-- ***************************************  -->
 <#function descForLang entity lang >
     <#if entity.descs?has_content>
@@ -5831,6 +5842,13 @@ INSERT INTO public."ScriptResource" (id, created, updated, version, content, pat
         </#list>
     </#if>
     <#if entity.descs?has_content>
+        <#if defaultLanguage??>
+            <#list entity.descs as desc>
+                <#if desc.lang?? && desc.lang == defaultLanguage>
+                    <#return desc />
+                </#if>
+            </#list>
+        </#if>
         <#return entity.descs[0] />
     </#if>
 </#function>
