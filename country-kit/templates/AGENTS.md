@@ -202,7 +202,10 @@ Your part:
 3. Do each `## Human actions` item in full, and tick its box: each new section's "What a country
    must do" of `.niord/kit/API-CHANGES.md` (set-up checks none of them), the merge of
    `.niord/kit/templates/AGENTS.md` into this file, each new bootstrap release folder for a person
-   to decide on. A box is ticked, never deleted, and never ticked for work not done.
+   to decide on, and each file of `be/bootstrap/templates/` that replaces a base product template the
+   new version changed (a copy at the template's own path, or a language variant `x_<ll>.ftl` of its
+   `x.ftl`): compare it with the new base template, carry the change into your file, and ship it in a
+   release folder of your own. A box is ticked, never deleted, and never ticked for work not done.
 4. A workflow file item (`pack.yml`, `base-bump.yml`, `image.yml`) is a copy or merge by hand: the
    workflow's token cannot push a workflow file.
 5. A newer release moves this pull request and posts the comment again: a box keeps its tick while

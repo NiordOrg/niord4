@@ -190,8 +190,11 @@ flowchart TD
    (`init` keeps an existing `AGENTS.md`, so nothing else brings the template's changes to an AI
    agent); a workflow file to copy or merge by hand (`pack.yml`, `base-bump.yml`, `image.yml`: the
    workflow's token may not push one); each new bootstrap folder `releases/<yyyy-mm-dd>-<topic>/` to
-   decide on (a sysadmin imports it; nothing arrives by itself). Do each in full, then tick its box;
-   never delete one. Each tick recounts, and the status turns green when no box is left unticked.
+   decide on (a sysadmin imports it; nothing arrives by itself); each template of your
+   `be/bootstrap/templates/` that replaces a base product template the new version changed, your
+   copy at its path or a language variant `x_<ll>.ftl` of it, to compare with the new one and carry
+   the change into (the base product's change never reaches your file). Do each in full, then tick
+   its box; never delete one. Each tick recounts, and the status turns green when no box is left unticked.
    Set-up checks none of the API-CHANGES.md actions, so a green set-up does not mean they are done:
    open each new section and do its "What a country must do" in full, whether the report lists it
    under To do, under To look at, or not at all. When one touches the backend, read the new
