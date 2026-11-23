@@ -255,6 +255,22 @@ class BatchSettingsImportProcessorITTest extends ITTest {
                 processor.lines::toString);
     }
 
+    /**
+     * Deployment configuration, which an export made while it was still on the Settings page holds, is skipped with a
+     * line rather than failing the import, even where the row says editable
+     */
+    @Test
+    @Transactional
+    void deploymentConfigurationIsSkipped() throws Exception {
+        em.find(Setting.class, "authServerUrl").setEditable(true);
+        TestableProcessor processor = freshProcessor();
+
+        assertNull(processor.processItem(new Setting("authServerUrl", "https://elsewhere.example.org/auth")));
+
+        assertTrue(processor.lines.contains("Skipped authServerUrl: deployment configuration, which the deployment sets"),
+                processor.lines::toString);
+    }
+
     @Test
     @Transactional
     void aCatalogKeyWithoutARowIsSkippedAndNoRowIsCreated() throws Exception {

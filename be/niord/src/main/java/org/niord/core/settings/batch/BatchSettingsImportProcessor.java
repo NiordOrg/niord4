@@ -28,8 +28,10 @@ import java.util.Objects;
 
 /**
  * Filters the imported settings down to those whose value changes (docs/code-data-config-plan.md §5.3). The import
- * never creates a row: a key no catalog declares, a {@code state} key, a key this deployment has no row for and a
- * value that does not fit the row's type (else the catalog's) are skipped, each with a line in the job's log. The
+ * never creates a row: a key no catalog declares, a {@code state} key, a key the catalog does not make editable
+ * (deployment configuration, which an export made before it left the Settings page still holds), a key this
+ * deployment has no row for and a value that does not fit the row's type (else the catalog's) are skipped, each with
+ * a line in the job's log. The
  * row's stored value is compared with the item's, not the value a read would expand.
  */
 @Component
@@ -54,6 +56,10 @@ public class BatchSettingsImportProcessor extends AbstractItemHandler {
         }
         if (entry.scope() == Setting.Scope.state) {
             getLog().info("Skipped " + key + ": a state setting, which only the system writes");
+            return null;
+        }
+        if (!entry.editable()) {
+            getLog().info("Skipped " + key + ": deployment configuration, which the deployment sets");
             return null;
         }
         Setting original = settingsService.getSetting(key);
