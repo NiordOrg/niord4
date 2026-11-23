@@ -25,7 +25,9 @@ import org.niord.core.cache.BaseCache;
 import org.niord.core.cache.CacheElement;
 
 /**
- * Implements the settings cache with a default timeout of 1 minute.
+ * Implements the settings cache, local to the node, with a lifespan of 3 minutes. A save empties its key on the node
+ * that saves ({@link SettingsService#set}), and every other node empties the whole cache at its next poll of the change
+ * count ({@link SettingsRefresher#pollForChanges}), about every 30 seconds.
  *
  * NB: We cannot cache null, so use a CacheElement value wrapper.
  */

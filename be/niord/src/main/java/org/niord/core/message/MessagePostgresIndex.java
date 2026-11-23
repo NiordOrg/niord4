@@ -99,8 +99,8 @@ public class MessagePostgresIndex extends BaseService {
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessagePostgresIndex.class);
 
     @Setting(value = "messageIndexIncludeDeletedMessages", defaultValue = "false", type = Boolean,
-            description = "Whether the message index should include deleted messages or not. Read at start-up.")
-    Boolean includeDeletedMessages;
+            description = "Whether the message index should include deleted messages or not.")
+    volatile Boolean includeDeletedMessages;
 
     @Inject
     MessageQueryService messageQueryService;

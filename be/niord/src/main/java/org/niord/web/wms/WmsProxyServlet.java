@@ -39,7 +39,6 @@ import javax.imageio.stream.ImageOutputStream;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.niord.core.settings.SettingsService;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.core.util.WebUtils;
 import org.slf4j.Logger;
@@ -93,8 +92,8 @@ public class WmsProxyServlet extends HttpServlet {
     /** The bytes of {@link #BLANK_IMAGE}, read once; declared after the logger, which reading it may use */
     static final byte[] BLANK_PNG = readBlankImage();
 
-        @Setting(value="wmsProvider", description="The WMS provider. Read at start-up.")
-    String wmsProvider;
+        @Setting(value="wmsProvider", description="The WMS provider.")
+    volatile String wmsProvider;
 
 //    @Inject
 //    @Setting(value="wmsServiceName", description="The WMS service name")
@@ -110,30 +109,26 @@ public class WmsProxyServlet extends HttpServlet {
      * token based system instead of username/password based system. To ease the transition we decided to reuse the password
      * field, instead of introducing a new field.
      */
-        @Setting(value="wmsPassword", description="The WMS Token. Read at start-up.", type = Password)
-    String wmsPassword;
+        @Setting(value="wmsPassword", description="The WMS Token.", type = Password)
+    volatile String wmsPassword;
 
-        @Setting(value="wmsLayers", description="The WMS layers. Read at start-up.")
-    String wmsLayers;
+        @Setting(value="wmsLayers", description="The WMS layers.")
+    volatile String wmsLayers;
 
     /**
-     * The field only declares the setting. {@link #doGet} reads it through {@link SettingsService} for every
-     * request ({@link #isProtected()}), so a change on the Settings page applies at once, without a restart.
+     * Whether the tiles require a signed-in user. Like the other settings of the servlet, a save on the Settings page
+     * refreshes the field at once ({@code SettingsRefresher}); a request reads the field and nothing else. A value
+     * that is missing protects ({@link #isProtected(Object)}).
      */
         @Setting(value="wmsProtected",
             description="Whether the WMS map tiles (/wms/*) require a signed-in user",
             defaultValue = "true",
             web = true,
             type = Boolean)
-    Boolean wmsProtected;
-
-    static final String PROTECTED_KEY = "wmsProtected";
+    volatile Boolean wmsProtected;
 
     @Inject
     WmsTileCache cache;
-
-    @Inject
-    SettingsService settingsService;
 
     /**
      * Main GET method
@@ -153,7 +148,7 @@ public class WmsProxyServlet extends HttpServlet {
         // On the client level, the tiles are loaded through the host's HttpClient in protected
         // mode (see fe/shared-map/layers/ol-wms-layer.ts), so its interceptors pass the
         // credentials along
-        if (isProtected() && request.getUserPrincipal() == null) {
+        if (isProtected(wmsProtected) && request.getUserPrincipal() == null) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.getWriter().println("<html><body><p>WMS service only available to authenticated users</p></body></html>");
             return;
@@ -213,21 +208,6 @@ public class WmsProxyServlet extends HttpServlet {
         } catch (Exception e) {
             log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e));
         }
-    }
-
-    /**
-     * Whether the tiles require a signed-in user: the {@code wmsProtected} setting as it is now. When it cannot be
-     * read, the tiles are protected.
-     */
-    private boolean isProtected() {
-        Object value;
-        try {
-            value = settingsService.get(PROTECTED_KEY);
-        } catch (RuntimeException e) {
-            log.warn("Could not read the setting " + PROTECTED_KEY + ", so the WMS tiles are protected: " + e);
-            return true;
-        }
-        return isProtected(value);
     }
 
     /**

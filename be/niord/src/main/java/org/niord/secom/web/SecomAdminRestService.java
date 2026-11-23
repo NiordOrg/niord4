@@ -90,7 +90,7 @@ public class SecomAdminRestService {
      */
     @Setting(value = "secomMirPortalUrl", defaultValue = "",
             description = "URL of the MCP Identity Registry management-portal page holding this node's certificates, linked from the SECOM admin page (empty = no link)")
-    String mirPortalUrl;
+    volatile String mirPortalUrl;
 
     private final McpSecurityService pki;
     private final S124DatasetService datasetService;

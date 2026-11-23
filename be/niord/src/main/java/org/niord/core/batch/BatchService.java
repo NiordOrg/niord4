@@ -103,12 +103,13 @@ public class BatchService extends BaseService {
     @Inject
     SequenceService sequenceService;
 
-        @Setting(value="batchJobRootPath", defaultValue="${niord.home}/batch-jobs", description="The root directory of the Niord batch jobs. Read at start-up.")
+        @Setting(value="batchJobRootPath", defaultValue="${niord.home}/batch-jobs", editable = false,
+            description="The root directory of the Niord batch jobs. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.")
     private Path batchJobRoot;
 
     // Delete execution files after 10 days
-        @Setting(value="batchFileExpiryDays", defaultValue="10", description="Number of days after which batch job files are deleted. Read at start-up.", type = Type.Integer)
-    private int batchFileExpiryDays;
+        @Setting(value="batchFileExpiryDays", defaultValue="10", description="Number of days after which batch job files are deleted.", type = Type.Integer)
+    private volatile int batchFileExpiryDays;
 
     /****************************/
     /** Starting batch jobs    **/

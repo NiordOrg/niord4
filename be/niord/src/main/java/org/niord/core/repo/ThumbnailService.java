@@ -90,8 +90,8 @@ public class ThumbnailService {
     /** The pixel cap of the plain-Java path; package-private so a test can lower it */
     long maxThumbnailSourcePixels = DEFAULT_MAX_THUMBNAIL_SOURCE_PIXELS;
 
-        @Setting(value = "vipsPath", description = "Path to vips command on Linux. Use for faster thumbnail generation."
-            + " Read at start-up.")
+        @Setting(value = "vipsPath", editable = false,
+            description = "Path to vips command on Linux. Use for faster thumbnail generation. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.")
     String vipsCmd;
 
     Set<String> vipsFileTypes = new HashSet<>();

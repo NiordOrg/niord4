@@ -71,9 +71,9 @@ public class FiringExerciseService extends BaseService {
     // Default number of schedule days to include in the firing exercise messages
         @Setting(value="firingExerciseScheduleDays",
             defaultValue="30",
-            description="Default number of scheduled days to include in generated firing exercises. Read at start-up.",
+            description="Default number of scheduled days to include in generated firing exercises.",
             type = Integer)
-    private int firingExerciseScheduleDays;
+    private volatile int firingExerciseScheduleDays;
 
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(FiringExerciseService.class);
 

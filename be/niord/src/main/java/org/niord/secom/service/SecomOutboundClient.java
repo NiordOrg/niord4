@@ -114,18 +114,17 @@ public class SecomOutboundClient {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Setting(value = "secomServiceRegistryUrl", defaultValue = "",
-            description = "URL of the SECOM service registry used to resolve peer endpoints. Read at start-up.")
-    String serviceRegistryUrl;
+            description = "URL of the SECOM service registry used to resolve peer endpoints.")
+    volatile String serviceRegistryUrl;
 
     @Setting(value = "secomServiceRegistryInsecure", defaultValue = "false", type = Type.Boolean,
-            description = "Skip TLS validation towards the SECOM service registry (test environments only)."
-                    + " Read at start-up.")
-    boolean serviceRegistryInsecure;
+            description = "Skip TLS validation towards the SECOM service registry (test environments only).")
+    volatile boolean serviceRegistryInsecure;
 
     @Setting(value = "secomAllowInsecureEndpoints", defaultValue = "false", type = Type.Boolean,
             description = "Allow SECOM deliveries to http:// peer endpoints and to peers on loopback, link-local "
-                    + "or private addresses (test environments only). Read at start-up.")
-    boolean allowInsecureEndpoints;
+                    + "or private addresses (test environments only).")
+    volatile boolean allowInsecureEndpoints;
 
     private record CachedEndpoint(String endpoint, long resolvedAtMillis) {
     }

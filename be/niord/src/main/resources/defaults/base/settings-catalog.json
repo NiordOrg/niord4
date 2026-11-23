@@ -71,11 +71,11 @@
       "baseValue": "http://localhost:8080/auth",
       "scope": "operator",
       "web": false,
-      "editable": true,
+      "editable": false,
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The Keycloak URL. Read at start-up.",
+      "description": "The Keycloak URL. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.",
       "declaredIn": [
         "org.niord.core.keycloak.KeycloakIntegrationService"
       ]
@@ -107,7 +107,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Number of days after which batch job files are deleted. Read at start-up.",
+      "description": "Number of days after which batch job files are deleted.",
       "declaredIn": [
         "org.niord.core.batch.BatchService"
       ]
@@ -119,11 +119,11 @@
       "baseValue": null,
       "scope": "operator",
       "web": false,
-      "editable": true,
+      "editable": false,
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The root directory of the Niord batch jobs. Read at start-up.",
+      "description": "The root directory of the Niord batch jobs. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.",
       "declaredIn": [
         "org.niord.core.batch.BatchService"
       ]
@@ -313,7 +313,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Default number of scheduled days to include in generated firing exercises. Read at start-up.",
+      "description": "Default number of scheduled days to include in generated firing exercises.",
       "declaredIn": [
         "org.niord.core.schedule.FiringExerciseService"
       ]
@@ -381,7 +381,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The max number of mails to send per minute. Read at start-up.",
+      "description": "The max number of mails to send per minute.",
       "declaredIn": [
         "org.niord.core.mail.ScheduledMailService"
       ]
@@ -397,7 +397,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The sender e-mail address. Read at start-up.",
+      "description": "The sender e-mail address.",
       "declaredIn": [
         "org.niord.core.mail.MailService"
       ]
@@ -477,7 +477,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Size of map thumbnails. Read at start-up.",
+      "description": "Size of map thumbnails.",
       "declaredIn": [
         "org.niord.web.map.MessageMapImageGenerator"
       ]
@@ -493,7 +493,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The map thumbnail zoom level used for single-position messages. Read at start-up.",
+      "description": "The map thumbnail zoom level used for single-position messages.",
       "declaredIn": [
         "org.niord.web.map.MessageMapImageGenerator"
       ]
@@ -541,7 +541,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Whether the message lucene index is re-created for each restart or not. Read at start-up.",
+      "description": "Whether the message lucene index is re-created for each restart or not. Applies at the next start.",
       "declaredIn": [
         "org.niord.core.message.MessageLuceneIndex"
       ]
@@ -557,7 +557,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Whether the message index should include deleted messages or not. Read at start-up.",
+      "description": "Whether the message index should include deleted messages or not.",
       "declaredIn": [
         "org.niord.core.message.MessageLuceneIndex",
         "org.niord.core.message.MessagePostgresIndex"
@@ -570,11 +570,11 @@
       "baseValue": null,
       "scope": "operator",
       "web": false,
-      "editable": true,
+      "editable": false,
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The message Lucene index directory. Read at start-up.",
+      "description": "The message Lucene index directory. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.",
       "declaredIn": [
         "org.niord.core.message.MessageLuceneIndex"
       ]
@@ -642,7 +642,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Allow the Niord integration import to fetch from private/loopback addresses. Read at start-up.",
+      "description": "Allow the Niord integration import to fetch from private/loopback addresses.",
       "declaredIn": [
         "org.niord.core.integration.NiordIntegrationExecutionService"
       ]
@@ -722,7 +722,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Whether PDF reports should be encrypted or not. Read at start-up.",
+      "description": "Whether PDF reports should be encrypted or not.",
       "declaredIn": [
         "org.niord.core.script.FmTemplateService"
       ]
@@ -738,7 +738,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The PDF reports encryption password. Read at start-up.",
+      "description": "The PDF reports encryption password.",
       "declaredIn": [
         "org.niord.core.script.FmTemplateService"
       ]
@@ -750,11 +750,11 @@
       "baseValue": null,
       "scope": "operator",
       "web": false,
-      "editable": true,
+      "editable": false,
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Root directory for publication previews: a cache on the application's volume, swept after seven days. Read at start-up.",
+      "description": "Root directory for publication previews: a cache on the application's volume, swept after seven days. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.",
       "declaredIn": [
         "org.niord.core.publication.series.PublicationPathService"
       ]
@@ -770,7 +770,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Cache timeout of repo files in minutes. Read at start-up.",
+      "description": "Cache timeout of repo files in minutes.",
       "declaredIn": [
         "org.niord.core.repo.RepositoryService"
       ]
@@ -786,7 +786,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally (empty = no alerts). Read at start-up.",
+      "description": "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally (empty = no alerts).",
       "declaredIn": [
         "org.niord.secom.service.SecomCertificateAlertService",
         "org.niord.secom.service.SecomCertificateRenewalService",
@@ -805,7 +805,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Allow SECOM deliveries to http:// peer endpoints and to peers on loopback, link-local or private addresses (test environments only). Read at start-up.",
+      "description": "Allow SECOM deliveries to http:// peer endpoints and to peers on loopback, link-local or private addresses (test environments only).",
       "declaredIn": [
         "org.niord.secom.service.SecomOutboundClient"
       ]
@@ -821,7 +821,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Overrides the SECOM callback endpoint sent with uploads (default: baseUri + /api/secom). Read at start-up.",
+      "description": "Overrides the SECOM callback endpoint sent with uploads (default: baseUri + /api/secom).",
       "declaredIn": [
         "org.niord.secom.service.SecomOutboxDispatcher"
       ]
@@ -837,7 +837,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Days before SECOM service certificate expiry at which warning mails to the secomAlertEmails recipients begin. Read at start-up.",
+      "description": "Days before SECOM service certificate expiry at which warning mails to the secomAlertEmails recipients begin.",
       "declaredIn": [
         "org.niord.secom.service.SecomCertificateAlertService"
       ]
@@ -869,7 +869,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The max number of SECOM subscriptions one remote node may hold; further (non-identical) subscription requests are rejected. Read at start-up.",
+      "description": "The max number of SECOM subscriptions one remote node may hold; further (non-identical) subscription requests are rejected.",
       "declaredIn": [
         "org.niord.secom.service.SecomSubscriptionService"
       ]
@@ -901,7 +901,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Comma-separated backoff delays (minutes) between SECOM delivery attempts; the last value repeats. Read at start-up.",
+      "description": "Comma-separated backoff delays (minutes) between SECOM delivery attempts; the last value repeats.",
       "declaredIn": [
         "org.niord.secom.service.SecomOutboxService"
       ]
@@ -917,7 +917,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Max delivery attempts for a SECOM outbox entry before it is marked FAILED. Read at start-up.",
+      "description": "Max delivery attempts for a SECOM outbox entry before it is marked FAILED.",
       "declaredIn": [
         "org.niord.secom.service.SecomOutboxService"
       ]
@@ -933,7 +933,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The max number of SECOM outbox entries dispatched per scheduler run (one run per minute). Read at start-up.",
+      "description": "The max number of SECOM outbox entries dispatched per scheduler run (one run per minute).",
       "declaredIn": [
         "org.niord.secom.service.SecomOutboxDispatcher"
       ]
@@ -949,7 +949,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Enables unattended SECOM certificate renewal via the MCP Identity Registry. Needs niord.secom.renewal.mir-url, .org-mrn, .keystore.location and .keystore.password (optional .service-mrn/.user-mrn default to the certificate UIDs). Read at start-up.",
+      "description": "Enables unattended SECOM certificate renewal via the MCP Identity Registry. Needs niord.secom.renewal.mir-url, .org-mrn, .keystore.location and .keystore.password (optional .service-mrn/.user-mrn default to the certificate UIDs).",
       "declaredIn": [
         "org.niord.secom.service.SecomCertificateRenewalService"
       ]
@@ -965,7 +965,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Days before expiry at which the SECOM service and renewal-robot certificates are renewed automatically. Read at start-up.",
+      "description": "Days before expiry at which the SECOM service and renewal-robot certificates are renewed automatically.",
       "declaredIn": [
         "org.niord.secom.service.SecomCertificateRenewalService"
       ]
@@ -997,7 +997,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Skip TLS validation towards the SECOM service registry (test environments only). Read at start-up.",
+      "description": "Skip TLS validation towards the SECOM service registry (test environments only).",
       "declaredIn": [
         "org.niord.secom.service.SecomOutboundClient"
       ]
@@ -1013,7 +1013,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "URL of the SECOM service registry used to resolve peer endpoints. Read at start-up.",
+      "description": "URL of the SECOM service registry used to resolve peer endpoints.",
       "declaredIn": [
         "org.niord.secom.service.SecomOutboundClient"
       ]
@@ -1048,6 +1048,22 @@
       "description": "Validate SECOM client certificate chains against the MCP truststore. Read at start-up.",
       "declaredIn": [
         "org.niord.secom.SecomConfiguration"
+      ]
+    },
+    {
+      "key": "settingsChangeCount",
+      "type": "Long",
+      "codeDefault": null,
+      "baseValue": null,
+      "scope": "state",
+      "web": false,
+      "editable": false,
+      "required": false,
+      "cached": false,
+      "introducedIn": "4.0.228",
+      "description": "How many times a setting was saved; each node polls it to follow another node's saves",
+      "declaredIn": [
+        "org.niord.core.settings.SettingsRefresher"
       ]
     },
     {
@@ -1113,11 +1129,11 @@
       "baseValue": null,
       "scope": "operator",
       "web": false,
-      "editable": true,
+      "editable": false,
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "Path to vips command on Linux. Use for faster thumbnail generation. Read at start-up.",
+      "description": "Path to vips command on Linux. Use for faster thumbnail generation. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.",
       "declaredIn": [
         "org.niord.core.repo.ThumbnailService"
       ]
@@ -1133,7 +1149,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.153",
-      "description": "Days the backend keeps a sea-chart (WMS) tile on its volume before it asks the provider again; cached tiles go to logged-in users only. 0: no cache. Set it only when the provider's licence allows a cache. Read at start-up.",
+      "description": "Days the backend keeps a sea-chart (WMS) tile on its volume before it asks the provider again; cached tiles go to logged-in users only. 0: no cache. Set it only when the provider's licence allows a cache.",
       "declaredIn": [
         "org.niord.web.wms.WmsTileCache"
       ]
@@ -1149,7 +1165,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.153",
-      "description": "The most space, in MB, the sea-chart (WMS) tile cache takes on the application's volume; a tile counts for at least 16 KB, and the oldest go first. Read at start-up.",
+      "description": "The most space, in MB, the sea-chart (WMS) tile cache takes on the application's volume; a tile counts for at least 16 KB, and the oldest go first.",
       "declaredIn": [
         "org.niord.web.wms.WmsTileCache"
       ]
@@ -1197,7 +1213,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The WMS layers. Read at start-up.",
+      "description": "The WMS layers.",
       "declaredIn": [
         "org.niord.web.wms.WmsProxyServlet"
       ]
@@ -1213,7 +1229,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The WMS Token. Read at start-up.",
+      "description": "The WMS Token.",
       "declaredIn": [
         "org.niord.web.wms.WmsProxyServlet"
       ]
@@ -1245,7 +1261,7 @@
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The WMS provider. Read at start-up.",
+      "description": "The WMS provider.",
       "declaredIn": [
         "org.niord.web.wms.WmsProxyServlet"
       ]

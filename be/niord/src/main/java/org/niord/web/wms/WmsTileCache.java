@@ -169,13 +169,13 @@ public class WmsTileCache {
     @Setting(value = "wmsCacheDays", defaultValue = "0", type = Integer,
             description = "Days the backend keeps a sea-chart (WMS) tile on its volume before it asks the provider"
                     + " again; cached tiles go to logged-in users only. 0: no cache. Set it only when the provider's"
-                    + " licence allows a cache. Read at start-up.")
-    Integer wmsCacheDays;
+                    + " licence allows a cache.")
+    volatile Integer wmsCacheDays;
 
     @Setting(value = "wmsCacheMaxMb", defaultValue = "200", type = Integer,
             description = "The most space, in MB, the sea-chart (WMS) tile cache takes on the application's volume;"
-                    + " a tile counts for at least 16 KB, and the oldest go first. Read at start-up.")
-    Integer wmsCacheMaxMb;
+                    + " a tile counts for at least 16 KB, and the oldest go first.")
+    volatile Integer wmsCacheMaxMb;
 
     private final Clock clock;
     private final Path folder;

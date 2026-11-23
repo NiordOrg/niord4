@@ -90,8 +90,8 @@ import static org.niord.core.settings.Setting.Type;
 public class RepositoryService {
 
 
-    @Setting(value="repoCacheTimeout", defaultValue="5", description="Cache timeout of repo files in minutes. Read at start-up.", type=Type.Integer)
-    Integer cacheTimeout;
+    @Setting(value="repoCacheTimeout", defaultValue="5", description="Cache timeout of repo files in minutes.", type=Type.Integer)
+    volatile Integer cacheTimeout;
 
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(RepositoryService.class);
 

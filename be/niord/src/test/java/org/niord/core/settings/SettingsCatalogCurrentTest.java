@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.niord.core.NiordApp;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -27,8 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,11 +89,12 @@ class SettingsCatalogCurrentTest {
     /** What the base product's catalog holds since C3a: guards against a generation that missed declarations */
     private static void assertTheCatalogsContent(SettingsCatalog catalog) {
         Map<String, SettingsCatalog.Entry> byKey = catalog.byKey();
-        assertEquals(74, byKey.size(), "the catalog has " + byKey.size() + " keys: when a declaration was added or "
+        assertEquals(75, byKey.size(), "the catalog has " + byKey.size() + " keys: when a declaration was added or "
                 + "removed on purpose, update the expected count in SettingsCatalogCurrentTest.assertTheCatalogsContent"
                 + "; otherwise the generation missed declarations. The keys: " + byKey.keySet());
 
-        assertEquals(Set.of("areaLastUpdate", "categoryLastUpdate"), keys(catalog, e -> e.scope() == Setting.Scope.state),
+        assertEquals(Set.of("areaLastUpdate", "categoryLastUpdate", "settingsChangeCount"),
+                keys(catalog, e -> e.scope() == Setting.Scope.state),
                 "the state keys");
 
         // Since C5: niord-base names no country; the two required keys have no code default, and the base
@@ -109,7 +112,10 @@ class SettingsCatalogCurrentTest {
                 .collect(Collectors.toSet());
         assertTrue(missing.isEmpty(), "every key of " + BASE_SETTINGS + " has a declaration; these have none: " + missing);
 
-        assertEquals(Set.of("authServerTrustAllCertificates", "secomEnabled", "mapTileCachePath"),
+        // The deployment configuration: settable by an environment variable or system property named like the key,
+        // the settings file or an existing row, but not on the Settings page, and not refreshed while running
+        assertEquals(Set.of("authServerTrustAllCertificates", "secomEnabled", "mapTileCachePath",
+                        "batchJobRootPath", "messageIndexPath", "publicationPreviewRootPath", "vipsPath", "authServerUrl"),
                 keys(catalog, e -> e.scope() == Setting.Scope.operator && !e.editable()),
                 "the operator keys the Settings page does not show");
         assertTrue(byKey.get("secomEnabled").web(), "the administration app reads secomEnabled from /web");
@@ -150,60 +156,90 @@ class SettingsCatalogCurrentTest {
         assertEquals(null, byKey.get("wmsCacheDays").baseValue(), "and the base product's file does not switch it on");
     }
 
-    /** The keys declared by an {@code @Setting} field that the code reads through SettingsService at each use */
-    static final Set<String> READ_LIVE = Set.of("secomMirPortalUrl", "mailValidRecipients", "mailDeleteAfterDays",
-            "wmsProtected");
-
-    /** The keys declared by a static {@link Setting} that the code reads once, when it creates its beans */
-    static final Set<String> CONSTANTS_READ_AT_START_UP = Set.of("secomValidateClientChain", "secomRevocationCheck",
-            "secomSignatureAlgorithm");
-
-    static final String READ_AT_START_UP = "Read at start-up.";
+    /**
+     * The settings that take effect only at the next start, each with its reason: the exception to the rule that a
+     * saved setting takes effect at once. {@link SettingInjectionBeanPostProcessor#RESTART_KEYS} holds the same keys,
+     * and their descriptions end with {@link #APPLIES_AT_THE_NEXT_START}.
+     */
+    static final Map<String, String> RESTART = Map.of(
+            "messageIndexDeleteOnStartup",
+            "by its meaning it acts only when the server starts: whether the start throws the search index away");
 
     /**
-     * A change on the Settings page reaches a value injected into a field only at the next start, so the description
-     * of every editable key read that way ends with "Read at start-up.", and the description of a key read at each use
-     * does not (SECOM-UI-1). {@code wmsProtected} names what it guards: the WMS map tiles, not the API
-     * (SETTINGS-12). A key read live from now on moves to {@link #READ_LIVE}, and its text loses the sentence.
+     * The keys declared by a static {@link Setting} that the code still reads once, when it creates its beans. They
+     * leave this list when they are read where they are used.
+     */
+    static final Set<String> CONSTANTS_NOT_YET_READ_AT_USE = Set.of("secomValidateClientChain", "secomRevocationCheck",
+            "secomSignatureAlgorithm");
+
+    static final String APPLIES_AT_THE_NEXT_START = "Applies at the next start.";
+
+    /** What a description says when a change needs a restart */
+    private static final Pattern SAYS_RESTART = Pattern.compile("(?i)read at start-up|restart|next start");
+
+    /**
+     * A saved setting takes effect at once: the save refreshes every {@code @Setting} field of its key
+     * ({@link SettingsRefresher}). A setting that needs a restart is the exception, on {@link #RESTART} with its
+     * reason, and its description ends with "Applies at the next start."; no other description says a restart is
+     * needed. Deployment configuration (not editable) is not on the Settings page and is not refreshed.
+     * {@code wmsProtected} names what it guards: the WMS map tiles, not the API (SETTINGS-12).
      */
     @Test
-    void theSettingsReadAtStartUpSaySo() throws Exception {
+    void aSavedSettingTakesEffectAtOnceAndARestartSettingSaysWhy() throws Exception {
         Map<String, SettingsCatalog.Entry> byKey = SettingsCatalog.read(BASE_CATALOG).byKey();
-        ClassLoader cl = getClass().getClassLoader();
 
-        Set<String> fieldKeys = new TreeSet<>();
-        for (SettingsCatalogGenerator.Declaration d : SettingsCatalogGenerator.scan(mainClassesRoot(), cl)) {
-            String className = d.source().substring(0, d.source().indexOf('#'));
-            String fieldName = d.source().substring(d.source().indexOf('#') + 1);
-            if (Class.forName(className, false, cl).getDeclaredField(fieldName)
-                    .isAnnotationPresent(org.niord.core.settings.annotation.Setting.class)) {
-                fieldKeys.add(d.setting().getKey());
-            }
-        }
-        assertTrue(fieldKeys.containsAll(READ_LIVE), "the live keys are declared by fields: " + fieldKeys);
-
+        assertEquals(RESTART.keySet(), SettingInjectionBeanPostProcessor.RESTART_KEYS,
+                "the restart settings are the ones this test gives a reason for");
         List<String> wrong = new ArrayList<>();
-        for (String key : fieldKeys) {
-            SettingsCatalog.Entry entry = byKey.get(key);
-            if (!entry.editable()) {
-                continue;
-            }
-            boolean saysSo = entry.description() != null && entry.description().endsWith(READ_AT_START_UP);
-            if (READ_LIVE.contains(key) == saysSo) {
-                wrong.add(key + ": '" + entry.description() + "'");
-            }
-        }
-        for (String key : CONSTANTS_READ_AT_START_UP) {
-            String description = byKey.get(key).description();
-            if (description == null || !description.endsWith(READ_AT_START_UP)) {
-                wrong.add(key + ": '" + description + "'");
+        for (SettingsCatalog.Entry entry : byKey.values()) {
+            String description = entry.description() != null ? entry.description() : "";
+            if (RESTART.containsKey(entry.key())) {
+                if (!entry.editable() || !description.endsWith(APPLIES_AT_THE_NEXT_START)) {
+                    wrong.add(entry.key() + " (a restart setting, editable, ending with '" + APPLIES_AT_THE_NEXT_START
+                            + "'): '" + description + "'");
+                }
+            } else if (SAYS_RESTART.matcher(description).find()
+                    && !CONSTANTS_NOT_YET_READ_AT_USE.contains(entry.key())) {
+                wrong.add(entry.key() + " (takes effect when saved, or is deployment configuration): '"
+                        + description + "'");
             }
         }
-        assertTrue(wrong.isEmpty(), "a key read at start-up ends its description with '" + READ_AT_START_UP
-                + "', a key read live does not; these do not follow the rule:\n" + String.join("\n", wrong));
+        assertTrue(wrong.isEmpty(), "only a setting on the restart list says a restart is needed; these do not "
+                + "follow the rule:\n" + String.join("\n", wrong));
 
         assertEquals("Whether the WMS map tiles (/wms/*) require a signed-in user",
                 byKey.get("wmsProtected").description(), "wmsProtected guards the map tiles only");
+    }
+
+    /**
+     * A refreshed field is written by the refresh's thread and read by the requests' threads, so every
+     * {@code @Setting} field of an editable key that is not on {@link #RESTART} is {@code volatile}: without it the
+     * new value need not be seen by a thread that read the old one.
+     */
+    @Test
+    void everyRefreshedFieldIsVolatile() throws Exception {
+        Map<String, SettingsCatalog.Entry> byKey = SettingsCatalog.read(BASE_CATALOG).byKey();
+        ClassLoader cl = getClass().getClassLoader();
+
+        List<String> notVolatile = new ArrayList<>();
+        int refreshed = 0;
+        for (SettingsCatalogGenerator.Declaration d : SettingsCatalogGenerator.scan(mainClassesRoot(), cl)) {
+            String className = d.source().substring(0, d.source().indexOf('#'));
+            Field field = Class.forName(className, false, cl)
+                    .getDeclaredField(d.source().substring(d.source().indexOf('#') + 1));
+            String key = d.setting().getKey();
+            if (!field.isAnnotationPresent(org.niord.core.settings.annotation.Setting.class)
+                    || !byKey.get(key).editable() || RESTART.containsKey(key)) {
+                continue;
+            }
+            refreshed++;
+            if (!Modifier.isVolatile(field.getModifiers())) {
+                notVolatile.add(key + ": " + d.source());
+            }
+        }
+        assertTrue(refreshed > 30, "the scan found the refreshed fields: " + refreshed);
+        assertTrue(notVolatile.isEmpty(), "a refreshed @Setting field is volatile, or its key goes on the restart "
+                + "list with its reason; these are neither:\n" + String.join("\n", notVolatile));
     }
 
     private static Set<String> keys(SettingsCatalog catalog, Predicate<SettingsCatalog.Entry> filter) {

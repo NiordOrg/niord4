@@ -108,17 +108,17 @@ public class MessageLuceneIndex extends BaseService {
     final static int LUCENE_OPTIMIZE_INDEX_COUNT    = 5000;
     final static int LUCENE_MAX_NUM_SEGMENTS        = 4;
 
-        @Setting(value="messageIndexPath", defaultValue="${niord.home}/message-index",
-            description="The message Lucene index directory. Read at start-up.")
+        @Setting(value="messageIndexPath", defaultValue="${niord.home}/message-index", editable = false,
+            description="The message Lucene index directory. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.")
     Path indexFolder;
 
         @Setting(value = "messageIndexDeleteOnStartup", defaultValue = "true", type = Boolean,
-            description = "Whether the message lucene index is re-created for each restart or not. Read at start-up.")
+            description = "Whether the message lucene index is re-created for each restart or not. Applies at the next start.")
     Boolean deleteOnStartup;
 
         @Setting(value = "messageIndexIncludeDeletedMessages", defaultValue = "false", type = Boolean,
-            description = "Whether the message index should include deleted messages or not. Read at start-up.")
-    Boolean includeDeletedMessages;
+            description = "Whether the message index should include deleted messages or not.")
+    volatile Boolean includeDeletedMessages;
 
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessageLuceneIndex.class);
 

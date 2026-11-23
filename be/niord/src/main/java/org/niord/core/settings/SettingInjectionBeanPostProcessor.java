@@ -28,13 +28,17 @@ import org.springframework.beans.factory.config.InstantiationAwareBeanPostProces
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Spring replacement for the CDI {@code @Produces @Setting} / {@code @TextResource}
@@ -51,8 +55,14 @@ import java.util.Objects;
  * ({@link SettingsService#resolveDefault}: the settings file's value, read without the database), or the annotation
  * default when {@link SettingsService} itself is not available yet. Such a field is recorded and injected again
  * through the database once start-up has added the missing settings ({@link #reinjectDeferred}), so every bean ends
- * start-up with the database's value (docs/code-data-config-plan.md §5.2). A singleton's field still holds
- * that value until the next restart (SECOM-UI-1).
+ * start-up with the database's value (docs/code-data-config-plan.md §5.2).
+ *
+ * <p>A saved setting takes effect at once. The processor records every {@code @Setting} field it injects, also of a
+ * bean created after start-up (the bean by weak reference), and {@link #refresh} sets the fields of a key again with
+ * the same resolve and coerce code as the injection, when {@link SettingsRefresher} asks after a save or after
+ * another node's save. A refreshed field is {@code volatile}. Two kinds of field are not refreshed: one whose key is on
+ * {@link #RESTART_KEYS}, which by its meaning acts only when the server starts, and one whose key the catalogue does
+ * not make editable (deployment configuration, which the Settings page neither lists nor saves).
  */
 @Component
 public class SettingInjectionBeanPostProcessor implements InstantiationAwareBeanPostProcessor {
@@ -60,12 +70,45 @@ public class SettingInjectionBeanPostProcessor implements InstantiationAwareBean
     private static final Logger log = LoggerFactory.getLogger(SettingInjectionBeanPostProcessor.class);
     private static final ObjectMapper MAPPER = JsonMapper.builderWithJackson2Defaults().build();
 
+    /**
+     * The settings that take effect only at the next start, so their fields are never refreshed; each has its reason
+     * in {@code SettingsCatalogCurrentTest}, and its description ends "Applies at the next start."
+     */
+    static final Set<String> RESTART_KEYS = Set.of("messageIndexDeleteOnStartup");
+
     // ObjectProvider keeps the dependency lazy so this processor (and SettingsService) can be
     // created without an eager circular dependency.
     private final ObjectProvider<SettingsService> settingsService;
 
+    /**
+     * A field the processor injected: the bean by weak reference, so a bean that is no singleton is not kept alive,
+     * and the value last resolved for it, so a refresh changes the field only when its setting changed
+     */
+    private static final class Injected {
+        final WeakReference<Object> bean;
+        final Field field;
+        final Setting template;
+        Object value;
+
+        Injected(Object bean, Field field, Setting template, Object value) {
+            this.bean = new WeakReference<>(bean);
+            this.field = field;
+            this.template = template;
+            this.value = value;
+        }
+    }
+
+    /** Every field injected so far; guarded by itself */
+    private final List<Injected> injected = new ArrayList<>();
+
+    /** The size of {@link #injected} at which its dead entries are removed next */
+    private int purgeAt = 64;
+
+    /** One refresh at a time: a save's and the poll's */
+    private final Object refreshLock = new Object();
+
     /** A field injected without the database, to be injected again once start-up has added the missing settings */
-    private record Deferred(Object bean, Field field, Setting template) {
+    private record Deferred(Object bean, Injected injected) {
     }
 
     private final List<Deferred> deferred = new ArrayList<>();
@@ -110,6 +153,7 @@ public class SettingInjectionBeanPostProcessor implements InstantiationAwareBean
         }
         SettingsService svc = available();
         Object value;
+        boolean withoutDatabase = false;
         try {
             if (svc == null) {
                 throw new IllegalStateException("SettingsService is not available yet");
@@ -120,15 +164,7 @@ public class SettingInjectionBeanPostProcessor implements InstantiationAwareBean
             log.debug("@Setting '{}' of {} resolved without the database during startup: {}", template.getKey(),
                     bean.getClass().getSimpleName(), e.toString());
             value = defaultWithoutDatabase(svc, template);
-            synchronized (deferred) {
-                if (!started) {
-                    deferred.add(new Deferred(bean, field, template));
-                } else {
-                    // Nothing injects again after start-up, and a record would keep the bean reachable
-                    log.debug("@Setting '{}' of {}.{} keeps the default resolved without the database",
-                            template.getKey(), bean.getClass().getSimpleName(), field.getName());
-                }
-            }
+            withoutDatabase = true;
         }
         if (value == null) {
             // fall back to the parsed annotation default (mirrors the CDI producer when DB has no override)
@@ -138,6 +174,95 @@ public class SettingInjectionBeanPostProcessor implements InstantiationAwareBean
         // to the field's declared type so e.g. a Path field is never assigned a String.
         value = coerce(value, field.getType());
         setField(bean, field, value);
+
+        Injected record = new Injected(bean, field, template, value);
+        record(record);
+        if (withoutDatabase) {
+            synchronized (deferred) {
+                if (!started) {
+                    deferred.add(new Deferred(bean, record));
+                } else {
+                    // Nothing injects again after start-up, and a record would keep the bean reachable; the next
+                    // refresh of the key sets the field
+                    log.debug("@Setting '{}' of {}.{} keeps the default resolved without the database",
+                            template.getKey(), bean.getClass().getSimpleName(), field.getName());
+                }
+            }
+        }
+    }
+
+    /** Records an injected field, and every so often forgets the fields of beans that are gone */
+    private void record(Injected record) {
+        synchronized (injected) {
+            injected.add(record);
+            if (injected.size() >= purgeAt) {
+                injected.removeIf(i -> i.bean.get() == null);
+                purgeAt = Math.max(64, injected.size() * 2);
+            }
+        }
+    }
+
+    /**
+     * Sets again each recorded field of a key the given filter accepts, with the value the setting has now, resolved
+     * as the injection resolves it (an environment variable or system property named like the key still wins); and
+     * returns the keys of which at least one field took a new value. A field is set only when that value differs from
+     * the one last resolved for it, so a field is changed only when its setting changed. A field whose key is on
+     * {@link #RESTART_KEYS}, or whose key the catalogue does not make editable, is left as it is. A value that cannot
+     * be resolved leaves the field as it is, with a warning. Each field set is logged, without its value.
+     *
+     * @param svc  the settings service, its transactional proxy
+     * @param keys which keys to refresh
+     * @return the keys of which a field took a new value
+     */
+    Set<String> refresh(SettingsService svc, Predicate<String> keys) {
+        List<Injected> due;
+        synchronized (injected) {
+            due = injected.stream()
+                    .filter(i -> i.bean.get() != null && keys.test(i.template.getKey()))
+                    .toList();
+        }
+        Set<String> changed = new LinkedHashSet<>();
+        synchronized (refreshLock) {
+            for (Injected i : due) {
+                String key = i.template.getKey();
+                Object bean = i.bean.get();
+                if (bean == null || !refreshable(svc, key)) {
+                    continue;
+                }
+                try {
+                    Object value = resolveSettingValue(svc, i.template, i.field.getType());
+                    if (value == null) {
+                        value = i.template.getValue();
+                    }
+                    value = coerce(value, i.field.getType());
+                    if (Objects.equals(value, i.value)) {
+                        continue;
+                    }
+                    if (value == null && i.field.getType().isPrimitive()) {
+                        continue;
+                    }
+                    ReflectionUtils.makeAccessible(i.field);
+                    ReflectionUtils.setField(i.field, bean, value);
+                    i.value = value;
+                    changed.add(key);
+                    log.info("@Setting '{}' of {}.{} refreshed: the setting changed", key,
+                            bean.getClass().getSimpleName(), i.field.getName());
+                } catch (Exception e) {
+                    log.warn("@Setting '{}' of {}.{} keeps its value, the setting could not be read: {}", key,
+                            bean.getClass().getSimpleName(), i.field.getName(), e.toString());
+                }
+            }
+        }
+        return changed;
+    }
+
+    /** Whether the fields of the key are refreshed: not a restart setting, and editable by the catalogue */
+    static boolean refreshable(SettingsService svc, String key) {
+        if (RESTART_KEYS.contains(key)) {
+            return false;
+        }
+        SettingsCatalog.Entry entry = svc.catalogEntry(key);
+        return entry != null && entry.editable();
     }
 
     /**
@@ -155,22 +280,26 @@ public class SettingInjectionBeanPostProcessor implements InstantiationAwareBean
             deferred.clear();
         }
         for (Deferred d : pending) {
+            Injected i = d.injected();
             try {
-                Object value = resolveSettingValue(svc, d.template(), d.field().getType());
+                Object value = resolveSettingValue(svc, i.template, i.field.getType());
                 if (value == null) {
-                    value = d.template().getValue();
+                    value = i.template.getValue();
                 }
-                value = coerce(value, d.field().getType());
-                ReflectionUtils.makeAccessible(d.field());
-                if (value != null && !Objects.equals(ReflectionUtils.getField(d.field(), d.bean()), value)) {
-                    setField(d.bean(), d.field(), value);
+                value = coerce(value, i.field.getType());
+                ReflectionUtils.makeAccessible(i.field);
+                if (value != null && !Objects.equals(ReflectionUtils.getField(i.field, d.bean()), value)) {
+                    setField(d.bean(), i.field, value);
                     log.info("@Setting '{}' of {}.{} injected again: the database's value differs from the one "
                                     + "injected while the database could not be read",
-                            d.template().getKey(), d.bean().getClass().getSimpleName(), d.field().getName());
+                            i.template.getKey(), d.bean().getClass().getSimpleName(), i.field.getName());
+                }
+                synchronized (refreshLock) {
+                    i.value = value;
                 }
             } catch (Exception e) {
                 log.warn("@Setting '{}' of {}.{} keeps the value injected without the database: {}",
-                        d.template().getKey(), d.bean().getClass().getSimpleName(), d.field().getName(), e.toString());
+                        i.template.getKey(), d.bean().getClass().getSimpleName(), i.field.getName(), e.toString());
             }
         }
     }

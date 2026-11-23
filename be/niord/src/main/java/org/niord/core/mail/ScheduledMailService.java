@@ -90,8 +90,8 @@ public class ScheduledMailService extends BaseService {
     }
 
         @Setting(value = "mailMaxPerMinute", defaultValue = "10", type = Integer,
-            description = "The max number of mails to send per minute. Read at start-up.")
-    Integer maxMailsPerMinute;
+            description = "The max number of mails to send per minute.")
+    volatile Integer maxMailsPerMinute;
 
     /**
      * The field only declares the setting. {@link #deleteExpiredMails()} reads it through {@link SettingsService}
@@ -100,7 +100,7 @@ public class ScheduledMailService extends BaseService {
      */
         @Setting(value = "mailDeleteAfterDays", defaultValue = "30", type = Integer,
             description = "Delete scheduled mails older than the given value. A non-positive value means never.")
-    Integer mailDeleteAfterDays;
+    volatile Integer mailDeleteAfterDays;
 
     /**
      * NB: Niord defines its own managed executor service to limit the number of threads,

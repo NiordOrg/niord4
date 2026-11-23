@@ -75,7 +75,10 @@ import java.util.stream.Stream;
         // The mailing lists' status-change outbox is one table for every application context of the run, and each
         // context's sweep would take any context's rows, out of the order and the timing a test expects. Each context
         // still drains it on its own JMS prompt and at start; the tests call drainOutbox() themselves.
-        "niord.mailinglist.status-change-sweep-cron=-"
+        "niord.mailinglist.status-change-sweep-cron=-",
+        // The settings' change count is one row for every application context of the run: each context's poll would
+        // follow another context's saves at a moment no test chooses. The tests call SettingsRefresher.pollForChanges().
+        "niord.settings.change-poll-cron=-"
 })
 public abstract class ITTest {
 

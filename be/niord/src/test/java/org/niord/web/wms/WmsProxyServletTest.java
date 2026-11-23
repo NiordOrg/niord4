@@ -60,23 +60,21 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the {@link WmsProxyServlet} {@code wmsProtected} security gate (WEB4).
  *
- * <p>The gate reads the {@code wmsProtected} setting through {@link SettingsService} on every request, so a change
- * on the Settings page applies at once (SECOM-UI-1); the tests hand the servlet a mocked
- * {@link SettingsService} ({@link #protect}). The setting has a {@code "true"} default. If it ever resolves to
+ * <p>The gate reads the {@code wmsProtected} field on every request, and a save on the Settings page refreshes the
+ * field at once; the tests set the field ({@link #protect}). The setting has a {@code "true"} default. If it ever resolves to
  * {@code null} (explicit null override / misconfiguration), the auto-unbox in the original
  * {@code if (wmsProtected && ...)} would throw a {@code NullPointerException} — HTTP 500 — and, worse, a
  * security gate would fail by <em>crashing</em> rather than defaulting to the safe (protected) value. The
  * hardened guard treats {@code null} as protected while leaving the shipped {@code true}/{@code false} behaviour
- * unchanged; only {@code false}, as a boolean or as a text in any case, opens the tiles, so a row stored as the
- * text {@code "true"} protects, and a setting that cannot be read protects too. These tests pin the cases at the
- * top of {@code doGet}, using Mockito servlet doubles (no container).
+ * unchanged; only {@code false}, as a boolean or as a text in any case, opens the tiles. These tests pin the cases at
+ * the top of {@code doGet}, using Mockito servlet doubles (no container), and that a request reads no setting through
+ * {@link SettingsService}.
  *
  * <p>They also pin the query sent to the WMS provider ({@link WmsProxyServlet#buildUpstreamQuery}): only
  * the tile parameters are forwarded, every value is encoded, and the token and configured layers cannot be
@@ -248,44 +246,35 @@ class WmsProxyServletTest {
         assertArrayEquals(blankPicture(), answer.body.toByteArray(), "the body is the blank picture");
     }
 
-    /** Gives the servlet a settings service whose {@code wmsProtected} reads as the given value */
-    private static void protect(WmsProxyServlet servlet, Object value) {
-        SettingsService settings = mock(SettingsService.class);
-        when(settings.get(WmsProxyServlet.PROTECTED_KEY)).thenReturn(value);
-        servlet.settingsService = settings;
+    /** Gives the servlet's {@code wmsProtected} field the given value, as the injection or a refresh does */
+    private static void protect(WmsProxyServlet servlet, Boolean value) {
+        servlet.wmsProtected = value;
     }
 
+    /**
+     * The gate reads the field on every request, so the refresh after a save applies to the next request; and a
+     * request reads no setting through the settings service, which would open a transaction for every tile
+     */
     @Test
-    void theSettingIsReadOnEveryRequest() throws Exception {
+    void theFieldIsReadOnEveryRequestAndNoSettingIsReadThroughTheService() throws Exception {
         WmsProxyServlet servlet = new WmsProxyServlet();
-        SettingsService settings = mock(SettingsService.class);
-        when(settings.get(WmsProxyServlet.PROTECTED_KEY)).thenReturn(Boolean.TRUE, Boolean.FALSE, Boolean.TRUE);
-        servlet.settingsService = settings;
 
+        protect(servlet, Boolean.TRUE);
         HttpServletResponse protectedAnswer = responseWithWriter();
         servlet.doGet(anonymousRequest(), protectedAnswer);
+        protect(servlet, Boolean.FALSE);
         HttpServletResponse openAnswer = responseWithWriter();
         servlet.doGet(anonymousRequest(), openAnswer);
+        protect(servlet, Boolean.TRUE);
         HttpServletResponse protectedAgain = responseWithWriter();
         servlet.doGet(anonymousRequest(), protectedAgain);
 
         verify(protectedAnswer).setStatus(HttpServletResponse.SC_FORBIDDEN);
         verify(openAnswer, never()).setStatus(HttpServletResponse.SC_FORBIDDEN);
         verify(protectedAgain).setStatus(HttpServletResponse.SC_FORBIDDEN);
-        verify(settings, times(3)).get(WmsProxyServlet.PROTECTED_KEY);
-    }
-
-    @Test
-    void aSettingThatCannotBeReadForbidsAnonymous() throws Exception {
-        WmsProxyServlet servlet = new WmsProxyServlet();
-        SettingsService settings = mock(SettingsService.class);
-        when(settings.get(WmsProxyServlet.PROTECTED_KEY)).thenThrow(new IllegalStateException("database down"));
-        servlet.settingsService = settings;
-
-        HttpServletRequest req = anonymousRequest();
-        HttpServletResponse resp = responseWithWriter();
-        assertDoesNotThrow(() -> servlet.doGet(req, resp), "an unreadable setting must not fail the request");
-        verify(resp).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        assertTrue(java.util.Arrays.stream(WmsProxyServlet.class.getDeclaredFields())
+                        .noneMatch(f -> SettingsService.class.isAssignableFrom(f.getType())),
+                "the servlet has no settings service to read a setting through");
     }
 
     @Test
@@ -298,20 +287,6 @@ class WmsProxyServletTest {
         for (Object on : new Object[] { Boolean.TRUE, "true", "TRUE", null, "", "no", "off", "0", 0 }) {
             assertTrue(WmsProxyServlet.isProtected(on), "'" + on + "'");
         }
-    }
-
-    @Test
-    void aStoredTextTrueForbidsAnonymousAndATextFalseDoesNot() throws Exception {
-        WmsProxyServlet servlet = new WmsProxyServlet();
-        protect(servlet, "true");
-        HttpServletResponse protectedAnswer = responseWithWriter();
-        servlet.doGet(anonymousRequest(), protectedAnswer);
-        verify(protectedAnswer).setStatus(HttpServletResponse.SC_FORBIDDEN);
-
-        protect(servlet, "False");
-        HttpServletResponse openAnswer = responseWithWriter();
-        servlet.doGet(anonymousRequest(), openAnswer);
-        verify(openAnswer, never()).setStatus(HttpServletResponse.SC_FORBIDDEN);
     }
 
     // ------------------------------------------------------------------ the upstream query

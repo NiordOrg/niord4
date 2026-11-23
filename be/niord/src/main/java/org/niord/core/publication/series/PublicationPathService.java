@@ -40,9 +40,9 @@ public class PublicationPathService {
 
     private static final Logger log = LoggerFactory.getLogger(PublicationPathService.class);
 
-    @Setting(value = "publicationPreviewRootPath", defaultValue = "${niord.home}/publication-preview",
+    @Setting(value = "publicationPreviewRootPath", defaultValue = "${niord.home}/publication-preview", editable = false,
             description = "Root directory for publication previews: a cache on the application's volume, swept after"
-                    + " seven days. Read at start-up.")
+                    + " seven days. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.")
     Path previewRoot;
 
 

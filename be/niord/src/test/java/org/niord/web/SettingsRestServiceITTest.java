@@ -33,6 +33,7 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasKey;
@@ -89,12 +90,18 @@ class SettingsRestServiceITTest extends ITTest {
     private static final String SEED_PASSWORD_KEY = "wmsPassword";
 
     /**
-     * Stable setting reachable via the by-key GET. The constant name reflects the original (now
-     * incorrect) assumption that this key was non-editable: authServerUrl is editable, like every other
-     * setting the start-up writes, so it also appears in the editable-settings list. Kept as-is because
-     * the by-key read test references it.
+     * Stable setting reachable via the by-key GET that is not on the Settings page: authServerUrl is deployment
+     * configuration, which the catalog does not make editable.
      */
     private static final String SEED_NON_EDITABLE_KEY = "authServerUrl";
+
+    /**
+     * The deployment configuration that left the Settings page: still declared settings, set by an environment
+     * variable or system property of the key's name, the settings file or an existing row, but neither listed nor
+     * saved on the page.
+     */
+    private static final List<String> DEPLOYMENT_KEYS = List.of("batchJobRootPath", "messageIndexPath",
+            "publicationPreviewRootPath", "vipsPath", "authServerUrl");
 
     /** Reads the current value of a setting through the sysadmin-protected GET endpoint. */
     private Object getSettingValue(String key) {
@@ -208,22 +215,64 @@ class SettingsRestServiceITTest extends ITTest {
 
     @Test
     void editableSettingsContainOnlyEditableSettings() {
-        // getSettings() -> SettingsService.getAllEditable() -> "Setting.findAllEditable"
-        // (select s from Setting s where s.editable = true). The endpoint must therefore expose the
-        // editable-flagged settings and only those.
-        //
-        // NOTE: the IT seed held only editable Setting rows until C4b, and the IT start writes
-        // authServerUrl editable too, so the test names no non-editable row to assert is omitted. We
-        // instead pin the positive contract: the list is non-empty and contains known editable keys
-        // (incl. SEED_NON_EDITABLE_KEY, which is editable and is consequently present here, contrary
-        // to its constant name). The negative ("omits X") case is not exercised here.
+        // getSettings() -> SettingsService.getAllEditable(): the rows whose key the catalog makes editable.
         given().auth().oauth2(accessToken())
                 .when().get("/rest/settings/editable-settings")
                 .then().statusCode(200)
                 .body("size()", greaterThan(0))
                 .body("key", hasItem(SEED_STRING_KEY))
                 .body("key", hasItem(SEED_BOOLEAN_KEY))
-                .body("key", hasItem(SEED_NON_EDITABLE_KEY));
+                .body("key", not(hasItem(SEED_NON_EDITABLE_KEY)));
+    }
+
+    /**
+     * Deployment configuration is not on the Settings page and a save of it is refused with 400, even where its row
+     * says editable, as a restored database's rows do (they were written when the keys were still editable, and a
+     * repository change never changes a deployment's rows): the page and the save take "editable" from the catalog,
+     * as the page takes the description. The rows are not changed.
+     */
+    @Test
+    void deploymentConfigurationIsNeitherListedNorSavedEvenWhereItsRowSaysEditable() {
+        Map<String, Boolean> editableBefore = new LinkedHashMap<>();
+        Map<String, Object> valueBefore = new LinkedHashMap<>();
+        Tx.requiringNew().run(() -> DEPLOYMENT_KEYS.forEach(key -> {
+            Setting row = em.find(Setting.class, key);
+            assertTrue(row != null, "start-up added " + key);
+            editableBefore.put(key, row.isEditable());
+            valueBefore.put(key, row.getValue());
+            row.setEditable(true);
+        }));
+        try {
+            given().auth().oauth2(accessToken())
+                    .when().get("/rest/settings/editable-settings")
+                    .then().statusCode(200)
+                    .body("key", hasItem(SEED_STRING_KEY))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(0))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(1))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(2))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(3))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(4))));
+
+            for (String key : DEPLOYMENT_KEYS) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("key", key);
+                body.put("value", "/it-refused");
+                given().auth().oauth2(accessToken())
+                        .contentType(ContentType.JSON)
+                        .body(body)
+                        .when().put("/rest/settings/setting/" + key)
+                        .then().statusCode(400)
+                        .body("detail", containsString("deployment configuration"));
+            }
+            Tx.requiringNew().run(() -> DEPLOYMENT_KEYS.forEach(key -> {
+                Setting row = em.find(Setting.class, key);
+                assertEquals(valueBefore.get(key), row.getValue(), key + ": the row's value is unchanged");
+                assertTrue(row.isEditable(), key + ": the row's own flag is not changed either");
+            }));
+        } finally {
+            Tx.requiringNew().run(() -> DEPLOYMENT_KEYS.forEach(key ->
+                    em.find(Setting.class, key).setEditable(editableBefore.get(key))));
+        }
     }
 
     /**

@@ -65,15 +65,15 @@ public class FmTemplateService extends BaseService {
 
     public enum ProcessFormat { TEXT, PDF }
 
-        @Setting(value = "pdfEncryptionEnabled", description = "Whether PDF reports should be encrypted or not. Read at start-up.",
+        @Setting(value = "pdfEncryptionEnabled", description = "Whether PDF reports should be encrypted or not.",
             defaultValue = "false", type = Boolean)
-    Boolean pdfEncryptionEnabled;
+    volatile Boolean pdfEncryptionEnabled;
 
         // No password in the code (the owner's ruling of 2026-11-04): a fresh database holds none until a
         // sysadmin sets one, and encryption is off until pdfEncryptionEnabled is set.
-        @Setting(value = "pdfEncryptionPassword", description = "The PDF reports encryption password. Read at start-up.",
+        @Setting(value = "pdfEncryptionPassword", description = "The PDF reports encryption password.",
             defaultValue = "", type = Password)
-    String pdfEncryptionPassword;
+    volatile String pdfEncryptionPassword;
 
     private final DictionaryService dictionaryService;
 

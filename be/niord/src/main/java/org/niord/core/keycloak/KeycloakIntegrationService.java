@@ -88,7 +88,8 @@ public class KeycloakIntegrationService {
     @Value("${" + ISSUER_URI_PROPERTY + ":}")
     String issuerUri;
 
-        @Setting(value = "authServerUrl", defaultValue = "/auth", description = "The Keycloak URL. Read at start-up.")
+        @Setting(value = "authServerUrl", defaultValue = "/auth", editable = false,
+            description = "The Keycloak URL. Deployment configuration, not on the Settings page: set by an environment variable or system property of this name, or the settings file.")
     String authServerUrl;
 
     /**

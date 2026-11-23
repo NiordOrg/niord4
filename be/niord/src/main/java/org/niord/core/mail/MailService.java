@@ -49,8 +49,8 @@ public class MailService extends BaseService {
     private final Session mailSession;
     
         @Setting(value = "mailSender", defaultValue = "niord@e-navigation.net",
-            description = "The sender e-mail address. Read at start-up.")
-    String mailSender;
+            description = "The sender e-mail address.")
+    volatile String mailSender;
 
     static final String VALID_RECIPIENTS_KEY = "mailValidRecipients";
 
@@ -60,7 +60,7 @@ public class MailService extends BaseService {
      */
         @Setting(value = "mailValidRecipients", defaultValue = "LOG",
             description = "Comma-separated list of valid mail recipients, or 'ALL' for all recipients, or 'LOG' for simulation")
-    String validRecipients;
+    volatile String validRecipients;
 
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MailService.class);
 

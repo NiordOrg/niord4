@@ -76,12 +76,12 @@ public class MessageMapImageGenerator {
     TileFetcher tileFetcher;
 
     @Setting(value = "mapImageSize", defaultValue = "256", type = Integer, web = true,
-            description = "Size of map thumbnails. Read at start-up.")
-    Integer mapImageSize;
+            description = "Size of map thumbnails.")
+    volatile Integer mapImageSize;
 
     @Setting(value = "mapImageZoomLevel", defaultValue = "8", type = Integer,
-            description = "The map thumbnail zoom level used for single-position messages. Read at start-up.")
-    Integer zoomLevel;
+            description = "The map thumbnail zoom level used for single-position messages.")
+    volatile Integer zoomLevel;
 
     /** Returns the size of the map image */
     public java.lang.Integer getMapImageSize() {
