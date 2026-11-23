@@ -268,6 +268,55 @@ class SettingsRestServiceITTest extends ITTest {
     }
 
     /**
+     * A row whose type is String although the catalogue's is Integer, as a database restored from an older system can
+     * hold, takes text, and the code parses it: so text that is a number outside the range, and text that is no
+     * number, is refused as the number is. FAILS when the range is checked on numbers only: "0" is saved, and every
+     * batch job's files are deleted at the next hourly pass.
+     */
+    @Test
+    void aNumberSavedAsTextInARowTypedStringIsHeldToTheSameRange() {
+        Map<String, List<String>> refused = new LinkedHashMap<>();
+        refused.put("batchFileExpiryDays", List.of("0", "-3", "seven"));
+        refused.put("firingExerciseScheduleDays", List.of("0", "1.5"));
+        refused.put("mapImageSize", List.of("2049", "x"));
+        refused.put("mapImageZoomLevel", List.of("-1", "31"));
+        refused.forEach((key, values) -> {
+            Setting.Type type = Tx.requiringNew().call(() -> em.find(Setting.class, key).getType());
+            Object stored = getSettingValue(key);
+            Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(Setting.Type.String));
+            try {
+                for (String value : values) {
+                    Map<String, Object> body = new LinkedHashMap<>();
+                    body.put("key", key);
+                    body.put("value", value);
+                    given().auth().oauth2(accessToken())
+                            .contentType(ContentType.JSON)
+                            .body(body)
+                            .when().put("/rest/settings/setting/" + key)
+                            .then().statusCode(400)
+                            .body("detail", containsString(key + " takes "));
+                }
+                assertEquals(stored, getSettingValue(key), key + ": the row is unchanged");
+            } finally {
+                Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(type));
+            }
+        });
+
+        String key = "batchFileExpiryDays";
+        Setting.Type type = Tx.requiringNew().call(() -> em.find(Setting.class, key).getType());
+        Object stored = getSettingValue(key);
+        Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(Setting.Type.String));
+        try {
+            putSettingValue(key, "2");
+            assertEquals("2", getSettingValue(key), "text in the range is saved");
+        } finally {
+            // Saved back through the page, so the field and the cache follow
+            Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(type));
+            putSettingValue(key, stored);
+        }
+    }
+
+    /**
      * Deployment configuration is not on the Settings page and a save of it is refused with 400, even where its row
      * says editable, as a restored database's rows do (they were written when the keys were still editable, and a
      * repository change never changes a deployment's rows): the page and the save take "editable" from the catalog,

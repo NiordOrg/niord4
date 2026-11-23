@@ -955,8 +955,8 @@ public class SettingsService extends BaseService {
 
     /**
      * Returns why a save may not give a setting the value, by the checks of the code that reads it
-     * ({@link SettingValueCheck}): what {@link #set} refuses and the settings import skips. The value has the setting's
-     * type.
+     * ({@link SettingValueCheck}): what {@link #set} refuses and the settings import skips. The value has the type of the
+     * setting's row, else the catalogue's.
      *
      * @param key   the setting's key
      * @param value the value
