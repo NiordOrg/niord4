@@ -2106,3 +2106,22 @@ they say otherwise; every other path is from the repository root.
 - **Severity:** Low to medium (a cost on every request, no wrong answer). Fix:
   `@Transactional(propagation = Propagation.SUPPORTS)` or `NOT_SUPPORTED` on the two thread-local methods, then
   measure the tile request over HTTP in that test.
+
+## SETTINGS15. `niord.home` is on the Settings page, but a save of it moves only some of the folders
+
+- **Location:** `org/niord/core/settings/SettingsService.java` (`NIORD_HOME`, declared `editable(true)`, so the
+  Settings page lists it and a save is accepted), `org/niord/core/repo/RepoCache.java` `home()` (reads it once, at
+  the first use), `org/niord/web/map/MapTileSettings.java` (reads it at each use, line 247), and the folders whose
+  defaults name `${niord.home}` (`batchJobRootPath`, `messageIndexPath`, `publicationPreviewRootPath`,
+  `mapTileCachePath`), which are deployment configuration and resolved at start.
+- **Description:** since a saved setting takes effect at once, the guides say every setting on the page does so,
+  except `messageIndexDeleteOnStartup`. A save of `niord.home` does not: the repository cache keeps the folder it
+  started with and the start-resolved folders stay, while the map-tile cache follows the new home at once. Its
+  description says nothing of this.
+- **Why it looks wrong:** it is a folder of the server, like the five keys that left the page as deployment
+  configuration, and a save splits the server's files between two homes until the next start.
+- **Exposed by:** the settings take-effect-on-save change (2026-11-23), which listed the keys whose description said
+  "Read at start-up."; `niord.home` never said it, so it was not on the accepted list.
+- **Severity:** Low (a sysadmin rarely edits it; the deployments set it by `NIORD_HOME`, which wins). Fix, for the
+  owner to decide: make it deployment configuration too (`editable(false)`, not listed, not saved), as the five
+  folder and address keys are.
