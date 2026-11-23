@@ -47,9 +47,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *     the sea-chart servlet, which is created only at the first {@code /wms/} request after start-up.</li>
  *     <li>A key an environment variable or system property overrides stays overridden.</li>
  *     <li>Another node's save is followed at the next poll of the change count, which also empties the settings
- *     cache. The suite has one node per application context, and a second context would cost a whole start of its
- *     own, so the test makes the change as another node does (the row written behind this node's cache, the count
- *     raised) and calls this node's poll, which the suite's schedule switches off.</li>
+ *     cache. Here the test makes the change as another node does (the row written behind this node's cache, the
+ *     count raised) and calls this node's poll, which the suite's schedule switches off; a second node started on
+ *     the same database, with its poll on, is {@link SettingsSecondNodeITTest}.</li>
  *     <li>A field changes only when its setting changed: a poll that finds nothing new leaves a field a test set
  *     directly.</li>
  * </ul>
