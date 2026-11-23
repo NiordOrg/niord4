@@ -921,6 +921,10 @@ public class SettingsService extends BaseService {
             throw new IllegalArgumentException(refusal);
         }
 
+        // Noted before the commit, so a poll that meets the committed value before refreshSaved still publishes the
+        // change as this node's
+        beanFactory.getBeanProvider(SettingsRefresher.class).ifAvailable(refresher -> refresher.savingHere(key));
+
         // Update the DB
         setting.setValue(template.getValue());
         setting = em.merge(setting);

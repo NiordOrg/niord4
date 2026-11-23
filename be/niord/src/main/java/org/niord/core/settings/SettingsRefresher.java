@@ -22,7 +22,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -40,7 +45,9 @@ import java.util.Set;
  *     cache's three minutes) and refreshes every field.</li>
  * </ul>
  * A field is set only when its setting's value changed; an environment variable or system property named like the key
- * still wins. After each refresh that gave a field of a key a new value, a {@link SettingChangedEvent} is published.
+ * still wins. After each refresh that gave a field of a key a new value, a {@link SettingChangedEvent} is published,
+ * once per change: as saved here for a key saved on this node, whichever of the two refreshes moved its field
+ * ({@link #savingHere(String)}), and as found by the poll for the others.
  */
 @Component
 public class SettingsRefresher {
@@ -67,12 +74,43 @@ public class SettingsRefresher {
     /** The change count whose saves this node's fields hold; guarded by this */
     private Long seen;
 
+    /**
+     * The keys whose save on this node has not yet completed, each with the number of such saves; guarded by itself. A
+     * poll that refreshes such a key's field between the save's commit and {@link #refreshSaved} publishes it as saved
+     * here, so whichever refresh moves the field, the change is published as this node's.
+     */
+    private final Map<String, Integer> savingHere = new HashMap<>();
+
     SettingsRefresher(SettingsService settingsService, SettingInjectionBeanPostProcessor processor,
                       SettingsCache settingsCache, ApplicationEventPublisher events) {
         this.settingsService = settingsService;
         this.processor = processor;
         this.settingsCache = settingsCache;
         this.events = events;
+    }
+
+    /**
+     * Notes that the key is being saved on this node, until the save's transaction has completed: called by
+     * {@link SettingsService#set} before the save commits. Without a transaction it notes nothing.
+     *
+     * @param key the key being saved
+     */
+    public void savingHere(String key) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        synchronized (savingHere) {
+            savingHere.merge(key, 1, Integer::sum);
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                // After the save's afterCommit actions, refreshSaved among them; also after a rollback
+                synchronized (savingHere) {
+                    savingHere.computeIfPresent(key, (k, n) -> n > 1 ? n - 1 : null);
+                }
+            }
+        });
     }
 
     /**
@@ -103,15 +141,17 @@ public class SettingsRefresher {
     @Scheduled(cron = "${niord.settings.change-poll-cron:14/30 * * * * ?}")
     @Transactional
     public void pollForChanges() {
-        Long count;
-        try {
-            count = toLong(settingsService.peek(CHANGE_COUNT.getKey()));
-        } catch (RuntimeException e) {
-            log.warn("Could not read " + CHANGE_COUNT.getKey() + ": settings saved on another node are followed at "
-                    + "the next poll that can: " + e);
-            return;
-        }
+        // Read and compared under the monitor refreshSaved takes, so a count read before a save here committed never
+        // replaces the count that save wrote
         synchronized (this) {
+            Long count;
+            try {
+                count = toLong(settingsService.peek(CHANGE_COUNT.getKey()));
+            } catch (RuntimeException e) {
+                log.warn("Could not read " + CHANGE_COUNT.getKey() + ": settings saved on another node are followed "
+                        + "at the next poll that can: " + e);
+                return;
+            }
             if (following && Objects.equals(seen, count)) {
                 return;
             }
@@ -119,10 +159,19 @@ public class SettingsRefresher {
             seen = count;
         }
         settingsCache.getCache().clear();
-        Set<String> changed = processor.refresh(settingsService, key -> true);
+        Set<String> changed;
+        Set<String> savedHere = new LinkedHashSet<>();
+        // A key still being saved here whose field this refresh moved (its save has committed, refreshSaved has not
+        // yet run) is this node's change: the save's completion waits until it is sorted out
+        synchronized (savingHere) {
+            changed = new LinkedHashSet<>(processor.refresh(settingsService, key -> true));
+            changed.stream().filter(savingHere::containsKey).forEach(savedHere::add);
+        }
+        changed.removeAll(savedHere);
         if (!changed.isEmpty()) {
             log.info("Settings saved elsewhere followed: " + changed);
         }
+        publish(savedHere, true);
         publish(changed, false);
     }
 
