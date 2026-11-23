@@ -42,11 +42,13 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.Principal;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -85,7 +87,8 @@ import static org.mockito.Mockito.when;
  * and an {@link HttpStub} as the provider: a user's tile is fetched once and then answered from the cache; an
  * anonymous caller never gets a cached tile, whether the proxy is protected or not; and with the cache off, or for
  * a request that is no tile, the servlet answers as it did before the cache existed: a tile kept a day and the blank
- * image, for no provider, a failed fetch or an answer that is no image, kept five minutes in every cache header.
+ * image, for no provider, a failed fetch or an answer that is no image, kept five minutes in every cache header. And
+ * a request keeps the provider, token and layers it read at its start, though a save sets the fields while it runs.
  */
 class WmsProxyServletTest {
 
@@ -754,6 +757,62 @@ class WmsProxyServletTest {
 
             assertTheBlankImage(paused);
             assertEquals(3, provider.requestCount(), "the fourth request did not reach the provider");
+        }
+    }
+
+    /**
+     * A save that lands while a request runs, here between the gate and the tile's name, does not split the request:
+     * the tile is named, fetched, stored and logged with the provider, token and layers the request read at its start.
+     * The next request uses the saved ones.
+     */
+    @Test
+    void aRequestKeepsTheSettingsItReadAtItsStart() throws Exception {
+        try (HttpStub first = HttpStub.start(); HttpStub saved = HttpStub.start()) {
+            first.respondBytes("image/png", png(256));
+            saved.respondBytes("image/png", png(256));
+            WmsProxyServlet servlet = servletWithCache(first, 7);
+            servlet.wmsLayers = "layerA";
+            HttpServletRequest request = userRequest(tileParams());
+            AtomicInteger principalAsked = new AtomicInteger();
+            when(request.getUserPrincipal()).thenAnswer(call -> {
+                if (principalAsked.incrementAndGet() == 2) {
+                    // The refresh of a save on the Settings page
+                    servlet.wmsProvider = saved.baseUrl() + "/wms";
+                    servlet.wmsPassword = "tok-saved";
+                    servlet.wmsLayers = "layerB";
+                }
+                return (Principal) () -> "editor";
+            });
+            ListAppender<ILoggingEvent> appender = attachLogAppender();
+            try {
+                Answer answer = new Answer();
+                servlet.doGet(request, answer.response);
+
+                assertEquals(2, principalAsked.get(), "precondition: the save landed between the gate and the tile");
+                verify(answer.response).setHeader(WmsProxyServlet.CACHE_HEADER, "MISS");
+                assertEquals(1, first.requestCount(), "the provider the request started with was asked");
+                assertEquals(0, saved.requestCount(), "the saved one was not, by this request");
+                Map<String, List<String>> upstream = decoded(first.lastRequest().query());
+                assertEquals(List.of("tok-secret"), upstream.get("TOKEN"));
+                assertEquals(List.of("layerA"), upstream.get("LAYERS"));
+                List<Path> files = cachedFiles();
+                assertEquals(1, files.size());
+                assertTrue(cacheFolder.relativize(files.get(0)).startsWith("127.0.0.1_" + first.port()),
+                        "stored under the provider it came from: " + files.get(0));
+                assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().equals("Loading image "
+                                + first.baseUrl() + "/wms?" + WmsProxyServlet.upstreamQuery(
+                                WmsProxyServlet.forwardedParams(tileParams(), "layerA"), "***", true))),
+                        "the logged line is of the same request: " + appender.list);
+            } finally {
+                detachLogAppender(appender);
+            }
+
+            servlet.doGet(userRequest(tileParams()), new Answer().response);
+
+            assertEquals(1, saved.requestCount(), "the next request asks the saved provider");
+            Map<String, List<String>> next = decoded(saved.lastRequest().query());
+            assertEquals(List.of("tok-saved"), next.get("TOKEN"));
+            assertEquals(List.of("layerB"), next.get("LAYERS"));
         }
     }
 

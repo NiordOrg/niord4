@@ -2086,3 +2086,23 @@ they say otherwise; every other path is from the repository root.
 - **Severity:** Low. Fix: `@OrderBy("domainId")` on `availableDomains` (mapping only, no Liquibase change; the
   order is then by domain id, not the order sent, which no reader needs), and the tests then compare the list as it
   is read.
+
+## DOMAIN4. Every HTTP request opens a database transaction to clear the request's domain
+
+- **Location:** `org/niord/core/web/NiordDomainFilter.java` `doFilterInternal` (its `finally` calls
+  `domainService.removeDomainForCurrentThread()`), and `org/niord/core/domain/DomainService.java`
+  `removeDomainForCurrentThread` and `setDomainForCurrentThread`, which only remove or set a thread-local value but
+  inherit the class-level `@Transactional` of `BaseService`.
+- **Description:** the filter runs on every request, and its `finally` calls a transactional method, so every
+  request, a sea-chart tile among them, begins and commits a transaction and takes a connection from the pool for it,
+  without a statement. A request that names a domain does it twice (`setDomainForCurrentThread` as well).
+- **Why it looks wrong:** a thread-local value needs no transaction. The cost is a pool round trip per request, and
+  under load a request can wait for a connection only to clear its domain; a map that shows a place asks for some
+  tens of tiles at once.
+- **Exposed by:** `WmsProxyHttpITTest.aTileFromTheCacheCostsTheDatabaseNothing` while it was being written
+  (2026-11-23): measured over HTTP, a tile served from the cache took one pooled connection and one transaction, no
+  statement, and the transaction log named `DomainService.removeDomainForCurrentThread`. The test now measures the
+  servlet itself; the filter is left as it is.
+- **Severity:** Low to medium (a cost on every request, no wrong answer). Fix:
+  `@Transactional(propagation = Propagation.SUPPORTS)` or `NOT_SUPPORTED` on the two thread-local methods, then
+  measure the tile request over HTTP in that test.

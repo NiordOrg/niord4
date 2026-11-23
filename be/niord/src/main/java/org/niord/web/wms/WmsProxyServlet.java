@@ -66,6 +66,10 @@ import jakarta.servlet.http.HttpServletResponse;
  *
  * On either path a browser may keep a tile for a day, and the blank image that answers "no tile" for five minutes
  * ({@link #RETRY_TIMEOUT}): a blank means no tile just now, not that the place has none.
+ *
+ * A save of one of these settings takes effect at the next request: the save sets the fields again
+ * ({@code SettingsRefresher}). A request reads the fields, once each, and no setting through the settings service,
+ * so a tile, the most frequent request the backend has, costs the database nothing.
  */
 @WebServlet(value = "/wms/*")
 public class WmsProxyServlet extends HttpServlet {
@@ -144,6 +148,13 @@ public class WmsProxyServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
 
+        // Each setting is read once, here, and the request goes on with these values: a save on the Settings page
+        // refreshes the fields at any moment, and the tile's name, the query sent to the provider and the line logged
+        // must be of one and the same provider, token and layers
+        String provider = wmsProvider;
+        String token = wmsPassword;
+        String layers = wmsLayers;
+
         // Enforce "wmsProtected" flag. If set, only authenticated users can load the tiles.
         // On the client level, the tiles are loaded through the host's HttpClient in protected
         // mode (see fe/shared-map/layers/ol-wms-layer.ts), so its interceptors pass the
@@ -155,13 +166,13 @@ public class WmsProxyServlet extends HttpServlet {
         }
 
         // A tile of a web map's grid that a user asks for comes from the tile cache, when that is switched on
-        if (cache != null && cache.enabled() && StringUtils.isNotBlank(wmsProvider)) {
-            Map<String, String> forwarded = forwardedParams(request.getParameterMap(), wmsLayers);
+        if (cache != null && cache.enabled() && StringUtils.isNotBlank(provider)) {
+            Map<String, String> forwarded = forwardedParams(request.getParameterMap(), layers);
             WmsTileKey key = request.getUserPrincipal() == null
                     ? null
-                    : WmsTileKey.of(wmsProvider, forwarded).orElse(null);
+                    : WmsTileKey.of(provider, forwarded).orElse(null);
             if (key != null) {
-                serveFromCache(request, response, key, forwarded);
+                serveFromCache(request, response, key, forwarded, provider, token, StringUtils.isNotBlank(layers));
                 return;
             }
             cache.bypassed();
@@ -169,17 +180,17 @@ public class WmsProxyServlet extends HttpServlet {
 
         // The cache headers are set once the answer is known: a day for a tile, five minutes for the blank image.
         // Check that the WMS provider has been defined using system properties
-        if (StringUtils.isBlank(wmsProvider)) {
+        if (StringUtils.isBlank(provider)) {
             keepFor(response, RETRY_TIMEOUT);
             sendBlankImage(response);
             return;
         }
 
         Map<String, String[]> paramMap = request.getParameterMap();
-        String url = wmsProvider + "?" + buildUpstreamQuery(paramMap, wmsPassword, wmsLayers);
+        String url = provider + "?" + buildUpstreamQuery(paramMap, token, layers);
         // What the logs get: the same request with the token masked
-        String loggedUrl = wmsProvider + "?" + buildUpstreamQuery(paramMap,
-                StringUtils.isBlank(wmsPassword) ? null : TOKEN_MASK, wmsLayers);
+        String loggedUrl = provider + "?" + buildUpstreamQuery(paramMap,
+                StringUtils.isBlank(token) ? null : TOKEN_MASK, layers);
 
         log.trace("Loading image " + loggedUrl);
         try {
@@ -197,7 +208,7 @@ public class WmsProxyServlet extends HttpServlet {
         } catch (Exception e) {
             // The exception text of a failed request names the URL, token included, so it is
             // logged redacted and without the stack trace
-            log.warn("Failed loading WMS image for URL " + loggedUrl + ": " + redact(e));
+            log.warn("Failed loading WMS image for URL " + loggedUrl + ": " + redact(e, token));
         }
 
         // Fall back to return a blank image, kept for five minutes. Should writing a tile have failed after its
@@ -206,7 +217,7 @@ public class WmsProxyServlet extends HttpServlet {
             keepFor(response, RETRY_TIMEOUT);
             sendBlankImage(response);
         } catch (Exception e) {
-            log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e));
+            log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e, token));
         }
     }
 
@@ -239,14 +250,17 @@ public class WmsProxyServlet extends HttpServlet {
      * @param response the response
      * @param key the tile
      * @param forwarded the parameters to send to the provider
+     * @param provider the provider, as the request read it
+     * @param token the provider's token, as the request read it
+     * @param fixedLayers whether the {@code wmsLayers} setting, as the request read it, fixes the layers
      */
     private void serveFromCache(HttpServletRequest request, HttpServletResponse response, WmsTileKey key,
-                                Map<String, String> forwarded) throws IOException {
-        boolean fixedLayers = StringUtils.isNotBlank(wmsLayers);
-        String url = wmsProvider + "?" + upstreamQuery(forwarded, wmsPassword, fixedLayers);
+                                Map<String, String> forwarded, String provider, String token, boolean fixedLayers)
+            throws IOException {
+        String url = provider + "?" + upstreamQuery(forwarded, token, fixedLayers);
         // What the logs get: the same request with the token masked
-        String loggedUrl = wmsProvider + "?" + upstreamQuery(forwarded,
-                StringUtils.isBlank(wmsPassword) ? null : TOKEN_MASK, fixedLayers);
+        String loggedUrl = provider + "?" + upstreamQuery(forwarded,
+                StringUtils.isBlank(token) ? null : TOKEN_MASK, fixedLayers);
 
         WmsTileCache.Tile tile = cache.get(key, () -> {
             log.trace("Loading image " + loggedUrl);
@@ -255,7 +269,7 @@ public class WmsProxyServlet extends HttpServlet {
             } catch (Exception e) {
                 // The exception text of a failed request names the URL, token included, so it is
                 // logged redacted and without the stack trace
-                log.warn("Failed loading WMS image for URL " + loggedUrl + ": " + redact(e));
+                log.warn("Failed loading WMS image for URL " + loggedUrl + ": " + redact(e, token));
                 throw e;
             }
         });
@@ -265,7 +279,7 @@ public class WmsProxyServlet extends HttpServlet {
             try {
                 sendBlankImage(response);
             } catch (Exception e) {
-                log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e));
+                log.warn("Failed returning blank image for URL " + loggedUrl + ": " + redact(e, token));
             }
             return;
         }
@@ -513,13 +527,13 @@ public class WmsProxyServlet extends HttpServlet {
                 .replace("%2F", "/");
     }
 
-    /** The exception's class and message, with the token masked wherever it appears */
-    private String redact(Exception e) {
+    /** The exception's class and message, with the request's token masked wherever it appears */
+    private static String redact(Exception e, String token) {
         String text = e.getClass().getSimpleName() + ": " + e.getMessage();
-        if (StringUtils.isNotBlank(wmsPassword)) {
-            text = text.replace(wmsPassword, TOKEN_MASK)
-                    .replace(encodeValue(wmsPassword), TOKEN_MASK)
-                    .replace(URLEncoder.encode(wmsPassword, StandardCharsets.UTF_8), TOKEN_MASK);
+        if (StringUtils.isNotBlank(token)) {
+            text = text.replace(token, TOKEN_MASK)
+                    .replace(encodeValue(token), TOKEN_MASK)
+                    .replace(URLEncoder.encode(token, StandardCharsets.UTF_8), TOKEN_MASK);
         }
         return text;
     }
