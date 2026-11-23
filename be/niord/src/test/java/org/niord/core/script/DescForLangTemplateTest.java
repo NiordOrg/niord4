@@ -15,7 +15,8 @@
  */
 package org.niord.core.script;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.niord.core.NiordApp;
 import org.niord.core.dictionary.DictionaryService;
 import org.niord.core.domain.DomainService;
@@ -34,22 +35,28 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * The description {@code descForLang} of the base product's {@code message-support.ftl} picks for a language: the
- * one in that language, else the one in the deployment's default language, else the first. Every message print and
- * mail that includes the file reads a message's, a part's and a reference's text through it. Without the second
- * step a message with no text in the language asked for printed the first text it had, whatever its language; a
- * country with a language its editors do not always write in (Greenland) held its own copy of the whole file only to
- * add that step.
+ * The description {@code descForLang} picks for a language: the one in that language, else the one in the
+ * deployment's default language, else the first. The base product has the function twice, with the same steps:
+ * <ul>
+ *     <li>{@code messages/message-support.ftl}, which every message print and mail that includes the file reads a
+ *     message's, a part's and a reference's text through;</li>
+ *     <li>{@code tmpl/common.ftl}, which every category template includes, and reads an area's, a message's, a
+ *     part's, a template's and a list value's text through.</li>
+ * </ul>
+ * Without the second step a message with no text in the language asked for printed the first text it had, whatever
+ * its language; a country with a language its editors do not always write in (Greenland) held its own copy of each
+ * whole file only to add that step.
  *
  * <p>Rendered through the real builder and the base product's templates, as {@link MessageAttachmentTemplateTest}
- * does, with a one-line template that calls the function.
+ * does, with a one-line template that includes the file and calls the function.
  */
 class DescForLangTemplateTest {
 
     private static final String TEMPLATE = "templates/it/desc-for-lang-test.ftl";
 
-    /** The language of the description descForLang picks, or "none" */
-    private static String picked(String defaultLanguage, String asked, String... languages) throws Exception {
+    /** The language of the description descForLang of the included file picks, or "none" */
+    private static String picked(String include, String defaultLanguage, String asked, String... languages)
+            throws Exception {
         NiordApp app = mock(NiordApp.class);
         when(app.getLanguage(anyString())).thenAnswer(call -> call.getArgument(0));
         when(app.getDefaultLanguage()).thenReturn(defaultLanguage);
@@ -58,7 +65,7 @@ class DescForLangTemplateTest {
         ScriptResourceService resources = mock(ScriptResourceService.class);
         Map<String, ScriptResource> rows = BootstrapTemplates.rows();
         rows.put(TEMPLATE, BootstrapTemplates.row(TEMPLATE,
-                "<#include \"/templates/messages/message-support.ftl\"/>"
+                "<#include \"/" + include + "\"/>"
                         + "<#assign desc = descForLang(msg, asked)!>"
                         + "<#if desc?has_content>${desc.lang}<#else>none</#if>"));
         BootstrapTemplates.stub(resources, rows);
@@ -80,31 +87,37 @@ class DescForLangTemplateTest {
                 .templatePath(TEMPLATE)
                 .data("msg", msg)
                 .data("asked", asked)
+                // A category template is run with its parameters (TemplateExecutionService); common.ftl reads them
+                .data("params", Map.of())
                 .process()
                 .strip();
     }
 
-    /** FAILS on the template that went from the language asked for straight to the first description ("en"). */
-    @Test
-    void aMissingLanguageFallsBackToTheDefaultLanguage() throws Exception {
-        assertEquals("da", picked("da", "kl", "en", "da"));
+    /** FAILS on a template that goes from the language asked for straight to the first description ("en"). */
+    @ParameterizedTest
+    @ValueSource(strings = { "templates/messages/message-support.ftl", "templates/tmpl/common.ftl" })
+    void aMissingLanguageFallsBackToTheDefaultLanguage(String include) throws Exception {
+        assertEquals("da", picked(include, "da", "kl", "en", "da"));
     }
 
-    @Test
-    void theLanguageAskedForComesFirst() throws Exception {
-        assertEquals("en", picked("da", "en", "da", "en"));
-        assertEquals("kl", picked("da", "kl", "en", "da", "kl"));
+    @ParameterizedTest
+    @ValueSource(strings = { "templates/messages/message-support.ftl", "templates/tmpl/common.ftl" })
+    void theLanguageAskedForComesFirst(String include) throws Exception {
+        assertEquals("en", picked(include, "da", "en", "da", "en"));
+        assertEquals("kl", picked(include, "da", "kl", "en", "da", "kl"));
     }
 
     /** A deployment whose texts are complete, or that lacks the default language's text too, prints as before */
-    @Test
-    void withoutTheDefaultLanguageTheFirstDescriptionIsTaken() throws Exception {
-        assertEquals("en", picked("da", "kl", "en", "fr"));
-        assertEquals("en", picked(null, "kl", "en", "da"));
+    @ParameterizedTest
+    @ValueSource(strings = { "templates/messages/message-support.ftl", "templates/tmpl/common.ftl" })
+    void withoutTheDefaultLanguageTheFirstDescriptionIsTaken(String include) throws Exception {
+        assertEquals("en", picked(include, "da", "kl", "en", "fr"));
+        assertEquals("en", picked(include, null, "kl", "en", "da"));
     }
 
-    @Test
-    void anEntityWithoutDescriptionsHasNone() throws Exception {
-        assertEquals("none", picked("da", "kl"));
+    @ParameterizedTest
+    @ValueSource(strings = { "templates/messages/message-support.ftl", "templates/tmpl/common.ftl" })
+    void anEntityWithoutDescriptionsHasNone(String include) throws Exception {
+        assertEquals("none", picked(include, "da", "kl"));
     }
 }
