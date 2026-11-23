@@ -1199,6 +1199,18 @@ class MailingListDeliveryFaultITTest extends ITTest {
         }
     }
 
+    /** Runs the work with this context's free-text index rebuilt from the given time on, put back afterwards */
+    private <T> T rebuildStartedAt(Instant started, Callable<T> work) throws Exception {
+        Object index = AopTestUtils.getUltimateTargetObject(messageLuceneIndex);
+        Object was = ReflectionTestUtils.getField(index, "rebuildStartedAt");
+        ReflectionTestUtils.setField(index, "rebuildStartedAt", started);
+        try {
+            return work.call();
+        } finally {
+            ReflectionTestUtils.setField(index, "rebuildStartedAt", was);
+        }
+    }
+
     /**
      * Runs the real scheduler's pass once with the scheduler's and the execution's log captured, and returns their
      * WARN and ERROR events about the trigger
@@ -1353,5 +1365,40 @@ class MailingListDeliveryFaultITTest extends ITTest {
                 "the trigger moves to its next regular time");
         assertTrue(errorRecords(n).isEmpty(), "and leaves no failure record");
         assertTrue(waitRecords(n).isEmpty(), "nor a record of a wait");
+    }
+
+    /**
+     * The same trigger run long after the start, while the index is built again because a system administrator
+     * changed what it holds (a save of {@code messageIndexIncludeDeletedMessages}): it waits for the index as after a
+     * start, the half hour counted from the rebuild, and no mail is made. FAILS when the wait counts from the start
+     * only: the mail is made from the half-built index.
+     */
+    @Test
+    void aScheduledTriggerWhoseFreeTextSearchMeetsTheIndexBeingRebuiltWaitsInTheHalfHourAfterTheRebuild()
+            throws Exception {
+        messageLuceneIndex.recreateIndex();
+        awayFromTheRealSchedulersRun();
+        String n = Long.toString(System.nanoTime(), 36);
+        Integer list = committedListWithOneContact(n);
+        String subject = "IT-INDEX-REBUILD-" + n;
+        String inThreeHours = ZonedDateTime.now(ZoneOffset.UTC).plusHours(3)
+                .format(DateTimeFormatter.ofPattern("HH:mm"));
+        Integer triggerId = committedDueScheduledTrigger(list, subject, inThreeHours, IT_TEMPLATE, null,
+                "query=nw&status=PUBLISHED");
+        Instant longAgo = Instant.now().minus(MailingListExecutionService.INCOMPLETE_INDEX_WAIT).minusSeconds(60);
+        Instant rebuilt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        Instant endOfTheWait = rebuilt.plus(MailingListExecutionService.INCOMPLETE_INDEX_WAIT);
+
+        List<ILoggingEvent> run = startedAt(longAgo, () -> rebuildStartedAt(rebuilt, () -> withTheIndexIncomplete(
+                () -> schedulerRunWarningsAbout(triggerId))));
+
+        assertEquals(0, mailsWithSubject(subject), "no mail is made from the index being rebuilt");
+        assertEquals(1, run.size(), "one line about the trigger: " + run);
+        String line = run.get(0).getFormattedMessage();
+        assertTrue(line.contains("waits for the free-text index"), "it waits: " + line);
+        assertTrue(line.contains("by " + endOfTheWait + " at the latest"),
+                "half an hour after the rebuild began, not after the start: " + line);
+        assertTrue(nextExecutionOf(triggerId).after(new Date()), "postponed");
+        assertEquals(1, waitRecords(n).size(), "the wait is recorded in the Mail Queue");
     }
 }

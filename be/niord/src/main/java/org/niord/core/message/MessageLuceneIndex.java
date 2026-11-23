@@ -160,6 +160,12 @@ public class MessageLuceneIndex extends BaseService {
     volatile boolean allMessagesIndexed;
 
     /**
+     * When {@link #rebuildIndex()} last began to build the index again while the server runs, the epoch until it has:
+     * a scheduled mailing-list trigger waits for the index from here as it does from the start.
+     */
+    volatile Instant rebuildStartedAt = Instant.EPOCH;
+
+    /**
      * The messages the passes indexed since the start or the last deletion of the index: the count the line that says
      * the index is complete gives ({@link #logComplete()}). Written by the passes, under the folder's writer lock.
      */
@@ -297,6 +303,16 @@ public class MessageLuceneIndex extends BaseService {
      */
     public boolean allMessagesIndexed() {
         return allMessagesIndexed;
+    }
+
+    /**
+     * Returns when {@link #rebuildIndex()} last began to build the index again, the epoch when it has not since the
+     * start. A start that deletes the index is not counted here.
+     *
+     * @return when the last rebuild while running began
+     */
+    public Instant rebuildStartedAt() {
+        return rebuildStartedAt;
     }
 
     /**
@@ -572,15 +588,17 @@ public class MessageLuceneIndex extends BaseService {
      * answered from part of the messages ({@link #allMessagesIndexed()}) until the passes have indexed every message
      * again, and the first pass runs at once; the minute passes index the rest, {@value #LUCENE_MAX_INDEX_COUNT}
      * messages each. A search answers from more messages after each pass, and no pass holds the writer lock longer
-     * than a pass does. Called on a thread of its own when a setting that decides what the index holds has changed
-     * ({@link MessageIndexRebuilder}), on every node, since each node has its own index. It holds no transaction
-     * while it waits for the writer lock; the pass runs in a transaction of its own, through the proxy.
+     * than a pass does. A scheduled mailing-list trigger waits for the index from here as it does after a start
+     * ({@link #rebuildStartedAt()}). Called on a thread of its own when a setting that decides what the index holds
+     * has changed ({@link MessageIndexRebuilder}), on every node, since each node has its own index. It holds no
+     * transaction while it waits for the writer lock; the pass runs in a transaction of its own, through the proxy.
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void rebuildIndex() {
         ReentrantLock lock = writerLock(indexFolder);
         lock.lock();
         try {
+            rebuildStartedAt = Instant.now();
             deleteIndex();
         } catch (IOException | RuntimeException e) {
             log.error("Failed deleting the index to build it again", e);

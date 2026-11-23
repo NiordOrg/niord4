@@ -26,6 +26,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -85,9 +86,13 @@ class MessageIndexRebuildTest {
         assertTrue(index.allMessagesIndexed());
         assertEquals(List.of(), index.searchIndex("zzgone", "en", 10), "left out while the setting is off");
 
+        assertEquals(Instant.EPOCH, index.rebuildStartedAt(), "no rebuild since the start");
         index.includeDeletedMessages = true; // as the refresh after the save sets it
+        Instant beforeRebuild = Instant.now();
         index.rebuildIndex();
 
+        assertFalse(index.rebuildStartedAt().isBefore(beforeRebuild),
+                "the rebuild's start is noted, for the mailing lists' wait for the index");
         assertEquals(List.of(false), completeWhenThePassStarted,
                 "the index was deleted before the pass: a search meanwhile is marked incomplete");
         assertTrue(index.allMessagesIndexed(), "the pass indexed every message again");

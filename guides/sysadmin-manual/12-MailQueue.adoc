@@ -67,10 +67,8 @@ A system administrator can also ask at any time at `GET /rest/monitor/message-in
 servers run, each answers for itself.
 
 The index is also built again when a system administrator changes the setting
-`messageIndexIncludeDeletedMessages` (see <<settings-from-code,Settings from Code>>). The triggers do not wait then,
-since the half hour counts from the start of the server: a scheduled trigger with a text term that runs while the
-index is being built is mailed all the same, with the WARN above, and its mail may list too few messages. So change
-that setting outside the hours such triggers run.
+`messageIndexIncludeDeletedMessages` (see <<settings-from-code,Settings from Code>>). The triggers wait for it then
+as they do after a restart, in the first half hour after the change.
 
 Niord notes every status change of a message in its database, together with the change, until the mails of the
 status change triggers are in the queue. So a status change trigger makes its mails even when the server restarts

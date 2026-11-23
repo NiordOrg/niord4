@@ -135,8 +135,8 @@ A few settings are worth knowing about before you change them:
 * `messageIndexIncludeDeletedMessages` decides whether the text search index holds deleted messages. A change builds
   the search indexes again, which takes some minutes on a large database. Meanwhile the message list shows its
   warning that the index is still being built, as it does after a restart, and `GET /rest/monitor/message-index`
-  answers `"complete":false`. A scheduled mailing-list trigger with a text term does not wait for the index then
-  (see <<mail-queue,Mail Queue>>), so change this setting outside the hours such triggers run.
+  answers `"complete":false`. A scheduled mailing-list trigger with a text term waits for the index then, as it
+  does after a restart (see <<mail-queue,Mail Queue>>).
 * `wmsProvider`, `wmsLayers` and `wmsPassword` (the provider's token) choose the sea chart. The server fetches the
   next tile with the new value, and its own tile cache needs no emptying. A browser, however, keeps a tile it has
   shown for up to a day, so a place a user has already looked at can show the old chart for up to a day, or until

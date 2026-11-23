@@ -35,9 +35,10 @@ import java.util.stream.Collectors;
  * With this model, if one mailing list execution fails, it will not roll back a single transaction
  * for all mailing lists. A trigger whose run fails is postponed by at most an hour, rather than run again every
  * minute, and its failure is recorded in the Mail Queue as a mail in status Error, at most once a day while it keeps
- * failing. A trigger whose free-text search was answered while the index was being filled after the start
- * ({@link IncompleteIndexException}) is not a failure: it is postponed by a few minutes at a time, never past the end of
- * the half hour after the start, logged as one warning and recorded apart from the failures, at most once a day.
+ * failing. A trigger whose free-text search was answered while the index was being filled after the start, or after a
+ * change of its settings ({@link IncompleteIndexException}), is not a failure: it is postponed by a few minutes at a
+ * time, never past the end of the half hour after the later of the two, logged as one warning and recorded apart from
+ * the failures, at most once a day.
  */
 // PORT: was @jakarta.ejb.Stateless; now a Spring @Component (singleton).
 @Service
@@ -84,12 +85,14 @@ public class MailingListSchedulerService extends BaseService {
                     // In a new transaction: the mails and the trigger's next execution commit together or not at all
                     mailingListExecutionService.executeScheduledTrigger(triggerId);
                 } catch (IncompleteIndexException wait) {
-                    // Not a fault: the free-text index is being filled after the start. Postponed by a few minutes
+                    // Not a fault: the free-text index is being filled after the start or a change of its settings.
+                    // Postponed by a few minutes
                     // (never past the end of the wait), so the mail follows soon after the index is complete
                     String when = postponeFailedTrigger(triggerId, wait.getRetryAt());
                     if (indexWaitsLogged.add(triggerId)) {
                         log.warn("Scheduled mailing list trigger " + triggerId + " waits for the free-text index, "
-                                + "which is being built again after the start; it is tried again " + when
+                                + "which is being built again after the start or a change of its settings; it is tried "
+                                + "again " + when
                                 + ", and its mail is made once the index is complete, by "
                                 + wait.getWaitUntil().toInstant() + " at the latest");
                     } else {
