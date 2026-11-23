@@ -84,6 +84,9 @@ public class MessagePostgresIndex extends BaseService {
 
     static final int POSTGRES_MAX_INDEX_COUNT = 5000;
 
+    /** The messages a pass of {@link #recreateIndex()} indexes at most; package-private so a test can make it small */
+    int rebuildPassSize = POSTGRES_MAX_INDEX_COUNT;
+
     /** The search table, which no entity maps */
     static final String SEARCH_TABLE = "message_search_text";
 
@@ -99,8 +102,9 @@ public class MessagePostgresIndex extends BaseService {
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessagePostgresIndex.class);
 
     @Setting(value = "messageIndexIncludeDeletedMessages", defaultValue = "false", type = Boolean,
-            description = "Whether the message index should include deleted messages or not. Read at start-up.")
-    Boolean includeDeletedMessages;
+            description = "Whether the message index should include deleted messages or not.")
+    // A change builds the table again (MessageIndexRebuilder); each pass reads it once
+    volatile Boolean includeDeletedMessages;
 
     @Inject
     MessageQueryService messageQueryService;
@@ -202,7 +206,8 @@ public class MessagePostgresIndex extends BaseService {
     }
 
     /**
-     * Begins a new fill (a re-index, {@link #recreateIndex()}, which code and tests start; no page or endpoint does):
+     * Begins a new fill (a re-index, {@link #recreateIndex()}, which a save of {@code messageIndexIncludeDeletedMessages}
+     * starts ({@link MessageIndexRebuilder}), and code and tests; no page or endpoint does):
      * the table is not complete until a pass of this fill has committed
      */
     synchronized void startFill() {
@@ -230,7 +235,10 @@ public class MessagePostgresIndex extends BaseService {
     /**
      * Rebuilds the entire PostgreSQL search table and returns the number of indexed messages.
      * Unlike the scheduled maintainer this is unconditional, so it can prime the table right after the
-     * backend is enabled (and is the entry point the integration tests drive).
+     * backend is enabled (and is the entry point the integration tests drive). One transaction: until it commits, a
+     * search reads the table as it was. Inside it the messages are indexed in passes of {@link #rebuildPassSize}, and
+     * the messages a pass read are let go before the next, so the memory a rebuild takes does not grow with the number
+     * of messages; each pass goes on from the rows the one before wrote.
      */
     @Transactional
     public int recreateIndex() {
@@ -238,7 +246,16 @@ public class MessagePostgresIndex extends BaseService {
         try {
             searchTableStatement("delete from message_search_text").executeUpdate();
             startFill();
-            return updateIndex(Integer.MAX_VALUE);
+            int total = 0;
+            int indexed;
+            do {
+                indexed = updateIndex(rebuildPassSize);
+                total += indexed;
+                // The passes write by native statements only; a caller's pending change is written before it is let go
+                em.flush();
+                em.clear();
+            } while (indexed >= rebuildPassSize);
+            return total;
         } finally {
             lock.unlock();
         }
@@ -258,6 +275,8 @@ public class MessagePostgresIndex extends BaseService {
      * @return the number of messages (re-)indexed
      */
     int updateIndex(int maxIndexCount) {
+        // Read once, so that a save while the pass runs does not index its messages by two rules
+        boolean includeDeleted = java.lang.Boolean.TRUE.equals(includeDeletedMessages);
         Marker marker = getMarker();
         long t0 = System.currentTimeMillis();
 
@@ -275,7 +294,7 @@ public class MessagePostgresIndex extends BaseService {
         }
 
         for (Message message : updatedMessages) {
-            indexMessage(message, searchTexts(message));
+            indexMessage(message, searchTexts(message, includeDeleted));
         }
 
         // Then the missed messages, each on its own: one whose text cannot be built is tried again by the next pass
@@ -283,7 +302,7 @@ public class MessagePostgresIndex extends BaseService {
         for (Message message : missedMessages) {
             Map<String, String> texts;
             try {
-                texts = searchTexts(message);
+                texts = searchTexts(message, includeDeleted);
             } catch (RuntimeException ex) {
                 log.warn("Error indexing message " + message.getId() + " behind the marker (PostgreSQL): "
                         + ex.getMessage(), ex);
@@ -337,11 +356,12 @@ public class MessagePostgresIndex extends BaseService {
      * Builds the search text of each supported language of the given message, or returns {@code null} when the
      * message is not indexed (DELETED / excluded series). Mirrors {@code MessageLuceneIndex.shouldAddMessage}.
      *
-     * @param message the message
+     * @param message        the message
+     * @param includeDeleted whether a deleted message is indexed, as the pass read it
      * @return the text by language code, or {@code null}
      */
-    private Map<String, String> searchTexts(Message message) {
-        if (!shouldAddMessage(message)) {
+    private Map<String, String> searchTexts(Message message, boolean includeDeleted) {
+        if (!shouldAddMessage(message, includeDeleted)) {
             return null;
         }
         Map<String, String> texts = new LinkedHashMap<>();
@@ -395,14 +415,14 @@ public class MessagePostgresIndex extends BaseService {
     /**
      * Determines whether the message should be indexed. Identical to the Lucene backend: messages whose
      * series is flagged {@code excludeFromMessageIndex} are never indexed, and {@code DELETED} messages
-     * are excluded unless {@code messageIndexIncludeDeletedMessages} is set.
+     * are excluded unless {@code messageIndexIncludeDeletedMessages} is set, as the pass read it.
      */
-    private boolean shouldAddMessage(Message message) {
+    private boolean shouldAddMessage(Message message, boolean includeDeleted) {
         if (message.getMessageSeries().getExcludeFromMessageIndex() != null &&
                 message.getMessageSeries().getExcludeFromMessageIndex()) {
             return false;
         }
-        return includeDeletedMessages || message.getStatus() != Status.DELETED;
+        return includeDeleted || message.getStatus() != Status.DELETED;
     }
 
     /**

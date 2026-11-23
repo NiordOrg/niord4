@@ -33,6 +33,7 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasKey;
@@ -89,12 +90,18 @@ class SettingsRestServiceITTest extends ITTest {
     private static final String SEED_PASSWORD_KEY = "wmsPassword";
 
     /**
-     * Stable setting reachable via the by-key GET. The constant name reflects the original (now
-     * incorrect) assumption that this key was non-editable: authServerUrl is editable, like every other
-     * setting the start-up writes, so it also appears in the editable-settings list. Kept as-is because
-     * the by-key read test references it.
+     * Stable setting reachable via the by-key GET that is not on the Settings page: authServerUrl is deployment
+     * configuration, which the catalog does not make editable.
      */
     private static final String SEED_NON_EDITABLE_KEY = "authServerUrl";
+
+    /**
+     * The deployment configuration that left the Settings page: still declared settings, set by an environment
+     * variable or system property of the key's name, the settings file or an existing row, but neither listed nor
+     * saved on the page.
+     */
+    private static final List<String> DEPLOYMENT_KEYS = List.of("batchJobRootPath", "messageIndexPath",
+            "publicationPreviewRootPath", "vipsPath", "authServerUrl");
 
     /** Reads the current value of a setting through the sysadmin-protected GET endpoint. */
     private Object getSettingValue(String key) {
@@ -208,22 +215,155 @@ class SettingsRestServiceITTest extends ITTest {
 
     @Test
     void editableSettingsContainOnlyEditableSettings() {
-        // getSettings() -> SettingsService.getAllEditable() -> "Setting.findAllEditable"
-        // (select s from Setting s where s.editable = true). The endpoint must therefore expose the
-        // editable-flagged settings and only those.
-        //
-        // NOTE: the IT seed held only editable Setting rows until C4b, and the IT start writes
-        // authServerUrl editable too, so the test names no non-editable row to assert is omitted. We
-        // instead pin the positive contract: the list is non-empty and contains known editable keys
-        // (incl. SEED_NON_EDITABLE_KEY, which is editable and is consequently present here, contrary
-        // to its constant name). The negative ("omits X") case is not exercised here.
+        // getSettings() -> SettingsService.getAllEditable(): the rows whose key the catalog makes editable.
         given().auth().oauth2(accessToken())
                 .when().get("/rest/settings/editable-settings")
                 .then().statusCode(200)
                 .body("size()", greaterThan(0))
                 .body("key", hasItem(SEED_STRING_KEY))
                 .body("key", hasItem(SEED_BOOLEAN_KEY))
-                .body("key", hasItem(SEED_NON_EDITABLE_KEY));
+                .body("key", not(hasItem(SEED_NON_EDITABLE_KEY)));
+    }
+
+    /**
+     * A saved setting takes effect at once, so a value the code that reads it cannot use is refused with 400 and the
+     * reason, and the row is unchanged: a number of days below 1 (every batch job's files deleted at the next hourly
+     * pass, every firing exercise cancelled at the next run) and a map image size or zoom level the drawing does not
+     * accept (every new map image the placeholder). The bounds themselves are saved.
+     */
+    @Test
+    void aValueTheCodeCannotUseIsRefusedWith400AndLeavesTheRow() {
+        Map<String, List<Object>> refused = new LinkedHashMap<>();
+        refused.put("batchFileExpiryDays", List.of(0, -3));
+        refused.put("firingExerciseScheduleDays", List.of(0, -1));
+        refused.put("mapImageSize", List.of(0, 2049));
+        refused.put("mapImageZoomLevel", List.of(-1, 31));
+        refused.forEach((key, values) -> {
+            Object stored = getSettingValue(key);
+            for (Object value : values) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("key", key);
+                body.put("value", value);
+                given().auth().oauth2(accessToken())
+                        .contentType(ContentType.JSON)
+                        .body(body)
+                        .when().put("/rest/settings/setting/" + key)
+                        .then().statusCode(400)
+                        .body("detail", is(key + " takes " + switch (key) {
+                            case "mapImageSize" -> "a size in pixels from 1 to 2048";
+                            case "mapImageZoomLevel" -> "a zoom level from 0 to 30";
+                            default -> "a number of days of at least 1";
+                        } + ", not " + value));
+            }
+            assertEquals(stored, getSettingValue(key), key + ": the row is unchanged");
+        });
+
+        Object stored = getSettingValue("batchFileExpiryDays");
+        try {
+            putSettingValue("batchFileExpiryDays", 1);
+            assertEquals(1, getSettingValue("batchFileExpiryDays"), "the lowest number of days is saved");
+        } finally {
+            putSettingValue("batchFileExpiryDays", stored);
+        }
+    }
+
+    /**
+     * A row whose type is String although the catalogue's is Integer, as a database restored from an older system can
+     * hold, takes text, and the code parses it: so text that is a number outside the range, and text that is no
+     * number, is refused as the number is. FAILS when the range is checked on numbers only: "0" is saved, and every
+     * batch job's files are deleted at the next hourly pass.
+     */
+    @Test
+    void aNumberSavedAsTextInARowTypedStringIsHeldToTheSameRange() {
+        Map<String, List<String>> refused = new LinkedHashMap<>();
+        refused.put("batchFileExpiryDays", List.of("0", "-3", "seven"));
+        refused.put("firingExerciseScheduleDays", List.of("0", "1.5"));
+        refused.put("mapImageSize", List.of("2049", "x"));
+        refused.put("mapImageZoomLevel", List.of("-1", "31"));
+        refused.forEach((key, values) -> {
+            Setting.Type type = Tx.requiringNew().call(() -> em.find(Setting.class, key).getType());
+            Object stored = getSettingValue(key);
+            Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(Setting.Type.String));
+            try {
+                for (String value : values) {
+                    Map<String, Object> body = new LinkedHashMap<>();
+                    body.put("key", key);
+                    body.put("value", value);
+                    given().auth().oauth2(accessToken())
+                            .contentType(ContentType.JSON)
+                            .body(body)
+                            .when().put("/rest/settings/setting/" + key)
+                            .then().statusCode(400)
+                            .body("detail", containsString(key + " takes "));
+                }
+                assertEquals(stored, getSettingValue(key), key + ": the row is unchanged");
+            } finally {
+                Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(type));
+            }
+        });
+
+        String key = "batchFileExpiryDays";
+        Setting.Type type = Tx.requiringNew().call(() -> em.find(Setting.class, key).getType());
+        Object stored = getSettingValue(key);
+        Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(Setting.Type.String));
+        try {
+            putSettingValue(key, "2");
+            assertEquals("2", getSettingValue(key), "text in the range is saved");
+        } finally {
+            // Saved back through the page, so the field and the cache follow
+            Tx.requiringNew().run(() -> em.find(Setting.class, key).setType(type));
+            putSettingValue(key, stored);
+        }
+    }
+
+    /**
+     * Deployment configuration is not on the Settings page and a save of it is refused with 400, even where its row
+     * says editable, as a restored database's rows do (they were written when the keys were still editable, and a
+     * repository change never changes a deployment's rows): the page and the save take "editable" from the catalog,
+     * as the page takes the description. The rows are not changed.
+     */
+    @Test
+    void deploymentConfigurationIsNeitherListedNorSavedEvenWhereItsRowSaysEditable() {
+        Map<String, Boolean> editableBefore = new LinkedHashMap<>();
+        Map<String, Object> valueBefore = new LinkedHashMap<>();
+        Tx.requiringNew().run(() -> DEPLOYMENT_KEYS.forEach(key -> {
+            Setting row = em.find(Setting.class, key);
+            assertTrue(row != null, "start-up added " + key);
+            editableBefore.put(key, row.isEditable());
+            valueBefore.put(key, row.getValue());
+            row.setEditable(true);
+        }));
+        try {
+            given().auth().oauth2(accessToken())
+                    .when().get("/rest/settings/editable-settings")
+                    .then().statusCode(200)
+                    .body("key", hasItem(SEED_STRING_KEY))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(0))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(1))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(2))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(3))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(4))));
+
+            for (String key : DEPLOYMENT_KEYS) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("key", key);
+                body.put("value", "/it-refused");
+                given().auth().oauth2(accessToken())
+                        .contentType(ContentType.JSON)
+                        .body(body)
+                        .when().put("/rest/settings/setting/" + key)
+                        .then().statusCode(400)
+                        .body("detail", containsString("deployment configuration"));
+            }
+            Tx.requiringNew().run(() -> DEPLOYMENT_KEYS.forEach(key -> {
+                Setting row = em.find(Setting.class, key);
+                assertEquals(valueBefore.get(key), row.getValue(), key + ": the row's value is unchanged");
+                assertTrue(row.isEditable(), key + ": the row's own flag is not changed either");
+            }));
+        } finally {
+            Tx.requiringNew().run(() -> DEPLOYMENT_KEYS.forEach(key ->
+                    em.find(Setting.class, key).setEditable(editableBefore.get(key))));
+        }
     }
 
     /**

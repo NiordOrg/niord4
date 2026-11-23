@@ -102,12 +102,20 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   from the two flags in memory. `MessagePostgresIndex.allMessagesIndexed()` is set once the completing pass has
   committed (it used to be set when the pass had found its messages, before it wrote them) and is false after a
   start until the first pass, about a minute; a pass that commits after a re-index began does not mark the re-index's
-  table complete. A re-index (`recreateIndex` of either index) is started by code and tests only: no page or endpoint
-  starts one. The Lucene line after a start counts the whole rebuild; the PostgreSQL line after a restart counts only
+  table complete. A re-index is started by a save of `messageIndexIncludeDeletedMessages` (next item) and by code and
+  tests; no page or endpoint starts one. The Lucene line after a start counts the whole rebuild; the PostgreSQL line after a restart counts only
   what the table lacked, so `0 messages` there means nothing was missing, and its figure counts the passes that
   committed. The state is the backend process's: with several backend pods, each answers for itself. The Lucene line
   follows the line of the pass that completed the index. The operators' guide (`country-kit/docs/operators-guide.md`,
   _Cut-over_) tells how to wait for it.
+- A save of `messageIndexIncludeDeletedMessages` takes effect for every message: it builds both indexes again
+  (`MessageIndexRebuilder`, on a thread of its own, after the save has refreshed the two `@Setting` fields). Each node
+  builds its own Lucene index again as a start does (`MessageLuceneIndex.rebuildIndex`: the index is deleted, its
+  first pass runs at once and the minute passes do the rest, with the search's warning meanwhile); another node does
+  so when its settings poll has found the save. The shared table is rebuilt once, on the node that saved the setting
+  (`MessagePostgresIndex.recreateIndex`, one transaction: a search reads the table as it was until it commits, and
+  `GET /rest/monitor/message-index` on that node says `postgres: false` meanwhile). Each pass of either index reads
+  the setting once, when it starts.
 - Both passes also look five minutes behind their marker (`MessageQueryService.INDEX_LOOK_BACK`, a constant).
   A message's `updated` time is stamped when its transaction writes it, and transactions commit in another
   order: a message stamped before the time a pass read up to, and committed after that pass, lay below the
@@ -125,7 +133,7 @@ The PostgreSQL index is **always-on**, exactly like `MessageLuceneIndex`:
   the log tells of it. A failure of the database while a message is read (a dropped connection, a pool timeout, an
   SQL error after which the transaction refuses every later statement) is not skipped: it would fail every later
   message of the batch too, so the pass fails as a whole, the marker stays, and the next pass tries the same
-  messages again. A re-index (`recreateIndex`, started by code and tests only) runs the same pass. A transaction that takes longer than five minutes from
+  messages again. A re-index runs the same pass. A transaction that takes longer than five minutes from
   writing a message to its commit is still missed.
 - `disableLucene` therefore only routes which index a free-text **search** reads. Both indexes are always
   populated, so the two can be compared at any time and the switch is effectively instant.
@@ -177,7 +185,8 @@ removed, because they change which messages a given query returns):
 
 ## Limitations / things to revisit before committing to removal
 
-- **No REST trigger for `recreateIndex()`** — neither backend exposes one today; an admin/REST hook (and
+- **No REST trigger for `recreateIndex()`** — neither backend exposes one today (only a save of
+  `messageIndexIncludeDeletedMessages` starts a re-index); an admin/REST hook (and
   a UI affordance) would make flipping the toggle operationally smoother.
 - **Relevance is the default sort for free-text searches on both backends** — best-match-first rather
   than the area/domain default sort. No test asserted free-text ordering before, so the UI effect should be

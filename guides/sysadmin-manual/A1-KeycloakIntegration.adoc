@@ -22,7 +22,8 @@ development stack runs, with its development realm "niord".
 
 A deployment of Niord uses one Keycloak _realm_: a separate set of users, clients and roles. One Keycloak server can
 serve several deployments, each in a realm of its own. The deployment's configuration names the realm and the
-Keycloak server, and the setting `authServerUrl` gives Keycloak's address (see <<settings,Settings>>).
+Keycloak server, and the setting `authServerUrl` gives Keycloak's address. The deployment sets it, and it is not on
+the _Settings_ page (see <<settings-from-code,Settings from Code>>).
 
 The realm holds:
 

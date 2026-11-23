@@ -93,7 +93,8 @@ spring:
   # job, the message sweeps among them. A cron job is still never started again on one node while its
   # last run is running. Four jobs at once can hold about nine database connections: the mail sender up
   # to five (one per sender thread while its mail goes to the SMTP server), the firing run two, the
-  # message sweep one, an index pass one. The connection pool below is sized for that. A deployment can
+  # message sweep one, an index pass one. The settings' change poll, every 30 seconds, holds one for a
+  # moment. The connection pool below is sized for that. A deployment can
   # set its own number (SPRING_TASK_SCHEDULING_POOL_SIZE).
   task:
     scheduling:
@@ -174,6 +175,16 @@ niord:
   # pass at start still run.
   # mailinglist:
   #   status-change-sweep-cron: 23 * * * * ?
+  # The settings' change poll (SettingsRefresher.pollForChanges): every 30 seconds, at seconds 14 and 44, each
+  # server reads the state setting settingsChangeCount, which every save on the Settings page raises by one. When it
+  # has changed, the server empties its settings cache and reads every setting its services hold again, so a save on
+  # another server takes effect here; a setting it could not read before is read again at every poll. "-" switches
+  # the poll off, which the integration-test suite does (its tests call the poll themselves): a server then follows
+  # only its own saves, and another server's at its next start. A row changed by SQL is followed once the count is
+  # raised by one, or at the next start; the keys not on the Settings page and messageIndexDeleteOnStartup only at
+  # the next start.
+  # settings:
+  #   change-poll-cron: 14/30 * * * * ?
   # S-124 (org.niord.s124): the deployment's IHO S-62 producer code. REQUIRED to generate any
   # S-124 dataset - it is the agencyResponsibleForProduction (S-124 clause 4.3.3) and part of
   # the datasetFileIdentifier of every dataset, and names the SECOM exchange-set files - and
@@ -219,7 +230,8 @@ niord:
   #   secomRevocationCheck          soft-fail OCSP->CRL revocation checking, inbound client
   #                                 certs AND outbound connections (default true)
   #   secomAlertEmails              comma-separated recipients mailed on terminal delivery
-  #                                 failures and approaching certificate expiry
+  #                                 failures, approaching certificate expiry, certificate
+  #                                 renewals done or failed, and key/trust store reloads
   #                                 (default empty = no alerts)
   #   secomCertExpiryWarnDays       days before SECOM service certificate expiry at which
   #                                 warning mails to the alert recipients begin (default 60;

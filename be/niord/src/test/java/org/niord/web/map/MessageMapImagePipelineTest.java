@@ -53,6 +53,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -385,10 +387,9 @@ class MessageMapImagePipelineTest {
     /** An image size or a zoom level the map cannot have fails the image as an I/O failure, before any request */
     @Test
     void anImpossibleImageSizeOrZoomLevelFailsTheImage() {
-        generator.mapImageSize = 4096;
-        assertThrows(IOException.class, () -> generator.generate(request(fcs(square(11, 55.5, 0.05))), target));
+        assertThrows(IOException.class,
+                () -> generator.generate(request(fcs(square(11, 55.5, 0.05)), "NW", 4096), target));
 
-        generator.mapImageSize = SIZE;
         generator.zoomLevel = 40;
         assertThrows(IOException.class,
                 () -> generator.generate(request(fcs(new PointVo(new double[] { 11, 55.5 }))), target));
@@ -410,12 +411,12 @@ class MessageMapImagePipelineTest {
             return tiles;
         };
 
-        assertFalse(generator.generate(new MapImageRequest(new FeatureCollectionVo[0], "NW", null, UPDATED, counting),
-                target));
+        assertFalse(generator.generate(
+                new MapImageRequest(new FeatureCollectionVo[0], "NW", null, UPDATED, SIZE, counting), target));
         assertEquals(List.of(), resolvedOn, "nothing to draw: the tile source is not read");
 
-        assertTrue(generator.generate(new MapImageRequest(fcs(square(11, 55.5, 0.05)), "NW", null, UPDATED, counting),
-                target));
+        assertTrue(generator.generate(
+                new MapImageRequest(fcs(square(11, 55.5, 0.05)), "NW", null, UPDATED, SIZE, counting), target));
         assertEquals(List.of(Thread.currentThread().getName()), resolvedOn, "read once, by the drawing thread");
     }
 
@@ -444,6 +445,45 @@ class MessageMapImagePipelineTest {
     @Test
     void theFileNameCarriesTheSizeAndTheImageVersion() {
         assertEquals("map_256_" + portrayal.imageVersion() + ".png", generator.imageFileName());
+        assertEquals("map_128_" + portrayal.imageVersion() + ".png", generator.imageFileName(128));
+    }
+
+    /**
+     * A save of mapImageSize or mapImageZoomLevel is refused outside the range the drawing accepts, which would make
+     * every new image the placeholder at once; null (the default) and other keys pass
+     */
+    @Test
+    void aSaveOfASizeOrZoomLevelTheDrawingCannotUseIsRefused() {
+        assertNull(generator.refusal("mapImageSize", 1));
+        assertNull(generator.refusal("mapImageSize", TileWindow.MAX_SIZE));
+        assertEquals("mapImageSize takes a size in pixels from 1 to 2048, not 0", generator.refusal("mapImageSize", 0));
+        assertNotNull(generator.refusal("mapImageSize", TileWindow.MAX_SIZE + 1));
+        assertNull(generator.refusal("mapImageZoomLevel", 0));
+        assertNull(generator.refusal("mapImageZoomLevel", TileWindow.MAX_ZOOM));
+        assertEquals("mapImageZoomLevel takes a zoom level from 0 to 30, not 31",
+                generator.refusal("mapImageZoomLevel", 31));
+        assertNotNull(generator.refusal("mapImageZoomLevel", -1));
+        assertNull(generator.refusal("mapImageSize", null));
+        assertNull(generator.refusal("wmsCacheDays", 0));
+    }
+
+    /**
+     * The image is drawn at the size its request read and named the file by, not at the setting's value when it is
+     * drawn: a save of mapImageSize while the request runs cannot write an image of one size under another's name
+     */
+    @Test
+    void theImageHasTheSizeTheRequestNamedItBy() throws IOException {
+        TileSource tiles = new TileSource(stub.baseUrl() + "/tiles/{z}/{x}/{y}.png", USER_AGENT, tmp.resolve("tile-cache"));
+        MapImageRequest request = new MapImageRequest(fcs(square(11, 55.5, 0.05)), "NW", null, UPDATED, 128,
+                () -> tiles);
+        Path named = tmp.resolve("repo").resolve("a1").resolve(generator.imageFileName(request.imageSize()));
+
+        generator.mapImageSize = 512; // saved after the request read the size
+        assertTrue(generator.generate(request, named));
+
+        BufferedImage image = MapImageTestSupport.read(named);
+        assertEquals(128, image.getWidth());
+        assertEquals(128, image.getHeight());
     }
 
     // ------------------------------------------------------------------------------------------- //
@@ -455,8 +495,12 @@ class MessageMapImagePipelineTest {
     }
 
     private MapImageRequest request(FeatureCollectionVo[] fcs, String mainType) {
+        return request(fcs, mainType, SIZE);
+    }
+
+    private MapImageRequest request(FeatureCollectionVo[] fcs, String mainType, int imageSize) {
         TileSource tiles = new TileSource(stub.baseUrl() + "/tiles/{z}/{x}/{y}.png", USER_AGENT, tmp.resolve("tile-cache"));
-        return new MapImageRequest(fcs, mainType, null, UPDATED, () -> tiles);
+        return new MapImageRequest(fcs, mainType, null, UPDATED, imageSize, () -> tiles);
     }
 
     /** The plan the generator paints, for finding where on the image to look */

@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * SECOMLib provider implementations backed by {@link McpSecurityService}. Plugged into the
@@ -41,7 +42,7 @@ import java.util.Set;
  * make all SECOM payload + envelope signatures use the MCP service certificate.
  * <p>
  * The outgoing signature algorithm is configurable (the {@code secomSignatureAlgorithm}
- * setting) and defaults to the S-124 service design mandate (v0.995 §3.3.3),
+ * setting, read at each signature) and defaults to the S-124 service design mandate (v0.995 §3.3.3),
  * ECDSA-384-SHA2; legacy peers on the GRAD reference stack use SHA3-384.
  * <p>
  * Incoming signatures are accepted with two accommodations, both diagnosed against live
@@ -77,9 +78,18 @@ public class NiordSecomProviders implements SecomCertificateProvider, SecomSigna
     private static final Logger log = LoggerFactory.getLogger(NiordSecomProviders.class);
 
     private final McpSecurityService pki;
-    private final DigitalSignatureAlgorithmEnum signatureAlgorithm;
+    private final Supplier<DigitalSignatureAlgorithmEnum> signatureAlgorithm;
 
+    /** Providers that sign with the given algorithm */
     public NiordSecomProviders(McpSecurityService pki, DigitalSignatureAlgorithmEnum signatureAlgorithm) {
+        this(pki, () -> signatureAlgorithm);
+    }
+
+    /**
+     * Providers that ask for the algorithm at each signature, so a saved {@code secomSignatureAlgorithm} applies to
+     * the next outgoing message
+     */
+    public NiordSecomProviders(McpSecurityService pki, Supplier<DigitalSignatureAlgorithmEnum> signatureAlgorithm) {
         this.pki = pki;
         this.signatureAlgorithm = signatureAlgorithm;
     }
@@ -98,7 +108,7 @@ public class NiordSecomProviders implements SecomCertificateProvider, SecomSigna
     /** {@inheritDoc} */
     @Override
     public DigitalSignatureAlgorithmEnum getSignatureAlgorithm() {
-        return signatureAlgorithm;
+        return signatureAlgorithm.get();
     }
 
     /** {@inheritDoc} */

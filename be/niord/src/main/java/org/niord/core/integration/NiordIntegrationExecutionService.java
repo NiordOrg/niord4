@@ -84,12 +84,11 @@ public class NiordIntegrationExecutionService extends BaseService {
      * Whether the importer may fetch from loopback, private and other non-public addresses. Off by
      * default, so that the URL of an integration point cannot be used to reach into the network the
      * server runs in. Switch it on where the remote Niord server genuinely is on a private network.
-     * Consumed once at bean creation, like the other {@code @Setting} fields - restart to apply.
+     * Read at each run; a save on the Settings page refreshes it, like the other {@code @Setting} fields.
      */
     @Setting(value = "niordIntegrationAllowPrivateHosts", defaultValue = "false", type = Type.Boolean,
-            description = "Allow the Niord integration import to fetch from private/loopback addresses."
-                    + " Read at start-up.")
-    boolean allowPrivateHosts;
+            description = "Allow the Niord integration import to fetch from private/loopback addresses.")
+    volatile boolean allowPrivateHosts;
 
     NiordIntegrationExecutionService(MessageSeriesService messageSeriesService, MessageService messageService, MessageSearchService messageSearchService, AreaService areaService, CategoryService categoryService, ChartService chartService, FeatureService featureService) {
         this.messageSeriesService = messageSeriesService;

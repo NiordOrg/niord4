@@ -82,19 +82,19 @@ public class SecomCertificateRenewalService extends BaseService {
 
     @Setting(value = "secomRenewalEnabled", defaultValue = "false", type = Type.Boolean,
             description = "Enables unattended SECOM certificate renewal via the MCP Identity Registry. Needs niord.secom.renewal.mir-url, "
-                    + ".org-mrn, .keystore.location and .keystore.password (optional .service-mrn/.user-mrn default to the certificate UIDs)."
-                    + " Read at start-up.")
-    Boolean renewalEnabled;
+                    + ".org-mrn, .keystore.location and .keystore.password (optional .service-mrn/.user-mrn default to the certificate UIDs).")
+    volatile Boolean renewalEnabled;
 
     @Setting(value = "secomRenewalWindowDays", defaultValue = "60", type = Type.Integer,
             description = "Days before expiry at which the SECOM service and renewal-robot certificates are renewed"
-                    + " automatically. Read at start-up.")
-    Integer windowDays;
+                    + " automatically.")
+    volatile Integer windowDays;
 
     @Setting(value = "secomAlertEmails", defaultValue = "",
-            description = "Comma-separated recipients alerted by mail when a SECOM delivery fails terminally"
-                    + " (empty = no alerts). Read at start-up.")
-    String alertEmails;
+            description = "Comma-separated recipients of the SECOM alert mails: a delivery that fails for good, the"
+                    + " service certificate nearing expiry, a certificate renewal done or failed, and the key or trust"
+                    + " store reloaded or failing to reload (empty = no alerts).")
+    volatile String alertEmails;
 
     // The renewed service keystore is written to the location McpSecurityService loads from;
     // that service deliberately exposes no location/password getters, hence the own bindings
@@ -503,6 +503,8 @@ public class SecomCertificateRenewalService extends BaseService {
     }
 
     private boolean queueMail(String subject, String htmlBody) {
+        // Read once: a save may change it at any time
+        String alertEmails = this.alertEmails;
         if (StringUtils.isBlank(alertEmails)) {
             return false;
         }

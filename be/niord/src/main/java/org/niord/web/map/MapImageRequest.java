@@ -31,7 +31,10 @@ import java.util.function.Supplier;
  *                           definition may select a style on it
  * @param updatedMillis      when the message last changed; the image file carries it as its modification
  *                           time, which is how the endpoint tells a current image from an outdated one
- * @param tiles              where the background tiles come from, resolved from the live settings by the
+ * @param imageSize          the width and height of the image in pixels: the {@code mapImageSize} the request read
+ *                           once and named the image file by, so that the drawing agrees with the name when the
+ *                           setting is saved while the request runs
+ * @param tiles             where the background tiles come from, resolved from the live settings by the
  *                           thread that draws the image, when it has something to draw: a request that is
  *                           answered with an older image while the current one is drawn in the background does
  *                           not read the settings itself
@@ -41,5 +44,6 @@ public record MapImageRequest(
         String mainType,
         String messageType,
         long updatedMillis,
+        int imageSize,
         Supplier<TileSource> tiles) {
 }

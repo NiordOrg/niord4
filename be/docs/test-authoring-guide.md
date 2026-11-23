@@ -234,7 +234,8 @@ tasks are never registered with the scheduler at all:
         "niord.schedule.auto-publish-cron=-",
         "niord.schedule.auto-expire-cron=-",
         "niord.schedule.firing-exercise-cron=-",
-        "niord.mailinglist.status-change-sweep-cron=-"
+        "niord.mailinglist.status-change-sweep-cron=-",
+        "niord.settings.change-poll-cron=-"
 })
 public abstract class ITTest { … }
 ```
@@ -243,6 +244,12 @@ The fourth line is of another kind: the mailing lists' status-change outbox swee
 the outbox rows of every application context of the run at once (`docs/test-infrastructure.md`, several
 application contexts). A context still drains the outbox on its own JMS prompt and at its start, and a test that
 needs a drain calls `MailingListMessageListener.drainOutbox()`.
+
+The fifth is of that kind too: the settings' change count (`settingsChangeCount`) is one row for every application
+context of the run, and each context's poll (`SettingsRefresher.pollForChanges`, every 30 seconds in a deployment)
+would follow another context's saves and refresh its `@Setting` fields at a moment no test chooses. A save still
+refreshes the fields of the context that made it, and a test that needs another node's save followed calls
+`pollForChanges()` itself; `SettingsSecondNodeITTest` starts a second node with the poll switched on.
 
 It lives on the base class rather than in an `application.yml` because that file is module-local — the
 niord-base one is excluded from the test-jar — while a country repository's ITs, and the country build group's ITs

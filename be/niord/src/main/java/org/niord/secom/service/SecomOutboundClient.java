@@ -33,6 +33,7 @@ import org.grad.secomv2.core.models.ServiceInstanceObject;
 import org.grad.secomv2.core.models.SubscriptionNotificationObject;
 import org.grad.secomv2.core.models.UploadObject;
 import org.niord.core.integration.NiordIntegrationUrlValidator;
+import org.niord.core.settings.SettingChangedEvent;
 import org.niord.core.settings.SettingsService;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.secom.SecomConfiguration;
@@ -42,6 +43,7 @@ import org.niord.secom.pki.NiordSecomProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import static org.niord.core.settings.Setting.Type;
@@ -113,19 +115,21 @@ public class SecomOutboundClient {
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+    /** The setting naming the service registry, {@link #serviceRegistryUrl} */
+    static final String REGISTRY_URL = "secomServiceRegistryUrl";
+
     @Setting(value = "secomServiceRegistryUrl", defaultValue = "",
-            description = "URL of the SECOM service registry used to resolve peer endpoints. Read at start-up.")
-    String serviceRegistryUrl;
+            description = "URL of the SECOM service registry used to resolve peer endpoints.")
+    volatile String serviceRegistryUrl;
 
     @Setting(value = "secomServiceRegistryInsecure", defaultValue = "false", type = Type.Boolean,
-            description = "Skip TLS validation towards the SECOM service registry (test environments only)."
-                    + " Read at start-up.")
-    boolean serviceRegistryInsecure;
+            description = "Skip TLS validation towards the SECOM service registry (test environments only).")
+    volatile boolean serviceRegistryInsecure;
 
     @Setting(value = "secomAllowInsecureEndpoints", defaultValue = "false", type = Type.Boolean,
             description = "Allow SECOM deliveries to http:// peer endpoints and to peers on loopback, link-local "
-                    + "or private addresses (test environments only). Read at start-up.")
-    boolean allowInsecureEndpoints;
+                    + "or private addresses (test environments only).")
+    volatile boolean allowInsecureEndpoints;
 
     private record CachedEndpoint(String endpoint, long resolvedAtMillis) {
     }
@@ -133,16 +137,16 @@ public class SecomOutboundClient {
     private final Map<String, CachedEndpoint> endpointCache = new ConcurrentHashMap<>();
 
     /**
-     * Whether outbound server certificates are revocation-checked - the same knob as the
-     * inbound {@code MrnCertificateFilter}, consumed once at bean creation (restart to apply)
+     * Reads whether outbound server certificates are revocation-checked - the same knob as the
+     * inbound {@code MrnCertificateFilter} - at each https exchange, so a save applies to the next delivery
      */
-    private final boolean revocationCheck;
+    private final SettingsService settingsService;
 
     public SecomOutboundClient(McpSecurityService pki, NiordSecomProviders providers, SettingsService settingsService) {
         this.pki = pki;
         this.certificateProvider = providers;
         this.signatureProvider = providers;
-        this.revocationCheck = SecomConfiguration.booleanSetting(settingsService, SecomConfiguration.REVOCATION_CHECK);
+        this.settingsService = settingsService;
     }
 
     /***************************************/
@@ -160,6 +164,10 @@ public class SecomOutboundClient {
             return cached.endpoint();
         }
 
+        // Each read once: a save may change them at any time
+        String serviceRegistryUrl = this.serviceRegistryUrl;
+        boolean serviceRegistryInsecure = this.serviceRegistryInsecure;
+        boolean allowInsecureEndpoints = this.allowInsecureEndpoints;
         if (serviceRegistryUrl == null || serviceRegistryUrl.isBlank()) {
             throw new IllegalStateException("The secomServiceRegistryUrl setting is not configured");
         }
@@ -201,6 +209,19 @@ public class SecomOutboundClient {
     /** Drops the cached endpoint resolution of the given MRN (used when deliveries fail) */
     public void evictEndpoint(String mrn) {
         endpointCache.remove(mrn);
+    }
+
+    /**
+     * A save of the registry URL drops the endpoints resolved before, on every node, so the next delivery asks the
+     * registry now named instead of using the old registry's answer for the rest of {@link #REGISTRY_CACHE_TTL}
+     *
+     * @param event the setting whose field a save, here or on another node, changed
+     */
+    @EventListener
+    void settingChanged(SettingChangedEvent event) {
+        if (REGISTRY_URL.equals(event.key())) {
+            endpointCache.clear();
+        }
     }
 
     /***************************************/
@@ -323,6 +344,8 @@ public class SecomOutboundClient {
      * The sysadmin-configured registry URL does not go through here.
      */
     private void postToPeer(String url, Object body) throws Exception {
+        // Read once: a save may change it at any time
+        boolean allowInsecureEndpoints = this.allowInsecureEndpoints;
         URI uri = validatePeerEndpoint(url, allowInsecureEndpoints);
         requirePublicAddresses(uri, allowInsecureEndpoints);
         requireSuccess(url, doPost(uri, body, false));
@@ -345,6 +368,11 @@ public class SecomOutboundClient {
         }
     }
 
+    /** {@return whether the server certificate of an https exchange is checked for revocation, as now saved} */
+    private boolean revocationCheck() {
+        return SecomConfiguration.booleanSetting(settingsService, SecomConfiguration.REVOCATION_CHECK);
+    }
+
     /**
      * Sends one POST on a fresh client and waits for the complete response for at most
      * {@link #requestTimeout}. When the deadline passes, the exchange is cancelled and the
@@ -355,7 +383,7 @@ public class SecomOutboundClient {
         String json = mapper.writeValueAsString(body);
         // By the scheme, case-insensitively: an "HTTPS:" URL must get the MCP client too
         HttpClient client = "https".equalsIgnoreCase(url.getScheme())
-                ? pki.newHttpClient(trustAll, revocationCheck)
+                ? pki.newHttpClient(trustAll, revocationCheck())
                 : HttpClient.newBuilder().build();
         try {
             HttpRequest request = HttpRequest.newBuilder()

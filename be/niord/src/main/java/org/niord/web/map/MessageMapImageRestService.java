@@ -247,7 +247,9 @@ public class MessageMapImageRestService {
      */
     private ResponseEntity<?> generatedImage(Snapshot snapshot, HttpServletRequest request, HttpServletResponse response)
             throws IOException {
-        Path current = imageFolder(snapshot).resolve(messageMapImageGenerator.imageFileName());
+        // Read once: the file name and the drawing use the same size, also when the setting is saved meanwhile
+        int imageSize = messageMapImageGenerator.getMapImageSize();
+        Path current = imageFolder(snapshot).resolve(messageMapImageGenerator.imageFileName(imageSize));
 
         // The image drawn with the current portrayal for the message as it is now: it carries the message's change
         // time, so a message edited since, and a database restored to an earlier state, name another drawing
@@ -261,7 +263,7 @@ public class MessageMapImageRestService {
         if (superseded != null) {
             try {
                 if (!regenerator.inFlight(current)) {
-                    regenerator.refresh(snapshot.request(snapshots::tileSource), current);
+                    regenerator.refresh(snapshot.request(imageSize, snapshots::tileSource), current);
                 }
             } catch (RuntimeException e) {
                 log.warn("Could not start drawing the map image " + current + ": " + e);
@@ -270,7 +272,7 @@ public class MessageMapImageRestService {
         }
 
         // No image shows the message as it is now: draw it while the request waits
-        if (regenerator.generateNow(snapshot.request(snapshots::tileSource), current)) {
+        if (regenerator.generateNow(snapshot.request(imageSize, snapshots::tileSource), current)) {
             return cachedImage(current, CURRENT_EXPIRY, request, response);
         }
         return null;
@@ -414,9 +416,11 @@ public class MessageMapImageRestService {
      * @return the thumbnail's repository path
      */
     private String storeCustomThumbnail(String folder, byte[] data) throws IOException {
-        String imageName = String.format("custom_thumb_%d.png", messageMapImageGenerator.getMapImageSize());
+        // Read once: the name and the scaled image use the same size
+        int imageSize = messageMapImageGenerator.getMapImageSize();
+        String imageName = String.format("custom_thumb_%d.png", imageSize);
         String imageRepoPath = folder + "/" + imageName;
-        byte[] png = messageMapImageGenerator.scaleCustomThumbnail(data);
+        byte[] png = messageMapImageGenerator.scaleCustomThumbnail(data, imageSize);
         if (png == null) {
             log.error("Failed generating image thumbnail from uploaded image: not an image");
             throw new NiordWebException("The uploaded data is not an image", 400);

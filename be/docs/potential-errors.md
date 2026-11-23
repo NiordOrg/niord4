@@ -2087,6 +2087,45 @@ they say otherwise; every other path is from the repository root.
   order is then by domain id, not the order sent, which no reader needs), and the tests then compare the list as it
   is read.
 
+## DOMAIN4. Every HTTP request opens a database transaction to clear the request's domain
+
+- **Location:** `org/niord/core/web/NiordDomainFilter.java` `doFilterInternal` (its `finally` calls
+  `domainService.removeDomainForCurrentThread()`), and `org/niord/core/domain/DomainService.java`
+  `removeDomainForCurrentThread` and `setDomainForCurrentThread`, which only remove or set a thread-local value but
+  inherit the class-level `@Transactional` of `BaseService`.
+- **Description:** the filter runs on every request, and its `finally` calls a transactional method, so every
+  request, a sea-chart tile among them, begins and commits a transaction and takes a connection from the pool for it,
+  without a statement. A request that names a domain does it twice (`setDomainForCurrentThread` as well).
+- **Why it looks wrong:** a thread-local value needs no transaction. The cost is a pool round trip per request, and
+  under load a request can wait for a connection only to clear its domain; a map that shows a place asks for some
+  tens of tiles at once.
+- **Exposed by:** `WmsProxyHttpITTest.aTileFromTheCacheCostsTheDatabaseNothing` while it was being written
+  (2026-11-23): measured over HTTP, a tile served from the cache took one pooled connection and one transaction, no
+  statement, and the transaction log named `DomainService.removeDomainForCurrentThread`. The test now measures the
+  servlet itself; the filter is left as it is.
+- **Severity:** Low to medium (a cost on every request, no wrong answer). Fix:
+  `@Transactional(propagation = Propagation.SUPPORTS)` or `NOT_SUPPORTED` on the two thread-local methods, then
+  measure the tile request over HTTP in that test.
+
+## SETTINGS15. `niord.home` is on the Settings page, but a save of it moves only some of the folders
+
+- **Location:** `org/niord/core/settings/SettingsService.java` (`NIORD_HOME`, declared `editable(true)`, so the
+  Settings page lists it and a save is accepted), `org/niord/core/repo/RepoCache.java` `home()` (reads it once, at
+  the first use), `org/niord/web/map/MapTileSettings.java` (reads it at each use, line 247), and the folders whose
+  defaults name `${niord.home}` (`batchJobRootPath`, `messageIndexPath`, `publicationPreviewRootPath`,
+  `mapTileCachePath`), which are deployment configuration and resolved at start.
+- **Description:** since a saved setting takes effect at once, the guides say every setting on the page does so,
+  except `messageIndexDeleteOnStartup`. A save of `niord.home` does not: the repository cache keeps the folder it
+  started with and the start-resolved folders stay, while the map-tile cache follows the new home at once. Its
+  description says nothing of this.
+- **Why it looks wrong:** it is a folder of the server, like the five keys that left the page as deployment
+  configuration, and a save splits the server's files between two homes until the next start.
+- **Exposed by:** the settings take-effect-on-save change (2026-11-23), which listed the keys whose description said
+  "Read at start-up."; `niord.home` never said it, so it was not on the accepted list.
+- **Severity:** Low (a sysadmin rarely edits it; the deployments set it by `NIORD_HOME`, which wins). Fix, for the
+  owner to decide: make it deployment configuration too (`editable(false)`, not listed, not saved), as the five
+  folder and address keys are.
+
 ## DICT9. Five backend default texts carry other placeholders than the administration app passes, so an edit that keeps them never shows
 
 - **Location:** `be/niord/src/main/resources/defaults/base/texts/en/web.properties` 62, 86, 98 and 107 and

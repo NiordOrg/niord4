@@ -125,9 +125,9 @@ class SettingsAddMissingITTest extends ITTest {
     /**
      * A row a database holds before its key is declared, made by hand, is adopted as it is: start-up never changes
      * its value, type or flags. One whose {@code web} flag is false is therefore still not served at
-     * {@code /rest/settings/web}, and one whose {@code editable} flag is false is still not on the Settings page. To
-     * use such a row, give it the catalog's flags, or delete it before the first start on the version that declares
-     * the key, so start-up adds it.
+     * {@code /rest/settings/web}; to serve such a row, give it the catalog's flags, or delete it before the first
+     * start on the version that declares the key, so start-up adds it. Whether the Settings page lists it is the
+     * catalog's answer, not the row's {@code editable} flag, so a key the catalog makes editable is listed.
      */
     @Test
     void aRowMadeByHandIsAdoptedWithItsOwnFlags() throws SQLException {
@@ -151,8 +151,8 @@ class SettingsAddMissingITTest extends ITTest {
                 "recorded as adopted, without a hash: its value is not the default");
         assertFalse(Tx.requiringNew().call(() -> settingsService.getAllForWeb()).stream()
                 .anyMatch(s -> s.getKey().equals(key)), "not served to the web applications");
-        assertFalse(Tx.requiringNew().call(() -> settingsService.getAllEditable()).stream()
-                .anyMatch(s -> s.getKey().equals(key)), "not on the Settings page");
+        assertTrue(Tx.requiringNew().call(() -> settingsService.getAllEditable()).stream()
+                .anyMatch(s -> s.getKey().equals(key)), "on the Settings page: the catalog makes it editable");
     }
 
     @Test

@@ -42,11 +42,13 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.Principal;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -60,23 +62,21 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the {@link WmsProxyServlet} {@code wmsProtected} security gate (WEB4).
  *
- * <p>The gate reads the {@code wmsProtected} setting through {@link SettingsService} on every request, so a change
- * on the Settings page applies at once (SECOM-UI-1); the tests hand the servlet a mocked
- * {@link SettingsService} ({@link #protect}). The setting has a {@code "true"} default. If it ever resolves to
+ * <p>The gate reads the {@code wmsProtected} field on every request, and a save on the Settings page refreshes the
+ * field at once; the tests set the field ({@link #protect}). The setting has a {@code "true"} default. If it ever resolves to
  * {@code null} (explicit null override / misconfiguration), the auto-unbox in the original
  * {@code if (wmsProtected && ...)} would throw a {@code NullPointerException} — HTTP 500 — and, worse, a
  * security gate would fail by <em>crashing</em> rather than defaulting to the safe (protected) value. The
  * hardened guard treats {@code null} as protected while leaving the shipped {@code true}/{@code false} behaviour
- * unchanged; only {@code false}, as a boolean or as a text in any case, opens the tiles, so a row stored as the
- * text {@code "true"} protects, and a setting that cannot be read protects too. These tests pin the cases at the
- * top of {@code doGet}, using Mockito servlet doubles (no container).
+ * unchanged; only {@code false}, as a boolean or as a text in any case, opens the tiles. These tests pin the cases at
+ * the top of {@code doGet}, using Mockito servlet doubles (no container), and that a request reads no setting through
+ * {@link SettingsService}.
  *
  * <p>They also pin the query sent to the WMS provider ({@link WmsProxyServlet#buildUpstreamQuery}): only
  * the tile parameters are forwarded, every value is encoded, and the token and configured layers cannot be
@@ -87,7 +87,8 @@ import static org.mockito.Mockito.when;
  * and an {@link HttpStub} as the provider: a user's tile is fetched once and then answered from the cache; an
  * anonymous caller never gets a cached tile, whether the proxy is protected or not; and with the cache off, or for
  * a request that is no tile, the servlet answers as it did before the cache existed: a tile kept a day and the blank
- * image, for no provider, a failed fetch or an answer that is no image, kept five minutes in every cache header.
+ * image, for no provider, a failed fetch or an answer that is no image, kept five minutes in every cache header. And
+ * a request keeps the provider, token and layers it read at its start, though a save sets the fields while it runs.
  */
 class WmsProxyServletTest {
 
@@ -248,44 +249,35 @@ class WmsProxyServletTest {
         assertArrayEquals(blankPicture(), answer.body.toByteArray(), "the body is the blank picture");
     }
 
-    /** Gives the servlet a settings service whose {@code wmsProtected} reads as the given value */
-    private static void protect(WmsProxyServlet servlet, Object value) {
-        SettingsService settings = mock(SettingsService.class);
-        when(settings.get(WmsProxyServlet.PROTECTED_KEY)).thenReturn(value);
-        servlet.settingsService = settings;
+    /** Gives the servlet's {@code wmsProtected} field the given value, as the injection or a refresh does */
+    private static void protect(WmsProxyServlet servlet, Boolean value) {
+        servlet.wmsProtected = value;
     }
 
+    /**
+     * The gate reads the field on every request, so the refresh after a save applies to the next request; and a
+     * request reads no setting through the settings service, which would open a transaction for every tile
+     */
     @Test
-    void theSettingIsReadOnEveryRequest() throws Exception {
+    void theFieldIsReadOnEveryRequestAndNoSettingIsReadThroughTheService() throws Exception {
         WmsProxyServlet servlet = new WmsProxyServlet();
-        SettingsService settings = mock(SettingsService.class);
-        when(settings.get(WmsProxyServlet.PROTECTED_KEY)).thenReturn(Boolean.TRUE, Boolean.FALSE, Boolean.TRUE);
-        servlet.settingsService = settings;
 
+        protect(servlet, Boolean.TRUE);
         HttpServletResponse protectedAnswer = responseWithWriter();
         servlet.doGet(anonymousRequest(), protectedAnswer);
+        protect(servlet, Boolean.FALSE);
         HttpServletResponse openAnswer = responseWithWriter();
         servlet.doGet(anonymousRequest(), openAnswer);
+        protect(servlet, Boolean.TRUE);
         HttpServletResponse protectedAgain = responseWithWriter();
         servlet.doGet(anonymousRequest(), protectedAgain);
 
         verify(protectedAnswer).setStatus(HttpServletResponse.SC_FORBIDDEN);
         verify(openAnswer, never()).setStatus(HttpServletResponse.SC_FORBIDDEN);
         verify(protectedAgain).setStatus(HttpServletResponse.SC_FORBIDDEN);
-        verify(settings, times(3)).get(WmsProxyServlet.PROTECTED_KEY);
-    }
-
-    @Test
-    void aSettingThatCannotBeReadForbidsAnonymous() throws Exception {
-        WmsProxyServlet servlet = new WmsProxyServlet();
-        SettingsService settings = mock(SettingsService.class);
-        when(settings.get(WmsProxyServlet.PROTECTED_KEY)).thenThrow(new IllegalStateException("database down"));
-        servlet.settingsService = settings;
-
-        HttpServletRequest req = anonymousRequest();
-        HttpServletResponse resp = responseWithWriter();
-        assertDoesNotThrow(() -> servlet.doGet(req, resp), "an unreadable setting must not fail the request");
-        verify(resp).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        assertTrue(java.util.Arrays.stream(WmsProxyServlet.class.getDeclaredFields())
+                        .noneMatch(f -> SettingsService.class.isAssignableFrom(f.getType())),
+                "the servlet has no settings service to read a setting through");
     }
 
     @Test
@@ -298,20 +290,6 @@ class WmsProxyServletTest {
         for (Object on : new Object[] { Boolean.TRUE, "true", "TRUE", null, "", "no", "off", "0", 0 }) {
             assertTrue(WmsProxyServlet.isProtected(on), "'" + on + "'");
         }
-    }
-
-    @Test
-    void aStoredTextTrueForbidsAnonymousAndATextFalseDoesNot() throws Exception {
-        WmsProxyServlet servlet = new WmsProxyServlet();
-        protect(servlet, "true");
-        HttpServletResponse protectedAnswer = responseWithWriter();
-        servlet.doGet(anonymousRequest(), protectedAnswer);
-        verify(protectedAnswer).setStatus(HttpServletResponse.SC_FORBIDDEN);
-
-        protect(servlet, "False");
-        HttpServletResponse openAnswer = responseWithWriter();
-        servlet.doGet(anonymousRequest(), openAnswer);
-        verify(openAnswer, never()).setStatus(HttpServletResponse.SC_FORBIDDEN);
     }
 
     // ------------------------------------------------------------------ the upstream query
@@ -779,6 +757,62 @@ class WmsProxyServletTest {
 
             assertTheBlankImage(paused);
             assertEquals(3, provider.requestCount(), "the fourth request did not reach the provider");
+        }
+    }
+
+    /**
+     * A save that lands while a request runs, here between the gate and the tile's name, does not split the request:
+     * the tile is named, fetched, stored and logged with the provider, token and layers the request read at its start.
+     * The next request uses the saved ones.
+     */
+    @Test
+    void aRequestKeepsTheSettingsItReadAtItsStart() throws Exception {
+        try (HttpStub first = HttpStub.start(); HttpStub saved = HttpStub.start()) {
+            first.respondBytes("image/png", png(256));
+            saved.respondBytes("image/png", png(256));
+            WmsProxyServlet servlet = servletWithCache(first, 7);
+            servlet.wmsLayers = "layerA";
+            HttpServletRequest request = userRequest(tileParams());
+            AtomicInteger principalAsked = new AtomicInteger();
+            when(request.getUserPrincipal()).thenAnswer(call -> {
+                if (principalAsked.incrementAndGet() == 2) {
+                    // The refresh of a save on the Settings page
+                    servlet.wmsProvider = saved.baseUrl() + "/wms";
+                    servlet.wmsPassword = "tok-saved";
+                    servlet.wmsLayers = "layerB";
+                }
+                return (Principal) () -> "editor";
+            });
+            ListAppender<ILoggingEvent> appender = attachLogAppender();
+            try {
+                Answer answer = new Answer();
+                servlet.doGet(request, answer.response);
+
+                assertEquals(2, principalAsked.get(), "precondition: the save landed between the gate and the tile");
+                verify(answer.response).setHeader(WmsProxyServlet.CACHE_HEADER, "MISS");
+                assertEquals(1, first.requestCount(), "the provider the request started with was asked");
+                assertEquals(0, saved.requestCount(), "the saved one was not, by this request");
+                Map<String, List<String>> upstream = decoded(first.lastRequest().query());
+                assertEquals(List.of("tok-secret"), upstream.get("TOKEN"));
+                assertEquals(List.of("layerA"), upstream.get("LAYERS"));
+                List<Path> files = cachedFiles();
+                assertEquals(1, files.size());
+                assertTrue(cacheFolder.relativize(files.get(0)).startsWith("127.0.0.1_" + first.port()),
+                        "stored under the provider it came from: " + files.get(0));
+                assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().equals("Loading image "
+                                + first.baseUrl() + "/wms?" + WmsProxyServlet.upstreamQuery(
+                                WmsProxyServlet.forwardedParams(tileParams(), "layerA"), "***", true))),
+                        "the logged line is of the same request: " + appender.list);
+            } finally {
+                detachLogAppender(appender);
+            }
+
+            servlet.doGet(userRequest(tileParams()), new Answer().response);
+
+            assertEquals(1, saved.requestCount(), "the next request asks the saved provider");
+            Map<String, List<String>> next = decoded(saved.lastRequest().query());
+            assertEquals(List.of("tok-saved"), next.get("TOKEN"));
+            assertEquals(List.of("layerB"), next.get("LAYERS"));
         }
     }
 

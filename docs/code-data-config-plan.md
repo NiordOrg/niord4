@@ -603,7 +603,15 @@ sorted by key:
   `DefaultsGuard.checkSettings`), so a shadowed settings file fails start-up before add-missing writes
   anything; the full guard in `DictionaryService.init` stays. `SettingInjectionBeanPostProcessor` (`:67-101`),
   which resolves `@Setting` fields during bean creation, therefore sees the file's value from the first bean
-  on. A singleton's injected field still holds the start-up value until restart.
+  on. A saved setting takes effect at once (owner, 2026-11-23): the post-processor records every field it
+  injects, also of a bean created after start-up, and a save (`SettingsService.set`, the Settings page and the
+  settings import) sets the recorded fields of its key again once it has committed, resolved as the injection
+  resolves them, so a system property or environment variable still wins. The other nodes follow within about
+  30 seconds: the save adds one to the `state` key `settingsChangeCount`, which each node polls
+  (`SettingsRefresher`), emptying its settings cache and refreshing every field when the count has moved. A
+  restart setting is the exception, on `SettingsCatalogCurrentTest`'s list with its reason: only
+  `messageIndexDeleteOnStartup`, which by its meaning acts when the server starts. A value that cannot change
+  under a running server is deployment configuration, `editable=false` and off the Settings page (§5.4).
 - **An early bean ends start-up with the database's value.** Early loading alone would give a bean created
   before the
   database is reachable the file's value, not the database's (`secomRenewalEnabled=true` in the database
@@ -665,7 +673,7 @@ sorted by key:
   type). The settings import (`BatchSettingsImportProcessor`) creates no row through `get`: it
   skips a key no catalog declares, a `state` key, a key the deployment has no row for and a value of the wrong
   type, each with a line in the job log, and never creates a row.
-- **Everything else stays as today (owner, 2026-10-20).** Every setting the catalog marks `editable` (every `operator` key but three, §5.4) is edited on the Settings page,
+- **Everything else stays as today (owner, 2026-10-20).** Every setting the catalog marks `editable` (every `operator` key but eight, §5.4) is edited on the Settings page,
   including paths, the deployment's own addresses, trust switches and credentials. The per-key system-property
   and environment-variable override and the server's `${niord.home}/niord.json` overlay stay. `/web`,
   `/editable-settings` and `/setting/{key}` (`SettingsRestService.java:79-146`) keep reading the database:
@@ -677,8 +685,8 @@ sorted by key:
 
 | Scope | Keys |
 |---|---|
-| **operator**, defaults in the base product's settings file or else in the code; edited on the Settings page as today, except `authServerTrustAllCertificates`, `secomEnabled` and `mapTileCachePath`, which are `editable=false` and stay off it (`KeycloakIntegrationService.java:81`, `SecomAdminRestService.java:82-83`, `MapTileSettings.java:89-93`) | every key below and every other non-state key: paths (`niord.home`, `repoRootPath`, `batchJobRootPath`, `messageIndexPath`, `publicationArchiveRootPath`, `publicationPreviewRootPath`, `mapTileCachePath`, `vipsPath`); the deployment's addresses (`baseUri`, `adminAppUrl`, `authServerUrl`, the SECOM URLs); the trust switches (`authServerTrustAllCertificates`, `niordIntegrationAllowPrivateHosts`, the SECOM security switches); the password settings (`pdfEncryptionPassword`, `wmsPassword`; masked and never web-visible, as today); `mode`, `mailSender`, `mailValidRecipients`, `secomEnabled`, `messageIndexDeleteOnStartup`; languages (`modelLanguages`, `siteLanguages`, `defaultLanguage`, `infoSiteLanguages`, `infoDefaultLanguage`) and the tile and WMS addresses (`osmUrl`, `openSeaMapUrl`, `wmsProvider`), as today (D3); `mapDefaultZoomLevel`/`Latitude`/`Longitude`, `wmsLayerEnabled`, `wmsLayerEnabledByDefault`, `openSeaMapLayerEnabled`, `editorFieldsBase`/`Nw`/`Nm`, `stdTemplateFields`, `mapImageSize`, `mapImageZoomLevel`, `mailMaxPerMinute`, `mailDeleteAfterDays`, `batchFileExpiryDays`, `firingExerciseScheduleDays`, `repoCacheTimeout`, `batchMessageSeriesId`, `documentationUrl`, `mapTileContact`, `disableLucene`, `messageIndexIncludeDeletedMessages`, `pdfEncryptionEnabled`, `wmsLayers`, `wmsProtected`, `adminIntegrationPageEnabled`, `country` and `organisation` (both `required`), the SECOM operational keys (`secomAlertEmails`, `secomCertExpiryWarnDays`, `secomMaxSubscriptionsPerNode`, `secomOutbox*`, `secomRenewalEnabled`, `secomRenewalWindowDays`) |
-| **state** | `areaLastUpdate`, `categoryLastUpdate` |
+| **operator**, defaults in the base product's settings file or else in the code; edited on the Settings page as today, except `authServerTrustAllCertificates`, `secomEnabled` and `mapTileCachePath`, which are `editable=false` and stay off it (`KeycloakIntegrationService.java:81`, `SecomAdminRestService.java:82-83`, `MapTileSettings.java:89-93`), and, from 2026-11-23, the deployment configuration `batchJobRootPath`, `messageIndexPath`, `publicationPreviewRootPath`, `vipsPath` and `authServerUrl`, `editable=false` too: values that cannot change under a running server, set by the deployment (a system property or environment variable named like the key, the settings file, or an existing row) | every key below and every other non-state key: paths (`niord.home`, `repoRootPath`, `batchJobRootPath`, `messageIndexPath`, `publicationArchiveRootPath`, `publicationPreviewRootPath`, `mapTileCachePath`, `vipsPath`); the deployment's addresses (`baseUri`, `adminAppUrl`, `authServerUrl`, the SECOM URLs); the trust switches (`authServerTrustAllCertificates`, `niordIntegrationAllowPrivateHosts`, the SECOM security switches); the password settings (`pdfEncryptionPassword`, `wmsPassword`; masked and never web-visible, as today); `mode`, `mailSender`, `mailValidRecipients`, `secomEnabled`, `messageIndexDeleteOnStartup`; languages (`modelLanguages`, `siteLanguages`, `defaultLanguage`, `infoSiteLanguages`, `infoDefaultLanguage`) and the tile and WMS addresses (`osmUrl`, `openSeaMapUrl`, `wmsProvider`), as today (D3); `mapDefaultZoomLevel`/`Latitude`/`Longitude`, `wmsLayerEnabled`, `wmsLayerEnabledByDefault`, `openSeaMapLayerEnabled`, `editorFieldsBase`/`Nw`/`Nm`, `stdTemplateFields`, `mapImageSize`, `mapImageZoomLevel`, `mailMaxPerMinute`, `mailDeleteAfterDays`, `batchFileExpiryDays`, `firingExerciseScheduleDays`, `repoCacheTimeout`, `batchMessageSeriesId`, `documentationUrl`, `mapTileContact`, `disableLucene`, `messageIndexIncludeDeletedMessages`, `pdfEncryptionEnabled`, `wmsLayers`, `wmsProtected`, `adminIntegrationPageEnabled`, `country` and `organisation` (both `required`), the SECOM operational keys (`secomAlertEmails`, `secomCertExpiryWarnDays`, `secomMaxSubscriptionsPerNode`, `secomOutbox*`, `secomRenewalEnabled`, `secomRenewalWindowDays`) |
+| **state** | `areaLastUpdate`, `categoryLastUpdate`, `settingsChangeCount` (2026-11-23, §5.2) |
 | **none** (dead, dropped from the files) | `wmsLogin`, `wmsServiceName` (commented out, `WmsProxyServlet.java:76-82`) |
 
 `country` and `organisation` lose their Danish code defaults (S3: no code default, `required`).
@@ -701,7 +709,7 @@ every rule but `https` fails the build. The rules as built:
 - **`missing-key`** (R-CDC7's completeness, scoped to the keys of the base product's settings file): a key of
   the base product's file missing from the country file fails, unless it is listed in `useBaseDefault`. The
   check reports that list with the warnings (where the report lands, see below). A key the base product declares only in code takes its code default and needs no
-  entry. The catalog holds 74 keys (the two `state` keys included) and the base file 26 of
+  entry. The catalog holds 75 keys (the three `state` keys included) and the base file 26 of
   them (`BaseProductSettingsCheckTest` reads 26 values). DK's
   and GL's files set every one of them, so they need no `useBaseDefault` entry. A key a base product release
   adds to its file fails both country builds until it is
@@ -753,6 +761,12 @@ cannot be saved, the write answering 400 (§12):
 /rest/settings/editable-settings`, which the page and its Export read, serves that list. The row stays in the
 database, untouched; `GET /setting/{key}` is unchanged. The Export leaving such a row out matches the settings
 import, which skips an undeclared key. `SettingsRestServiceITTest` covers it.
+
+Whether a declared key is listed and may be saved is its catalog entry's `editable`, the code's current answer,
+not the row's `editable` column (2026-11-23), as the page already shows the catalog's description rather than the
+row's: a restored database carries rows from before a key became deployment configuration (§5.4), and a repository
+change never changes a deployment's rows. Such a key is not listed, a save of it answers 400 and the settings import
+skips it; its row stays, and is still read.
 
 ---
 

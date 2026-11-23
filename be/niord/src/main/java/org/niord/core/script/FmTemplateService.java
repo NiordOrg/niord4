@@ -65,15 +65,15 @@ public class FmTemplateService extends BaseService {
 
     public enum ProcessFormat { TEXT, PDF }
 
-        @Setting(value = "pdfEncryptionEnabled", description = "Whether PDF reports should be encrypted or not. Read at start-up.",
+        @Setting(value = "pdfEncryptionEnabled", description = "Whether PDF reports should be encrypted or not.",
             defaultValue = "false", type = Boolean)
-    Boolean pdfEncryptionEnabled;
+    volatile Boolean pdfEncryptionEnabled;
 
         // No password in the code (the owner's ruling of 2026-11-04): a fresh database holds none until a
         // sysadmin sets one, and encryption is off until pdfEncryptionEnabled is set.
-        @Setting(value = "pdfEncryptionPassword", description = "The PDF reports encryption password. Read at start-up.",
+        @Setting(value = "pdfEncryptionPassword", description = "The PDF reports encryption password.",
             defaultValue = "", type = Password)
-    String pdfEncryptionPassword;
+    volatile String pdfEncryptionPassword;
 
     private final DictionaryService dictionaryService;
 
@@ -105,8 +105,11 @@ public class FmTemplateService extends BaseService {
      * @return a PDF encryption
      */
     private String getPDFEncryptionPassword() {
-        if (pdfEncryptionEnabled != null && pdfEncryptionEnabled && StringUtils.isNotBlank(pdfEncryptionPassword)) {
-            return pdfEncryptionPassword;
+        // Each read once: a save may change them at any time
+        Boolean enabled = pdfEncryptionEnabled;
+        String password = pdfEncryptionPassword;
+        if (enabled != null && enabled && StringUtils.isNotBlank(password)) {
+            return password;
         }
         return null;
     }

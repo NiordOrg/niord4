@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.util.ClassUtils;
 
 import jakarta.inject.Inject;
+import jakarta.persistence.LockModeType;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.io.InputStream;
@@ -604,20 +605,26 @@ public class SettingsService extends BaseService {
     }
 
     /**
-     * Returns all settings that are editable on the Settings admin page: the editable rows whose key a settings
-     * catalog declares (owner, 2026-10-21; docs/code-data-config-plan.md §5.6). A row no code declares, such as the
-     * eight legacy rows in DK's and GL's databases ({@code authServerRealmKey}, {@code authServerSslRequired},
-     * {@code faMrnPrefix}, {@code frontPageMessageSeries}, {@code lightCharacterUrl}, {@code numeralLanguages},
-     * {@code wmsLogin}, {@code wmsServiceName}), is left out; it stays in the database untouched.
+     * Returns all settings that are editable on the Settings admin page: the rows whose key a settings catalog
+     * declares editable (owner, 2026-10-21; docs/code-data-config-plan.md §5.6). Whether a key is editable is the
+     * catalog's answer, the code's current one, not the row's {@code editable} column, which keeps what it was first
+     * written with: so a key that became deployment configuration leaves the page on a restored database too, and the
+     * row is not changed. A row no code declares, such as the eight legacy rows in DK's and GL's databases
+     * ({@code authServerRealmKey}, {@code authServerSslRequired}, {@code faMrnPrefix}, {@code frontPageMessageSeries},
+     * {@code lightCharacterUrl}, {@code numeralLanguages}, {@code wmsLogin}, {@code wmsServiceName}), is left out; it
+     * stays in the database untouched.
      *
      * @return all settings that are editable on the Settings admin page
      */
     @Transactional
     public List<Setting> getAllEditable() {
-        return em.createNamedQuery("Setting.findAllEditable", Setting.class)
+        return em.createQuery("select s from Setting s", Setting.class)
                 .getResultList()
                 .stream()
-                .filter(setting -> catalogEntry(setting.getKey()) != null)
+                .filter(setting -> {
+                    SettingsCatalog.Entry entry = catalogEntry(setting.getKey());
+                    return entry != null && entry.editable();
+                })
                 .toList();
     }
 
@@ -871,8 +878,14 @@ public class SettingsService extends BaseService {
      * Updates the database value of an operator setting: what the Settings page and the settings import write
      * (docs/code-data-config-plan.md §5.3). Refused with an {@link IllegalArgumentException}, which the REST layer
      * answers with 400, for a key no catalog declares (also one that has a row), a {@code state} key, a key the
-     * database has no row for, a value that does not fit the row's type (else the catalog's), and a null or blank
-     * value for a {@code required} key (a row wins over the settings file, so such a row would read null).
+     * catalog does not make editable (deployment configuration, whatever its row's {@code editable} column says), a
+     * key the database has no row for, a value that does not fit the row's type (else the catalog's), a null or
+     * blank value for a {@code required} key (a row wins over the settings file, so such a row would read null), and a
+     * value the code that reads the setting cannot use ({@link #valueRefusal}).
+     *
+     * <p>A saved setting takes effect at once. The save adds one to {@link SettingsRefresher#CHANGE_COUNT}, which the
+     * other nodes poll, and once it has committed the {@code @Setting} fields on this node take the new
+     * value ({@link SettingsRefresher#refreshSaved}).
      *
      * @param template the setting to update
      * @return the updated setting
@@ -887,6 +900,10 @@ public class SettingsService extends BaseService {
         if (entry.scope() == Setting.Scope.state) {
             throw new IllegalArgumentException(key + " is a state setting: only the system writes it");
         }
+        if (!entry.editable()) {
+            throw new IllegalArgumentException(key + " is deployment configuration, not saved here: the deployment "
+                    + "sets it by an environment variable or system property of this name, or the settings file");
+        }
         Setting setting = em.find(Setting.class, key);
         if (setting == null) {
             throw new IllegalArgumentException("Non-existing setting " + key);
@@ -899,17 +916,58 @@ public class SettingsService extends BaseService {
         if (entry.required() && isBlank(template.getValue())) {
             throw new IllegalArgumentException(key + " is required: it takes a value, not an empty one");
         }
+        String refusal = valueRefusal(key, template.getValue());
+        if (refusal != null) {
+            throw new IllegalArgumentException(refusal);
+        }
+
+        // Noted before the commit, so a poll that meets the committed value before refreshSaved still publishes the
+        // change as this node's
+        beanFactory.getBeanProvider(SettingsRefresher.class).ifAvailable(refresher -> refresher.savingHere(key));
 
         // Update the DB
         setting.setValue(template.getValue());
         setting = em.merge(setting);
 
+        // Count the save, for the other nodes' poll: the row is locked until the save commits, so two saves at once
+        // count two
+        Setting count = em.find(Setting.class, SettingsRefresher.CHANGE_COUNT.getKey(), LockModeType.PESSIMISTIC_WRITE);
+        Long countBefore = count != null ? SettingsRefresher.toLong(count.getValue()) : null;
+        long countAfter = (countBefore != null ? countBefore : 0L) + 1;
+        writeState(SettingsRefresher.CHANGE_COUNT, countAfter);
+
         // Invalidate the cache now and again once the write commits: a read on another thread before the commit fills
-        // the cache again from the old row (SETTINGS-9)
+        // the cache again from the old row (SETTINGS-9). Then the fields that hold the setting take the new value
         evictFromCache(key);
-        DefaultsLedger.afterCommit(() -> evictFromCache(key));
+        DefaultsLedger.afterCommit(() -> {
+            evictFromCache(key);
+            try {
+                beanFactory.getBeanProvider(SettingsRefresher.class)
+                        .ifAvailable(refresher -> refresher.refreshSaved(key, countBefore, countAfter));
+            } catch (RuntimeException e) {
+                // The save has committed; the next poll reads what this refresh did not
+                log.warn("The fields of setting {} were not refreshed after its save: {}", key, e.toString());
+            }
+        });
 
         return setting;
+    }
+
+    /**
+     * Returns why a save may not give a setting the value, by the checks of the code that reads it
+     * ({@link SettingValueCheck}): what {@link #set} refuses and the settings import skips. The value has the type of the
+     * setting's row, else the catalogue's.
+     *
+     * @param key   the setting's key
+     * @param value the value
+     * @return why the value is refused, or null when it may be saved
+     */
+    public String valueRefusal(String key, Object value) {
+        return beanFactory.getBeanProvider(SettingValueCheck.class).orderedStream()
+                .map(check -> check.refusal(key, value))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     /**

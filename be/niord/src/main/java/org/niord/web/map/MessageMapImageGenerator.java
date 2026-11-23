@@ -19,6 +19,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import org.niord.core.portrayal.PortrayalDefinition;
 import org.niord.core.portrayal.PortrayalSymbols;
+import org.niord.core.settings.SettingValueCheck;
 import org.niord.core.settings.annotation.Setting;
 import org.niord.core.util.MdcContext;
 import org.niord.model.geojson.FeatureCollectionVo;
@@ -62,7 +63,7 @@ import static org.niord.core.settings.Setting.Type.Integer;
  * image is told from an outdated one.
  */
 @Component
-public class MessageMapImageGenerator {
+public class MessageMapImageGenerator implements SettingValueCheck {
 
     private static final Logger log = LoggerFactory.getLogger(MessageMapImageGenerator.class);
 
@@ -76,16 +77,35 @@ public class MessageMapImageGenerator {
     TileFetcher tileFetcher;
 
     @Setting(value = "mapImageSize", defaultValue = "256", type = Integer, web = true,
-            description = "Size of map thumbnails. Read at start-up.")
-    Integer mapImageSize;
+            description = "Size of map thumbnails.")
+    volatile Integer mapImageSize;
 
     @Setting(value = "mapImageZoomLevel", defaultValue = "8", type = Integer,
-            description = "The map thumbnail zoom level used for single-position messages. Read at start-up.")
-    Integer zoomLevel;
+            description = "The map thumbnail zoom level used for single-position messages.")
+    volatile Integer zoomLevel;
 
-    /** Returns the size of the map image */
+    /**
+     * Returns the size of the map image. A request reads it once and uses that value for the file name and the
+     * drawing ({@link MapImageRequest#imageSize()}), so that a save while it runs cannot write an image of one size
+     * under the name of another.
+     */
     public java.lang.Integer getMapImageSize() {
         return mapImageSize;
+    }
+
+    /**
+     * Refuses a save of {@code mapImageSize} or {@code mapImageZoomLevel} outside the range the drawing accepts
+     * ({@link TileWindow}): every new map image would be the placeholder
+     */
+    @Override
+    public String refusal(String key, Object value) {
+        return switch (key) {
+            case "mapImageSize" -> SettingValueCheck.outside(key, value, 1, TileWindow.MAX_SIZE,
+                    "a size in pixels from 1 to " + TileWindow.MAX_SIZE);
+            case "mapImageZoomLevel" -> SettingValueCheck.outside(key, value, 0, TileWindow.MAX_ZOOM,
+                    "a zoom level from 0 to " + TileWindow.MAX_ZOOM);
+            default -> null;
+        };
     }
 
     /**
@@ -171,7 +191,16 @@ public class MessageMapImageGenerator {
      * @return the file name, e.g. {@code map_256_053d3a24b6af.png}
      */
     public String imageFileName() {
-        return String.format(Locale.ROOT, "map_%d_%s.png", mapImageSize, portrayal.imageVersion());
+        return imageFileName(mapImageSize);
+    }
+
+    /**
+     * The file name of a message's generated map image of the given size, see {@link #imageFileName()}
+     * @param imageSize the size of the image, as the request read it ({@link #getMapImageSize()})
+     * @return the file name, e.g. {@code map_256_053d3a24b6af.png}
+     */
+    public String imageFileName(int imageSize) {
+        return String.format(Locale.ROOT, "map_%d_%s.png", imageSize, portrayal.imageVersion());
     }
 
     /**
@@ -194,15 +223,18 @@ public class MessageMapImageGenerator {
         long start = System.nanoTime();
 
         FeatureCollectionVo[] fcs = request.featureCollections();
+        // The size the request named the file by; the zoom level read once
+        int imageSize = request.imageSize();
+        int zoom = zoomLevel;
         TileWindow window;
         List<MapImageMark> marks;
         try {
-            window = MapImagePlanner.frame(fcs, mapImageSize, zoomLevel);
+            window = MapImagePlanner.frame(fcs, imageSize, zoom);
             if (window == null) {
                 return false;
             }
             marks = MapImagePlanner.plan(fcs, request.mainType(), request.messageType(), portrayal,
-                    portrayal.print(mapImageSize), window);
+                    portrayal.print(imageSize), window);
         } catch (IllegalArgumentException | IllegalStateException e) {
             // An image size or zoom level out of range, or a definition that cannot draw this message
             throw new IOException("Cannot plan the map image: " + e.getMessage(), e);
@@ -270,9 +302,11 @@ public class MessageMapImageGenerator {
      * proper proportions, it will be scaled; see {@link CustomThumbnailScaler}.
      *
      * @param imageData the image data
+     * @param imageSize the map image size, as the request read it ({@link #getMapImageSize()}) and named the
+     *                  thumbnail by
      * @return the thumbnail as a PNG of the map image size, or null when the data is not an image
      */
-    public byte[] scaleCustomThumbnail(byte[] imageData) throws IOException {
-        return CustomThumbnailScaler.scale(imageData, mapImageSize);
+    public byte[] scaleCustomThumbnail(byte[] imageData, int imageSize) throws IOException {
+        return CustomThumbnailScaler.scale(imageData, imageSize);
     }
 }

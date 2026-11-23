@@ -445,6 +445,36 @@ class MessagePostgresIndexITTest extends ITTest {
                 "recreateIndex() must report exactly the two newly committed messages on top of the baseline");
     }
 
+    /**
+     * A rebuild reads the messages in passes, letting each pass's messages go before the next, so its memory does not
+     * grow with the database: with passes of two messages it still indexes every message, and finds the messages of
+     * the last passes. FAILS when the rebuild stops after its first pass: it reports two messages.
+     */
+    @Test
+    void recreateIndexInSmallPassesIndexesEveryMessage() throws Exception {
+        String first = uniqueToken();
+        Message m1 = createCommitted("dma-nw", Type.COASTAL_WARNING, "Pass " + first, "subject", "details");
+        createCommitted("dma-nw", Type.COASTAL_WARNING, "Pass " + uniqueToken(), "subject", "details");
+        String last = uniqueToken();
+        Message m2 = createCommitted("dma-nm", Type.TEMPORARY_NOTICE, "Pass " + last, "subject", "details");
+        int inOnePass = messagePostgresIndex.recreateIndex();
+
+        MessagePostgresIndex target = AopTestUtils.getUltimateTargetObject(messagePostgresIndex);
+        target.rebuildPassSize = 2;
+        int inPasses;
+        try {
+            inPasses = messagePostgresIndex.recreateIndex();
+        } finally {
+            target.rebuildPassSize = MessagePostgresIndex.POSTGRES_MAX_INDEX_COUNT;
+        }
+
+        assertTrue(inOnePass >= 3, "precondition: more messages than one small pass takes: " + inOnePass);
+        assertEquals(inOnePass, inPasses, "the passes together index every message");
+        assertTrue(search(first).contains(m1.getId().longValue()), "a message of an early pass is found");
+        assertTrue(search(last).contains(m2.getId().longValue()), "and one of the last passes");
+        assertTrue(messagePostgresIndex.allMessagesIndexed(), "and the table is complete once the rebuild committed");
+    }
+
     // ------------------------------------------------------------------------------------------- //
     // The scheduled incremental updater always runs (symmetric to the Lucene index) and picks up a
     // newly committed message incrementally, without a full recreate.

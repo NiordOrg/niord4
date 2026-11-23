@@ -119,7 +119,9 @@ fails, the deployment is set up again on an empty database.
 
 The _Settings_ page lists only the settings that Niord's code declares as editable; values the
 system keeps for itself, such as the time the areas were last changed, are not listed. A setting row left over from
-an older version, which no code reads, stays in the database but is neither listed nor exported. A
+an older version, which no code reads, stays in the database but is neither listed nor exported. The
+settings that name the server's folders, its thumbnail program and Keycloak's address are set by the
+deployment and are not listed either. A saved setting takes effect at once, without a restart. A
 few settings worth knowing: `documentationUrl` decides where every _Help_ link goes,
 `adminIntegrationPageEnabled` shows the _Niord Integration_ page, and `mailValidRecipients` decides
 whether mails are really sent, for every mail when it is sent. See

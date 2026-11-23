@@ -273,9 +273,9 @@ class SettingsServiceGapITTest extends ITTest {
         List<Setting> editable = settingsService.getAllEditable();
         assertFalse(editable.isEmpty(), "the seed data defines editable settings");
 
-        // Every returned setting must actually be editable.
-        assertTrue(editable.stream().allMatch(Setting::isEditable),
-                "getAllEditable() must only return settings with editable=true");
+        // Every returned setting is one the catalog makes editable, whatever its row's column says.
+        assertTrue(editable.stream().allMatch(s -> settingsService.catalogEntry(s.getKey()).editable()),
+                "getAllEditable() must only return settings the catalog makes editable");
 
         List<String> keys = editable.stream().map(Setting::getKey).toList();
         // 'documentationUrl' is seeded with editable=true.

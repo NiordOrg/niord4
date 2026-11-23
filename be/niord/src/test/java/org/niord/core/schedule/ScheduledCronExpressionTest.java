@@ -29,6 +29,7 @@ import org.niord.core.message.MessageLuceneIndex;
 import org.niord.core.message.MessageTagService;
 import org.niord.core.message.ScheduledMessageService;
 import org.niord.core.repo.RepositoryService;
+import org.niord.core.settings.SettingsRefresher;
 import org.niord.web.map.TileFetcher;
 
 import java.lang.reflect.Method;
@@ -100,7 +101,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ScheduledCronExpressionTest {
 
     /** Expected number of {@code @Scheduled} cron methods across the scheduler classes listed below. */
-    private static final int EXPECTED_TOTAL = 15;
+    private static final int EXPECTED_TOTAL = 16;
 
     /**
      * One row per production {@code @Scheduled(cron=...)} method: the declaring class, the (zero-arg) method
@@ -139,6 +140,9 @@ public class ScheduledCronExpressionTest {
             new CronRow(MessageTagService.class,           "removeExpiredMessageTags",           "22 22 */1 * * ?", "22 22 */1 * * *"),
             new CronRow(MessageLuceneIndex.class,          "updateLuceneIndex",                  "38 */1 * * * ?",  "38 */1 * * * *"),
             new CronRow(TileFetcher.class,                 "sweepTileCaches",                    "41 47 3 * * ?",   "41 47 3 * * *"),
+            // Externalized: the IT suite sets the property to "-", since every context of the run shares the count.
+            new CronRow(SettingsRefresher.class, "pollForChanges",
+                    "niord.settings.change-poll-cron", "14/30 * * * * ?", "14/30 * * * * *"),
             // Externalized: the IT suite sets both properties to "-" so the two status sweeps cannot fire.
             // Auto-publish runs at second 7 (SCHED3): a second no other per-minute job uses, and before the
             // mailing-list run at second 37 that it shared until then.

@@ -36,7 +36,8 @@ folder on the server starts a batch job.
 
 When a batch job starts, Niord copies its data file into the job's own folder,
 `<batch job folder>/<job name>/execution/<year>/<month>/<job number>`, where the job also writes its log files. The
-batch job folder is the setting `batchJobRootPath`, by default the folder "batch-jobs" in Niord's home folder.
+batch job folder is the setting `batchJobRootPath`, by default the folder "batch-jobs" in Niord's home folder. The
+deployment sets it, not the _Settings_ page (see <<settings-from-code,Settings from Code>>).
 
 Niord runs batch jobs with Jakarta Batch (https://jakarta.ee/specifications/batch/). A batch job usually reads,
 processes and writes its data in steps, each with its own log file, and commits a number of records at a time. So
@@ -136,5 +137,5 @@ system administrator.
 === Batch Job Clean-Up
 
 So that the server's disk does not fill up, Niord deletes the files and folders of a batch job's executions when
-they are older than the number of days in the setting `batchFileExpiryDays` (10 unless it is changed). It looks
-for them every hour.
+they are older than the number of days in the setting `batchFileExpiryDays` (10 unless it is changed, and at least
+1). It looks for them every hour, so a change to the setting applies from the next hourly look.
