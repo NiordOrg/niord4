@@ -258,7 +258,9 @@ on every build (the generated `build` script runs them first) and weekly (`npm r
 country's workflow); a high or critical advisory, or an invalid or missing signature, fails unless listed with a
 reason in `audit-accepted.json`, printed like the escape hatch. `npm audit signatures` exiting
 3221226505 (a Windows process crash) with no report is run once more with a fresh npm cache of its own, removed
-afterwards; a second crash fails, as any answer that is no report does.
+afterwards; a second crash fails, as any answer that is no report does. An answer of the registry's that npm
+could not read (`invalid json response body at <url>`) is run again, three attempts in all with a pause of 2 s,
+then 6 s, and fails when it stays unreadable; a report decides as without a retry (2026-11-24).
 
 ### 3.3 Who owns what
 

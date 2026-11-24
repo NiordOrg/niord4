@@ -1130,13 +1130,28 @@ An absent file is an empty list; an unknown field, an empty reason, a bad date o
 twice fails, and an advisory npm names without a GHSA id cannot be accepted. The list is printed in
 full on every run, as the escape hatch is, and set-up prints it too and records it in the build
 report; an entry that no longer matches a finding is a warning — remove it. When npm's answer is not
-JSON (the registry did not answer), the audit fails: no build goes out without it. The one
-exception is `npm audit signatures` exiting 3221226505 (a Windows process crash) with no report: it
-is run once more with a fresh npm cache of its own, removed afterwards, and the audit says so,
-`npm audit signatures: exit 3221226505 with no report, a Windows process crash; running it once more with a fresh npm cache`;
-a second crash fails, its finding naming `(exit 3221226505), after one retry with a fresh npm cache`.
-A finding in a
-base product package is fixed by a later base product version; list it until then.
+JSON (the registry did not answer), the audit fails: no build goes out without it. Two outside
+faults are run again, and the audit says so each time:
+
+- **An answer of the registry's that npm could not read**, which npm reports as
+  `invalid json response body at <url>` (code `FETCH_ERROR` from `npm audit signatures`;
+  `npm audit` gives no code): the registry has answered a request with the text `OK`. That command
+  is run again, three attempts in all, after a pause of 2 s and then 6 s, 8 s at most beside npm's
+  own runs, and each retry is printed,
+  `npm audit signatures: attempt 1 of 3 failed (exit 1), the registry's answer could not be read: invalid json response body at …; trying again in 2 s`.
+  The first report that comes decides, as without a retry: an invalid or missing signature is a
+  finding, and a report is never run again. A third unreadable answer fails, its finding naming `after 3 attempts`.
+  No other fault is run again: npm retries a connection that failed and a `5xx` answer itself before
+  it reports them, and a `401`, `403` or `404`, another `FETCH_ERROR` (a timeout npm has retried) or
+  an answer that is no report fails at once.
+- **`npm audit signatures` exiting 3221226505** (a Windows process crash) with no report: it is run
+  once more with a fresh npm cache of its own, removed afterwards,
+  `npm audit signatures: exit 3221226505 with no report, a Windows process crash; running it once more with a fresh npm cache`;
+  a second crash fails, its finding naming `(exit 3221226505), after one retry with a fresh npm cache`.
+  The crash's run again belongs to the attempt it crashed in and happens once per audit, so an
+  unreadable answer after it is retried as above, and a crash in a later attempt fails.
+
+A finding in a base product package is fixed by a later base product version; list it until then.
 
 ## The checks on every country build
 

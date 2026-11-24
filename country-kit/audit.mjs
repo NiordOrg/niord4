@@ -22,9 +22,12 @@
  *
  * An absent file is an empty list; a file outside that shape fails. The accepted list is printed
  * in full on every run, and an entry that no longer matches a finding is a warning. A report that
- * is no JSON — the registry did not answer — fails too: no build goes out without its audit. The
- * one exception is `npm audit signatures` crashing on Windows with no report, which is run once
- * more with a fresh npm cache of its own (CRASHED); a second crash fails.
+ * is no JSON — the registry did not answer — fails too: no build goes out without its audit. Two
+ * outside faults are run again. An answer of the registry's that npm could not read (UNREADABLE)
+ * is retried, ATTEMPTS runs in all with a growing pause between them (PAUSES), and fails when it
+ * stays unreadable; a report decides as any other, so a retry never turns a finding into a pass.
+ * And `npm audit signatures` crashing on Windows with no report is run once more with a fresh npm
+ * cache of its own (CRASHED); a second crash fails.
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -39,6 +42,17 @@ const SIGNATURES = ['audit', 'signatures', '--json'];
 // over the user's shared npm cache, and passed when run again. Only that run is retried, once,
 // with a cache of its own; any other exit without a report is the registry's answer.
 const CRASHED = 3221226505;
+// An answer npm fetched and could not read: minipass-fetch's text for a body that is no JSON, in
+// npm's error report as `npm audit signatures` prints it (code FETCH_ERROR, the text as summary)
+// and as `npm audit` does (no code, the text as message). The registry has answered one
+// attestation request with "OK", and a run minutes later passed. npm retries a connection that
+// failed and a 5xx answer itself before it reports them, but not this, so only this is retried:
+// never another FETCH_ERROR (a timeout npm has retried, a redirect, a size), a network code, an
+// HTTP status (401, 403, 404, 5xx) or an answer that is no report.
+const UNREADABLE = /^invalid json response body at /;
+const ATTEMPTS = 3;
+// Before the second attempt and before the third: 8 s at most in all, beside npm's own runs.
+const PAUSES = [2000, 6000];
 const SEVERE = ['high', 'critical'];
 const GHSA = /GHSA(?:-[0-9a-z]{4}){3}/i;
 const ADVISORY = /^GHSA(?:-[0-9a-z]{4}){3}$/;
@@ -75,9 +89,17 @@ function parseReport(text, command) {
   if (!isObject(report)) throw new Error(`\`npm ${command}\` printed no JSON report`);
   if (report.error !== undefined) {
     const { code, summary, detail } = isObject(report.error) ? report.error : {};
-    throw new Error(
-      `\`npm ${command}\` failed${code ? ` (${code})` : ''}: ${summary ?? detail ?? JSON.stringify(report.error)}`,
-    );
+    // `npm audit` puts what failed in the report's message and leaves the error's texts empty.
+    const said = String(
+      [summary, detail, report.message].find(isText) ?? JSON.stringify(report.error),
+    )
+      .replace(/\s+/g, ' ')
+      .trim();
+    const error = new Error(`\`npm ${command}\` failed${code ? ` (${code})` : ''}: ${said}`);
+    // The one fault run again (main): what npm said of it.
+    if ((code === undefined || code === 'FETCH_ERROR') && UNREADABLE.test(said))
+      error.unreadable = said;
+    throw error;
   }
   return report;
 }
@@ -257,57 +279,84 @@ function runNpm(args, { cwd, cache }) {
 const removeFolder = (folder) =>
   fs.rmSync(folder, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
 
+// Waits without a timer, as the audit runs npm synchronously.
+const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
 /**
  * The audit of the workspace in `cwd`. `run(args, { cwd, cache })` runs npm, with `cache` as its
  * cache folder when given, and returns its exit status and output (tests pass their own);
- * `remove(folder)` deletes the retry's cache folder; `out` and `err` print. Returns the exit code:
- * 0 when every finding is accepted, 1 otherwise.
+ * `remove(folder)` deletes the crash retry's cache folder; `pause(ms)` waits before a run again
+ * after an unreadable answer; `out` and `err` print. Returns the exit code: 0 when every finding
+ * is accepted, 1 otherwise.
  */
 export function main({
   cwd = process.cwd(),
   run = runNpm,
   remove = removeFolder,
+  pause = sleep,
   out = console.log,
   err = console.error,
 } = {}) {
   const errors = [];
   const findings = [];
-  for (const [args, parse] of [
-    [AUDIT, parseAudit],
-    [SIGNATURES, parseSignatures],
+  for (const [command, args, parse] of [
+    ['audit', AUDIT, parseAudit],
+    ['audit signatures', SIGNATURES, parseSignatures],
   ]) {
-    let result;
+    // The crash retry is one run more inside an attempt, and at most once per command.
     let retried = false;
-    try {
-      result = run(args, { cwd });
-      if (args === SIGNATURES && result.status === CRASHED && !isReport(result.stdout)) {
-        out(
-          `npm audit signatures: exit ${CRASHED} with no report, a Windows process crash; running it once more with a fresh npm cache`,
-        );
-        retried = true;
-        const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'niord-audit-npm-cache-'));
-        try {
-          result = run(args, { cwd, cache });
-        } finally {
-          // A folder left behind is a warning: the retry's answer decides the audit, not its clean-up.
+    for (let attempt = 1; ; attempt++) {
+      let result;
+      try {
+        result = run(args, { cwd });
+        if (
+          args === SIGNATURES &&
+          !retried &&
+          result.status === CRASHED &&
+          !isReport(result.stdout)
+        ) {
+          out(
+            `npm audit signatures: exit ${CRASHED} with no report, a Windows process crash; running it once more with a fresh npm cache`,
+          );
+          retried = true;
+          const cache = fs.mkdtempSync(path.join(os.tmpdir(), 'niord-audit-npm-cache-'));
           try {
-            remove(cache);
-          } catch (error) {
-            out(
-              `warning: the npm cache ${cache} could not be removed (${error.code ?? error.message})`,
-            );
+            result = run(args, { cwd, cache });
+          } finally {
+            // A folder left behind is a warning: the retry's answer decides the audit, not its clean-up.
+            try {
+              remove(cache);
+            } catch (error) {
+              out(
+                `warning: the npm cache ${cache} could not be removed (${error.code ?? error.message})`,
+              );
+            }
           }
         }
+        findings.push(...parse(result.stdout));
+        break;
+      } catch (error) {
+        if (error.unreadable !== undefined && attempt < ATTEMPTS) {
+          const wait = PAUSES[attempt - 1];
+          out(
+            `npm ${command}: attempt ${attempt} of ${ATTEMPTS} failed (exit ${result.status}), the registry's answer could not be read: ${error.unreadable}; trying again in ${wait / 1000} s`,
+          );
+          pause(wait);
+          continue;
+        }
+        const said = String(result?.stderr ?? '')
+          .trim()
+          .split(/\r?\n/)
+          .find(Boolean);
+        const after = [
+          ...(attempt > 1 ? [`${attempt} attempts`] : []),
+          ...(retried ? ['one retry with a fresh npm cache'] : []),
+        ];
+        errors.push(
+          `${error.message}${result ? ` (exit ${result.status})` : ''}${after.length ? `, after ${after.join(' and ')}` : ''}${said ? `: ${said}` : ''}; the audit needs the registry, and no build goes out without it`,
+        );
+        break;
       }
-      findings.push(...parse(result.stdout));
-    } catch (error) {
-      const said = String(result?.stderr ?? '')
-        .trim()
-        .split(/\r?\n/)
-        .find(Boolean);
-      errors.push(
-        `${error.message}${result ? ` (exit ${result.status})` : ''}${retried ? ', after one retry with a fresh npm cache' : ''}${said ? `: ${said}` : ''}; the audit needs the registry, and no build goes out without it`,
-      );
     }
   }
   const { entries, errors: fileErrors } = readAuditAccepted(cwd);
