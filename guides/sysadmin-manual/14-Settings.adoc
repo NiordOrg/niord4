@@ -181,7 +181,10 @@ For the folders and `authServerUrl` an empty value is no way to clear the row: a
 ("niord.home cannot be resolved"), another empty folder is the server's working folder, and with an empty
 `authServerUrl` the server's calls to Keycloak fail with "No authServerUrl setting defined". To go back to the
 default instead, delete the row: from the next start the value of "niord.json", else the settings file, else the
-default in the code, applies. A change of one of these rows by SQL is taken at the next start.
+default in the code, applies. A change of one of these rows by SQL is taken at the next start. On a server started
+with neither `NIORD_HOME` nor `-Dniord.home`, change the row of `niord.home` only while the server is stopped: the map
+tile cache can follow the new row before the next start, while the server's other folders keep the home it started
+with.
 
 [#settings-an-operator-sets]
 === Settings to Set for a New Deployment

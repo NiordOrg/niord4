@@ -2109,6 +2109,25 @@ they say otherwise; every other path is from the repository root.
   `@Transactional(propagation = Propagation.SUPPORTS)` or `NOT_SUPPORTED` on the two thread-local methods, then
   measure the tile request over HTTP in that test.
 
+## SETTINGS-16. A `niord.home` row changed under a server started without `NIORD_HOME` moves only the map tile cache
+
+- **Location:** `org/niord/web/map/MapTileSettings.java` `tileCacheDir` (167-187: reads `mapTileCachePath`, by
+  default `${niord.home}/tile-cache`, at each use, through the settings cache) and `niordHomeResolves` (246-249:
+  `peek` of `niord.home`, which bypasses the cache); against `org/niord/core/repo/RepoCache.java` `home()` (91: read
+  once) and the folders resolved at start (`batchJobRootPath`, `messageIndexPath`, `publicationPreviewRootPath`).
+- **Description:** since 2026-11-24 `niord.home` is deployment configuration: the Settings page does not list it,
+  a save is refused and the settings import skips it. A change of its row by SQL, or a restore under a running
+  server, still reaches the tile cache before the next start when the server was started with neither `NIORD_HOME`
+  nor a `niord.home` system property or environment variable: the fallback check at once, the folder when the
+  cached `mapTileCachePath` is read again. The repository cache and the start-resolved folders keep the old home.
+- **Why it looks wrong:** the server's files are split between two homes until the next start, and the sysadmin
+  manual says a change of these rows by SQL is taken at the next start.
+- **Exposed by:** the change that made `niord.home` deployment configuration (2026-11-24), read in the code; not
+  run.
+- **Severity:** Low — every chart and launcher sets `NIORD_HOME` or `-Dniord.home`, which wins over the row; only a
+  server started by hand without either is affected. Fix, for the owner to decide: resolve the tile cache folder
+  once, at start, as the other folders are (or read `niord.home` once for every folder, as `RepoCache` does).
+
 ## DICT9. Five backend default texts carry other placeholders than the administration app passes, so an edit that keeps them never shows
 
 - **Location:** `be/niord/src/main/resources/defaults/base/texts/en/web.properties` 62, 86, 98 and 107 and
