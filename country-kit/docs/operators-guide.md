@@ -397,14 +397,20 @@ maintainers how your deployment gets its AtoN records.
 pencil changes a value, and only the value. There is no reset and no delete. Only the keys the code
 declares are listed: a row of an earlier version that no code declares stays in the database,
 unlisted. A password value is never shown. **Import...** and **Export...** take a settings file.
-A saved value takes effect at once, without a restart. The folders (`batchJobRootPath`,
+A saved value takes effect at once, without a restart. The server's home folder (`niord.home`, see
+[The server's home folder](#the-servers-home-folder)), the other folders (`batchJobRootPath`,
 `messageIndexPath`, `publicationPreviewRootPath`), `vipsPath` and Keycloak's address
 (`authServerUrl`) are not listed: the deployment sets them at the server's start (below).
-A database restored from another system keeps that system's rows for these five, and the page
+A database restored from another system keeps that system's rows for these six, and the page
 cannot correct them: a system property or environment variable of the key's name wins over the row,
-an empty one included. The chart's `app.settings` renders no empty value, so an empty one goes in
+an empty one included. For `niord.home`, `NIORD_HOME` wins over the row as well, as it always has:
+a restored row of `niord.home` (in a country's database usually `${NIORD_HOME}`, in another
+system's perhaps that system's folder) changes nothing on a server started with `NIORD_HOME` (or
+`-Dniord.home`), which the base chart and the local launcher always give; only a server started
+with neither takes its home from the row. The chart's `app.settings` renders no empty value, so an empty one goes in
 `app.javaOpts`, as `-DvipsPath=`, which switches the program off. Never give a folder or
-`authServerUrl` an empty value (an empty folder is the server's working folder); to go back to the
+`authServerUrl` an empty value (an empty `niord.home` stops the start, another empty folder is the
+server's working folder); to go back to the
 default, delete the row, and the next start applies the settings file's value, else the code's
 default. A row changed by SQL
 is taken at the next start; any other setting changed that way is taken within half a minute once
@@ -509,15 +515,17 @@ set, or an empty value. Its log says, at ERROR,
 (or `from the database's niord.home setting`, the value a started database holds), and the start
 stops before anything is written under the home.
 
-How to see it worked: Sysadmin > Settings lists `niord.home` with the value `${NIORD_HOME}`. The
-backend's start log says `Default setting niord.home = ${NIORD_HOME} (country)`. Do not change the
-value on the page. The volume itself is verified at the deploy step.
+How to see it worked: the backend's start log says
+`Default setting niord.home = ${NIORD_HOME} (country)`, and its line `Publication preview root:`
+names a folder in the home (the default of `publicationPreviewRootPath`). `niord.home` is deployment
+configuration: Sysadmin > Settings does not list it, a save of it is refused and the settings import
+skips it (step 15). The volume itself is verified at the deploy step.
 
 The base product's generic deployable, without a country, follows `NIORD_HOME` too:
 when no `niord.home` property or variable is set, its `niord.home` takes the `NIORD_HOME` system
 property, else the environment variable, ahead of the database row; only without any of them does
-it fall back to `${user.home}/.niord`. Check the Settings page on such a deployment before anyone
-enters data.
+it fall back to `${user.home}/.niord`. Check the start log's `Publication preview root:` (by
+default a folder in the home) on such a deployment before anyone enters data.
 
 **The execution mode.** A fresh database starts in mode `test`: both frontends then
 show a TEST ribbon, the public site included. A production deployment adds `-Dmode=production` to

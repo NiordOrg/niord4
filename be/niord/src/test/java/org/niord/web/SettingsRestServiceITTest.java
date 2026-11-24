@@ -98,10 +98,10 @@ class SettingsRestServiceITTest extends ITTest {
     /**
      * The deployment configuration that left the Settings page: still declared settings, set by an environment
      * variable or system property of the key's name, the settings file or an existing row, but neither listed nor
-     * saved on the page.
+     * saved on the page. niord.home, the server's home folder, is one too (also set by NIORD_HOME).
      */
     private static final List<String> DEPLOYMENT_KEYS = List.of("batchJobRootPath", "messageIndexPath",
-            "publicationPreviewRootPath", "vipsPath", "authServerUrl");
+            "publicationPreviewRootPath", "vipsPath", "authServerUrl", "niord.home");
 
     /** Reads the current value of a setting through the sysadmin-protected GET endpoint. */
     private Object getSettingValue(String key) {
@@ -342,7 +342,8 @@ class SettingsRestServiceITTest extends ITTest {
                     .body("key", not(hasItem(DEPLOYMENT_KEYS.get(1))))
                     .body("key", not(hasItem(DEPLOYMENT_KEYS.get(2))))
                     .body("key", not(hasItem(DEPLOYMENT_KEYS.get(3))))
-                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(4))));
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(4))))
+                    .body("key", not(hasItem(DEPLOYMENT_KEYS.get(5))));
 
             for (String key : DEPLOYMENT_KEYS) {
                 Map<String, Object> body = new LinkedHashMap<>();

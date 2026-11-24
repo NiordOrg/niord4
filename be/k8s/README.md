@@ -565,7 +565,10 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
   `mapTileContact` setting (Settings page) to the operator's e-mail address or URL, which the
   OpenStreetMap tile policy asks to find in the User-Agent; left empty, the backend names
   `baseUri` there. The tiles are cached in `tile-cache` under `NIORD_HOME`, on the app's volume,
-  and a nightly sweep keeps that folder below 200 MB; nothing serves it.
+  and a nightly sweep keeps that folder below 200 MB; nothing serves it. The schema update at
+  start needs no egress: Liquibase's own usage analytics, on by default in the library and a call
+  to `config.liquibase.com` at every start, are off in `config/niord-core-defaults.yml`
+  (`spring.liquibase.analytics-enabled: false`).
 - **Retired settings** — no external static-map service is called any more, and the
   `mapImageServer`, `mapImageIndent` and `osmSourceUrl` settings are gone: Liquibase deletes
   their rows. A `niord.json` of the deployment's own in `NIORD_HOME` that still sets one needs no

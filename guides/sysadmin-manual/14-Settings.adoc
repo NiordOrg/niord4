@@ -108,7 +108,8 @@ that is not set, as `${NIORD_HOME}` does without `NIORD_HOME`. The log then says
 with the value, where it came from and how to set it.
 
 The _Settings_ page still shows and saves the value in the database, but while such a system property or
-environment variable is set, Niord uses that instead.
+environment variable is set, Niord uses that instead. The home folder is not on the page: the deployment sets it
+(see <<settings-from-code,Settings from Code>>).
 
 [#settings-from-code]
 === Settings from Code
@@ -159,21 +160,32 @@ A few settings are worth knowing about before you change them:
   new size the first time it is asked for.
 
 These settings are not on this page, because a change under a running server would do harm (a batch job would be
-split across two folders, or the search would answer from another folder's index): `authServerUrl` (the address of
-Keycloak), `batchJobRootPath`, `messageIndexPath` and `publicationPreviewRootPath` (the folders of the batch jobs, the
-text search index and the publication previews) and `vipsPath` (a program on the server that draws thumbnails
-faster). The deployment sets them, with a system property or an environment variable of the same name, or, for a
-new database, in "niord.json" (see <<settings-from-niord-json,Where Settings Come From>>). The server uses the
+split across two folders, the search would answer from another folder's index, or the server's files would be split
+between two home folders): `authServerUrl` (the address of Keycloak), `niord.home` (the server's home folder, in
+which the other folders lie by default), `batchJobRootPath`, `messageIndexPath` and `publicationPreviewRootPath` (the
+folders of the batch jobs, the text search index and the publication previews) and `vipsPath` (a program on the
+server that draws thumbnails faster). The deployment sets them, with a system property or an environment variable of
+the same name (for `niord.home` also the environment variable `NIORD_HOME`, see
+<<settings-from-environment-variables,Settings from Environment Variables>>), or, for a new database, in
+"niord.json" or the settings file (see <<settings-from-niord-json,Where Settings Come From>>). The home folder
+itself is the exception: "niord.json" lies in it, so `niord.home` never comes from that file. The server uses the
 value it had when it started, and the settings import skips them.
 
-A database restored from another system brings that system's rows for these five settings, and this page cannot
+A database restored from another system brings that system's rows for these six settings, and this page cannot
 correct them. To give one of them another value, set a system property or an environment variable of the same
-name: it wins over the row, also when it is empty. An empty `vipsPath` (for example `-DvipsPath=` among the
-server's Java options) switches the program off, and the server draws the thumbnails itself. For the three folders
-and `authServerUrl` an empty value is no way to clear the row: an empty folder is the server's working folder, and
-with an empty `authServerUrl` the server's calls to Keycloak fail with "No authServerUrl setting defined". To go
-back to the default instead, delete the row: from the next start the value of "niord.json", else the default in the
-code, applies. A change of one of these rows by SQL is taken at the next start.
+name: it wins over the row, also when it is empty. For `niord.home`, `NIORD_HOME` wins over the row too, as it always
+has, so a restored row of `niord.home` (in a country's database often `${NIORD_HOME}`) changes nothing on a server
+started with `NIORD_HOME` or `-Dniord.home`, as the deployments and the local start scripts start it; only a server
+started with neither takes its home folder from the row. An empty `vipsPath` (for example
+`-DvipsPath=` among the server's Java options) switches the program off, and the server draws the thumbnails itself.
+For the folders and `authServerUrl` an empty value is no way to clear the row: an empty `niord.home` stops the start
+("niord.home cannot be resolved"), another empty folder is the server's working folder, and with an empty
+`authServerUrl` the server's calls to Keycloak fail with "No authServerUrl setting defined". To go back to the
+default instead, delete the row: from the next start the value of "niord.json", else the settings file, else the
+default in the code, applies. A change of one of these rows by SQL is taken at the next start. On a server started
+with neither `NIORD_HOME` nor `-Dniord.home`, change the row of `niord.home` only while the server is stopped: the map
+tile cache can follow the new row before the next start, while the server's other folders keep the home it started
+with.
 
 [#settings-an-operator-sets]
 === Settings to Set for a New Deployment

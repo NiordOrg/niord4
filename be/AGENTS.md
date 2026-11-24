@@ -119,7 +119,7 @@ repository; Spring-specific code and Spring-specific tests are correct, not a co
     so an editable `@Setting` field is `volatile` and request code reads the field, not `SettingsService`. A
     restart setting is the exception: on `SettingInjectionBeanPostProcessor.RESTART_KEYS` and on
     `SettingsCatalogCurrentTest`'s list with its reason, its description ending "Applies at the next start."
-    A value that cannot change under a running server (a folder, the Keycloak address) is deployment
+    A value that cannot change under a running server (a folder, `niord.home` among them, the Keycloak address) is deployment
     configuration, `editable = false`, not on the Settings page; the page and the save take `editable` from
     the catalog, not the row. A repository settings file holds no real secret (a password setting is empty
     there). A setting is declared in code, as an `@Setting` field or a static

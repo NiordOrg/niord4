@@ -272,7 +272,7 @@ move. So an editable `@Setting` field is `volatile`, and request code reads the 
 settings service. A setting that needs a restart is the exception: it is on the restart list
 (`SettingInjectionBeanPostProcessor.RESTART_KEYS`, held with its reason by
 `SettingsCatalogCurrentTest`), and its description ends "Applies at the next start." A value that
-cannot change under a running server, such as a folder or the Keycloak address, is deployment
+cannot change under a running server, such as a folder (the home folder `niord.home` among them) or the Keycloak address, is deployment
 configuration: `editable = false`, not on the Settings page, set by an environment variable, a
 system property or the settings file.
 

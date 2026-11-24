@@ -26,7 +26,9 @@ import org.niord.core.settings.SettingsService;
 import org.niord.test.ITTest;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
@@ -257,18 +259,28 @@ class BatchSettingsImportProcessorITTest extends ITTest {
 
     /**
      * Deployment configuration, which an export made while it was still on the Settings page holds, is skipped with a
-     * line rather than failing the import, even where the row says editable
+     * line rather than failing the import, even where the row says editable: authServerUrl, and niord.home, the
+     * server's home folder
      */
     @Test
     @Transactional
     void deploymentConfigurationIsSkipped() throws Exception {
-        em.find(Setting.class, "authServerUrl").setEditable(true);
-        TestableProcessor processor = freshProcessor();
+        Map<String, Object> items = new LinkedHashMap<>();
+        items.put("authServerUrl", "https://elsewhere.example.org/auth");
+        items.put("niord.home", "/elsewhere/niord");
+        for (Map.Entry<String, Object> item : items.entrySet()) {
+            String key = item.getKey();
+            Setting row = em.find(Setting.class, key);
+            assertNotNull(row, "precondition: start-up added " + key);
+            row.setEditable(true);
+            assertNotEquals(row.getValue(), item.getValue(), "precondition: the file's value differs from the row's");
+            TestableProcessor processor = freshProcessor();
 
-        assertNull(processor.processItem(new Setting("authServerUrl", "https://elsewhere.example.org/auth")));
+            assertNull(processor.processItem(new Setting(key, item.getValue())), key);
 
-        assertTrue(processor.lines.contains("Skipped authServerUrl: deployment configuration, which the deployment sets"),
-                processor.lines::toString);
+            assertTrue(processor.lines.contains("Skipped " + key + ": deployment configuration, which the deployment sets"),
+                    processor.lines::toString);
+        }
     }
 
     /**
