@@ -167,7 +167,8 @@ folders of the batch jobs, the text search index and the publication previews) a
 server that draws thumbnails faster). The deployment sets them, with a system property or an environment variable of
 the same name (for `niord.home` also the environment variable `NIORD_HOME`, see
 <<settings-from-environment-variables,Settings from Environment Variables>>), or, for a new database, in
-"niord.json" or the settings file (see <<settings-from-niord-json,Where Settings Come From>>). The server uses the
+"niord.json" or the settings file (see <<settings-from-niord-json,Where Settings Come From>>). The home folder
+itself is the exception: "niord.json" lies in it, so `niord.home` never comes from that file. The server uses the
 value it had when it started, and the settings import skips them.
 
 A database restored from another system brings that system's rows for these six settings, and this page cannot
