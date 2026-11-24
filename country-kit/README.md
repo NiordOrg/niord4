@@ -1142,8 +1142,9 @@ faults are run again, and the audit says so each time:
   The first report that comes decides, as without a retry: an invalid or missing signature is a
   finding, and a report is never run again. A third unreadable answer fails, its finding naming `after 3 attempts`.
   No other fault is run again: npm retries a connection that failed and a `5xx` answer itself before
-  it reports them, and a `401`, `403` or `404`, another `FETCH_ERROR` (a timeout npm has retried) or
-  an answer that is no report fails at once.
+  it reports them, and a `401`, `403` or `404`, another `FETCH_ERROR` (a timeout npm has retried),
+  an answer that is no report, or the unreadable answer's error beside a report's own lists, fails
+  at once.
 - **`npm audit signatures` exiting 3221226505** (a Windows process crash) with no report: it is run
   once more with a fresh npm cache of its own, removed afterwards,
   `npm audit signatures: exit 3221226505 with no report, a Windows process crash; running it once more with a fresh npm cache`;

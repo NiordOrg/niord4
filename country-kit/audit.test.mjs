@@ -426,6 +426,50 @@ describe('npm audit: the command', () => {
       assertNamed(first.err, 'error: npm audit signatures: left-pad@1.3.0 has an invalid');
     });
 
+    it('an unreadable error beside a report with findings fails, and is not run again', () => {
+      const { error } = JSON.parse(text('signatures-unreadable.json'));
+      for (const [scripted, command] of [
+        [
+          {
+            signatureRuns: [
+              {
+                status: 1,
+                stdout: JSON.stringify({
+                  invalid: [{ name: 'left-pad', version: '1.3.0' }],
+                  missing: [],
+                  error,
+                }),
+              },
+              clean,
+            ],
+          },
+          'audit signatures',
+        ],
+        [
+          {
+            auditRuns: [
+              {
+                status: 1,
+                stdout: JSON.stringify({
+                  ...JSON.parse(text('audit-unreadable.json')),
+                  vulnerabilities: {},
+                }),
+              },
+              { status: 0, stdout: 'audit-clean.json' },
+            ],
+          },
+          'audit',
+        ],
+      ]) {
+        const { code, out, err, calls, pauses } = audit(workspace(), scripted);
+        assert.equal(code, 1, command);
+        assert.equal(calls.length, 2, command);
+        assert.deepEqual(pauses, [], command);
+        assert.ok(!out.some((line) => line.includes('attempt')), out.join('\n'));
+        assertNamed(err, `error: \`npm ${command}\` failed`);
+      }
+    });
+
     it('fails when every attempt is unreadable, naming the attempts, after a growing pause', () => {
       const { code, out, err, calls, pauses } = audit(workspace(), {
         signatureRuns: [unreadable, { ...unreadable }, { ...unreadable }, clean],

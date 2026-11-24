@@ -96,8 +96,13 @@ function parseReport(text, command) {
       .replace(/\s+/g, ' ')
       .trim();
     const error = new Error(`\`npm ${command}\` failed${code ? ` (${code})` : ''}: ${said}`);
-    // The one fault run again (main): what npm said of it.
-    if ((code === undefined || code === 'FETCH_ERROR') && UNREADABLE.test(said))
+    // The one fault run again (main): what npm said of it. Only when the error is all there is: an
+    // error beside a report's lists, findings or not, fails as any other and is not run again.
+    if (
+      (code === undefined || code === 'FETCH_ERROR') &&
+      UNREADABLE.test(said) &&
+      !['invalid', 'missing', 'vulnerabilities'].some((key) => key in report)
+    )
       error.unreadable = said;
     throw error;
   }
