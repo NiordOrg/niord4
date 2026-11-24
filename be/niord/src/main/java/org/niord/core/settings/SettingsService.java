@@ -80,11 +80,20 @@ import java.util.regex.Matcher;
 @SuppressWarnings("unused")
 public class SettingsService extends BaseService {
 
-    /** The root folder of the server's own files; no code default: without a row {@link #peek} gives the settings file's value, expanded */
+    /**
+     * The root folder of the server's own files; no code default: without a row {@link #peek} gives the settings file's
+     * value, expanded. Deployment configuration, not editable: a save would move only some of the server's folders
+     * ({@code RepoCache} reads it once, the folders whose defaults name {@code ${niord.home}} are resolved at start),
+     * so the Settings page does not list it, a save of it is refused and the settings import skips it. It is still
+     * read from {@code NIORD_HOME}, a system property or environment variable named {@code niord.home}
+     * ({@link #override}), the settings file and an existing row, as before.
+     */
     public static final Setting NIORD_HOME = new Setting("niord.home", null)
             .type(Setting.Type.String)
-            .description("The root directory for the Niord application")
-            .editable(true);
+            .description("The root directory for the Niord application. Deployment configuration, not on the Settings"
+                    + " page: set by NIORD_HOME, an environment variable or system property of this name, or the"
+                    + " settings file.")
+            .editable(false);
 
     /**
      * The deployments' environment variable for the home folder, and the token the countries' settings files give

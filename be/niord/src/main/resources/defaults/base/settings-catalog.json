@@ -622,11 +622,11 @@
       "baseValue": "${user.home}/.niord",
       "scope": "operator",
       "web": false,
-      "editable": true,
+      "editable": false,
       "required": false,
       "cached": true,
       "introducedIn": "4.0.74",
-      "description": "The root directory for the Niord application",
+      "description": "The root directory for the Niord application. Deployment configuration, not on the Settings page: set by NIORD_HOME, an environment variable or system property of this name, or the settings file.",
       "declaredIn": [
         "org.niord.core.settings.SettingsService"
       ]

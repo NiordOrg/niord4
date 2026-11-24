@@ -113,9 +113,11 @@ class SettingsCatalogCurrentTest {
         assertTrue(missing.isEmpty(), "every key of " + BASE_SETTINGS + " has a declaration; these have none: " + missing);
 
         // The deployment configuration: settable by an environment variable or system property named like the key,
-        // the settings file or an existing row, but not on the Settings page, and not refreshed while running
+        // the settings file or an existing row, but not on the Settings page, and not refreshed while running;
+        // niord.home, the server's home folder, also by NIORD_HOME
         assertEquals(Set.of("authServerTrustAllCertificates", "secomEnabled", "mapTileCachePath",
-                        "batchJobRootPath", "messageIndexPath", "publicationPreviewRootPath", "vipsPath", "authServerUrl"),
+                        "batchJobRootPath", "messageIndexPath", "publicationPreviewRootPath", "vipsPath", "authServerUrl",
+                        "niord.home"),
                 keys(catalog, e -> e.scope() == Setting.Scope.operator && !e.editable()),
                 "the operator keys the Settings page does not show");
         assertTrue(byKey.get("secomEnabled").web(), "the administration app reads secomEnabled from /web");
