@@ -36,6 +36,11 @@ spring:
   # db/changelog/changelog-with-seed.yaml — see ITTest).
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    # Liquibase's own usage analytics are on by default in the library: at every start it fetches its analytics
+    # configuration from config.liquibase.com and may then send usage data to the vendor. Off for every
+    # application with niord-base, so a start contacts no third party and does not depend on how a blocked call
+    # fails (Spring Boot passes this to SpringLiquibase, which sets Liquibase's liquibase.analytics.enabled).
+    analytics-enabled: false
   jpa:
     open-in-view: false
     hibernate:
