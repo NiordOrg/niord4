@@ -80,7 +80,8 @@
     <tr>
         <td width="25%" align="left">
             ${.now?string(text("msg.time.date_format"))}
-            <#if edition?? && edition != '1'> - Version ${edition}</#if>
+            <#-- The edition's label is the text pdf.edition; a deployment without it prints the English word -->
+            <#if edition?? && edition != '1'> - <#attempt>${text('pdf.edition', edition)}<#recover>Version ${edition}</#attempt></#if>
         </td>
         <td width="25%" align="center">ISSN ${ISSN!""}</td>
         <#-- The volume is counted from ${yearNumber}, the year the numbering

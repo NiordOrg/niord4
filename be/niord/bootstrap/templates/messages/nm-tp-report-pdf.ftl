@@ -56,7 +56,8 @@
     <tr>
         <td width="50%" align="left">
             ${.now?string(text("msg.time.date_format"))}
-            <#if edition?? && edition != '1'> - Version ${edition}</#if>
+            <#-- The edition's label is the text pdf.edition; a deployment without it prints the English word -->
+            <#if edition?? && edition != '1'> - <#attempt>${text('pdf.edition', edition)}<#recover>Version ${edition}</#attempt></#if>
         </td>
         <td width="50%" align="right">
             ${text("pdf.nm_abbrev")}  ${weeks!week!""} ${year!""}

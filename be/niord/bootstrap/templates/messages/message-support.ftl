@@ -377,7 +377,7 @@
             <tr>
                 <td class="field-name">${text("msg.field.status")}</td>
                 <td class="field-value">
-                    ${msg.status?lower_case}
+                    <#attempt>${text("msg.status." + msg.status)?lower_case}<#recover>${msg.status?lower_case}</#attempt>
                 </td>
             </tr>
         </#if>
