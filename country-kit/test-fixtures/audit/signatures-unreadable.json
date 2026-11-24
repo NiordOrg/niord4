@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "FETCH_ERROR",
+    "summary": "invalid json response body at https://registry.npmjs.org/-/npm/v1/attestations/semver@7.8.5 reason: Unexpected token 'O', \"OK\n\" is not valid JSON",
+    "detail": ""
+  }
+}

@@ -44,8 +44,9 @@ function workspace(accepted) {
 
 /**
  * npm as a test plays it: the reports named, an exit status, and the calls made, each with the
- * options it was given. `signatureRuns`, when given, scripts each `audit signatures` call in turn:
- * `{ status, stdout, stderr }`, its stdout a fixture's name or the text itself.
+ * options it was given. `signatureRuns` and `auditRuns`, when given, script each `audit signatures`
+ * and each `audit` call in turn: `{ status, stdout, stderr }`, its stdout a fixture's name or the
+ * text itself.
  */
 function npm({
   audit = 'audit-clean.json',
@@ -53,6 +54,7 @@ function npm({
   status = 0,
   stderr = '',
   signatureRuns,
+  auditRuns,
 } = {}) {
   const calls = [];
   const options = [];
@@ -60,8 +62,9 @@ function npm({
   const run = (args, given) => {
     calls.push({ args, cwd: given.cwd });
     options.push(given);
-    if (args.includes('signatures') && signatureRuns) {
-      const scripted = signatureRuns.shift();
+    const scripts = args.includes('signatures') ? signatureRuns : auditRuns;
+    if (scripts) {
+      const scripted = scripts.shift();
       return { stderr: '', ...scripted, stdout: report(scripted.stdout) };
     }
     return { status, stdout: report(args.includes('signatures') ? signatures : audit), stderr };
@@ -69,19 +72,24 @@ function npm({
   return { run, calls, options };
 }
 
-/** main's exit code and printed lines; `remove`, when given, replaces its folder removal. */
+/**
+ * main's exit code, printed lines and the pauses it asked for, never waited; `remove`, when
+ * given, replaces its folder removal.
+ */
 function audit(fe, npmOptions, { remove } = {}) {
   const out = [];
   const err = [];
+  const pauses = [];
   const { run, calls, options } = npm(npmOptions);
   const code = main({
     cwd: fe,
     run,
     ...(remove ? { remove } : {}),
+    pause: (ms) => pauses.push(ms),
     out: (line) => out.push(line),
     err: (line) => err.push(line),
   });
-  return { code, out, err, calls, options };
+  return { code, out, err, calls, options, pauses };
 }
 
 function assertNamed(lines, ...fragments) {
@@ -140,6 +148,27 @@ describe('npm audit: the reports', () => {
     assert.throws(() => parseAudit('{}'), /a report without vulnerabilities/);
     assert.throws(() => parseSignatures(''), /`npm audit signatures` printed no JSON report/);
     assert.throws(() => parseSignatures('{"invalid":[]}'), /without its invalid and missing lists/);
+  });
+
+  it("unreadable: npm's report of an answer it could not read names it, on one line", () => {
+    assert.throws(
+      () => parseSignatures(text('signatures-unreadable.json')),
+      (error) =>
+        error.message ===
+          '`npm audit signatures` failed (FETCH_ERROR): invalid json response body at https://registry.npmjs.org/-/npm/v1/attestations/semver@7.8.5 reason: Unexpected token \'O\', "OK " is not valid JSON' &&
+        error.unreadable === error.message.slice(error.message.indexOf('invalid json')),
+    );
+    assert.throws(
+      () => parseAudit(text('audit-unreadable.json')),
+      (error) =>
+        error.message.startsWith(
+          '`npm audit` failed: invalid json response body at https://registry.npmjs.org/-/npm/v1/security/advisories/bulk',
+        ) && error.unreadable !== undefined,
+    );
+    assert.throws(
+      () => parseAudit(text('audit-error.json')),
+      (error) => error.unreadable === undefined,
+    );
   });
 });
 
@@ -343,6 +372,197 @@ describe('npm audit: the command', () => {
       });
       assert.equal(reported.calls.length, 2);
       assertNamed(reported.err, 'npm audit signatures: left-pad@1.3.0 has an invalid');
+    });
+  });
+
+  describe("an answer of the registry's that npm could not read", () => {
+    const SIGNATURES = ['audit', 'signatures', '--json'];
+    const AUDIT = ['audit', '--omit=dev', '--audit-level=high', '--json'];
+    const unreadable = {
+      status: 1,
+      stdout: 'signatures-unreadable.json',
+      stderr: 'npm error code FETCH_ERROR\nnpm error errno FETCH_ERROR\n',
+    };
+    const clean = { status: 0, stdout: 'signatures-clean.json' };
+    const problems = { status: 1, stdout: 'signatures-problems.json' };
+    const errorReport = (code, summary) => ({
+      status: 1,
+      stdout: JSON.stringify({ error: { code, summary, detail: '' } }),
+      stderr: `npm error code ${code}\n`,
+    });
+
+    it('runs it again after a pause, saying so, and passes the clean report that follows', () => {
+      const { code, out, err, calls, pauses } = audit(workspace(), {
+        signatureRuns: [unreadable, clean],
+      });
+      assert.equal(code, 0, err.join('\n'));
+      assert.deepEqual(
+        calls.map((call) => call.args),
+        [AUDIT, SIGNATURES, SIGNATURES],
+      );
+      assert.deepEqual(pauses, [2000]);
+      assert.deepEqual(out.slice(0, 1), [
+        "npm audit signatures: attempt 1 of 3 failed (exit 1), the registry's answer could not be read: invalid json response body at https://registry.npmjs.org/-/npm/v1/attestations/semver@7.8.5 reason: Unexpected token 'O', \"OK \" is not valid JSON; trying again in 2 s",
+      ]);
+      assertNamed(out, 'npm audit: passed');
+    });
+
+    it('a retry never passes a finding: the report that follows decides, and is not retried', () => {
+      const { code, err, calls, pauses } = audit(workspace(), {
+        signatureRuns: [unreadable, problems, clean],
+      });
+      assert.equal(code, 1);
+      assert.equal(calls.length, 3);
+      assert.deepEqual(pauses, [2000]);
+      assertNamed(
+        err,
+        'error: npm audit signatures: left-pad@1.3.0 has an invalid registry signature',
+        'error: npm audit signatures: @zz/berths@1.0.0 has no registry signature',
+      );
+      const first = audit(workspace(), { signatureRuns: [problems, clean] });
+      assert.equal(first.code, 1);
+      assert.equal(first.calls.length, 2, 'a report with findings is not run again');
+      assert.deepEqual(first.pauses, []);
+      assertNamed(first.err, 'error: npm audit signatures: left-pad@1.3.0 has an invalid');
+    });
+
+    it('an unreadable error beside a report with findings fails, and is not run again', () => {
+      const { error } = JSON.parse(text('signatures-unreadable.json'));
+      for (const [scripted, command] of [
+        [
+          {
+            signatureRuns: [
+              {
+                status: 1,
+                stdout: JSON.stringify({
+                  invalid: [{ name: 'left-pad', version: '1.3.0' }],
+                  missing: [],
+                  error,
+                }),
+              },
+              clean,
+            ],
+          },
+          'audit signatures',
+        ],
+        [
+          {
+            auditRuns: [
+              {
+                status: 1,
+                stdout: JSON.stringify({
+                  ...JSON.parse(text('audit-unreadable.json')),
+                  vulnerabilities: {},
+                }),
+              },
+              { status: 0, stdout: 'audit-clean.json' },
+            ],
+          },
+          'audit',
+        ],
+      ]) {
+        const { code, out, err, calls, pauses } = audit(workspace(), scripted);
+        assert.equal(code, 1, command);
+        assert.equal(calls.length, 2, command);
+        assert.deepEqual(pauses, [], command);
+        assert.ok(!out.some((line) => line.includes('attempt')), out.join('\n'));
+        assertNamed(err, `error: \`npm ${command}\` failed`);
+      }
+    });
+
+    it('fails when every attempt is unreadable, naming the attempts, after a growing pause', () => {
+      const { code, out, err, calls, pauses } = audit(workspace(), {
+        signatureRuns: [unreadable, { ...unreadable }, { ...unreadable }, clean],
+      });
+      assert.equal(code, 1);
+      assert.equal(calls.length, 4);
+      assert.deepEqual(pauses, [2000, 6000]);
+      assertNamed(out, 'attempt 1 of 3 failed', 'attempt 2 of 3 failed', 'trying again in 6 s');
+      assert.ok(!out.some((line) => line.includes('attempt 3 of 3')), out.join('\n'));
+      assertNamed(
+        err,
+        'error: `npm audit signatures` failed (FETCH_ERROR): invalid json response body at https://registry.npmjs.org/-/npm/v1/attestations/semver@7.8.5',
+        '(exit 1), after 3 attempts: npm error code FETCH_ERROR; the audit needs the registry, and no build goes out without it',
+      );
+    });
+
+    it("runs `npm audit` again too, whose report puts npm's text in its message", () => {
+      const passed = audit(workspace(), {
+        auditRuns: [
+          { status: 1, stdout: 'audit-unreadable.json' },
+          { status: 0, stdout: 'audit-clean.json' },
+        ],
+      });
+      assert.equal(passed.code, 0, passed.err.join('\n'));
+      assert.deepEqual(
+        passed.calls.map((call) => call.args),
+        [AUDIT, AUDIT, SIGNATURES],
+      );
+      assertNamed(passed.out, "npm audit: attempt 1 of 3 failed (exit 1), the registry's answer");
+      const failed = audit(workspace(), {
+        auditRuns: [1, 2, 3].map(() => ({ status: 1, stdout: 'audit-unreadable.json' })),
+      });
+      assert.equal(failed.code, 1);
+      assertNamed(
+        failed.err,
+        'error: `npm audit` failed: invalid json response body at https://registry.npmjs.org/-/npm/v1/security/advisories/bulk',
+        '(exit 1), after 3 attempts; the audit needs the registry',
+      );
+    });
+
+    it('retries no other fault: an HTTP status, a network code, another FETCH_ERROR, no report', () => {
+      for (const run of [
+        errorReport(
+          'E503',
+          '503 Service Unavailable - GET https://registry.npmjs.org/-/npm/v1/attestations/semver@7.8.5',
+        ),
+        errorReport('E404', '404 Not Found - GET https://registry.npmjs.org/-/npm/v1/keys'),
+        errorReport(
+          'E403',
+          'invalid json response body at https://registry.npmjs.org/ reason: forbidden',
+        ),
+        errorReport(
+          'ECONNRESET',
+          'request to https://registry.npmjs.org/-/npm/v1/attestations/semver@7.8.5 failed, reason: socket hang up',
+        ),
+        errorReport(
+          'FETCH_ERROR',
+          'network timeout at: https://registry.npmjs.org/-/npm/v1/attestations/semver@7.8.5',
+        ),
+        { status: 1, stdout: 'OK' },
+      ]) {
+        const { code, calls, pauses, out } = audit(workspace(), { signatureRuns: [run, clean] });
+        assert.equal(code, 1, run.stdout);
+        assert.equal(calls.length, 2, run.stdout);
+        assert.deepEqual(pauses, []);
+        assert.ok(!out.some((line) => line.includes('attempt')), out.join('\n'));
+      }
+      // The same run, with the unreadable answer, is run again.
+      assert.equal(audit(workspace(), { signatureRuns: [unreadable, clean] }).calls.length, 3);
+    });
+
+    it('composes with the crash retry: a crash inside an attempt is run again once, at most', () => {
+      const CRASH = 3221226505;
+      const crashed = { status: CRASH, stdout: '' };
+      const passed = audit(workspace(), { signatureRuns: [crashed, unreadable, clean] });
+      assert.equal(passed.code, 0, passed.err.join('\n'));
+      assert.equal(passed.calls.length, 4);
+      assert.equal(typeof passed.options[2].cache, 'string');
+      assert.equal(
+        passed.options[3].cache,
+        undefined,
+        'the next attempt uses the npm cache as usual',
+      );
+      assertNamed(passed.out, 'a fresh npm cache', 'attempt 1 of 3 failed', 'npm audit: passed');
+      const failed = audit(workspace(), {
+        signatureRuns: [crashed, unreadable, { ...crashed }, clean],
+      });
+      assert.equal(failed.code, 1);
+      assert.equal(failed.calls.length, 4);
+      assertNamed(
+        failed.err,
+        `printed no JSON report (exit ${CRASH}), after 2 attempts and one retry with a fresh npm cache; the audit needs the registry`,
+      );
     });
   });
 
