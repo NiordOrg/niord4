@@ -927,7 +927,7 @@ public class MessageSearchParamsTest {
         assertTrue(s.contains("Updated from:"), s);
         assertTrue(s.contains("Updated to:"), s);
         assertTrue(s.contains("Extent:"), s);
-        // RENDER6: the message-list PDF prints this line, so the plural takes no apostrophe
+        // The description is the search's log line and its result's text: the plural takes no apostrophe
         assertFalse(s.contains("ID's"), s);
         // Fields are joined with ", "
         assertTrue(s.contains(", "), s);

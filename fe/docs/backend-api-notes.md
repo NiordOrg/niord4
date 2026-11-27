@@ -350,8 +350,8 @@ Three things differ from the public API and each one is a wrong answer rather th
 - **An anonymous list is rendered in the `public` report, one message in the standard report, and
   neither in any other.** For a caller the backend knows, `report` defaults to the standard
   report, whose list opens with a front page written for the editors: a heading, the search
-  criteria with their internal ids, the number of messages and a table of contents, in English
-  whatever the language. The backend creates a
+  criteria in the print's language, the number of messages and a table of contents. The backend
+  creates a
   `public` report at start-up — the same template without that front page — and the public site
   names it on its list sheet. The catalogue (`GET /message-reports/reports`) also answers
   anonymously and offers a `draft` report, which renders every language variant of every message.
