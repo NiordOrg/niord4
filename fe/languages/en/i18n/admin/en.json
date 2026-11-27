@@ -4413,6 +4413,17 @@
       "remove": "Delete",
       "measure": "Measure"
     },
+    "type": {
+      "Point": "Point",
+      "MultiPoint": "Points",
+      "LineString": "Line",
+      "MultiLineString": "Lines",
+      "Polygon": "Area",
+      "MultiPolygon": "Areas",
+      "GeometryCollection": "Collection",
+      "Exterior": "Outer ring",
+      "Interior": "Inner ring"
+    },
     "buffer": {
       "addRadius": "Add affected radius",
       "addPath": "Add affected path",
@@ -4429,7 +4440,8 @@
       "select": "Select geometry",
       "zoom": "Zoom to geometry",
       "delete": "Delete geometry",
-      "reorder": "Reorder geometry"
+      "reorder": "Reorder geometry",
+      "noGeometry": "No geometry"
     },
     "tree": {
       "collapse": "Collapse {{type}}",

@@ -21,6 +21,7 @@ import { MapProjectionService } from '@niord/map/map-projection.service';
 import { formatLatLon, parseLatLon } from '../../../utils/coordinate-format';
 import type { GeometryEditType } from '../geometry-editor';
 import { isDeletableNode, type TreeNode } from './geometry-tree-model';
+import { geometryTypeLabel } from './geometry-type-labels';
 
 export interface CoordinateEdit {
   readonly coordIndex: number;
@@ -50,6 +51,8 @@ const NAMEABLE_PARENTS: readonly TreeNode['type'][] = ['Point', 'LineString', 'E
   imports: [TranslocoPipe, Icon],
   template: `
     @if (isFolder()) {
+      @let label = typeLabel();
+      @let typeText = label.key ? (label.key | transloco) : label.text;
       <div
         class="group flex items-center gap-1 rounded py-0.5 text-sm focus:ring-1 focus:ring-accent focus:outline-none"
         data-tree-row
@@ -63,7 +66,7 @@ const NAMEABLE_PARENTS: readonly TreeNode['type'][] = ['Point', 'LineString', 'E
             [attr.aria-expanded]="expanded()"
             [attr.aria-label]="
               (expanded() ? 'geometry.tree.collapse' : 'geometry.tree.expand')
-                | transloco: { type: node().type }
+                | transloco: { type: typeText }
             "
             (click)="toggleExpanded()"
           >
@@ -72,13 +75,13 @@ const NAMEABLE_PARENTS: readonly TreeNode['type'][] = ['Point', 'LineString', 'E
         } @else {
           <span class="w-4"></span>
         }
-        <span class="font-medium">{{ node().type }}</span>
+        <span class="font-medium">{{ typeText }}</span>
         <span class="flex-1"></span>
         @if (deletable() && !locked()) {
           <button
             type="button"
             class="px-1 text-xs text-fg-muted opacity-0 hover:text-danger group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100"
-            [attr.aria-label]="'geometry.tree.delete' | transloco: { type: node().type }"
+            [attr.aria-label]="'geometry.tree.delete' | transloco: { type: typeText }"
             (click)="deleteNode.emit(node().key)"
           >
             <app-icon name="lucideMinus" />
@@ -290,6 +293,9 @@ export class GeometryTreeNode {
   private editStartedAt: Coordinate | undefined;
 
   protected readonly isFolder = computed(() => this.node().type !== 'Position');
+
+  /** A folder row's type in words ("Line", "Outer ring"), for its label and its buttons' names. */
+  protected readonly typeLabel = computed(() => geometryTypeLabel(this.node().type));
 
   /**
    * Expanded by default only for small folders, and for nameable positions only once they

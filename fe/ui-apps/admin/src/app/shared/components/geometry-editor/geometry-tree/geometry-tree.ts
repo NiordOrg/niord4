@@ -1,6 +1,6 @@
 import { Component, computed, ElementRef, inject, input, output, signal } from '@angular/core';
 import type { Feature as OlFeature } from 'ol';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 import { Icon } from '../../../icons/icon';
 import { MapProjectionService } from '@niord/map/map-projection.service';
@@ -9,6 +9,7 @@ import type { GeometryEditType } from '../geometry-editor';
 import { applyCoordNameUpdates } from './coord-names';
 import { type CoordinateEdit, GeometryTreeNode } from './geometry-tree-node';
 import { iconForGeometryType } from './geometry-type-icons';
+import { geometryTypeLabel, type ShownLabel } from './geometry-type-labels';
 import {
   computeInsertCoordinate,
   findNodeByKey,
@@ -61,7 +62,10 @@ import {
           (click)="selectRequested.emit()"
         >
           <app-icon [name]="featureIconClass()" class="text-fg-muted" />
-          <span class="truncate font-medium">{{ label() }}</span>
+          @let title = label();
+          <span class="truncate font-medium">{{
+            title.key ? (title.key | transloco) : title.text
+          }}</span>
         </button>
         <button
           type="button"
@@ -117,7 +121,6 @@ import {
 })
 export class GeometryTree {
   private readonly projection = inject(MapProjectionService);
-  private readonly transloco = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly feature = input.required<OlFeature>();
@@ -163,15 +166,16 @@ export class GeometryTree {
 
   /**
    * A feature's display label — its active-language name, else (for a locked affected-area
-   * buffer) "Affected area", else the geometry type.
+   * buffer) "Affected area", else the geometry type in words, else "No geometry".
    */
-  protected readonly label = computed(() => {
+  protected readonly label = computed<ShownLabel>(() => {
     this.revision();
     const feature = this.feature();
     const name = feature.get(`name:${this.language()}`);
-    if (typeof name === 'string' && name.length > 0) return name;
-    if (this.locked()) return this.transloco.translate('geometry.affectedArea');
-    return feature.getGeometry()?.getType() ?? 'Feature';
+    if (typeof name === 'string' && name.length > 0) return { text: name };
+    if (this.locked()) return { key: 'geometry.affectedArea' };
+    const type = feature.getGeometry()?.getType();
+    return type === undefined ? { key: 'geometry.card.noGeometry' } : geometryTypeLabel(type);
   });
 
   protected onEdit(edit: CoordinateEdit): void {

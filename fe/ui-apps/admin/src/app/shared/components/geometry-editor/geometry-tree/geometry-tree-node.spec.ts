@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { fromLonLat } from 'ol/proj';
 import { describe, expect, it } from 'vitest';
 
+import { provideTestTransloco } from '../../../testing/transloco-testing';
 import { type CoordinateEdit, GeometryTreeNode } from './geometry-tree-node';
 import type { TreeNode } from './geometry-tree-model';
 
@@ -28,7 +30,7 @@ function folderNode(coordCount: number): TreeNode {
 }
 
 function setup(node: TreeNode = positionNode) {
-  TestBed.configureTestingModule({});
+  TestBed.configureTestingModule({ providers: [provideTestTransloco()] });
   const fixture = TestBed.createComponent(GeometryTreeNode);
   fixture.componentRef.setInput('node', node);
   fixture.detectChanges();
@@ -90,6 +92,39 @@ describe('GeometryTreeNode inline edit', () => {
     fixture.componentRef.setInput('node', { ...positionNode, coordinate: fromLonLat([20, 60]) });
     fixture.detectChanges();
     expect(view.editing()).toBe(false);
+  });
+});
+
+describe('GeometryTreeNode folder row', () => {
+  it('names the type in words in the row and in its buttons, not by its identifier', () => {
+    TestBed.configureTestingModule({ providers: [provideTestTransloco()] });
+    const transloco = TestBed.inject(TranslocoService);
+    transloco.setTranslation(
+      {
+        'geometry.type.Exterior': 'Outer ring',
+        'geometry.tree.collapse': 'Collapse {{type}}',
+        'geometry.tree.delete': 'Delete {{type}}',
+      },
+      'en',
+    );
+    transloco.setActiveLang('en');
+    const ring: TreeNode = {
+      type: 'Exterior',
+      key: '0.0',
+      coordIndex: 0,
+      coordCount: 1,
+      children: [positionNode],
+    };
+    const fixture = TestBed.createComponent(GeometryTreeNode);
+    fixture.componentRef.setInput('node', ring);
+    fixture.componentRef.setInput('deletable', true);
+    fixture.detectChanges();
+
+    const row = (fixture.nativeElement as HTMLElement).querySelector('[data-tree-row]')!;
+    const buttons = [...row.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'));
+    expect(row.querySelector('.font-medium')?.textContent?.trim()).toBe('Outer ring');
+    expect(buttons).toEqual(['Collapse Outer ring', 'Delete Outer ring']);
+    expect(row.textContent).not.toContain('Exterior');
   });
 });
 

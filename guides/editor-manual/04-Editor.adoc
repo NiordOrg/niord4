@@ -574,9 +574,10 @@ image::TextEditorToolLocationDialog.png[The Format Message Locations dialog, 500
 
 * *Message Part*: which part's positions to use, when the message has several parts.
 * *Features*: the points, lines and areas of the part, each with its positions; tick the ones to
-  insert, or use _all_ and _none_. The map shows them. Only the positions that make sense in a text
-  are listed: for an area with a hole, only its outer edge. An affected area drawn around a
-  position is left out.
+  insert, or use _all_ and _none_. A feature is listed by its name in the language of the
+  description, or by its type in words (such as _Point_ or _Area_) when it has none there. The
+  map shows them. Only the positions that make sense in a text are listed: for an area with a
+  hole, only its outer edge. An affected area drawn around a position is left out.
 * *Layout*: _List (numbered)_, _List (bullet)_, _Table_, _From-to Table_ or _Text_.
 * The list below the layouts sets the format of the coordinates: _3 Decimals_, _2 Decimals_,
   _1 Decimal_, _Seconds_ or _Navtex_.

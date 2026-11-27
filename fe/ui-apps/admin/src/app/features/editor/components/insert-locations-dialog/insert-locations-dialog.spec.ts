@@ -61,7 +61,7 @@ class Host {
 
 const format = vi.fn();
 
-async function setup(message: Message) {
+async function setup(message: Message, translations: Record<string, string> = {}) {
   format.mockReturnValue(of('<rendered/>'));
   TestBed.configureTestingModule({
     providers: [
@@ -72,6 +72,7 @@ async function setup(message: Message) {
     ],
   });
   TestBed.inject(TranslocoService).load('en').subscribe();
+  TestBed.inject(TranslocoService).setTranslation(translations, 'en');
 
   const fixture = TestBed.createComponent(Host);
   fixture.componentInstance.message.set(message);
@@ -107,6 +108,28 @@ describe('InsertLocationsDialog', () => {
     await fixture.whenStable();
 
     expect(featureBoxes()).toHaveLength(1);
+  });
+
+  it('lists a feature by its name, else by its geometry type in words', async () => {
+    const line: GeometryFeature = {
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [12, 56],
+          [13, 56],
+        ],
+      },
+      properties: {},
+    };
+    const fixture = await setup(messageWith(point({ 'name:en': 'Alpha' }), line), {
+      'geometry.type.LineString': 'Line',
+    });
+    fixture.componentInstance.visible.set(true);
+    await fixture.whenStable();
+
+    const labels = featureBoxes().map((box) => box.parentElement?.lastElementChild?.textContent);
+    expect(labels).toEqual(['Alpha', 'Line']);
   });
 
   it('never calls the endpoint (and keeps Insert disabled) when nothing is selected', async () => {

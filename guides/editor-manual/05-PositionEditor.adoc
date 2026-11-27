@@ -43,33 +43,40 @@ also warns you when you reload or close the page with changes in the position ed
 
 Niord keeps positions in the GeoJSON format, the common format for geographic data on the web;
 the link:../model/model.html#niord-geojson-model[message model] describes how Niord uses it. In
-the position editor you meet it as the names of the geometry types, which the Positions panel
-shows:
+the position editor you meet it as the geometry types. The Positions panel names each type in
+words; the text format (<<text-format>>) and this manual use the GeoJSON names:
 
-[cols="25,75",options="header"]
+[cols="22,22,56",options="header"]
 |===
-|Geometry type|What it is
+|Geometry type|In the Positions panel|What it is
 
 | Point
+| _Point_
 | A single position: latitude and longitude.
 
 | MultiPoint
+| _Points_
 | A list of points, kept together as one geometry.
 
 | LineString
+| _Line_
 | A line: a list of positions joined in order.
 
 | MultiLineString
+| _Lines_
 | A list of lines.
 
 | Polygon
-| An area. Its outline is the _Exterior_ ring; an area can also have inner rings, holes in the
-  area.
+| _Area_
+| An area. Its outline is the outer ring (_Outer ring_ in the panel); an area can also have inner
+  rings (_Inner ring_), holes in the area.
 
 | MultiPolygon
+| _Areas_
 | A list of areas.
 
 | GeometryCollection
+| _Collection_
 | A list of geometries of different types.
 |===
 
@@ -261,8 +268,8 @@ again. A card has, from left to right:
 * the handle (*Reorder geometry*): drag a card up or down to change the order of the features.
   The order is the order in which the message numbers its positions;
 * the tick box (*Select geometry*), which adds the feature to the selection or takes it out;
-* the feature's name, or its geometry type when it has no name: click it to select the feature
-  alone;
+* the feature's name, or its geometry type in words (such as _Line_ or _Area_) when it has no
+  name in the language you work in: click it to select the feature alone;
 * *Zoom to geometry*, which moves and zooms the map to the feature;
 * *Delete geometry*, which deletes the feature.
 

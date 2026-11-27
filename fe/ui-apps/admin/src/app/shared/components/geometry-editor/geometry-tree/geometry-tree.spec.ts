@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { TranslocoService } from '@jsverse/transloco';
 import { Feature } from 'ol';
 import { LineString } from 'ol/geom';
 import { fromLonLat, toLonLat } from 'ol/proj';
@@ -54,6 +55,30 @@ describe('GeometryTree', () => {
     expect(lon).toBeCloseTo(11, 4);
     expect(lat).toBeCloseTo(56, 4);
     expect(edited).toBe(true);
+  });
+
+  it('titles an unnamed feature by its type in words, and a feature without one as such', () => {
+    TestBed.configureTestingModule({ providers: [provideTestTransloco()] });
+    const transloco = TestBed.inject(TranslocoService);
+    transloco.setTranslation(
+      { 'geometry.type.LineString': 'Line', 'geometry.card.noGeometry': 'No geometry' },
+      'en',
+    );
+    transloco.setActiveLang('en');
+    const title = (feature: Feature) => {
+      const fixture = TestBed.createComponent(GeometryTree);
+      fixture.componentRef.setInput('feature', feature);
+      fixture.detectChanges();
+      return (fixture.nativeElement as HTMLElement)
+        .querySelector('button[aria-pressed] .font-medium')
+        ?.textContent?.trim();
+    };
+
+    expect(title(lineFeature())).toBe('Line');
+    expect(title(new Feature())).toBe('No geometry');
+    const named = lineFeature();
+    named.set('name:en', 'Cable route');
+    expect(title(named)).toBe('Cable route');
   });
 
   it('emits selectRequested when the feature header is clicked', () => {
