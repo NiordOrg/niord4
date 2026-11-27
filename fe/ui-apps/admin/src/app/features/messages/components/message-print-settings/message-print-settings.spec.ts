@@ -198,4 +198,22 @@ describe('MessagePrintSettings: the labels', () => {
     ).map((button) => button.textContent?.trim());
     expect(layouts).toEqual(['Portrait', 'Landscape']);
   });
+
+  it("labels the parameters the base product's reports read in words, and any other by its name", async () => {
+    const { fixture, host } = await setup({ isAuthenticated: true, english: true });
+    host.report.set({
+      reportId: 'nm-report',
+      name: 'NM report',
+      properties: {},
+      params: { week: '39', year: '2026', 'NtM-ref': 'NtM 12/2026', edition: '2' },
+    });
+    await fixture.whenStable();
+
+    const labels = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLLabelElement>(
+        'label[for^="printParam_"]',
+      ),
+    ).map((label) => label.textContent?.trim());
+    expect(labels).toEqual(['Week', 'Year', 'NtM reference', 'edition']);
+  });
 });

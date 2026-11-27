@@ -3655,6 +3655,11 @@
           "portrait": "Portrait",
           "landscape": "Landscape"
         },
+        "param": {
+          "week": "Week",
+          "year": "Year",
+          "ntmRef": "NtM reference"
+        },
         "includeThumbnails": "include thumbnails",
         "paperSize.A3": "A3",
         "paperSize.A4": "A4",

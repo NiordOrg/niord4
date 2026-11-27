@@ -35,6 +35,17 @@ import { LanguageService } from '../../../../core/main-shell/services/language.s
  */
 export const GUEST_LIST_REPORT_ID = 'public';
 
+/**
+ * The label of each report parameter the base product's report templates read (the weekly
+ * Notices to Mariners reports read `week` and `year`, their annex `NtM-ref`). Any other
+ * parameter is labelled by the name the report gives it.
+ */
+const REPORT_PARAM_LABEL_KEYS: ReadonlyMap<string, string> = new Map([
+  ['week', 'messages.print.settings.param.week'],
+  ['year', 'messages.print.settings.param.year'],
+  ['NtM-ref', 'messages.print.settings.param.ntmRef'],
+]);
+
 interface SelectOption<T> {
   readonly value: T;
   readonly label: string;
@@ -131,8 +142,14 @@ export class MessagePrintSettings {
     () => this.report() === undefined && this.reportOptions().length > 0,
   );
 
-  /** Keys of the current reportParams record, for template iteration. */
-  protected readonly reportParamKeys = computed(() => Object.keys(this.reportParams()));
+  /** The current report's parameters in their order, each with its label. */
+  protected readonly reportParamFields = computed(() => {
+    this.activeLang();
+    return Object.keys(this.reportParams()).map((key) => {
+      const labelKey = REPORT_PARAM_LABEL_KEYS.get(key);
+      return { key, label: labelKey ? this.transloco.translate(labelKey) : key };
+    });
+  });
 
   constructor() {
     // Auto-load reports when no report is hardcoded. Re-fires when `list`,
