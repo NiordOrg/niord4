@@ -6,6 +6,7 @@ import { DomainFacade } from '../../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
 import { LocaleFormatService } from '../../../../../core/main-shell/services/locale-format.service';
 import { ScriptResourcesField } from '../../../components/script-resources-field/script-resources-field';
+import { LanguageFlag } from '../../../../../shared/components/language-flag/language-flag';
 import { Icon } from '../../../../../shared/icons/icon';
 import { TimeField } from '../../../../../shared/forms/time-field/time-field';
 import { getZonedDateParts } from '../../../../../shared/utils/zoned-date';
@@ -26,7 +27,7 @@ import {
  */
 @Component({
   selector: 'app-trigger-card',
-  imports: [FormField, TranslocoPipe, Icon, TimeField, ScriptResourcesField],
+  imports: [FormField, TranslocoPipe, Icon, LanguageFlag, TimeField, ScriptResourcesField],
   templateUrl: './trigger-card.html',
   host: { class: 'contents' },
 })
@@ -49,6 +50,17 @@ export class TriggerCard {
 
   /** The current trigger value (read model). */
   protected readonly value = computed(() => this.triggerField()().value());
+
+  /**
+   * Each subject row's language, by the subject's index: its configured label ("Dansk") and flag,
+   * or the code as stored for a language the configuration does not name.
+   */
+  protected readonly subjectLanguages = computed(() =>
+    this.value().subjects.map(({ lang }) => {
+      const option = this.language.modelLanguages.find((entry) => entry.value === lang);
+      return { label: option?.label ?? lang, flagPath: option?.flagPath };
+    }),
+  );
 
   /**
    * Whether the zone is required here and still unanswered.
