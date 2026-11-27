@@ -165,8 +165,9 @@ flowchart TD
    compares with the old version by version). It copies `.niord/kit/templates/setup.mjs` over
    `fe/setup.mjs` when the kit changed the stub, and `.niord/kit/templates/start-local.sh` over
    `start-local.sh`. It moves every pinned pack to its home's newest pack
-   (`node setup.mjs --update-pins`), and the comment names each moved pin, old and new: compare the
-   new digest with the home's `pack-releases.md`. It commits as `github-actions[bot]`, cancels the
+   (`node setup.mjs --update-pins`), pulled and verified by its digest, and the comment names each
+   moved pin, old and new, and asks for a first pin's digest to be compared with the summary of the
+   home's Pack run that published its tag. It commits as `github-actions[bot]`, cancels the
    branch's CI runs and dispatches `ci.yml` on the new commit, then posts the Base bump comment and
    sets the status `niord/upgrade-actions`. The workflow reads the notes with your repository's own
    token: the base product's repository is public. When the notes and the

@@ -443,7 +443,6 @@ niord-<cc>/
     pack.yml                       publishes a home pack as ghcr.io/<owner>/niord-lang-<lang> with the
                                    repository's own token (path filter fe/packs/**, one pack per push; dispatch
                                    for a publish or a withdrawal, §4.5)
-  pack-releases.md                 the home's record of every pack published and withdrawn (§4.5); written by init
   .github/dependabot.yml           security updates only: npm for /fe/country and github-actions, no maven
                                    (the base bump moves the <parent>; the base product's npm alerts are the
                                    base product's; a country takes a fix with the version)
@@ -621,7 +620,7 @@ packs/da/                                  (the same shape in the base product: 
     timestamps, size caps — with its sha256.
   - **publish** (needs validate; `permissions: packages: write` only; runs only on the default branch):
     pushes that archive unchanged as `ghcr.io/<owner>/niord-lang-<lang>:<run>`, `<owner>` the home repository's GitHub owner in lower case (the only namespace its workflow token can push to; `pack.yml` reads it from the run, so `init` needs no owner), and writes the digest into
-    the run summary; the home records each publish (its tag and digest) and withdrawal in its `pack-releases.md`, the human record.
+    the run summary as information. Nothing is recorded by hand after a run (decided 2026-11-27: the record file `pack-releases.md` is gone): the registry holds each tag's digest, the run summary on `main` states it, and the withdrawn marker holds each withdrawal with its reason.
   - **withdraw** (dispatch only, with the tag and a reason, both through `env:` only; `permissions: packages: write` only; default branch only): adds the tag's digest, the tag and the reason to the pack's **withdrawn marker** and pushes the whole marker as `ghcr.io/<owner>/niord-lang-<lang>:withdrawn`, a small OCI artifact; the first publish pushes it empty. Consumers read it anonymously, like the pack (§4.11 rule 6).
 
   The package is set to public once. One pack per change; nothing else is rebuilt; every consumer's next base
@@ -670,7 +669,7 @@ packs/da/                                  (the same shape in the base product: 
     pushes leaves only a marker, which no consumer pins, and a re-run of the failed job, with the same run number,
     finishes it; the archive pushed unchanged as `:<GITHUB_RUN_NUMBER>` under `GITHUB_REPOSITORY_OWNER` in lower
     case, a manifest `PUT` answered without `Docker-Content-Digest` confirmed by a `HEAD` of the digest; and
-    the reference with its digest written into the summary with the line for `pack-releases.md`. GitHub counts
+    the reference with its tag and digest written into the summary as information. GitHub counts
     `GITHUB_RUN_NUMBER` per workflow file: a renamed or recreated `pack.yml` starts again at 1, and publish refuses
     "exists already" until the numbering passes the old tags; a tag is never overwritten.
   - `withdraw` (`needs: validate`; dispatch of `withdraw` on `main` only; `packages: write` only): checks the
@@ -699,9 +698,9 @@ packs/da/                                  (the same shape in the base product: 
   the 8 MiB, since a stored archive of nearly 8 MiB of content is a little over 8 MiB; the two are never made
   equal. The same files give the same archive on the same Node build, whose zlib deflates it; a publish never
   rebuilds: validate builds once, publish pushes those bytes, and a consumer verifies them against the pin. No run block holds an expression, every one,
-  one-liners included, starts with `set -euo pipefail`, and the file names no npm. `pack-releases.md`, at the repository root so that
-  editing it runs no publish, is a table of publishes (pack, tag, digest, date) and one of withdrawals (with the
-  reason).
+  one-liners included, starts with `set -euo pipefail`, and the file names no npm. No file records the publishes
+  and withdrawals by hand: the registry and the withdrawn marker are the record. A country that has the earlier
+  `pack-releases.md` deletes it with its `CODEOWNERS` line.
 - **Moving a pack later** (to another home, or to a shared repository): `git filter-repo` of
   `fe/packs/<lang>` with its history into the new repository, its `pack.yml`, and the GHCR package's
   publish permission granted to that repository; the old home's manifest changes the pack from `home` to
@@ -904,7 +903,7 @@ as its own package, `org.niord:niord-country-kit`, beside the source zip, which 
   text — `tokens.<cc>.css` with the default values, `pack.yml`, `base-bump.yml`, `fe/.gitignore`, `fe/.gitattributes`
   and the root `.gitattributes` from the same template (the base product's
   `* text=auto eol=lf` with its binary list, without the `.husky` rule, held equal to `fe/.gitattributes` by
-  `init.test.mjs`; a country's own is kept), `pack-releases.md` at the repository root, `dependabot.yml`,
+  `init.test.mjs`; a country's own is kept), `dependabot.yml`,
   `AGENTS.md` with a one-line `CLAUDE.md` importing it, `.niord/.gitignore` and `fe/niord-pins.lock.json`
   with the base product's version and both zips' hashes. Its closing lines name set-up (with
   `--update-pins` when languages were answered) and the launcher and, on Windows, the commit line that gives the
@@ -1298,7 +1297,7 @@ country — hence split tokens, hash pins and, later, attestations.
      home's next publish pushes the missing marker), refuses a given tag that is withdrawn or absent, accepts a
      candidate only once it is pulled and verified as a pack (one that is not is skipped with a line, and refused
      when named), rewrites the lock with the base pin kept and the pack pins sorted, prints each old → new with a reminder
-     to compare a first pin with the home's `pack-releases.md`, then runs the whole set-up; `NIORD_PACK_REGISTRY`
+     to compare a first pin with the summary of the home's Pack run that published its tag, then runs the whole set-up; `NIORD_PACK_REGISTRY`
      may name a loopback registry instead of `ghcr.io`, for the example's harness, and any other host is refused. `publish.yml` records the zip's sha256 in the notes of a GitHub release on the tag `v4.0.<run>` (the tag stays lightweight, as the gate needs: the tag job's step _Tag v…_ in `.github/workflows/publish.yml`) and in the run
      summary — a record the registry token cannot rewrite. As built: the build job's summary gives the line
      `<sha256>  niord-fe-src-4.0.<run>.zip` beside the deploy's upload lines; after the tag, the tag job — with its
@@ -1308,7 +1307,7 @@ country — hence split tokens, hash pins and, later, attestations.
      attached as a release asset (§3.1 _Reading_, §4.8's upgrade test). When GitHub refuses the tag (a workflow
      change on `main` since the run's commit), or `gh release create` fails, the run summary gives the by-hand
      commands for the tag and the release, from the run's one-day artifact `niord-fe-src`, which is deleted only
-     once the release exists. A first pin is checked before it is committed — the zip's against these records, a foreign pack's against its home's `pack-releases.md` (§4.5) — by §5 steps 2 and 4; on a base bump the Base bump workflow (`.github/workflows/base-bump.yml`, §4.12) is its executor: it compares the two downloads with release `v<version>`'s notes, which are public, and commits the pin only when they agree; beyond that it is trust on first use, accepted until the attestations. They are not built yet: each artifact is to be attested (`actions/attest-build-provenance`) by the workflow
+     once the release exists. A first pin is checked before it is committed — the zip's against these records, a foreign pack's against the summary of its home's Pack run that published the tag (§4.5) — by §5 steps 2 and 4; on a base bump the Base bump workflow (`.github/workflows/base-bump.yml`, §4.12) is its executor: it compares the two downloads with release `v<version>`'s notes, which are public, and commits the pin only when they agree; beyond that it is trust on first use, accepted until the attestations. They are not built yet: each artifact is to be attested (`actions/attest-build-provenance`) by the workflow
      that builds it — the zip by `publish.yml`, a pack by its home's `pack.yml`, an image by the country's push
      job — and verified by its consumer.
    - The kit uses Node built-ins only, is covered by the base product's lockfile and audit, and runs only after
@@ -1571,7 +1570,7 @@ country — hence split tokens, hash pins and, later, attestations.
      tracked number. With the cadence above every version, a security version included, reaches every installed
      country as its bump PR within minutes of its publish; the Base bump workflow labels the pull request
      `security` when the report lists a new `security.json` fix.
-   - A home withdraws a bad pack with `pack.yml`'s withdraw dispatch, which lists its digest and the reason in the pack's withdrawn marker on GHCR (§4.5) — the channel every consumer reads anonymously; its `pack-releases.md` is the human record.
+   - A home withdraws a bad pack with `pack.yml`'s withdraw dispatch, which lists its digest and the reason in the pack's withdrawn marker on GHCR (§4.5) — the channel every consumer reads anonymously, and the record: the reason travels with it.
      `setup.mjs` reads the marker with every foreign pack it sets up and fails a pin listed there, printing the reason; a published pack without a marker fails as unreadable.
      As built: set-up reads the marker anonymously before anything else of the pack, and a listed pin is the
      first failed check, `pack <lang>: <reference> is withdrawn (<date>): <reason>; move the pin with node setup.mjs
@@ -1590,7 +1589,7 @@ country — hence split tokens, hash pins and, later, attestations.
      The GHCR namespace: any repository's workflow token in the `SIFA-DK` organisation can create
      `ghcr.io/sifa-dk/niord-lang-<lang>` before the pack's home does (a package is created by the first repository
      that pushes to it, and linked to it); this closes at the home's first publish, and until then the pin review —
-     a first pin compared with the home's `pack-releases.md` — is the guard.
+     a first pin compared with the summary of the home's Pack run that published it — is the guard.
    - `--accept-override` prints, per `basedOn` file, the recorded and the current fingerprint and the lines in which the
      country's copy differs from the base product's current file; and the base product's own diff
      of each changed file since the recorded fingerprint, from the previous version's file — the zip of the last
@@ -1797,7 +1796,7 @@ definition of done and _Before go-live_. An AI agent can do steps 1, 2 and 9 fro
    languages of both applications, the default `en`. Languages per application, which packs are pinned and which
    are the country's own, and another default language are the in-depth guide's.
 4. **Packs.** For each pinned pack, its name in the manifest (with its `owner` when not `sifa-dk`) and its full reference, tag and digest in `niord-pins.lock.json`
-   (`node setup.mjs --update-pins`, §4.11 rule 2; before a first pin is committed, the digest it wrote is compared with the one the home's `pack-releases.md` records, §4.5 — while the home is private, as its maintainers give it); set-up stages every pack's backend half, home packs included, into `fe/.niord/packs/<lang>/backend/`, and the backend build reads it there: for every pack but `en` the pom copies the staged pack from `fe/.niord/packs/<lang>/` and its `require-staged-packs` check refuses a build that runs before set-up (the kit README's *The backend build*), so a pinned pack's backend half reaches the jar as a home pack's does. For a language
+   (`node setup.mjs --update-pins`, §4.11 rule 2; before a first pin is committed, the digest it wrote is compared with the one the summary of the home's Pack run that published the tag states, §4.5 — while the home is private, as its maintainers give it); set-up stages every pack's backend half, home packs included, into `fe/.niord/packs/<lang>/backend/`, and the backend build reads it there: for every pack but `en` the pom copies the staged pack from `fe/.niord/packs/<lang>/` and its `require-staged-packs` check refuses a build that runs before set-up (the kit README's *The backend build*), so a pinned pack's backend half reaches the jar as a home pack's does. For a language
    no country has yet (Norway's `nb`): `fe/packs/nb/` with `pack.json`, the flag and its attribution;
    list it under `contentLanguages` until `pack check` says the text is complete. If it should be
    published, `pack.yml` (written by `init`) publishes it as `ghcr.io/<owner>/niord-lang-nb`, `<owner>` the country's GitHub owner, with the country's own workflow token (a consumer names that owner in its manifest), and

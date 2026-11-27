@@ -127,7 +127,7 @@ standard default, taken with Enter alone.
 | `owners`                    | the repository's owners for `.github/CODEOWNERS`, each `@user` or `@org/team`, separated by spaces                                                                                              | required                                                      |
 
 Each language is a pack another country publishes on GHCR as `ghcr.io/<owner>/niord-lang-<lang>`,
-and its home lists every published tag and digest in the `pack-releases.md` at its repository root.
+each tag with its digest, which the summary of the home's Pack run that published it states too.
 When this kit was released, `da` was the one published pack: `ghcr.io/sifa-dk/niord-lang-da`, whose
 home is `SIFA-DK/niord-dk`. For a pack that is not published and public, set-up's `--update-pins`
 writes no pin and says so, with `an anonymous pull needs the package to be public` or
