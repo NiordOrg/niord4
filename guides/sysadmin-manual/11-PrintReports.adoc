@@ -58,9 +58,10 @@ A new deployment gets three print reports from its bootstrap, offered in every d
 |===
 
 These reports are data like any other: you may change them, and Niord does not put back a report you deleted. A
-print that needs a built-in report the deployment lacks fails, saying which report is missing, and the
-missing-path report lists it (see <<script-resource-extensions,Where Script Resources Come From>>). To get it back,
-import it on this page, for example from an export of another deployment.
+print that needs a built-in report the deployment lacks fails: an editor is told _The document could not be
+generated._, and a reader of the public site sees the page _Failed to load document_. Neither names the report;
+the missing-path report lists it (see <<script-resource-extensions,Where Script Resources Come From>>). To get it
+back, import it on this page, for example from an export of another deployment.
 
 [#generating-pdfs]
 === Generating PDFs
