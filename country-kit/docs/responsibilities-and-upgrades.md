@@ -167,7 +167,8 @@ flowchart TD
    `start-local.sh`. It moves every pinned pack to its home's newest pack
    (`node setup.mjs --update-pins`), pulled and verified by its digest, and the comment names each
    moved pin, old and new, and asks for a first pin's digest to be compared with the summary of the
-   home's Pack run that published its tag. It commits as `github-actions[bot]`, cancels the
+   home's Pack run that published its tag, or with the reference the home's maintainers give when
+   GitHub no longer keeps that run. It commits as `github-actions[bot]`, cancels the
    branch's CI runs and dispatches `ci.yml` on the new commit, then posts the Base bump comment and
    sets the status `niord/upgrade-actions`. The workflow reads the notes with your repository's own
    token: the base product's repository is public. When the notes and the

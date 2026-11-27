@@ -310,7 +310,8 @@ needs no secret: it reads GitHub Packages and writes to the pull request with it
 
 The comment is one per pull request, found by its marker `<!-- niord-base-bump -->` and edited in
 place: `## Base bump: <old> to <new>` with the pins and where they came from (each moved pack pin,
-old and new; a first pin with the home's Pack run to compare its digest with), `## Human actions`
+old and new; a first pin with the home's Pack run to compare its digest with, or the reference the
+home's maintainers give when that run is gone), `## Human actions`
 with a `- [ ]` box per item or "No human action: review, merge, deploy.", `## Checked by CI`, and
 the whole upgrade report folded in `<details>`, cut at 60000 characters with a pointer to
 `niord-upgrade-report.md` in the run's artifact `base-bump`. A move of the pull request to a newer
@@ -957,7 +958,8 @@ is read whole or not at all (more than 100 pages, or a later page missing, fails
 
 **Nothing is recorded by hand** after a publish or a withdrawal. The registry holds every tag with
 its digest (the package's page lists them), the summary of the Pack run on `main` that pushed a tag
-— its run number is the tag — states that tag's reference with its digest, and the withdrawn marker
+— its run number is the tag — states that tag's reference with its digest while GitHub keeps the
+run ([Pinning a pack](#pinning-a-pack)), and the withdrawn marker
 holds every withdrawal with its reason and date, which each consumer's set-up prints. A repository
 that has a `pack-releases.md` from an earlier kit, which `init` wrote, deletes it with its line in
 `.github/CODEOWNERS` and the lines of its own documents that name it: nothing reads it. Its first
@@ -988,7 +990,10 @@ runs the whole set-up. The digest a pin holds is the one the registry answers fo
 pull is verified against it, so a pin always gets the bytes it was reviewed with. Before a **first**
 pin is committed, a person compares that digest with the reference in the summary of the home's Pack
 run that published the tag (the run whose number is the tag, on the home's `main`): what the home's
-own workflow pushed. After that, each bump of a pin is a reviewed pull request that shows the new
+own workflow pushed. GitHub keeps a run, its summary included, only for the home repository's
+retention period (90 days by default), and a pack is published only when its folder changes, so the
+newest tag's run can be gone: then, as when the home's repository is private, the home's maintainers
+give the reference. After that, each bump of a pin is a reviewed pull request that shows the new
 digest. `NIORD_PACK_REGISTRY` names a loopback registry (`http://127.0.0.1:<port>`) in
 place of `ghcr.io`, for the kit's tests and the example's harness; any other host is refused. Only
 they write a loopback pin, and set-up accepts one wherever a lock holds it: the digest guards the

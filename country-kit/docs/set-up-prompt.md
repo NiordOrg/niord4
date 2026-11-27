@@ -206,9 +206,10 @@ the pin ending in its `sha256:` digest, and then a line ending `review the new d
 first pin against the summary of the home's Pack run that published its tag`. Show the person each
 new pin's line and where its home states that tag's digest: the summary of the home's Pack run on
 `main` whose run number is the tag (Actions, Pack) — for `da`, a run of `SIFA-DK/niord-dk`, a
-repository that is not public yet (when the person cannot read that repository, its maintainers
-give the reference). Stop when: the person has not confirmed that each new digest is the one that
-run's summary states for its tag. The comparison is the person's: go on to
+repository that is not public yet (when the person cannot read that repository, or the run is gone,
+since GitHub keeps a run only for the repository's retention period, its maintainers give the
+reference). Stop when: the person has not confirmed that each new digest is the one that run's
+summary, or the home's maintainers, state for its tag. The comparison is the person's: go on to
 step 9 only with their yes, so nothing is committed at step 11 without it.
 
 The detail is in [Set-up](../README.md#set-up) and

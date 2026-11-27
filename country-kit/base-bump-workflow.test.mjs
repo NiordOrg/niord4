@@ -1887,7 +1887,7 @@ describe('base-bump.yml: Build the comment', () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.ok(
       result.comment.includes(
-        `\n- The pinned pack kl moved from no pin to \`${KL_PIN6}\`, its home's newest pack (\`node setup.mjs --update-pins\`): a first pin, so compare its digest with the summary of the home's Pack run that published its tag.\n`,
+        `\n- The pinned pack kl moved from no pin to \`${KL_PIN6}\`, its home's newest pack (\`node setup.mjs --update-pins\`): a first pin, so compare its digest with the summary of the home's Pack run that published its tag, or with the reference the home's maintainers give when that run is gone.\n`,
       ),
       result.comment,
     );

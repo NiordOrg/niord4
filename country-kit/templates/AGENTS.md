@@ -198,7 +198,8 @@ Your part:
    after a set-up of your own): your packs' new keys, each override, and
    `node setup.mjs --update-pins` only when the workflow could not move a pinned pack's pin (its
    warning says why). The comment names each moved pin, old and new; compare a first pin's digest
-   with the summary of the home's Pack run that published its tag (Pinning a pack).
+   with the summary of the home's Pack run that published its tag, or, when that run is gone, with
+   the reference the home's maintainers give (Pinning a pack).
 3. Do each `## Human actions` item in full, and tick its box: each new section's "What a country
    must do" of `.niord/kit/API-CHANGES.md` (set-up checks none of them), the merge of
    `.niord/kit/templates/AGENTS.md` into this file, each new bootstrap release folder for a person

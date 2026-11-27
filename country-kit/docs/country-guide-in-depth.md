@@ -559,7 +559,8 @@ The pin ends in the digest the registry answers for the tag, and every pull is v
 it. Before you commit a first pin, compare that digest with the reference in the summary of the
 home's Pack run that published the tag (Actions, Pack, the run whose number is the tag, on the
 home's `main`): for `da`, a run of `SIFA-DK/niord-dk`, a repository that is not public yet; when
-you cannot read the home's repository, its maintainers give you the reference. Every later move of
+you cannot read the home's repository, or the run is gone (GitHub keeps a run for the repository's
+retention period, 90 days by default), its maintainers give you the reference. Every later move of
 the pin is a reviewed pull request ([Pinning a pack](../README.md#pinning-a-pack)). When a home
 withdraws the tag you pin, set-up fails with the date and the reason the home gave, read from the
 pack's withdrawn marker, until you move the pin
