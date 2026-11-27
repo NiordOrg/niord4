@@ -34,7 +34,7 @@ there. `init` writes 23 files from your answers: the backend `be/` whole, the ma
 and the root `README.md`. Beside them it writes the skeleton every country shares: `start-local.sh`,
 the set-up stub `fe/setup.mjs`, the branding files, the brand tokens, `.gitignore` and
 `.gitattributes` at the root and in `fe/`, the workflows `pack.yml` and `base-bump.yml`,
-`.github/dependabot.yml`, `pack-releases.md`, `AGENTS.md`, `CLAUDE.md` and the pins
+`.github/dependabot.yml`, `AGENTS.md`, `CLAUDE.md` and the pins
 `fe/niord-pins.lock.json`. It never writes over a file that exists: such a file is kept, and `init`
 lists it as `kept`. An existing `be/pom.xml` is kept too, and its parent must name the kit's
 version, or `init` refuses and writes nothing.
@@ -555,12 +555,15 @@ pin, in `fe/`:
 node setup.mjs --update-pins
 ```
 
-Before you commit a first pin, compare the digest it wrote with the one the home's
-`pack-releases.md`, at the root of its repository, records: for `da`, the one in
-`SIFA-DK/niord-dk`, a repository that is not public yet; when you cannot read the home's
-repository, its maintainers give you the line. Every later move of the pin is a reviewed pull
-request ([Pinning a pack](../README.md#pinning-a-pack)). When a home withdraws the tag you pin,
-set-up fails with the reason until you move the pin
+The pin ends in the digest the registry answers for the tag, and every pull is verified against
+it. Before you commit a first pin, compare that digest with the reference in the summary of the
+home's Pack run that published the tag (Actions, Pack, the run whose number is the tag, on the
+home's `main`): for `da`, a run of `SIFA-DK/niord-dk`, a repository that is not public yet; when
+you cannot read the home's repository, or the run is gone (GitHub keeps a run for the repository's
+retention period, 90 days by default), its maintainers give you the reference. Every later move of
+the pin is a reviewed pull request ([Pinning a pack](../README.md#pinning-a-pack)). When a home
+withdraws the tag you pin, set-up fails with the date and the reason the home gave, read from the
+pack's withdrawn marker, until you move the pin
 ([Withdrawing a pack](../README.md#withdrawing-a-pack)).
 
 ### The backend half

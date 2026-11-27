@@ -18,8 +18,8 @@ name: Pack
 #   publish    on the default branch only, for a pack the manifest marks `publish: true`, on a
 #              push or a dispatch with action publish: `packages: write` and nothing else, no
 #              checkout and no package installed; verifies both files against validate's
-#              SHA-256s and pushes the archive unchanged as :<run>, and writes the digest into
-#              the run summary with the line to add to pack-releases.md. The first publish pushes
+#              SHA-256s and pushes the archive unchanged as :<run>, and writes the reference, its
+#              tag and digest, into the run summary as information. The first publish pushes
 #              the empty withdrawn marker (:withdrawn) before the pack, so a re-run of a first
 #              publish that failed between the two finishes it
 #   withdraw   by dispatch on the default branch only, with the tag and a reason: lists the tag's
@@ -27,8 +27,8 @@ name: Pack
 #              the whole marker as :withdrawn, which every consumer's set-up reads first
 #
 # A withdrawal runs validate first, for the verified client: it needs set-up green on main. When
-# main is red, withdraw by hand with the kit README's commands. pack-releases.md, at the repository
-# root, is the human record of every publish and withdrawal: add the summary's line to it.
+# main is red, withdraw by hand with the kit README's commands. Nothing is recorded by hand after a
+# run: the registry holds each tag's digest, the withdrawn marker each withdrawal with its reason.
 #
 # The first publish is the first push to main that changes a pack folder: a home that adds this
 # workflow and its pack in one merge publishes at that merge, and dispatches publish only when no

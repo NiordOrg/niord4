@@ -787,22 +787,14 @@ function options(args, allowed) {
   return values;
 }
 
-/** A row of pack-releases.md: its cells joined, a `|` inside one escaped. */
-const tableRow = (cells) => `| ${cells.map((cell) => cell.replaceAll('|', '\\|')).join(' | ')} |`;
-
-/** A code fence longer than any run of backticks in `lines`, at least three. */
-const fenceFor = (lines) =>
-  '`'.repeat(
-    Math.max(3, ...lines.flatMap((line) => line.match(/`+/g) ?? []).map((run) => run.length + 1)),
-  );
-
 /**
  * `publish --archive <file> --sha256 <hex>`: the archive hashed again against the sha256 the
  * validate job gave, the tag refused when it exists, the empty withdrawn marker pushed on the
- * first publish, before the pack, then the pack pushed, and the reference written into the run
- * summary with the line for pack-releases.md. Returns the lines printed.
+ * first publish, before the pack, then the pack pushed, and the reference, with its tag and
+ * digest, written into the run summary as information: nothing is left to record by hand. Returns
+ * the lines printed.
  */
-export async function publish(args, { env = process.env, fetch, now = new Date() } = {}) {
+export async function publish(args, { env = process.env, fetch } = {}) {
   const { archive: file, sha256 } = options(args, ['archive', 'sha256']);
   if (!/^[0-9a-f]{64}$/.test(sha256)) throw new UsageError('--sha256 is 64 lower-case hex digits');
   const { lang, owner, registry, repository, credentials, source } = packEnvironment(env);
@@ -850,12 +842,6 @@ export async function publish(args, { env = process.env, fetch, now = new Date()
     `### niord-lang-${lang}:${tag} published`,
     '',
     `\`${reference}\``,
-    '',
-    'Add this line to the table of `pack-releases.md`:',
-    '',
-    '```',
-    tableRow([lang, tag, digest, today(now)]),
-    '```',
     ...(marker
       ? []
       : ['', `The first publish: the empty withdrawn marker is \`:${WITHDRAWN_TAG}\`.`]),
@@ -898,20 +884,14 @@ export async function withdraw(args, { env = process.env, fetch, now = new Date(
   const date = today(now);
   const withdrawn = [...marker.withdrawn, { digest, tag, reason, date }];
   await pushWithdrawn({ registry, repository, lang, withdrawn, credentials, source, fetch });
-  // The marker keeps the reason as given; the summary escapes a `|`, which would split the row,
-  // and fences the row longer than any run of backticks in it.
-  const row = tableRow([lang, tag, digest, date, reason]);
-  const fence = fenceFor([row]);
+  // The marker keeps the reason as given, and every consumer's set-up prints it from there; the
+  // summary states the withdrawal as information and leaves nothing to record by hand.
   summarise(env, [
     `### niord-lang-${lang}:${tag} withdrawn`,
     '',
-    `\`${reference}\`: ${reason.replaceAll('|', '\\|')}`,
+    `\`${reference}\`: ${reason}`,
     '',
-    'Add this line to the withdrawals of `pack-releases.md`:',
-    '',
-    fence,
-    row,
-    fence,
+    `The withdrawn marker \`:${WITHDRAWN_TAG}\` lists it, with the reason and the date ${date}.`,
   ]);
   return [
     `withdrew ${reference}: ${reason}`,

@@ -42,8 +42,8 @@ The country owns and commits:
 - `fe/styles/` (its tokens and fonts), `fe/text-overrides/`, `fe/country/` (its own npm packages) and
   `fe/e2e/` (its end-to-end specs).
 - The lists: `fe/missing-keys-accepted.json` (the escape hatch), `fe/build-urls-allowed.json`,
-  `fe/audit-accepted.json`, `fe/admin/branding-unaccepted.json`, `fe/info/branding-unaccepted.json`
-  and `pack-releases.md`.
+  `fe/audit-accepted.json`, `fe/admin/branding-unaccepted.json` and
+  `fe/info/branding-unaccepted.json`.
 - `.github/`: `ci.yml`, `image.yml`, `pack.yml`, `base-bump.yml`, `dependabot.yml`, `CODEOWNERS`.
 
 `fe/setup.mjs` and `start-local.sh` are committed copies of the kit's, never changed by hand.
@@ -105,8 +105,8 @@ Set-up:
 - A bump without a new pin, or a zip hash that is not the pin → move the pin as "The base bump"
   below says (Set-up).
 - `fe/setup.mjs` is not the kit's own → copy `.niord/kit/templates/setup.mjs` over it.
-- A pin is withdrawn → `node setup.mjs --update-pins`, the digest compared with the home's
-  `pack-releases.md` (Withdrawing a pack).
+- A pin is withdrawn (the line gives the home's reason) → `node setup.mjs --update-pins`
+  (Withdrawing a pack).
 - The pack check (a key missing, or in both status lists or neither) → in a home pack a person
   translates and accepts; for a foreign pack, wait for its home, write a text override, or, with the
   maintainer's say-so, add an escape-hatch entry with its reason (Language packs).
@@ -197,8 +197,9 @@ Your part:
 2. Do **To do** of the upgrade report (in the comment, and in `fe/.niord/niord-upgrade-report.md`
    after a set-up of your own): your packs' new keys, each override, and
    `node setup.mjs --update-pins` only when the workflow could not move a pinned pack's pin (its
-   warning says why). The comment names each moved pin, old and new: compare the new digest with the
-   home's `pack-releases.md`.
+   warning says why). The comment names each moved pin, old and new; compare a first pin's digest
+   with the summary of the home's Pack run that published its tag, or, when that run is gone, with
+   the reference the home's maintainers give (Pinning a pack).
 3. Do each `## Human actions` item in full, and tick its box: each new section's "What a country
    must do" of `.niord/kit/API-CHANGES.md` (set-up checks none of them), the merge of
    `.niord/kit/templates/AGENTS.md` into this file, each new bootstrap release folder for a person

@@ -1714,9 +1714,13 @@ describe('base-bump.yml: Build the comment', () => {
     );
   });
 
+  /** KIT_FILES with the two other templates the tests below name, so the kit at NEW has them. */
+  const WITH_OTHERS = { ...KIT_FILES, CODEOWNERS: '* @o\n', 'be/pom.xml.tmpl': '<project/>\n' };
+
   it('names every other changed template in one line above the boxes, never a box', () => {
     const result = build({
       report: data({ otherTemplatesChanged: ['CODEOWNERS', 'be/pom.xml.tmpl'] }),
+      kit: WITH_OTHERS,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const line =
@@ -1737,9 +1741,29 @@ describe('base-bump.yml: Build the comment', () => {
     assert.ok(statusCall(recount).includes('state=success'), statusCall(recount));
   });
 
+  it('tells a country to delete its copy of a template the kit no longer has, still without a box', () => {
+    const result = build({
+      report: data({ otherTemplatesChanged: ['CODEOWNERS', 'pack-releases.md'] }),
+      kit: WITH_OTHERS,
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const changed =
+      '\nOther templates changed since 4.0.97, in `.niord/kit/templates/`: `CODEOWNERS` (no action: a country that keeps its own copy compares it).\n';
+    const removed =
+      '\nTemplates the kit no longer has since 4.0.97: `pack-releases.md` (no box: a country that has a copy deletes it, and the lines that name it).\n';
+    assert.ok(result.comment.includes(changed), result.comment);
+    const at = result.comment.indexOf(removed);
+    assert.ok(at > 0, result.comment);
+    assert.ok(at < result.comment.indexOf('\n## Human actions\n'));
+    assert.doesNotMatch(result.comment, /`pack-releases\.md` \(no action/);
+    assert.deepEqual(boxesOf(result.comment), []);
+    assert.deepEqual(result.outputs, { unticked: '0', security: 'false' });
+  });
+
   it('leaves the boxes of the tracked templates as they were beside the line', () => {
     const result = build({
       report: data({ templatesChanged: ['AGENTS.md'], otherTemplatesChanged: ['CODEOWNERS'] }),
+      kit: WITH_OTHERS,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.deepEqual(boxesOf(result.comment), [
@@ -1834,18 +1858,46 @@ describe('base-bump.yml: Build the comment', () => {
     ])
       assert.ok(
         result.comment.includes(
-          `\n- The pinned pack ${lang} moved from \`${from}\` to \`${to}\`, its home's newest pack (\`node setup.mjs --update-pins\`): compare the digest with the home's \`pack-releases.md\`.\n`,
+          `\n- The pinned pack ${lang} moved from \`${from}\` to \`${to}\`, its home's newest pack (\`node setup.mjs --update-pins\`).\n`,
         ),
         result.comment,
       );
-    // A line, not a box: set-up checks the new pack in CI.
+    // A line, not a box: set-up checks the new pack in CI. No file of the home is named.
     assert.equal(boxesOf(result.comment).length, 2);
-    assert.ok(boxesOf(result.comment).every((box) => !box.includes('pack-releases')));
+    assert.doesNotMatch(result.comment, /pack-releases/);
     const note = result.comment.indexOf(
       '\nThe bootstrap of 4.0.97 could not be fetched: every release folder of 4.0.110 is listed.\n',
     );
     assert.ok(note > result.comment.indexOf('`releases/2026-10-30-harbours/`'));
     assert.ok(note < result.comment.indexOf('\nTick each box'));
+  });
+
+  it("asks a first pin's digest to be compared with the home's Pack run, in a line and not a box", () => {
+    const result = build({
+      report: data(),
+      env: { UPDATE_PINS: 'da kl' },
+      baseLock: lockText({ version: OLD, sha256: FE_SHA, packs: { da: DA_PIN } }),
+      lock: lockText({
+        version: NEW,
+        sha256: FE_SHA,
+        kit: { sha256: KIT_SHA },
+        packs: { da: DA_PIN3, kl: KL_PIN6 },
+      }),
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.ok(
+      result.comment.includes(
+        `\n- The pinned pack kl moved from no pin to \`${KL_PIN6}\`, its home's newest pack (\`node setup.mjs --update-pins\`): a first pin, so compare its digest with the summary of the home's Pack run that published its tag, or with the reference the home's maintainers give when that run is gone.\n`,
+      ),
+      result.comment,
+    );
+    assert.ok(
+      result.comment.includes(
+        `\n- The pinned pack da moved from \`${DA_PIN}\` to \`${DA_PIN3}\`, its home's newest pack (\`node setup.mjs --update-pins\`).\n`,
+      ),
+      result.comment,
+    );
+    assert.ok(boxesOf(result.comment).every((box) => !box.includes('Pack run')));
   });
 
   it('asks for each template the country replaces whose base product file changed, after the release folders', () => {

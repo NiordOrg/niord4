@@ -85,8 +85,8 @@ confirms it. When an answer breaks its rule, say which rule and ask again.
 | `owners`                    | `Repository owners for CODEOWNERS, @user or @org/team, separated by spaces`        | one or more, each a GitHub `@user` or `@org/team`, each once                                                                                                                                                                                                                       | **required**                                                             |
 
 For `languages`, each code is a pack another country publishes on GHCR as
-`ghcr.io/<owner>/niord-lang-<lang>`; its home lists every published tag and digest in the
-`pack-releases.md` at its repository root. When this kit was released, `da` was the one published
+`ghcr.io/<owner>/niord-lang-<lang>`, each tag with its digest, which the summary of the home's Pack
+run that published it states too. When this kit was released, `da` was the one published
 pack: `ghcr.io/sifa-dk/niord-lang-da`, whose home is `SIFA-DK/niord-dk`. Make no registry call of
 your own to check a code: step 8 pulls and verifies each pack, and refuses one that is not
 published and public.
@@ -202,12 +202,14 @@ Expect it to end with exit code 0. Stop when: Maven answers 401 or 403 (the toke
 published and public, and no pin is written), or a check fails (`AGENTS.md`, "When a check fails").
 
 With languages, set-up prints `setup: --update-pins: <lang>: no pin -> <the pin>` for each new pin,
-the pin ending in its `sha256:` digest, and then a line ending
-`review the new digests, and a first pin against the home's pack-releases.md`. Show the person each
-new pin's line and its home's record, the `pack-releases.md` at the root of the home's repository:
-for `da`, the one in `SIFA-DK/niord-dk`, a repository that is not public yet (when the person cannot
-read that repository, its maintainers give the line). Stop when: the person has not confirmed that
-each new digest is the one the record lists for its tag. The comparison is the person's: go on to
+the pin ending in its `sha256:` digest, and then a line ending `review the new digests, and a
+first pin against the summary of the home's Pack run that published its tag`. Show the person each
+new pin's line and where its home states that tag's digest: the summary of the home's Pack run on
+`main` whose run number is the tag (Actions, Pack) — for `da`, a run of `SIFA-DK/niord-dk`, a
+repository that is not public yet (when the person cannot read that repository, or the run is gone,
+since GitHub keeps a run only for the repository's retention period, its maintainers give the
+reference). Stop when: the person has not confirmed that each new digest is the one that run's
+summary, or the home's maintainers, state for its tag. The comparison is the person's: go on to
 step 9 only with their yes, so nothing is committed at step 11 without it.
 
 The detail is in [Set-up](../README.md#set-up) and

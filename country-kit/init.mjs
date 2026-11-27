@@ -78,7 +78,6 @@
  *                                   packs, posts the upgrade report with the human actions and
  *                                   sets the status niord/upgrade-actions; it dispatches ci.yml,
  *                                   which must take workflow_dispatch
- *   pack-releases.md                the record of every pack published and withdrawn
  *   .github/dependabot.yml          security updates only
  *   AGENTS.md                       the agent contract, byte for byte templates/AGENTS.md: it names
  *                                   no country, and a country's own rules go below it
@@ -228,7 +227,6 @@ export function skeleton({ cc, version, sha256, kitSha256, source, kit = KIT }) 
   files.set('.gitattributes', template('gitattributes'));
   files.set('.github/workflows/pack.yml', template('pack.yml'));
   files.set(BASE_BUMP, template('base-bump.yml'));
-  files.set('pack-releases.md', template('pack-releases.md'));
   files.set('.github/dependabot.yml', template('dependabot.yml'));
   files.set('AGENTS.md', template('AGENTS.md'));
   files.set('CLAUDE.md', Buffer.from(CLAUDE_IMPORTER));

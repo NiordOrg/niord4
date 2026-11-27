@@ -675,7 +675,15 @@ describe('the publish and withdraw commands', () => {
     );
     assert.deepEqual((await marker()).withdrawn, []);
     const summary = fs.readFileSync(path.join(dir, 'summary.md'), 'utf8');
-    assert.match(summary, /^\| zz \| 1 \| sha256:[0-9a-f]{64} \| 2026-10-22 \|$/m);
+    // The reference, its tag and digest, as information; no file to edit and no line to copy.
+    assert.match(
+      summary,
+      new RegExp(
+        `^\`${registry.host.replace(/\./g, '\\.')}/example/niord-lang-zz:1@sha256:[0-9a-f]{64}\`$`,
+        'm',
+      ),
+    );
+    assert.doesNotMatch(summary, /pack-releases|\.md\b|Add this line|^\|/m);
   });
 
   it('publishes the first tag where a pull token may not read a package that does not exist yet', async () => {
@@ -800,10 +808,16 @@ describe('the publish and withdraw commands', () => {
     assert.deepEqual((await marker()).withdrawn, [
       { digest, tag: '1', reason: 'a wrong date pattern', date: '2026-10-22' },
     ]);
-    assert.match(
-      fs.readFileSync(path.join(dir, 'summary.md'), 'utf8'),
-      new RegExp(`^\\| zz \\| 1 \\| ${digest} \\| 2026-10-22 \\| a wrong date pattern \\|$`, 'm'),
+    const summary = fs.readFileSync(path.join(dir, 'summary.md'), 'utf8');
+    assert.ok(summary.includes(`@${digest}\`: a wrong date pattern\n`), summary);
+    assert.ok(
+      summary.includes(
+        'The withdrawn marker `:withdrawn` lists it, with the reason and the date 2026-10-22.',
+      ),
+      summary,
     );
+    // Information only: no file to edit and no line to copy.
+    assert.doesNotMatch(summary, /pack-releases|\.md\b|Add this line|^\|/m);
     const before = (await marker()).digest;
     const again = await run(['withdraw'], { PACK_TAG: '1', PACK_REASON: 'again' });
     assert.equal(again.status, 0, again.err);
@@ -832,7 +846,7 @@ describe('the publish and withdraw commands', () => {
     assert.match(result.err, /has no withdrawn marker .*publish the pack first/);
   });
 
-  it('escapes a | in the withdrawal row and fences it longer than the reason, keeping the reason in the marker', async () => {
+  it('keeps a reason with a | and backticks as given, in the marker and in the summary', async () => {
     const summary = path.join(dir, 'pipe-summary.md');
     const published = await run(['publish', '--archive', archive, '--sha256', sha], {
       GITHUB_RUN_NUMBER: '5',
@@ -848,12 +862,7 @@ describe('the publish and withdraw commands', () => {
     const digest = registry.tagged(REPOSITORY, '5');
     assert.equal((await marker()).withdrawn.at(-1).reason, reason);
     const text = fs.readFileSync(summary, 'utf8');
-    assert.ok(
-      text.includes(
-        `\n\`\`\`\`\n| zz | 5 | ${digest} | 2026-10-22 | the \\| splits a row, \`\`\`and\`\`\` fences |\n\`\`\`\`\n`,
-      ),
-      text,
-    );
-    assert.match(text, /: the \\\| splits a row/);
+    assert.ok(text.includes(`@${digest}\`: ${reason}\n`), text);
+    assert.doesNotMatch(text, /pack-releases|Add this line/);
   });
 });

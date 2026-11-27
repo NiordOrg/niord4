@@ -310,7 +310,8 @@ needs no secret: it reads GitHub Packages and writes to the pull request with it
 
 The comment is one per pull request, found by its marker `<!-- niord-base-bump -->` and edited in
 place: `## Base bump: <old> to <new>` with the pins and where they came from (each moved pack pin,
-old and new, with the home's `pack-releases.md` to compare the new digest with), `## Human actions`
+old and new; a first pin with the home's Pack run to compare its digest with, or the reference the
+home's maintainers give when that run is gone), `## Human actions`
 with a `- [ ]` box per item or "No human action: review, merge, deploy.", `## Checked by CI`, and
 the whole upgrade report folded in `<details>`, cut at 60000 characters with a pointer to
 `niord-upgrade-report.md` in the run's artifact `base-bump`. A move of the pull request to a newer
@@ -329,9 +330,10 @@ stale copy would be found only by comparing databases. Without the old version's
 the new one holds is named, not compared; without the new version's, one item asks for the
 comparison by hand. Every other template the kit changed since `<old>` (`CODEOWNERS`,
 `dependabot.yml`, the `be/` files `init` writes, a template added or removed) is named in one line
-above `## Human actions`, with no box: it asks nothing, and a country that keeps its own copy of one
-compares it. Green means no task: review, merge, deploy. The status `niord/upgrade-actions`
-says:
+above `## Human actions`, with no box, since set-up checks none of them: a country that keeps its own
+copy of one compares it, and deletes its copy of one the kit no longer has, with the lines that name
+it (`Templates the kit no longer has since <old>`). Green means no task: review, merge, deploy. The
+status `niord/upgrade-actions` says:
 
 | State   | Description                                                                                                    | When                                                  |
 | ------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -918,13 +920,13 @@ Three jobs:
   against validate's SHA-256s, then `node oci.mjs publish --archive <file> --sha256 <hex>`, with every
   other value in its environment, re-hashes the archive, refuses a tag that exists, pushes the empty
   withdrawn marker when the pack has none yet (its first publish) **before** the pack, pushes the
-  archive unchanged, and writes the reference with its digest into the run summary, with the line to
-  add to `pack-releases.md`. A first publish that broke between the two pushes leaves only the
+  archive unchanged, and writes the reference, its tag and digest, into the run summary as
+  information. A first publish that broke between the two pushes leaves only the
   marker, which no consumer pins; re-run the failed job (it keeps its run number) to finish it.
 - **withdraw**, by dispatch of `withdraw` on `main` only, with the tag (digits) and a one-line reason:
   `packages: write` only; it verifies the client and runs `node oci.mjs withdraw`, which reads the
   marker, resolves the tag's digest, adds `{ digest, tag, reason, date }` unless it is listed already,
-  and pushes the whole marker. The summary gives the line for `pack-releases.md`.
+  and pushes the whole marker. The summary states the reference, the reason and the date.
 
 No run block holds an expression, and every one starts with `set -euo pipefail`; the language, the
 tag and the reason reach the scripts through `env:` only. A translation commit to a pack with
@@ -954,10 +956,14 @@ elsewhere; a pushed manifest's answered digest, when the registry gives one, mus
 the bytes sent, and without one the manifest is confirmed by a `HEAD` of that digest; and a tag list
 is read whole or not at all (more than 100 pages, or a later page missing, fails).
 
-**`pack-releases.md`**, at the repository root (`init` writes it, outside `fe/packs/`, so editing it
-runs no publish), is the home's human record: a table of every publish (pack, tag, digest, date) and
-one of every withdrawal (with its reason). Add the run summary's line in the change that follows the
-run. A consumer compares its first pin of a pack with the digest recorded there.
+**Nothing is recorded by hand** after a publish or a withdrawal. The registry holds every tag with
+its digest (the package's page lists them), the summary of the Pack run on `main` that pushed a tag
+— its run number is the tag — states that tag's reference with its digest while GitHub keeps the
+run ([Pinning a pack](#pinning-a-pack)), and the withdrawn marker
+holds every withdrawal with its reason and date, which each consumer's set-up prints. A repository
+that has a `pack-releases.md` from an earlier kit, which `init` wrote, deletes it with its line in
+`.github/CODEOWNERS` and the lines of its own documents that name it: nothing reads it. Its first
+bump onto this kit says so in the comment's line of the templates the kit no longer has.
 
 ### Pinning a pack
 
@@ -980,9 +986,15 @@ tag given or the highest numeric tag whose digest the marker does not list, pull
 as a pack, as set-up would (the archive cached for the set-up that follows) — a candidate that is not
 a readable pack is skipped with a line, and refused when named — rewrites `niord-pins.lock.json` (the
 base pin kept, the pack pins sorted), prints each pin old → new (`, unchanged` when it is), and then
-runs the whole set-up. Before a **first** pin is committed, compare the digest it wrote with the one
-the home's `pack-releases.md` records; after that, each bump of a pin is a reviewed pull request that
-shows the new digest. `NIORD_PACK_REGISTRY` names a loopback registry (`http://127.0.0.1:<port>`) in
+runs the whole set-up. The digest a pin holds is the one the registry answers for the tag, and every
+pull is verified against it, so a pin always gets the bytes it was reviewed with. Before a **first**
+pin is committed, a person compares that digest with the reference in the summary of the home's Pack
+run that published the tag (the run whose number is the tag, on the home's `main`): what the home's
+own workflow pushed. GitHub keeps a run, its summary included, only for the home repository's
+retention period (90 days by default), and a pack is published only when its folder changes, so the
+newest tag's run can be gone: then, as when the home's repository is private, the home's maintainers
+give the reference. After that, each bump of a pin is a reviewed pull request that shows the new
+digest. `NIORD_PACK_REGISTRY` names a loopback registry (`http://127.0.0.1:<port>`) in
 place of `ghcr.io`, for the kit's tests and the example's harness; any other host is refused. Only
 they write a loopback pin, and set-up accepts one wherever a lock holds it: the digest guards the
 bytes, and the lock's change shows in review. The build report records each pinned pack's
@@ -990,15 +1002,15 @@ bytes, and the lock's change shows in review. The build report records each pinn
 
 ### Withdrawing a pack
 
-A home withdraws a bad tag with `pack.yml`'s dispatch: `action` `withdraw`, `tag` and `reason`. Check
-the run's summary line, `niord-lang-<lang>:<tag> withdrawn` or `… was withdrawn already`, before
-recording the withdrawal; dispatching again is safe, since a digest listed already is a notice. Every
-consumer's next set-up fails on a pin that names it, with the reason, until the consumer moves the pin
-(`node setup.mjs --update-pins`, to the home's next pack or back to the last good one). A `|` in the
-reason is written `\|` in the summary's row for `pack-releases.md`, and the row is fenced longer than
-any run of backticks in it; the marker keeps the reason as given. Each withdrawal leaves the previous
-`:withdrawn` manifest as an untagged version of the package: harmless, and the owner may delete it on
-the package's page. The
+A home withdraws a bad tag with `pack.yml`'s dispatch: `action` `withdraw`, `tag` and `reason`. The
+run's summary says `niord-lang-<lang>:<tag> withdrawn`, with the reference, the reason and the date,
+or `… was withdrawn already`; dispatching again is safe, since a digest listed already is a notice.
+The marker keeps the reason as given, and it is the record: every consumer's next set-up fails on a
+pin that names it, with the date and the reason, until the consumer moves the pin
+(`node setup.mjs --update-pins`, to the home's next pack or back to the last good one), and
+`--update-pins` refuses a withdrawn tag named to it, with the same reason. Each withdrawal leaves
+the previous `:withdrawn` manifest as an untagged version of the package: harmless, and the owner
+may delete it on the package's page. The
 withdrawal's validate job runs set-up to obtain the verified client, so it needs set-up green on
 `main`; when `main` is red, withdraw by hand from a checkout of `main` in which `node setup.mjs` has
 unpacked the pinned kit into `.niord/kit/` (the stub verifies both packages by their hashes before
@@ -1013,7 +1025,7 @@ PACK_LANG=<lang> PACK_TAG=<tag> PACK_REASON='<one line>' \
   node ../.niord/kit/lib/oci.mjs withdraw
 ```
 
-and add the line it prints to `pack-releases.md`.
+Its lines say what it pushed; there is nothing to record afterwards.
 
 ## Text overrides
 
@@ -1758,7 +1770,7 @@ file, which it lists as `init: kept <file>, which exists`:
   `fe/niord-country.json` (English, and every answered language pinned), the public site's
   `fe/info/app/info.config.ts` (with the answered time zone), `.github/CODEOWNERS` with the answered
   owners (for the override, escape-hatch, dependency and pin files, the country's URL allow-list and
-  branding-unaccepted lists, `fe/packs/`, `pack-releases.md`, `pack.yml` and the Base bump
+  branding-unaccepted lists, `fe/packs/`, `pack.yml` and the Base bump
   workflow), `.github/workflows/image.yml` with the frontend job, the backend job
   ([The backend build](#the-backend-build)) and the push job, whose last step is the placeholder for
   the administration bundle's image above, and `MODULE` filled (when the repository has an
@@ -1777,7 +1789,7 @@ file, which it lists as `init: kept <file>, which exists`:
   `.github/workflows/pack.yml` ([Publishing a pack](#publishing-a-pack)),
   `.github/workflows/base-bump.yml` ([The base bump workflow](#the-base-bump-workflow); an existing
   one is kept, and `init` prints to compare it with `.niord/kit/templates/base-bump.yml`),
-  `pack-releases.md` at the repository root, `.github/dependabot.yml` (security updates for
+  `.github/dependabot.yml` (security updates for
   `/fe/country` and the workflows' actions), the agent contract `AGENTS.md`
   (byte for byte [templates/AGENTS.md](templates/AGENTS.md)) with a `CLAUDE.md` holding the one line
   `@AGENTS.md`, which loads it in Claude Code (a `CLAUDE.md` that exists is kept, and `init` prints

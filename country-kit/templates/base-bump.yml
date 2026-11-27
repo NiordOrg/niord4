@@ -623,7 +623,7 @@ jobs:
           const to = pinsOf('fe/niord-pins.lock.json');
           for (const lang of (env.UPDATE_PINS ?? '').split(' ').filter(Boolean))
             done.push(
-              `The pinned pack ${lang} moved from ${from[lang] ? code(from[lang]) : 'no pin'} to ${code(to[lang] ?? 'no pin')}, its home's newest pack (${code('node setup.mjs --update-pins')}): compare the digest with the home's ${code('pack-releases.md')}.`,
+              `The pinned pack ${lang} moved from ${from[lang] ? code(from[lang]) : 'no pin'} to ${code(to[lang] ?? 'no pin')}, its home's newest pack (${code('node setup.mjs --update-pins')})${from[lang] ? '' : ": a first pin, so compare its digest with the summary of the home's Pack run that published its tag, or with the reference the home's maintainers give when that run is gone"}.`,
             );
           if (env.RECORD === 'missing')
             done.push(
@@ -663,10 +663,20 @@ jobs:
             // asks nothing, so the count never sees it, and it carries no template marker.
             if (data.otherTemplatesChanged === null)
               intro.push(`Other templates changed since ${OLD}: not available (${fold(data.templatesUnavailable ?? 'no reason given')}).`);
-            else if (Array.isArray(data.otherTemplatesChanged) && data.otherTemplatesChanged.length)
-              intro.push(
-                `Other templates changed since ${OLD}, in ${code(`${TEMPLATES}/`)}: ${data.otherTemplatesChanged.map((name) => code(fold(name))).join(', ')} (no action: a country that keeps its own copy compares it).`,
-              );
+            else if (Array.isArray(data.otherTemplatesChanged) && data.otherTemplatesChanged.length) {
+              // One the kit at NEW no longer has is no longer part of a country's design: its copy
+              // is deleted, which the line says, still without a box.
+              const kept = data.otherTemplatesChanged.filter((name) => fs.existsSync(path.join(TEMPLATES, name)));
+              const removed = data.otherTemplatesChanged.filter((name) => !kept.includes(name));
+              if (kept.length)
+                intro.push(
+                  `Other templates changed since ${OLD}, in ${code(`${TEMPLATES}/`)}: ${kept.map((name) => code(fold(name))).join(', ')} (no action: a country that keeps its own copy compares it).`,
+                );
+              if (removed.length)
+                intro.push(
+                  `Templates the kit no longer has since ${OLD}: ${removed.map((name) => code(fold(name))).join(', ')} (no box: a country that has a copy deletes it, and the lines that name it).`,
+                );
+            }
             if ((data.fixes ?? []).length) labels.push('security');
           }
           for (const name of listed('drift.txt')) {
