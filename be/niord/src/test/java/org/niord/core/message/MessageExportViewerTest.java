@@ -38,9 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The page an unpacked message export opens with ({@code export-messages.html}, written into the archive as
- * {@code messages-preview.html}) labels each message part by its type in words: the message dictionary's English
- * text of the type ({@code msg.field.details} and the rest), the language the page writes its other labels in. FAILS
- * without the words: the page printed the type's code in lower case ("details", "time", "positions").
+ * {@code messages-preview.html}) labels each message part by its type in words: the message dictionary's text of
+ * the type ({@code msg.field.details} and the rest) in the export's language, which {@code MessageExportService}
+ * injects, over the dictionary's English text, which the page holds for a type it is sent no text for. FAILS without
+ * the words: the page printed the type's code in lower case ("details", "time", "positions").
  */
 class MessageExportViewerTest {
 
@@ -56,7 +57,7 @@ class MessageExportViewerTest {
 
     /** The page's map of part labels, by type */
     private static Map<String, String> partTypeTexts(String viewer) {
-        Matcher block = Pattern.compile("const PART_TYPE_TEXTS = \\{([^}]*)}").matcher(viewer);
+        Matcher block = Pattern.compile("const PART_TYPE_TEXTS = Object\\.assign\\(\\{([^}]*)}").matcher(viewer);
         assertTrue(block.find(), "the page holds the labels of the part types");
         Map<String, String> texts = new LinkedHashMap<>();
         Matcher entry = ENTRY.matcher(block.group(1));
@@ -87,5 +88,11 @@ class MessageExportViewerTest {
 
         assertFalse(viewer.contains("(part.type || '').toLowerCase()"), "the row printed the type's code");
         assertTrue(viewer.contains("Object.hasOwn(PART_TYPE_TEXTS, part.type)"), "the row reads the map");
+    }
+
+    @Test
+    void theTextsOfTheExportsLanguageReplaceTheEnglishWords() throws IOException {
+        assertTrue(viewer().contains("}, JSON.parse('<<PART-TYPE-TEXTS>>'));"),
+                "the texts MessageExportService injects are laid over the page's English words");
     }
 }

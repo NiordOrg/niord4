@@ -95,7 +95,13 @@ public final class RequiredTexts {
          * the key of a criterion's name it prints the base product's English word, without the key of a value the
          * value as it is stored, and without the date format the dates as day-month-year in digits.
          */
-        SEARCH_CRITERIA
+        SEARCH_CRITERIA,
+        /**
+         * {@code MessageExportService}: the label of each message part on the preview page of a message export.
+         * Without the key in the export's language it takes the default language's, and without that the page's
+         * own English word.
+         */
+        MESSAGE_EXPORT
     }
 
     /**
@@ -192,7 +198,13 @@ public final class RequiredTexts {
             JavaText.of("pdf", "pdf.list.criteria.comments.ANY_UNACK", Reader.SEARCH_CRITERIA),
             JavaText.of("pdf", "pdf.list.criteria.comments.OWN_UNACK", Reader.SEARCH_CRITERIA),
             JavaText.of("pdf", "pdf.list.criteria.selection", Reader.SEARCH_CRITERIA),
-            JavaText.of("pdf", "pdf.list.criteria.map_area", Reader.SEARCH_CRITERIA));
+            JavaText.of("pdf", "pdf.list.criteria.map_area", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.field.details", Reader.MESSAGE_EXPORT),
+            JavaText.of("message", "msg.field.time", Reader.MESSAGE_EXPORT),
+            JavaText.of("message", "msg.field.positions", Reader.MESSAGE_EXPORT),
+            JavaText.of("message", "msg.field.note", Reader.MESSAGE_EXPORT),
+            JavaText.of("message", "msg.field.prohibition", Reader.MESSAGE_EXPORT),
+            JavaText.of("message", "msg.field.signals", Reader.MESSAGE_EXPORT));
 
     /**
      * The key prefixes templates complete at runtime, such as {@code text("msg.status." + msg.status)}

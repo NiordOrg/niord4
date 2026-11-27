@@ -17,6 +17,7 @@ package org.niord.core.message;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.niord.core.dictionary.DictionaryService;
 import org.niord.core.message.vo.SystemMessageVo;
 import org.niord.core.repo.RepoFileInfo;
 import org.niord.core.repo.RepoStore;
@@ -44,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -55,7 +57,8 @@ import static org.mockito.Mockito.when;
  * <p>The attachment path and the thumbnail path are stored as an editor sent them, and the export is anonymous
  * once the message is published, so a path that climbs out of the folder, into another message's folder or out of
  * the repository, must be skipped. The store is a mock holding three rows: the message's own file, another
- * message's file and the message's custom thumbnail; what the export resolves is what it streams.
+ * message's file and the message's custom thumbnail; what the export resolves is what it streams. The preview
+ * page gets the labels of the message parts in the export's language.
  */
 class MessageExportServiceTest {
 
@@ -64,6 +67,7 @@ class MessageExportServiceTest {
     private static final byte[] THUMB = "THUMB".getBytes(StandardCharsets.UTF_8);
 
     private MessageExportService service;
+    private DictionaryService dictionaryService;
     private final String repoPath = "messages/a/ab/own-uid";
     private final String otherRepoPath = "messages/c/cd/other-uid";
 
@@ -94,8 +98,9 @@ class MessageExportServiceTest {
             return null;
         }).when(store).copyTo(any(RepoFileInfo.class), any(OutputStream.class));
 
-        service = new MessageExportService(store);
-        service.messagesPreviewHtmlFile = "<html><<MESSAGES-JSON>></html>";
+        dictionaryService = mock(DictionaryService.class);
+        service = new MessageExportService(store, dictionaryService);
+        service.messagesPreviewHtmlFile = "<html><<MESSAGES-JSON>>|<<PART-TYPE-TEXTS>></html>";
     }
 
     private SystemMessageVo message(AttachmentVo... attachments) {
@@ -115,12 +120,17 @@ class MessageExportServiceTest {
 
     /** Exports the message and returns every zip entry as name -> bytes */
     private Map<String, byte[]> export(SystemMessageVo message) throws IOException {
+        return export(message, "en");
+    }
+
+    /** Exports the message in the language and returns every zip entry as name -> bytes */
+    private Map<String, byte[]> export(SystemMessageVo message, String language) throws IOException {
         PagedSearchResultVo<SystemMessageVo> result = new PagedSearchResultVo<>();
         result.setData(new ArrayList<>(List.of(message)));
         result.setTotal(1L);
         result.setSize(1);
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        service.export(result, bytes);
+        service.export(result, language, bytes);
 
         Map<String, byte[]> entries = new HashMap<>();
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
@@ -197,5 +207,33 @@ class MessageExportServiceTest {
 
         assertEquals(List.of(), entries.keySet().stream().filter(n -> n.startsWith("messages/")).toList(),
                 "nothing of the message folder is exported for a name that names no file");
+    }
+
+    // The preview page labels each message part by the message dictionary's text of its type, in the export's
+    // language. FAILS without it: the page had no texts of the export's language and wrote the type's code.
+
+    @Test
+    void thePreviewPageGetsThePartTypeTextsOfTheExportsLanguage() throws Exception {
+        Map<String, String> danish = Map.of("msg.field.details", "Detaljer", "msg.field.time", "Tid",
+                "msg.field.positions", "Positioner", "msg.field.note", "Note", "msg.field.prohibition", "Forbud",
+                "msg.field.signals", "Skydesignaler");
+        when(dictionaryService.value(eq("message"), eq("da"), anyString()))
+                .thenAnswer(invocation -> danish.get(invocation.<String>getArgument(2)));
+
+        String preview = new String(export(message(), "da").get("messages-preview.html"), StandardCharsets.UTF_8);
+
+        String texts = preview.substring(preview.indexOf('|') + 1, preview.indexOf("</html>"));
+        assertEquals("{\\\"DETAILS\\\":\\\"Detaljer\\\",\\\"TIME\\\":\\\"Tid\\\",\\\"POSITIONS\\\":\\\"Positioner\\\","
+                + "\\\"NOTE\\\":\\\"Note\\\",\\\"PROHIBITION\\\":\\\"Forbud\\\",\\\"SIGNALS\\\":\\\"Skydesignaler\\\"}",
+                texts, "the texts, as a JSON object escaped as a JavaScript string");
+    }
+
+    @Test
+    void aPartTypeWithoutATextIsLeftToThePage() throws Exception {
+        when(dictionaryService.value("message", "da", "msg.field.details")).thenReturn("Detaljer");
+
+        String preview = new String(export(message(), "da").get("messages-preview.html"), StandardCharsets.UTF_8);
+
+        assertTrue(preview.endsWith("|{\\\"DETAILS\\\":\\\"Detaljer\\\"}</html>"), preview);
     }
 }
