@@ -2,7 +2,6 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { disabled, form, FormField, required } from '@angular/forms/signals';
-import { LowerCasePipe } from '@angular/common';
 import { TranslocoPipe, TranslocoService, translateSignal } from '@jsverse/transloco';
 import { debounceTime } from 'rxjs';
 
@@ -68,7 +67,6 @@ interface DraftState {
     FormField,
     HelpAnchor,
     Icon,
-    LowerCasePipe,
     TagScopeSelect,
     TranslocoPipe,
   ],
@@ -407,5 +405,10 @@ export class MessageTagsDialog {
 
   protected iconForType(type: MessageTagType): string {
     return TAG_TYPE_ICONS[type];
+  }
+
+  /** The type in words, as the type buttons name it; a type this build does not list reads as stored. */
+  protected typeLabel(type: MessageTagType | string): string {
+    return this.typeOptions().find((option) => option.value === type)?.label ?? type;
   }
 }
