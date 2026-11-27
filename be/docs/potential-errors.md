@@ -2178,3 +2178,25 @@ they say otherwise; every other path is from the repository root.
   the code, not reproduced.
 - **Severity:** Low — the admin editor always sets a language. Fix: `language.equals(d.getLang())`, as the audio
   generation does.
+
+## ISSUE13. A domain sorted by "Date" refuses the member list, the preview and the release of its series' open issues
+
+- **Location:** `be/niord/src/main/java/org/niord/core/publication/series/resolve/IssueOrdering.java`,
+  `resolveSort` (~109) and `parseSortBy` (~119-127); the domain editor's choices,
+  `fe/ui-apps/admin/src/app/features/admin/sections/sysadmin/domains/domain-rules.ts`,
+  `MESSAGE_SORT_ORDER_OPTIONS` (~36-43).
+- **Description:** the domain editor offers six message sort orders, `DATE ASC` and `DATE DESC` among them, and
+  the message search reads `DATE` as the event date (`MessageSearchParams.sortByEventDate`). A publication series
+  that names no sort of its own takes its domain's: `resolveSort` splits the domain's value and hands `DATE` to
+  `parseSortBy`, which knows `AREA`, `PUBLISH_DATE`, `EVENT_DATE`, `FOLLOW_UP_DATE` and `ID` (and three other
+  spellings) and throws `IllegalArgumentException("unknown sort field: DATE")`; there is no fallback. Its three
+  callers are the live member list of an unreleased issue (`IssueMemberListService.liveMembers`), the preview
+  (`IssuePublishService.preview`) and the release (`IssuePublishService.publish`), so in such a series each of them
+  answers 400 with that text (`RestExceptionStatusAdvice`) for every open issue; a released or imported issue
+  reads its stored order and is not affected. `AREA` and `ID` mean the same in both readers.
+- **Why it looks wrong:** a choice the domain editor offers, and the message lists honour, stops a publication
+  series from being released, and the answer names a sort field the operator never typed in the series.
+- **Exposed by:** a check of the domain editor's sort-order choices against the publications' sort parser,
+  2026-11-27; read in the code, not reproduced.
+- **Severity:** Medium where a domain holds a `DATE` order (the base bootstrap and the sample hold none). Fix:
+  `parseSortBy` reads `DATE` as `EVENT_DATE`, as the message search does, with a test of the domain fallback.
