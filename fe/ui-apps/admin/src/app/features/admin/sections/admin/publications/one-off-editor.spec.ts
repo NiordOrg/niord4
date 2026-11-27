@@ -464,6 +464,33 @@ describe('OneOffEditor', () => {
     ]);
   });
 
+  it('offers the sort fields as named choices, with a stored value it does not name as stored', async () => {
+    const stored: OneOffPublication = {
+      ...QUERY_BACKED,
+      series: {
+        ...QUERY_BACKED.series,
+        messageSortBy: 'FOLLOWUPDATE',
+        messageSortOrder: 'ASC',
+      } as PublicationSeries,
+    };
+    await setup({ mode: 'edit', publication: stored });
+
+    const select = [...panel().querySelectorAll<HTMLSelectElement>('select')].find((candidate) =>
+      [...candidate.options].some((option) => option.value === 'FOLLOW_UP_DATE'),
+    );
+    const options = [...(select?.options ?? [])];
+    expect(options.map((option) => option.textContent?.trim())).toEqual([
+      'admin.publications.series.option.domainSort',
+      'FOLLOWUPDATE',
+      'messages.shell.action.sortBy.area',
+      'messages.shell.action.sortBy.publishDate',
+      'messages.shell.action.sortBy.date',
+      'messages.shell.action.sortBy.followUpDate',
+      'messages.shell.action.sortBy.id',
+    ]);
+    expect(select?.value).toBe('FOLLOWUPDATE');
+  });
+
   it('shows no criteria editor on a publication that is not query-backed', async () => {
     await setup({ mode: 'add' });
 

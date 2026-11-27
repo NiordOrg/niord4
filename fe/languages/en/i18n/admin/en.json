@@ -2503,7 +2503,8 @@
         "option": {
           "noCategory": "Choose a category…",
           "noReport": "No report",
-          "noSourceSeries": "Choose a source series…"
+          "noSourceSeries": "Choose a source series…",
+          "domainSort": "The domain's sort order"
         },
         "messagePublication": {
           "NONE": "No",

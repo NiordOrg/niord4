@@ -1813,6 +1813,57 @@ describe('PublicationSeriesEditor', () => {
     expect(text('LEDGER')).toBe('Ledger');
   });
 
+  it('offers the sort fields as named choices and sends the one chosen', () => {
+    const { fixture, host, httpTesting } = setup(DOMAINS);
+    const editor = open(fixture, host, { mode: 'edit', series: WEEKLY_WITH_REPORT }, httpTesting);
+    fixture.detectChanges();
+
+    const select = document.querySelector<HTMLSelectElement>('#series-sort-by');
+    expect(select?.tagName).toBe('SELECT');
+    const options = [...(select?.options ?? [])];
+    expect(options.map((option) => option.value)).toEqual([
+      '',
+      'AREA',
+      'PUBLISH_DATE',
+      'EVENT_DATE',
+      'FOLLOW_UP_DATE',
+      'ID',
+    ]);
+    expect(options.map((option) => option.textContent?.trim())).toEqual([
+      'admin.publications.series.option.domainSort',
+      'messages.shell.action.sortBy.area',
+      'messages.shell.action.sortBy.publishDate',
+      'messages.shell.action.sortBy.date',
+      'messages.shell.action.sortBy.followUpDate',
+      'messages.shell.action.sortBy.id',
+    ]);
+    // Unset: the domain's order is the one chosen, and the direction waits for a field.
+    expect(select?.selectedIndex).toBe(0);
+    expect(document.querySelector<HTMLSelectElement>('#series-sort-order')?.disabled).toBe(true);
+
+    select!.value = 'PUBLISH_DATE';
+    select!.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(editor.value().messageSortBy).toBe('PUBLISH_DATE');
+    expect(document.querySelector<HTMLSelectElement>('#series-sort-order')?.disabled).toBe(false);
+  });
+
+  it('shows a stored sort value it does not name as stored, chosen', () => {
+    const { fixture, host, httpTesting } = setup(DOMAINS);
+    const stored = {
+      ...WEEKLY_WITH_REPORT,
+      messageSortBy: 'publishDate',
+      messageSortOrder: 'DESC',
+    } as PublicationSeries;
+    open(fixture, host, { mode: 'edit', series: stored }, httpTesting);
+    fixture.detectChanges();
+
+    const select = document.querySelector<HTMLSelectElement>('#series-sort-by')!;
+    const chosen = select.options[select.selectedIndex];
+    expect(chosen.value).toBe('publishDate');
+    expect(chosen.textContent?.trim()).toBe('publishDate');
+  });
+
   describe('the parameters the report names', () => {
     /**
      * The report's declared parameters, with values that must not be offered:

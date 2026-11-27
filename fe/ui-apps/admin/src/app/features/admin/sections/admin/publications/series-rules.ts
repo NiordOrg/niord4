@@ -233,6 +233,39 @@ export function pageSizeTextKey(size: PageSize): string {
   return `messages.print.settings.paperSize.${PAPER_OF_PAGE_SIZE[size]}`;
 }
 
+/** One choice of the "Sort messages by" select; a choice without a text key reads as stored. */
+export interface MessageSortByOption {
+  readonly value: string;
+  readonly labelKey?: string;
+}
+
+/**
+ * The empty choice, which leaves the order to the domain, and the fields the server sorts an
+ * issue's messages by, named as the message list's sort menu names them: the issue orders each
+ * field the way that menu's search does.
+ */
+const MESSAGE_SORT_BY_OPTIONS: readonly MessageSortByOption[] = [
+  { value: '', labelKey: 'admin.publications.series.option.domainSort' },
+  { value: 'AREA', labelKey: 'messages.shell.action.sortBy.area' },
+  { value: 'PUBLISH_DATE', labelKey: 'messages.shell.action.sortBy.publishDate' },
+  { value: 'EVENT_DATE', labelKey: 'messages.shell.action.sortBy.date' },
+  { value: 'FOLLOW_UP_DATE', labelKey: 'messages.shell.action.sortBy.followUpDate' },
+  { value: 'ID', labelKey: 'messages.shell.action.sortBy.id' },
+];
+
+/**
+ * The choices of the "Sort messages by" select. A stored value that is none of them (a spelling
+ * the server also reads, or one it will refuse) is offered too, after the empty choice, so the
+ * select shows what the series holds and an untouched save sends it back.
+ */
+export function messageSortByOptions(stored: string): readonly MessageSortByOption[] {
+  if (MESSAGE_SORT_BY_OPTIONS.some((option) => option.value === stored)) {
+    return MESSAGE_SORT_BY_OPTIONS;
+  }
+  const [domainOrder, ...fields] = MESSAGE_SORT_BY_OPTIONS;
+  return [domainOrder, { value: stored }, ...fields];
+}
+
 export const PAGE_ORIENTATIONS: readonly PageOrientation[] = ['PORTRAIT', 'LANDSCAPE'];
 export const MESSAGE_PUBLICATIONS: readonly MessagePublication[] = ['NONE', 'INTERNAL', 'EXTERNAL'];
 export const RELEASE_MODES: readonly ReleaseMode[] = ['MANUAL_GATE', 'AUTO_RELEASE'];
