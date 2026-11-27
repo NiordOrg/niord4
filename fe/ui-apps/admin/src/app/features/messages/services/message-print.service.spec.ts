@@ -21,6 +21,20 @@ interface SetupOpts {
   /** What the backend answers when asked to expand a report's parameters. */
   readonly expandedParams?: Record<string, string>;
   readonly expandError?: boolean;
+  /** What the backend answers for the PDF; a PDF named as the backend names a list by default. */
+  readonly answer?: () => Promise<Response>;
+}
+
+function pdf(headers: Record<string, string> = {}): Response {
+  return new Response(new Blob(['%PDF-1.4'], { type: 'application/pdf' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/pdf', ...headers },
+  });
+}
+
+/** Lets the fetch and the reading of its answer run. */
+async function settle(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve));
 }
 
 function tag(): MessageTag {
@@ -28,12 +42,18 @@ function tag(): MessageTag {
 }
 
 function setup(opts: SetupOpts = {}) {
-  const navigate = vi.fn();
-  // Provide a stub MessagePrintService that uses our test navigator. The
-  // production service exposes `navigator` as a protected field; we override
-  // the whole service in the TestBed with a subclass that flips it public.
+  // The browser's fetch is the service's one request for the PDF; saving the answer is the
+  // service's protected seam, which a subclass records instead of clicking a link.
+  const answer =
+    opts.answer ??
+    (async () => pdf({ 'Content-Disposition': 'attachment; filename="messages.pdf"' }));
+  const fetched = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(() => answer());
+  vi.stubGlobal('fetch', fetched);
+  const save = vi.fn();
   class TestMessagePrintService extends MessagePrintService {
-    override readonly navigator = { navigate };
+    protected override saveFile(file: Blob, name: string): void {
+      save(file, name);
+    }
   }
 
   const open = vi.fn(() => of(opts.dialogResult));
@@ -68,7 +88,8 @@ function setup(opts: SetupOpts = {}) {
 
   return {
     service: TestBed.inject(MessagePrintService),
-    navigate,
+    fetched,
+    save,
     open,
     createTempMessageTag,
     expandReportParams,
@@ -92,18 +113,84 @@ function printRequest(overrides: Partial<PrintRequest['settings']> = {}): PrintR
 
 describe('MessagePrintService', () => {
   beforeEach(() => undefined);
-  afterEach(() => undefined);
+  afterEach(() => vi.unstubAllGlobals());
+
+  describe('the PDF', () => {
+    it("is fetched with the address alone, kept by nothing, and saved under the backend's name", async () => {
+      const { service, fetched, save, notifyError } = setup({ dialogResult: printRequest() });
+      service.printList({ totalMessageNo: 1, filterParams: '' }).subscribe();
+      await settle();
+
+      expect(fetched).toHaveBeenCalledTimes(1);
+      expect(fetched.mock.calls[0][1]).toEqual({ cache: 'no-store' });
+      expect(save).toHaveBeenCalledTimes(1);
+      const [file, name] = save.mock.calls[0] as [Blob, string];
+      expect(file.size).toBeGreaterThan(0);
+      expect(name).toBe('messages.pdf');
+      expect(notifyError).not.toHaveBeenCalled();
+    });
+
+    it('takes the name the backend wrote encoded, and the default one when it names none', async () => {
+      const named = setup({
+        dialogResult: printRequest(),
+        answer: async () =>
+          pdf({ 'Content-Disposition': 'attachment; filename="Notices%20to%20Mariners.pdf"' }),
+      });
+      named.service.printList({ totalMessageNo: 1, filterParams: '' }).subscribe();
+      await settle();
+      expect(named.save.mock.calls[0][1]).toBe('Notices to Mariners.pdf');
+
+      TestBed.resetTestingModule();
+      const unnamed = setup({ dialogResult: printRequest(), answer: async () => pdf() });
+      unnamed.service.printMessage('NM-123').subscribe();
+      await settle();
+      expect(unnamed.save.mock.calls[0][1]).toBe('message-NM-123.pdf');
+    });
+
+    // A navigation showed whatever the backend answered, so a failed print replaced the
+    // application with the backend's English error document.
+    it('that the backend cannot make is not saved, and a toast says it could not be generated', async () => {
+      for (const status of [403, 404, 500, 503]) {
+        TestBed.resetTestingModule();
+        const { service, save, notifyError } = setup({
+          dialogResult: printRequest(),
+          answer: async () =>
+            new Response(JSON.stringify({ status, detail: 'Message NM-123 not found' }), {
+              status,
+              headers: { 'Content-Type': 'application/problem+json' },
+            }),
+        });
+        service.printMessage('NM-123').subscribe();
+        await settle();
+
+        expect(save, `status ${status}`).not.toHaveBeenCalled();
+        expect(notifyError).toHaveBeenCalledWith('messages.print.errorDocument');
+      }
+    });
+
+    it('that never arrives is not saved, and a toast says it could not be generated', async () => {
+      const { service, save, notifyError } = setup({
+        dialogResult: printRequest(),
+        answer: () => Promise.reject(new TypeError('Failed to fetch')),
+      });
+      service.printList({ totalMessageNo: 1, filterParams: '' }).subscribe();
+      await settle();
+
+      expect(save).not.toHaveBeenCalled();
+      expect(notifyError).toHaveBeenCalledWith('messages.print.errorDocument');
+    });
+  });
 
   describe('printList', () => {
-    it('opens dialog with totalMessageNo + list=true, builds URL, navigates', () => {
-      const { service, open, navigate } = setup({ dialogResult: printRequest() });
+    it('opens dialog with totalMessageNo + list=true, builds URL, fetches it', () => {
+      const { service, open, fetched } = setup({ dialogResult: printRequest() });
       service
         .printList({ totalMessageNo: 42, filterParams: 'status=PUBLISHED&type=NW' })
         .subscribe();
 
       expect(open).toHaveBeenCalledWith({ totalMessageNo: 42, list: true });
-      expect(navigate).toHaveBeenCalledTimes(1);
-      const url = navigate.mock.calls[0][0] as string;
+      expect(fetched).toHaveBeenCalledTimes(1);
+      const url = fetched.mock.calls[0][0] as string;
       expect(url).toMatch(/^\/rest\/message-reports\/report\.pdf\?/);
       expect(url).toContain('report=summary');
       expect(url).toContain('pageSize=A4');
@@ -118,55 +205,55 @@ describe('MessagePrintService', () => {
     });
 
     it('empty filterParams produces no trailing & after print params', () => {
-      const { service, navigate } = setup({ dialogResult: printRequest() });
+      const { service, fetched } = setup({ dialogResult: printRequest() });
       service.printList({ totalMessageNo: 1, filterParams: '' }).subscribe();
-      const url = navigate.mock.calls[0][0] as string;
+      const url = fetched.mock.calls[0][0] as string;
       expect(url.endsWith('&')).toBe(false);
     });
 
-    it('dialog dismiss → no navigation', () => {
-      const { service, navigate } = setup({ dialogResult: undefined });
+    it('dialog dismiss → no fetch', () => {
+      const { service, fetched } = setup({ dialogResult: undefined });
       service.printList({ totalMessageNo: 1, filterParams: '' }).subscribe();
-      expect(navigate).not.toHaveBeenCalled();
+      expect(fetched).not.toHaveBeenCalled();
     });
   });
 
   describe('printSelection', () => {
-    it('creates a temp tag, appends &tag=<id>, navigates', () => {
-      const { service, createTempMessageTag, navigate } = setup({ dialogResult: printRequest() });
+    it('creates a temp tag, appends &tag=<id>, fetches it', () => {
+      const { service, createTempMessageTag, fetched } = setup({ dialogResult: printRequest() });
       service.printSelection(['m1', 'm2'], 'status=PUBLISHED').subscribe();
 
       expect(createTempMessageTag).toHaveBeenCalledWith(['m1', 'm2']);
-      const url = navigate.mock.calls[0][0] as string;
+      const url = fetched.mock.calls[0][0] as string;
       expect(url).toContain('tag=temp-1');
       expect(url).toContain('&status=PUBLISHED');
     });
 
-    it('dialog dismiss → no temp tag, no navigation', () => {
-      const { service, createTempMessageTag, navigate } = setup({ dialogResult: undefined });
+    it('dialog dismiss → no temp tag, no fetch', () => {
+      const { service, createTempMessageTag, fetched } = setup({ dialogResult: undefined });
       service.printSelection(['m1'], '').subscribe();
       expect(createTempMessageTag).not.toHaveBeenCalled();
-      expect(navigate).not.toHaveBeenCalled();
+      expect(fetched).not.toHaveBeenCalled();
     });
 
-    it('temp-tag failure → error toast, no navigation', () => {
-      const { service, navigate, notifyError } = setup({
+    it('temp-tag failure → error toast, no fetch', () => {
+      const { service, fetched, notifyError } = setup({
         dialogResult: printRequest(),
         tempTagError: true,
       });
       service.printSelection(['m1'], '').subscribe();
-      expect(navigate).not.toHaveBeenCalled();
+      expect(fetched).not.toHaveBeenCalled();
       expect(notifyError).toHaveBeenCalledWith('messages.print.errorTempTag');
     });
   });
 
   describe('printMessage', () => {
-    it('opens dialog with list=false, navigates to per-message URL (no filter params)', () => {
-      const { service, open, navigate } = setup({ dialogResult: printRequest() });
+    it('opens dialog with list=false, fetches the per-message URL (no filter params)', () => {
+      const { service, open, fetched } = setup({ dialogResult: printRequest() });
       service.printMessage('NM-123').subscribe();
 
       expect(open).toHaveBeenCalledWith({ totalMessageNo: 1, list: false });
-      const url = navigate.mock.calls[0][0] as string;
+      const url = fetched.mock.calls[0][0] as string;
       expect(url).toMatch(/^\/rest\/message-reports\/message\/NM-123\.pdf\?/);
       expect(url).toContain('pageSize=A4');
       expect(url).toContain('ticket=TICKET-XYZ');
@@ -176,9 +263,9 @@ describe('MessagePrintService', () => {
     });
 
     it('URL-encodes the messageId in the path', () => {
-      const { service, navigate } = setup({ dialogResult: printRequest() });
+      const { service, fetched } = setup({ dialogResult: printRequest() });
       service.printMessage('NM/123 X').subscribe();
-      const url = navigate.mock.calls[0][0] as string;
+      const url = fetched.mock.calls[0][0] as string;
       expect(url).toContain('/message/NM%2F123%20X.pdf');
     });
   });
@@ -191,22 +278,22 @@ describe('MessagePrintService', () => {
       params: {},
     };
 
-    it('opens the dialog with the hardcoded report, appends the chosen tag, navigates (no filter)', () => {
-      const { service, open, navigate } = setup({ dialogResult: printRequest() });
+    it('opens the dialog with the hardcoded report, appends the chosen tag, fetches it (no filter)', () => {
+      const { service, open, fetched } = setup({ dialogResult: printRequest() });
       service.printReportTest(report, 'tag-99').subscribe();
 
       expect(open).toHaveBeenCalledWith({ totalMessageNo: 0, list: true, report });
-      const url = navigate.mock.calls[0][0] as string;
+      const url = fetched.mock.calls[0][0] as string;
       expect(url).toMatch(/^\/rest\/message-reports\/report\.pdf\?/);
       expect(url).toContain('tag=tag-99');
       // A test-print appends no filter params.
       expect(url).not.toContain('status=');
     });
 
-    it('dialog dismiss → no navigation', () => {
-      const { service, navigate } = setup({ dialogResult: undefined });
+    it('dialog dismiss → no fetch', () => {
+      const { service, fetched } = setup({ dialogResult: undefined });
       service.printReportTest(report, 'tag-99').subscribe();
-      expect(navigate).not.toHaveBeenCalled();
+      expect(fetched).not.toHaveBeenCalled();
     });
 
     // Only /reports expands a stored report's ${year} and ${week}; the in-edit report is sent to
@@ -231,7 +318,7 @@ describe('MessagePrintService', () => {
     });
 
     it('says the parameters could not be prepared and opens no dialog when the expansion fails', () => {
-      const { service, open, navigate, notifyError } = setup({
+      const { service, open, fetched, notifyError } = setup({
         dialogResult: printRequest(),
         expandError: true,
       });
@@ -239,7 +326,7 @@ describe('MessagePrintService', () => {
 
       expect(notifyError).toHaveBeenCalledWith('messages.print.errorExpandParams');
       expect(open).not.toHaveBeenCalled();
-      expect(navigate).not.toHaveBeenCalled();
+      expect(fetched).not.toHaveBeenCalled();
     });
   });
 });

@@ -395,7 +395,8 @@ that 503 with a page of the site's own (`ui-apps/info/public/pdf-busy.html`), st
 documents are being prepared for other readers and to try again in a moment. Any other failure of
 the two — a 400, 403, 404 or 500, or a backend that does not answer — gets the site's
 `pdf-failed.html` with the failure's status, which says the document failed to load
-(`DOCUMENT_LOAD_FAILED`).
+(`DOCUMENT_LOAD_FAILED`). The administration app fetches its prints rather than navigating to them,
+and says in a toast when one fails (`MessagePrintService`).
 
 `debug=true` on either endpoint returns the HTML the PDF is rendered from instead of the PDF —
 the cheap way to see which messages a set of parameters actually selects — and the free-form

@@ -3648,6 +3648,7 @@
       "errorTicket": "Failed to obtain print ticket. Please try again.",
       "errorTempTag": "Failed to prepare selection for print.",
       "errorExpandParams": "Failed to prepare the report's parameters for the test print. Please try again.",
+      "errorDocument": "The document could not be generated.",
       "settings": {
         "report": "Report",
         "layout": "Layout",

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { DOCUMENT, Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, catchError, map, of, switchMap } from 'rxjs';
 
 import { APP_CONFIG } from '../../../core/config/app-config.token';
@@ -9,22 +9,6 @@ import { MessagePrintDialogService } from '../dialogs/message-print-dialog/messa
 import type { MessageReport } from '../../../shared/models/print/message-report.model';
 import { MessageReportsApiService } from './api/message-reports-api.service';
 import { TagsApiService } from './api/tags-api.service';
-
-/**
- * Window-location boundary. Tests override this via `TestBed.overrideProvider`
- * to assert URL construction without actually navigating away.
- */
-export interface BrowserNavigator {
-  navigate(url: string): void;
-}
-
-const DEFAULT_BROWSER_NAVIGATOR: BrowserNavigator = {
-  navigate(url) {
-    if (typeof window !== 'undefined') {
-      window.location.href = url;
-    }
-  },
-};
 
 export interface PrintListOptions {
   /** Visible to user in the dialog header. */
@@ -37,8 +21,9 @@ export interface PrintListOptions {
  * Orchestrator for the three print flows. Each method:
  *   1. Opens the print dialog with the appropriate count + list mode.
  *   2. On PrintRequest, builds the URL (with optional temp-tag for selection).
- *   3. Navigates the browser to the URL — the backend serves the PDF, which
- *      the browser handles as a download. window.location stays put.
+ *   3. Fetches the PDF from the URL and hands it to the browser as a download;
+ *      when the backend cannot make it, a toast says so and the page stays as
+ *      it was (see `download`).
  *
  * The service takes total + filter as caller-supplied parameters rather than
  * injecting MessageListFacade + MessagesFilterFacade — keeps the dependency
@@ -51,17 +36,15 @@ export class MessagePrintService {
   private readonly reportsApi = inject(MessageReportsApiService);
   private readonly language = inject(LanguageService);
   private readonly notifications = inject(NotificationService);
+  private readonly document = inject(DOCUMENT);
   private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
-
-  /** Overridable for tests; see message-print.service.spec.ts. */
-  protected readonly navigator: BrowserNavigator = DEFAULT_BROWSER_NAVIGATOR;
 
   printList(options: PrintListOptions): Observable<void> {
     return this.dialog.open({ totalMessageNo: options.totalMessageNo, list: true }).pipe(
       map((request) => {
         if (!request) return;
         const url = this.buildListUrl(request, undefined, options.filterParams);
-        this.navigator.navigate(url);
+        this.download(fetch(url, NOT_KEPT), LIST_FILE_NAME);
       }),
     );
   }
@@ -73,7 +56,7 @@ export class MessagePrintService {
         return this.tagsApi.createTempMessageTag(messageIds).pipe(
           map((tempTag) => {
             const url = this.buildListUrl(request, tempTag.tagId, filterParams);
-            this.navigator.navigate(url);
+            this.download(fetch(url, NOT_KEPT), LIST_FILE_NAME);
           }),
           catchError(() => {
             this.notifications.error('messages.print.errorTempTag');
@@ -89,7 +72,7 @@ export class MessagePrintService {
       map((request) => {
         if (!request) return;
         const url = this.buildSingleMessageUrl(messageId, request);
-        this.navigator.navigate(url);
+        this.download(fetch(url, NOT_KEPT), `message-${messageId}.pdf`);
       }),
     );
   }
@@ -121,9 +104,43 @@ export class MessagePrintService {
       map((request) => {
         if (!request) return;
         const url = this.buildListUrl(request, tagId || undefined, '');
-        this.navigator.navigate(url);
+        this.download(fetch(url, NOT_KEPT), LIST_FILE_NAME);
       }),
     );
+  }
+
+  /**
+   * Hand the fetched PDF to the browser as a download, or say that it could not be made.
+   *
+   * Fetched rather than navigated to: a navigation shows whatever the backend answers, so a print
+   * it cannot make (a message no longer there, an error while rendering, a backend that does not
+   * answer) replaced the application with the backend's error document. The request is the one
+   * the navigation made — the address with its one-time ticket, no bearer and no domain header,
+   * which is why it is the browser's own fetch and not HttpClient, whose interceptors add both —
+   * so the backend answers it exactly as it answered the navigation (`NOT_KEPT`).
+   *
+   * The document is named as the backend names it, or by `fallbackName` when the backend's name
+   * cannot be read.
+   */
+  private download(answer: Promise<Response>, fallbackName: string): void {
+    answer
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        this.saveFile(await response.blob(), fileNameOf(response, fallbackName));
+      })
+      .catch(() => this.notifications.error('messages.print.errorDocument'));
+  }
+
+  /** Hand a fetched document to the browser as a download; overridable for tests. */
+  protected saveFile(file: Blob, name: string): void {
+    const objectUrl = URL.createObjectURL(file);
+    const link = this.document.createElement('a');
+    link.href = objectUrl;
+    link.download = name;
+    link.click();
+    // Released once the click has been dispatched; the browser has taken its own reference by
+    // then, and holding it would keep the document in memory for the life of the page.
+    URL.revokeObjectURL(objectUrl);
   }
 
   /**
@@ -173,5 +190,25 @@ export class MessagePrintService {
     params.set('ticket', request.ticket);
     params.set('lang', request.settings.language ?? this.language.selectedLanguage());
     return params;
+  }
+}
+
+/** How a print is fetched: as a navigation would ask, and kept by nothing. */
+const NOT_KEPT: RequestInit = { cache: 'no-store' };
+
+/** The name the backend gives a printed list when the request names none. */
+const LIST_FILE_NAME = 'messages.pdf';
+
+/**
+ * The file name of a Content-Disposition `filename="…"`, which the backend writes URI-encoded, or
+ * the fallback when the response carries none the page can read.
+ */
+function fileNameOf(response: Response, fallback: string): string {
+  const quoted = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1];
+  if (!quoted) return fallback;
+  try {
+    return decodeURIComponent(quoted);
+  } catch {
+    return quoted;
   }
 }
