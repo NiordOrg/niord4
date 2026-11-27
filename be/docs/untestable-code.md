@@ -1014,16 +1014,22 @@ lists what would unblock it.
 
 ## `PublicationRestService.releasePublication()` / `generatePublicationReport()` — live PDF round-trip
 
-- **Location:** `niord/src/main/java/org/niord/web/PublicationRestService.java`, `releasePublication` (~538-560) and `generatePublicationReport` (~448-497).
-- **Why it is hard to test:** both perform a live HTTP round-trip from the running server back to
-  `/rest/message-reports/report.pdf`, which renders a PDF through the message-report FreeMarker/print pipeline. Driving
-  a success needs a `MESSAGE_REPORT` publication in `RECORDING` with a real `MessageTag` and `printSettings.report`,
-  plus the renderer producing a 200 PDF — not constructible purely through the public REST surface, and heavyweight/
-  brittle for an endpoint test. `PublicationRestReleaseITTest` therefore drives every reachable branch up to (but not
-  including) the rendering round-trip (e.g. release of a non-report publication, the auth oracle, validation negatives).
-- **What would make it testable:** a fixture/seed providing a fully-formed `MESSAGE_REPORT` publication plus a stub
-  `/rest/message-reports/report.pdf` returning a canned PDF; or an injectable seam replacing the HTTP round-trip with a
-  test double so the status-to-`ACTIVE` and next-issue-creation outcomes can be asserted in isolation.
+- **Location:** `niord/src/main/java/org/niord/web/PublicationRestService.java`, `releasePublication` (~815-880) and
+  `generatePublicationReport` (~716-797).
+- **Covered:** a release with its reports, through the live HTTP round-trip from the running server back to
+  `/rest/message-reports/report.pdf`, is driven by `PublicationsSweepGroup#publicationRelease`: it releases the sweep
+  fixture's `RECORDING` publication and asserts that it is `ACTIVE`, that its English description names a report
+  which answers a PDF, and that its message tag is locked. A release of a publication without any text, which opens
+  no round-trip (the round-trip runs once per description), is carried to `ACTIVE` by
+  `PublicationRestReleaseITTest#releasePublication_aRecordingReportWithoutAnyTextIsReleasedWithoutAReport`; the rest of
+  `PublicationRestReleaseITTest` holds the branches before the round-trip (the four-way validation guard, the
+  temp-folder guard, the authorization boundaries).
+- **Why it is still hard to test:** the report round-trip in isolation: a release with descriptions renders a real
+  PDF through the message-report print pipeline, so it is driven only by the sweep's fixture. Not asserted by any
+  test: the release's creation of the next issue (`nextIssue=true` on a periodical publication).
+- **What would make it testable:** an injectable seam replacing the HTTP round-trip with a test double, so that a
+  release with descriptions can be carried through without the renderer; the next-issue creation needs no seam, as a
+  periodical publication without any text released with `nextIssue=true` reaches it without a round-trip.
 
 ## `PublicationRestService.importPublications()` (`POST /upload-publications`) — async JBeret import — covered
 
