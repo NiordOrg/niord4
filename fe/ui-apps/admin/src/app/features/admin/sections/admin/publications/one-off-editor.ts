@@ -64,6 +64,7 @@ import {
   MESSAGE_PUBLICATIONS,
   PAGE_ORIENTATIONS,
   PAGE_SIZES,
+  pageSizeTextKey,
   previewIntervalFrom,
   reservedReportParamKeys,
   seriesWritable,
@@ -227,6 +228,7 @@ export class OneOffEditor {
     (relation) => relation !== 'COMPILED_FROM_SOURCE',
   );
   protected readonly pageSizes = PAGE_SIZES;
+  protected readonly pageSizeTextKey = pageSizeTextKey;
   protected readonly pageOrientations = PAGE_ORIENTATIONS;
   protected readonly sortDirections: readonly SortDirection[] = ['ASC', 'DESC'];
 

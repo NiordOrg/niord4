@@ -77,6 +77,7 @@ import {
   NUMBERING_SCHEMES,
   PAGE_ORIENTATIONS,
   PAGE_SIZES,
+  pageSizeTextKey,
   isReservedReportParamKey,
   previewIntervalFrom,
   reservedReportParamKeys,
@@ -235,6 +236,7 @@ export class PublicationSeriesEditor {
   protected readonly numberingSchemes = NUMBERING_SCHEMES;
   protected readonly contentModes = CONTENT_MODES;
   protected readonly pageSizes = PAGE_SIZES;
+  protected readonly pageSizeTextKey = pageSizeTextKey;
   protected readonly pageOrientations = PAGE_ORIENTATIONS;
   protected readonly messagePublications = MESSAGE_PUBLICATIONS;
   protected readonly timeRelations = TIME_RELATIONS;

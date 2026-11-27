@@ -430,7 +430,7 @@
                       >
                         @for (option of pageSizes; track option) {
                           <option [value]="option" [selected]="value().pageSize === option">
-                            {{ option }}
+                            {{ pageSizeTextKey(option) | transloco }}
                           </option>
                         }
                       </select>

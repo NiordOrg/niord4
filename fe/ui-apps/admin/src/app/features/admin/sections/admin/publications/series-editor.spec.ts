@@ -1781,6 +1781,38 @@ describe('PublicationSeriesEditor', () => {
    * one its template ignores, so this is a shortcut to a row and never a check on
    * the series: nothing is added for anybody, and nothing is refused.
    */
+  it('names each page size as the print dialog does, the stored size as the value', () => {
+    const { fixture, host, httpTesting } = setup(DOMAINS);
+    TestBed.inject(TranslocoService).setTranslation(
+      {
+        'messages.print.settings.paperSize.A4': 'A4',
+        'messages.print.settings.paperSize.letter': 'Letter',
+        'messages.print.settings.paperSize.ledger': 'Ledger',
+      },
+      'en',
+      { merge: true },
+    );
+    open(fixture, host, { mode: 'edit', series: WEEKLY_WITH_REPORT }, httpTesting);
+    fixture.detectChanges();
+
+    const options = [...document.querySelectorAll<HTMLOptionElement>('#series-page-size option')];
+    expect(options.map((option) => option.value)).toEqual([
+      'A3',
+      'A4',
+      'A5',
+      'B4',
+      'B5',
+      'LETTER',
+      'LEGAL',
+      'LEDGER',
+    ]);
+    const text = (value: string) =>
+      options.find((option) => option.value === value)?.textContent?.trim();
+    expect(text('A4')).toBe('A4');
+    expect(text('LETTER')).toBe('Letter');
+    expect(text('LEDGER')).toBe('Ledger');
+  });
+
   describe('the parameters the report names', () => {
     /**
      * The report's declared parameters, with values that must not be offered:

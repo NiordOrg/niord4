@@ -268,7 +268,9 @@
               </span>
               <select class="text-input" (change)="setField('pageSize', $any($event.target).value)">
                 @for (size of pageSizes; track size) {
-                  <option [value]="size" [selected]="value().pageSize === size">{{ size }}</option>
+                  <option [value]="size" [selected]="value().pageSize === size">
+                    {{ pageSizeTextKey(size) | transloco }}
+                  </option>
                 }
               </select>
             </label>

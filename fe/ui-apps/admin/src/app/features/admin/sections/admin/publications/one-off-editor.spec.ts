@@ -435,6 +435,35 @@ describe('OneOffEditor', () => {
     ]);
   });
 
+  it('names each page size as the print dialog does, the stored size as the value', async () => {
+    await setup({ mode: 'edit', publication: QUERY_BACKED });
+
+    const select = [...panel().querySelectorAll<HTMLSelectElement>('select')].find((candidate) =>
+      [...candidate.options].some((option) => option.value === 'LETTER'),
+    );
+    const options = [...(select?.options ?? [])];
+    expect(options.map((option) => option.value)).toEqual([
+      'A3',
+      'A4',
+      'A5',
+      'B4',
+      'B5',
+      'LETTER',
+      'LEGAL',
+      'LEDGER',
+    ]);
+    expect(options.map((option) => option.textContent?.trim())).toEqual([
+      'messages.print.settings.paperSize.A3',
+      'messages.print.settings.paperSize.A4',
+      'messages.print.settings.paperSize.A5',
+      'messages.print.settings.paperSize.B4',
+      'messages.print.settings.paperSize.B5',
+      'messages.print.settings.paperSize.letter',
+      'messages.print.settings.paperSize.legal',
+      'messages.print.settings.paperSize.ledger',
+    ]);
+  });
+
   it('shows no criteria editor on a publication that is not query-backed', async () => {
     await setup({ mode: 'add' });
 

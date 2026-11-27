@@ -1,3 +1,4 @@
+import type { PaperSize } from '../../../../../shared/models/print/print-settings.model';
 import { formatWallClockTime, parseWallClockTime } from '../../../../../shared/utils/zoned-date';
 import type {
   Availability,
@@ -211,6 +212,26 @@ export const PAGE_SIZES: readonly PageSize[] = [
   'LEGAL',
   'LEDGER',
 ];
+
+/**
+ * The paper each page size is, in the message print dialog's words: the same eight sizes, with
+ * the three US papers spelled in lower case there.
+ */
+const PAPER_OF_PAGE_SIZE: Readonly<Record<PageSize, PaperSize>> = {
+  A3: 'A3',
+  A4: 'A4',
+  A5: 'A5',
+  B4: 'B4',
+  B5: 'B5',
+  LETTER: 'letter',
+  LEGAL: 'legal',
+  LEDGER: 'ledger',
+};
+
+/** The text key of a page size's name ("Letter" for `LETTER`). */
+export function pageSizeTextKey(size: PageSize): string {
+  return `messages.print.settings.paperSize.${PAPER_OF_PAGE_SIZE[size]}`;
+}
 
 export const PAGE_ORIENTATIONS: readonly PageOrientation[] = ['PORTRAIT', 'LANDSCAPE'];
 export const MESSAGE_PUBLICATIONS: readonly MessagePublication[] = ['NONE', 'INTERNAL', 'EXTERNAL'];
