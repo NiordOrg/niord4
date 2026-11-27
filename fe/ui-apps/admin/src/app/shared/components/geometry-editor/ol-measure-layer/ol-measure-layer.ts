@@ -1,4 +1,5 @@
 import { Component, DestroyRef, effect, inject, input } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { Overlay, type Map as OlMap } from 'ol';
 import type { EventsKey } from 'ol/events';
 import type { LineString } from 'ol/geom';
@@ -56,6 +57,7 @@ export class OlMeasureLayer {
   private readonly shell = inject(MapShellService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly language = inject(LanguageService);
+  private readonly transloco = inject(TranslocoService);
 
   readonly active = input<boolean>(false);
 
@@ -111,7 +113,9 @@ export class OlMeasureLayer {
     const geometry = event.feature.getGeometry() as LineString;
     this.sketchListener = geometry.on('change', () => {
       const length = getLength(geometry, { projection: FEATURE_PROJECTION, radius: WGS84_RADIUS });
-      const distance = formatDistance(length, this.language.activeLocale());
+      const distance = formatDistance(length, this.language.activeLocale(), (unit) =>
+        this.transloco.translate(`common.distanceUnit.${unit}`),
+      );
       if (this.liveTooltipElement) {
         this.liveTooltipElement.textContent = `${distance.meters} · ${distance.kilometers} · ${distance.nauticalMiles}`;
       }

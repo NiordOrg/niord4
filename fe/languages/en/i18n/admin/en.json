@@ -24,6 +24,11 @@
     },
     "dateTime": {
       "noTimeZone": "No time zone: choose a domain, or ask a sysadmin to give this domain a time zone"
+    },
+    "distanceUnit": {
+      "m": "m",
+      "km": "km",
+      "nm": "nm"
     }
   },
   "schedule": {
