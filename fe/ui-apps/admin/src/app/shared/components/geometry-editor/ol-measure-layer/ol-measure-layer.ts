@@ -40,6 +40,17 @@ function measureStyle(): Style {
 }
 
 /**
+ * The measure tooltip's text for a length in metres: metres · kilometres · nautical miles, in the
+ * locale's numbers, each unit written as the language's text for it (`common.distanceUnit.<unit>`).
+ */
+export function measureLabel(meters: number, locale: string, transloco: TranslocoService): string {
+  const distance = formatDistance(meters, locale, (unit) =>
+    transloco.translate(`common.distanceUnit.${unit}`),
+  );
+  return `${distance.meters} · ${distance.kilometers} · ${distance.nauticalMiles}`;
+}
+
+/**
  * The measure tool. When `[active]`
  * (the editor's `drawMode === 'measure'`), a LineString draw is enabled and a live OL
  * `Overlay` tooltip shows the path length in m / km / nm (geodesic, via `ol/sphere`
@@ -113,11 +124,12 @@ export class OlMeasureLayer {
     const geometry = event.feature.getGeometry() as LineString;
     this.sketchListener = geometry.on('change', () => {
       const length = getLength(geometry, { projection: FEATURE_PROJECTION, radius: WGS84_RADIUS });
-      const distance = formatDistance(length, this.language.activeLocale(), (unit) =>
-        this.transloco.translate(`common.distanceUnit.${unit}`),
-      );
       if (this.liveTooltipElement) {
-        this.liveTooltipElement.textContent = `${distance.meters} · ${distance.kilometers} · ${distance.nauticalMiles}`;
+        this.liveTooltipElement.textContent = measureLabel(
+          length,
+          this.language.activeLocale(),
+          this.transloco,
+        );
       }
       this.liveTooltip?.setPosition(geometry.getLastCoordinate());
     });
