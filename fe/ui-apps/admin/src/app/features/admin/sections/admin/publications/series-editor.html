@@ -566,7 +566,7 @@
                       @for (option of messageSortByOptions(); track option.value) {
                         <option
                           [value]="option.value"
-                          [selected]="value().messageSortBy === option.value"
+                          [selected]="messageSortByChoice() === option.value"
                         >
                           @if (option.labelKey) {
                             {{ option.labelKey | transloco }}

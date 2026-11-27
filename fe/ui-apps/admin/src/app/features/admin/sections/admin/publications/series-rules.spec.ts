@@ -11,6 +11,7 @@ import {
   isQueryBacked,
   isReservedReportParamKey,
   livenessIsForced,
+  messageSortByChoice,
   messageSortByOptions,
   nextIssueIsDerived,
   ownerVerdict,
@@ -769,12 +770,25 @@ describe('messageSortByOptions', () => {
     expect(messageSortByOptions('EVENT_DATE')).toEqual(messageSortByOptions(''));
   });
 
-  /** A value the select does not name stays the series' value, shown as stored. */
-  it('keeps a stored value it does not name, without a text, after the domain order', () => {
-    const options = messageSortByOptions('publishDate');
+  /** A spelling the server also reads is the choice it names, not a code of its own. */
+  it('reads a stored value as the server does: trimmed, in any case, and its other spellings', () => {
+    expect(messageSortByChoice('publishDate')).toBe('PUBLISH_DATE');
+    expect(messageSortByChoice(' area ')).toBe('AREA');
+    expect(messageSortByChoice('EVENTDATE')).toBe('EVENT_DATE');
+    expect(messageSortByChoice('FollowUpDate')).toBe('FOLLOW_UP_DATE');
+    expect(messageSortByChoice('id')).toBe('ID');
+    expect(messageSortByChoice('  ')).toBe('');
+    expect(messageSortByChoice('TITLE')).toBe('TITLE');
+    expect(messageSortByOptions('publishDate')).toEqual(messageSortByOptions(''));
+    expect(messageSortByOptions('FOLLOWUPDATE')).toEqual(messageSortByOptions(''));
+  });
+
+  /** A value the server would refuse stays the series' value, shown as stored. */
+  it('keeps a stored value the server would refuse, without a text, after the domain order', () => {
+    const options = messageSortByOptions('TITLE');
     expect(options.map((option) => option.value)).toEqual([
       '',
-      'publishDate',
+      'TITLE',
       'AREA',
       'PUBLISH_DATE',
       'EVENT_DATE',

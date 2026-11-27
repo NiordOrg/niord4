@@ -1848,11 +1848,11 @@ describe('PublicationSeriesEditor', () => {
     expect(document.querySelector<HTMLSelectElement>('#series-sort-order')?.disabled).toBe(false);
   });
 
-  it('shows a stored sort value it does not name as stored, chosen', () => {
+  it('shows a stored sort value the server would refuse as stored, chosen', () => {
     const { fixture, host, httpTesting } = setup(DOMAINS);
     const stored = {
       ...WEEKLY_WITH_REPORT,
-      messageSortBy: 'publishDate',
+      messageSortBy: 'TITLE',
       messageSortOrder: 'DESC',
     } as PublicationSeries;
     open(fixture, host, { mode: 'edit', series: stored }, httpTesting);
@@ -1860,8 +1860,27 @@ describe('PublicationSeriesEditor', () => {
 
     const select = document.querySelector<HTMLSelectElement>('#series-sort-by')!;
     const chosen = select.options[select.selectedIndex];
-    expect(chosen.value).toBe('publishDate');
-    expect(chosen.textContent?.trim()).toBe('publishDate');
+    expect(chosen.value).toBe('TITLE');
+    expect(chosen.textContent?.trim()).toBe('TITLE');
+  });
+
+  it('shows a stored spelling the server also reads as the field it names', () => {
+    const { fixture, host, httpTesting } = setup(DOMAINS);
+    const stored = {
+      ...WEEKLY_WITH_REPORT,
+      messageSortBy: 'publishDate',
+      messageSortOrder: 'DESC',
+    } as PublicationSeries;
+    const editor = open(fixture, host, { mode: 'edit', series: stored }, httpTesting);
+    fixture.detectChanges();
+
+    const select = document.querySelector<HTMLSelectElement>('#series-sort-by')!;
+    expect([...select.options].map((option) => option.value)).not.toContain('publishDate');
+    const chosen = select.options[select.selectedIndex];
+    expect(chosen.value).toBe('PUBLISH_DATE');
+    expect(chosen.textContent?.trim()).toBe('messages.shell.action.sortBy.publishDate');
+    // Untouched, the series keeps its own spelling.
+    expect(editor.value().messageSortBy).toBe('publishDate');
   });
 
   describe('the parameters the report names', () => {

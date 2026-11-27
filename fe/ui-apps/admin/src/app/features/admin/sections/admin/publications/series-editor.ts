@@ -78,6 +78,7 @@ import {
   PAGE_ORIENTATIONS,
   PAGE_SIZES,
   pageSizeTextKey,
+  messageSortByChoice,
   messageSortByOptions,
   isReservedReportParamKey,
   previewIntervalFrom,
@@ -298,6 +299,11 @@ export class PublicationSeriesEditor {
   /** The sort-field choices, with the series' own value among them. */
   protected readonly messageSortByOptions = computed(() =>
     messageSortByOptions(this.value().messageSortBy),
+  );
+
+  /** The choice the series' sort field is, as the server reads it. */
+  protected readonly messageSortByChoice = computed(() =>
+    messageSortByChoice(this.value().messageSortBy),
   );
 
   /**

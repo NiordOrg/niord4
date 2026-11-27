@@ -253,13 +253,33 @@ const MESSAGE_SORT_BY_OPTIONS: readonly MessageSortByOption[] = [
   { value: 'ID', labelKey: 'messages.shell.action.sortBy.id' },
 ];
 
+/** The other spellings the server reads a sort field by, in upper case, and the field they name. */
+const MESSAGE_SORT_BY_ALIASES: Readonly<Record<string, string>> = {
+  PUBLISHDATE: 'PUBLISH_DATE',
+  EVENTDATE: 'EVENT_DATE',
+  FOLLOWUPDATE: 'FOLLOW_UP_DATE',
+};
+
 /**
- * The choices of the "Sort messages by" select. A stored value that is none of them (a spelling
- * the server also reads, or one it will refuse) is offered too, after the empty choice, so the
- * select shows what the series holds and an untouched save sends it back.
+ * The choice of the "Sort messages by" select a stored value is, read as the server reads it:
+ * trimmed, in any letter case, and with the spellings it also takes (`publishDate`,
+ * `FOLLOWUPDATE`); a blank value is the domain's order. A value the server would refuse is
+ * returned as stored.
+ */
+export function messageSortByChoice(stored: string): string {
+  const read = (stored ?? '').trim().toUpperCase();
+  const field = MESSAGE_SORT_BY_ALIASES[read] ?? read;
+  return MESSAGE_SORT_BY_OPTIONS.some((option) => option.value === field) ? field : stored;
+}
+
+/**
+ * The choices of the "Sort messages by" select. A stored value the server would refuse is offered
+ * too, after the empty choice, so the select shows what the series holds and an untouched save
+ * sends it back.
  */
 export function messageSortByOptions(stored: string): readonly MessageSortByOption[] {
-  if (MESSAGE_SORT_BY_OPTIONS.some((option) => option.value === stored)) {
+  const choice = messageSortByChoice(stored);
+  if (MESSAGE_SORT_BY_OPTIONS.some((option) => option.value === choice)) {
     return MESSAGE_SORT_BY_OPTIONS;
   }
   const [domainOrder, ...fields] = MESSAGE_SORT_BY_OPTIONS;

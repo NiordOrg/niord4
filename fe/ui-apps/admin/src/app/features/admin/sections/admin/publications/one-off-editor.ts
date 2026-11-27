@@ -65,6 +65,7 @@ import {
   PAGE_ORIENTATIONS,
   PAGE_SIZES,
   pageSizeTextKey,
+  messageSortByChoice,
   messageSortByOptions,
   previewIntervalFrom,
   reservedReportParamKeys,
@@ -244,6 +245,10 @@ export class OneOffEditor {
   /** The sort-field choices, with the publication's own value among them. */
   protected readonly messageSortByOptions = computed(() =>
     messageSortByOptions(this.value().messageSortBy),
+  );
+  /** The choice the publication's sort field is, as the server reads it. */
+  protected readonly messageSortByChoice = computed(() =>
+    messageSortByChoice(this.value().messageSortBy),
   );
 
   /**
