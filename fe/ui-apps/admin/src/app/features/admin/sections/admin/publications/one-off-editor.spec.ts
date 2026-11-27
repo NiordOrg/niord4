@@ -435,6 +435,82 @@ describe('OneOffEditor', () => {
     ]);
   });
 
+  it('names each page size as the print dialog does, the stored size as the value', async () => {
+    await setup({ mode: 'edit', publication: QUERY_BACKED });
+
+    const select = [...panel().querySelectorAll<HTMLSelectElement>('select')].find((candidate) =>
+      [...candidate.options].some((option) => option.value === 'LETTER'),
+    );
+    const options = [...(select?.options ?? [])];
+    expect(options.map((option) => option.value)).toEqual([
+      'A3',
+      'A4',
+      'A5',
+      'B4',
+      'B5',
+      'LETTER',
+      'LEGAL',
+      'LEDGER',
+    ]);
+    expect(options.map((option) => option.textContent?.trim())).toEqual([
+      'messages.print.settings.paperSize.A3',
+      'messages.print.settings.paperSize.A4',
+      'messages.print.settings.paperSize.A5',
+      'messages.print.settings.paperSize.B4',
+      'messages.print.settings.paperSize.B5',
+      'messages.print.settings.paperSize.letter',
+      'messages.print.settings.paperSize.legal',
+      'messages.print.settings.paperSize.ledger',
+    ]);
+  });
+
+  it('offers the sort fields as named choices, with a stored value the server would refuse as stored', async () => {
+    const stored: OneOffPublication = {
+      ...QUERY_BACKED,
+      series: {
+        ...QUERY_BACKED.series,
+        messageSortBy: 'TITLE',
+        messageSortOrder: 'ASC',
+      } as PublicationSeries,
+    };
+    await setup({ mode: 'edit', publication: stored });
+
+    const select = [...panel().querySelectorAll<HTMLSelectElement>('select')].find((candidate) =>
+      [...candidate.options].some((option) => option.value === 'FOLLOW_UP_DATE'),
+    );
+    const options = [...(select?.options ?? [])];
+    expect(options.map((option) => option.textContent?.trim())).toEqual([
+      'admin.publications.series.option.domainSort',
+      'TITLE',
+      'messages.shell.action.sortBy.area',
+      'messages.shell.action.sortBy.publishDate',
+      'messages.shell.action.sortBy.date',
+      'messages.shell.action.sortBy.followUpDate',
+      'messages.shell.action.sortBy.id',
+    ]);
+    expect(select?.value).toBe('TITLE');
+  });
+
+  it('shows a stored spelling the server also reads as the field it names', async () => {
+    const stored: OneOffPublication = {
+      ...QUERY_BACKED,
+      series: {
+        ...QUERY_BACKED.series,
+        messageSortBy: 'FOLLOWUPDATE',
+        messageSortOrder: 'ASC',
+      } as PublicationSeries,
+    };
+    await setup({ mode: 'edit', publication: stored });
+
+    const select = [...panel().querySelectorAll<HTMLSelectElement>('select')].find((candidate) =>
+      [...candidate.options].some((option) => option.value === 'FOLLOW_UP_DATE'),
+    );
+    expect([...(select?.options ?? [])].map((option) => option.value)).not.toContain(
+      'FOLLOWUPDATE',
+    );
+    expect(select?.value).toBe('FOLLOW_UP_DATE');
+  });
+
   it('shows no criteria editor on a publication that is not query-backed', async () => {
     await setup({ mode: 'add' });
 

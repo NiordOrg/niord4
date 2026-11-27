@@ -80,15 +80,15 @@
     </div>
   }
 
-  @for (key of reportParamKeys(); track key) {
+  @for (param of reportParamFields(); track param.key) {
     <div class="flex items-center gap-3">
-      <label [for]="'printParam_' + key" class="w-32">{{ key }}</label>
+      <label [for]="'printParam_' + param.key" class="w-32">{{ param.label }}</label>
       <input
-        [id]="'printParam_' + key"
+        [id]="'printParam_' + param.key"
         type="text"
         class="flex-1 text-input"
-        [ngModel]="reportParams()[key]"
-        (ngModelChange)="updateReportParam(key, $event)"
+        [ngModel]="reportParams()[param.key]"
+        (ngModelChange)="updateReportParam(param.key, $event)"
       />
     </div>
   }

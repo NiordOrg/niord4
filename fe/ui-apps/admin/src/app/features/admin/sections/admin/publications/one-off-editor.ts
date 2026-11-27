@@ -64,6 +64,9 @@ import {
   MESSAGE_PUBLICATIONS,
   PAGE_ORIENTATIONS,
   PAGE_SIZES,
+  pageSizeTextKey,
+  messageSortByChoice,
+  messageSortByOptions,
   previewIntervalFrom,
   reservedReportParamKeys,
   seriesWritable,
@@ -227,6 +230,7 @@ export class OneOffEditor {
     (relation) => relation !== 'COMPILED_FROM_SOURCE',
   );
   protected readonly pageSizes = PAGE_SIZES;
+  protected readonly pageSizeTextKey = pageSizeTextKey;
   protected readonly pageOrientations = PAGE_ORIENTATIONS;
   protected readonly sortDirections: readonly SortDirection[] = ['ASC', 'DESC'];
 
@@ -238,6 +242,14 @@ export class OneOffEditor {
 
   private readonly base = signal<PublicationSeries>({} as PublicationSeries);
   protected readonly value = signal<SeriesFormModel>(toFormModel({} as PublicationSeries));
+  /** The sort-field choices, with the publication's own value among them. */
+  protected readonly messageSortByOptions = computed(() =>
+    messageSortByOptions(this.value().messageSortBy),
+  );
+  /** The choice the publication's sort field is, as the server reads it. */
+  protected readonly messageSortByChoice = computed(() =>
+    messageSortByChoice(this.value().messageSortBy),
+  );
 
   /**
    * The two fields that carry a rule, as a form.

@@ -91,6 +91,9 @@ public class MessageExportRestService extends AbstractBatchableRestService {
         // Perform a search for at most 1000 messages. The administration app tells the person when a search holds
         // more (MESSAGE_EXPORT_LIMIT in message-export.service.ts): keep the two numbers equal
         MessageSearchParams params = MessageSearchParams.instantiate(domainService.currentDomain(), request);
+        // The archive holds every language of the messages; the language asked for is that of the preview page's
+        // labels
+        String language = params.getLanguage();
         params.language(null)
                 .maxSize(1000)
                 .page(0);
@@ -102,7 +105,7 @@ public class MessageExportRestService extends AbstractBatchableRestService {
         result.setIndexIncomplete(null);
 
         try {
-            StreamingResponseBody stream = os -> messageExportService.export(result, os);
+            StreamingResponseBody stream = os -> messageExportService.export(result, language, os);
 
             return ResponseEntity.ok()
                     .header("Content-Disposition", "attachment; filename=\"messages.zip\"")

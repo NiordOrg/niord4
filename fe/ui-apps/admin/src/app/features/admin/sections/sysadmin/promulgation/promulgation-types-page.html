@@ -104,7 +104,19 @@
                 }
               </td>
               <td>{{ type.priority }}</td>
-              <td>{{ type.language }}</td>
+              <td>
+                @if (type.language; as language) {
+                  <span class="inline-flex items-center gap-1.5">
+                    <app-language-flag
+                      class="h-3.5 w-5 rounded-xs"
+                      [lang]="language"
+                      [flagPath]="flagPathFor(language)"
+                      [codeFallback]="false"
+                    />
+                    {{ languageLabelFor(language) }}
+                  </span>
+                }
+              </td>
               <td>{{ domainNames(type) }}</td>
               <td class="text-sm">
                 <!-- Absent/empty set = no restriction: the cell stays blank. -->

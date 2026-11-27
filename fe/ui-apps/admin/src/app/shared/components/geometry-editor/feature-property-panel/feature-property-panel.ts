@@ -76,7 +76,9 @@ const RESTRICTION_OPTIONS: readonly string[] = ['', ...RESTRICTIONS];
                  value binding before its @for options exist, so a non-default value never sticks on
                  a freshly-rendered panel (e.g. after undo/redo re-select). -->
             @for (unit of units; track unit) {
-              <option [value]="unit" [selected]="unit === radiusUnit()">{{ unit }}</option>
+              <option [value]="unit" [selected]="unit === radiusUnit()">
+                {{ 'common.distanceUnit.' + unit | transloco }}
+              </option>
             }
           </select>
         </label>

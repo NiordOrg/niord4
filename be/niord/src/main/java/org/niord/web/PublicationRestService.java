@@ -839,8 +839,11 @@ public class PublicationRestService extends AbstractBatchableRestService {
 
         // The query string of the message-report print request: the tag, the print settings, the
         // "param:"-prefixed report params (the edition among them), lang and fileName.
+        // A publication without any text holds no list of descriptions at all: it has no report to make, and is
+        // released without one
         List<PublicationDescVo> updateDescs = new ArrayList<>();
-        for (PublicationDescVo desc : publication.getDescs()) {
+        List<PublicationDescVo> descs = publication.getDescs() != null ? publication.getDescs() : List.of();
+        for (PublicationDescVo desc : descs) {
             String printParam = "tag=" + encodeURIComponent(pub.getMessageTag().getTagId());
             for (Map.Entry<String, Object> e : printSettings.entrySet()) {
                 printParam = concatParam(printParam, e.getKey(), e.getValue());

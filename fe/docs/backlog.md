@@ -422,6 +422,12 @@ Background: [`features/messages.md`](features/messages.md).
   backend's 403 page, as the list print did before 2026-11-16. Offering a guest only the standard report when not
   in list mode closes it. Met by the error hunt's phase 2 fix stage (2026-11-16, cluster P3-9), read in the code;
   Low.
+- **A failed message export replaces the application with the server's answer.** The export still navigates the
+  application's tab to `export.zip` (`features/messages/services/message-export.service.ts` 76-90, the
+  `navigator`), so when the server cannot make the archive (a refusal, a fault) the browser shows its problem-detail
+  answer in place of the application. A print is fetched instead and reports its failure in the toast "The
+  document could not be generated." (`message-print.service.ts`, since 2026-11-27); fetching the archive the same
+  way, saved under the name the server gives it, closes it. Read in the code; Low.
 
 ### Map
 

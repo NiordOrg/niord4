@@ -11,7 +11,8 @@
  * serves an editor. What the image promises is narrow and worth asserting from the outside: only
  * GET and HEAD leave it, only six paths exist, the two report PDFs take no query but the one the
  * site composes, the list renders no report but the public one, a reader turned away by a busy
- * backend gets the site's own page with the 503 and its Retry-After, no credential survives the hop,
+ * backend gets the site's own page with the 503 and its Retry-After, a reader whose PDF could not
+ * be made gets the site's page that says so with the failure's status, no credential survives the hop,
  * the backend learns nothing about the request that the client wrote itself, no upstream may set
  * a cookie on this origin, a missing asset is a 404 rather than the application rendered inside a
  * dialog, every response carries the site's security headers, a legal document or branding file
@@ -268,18 +269,19 @@ const REPO_FILE_TYPES = {
 
 /**
  * A PDF the stub answers as the backend does while it is making as many PDFs for readers as it
- * makes at once, or with another refusal the container must pass as it came: a request whose
- * series or message id names the case.
+ * makes at once, for a message it does not have, or for a document it failed to make: a request
+ * whose series or message id names the case.
  */
 const PDF_REFUSALS = {
   busy: [503, { 'retry-after': '10' }],
   gone: [404, {}],
+  broken: [500, {}],
 };
 
 let seen = [];
 const stub = http.createServer((req, res) => {
   seen.push({ method: req.method, url: req.url, headers: { ...req.headers } });
-  const refusal = /^\/rest\/message-reports\/.*\b(busy|gone)\b/.exec(req.url);
+  const refusal = /^\/rest\/message-reports\/.*\b(busy|gone|broken)\b/.exec(req.url);
   if (refusal) {
     const [status, headers] = PDF_REFUSALS[refusal[1]];
     res.writeHead(status, { 'content-type': 'application/problem+json', ...headers });
@@ -704,7 +706,8 @@ async function run(port, stubPort) {
 
   // A busy PDF: the backend answers a reader 503 at once while it makes as many PDFs as it makes at
   // once. The reader's tab gets the site's own page, still a 503 and with Retry-After, under the
-  // site's headers and kept by nobody; any other refusal passes as the backend wrote it.
+  // site's headers and kept by nobody; any other failure gets the site's page that says the
+  // document could not be made, with the failure's status.
   for (const [path, what] of [
     ['/rest/message-reports/report.pdf?lang=da&report=public&messageSeries=busy', 'the list PDF'],
     ['/rest/message-reports/message/busy-1-26.pdf?lang=da', 'one message PDF'],
@@ -733,20 +736,47 @@ async function run(port, stubPort) {
       `${problems.join('; ')}; stub saw ${lastSeen()?.url}`,
     );
   }
-  const gone = await request(port, 'GET', '/rest/message-reports/message/gone-1-26.pdf?lang=da');
-  check(
-    "another refusal of a PDF passes as the backend's own",
-    gone.status === 404 &&
-      /^application\/problem\+json/.test(gone.headers['content-type'] ?? '') &&
-      !gone.body.toString('utf8').includes('pdf-busy'),
-    `got ${gone.status}, content-type ${gone.headers['content-type']}`,
-  );
-  const byName = await request(port, 'GET', '/pdf-busy.html');
-  check(
-    'the busy page is no page of its own: asked for by its name it is a 404',
-    byName.status === 404,
-    `got ${byName.status}`,
-  );
+  for (const [path, status, what] of [
+    ['/rest/message-reports/message/gone-1-26.pdf?lang=da', 404, 'a message it does not have'],
+    ['/rest/message-reports/message/broken-1-26.pdf?lang=da', 500, 'one message it failed to make'],
+    [
+      '/rest/message-reports/report.pdf?lang=da&report=public&messageSeries=broken',
+      500,
+      'a list it failed to make',
+    ],
+  ]) {
+    const failed = await request(port, 'GET', path);
+    const body = failed.body.toString('utf8');
+    const problems = [
+      ...securityHeaderProblems(failed),
+      ...(failed.status === status ? [] : [`status ${failed.status}`]),
+      ...(failed.headers['retry-after'] === undefined
+        ? []
+        : [`retry-after ${JSON.stringify(failed.headers['retry-after'])}`]),
+      ...(failed.headers['cache-control'] === 'no-store'
+        ? []
+        : [`cache-control ${JSON.stringify(failed.headers['cache-control'])}`]),
+      ...(/^text\/html/.test(failed.headers['content-type'] ?? '')
+        ? []
+        : [`content-type ${failed.headers['content-type']}`]),
+      ...(body.includes('src="/pdf-busy.js"') && body.includes('id="pdf-failed-text"')
+        ? []
+        : ['the body is not the failed page']),
+    ];
+    check(
+      `the backend's ${status} for ${what} reaches the reader as the site's page, with the ${status}`,
+      problems.length === 0 && lastSeen()?.url === path,
+      `${problems.join('; ')}; stub saw ${lastSeen()?.url}`,
+    );
+  }
+  for (const page of ['/pdf-busy.html', '/pdf-failed.html']) {
+    const byName = await request(port, 'GET', page);
+    check(
+      `${page} is no page of its own: asked for by its name it is a 404`,
+      byName.status === 404,
+      `got ${byName.status}`,
+    );
+  }
   const busyScript = await request(port, 'GET', '/pdf-busy.js');
   check(
     "the busy page's script is served",
@@ -1492,6 +1522,8 @@ async function run(port, stubPort) {
     'GET /rest/message-reports/report.pdf?lang=da&report=public&messageSeries=busy',
     'GET /rest/message-reports/message/busy-1-26.pdf?lang=da',
     'GET /rest/message-reports/message/gone-1-26.pdf?lang=da',
+    'GET /rest/message-reports/message/broken-1-26.pdf?lang=da',
+    'GET /rest/message-reports/report.pdf?lang=da&report=public&messageSeries=broken',
     'GET /rest/message-reports/message/Lokal%C3%86-7-26.pdf?lang=da',
     ...messageIdUrls.map(([url]) => `GET ${url}`),
     ...repoFileNames.map(([method, url]) => `${method} ${url}`),

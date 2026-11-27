@@ -114,7 +114,7 @@ class MessageExportServiceITTest extends ITTest {
     /** Runs the export into an in-memory buffer and returns the raw Zip bytes. */
     private byte[] exportToBytes(PagedSearchResultVo<SystemMessageVo> r) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exportService.export(r, baos);
+        exportService.export(r, "en", baos);
         return baos.toByteArray();
     }
 

@@ -25,6 +25,7 @@ import org.niord.core.domain.Domain;
 import org.niord.core.domain.DomainService;
 import org.niord.core.message.IndexIncompleteNotice;
 import org.niord.core.message.MessagePrintParams;
+import org.niord.core.message.MessageSearchCriteriaText;
 import org.niord.core.message.MessageSearchParams;
 import org.niord.core.message.MessageService;
 import org.niord.core.report.FmReport;
@@ -100,6 +101,8 @@ public class MessageReportRestService extends AbstractBatchableRestService {
 
     private final IndexIncompleteNotice indexIncompleteNotice;
 
+    private final MessageSearchCriteriaText searchCriteriaText;
+
     /**
      * The PDFs rendered for anonymous callers at once, see {@link #acquireAnonymousPdfPermit(boolean)}.
      * Sized by {@code niord.reports.anonymous-pdf-concurrency}.
@@ -107,7 +110,7 @@ public class MessageReportRestService extends AbstractBatchableRestService {
     private final Semaphore anonymousPdfPermits;
 
     MessageReportRestService(NiordApp app, DomainService domainService, UserService userService, MessageService messageService, MessageRestService messageRestService, MessageSearchRestService messageSearchRestService, FmReportService fmReportService, FmTemplateService templateService,
-                             IndexIncompleteNotice indexIncompleteNotice,
+                             IndexIncompleteNotice indexIncompleteNotice, MessageSearchCriteriaText searchCriteriaText,
                              @Value("${niord.reports.anonymous-pdf-concurrency}") int anonymousPdfConcurrency) {
         this.app = app;
         this.domainService = domainService;
@@ -118,6 +121,7 @@ public class MessageReportRestService extends AbstractBatchableRestService {
         this.fmReportService = fmReportService;
         this.templateService = templateService;
         this.indexIncompleteNotice = indexIncompleteNotice;
+        this.searchCriteriaText = searchCriteriaText;
         if (anonymousPdfConcurrency < 1) {
             throw new IllegalArgumentException(
                     "niord.reports.anonymous-pdf-concurrency must be at least 1, was " + anonymousPdfConcurrency);
@@ -389,11 +393,12 @@ public class MessageReportRestService extends AbstractBatchableRestService {
 
             String timeZone = reportTimeZone(result.getData(), params.getSeriesIds());
 
-            // The criteria describe the request, free text included, and the templates print them as
-            // they are handed over; escaped here, they stay text in every copy of a template, the ones
-            // a deployment keeps in its database among them. Only the markup characters are escaped.
-            String searchCriteria = result.getDescription() == null ? null
-                    : HtmlUtils.htmlEscape(result.getDescription(), StandardCharsets.UTF_8.name());
+            // The criteria describe the search as it was run, in the print's language, free text included, and
+            // the templates print them as they are handed over; escaped here, they stay text in every copy of a
+            // template, the ones a deployment keeps in its database among them. Only the markup characters are
+            // escaped.
+            String searchCriteria = HtmlUtils.htmlEscape(searchCriteriaText.describe(params, language, timeZone),
+                    StandardCharsets.UTF_8.name());
 
             // The line that says the list may miss messages, when the search was answered from an incomplete index
             String topNotice = indexIncompleteNotice.forResult(result, language);

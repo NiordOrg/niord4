@@ -5,9 +5,10 @@ import { catchError, from, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/services/auth.service';
 import { isNiordBackendRequest } from './backend-prefixes';
 import { BACKGROUND_READ, BackgroundReadSkipped } from './background-read';
+import { TICKETED_REQUEST } from './ticketed-request';
 
 export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!isNiordBackendRequest(req.url)) {
+  if (!isNiordBackendRequest(req.url) || req.context.get(TICKETED_REQUEST)) {
     return next(req);
   }
 

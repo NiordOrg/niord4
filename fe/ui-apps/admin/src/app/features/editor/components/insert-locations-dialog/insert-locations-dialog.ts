@@ -5,6 +5,10 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { Dialog } from '../../../../shared/components/dialog/dialog';
 import { OlTileLayer } from '@niord/map/layers/ol-tile-layer';
 import { OlMap } from '@niord/map/ol-map';
+import {
+  geometryTypeLabel,
+  type ShownLabel,
+} from '../../../../shared/components/geometry-editor/geometry-tree/geometry-type-labels';
 import type { GeometryFeature } from '../../../../shared/models/geometry.model';
 import { MessagesApiService } from '../../../messages/services/api/messages-api.service';
 import { InsertLocationsMapLayer } from './insert-locations-map-layer';
@@ -127,7 +131,8 @@ interface FormatParams {
                     (change)="toggleFeature($index)"
                   />
                   <span class="text-fg-subtle">#{{ $index + 1 }}</span>
-                  <span>{{ featureLabel(feature) }}</span>
+                  @let label = featureLabel(feature);
+                  <span>{{ label.key ? (label.key | transloco) : label.text }}</span>
                 </label>
               } @empty {
                 <p class="py-1 text-sm text-fg-subtle">
@@ -313,13 +318,13 @@ export class InsertLocationsDialog {
     );
   }
 
-  /** Feature-level name in the target language, else the geometry type (the list label). */
-  protected featureLabel(feature: GeometryFeature): string {
+  /** Feature-level name in the target language, else the geometry type in words (the list label). */
+  protected featureLabel(feature: GeometryFeature): ShownLabel {
     const name = (feature.properties ?? {})[`${NAME_PREFIX}${this.lang()}`];
     if (typeof name === 'string' && name.trim() !== '') {
-      return name;
+      return { text: name };
     }
-    return feature.geometry?.type ?? '';
+    return geometryTypeLabel(feature.geometry?.type ?? '');
   }
 
   protected insert(): void {

@@ -2,10 +2,12 @@ import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { TranslocoPipe, TranslocoService, translateSignal } from '@jsverse/transloco';
 
 import { TicketedDownloadService } from '../../../../../core/auth/services/ticketed-download.service';
+import { LanguageService } from '../../../../../core/main-shell/services/language.service';
 import { NotificationService } from '../../../../../core/notifications/notification.service';
 import { Confirm } from '../../../../../shared/components/confirm/confirm';
 import { EmptyState } from '../../../../../shared/components/empty-state/empty-state';
 import { ErrorBanner } from '../../../../../shared/components/error-banner/error-banner';
+import { LanguageFlag } from '../../../../../shared/components/language-flag/language-flag';
 import { Menu } from '../../../../../shared/components/menu/menu';
 import { MenuTrigger } from '../../../../../shared/components/menu-trigger/menu-trigger';
 import { Pager } from '../../../../../shared/components/pager/pager';
@@ -48,6 +50,7 @@ export interface PromulgationTypeEditorModel {
     ProgressBar,
     EmptyState,
     ErrorBanner,
+    LanguageFlag,
     JsonImportDialog,
     PromulgationTypeEditor,
     TranslocoPipe,
@@ -63,6 +66,7 @@ export class PromulgationTypesPage {
   private readonly confirm = inject(ConfirmService);
   private readonly notifications = inject(NotificationService);
   private readonly transloco = inject(TranslocoService);
+  private readonly languageSettings = inject(LanguageService);
 
   private readonly importDialog = viewChild.required(JsonImportDialog);
 
@@ -108,6 +112,19 @@ export class PromulgationTypesPage {
   protected onSearch(value: string): void {
     this.search.set(value);
     this.pager.reset();
+  }
+
+  protected flagPathFor(lang: string): string | undefined {
+    return this.languageSettings.modelLanguages.find((language) => language.value === lang)
+      ?.flagPath;
+  }
+
+  /** The configured language's label ("Dansk"); a language the configuration does not name reads as stored. */
+  protected languageLabelFor(lang: string): string {
+    return (
+      this.languageSettings.modelLanguages.find((language) => language.value === lang)?.label ??
+      lang
+    );
   }
 
   /** Comma-joined domain names. */

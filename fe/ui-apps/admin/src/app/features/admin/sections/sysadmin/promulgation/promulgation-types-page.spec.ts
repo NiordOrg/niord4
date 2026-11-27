@@ -14,6 +14,7 @@ import { LanguageService } from '../../../../../core/main-shell/services/languag
 import { NotificationService } from '../../../../../core/notifications/notification.service';
 import type { MenuItem } from '../../../../../shared/models/menu-item.model';
 import { ConfirmService } from '../../../../../shared/services/confirm.service';
+import { TEST_LANGUAGES } from '../../../../../shared/testing/language-testing';
 import { provideTestTransloco } from '../../../../../shared/testing/transloco-testing';
 import { JsonImportDialog } from '../../../components/json-import-dialog/json-import-dialog';
 import type { AdminPromulgationType, PromulgationServiceRef } from './promulgation-admin.model';
@@ -104,7 +105,10 @@ async function setup(types: readonly AdminPromulgationType[], options: SetupOpti
       { provide: APP_CONFIG, useValue: { apiBaseUrl: '/rest', appName: 'Niord', helpUrls: {} } },
       {
         provide: LanguageService,
-        useValue: { selectedLanguage: () => 'en', modelLanguages: [] },
+        useValue: {
+          selectedLanguage: () => 'en',
+          modelLanguages: TEST_LANGUAGES.availableLanguages,
+        },
       },
       { provide: DomainFacade, useValue: { availableDomains: signal([]) } },
       {
@@ -199,14 +203,24 @@ describe('PromulgationTypesPage', () => {
     expect(page.pager.first()).toBe(0);
   });
 
-  it('renders serviceId raw and typeId, name, priority and language verbatim', async () => {
+  it('renders serviceId raw and typeId, name and priority verbatim', async () => {
     const { fixture } = await setup([NAVTEX, TWITTER]);
     expect(cellTexts(fixture, 1)).toEqual(['navtex', 'twitter']);
     expect(cellTexts(fixture, 2)).toEqual(['navtex-dk', 'tw-all']);
     expect(cellTexts(fixture, 3)).toEqual(['NAVTEX', 'Tweet warnings']);
     expect(cellTexts(fixture, 5)).toEqual(['10', '0']);
-    // Language: the raw lang code, blank when the type is not language-bound.
-    expect(cellTexts(fixture, 6)).toEqual(['da', '']);
+  });
+
+  it('names the language by its configured label and flag; blank when the type is not language-bound', async () => {
+    // A language the configuration does not name reads as stored.
+    const greenlandic: AdminPromulgationType = { ...TWITTER, typeId: 'tw-kl', language: 'kl' };
+    const { fixture } = await setup([NAVTEX, TWITTER, greenlandic]);
+    expect(cellTexts(fixture, 6)).toEqual(['Dansk', '', 'kl']);
+    expect(
+      rows(fixture).map(
+        (row) => row.cells[6].querySelector('app-language-flag img')?.getAttribute('src') ?? null,
+      ),
+    ).toEqual(['assets/img/flags/da.png', null, null]);
   });
 
   it('marks the active flag with the boolean status dot', async () => {

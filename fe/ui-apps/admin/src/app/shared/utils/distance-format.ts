@@ -25,16 +25,24 @@ function fixedFormatter(locale: string, digits: number): Intl.NumberFormat {
   return formatter;
 }
 
+/** The units a distance is given in; each has its text under `common.distanceUnit.<unit>`. */
+export type DistanceUnit = 'm' | 'km' | 'nm';
+
 /**
  * Formats a length (in metres) into metres / kilometres / nautical miles — the units the
- * measure tooltip shows. The decimal/grouping separators follow the locale.
+ * measure tooltip shows. The decimal/grouping separators follow the locale; each unit's symbol
+ * is the caller's text for it (the nautical mile is "sm" in Danish).
  */
-export function formatDistance(meters: number, locale = 'en'): FormattedDistance {
+export function formatDistance(
+  meters: number,
+  locale: string,
+  unitLabel: (unit: DistanceUnit) => string,
+): FormattedDistance {
   const format = (value: number, digits: number): string =>
     fixedFormatter(locale, digits).format(value);
   return {
-    meters: `${format(Math.round(meters), 0)} m`,
-    kilometers: `${format(meters / 1000, 2)} km`,
-    nauticalMiles: `${format(meters / METERS_PER_NM, 2)} nm`,
+    meters: `${format(Math.round(meters), 0)} ${unitLabel('m')}`,
+    kilometers: `${format(meters / 1000, 2)} ${unitLabel('km')}`,
+    nauticalMiles: `${format(meters / METERS_PER_NM, 2)} ${unitLabel('nm')}`,
   };
 }

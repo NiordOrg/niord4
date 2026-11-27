@@ -24,6 +24,11 @@
     },
     "dateTime": {
       "noTimeZone": "No time zone: choose a domain, or ask a sysadmin to give this domain a time zone"
+    },
+    "distanceUnit": {
+      "m": "m",
+      "km": "km",
+      "nm": "nm"
     }
   },
   "schedule": {
@@ -2498,7 +2503,8 @@
         "option": {
           "noCategory": "Choose a category…",
           "noReport": "No report",
-          "noSourceSeries": "Choose a source series…"
+          "noSourceSeries": "Choose a source series…",
+          "domainSort": "The domain's sort order"
         },
         "messagePublication": {
           "NONE": "No",
@@ -3643,13 +3649,19 @@
       "errorTicket": "Failed to obtain print ticket. Please try again.",
       "errorTempTag": "Failed to prepare selection for print.",
       "errorExpandParams": "Failed to prepare the report's parameters for the test print. Please try again.",
+      "errorDocument": "The document could not be generated.",
       "settings": {
         "report": "Report",
         "layout": "Layout",
         "paperSize": "Paper size",
         "orientation": {
-          "portrait": "portrait",
-          "landscape": "landscape"
+          "portrait": "Portrait",
+          "landscape": "Landscape"
+        },
+        "param": {
+          "week": "Week",
+          "year": "Year",
+          "ntmRef": "NtM reference"
         },
         "includeThumbnails": "include thumbnails",
         "paperSize.A3": "A3",
@@ -4414,6 +4426,17 @@
       "remove": "Delete",
       "measure": "Measure"
     },
+    "type": {
+      "Point": "Point",
+      "MultiPoint": "Points",
+      "LineString": "Line",
+      "MultiLineString": "Lines",
+      "Polygon": "Area",
+      "MultiPolygon": "Areas",
+      "GeometryCollection": "Collection",
+      "Exterior": "Outer ring",
+      "Interior": "Inner ring"
+    },
     "buffer": {
       "addRadius": "Add affected radius",
       "addPath": "Add affected path",
@@ -4430,7 +4453,8 @@
       "select": "Select geometry",
       "zoom": "Zoom to geometry",
       "delete": "Delete geometry",
-      "reorder": "Reorder geometry"
+      "reorder": "Reorder geometry",
+      "noGeometry": "No geometry"
     },
     "tree": {
       "collapse": "Collapse {{type}}",
@@ -4440,7 +4464,7 @@
       "editNames": "Edit names",
       "addPosition": "Add a position after this one",
       "deletePosition": "Delete this position",
-      "positionName": "{{lang}} name for this position"
+      "positionName": "Name for this position in {{lang}}"
     },
     "restriction": {
       "none": "None",

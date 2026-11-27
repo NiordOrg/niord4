@@ -268,7 +268,9 @@
               </span>
               <select class="text-input" (change)="setField('pageSize', $any($event.target).value)">
                 @for (size of pageSizes; track size) {
-                  <option [value]="size" [selected]="value().pageSize === size">{{ size }}</option>
+                  <option [value]="size" [selected]="value().pageSize === size">
+                    {{ pageSizeTextKey(size) | transloco }}
+                  </option>
                 }
               </select>
             </label>
@@ -310,11 +312,23 @@
               <span class="text-sm font-medium text-fg-title">
                 {{ 'admin.publications.series.field.messageSortBy' | transloco }}
               </span>
-              <input
+              <select
                 class="text-input"
-                [value]="value().messageSortBy"
-                (input)="setField('messageSortBy', $any($event.target).value)"
-              />
+                (change)="setField('messageSortBy', $any($event.target).value)"
+              >
+                @for (option of messageSortByOptions(); track option.value) {
+                  <option
+                    [value]="option.value"
+                    [selected]="messageSortByChoice() === option.value"
+                  >
+                    @if (option.labelKey) {
+                      {{ option.labelKey | transloco }}
+                    } @else {
+                      {{ option.value }}
+                    }
+                  </option>
+                }
+              </select>
             </label>
 
             <label class="flex flex-col gap-1.5">

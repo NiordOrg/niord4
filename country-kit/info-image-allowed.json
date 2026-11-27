@@ -15,6 +15,10 @@
       "reason": "The page nginx answers a busy PDF with, and its script, from ui-apps/info/public/. Unhashed by design: nginx names the page in its configuration, and the page its script."
     },
     {
+      "glob": "pdf-failed.html",
+      "reason": "The page nginx answers a PDF that could not be made with, from ui-apps/info/public/; its script is the busy page's. Unhashed by design: nginx names the page in its configuration."
+    },
+    {
       "glob": "{main,chunk,styles}-*.{js,css}",
       "reason": "The builder's bundles: the entry script, the lazy and shared chunks and the global stylesheet, each named by its content hash."
     },

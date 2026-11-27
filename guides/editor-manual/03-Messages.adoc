@@ -458,13 +458,17 @@ messages_ for two messages, has these settings:
   report, which prints every language of the messages with more of their fields, useful for reading
   messages through. A domain for Notices to Mariners often has more reports, for example for the
   weekly Notices to Mariners.
-* _Layout_ (_portrait_ or _landscape_) and _Paper size_.
+* _Layout_ (_Portrait_ or _Landscape_) and _Paper size_.
 * _include thumbnails_, a thumbnail map beside each message. It is offered only when the report
   leaves the choice to you.
-* Some reports have settings of their own, listed below the others by name.
+* Some reports have settings of their own, listed below the others, such as the _Week_ and the
+  _Year_ of a weekly report. A setting the report names in its own way is listed by that name.
 
-Click _Print_ to make the PDF; the browser opens it. The browser remembers the layout, the paper
-size and the thumbnails for the next time; the report and its settings start afresh each time.
+Click _Print_ to make the PDF; the browser downloads it when it is ready, which for a long list can
+take a while. When the PDF cannot be made, for example because a message was deleted in the
+meantime, Niord says so instead: _The document could not be generated._ The browser remembers the
+layout, the paper size and the thumbnails for the next time; the report and its settings start
+afresh each time.
 
 [#print-selection-action]
 ==== Print Selection Action

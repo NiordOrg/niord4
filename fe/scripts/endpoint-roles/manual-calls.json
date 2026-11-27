@@ -20,6 +20,27 @@
       "file": "ui-apps/admin/src/app/shared/components/file-upload/file-upload.ts",
       "expression": "target",
       "reason": "An input: the attachments and the layout fields bind their uploadUrl, which the extractor reports as a POST of its own (member AttachmentsField.uploadUrl, LayoutField.uploadUrl)."
+    },
+    {
+      "file": "ui-apps/admin/src/app/features/messages/services/message-print.service.ts",
+      "expression": "url",
+      "reason": "download(url, …) fetches the PDF its callers build with buildListUrl (the list, the selection and the report editor's test print) or buildSingleMessageUrl (one message), each with the print dialog's settings and its one-time ticket; the report's own parameters (param:…) and the list's filter are added as they come.",
+      "calls": [
+        {
+          "verb": "GET",
+          "path": "/rest/message-reports/report.pdf",
+          "params": ["lang", "mapThumbnails", "pageOrientation", "pageSize", "report", "tag"],
+          "paramsDynamic": true,
+          "ticketRoles": ["?"]
+        },
+        {
+          "verb": "GET",
+          "path": "/rest/message-reports/message/{}.pdf",
+          "params": ["lang", "mapThumbnails", "pageOrientation", "pageSize", "report"],
+          "paramsDynamic": true,
+          "ticketRoles": ["?"]
+        }
+      ]
     }
   ],
   "ticketRoles": [

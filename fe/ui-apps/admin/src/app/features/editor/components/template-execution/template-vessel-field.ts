@@ -107,7 +107,7 @@ export interface VesselData {
             [class.border-surface-300]="current().minDistType !== 'nm'"
             (click)="patch({ minDistType: 'nm' })"
           >
-            nm
+            {{ 'common.distanceUnit.nm' | transloco }}
           </button>
           <button
             type="button"
@@ -118,7 +118,7 @@ export interface VesselData {
             [class.border-surface-300]="current().minDistType !== 'm'"
             (click)="patch({ minDistType: 'm' })"
           >
-            m
+            {{ 'common.distanceUnit.m' | transloco }}
           </button>
         </div>
       </div>

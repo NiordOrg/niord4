@@ -268,6 +268,13 @@ leeway (`AuthService.currentFreshToken()`); otherwise it is refused in the brows
 `BackgroundReadSkipped`. It never refreshes the token, and a 401 on it does not call
 `sessionExpired()`, so only an act of the user keeps a session alive or ends it.
 
+A ticketed request is not the session's at all: a request whose `HttpContext` sets
+`TICKETED_REQUEST` (`core/interceptors/ticketed-request.ts`) has the one-time ticket in its address
+as its one credential, as when the browser opens a download address itself, and both interceptors
+send it as it is — no bearer, no `NiordDomain` header, no refresh, and no `sessionExpired()` when a
+spent ticket is refused with 401. The prints are fetched this way (`MessagePrintService`), so the
+backend answers them as the ticket's user, role and domain.
+
 ### Interceptor scoping
 
 Both interceptors gate on `isNiordBackendRequest(url)`, which matches the URL against `apiBaseUrl`

@@ -430,7 +430,7 @@
                       >
                         @for (option of pageSizes; track option) {
                           <option [value]="option" [selected]="value().pageSize === option">
-                            {{ option }}
+                            {{ pageSizeTextKey(option) | transloco }}
                           </option>
                         }
                       </select>
@@ -558,13 +558,24 @@
                     <label for="series-sort-by" class="text-sm font-medium text-fg-title">
                       {{ 'admin.publications.series.field.messageSortBy' | transloco }}
                     </label>
-                    <input
+                    <select
                       id="series-sort-by"
-                      type="text"
                       class="w-full text-input"
-                      [value]="value().messageSortBy"
-                      (input)="setFromInput('messageSortBy', $event)"
-                    />
+                      (change)="setFromSelect('messageSortBy', $event)"
+                    >
+                      @for (option of messageSortByOptions(); track option.value) {
+                        <option
+                          [value]="option.value"
+                          [selected]="messageSortByChoice() === option.value"
+                        >
+                          @if (option.labelKey) {
+                            {{ option.labelKey | transloco }}
+                          } @else {
+                            {{ option.value }}
+                          }
+                        </option>
+                      }
+                    </select>
                     <p class="text-xs text-fg-muted">
                       {{ 'admin.publications.series.hint.messageSortBy' | transloco }}
                     </p>

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.niord.core.area.Area;
+import org.niord.core.message.Message;
 import org.niord.core.util.TimeUtils;
 import org.niord.model.message.MainType;
 import org.niord.model.message.Status;
@@ -164,6 +165,39 @@ class FiringExerciseServiceITTest extends ITTest {
         // publishDateTo is set to the aggregate event end date (i.e. the period's to-date).
         assertEquals(to, ex.publishDateTo(),
                 "publishDateTo must be set to the last event date (the firing period's to-date)");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // A template without any description still gives its exercise
+    // ------------------------------------------------------------------------------------------- //
+
+    /**
+     * A template message without any description (no title, no vicinity), which the mapper gives no list of them at
+     * all, is built into its exercise like any other: the run answers no failure, and the exercise's title is made
+     * from its area and its subject, as for a template with a title.
+     */
+    @Test
+    void aTemplateWithoutAnyDescriptionStillGivesItsExercise() {
+        FiringDomains d = fixtures.firingDomains();
+        String name = "IT-FE nodesc " + DeliveryFixtures.uniq();
+        Area area = fixtures.firingArea(name + " area");
+        String template = fixtures.firingTemplate(d.sourceSeries(), area, name + " template");
+        Tx.requiringNew().run(() -> em.createNamedQuery("Message.findByUid", Message.class)
+                .setParameter("uid", template)
+                .getSingleResult()
+                .getDescs().clear());
+        fixtures.firingPeriod(area, futureDay(3, 8), futureDay(3, 12));
+        Integer schedule = activeSchedule(d);
+
+        assertEquals(CLEAN, run(schedule), "a template without a description is no failure");
+
+        List<FiringExercise> published = exercises(d, area, Status.PUBLISHED);
+        assertEquals(1, published.size(), "the area gets its exercise");
+        String title = Tx.requiringNew().call(() -> em.createNamedQuery("Message.findByUid", Message.class)
+                .setParameter("uid", published.get(0).uid())
+                .getSingleResult()
+                .getDesc("en").getTitle());
+        assertTrue(title.startsWith(name + " area."), "the title is made from the area: " + title);
     }
 
     // ------------------------------------------------------------------------------------------- //

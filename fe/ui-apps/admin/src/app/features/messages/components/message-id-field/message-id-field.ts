@@ -8,6 +8,7 @@ import { Autocomplete } from '../../../../shared/forms/autocomplete/autocomplete
 import { AutocompleteSearchField } from '../../../../shared/forms/autocomplete-search-field';
 import {
   KNOWN_MATCH_TYPES,
+  MATCH_TYPE_LABEL_KEYS,
   MessageIdMatchType,
   MessageIdSearchResult,
 } from '../../models/message-id-search-result.model';
@@ -73,7 +74,7 @@ export class MessageIdField
   matchTypeLabel(type: MessageIdMatchType | string | undefined): string {
     if (!type) return '';
     if (KNOWN_MATCH_TYPES.has(type as MessageIdMatchType)) {
-      return this.transloco.translate(`messages.matchType.${type}`);
+      return this.transloco.translate(MATCH_TYPE_LABEL_KEYS[type as MessageIdMatchType]);
     }
     return type;
   }

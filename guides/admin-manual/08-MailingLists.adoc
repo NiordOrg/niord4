@@ -113,7 +113,8 @@ What every trigger has:
 | _Status Change_ or _Scheduled_; see below.
 
 | Mail Subject
-| The subject of the mails, in each language, each with a tick box before it. A mail is made for
+| The subject of the mails, in each language, each with a tick box and the language's flag and
+  name before it. A mail is made for
   each language whose box is ticked. With one language ticked, every recipient receives that one.
   With two or more, each recipient receives the one in the recipient's preferred language. A
   recipient without a preferred language, or whose preferred language is not ticked, receives

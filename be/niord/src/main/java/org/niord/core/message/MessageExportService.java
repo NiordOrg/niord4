@@ -24,8 +24,10 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.niord.core.conf.TextResource;
+import org.niord.core.dictionary.DictionaryService;
 import org.niord.core.message.vo.SystemMessageVo;
 import org.niord.model.message.AttachmentVo;
+import org.niord.model.message.MessagePartType;
 import org.niord.model.search.PagedSearchResultVo;
 import org.slf4j.Logger;
 
@@ -40,6 +42,8 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -53,10 +57,22 @@ public class MessageExportService {
     // PORT: §5 replaced CDI @Inject Logger producer with a static slf4j logger.
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(MessageExportService.class);
 
+    /** The message dictionary's text of each message part type, the label of a part on the preview page */
+    static final Map<MessagePartType, String> PART_TYPE_TEXTS = Map.of(
+            MessagePartType.DETAILS, "msg.field.details",
+            MessagePartType.TIME, "msg.field.time",
+            MessagePartType.POSITIONS, "msg.field.positions",
+            MessagePartType.NOTE, "msg.field.note",
+            MessagePartType.PROHIBITION, "msg.field.prohibition",
+            MessagePartType.SIGNALS, "msg.field.signals");
+
     private final RepoStore store;
 
-    MessageExportService(RepoStore store) {
+    private final DictionaryService dictionaryService;
+
+    MessageExportService(RepoStore store, DictionaryService dictionaryService) {
         this.store = store;
+        this.dictionaryService = dictionaryService;
     }
 
     // The SQL for finding expired, published message is just too cumbersome for JPQL :-(
@@ -66,9 +82,11 @@ public class MessageExportService {
     /**
      * Exports the messages search result to the output stream
      * @param result the search result
+     * @param language the language of the preview page's part labels; a language without the texts gets the
+     *                 default language's
      * @param os the output stream
      */
-    public void export(PagedSearchResultVo<SystemMessageVo> result, OutputStream os) {
+    public void export(PagedSearchResultVo<SystemMessageVo> result, String language, OutputStream os) {
 
         long t0 = System.currentTimeMillis();
         try {
@@ -89,7 +107,10 @@ public class MessageExportService {
 
             // Write the messages-preview.html file into the archive.
             // Can be used to preview the messages by someone unzipping the archive
-            String html = messagesPreviewHtmlFile.replace("<<MESSAGES-JSON>>", StringEscapeUtils.escapeEcmaScript(messages));
+            String html = messagesPreviewHtmlFile
+                    .replace("<<MESSAGES-JSON>>", StringEscapeUtils.escapeEcmaScript(messages))
+                    .replace("<<PART-TYPE-TEXTS>>",
+                            StringEscapeUtils.escapeEcmaScript(mapper.writeValueAsString(partTypeTexts(language))));
             log.debug("Adding messages-preview.html to zip archive");
             out.putNextEntry(new ZipEntry("messages-preview.html"));
             IOUtils.write(html, out, "utf-8");
@@ -114,6 +135,21 @@ public class MessageExportService {
         } catch (Exception e) {
             throw new NiordWebException("Error generating ZIP archive for messages", e);
         }
+    }
+
+    /**
+     * Returns the label of each message part type in the language, by the type's name; a type whose text the
+     * dictionary lacks is left out, and the preview page then shows its own English word
+     */
+    private Map<String, String> partTypeTexts(String language) {
+        Map<String, String> texts = new LinkedHashMap<>();
+        for (MessagePartType type : MessagePartType.values()) {
+            String text = dictionaryService.value("message", language, PART_TYPE_TEXTS.get(type));
+            if (StringUtils.isNotBlank(text)) {
+                texts.put(type.name(), text);
+            }
+        }
+        return texts;
     }
 
     /**

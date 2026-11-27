@@ -77,6 +77,7 @@
           {{ 'admin.mailingLists.trigger.subject' | transloco }}
         </legend>
         @for (subject of v.subjects; track subject.lang; let j = $index) {
+          @let language = subjectLanguages()[j];
           <div class="flex items-center gap-2">
             <input
               type="checkbox"
@@ -84,12 +85,18 @@
               [checked]="subject.enabled"
               [disabled]="!editable()"
               [attr.aria-label]="
-                'admin.mailingLists.trigger.subjectEnabled' | transloco: { lang: subject.lang }
+                'admin.mailingLists.trigger.subjectEnabled' | transloco: { lang: language.label }
               "
               (change)="toggleSubject(j)"
             />
-            <span class="w-8 text-xs font-semibold tracking-wide text-fg-subtle uppercase">
-              {{ subject.lang }}
+            <span class="flex w-28 shrink-0 items-center gap-1.5 text-sm text-fg-subtle">
+              <app-language-flag
+                class="h-3.5 w-5 rounded-xs"
+                [lang]="subject.lang"
+                [flagPath]="language.flagPath"
+                [codeFallback]="false"
+              />
+              <span class="truncate">{{ language.label }}</span>
             </span>
             <input
               type="text"

@@ -4,6 +4,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { of, Subject, type Observable } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
+import en from '../../../../../../../../languages/en/i18n/admin/en.json';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { NotificationService } from '../../../../core/notifications/notification.service';
 import { provideNiordIcons } from '../../../../shared/icons/niord-icons';
@@ -53,6 +54,8 @@ interface SetupOptions {
   readonly listReports?: readonly MessageReport[];
   readonly detailReports?: readonly MessageReport[];
   readonly initialReport?: string;
+  /** Load the English administration texts, to read the labels as an English user does. */
+  readonly english?: boolean;
 }
 
 async function setup(opts: SetupOptions) {
@@ -72,7 +75,9 @@ async function setup(opts: SetupOptions) {
       { provide: NotificationService, useValue: { error: vi.fn() } },
     ],
   });
-  TestBed.inject(TranslocoService).load('en').subscribe();
+  const transloco = TestBed.inject(TranslocoService);
+  transloco.load('en').subscribe();
+  if (opts.english) transloco.setTranslation(en, 'en');
   const fixture = TestBed.createComponent(Host);
   const host = fixture.componentInstance;
   host.list.set(opts.list ?? true);
@@ -181,5 +186,34 @@ describe('MessagePrintSettings: a test print of a report', () => {
     expect(fixture.nativeElement.querySelector('#printReport')).toBeNull();
     expect(host.printSettings().report).toBe('nightly');
     expect(host.reportParams()).toEqual({ title: 'Notices 2026' });
+  });
+});
+
+describe('MessagePrintSettings: the labels', () => {
+  it('names the two layouts as the publication series editor does', async () => {
+    const { fixture } = await setup({ isAuthenticated: true, english: true });
+
+    const layouts = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.seg-btn'),
+    ).map((button) => button.textContent?.trim());
+    expect(layouts).toEqual(['Portrait', 'Landscape']);
+  });
+
+  it("labels the parameters the base product's reports read in words, and any other by its name", async () => {
+    const { fixture, host } = await setup({ isAuthenticated: true, english: true });
+    host.report.set({
+      reportId: 'nm-report',
+      name: 'NM report',
+      properties: {},
+      params: { week: '39', year: '2026', 'NtM-ref': 'NtM 12/2026', edition: '2' },
+    });
+    await fixture.whenStable();
+
+    const labels = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLLabelElement>(
+        'label[for^="printParam_"]',
+      ),
+    ).map((label) => label.textContent?.trim());
+    expect(labels).toEqual(['Week', 'Year', 'NtM reference', 'edition']);
   });
 });

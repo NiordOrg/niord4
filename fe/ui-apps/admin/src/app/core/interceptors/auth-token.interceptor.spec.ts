@@ -8,6 +8,7 @@ import { AuthService } from '../auth/services/auth.service';
 import { authTokenInterceptor } from './auth-token.interceptor';
 import { BACKGROUND_READ, BackgroundReadSkipped } from './background-read';
 import { niordDomainInterceptor } from './niord-domain.interceptor';
+import { TICKETED_REQUEST } from './ticketed-request';
 import { APP_CONFIG } from '../config/app-config.token';
 import type { AppConfig } from '../config/app-config.interface';
 import { DomainFacade } from '../domain/facades/domain.facade';
@@ -125,6 +126,29 @@ describe('authTokenInterceptor', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer tkn-123');
     expect(ensureFreshToken).toHaveBeenCalledTimes(1);
     req.flush({});
+  });
+
+  it('sends a ticketed request as it is, and a 401 for it leaves the session alone', async () => {
+    const {
+      http,
+      httpMock: m,
+      ensureFreshToken,
+      sessionExpired,
+    } = configure({
+      authenticated: true,
+      token: 'tkn-123',
+    });
+    httpMock = m;
+    const context = new HttpContext().set(TICKETED_REQUEST, true);
+    const failed = vi.fn();
+    http.get('/api/message-reports/report.pdf?ticket=T', { context }).subscribe({ error: failed });
+    await Promise.resolve();
+    const req = m.expectOne('/api/message-reports/report.pdf?ticket=T');
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush(null, { status: 401, statusText: 'Unauthorized' });
+    expect(failed).toHaveBeenCalledTimes(1);
+    expect(ensureFreshToken).not.toHaveBeenCalled();
+    expect(sessionExpired).not.toHaveBeenCalled();
   });
 
   it('omits Bearer header when ensureFreshToken resolves undefined', async () => {

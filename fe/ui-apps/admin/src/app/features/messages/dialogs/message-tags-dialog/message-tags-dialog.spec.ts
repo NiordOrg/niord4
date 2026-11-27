@@ -478,3 +478,28 @@ describe('MessageTagsDialog — a refused save', () => {
     expect(c.draft()).toEqual({ mode: 'new', tagId: null });
   });
 });
+
+describe('MessageTagsDialog — the Type column', () => {
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.replaceChildren());
+  });
+
+  it("names each tag's type by the label of its type button, not by its code", async () => {
+    const env = setup();
+    await openWith(env, [
+      mkTag({ tagId: 'a', name: 'A', type: 'PRIVATE' }),
+      mkTag({ tagId: 'b', name: 'B', type: 'DOMAIN' }),
+      mkTag({ tagId: 'c', name: 'C', type: 'PUBLIC' }),
+    ]);
+
+    const cells = Array.from(document.querySelectorAll('[data-testid="tag-type"]')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(cells).toEqual([
+      'messages.tags.dialog.filter.type.private',
+      'messages.tags.dialog.filter.type.domain',
+      'messages.tags.dialog.filter.type.public',
+    ]);
+    env.httpMock.match(() => true);
+  });
+});

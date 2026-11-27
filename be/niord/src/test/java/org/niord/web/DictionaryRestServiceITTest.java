@@ -521,14 +521,15 @@ class DictionaryRestServiceITTest extends ITTest {
                 .body("readers", is(List.of("AUDIO_TEXT", "LAT_LON_DIRECTIVE")))
                 .body("$", not(hasKey("prefix")));
 
-        // A runtime-built key: matched by its prefix, which the answer names
+        // A runtime-built key: matched by its prefix, which the answer names; the printed message list's criteria
+        // line also reads the key from Java
         given().auth().oauth2(accessToken())
                 .queryParam("key", "msg.status.DRAFT")
                 .when().get("/rest/dictionaries/dictionary/message/key-users")
                 .then().statusCode(200)
                 .body("templates", hasItem(path))
                 .body("prefix", is("msg.status."))
-                .body("readers", is(List.of()));
+                .body("readers", is(List.of("SEARCH_CRITERIA")));
     }
 
     @Test

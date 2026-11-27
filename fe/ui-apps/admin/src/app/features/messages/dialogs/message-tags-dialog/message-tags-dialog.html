@@ -262,7 +262,7 @@
               <td>
                 <span class="inline-flex items-center gap-1">
                   <app-icon [name]="iconForType(tag.type)" />
-                  <span>{{ tag.type | lowercase }}</span>
+                  <span data-testid="tag-type">{{ typeLabel(tag.type) }}</span>
                 </span>
               </td>
               <td class="whitespace-nowrap">{{ formatDate(tag.created) }}</td>

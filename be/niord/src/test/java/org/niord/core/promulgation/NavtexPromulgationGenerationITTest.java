@@ -242,6 +242,31 @@ class NavtexPromulgationGenerationITTest extends ITTest {
                 "OPTIONAL with no content must produce empty text");
     }
 
+    /**
+     * The mappers give a part without any text no list of texts, and a message without parts no list of parts (a
+     * part whose texts are all blanked is kept so). Generate reads either as giving no text: the other parts' texts
+     * make the NAVTEX text, and a message without parts has none, as one with an empty list.
+     */
+    @Test
+    @Transactional
+    void generateMessagePromulgation_aPartWithoutTexts_orNoParts_giveNoText() throws Exception {
+        SystemMessageVo message = messageWithEnDetails("<p>Buoy missing</p>");
+        MessagePartVo withoutTexts = new MessagePartVo();
+        withoutTexts.setType(MessagePartType.DETAILS);
+        message.getParts().add(0, withoutTexts);
+
+        NavtexMessagePromulgationVo navtex = (NavtexMessagePromulgationVo)
+                navtexPromulgationService.generateMessagePromulgation(message, navtexType(Requirement.DEFAULT));
+        assertTrue(navtex.isPromulgate());
+        assertEquals("BUOY MISSING", navtex.getText());
+
+        SystemMessageVo withoutParts = new SystemMessageVo();
+        NavtexMessagePromulgationVo none = (NavtexMessagePromulgationVo)
+                navtexPromulgationService.generateMessagePromulgation(withoutParts, navtexType(Requirement.MANDATORY));
+        assertTrue(none.isPromulgate(), "a MANDATORY type promulgates without content");
+        assertNull(none.getText());
+    }
+
     @Test
     @Transactional
     void generateMessagePromulgation_seedsActiveTransmittersFalse_andFlipsAreaMatchingTrue()

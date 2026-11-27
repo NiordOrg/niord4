@@ -171,6 +171,19 @@
             UPDATE: '(updated)'
         };
 
+        // The label of a message part by its type: the message dictionary's text of the type (msg.field.details
+        // and the rest) in the export's language, which MessageExportService injects here as a JSON object escaped
+        // as a JavaScript string; the dictionary's English text for a type it sends no text for; and a type this
+        // page does not know as it is stored
+        const PART_TYPE_TEXTS = Object.assign({
+            DETAILS: 'Details',
+            TIME: 'Time',
+            POSITIONS: 'Positions',
+            NOTE: 'Note',
+            PROHIBITION: 'Prohibition',
+            SIGNALS: 'Signals'
+        }, JSON.parse('<<PART-TYPE-TEXTS>>'));
+
         // Elements and URL attributes that are dropped from the HTML fields (part details and publication).
         // SVG and MathML go whole: their animation elements can set a URL attribute after it is checked.
         const UNSAFE_ELEMENTS = 'script, style, iframe, object, embed, link, meta, base, form, svg, math';
@@ -254,7 +267,8 @@
 
             // Details lines
             (msg.parts || []).forEach(part => {
-                const value = appendRow(block, (part.type || '').toLowerCase());
+                const value = appendRow(block, Object.hasOwn(PART_TYPE_TEXTS, part.type)
+                    ? PART_TYPE_TEXTS[part.type] : (part.type || ''));
                 const partDesc = firstDesc(part);
                 if (partDesc && partDesc.subject) {
                     value.appendChild(element('div')).appendChild(element('strong', null, partDesc.subject));

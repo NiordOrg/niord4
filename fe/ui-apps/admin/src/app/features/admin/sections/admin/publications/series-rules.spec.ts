@@ -11,6 +11,8 @@ import {
   isQueryBacked,
   isReservedReportParamKey,
   livenessIsForced,
+  messageSortByChoice,
+  messageSortByOptions,
   nextIssueIsDerived,
   ownerVerdict,
   previewIntervalFrom,
@@ -751,5 +753,48 @@ describe('seriesIdFromName', () => {
   it('answers empty for a name with nothing to make an id from', () => {
     expect(seriesIdFromName('')).toBe('');
     expect(seriesIdFromName('—  —')).toBe('');
+  });
+});
+
+describe('messageSortByOptions', () => {
+  /** The closed set the server's parser names, each with a text: no code is shown. */
+  it('offers the domain order and the five fields the server sorts by, each named', () => {
+    expect(messageSortByOptions('')).toEqual([
+      { value: '', labelKey: 'admin.publications.series.option.domainSort' },
+      { value: 'AREA', labelKey: 'messages.shell.action.sortBy.area' },
+      { value: 'PUBLISH_DATE', labelKey: 'messages.shell.action.sortBy.publishDate' },
+      { value: 'EVENT_DATE', labelKey: 'messages.shell.action.sortBy.date' },
+      { value: 'FOLLOW_UP_DATE', labelKey: 'messages.shell.action.sortBy.followUpDate' },
+      { value: 'ID', labelKey: 'messages.shell.action.sortBy.id' },
+    ]);
+    expect(messageSortByOptions('EVENT_DATE')).toEqual(messageSortByOptions(''));
+  });
+
+  /** A spelling the server also reads is the choice it names, not a code of its own. */
+  it('reads a stored value as the server does: trimmed, in any case, and its other spellings', () => {
+    expect(messageSortByChoice('publishDate')).toBe('PUBLISH_DATE');
+    expect(messageSortByChoice(' area ')).toBe('AREA');
+    expect(messageSortByChoice('EVENTDATE')).toBe('EVENT_DATE');
+    expect(messageSortByChoice('FollowUpDate')).toBe('FOLLOW_UP_DATE');
+    expect(messageSortByChoice('id')).toBe('ID');
+    expect(messageSortByChoice('  ')).toBe('');
+    expect(messageSortByChoice('TITLE')).toBe('TITLE');
+    expect(messageSortByOptions('publishDate')).toEqual(messageSortByOptions(''));
+    expect(messageSortByOptions('FOLLOWUPDATE')).toEqual(messageSortByOptions(''));
+  });
+
+  /** A value the server would refuse stays the series' value, shown as stored. */
+  it('keeps a stored value the server would refuse, without a text, after the domain order', () => {
+    const options = messageSortByOptions('TITLE');
+    expect(options.map((option) => option.value)).toEqual([
+      '',
+      'TITLE',
+      'AREA',
+      'PUBLISH_DATE',
+      'EVENT_DATE',
+      'FOLLOW_UP_DATE',
+      'ID',
+    ]);
+    expect(options[1].labelKey).toBeUndefined();
   });
 });

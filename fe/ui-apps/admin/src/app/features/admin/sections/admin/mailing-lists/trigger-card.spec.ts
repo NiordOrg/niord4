@@ -3,6 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
+import { TranslocoService } from '@jsverse/transloco';
 import { describe, expect, it } from 'vitest';
 
 import { APP_CONFIG } from '../../../../../core/config/app-config.token';
@@ -10,6 +11,7 @@ import { DomainFacade } from '../../../../../core/domain/facades/domain.facade';
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
 import { LocaleFormatService } from '../../../../../core/main-shell/services/locale-format.service';
 import { provideNiordIcons } from '../../../../../shared/icons/niord-icons';
+import { TEST_LANGUAGES } from '../../../../../shared/testing/language-testing';
 import { provideTestTransloco } from '../../../../../shared/testing/transloco-testing';
 import { wallClockIn } from '../../../../../shared/testing/zone-testing';
 import { dateToTimeString, newTriggerForm, type TriggerFormModel } from './mailing-list.model';
@@ -42,7 +44,13 @@ function setup(initialSessionZone?: string) {
       provideHttpClientTesting(),
       provideTestTransloco(),
       provideNiordIcons(),
-      { provide: LanguageService, useValue: { selectedLanguage: () => 'en' } },
+      {
+        provide: LanguageService,
+        useValue: {
+          selectedLanguage: () => 'en',
+          modelLanguages: TEST_LANGUAGES.availableLanguages,
+        },
+      },
       {
         provide: LocaleFormatService,
         useValue: { formatTime: () => '', uses12HourClock: () => false },
@@ -136,6 +144,35 @@ describe('TriggerCard', () => {
       expect(dateToTimeString(host.model().scheduledExecutionTime)).toBe('06:45');
       expect(host.model().scheduledExecutionTimeZone).toBe('Asia/Tokyo');
     });
+  });
+
+  it('names each subject language by its configured label and flag, and an unconfigured one as stored', () => {
+    const { fixture, host } = setup();
+    // The rows are drawn afresh after the text arrives, as they are when the drawer opens.
+    host.model.set(newTriggerForm([]));
+    fixture.detectChanges();
+    TestBed.inject(TranslocoService).setTranslation(
+      { 'admin.mailingLists.trigger.subjectEnabled': 'Enable {{lang}} subject' },
+      'en',
+      { merge: true },
+    );
+    host.model.set(newTriggerForm(['en', 'da', 'kl']));
+    fixture.detectChanges();
+
+    // The first fieldset is the Mail subject one; each of its rows is one language.
+    const subjects = fixture.nativeElement.querySelector('fieldset') as HTMLFieldSetElement;
+    const rows = [...subjects.querySelectorAll(':scope > div')] as HTMLElement[];
+    expect(rows.map((row) => row.querySelector('span.truncate')?.textContent?.trim())).toEqual([
+      'English',
+      'Dansk',
+      'kl',
+    ]);
+    expect(
+      rows.map((row) => row.querySelector('input[type="checkbox"]')?.getAttribute('aria-label')),
+    ).toEqual(['Enable English subject', 'Enable Dansk subject', 'Enable kl subject']);
+    expect(
+      rows.map((row) => row.querySelector('app-language-flag img')?.getAttribute('src') ?? null),
+    ).toEqual(['assets/img/flags/en.png', 'assets/img/flags/da.png', null]);
   });
 
   it('shows an unset zone as a disabled placeholder rather than a blank row', () => {

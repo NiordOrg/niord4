@@ -587,9 +587,13 @@ public class FiringExerciseService extends BaseService implements SettingValueCh
         message.getCategories().addAll(firingAreaMessage.getCategories());
         message.getCharts().addAll(firingAreaMessage.getCharts());
 
-        // Copy message description entities and message parts
+        // Copy message description entities and message parts. A template message without any description (no title,
+        // no vicinity) holds no list of them at all: the exercise then has none to copy, and its title is made from
+        // its areas and its parts' subjects below, as always
         MessageVo firingAreaMessageVo = firingAreaMessage.toVo(SystemMessageVo.class, Message.MESSAGE_DETAILS_FILTER);
-        firingAreaMessageVo.getDescs().forEach(d -> message.addDesc(new MessageDesc(d)));
+        if (firingAreaMessageVo.getDescs() != null) {
+            firingAreaMessageVo.getDescs().forEach(d -> message.addDesc(new MessageDesc(d)));
+        }
         firingAreaMessageVo.getParts()
                 .forEach(p -> {
                     if (p.getGeometry() != null) {

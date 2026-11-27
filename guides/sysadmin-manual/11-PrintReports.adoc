@@ -43,7 +43,10 @@ A new deployment gets three print reports from its bootstrap, offered in every d
 
 | Standard (`standard`)
 | Prints the details of each message of the list in the language chosen. Its front page shows the search criteria
-  of the list and a table of contents. Niord also uses it when a print names no report.
+  of the list and a table of contents. The criteria are in the language chosen too: the names of the message
+  filter's fields, the statuses, types and kinds in words, and the areas, categories, tags and publications by
+  their names; the words are texts of the "web", "message" and "pdf" dictionaries (see <<dictionaries>>). Niord
+  also uses it when a print names no report.
 
 | Draft (`draft`)
 | Like _Standard_, but prints every language of each message and a few extra fields, such as the message's type and
@@ -55,9 +58,10 @@ A new deployment gets three print reports from its bootstrap, offered in every d
 |===
 
 These reports are data like any other: you may change them, and Niord does not put back a report you deleted. A
-print that needs a built-in report the deployment lacks fails, saying which report is missing, and the
-missing-path report lists it (see <<script-resource-extensions,Where Script Resources Come From>>). To get it back,
-import it on this page, for example from an export of another deployment.
+print that needs a built-in report the deployment lacks fails: an editor is told _The document could not be
+generated._, and a reader of the public site sees the page _Failed to load document_. Neither names the report;
+the missing-path report lists it (see <<script-resource-extensions,Where Script Resources Come From>>). To get it
+back, import it on this page, for example from an export of another deployment.
 
 [#generating-pdfs]
 === Generating PDFs
@@ -113,7 +117,9 @@ The attributes of a print report:
 | A JSON object like the read-only properties, but each parameter is shown in the _Print_ dialog, where the editor
   can change it before printing. A default value may hold the tokens `${week}`, `${week-2-digits}`, `${year}` and
   `${year-2-digits}`, which Niord replaces with the current week and year. In the "NM report" example the
-  parameters `week` and `year` default to `${week}` and `${year}`.
+  parameters `week` and `year` default to `${week}` and `${year}`. The dialog labels the parameters `week`,
+  `year` and `NtM-ref`, which Niord's own reports read, in the editor's language (in English _Week_, _Year_
+  and _NtM reference_), and any other parameter by its name.
 
 |===
 

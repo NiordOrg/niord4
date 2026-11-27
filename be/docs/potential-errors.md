@@ -1139,26 +1139,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low — test hygiene. Fix: leave the provider empty in the test settings, so the no-provider branch
   is the one tested, and correct the Javadoc if a provider stays.
 
-## RENDER6. The message-list PDF's criteria line is Java's English description in every language
-
-- **Location:** `MessageSearchParams.toString` (the search description, `"Statuses: %s"` and the rest), which
-  `bootstrap/templates/messages/message-list-pdf.ftl` prints as `${searchCriteria}`.
-- **Description:** the first page of the message-list report reads "Criteria: Domain: niord-nw, Statuses:
-  [PUBLISHED], Kinds: [WARNING], Series IDs: [dma-nw-local, dma-nw]". The criteria line is the search's English
-  debug description, with Java's list brackets, printed whatever the report's language. Since 2026-11-20 the
-  description writes "Series IDs", "Area IDs" and "Category IDs" (it wrote "Series ID's"), and the time stamp is
-  printed by `msg.time.date_time_format` in the print's zone, as the message PDFs print a time (it was FreeMarker's
-  default "Nov 11, 2026, 11:28:28AM"); the template ships in the release folder
-  `be/niord/bootstrap/releases/2026-11-20-report-template-fixes/`. Since 2026-11-23 the labels around it
-  ("Generated", "Criteria", "Result" and the count of messages) are texts of the report's language
-  (`pdf.list.generated`, `pdf.list.criteria`, `pdf.list.result`, `pdf.list.result_count`), in the release folder
-  `be/niord/bootstrap/releases/2026-11-23-report-words-as-texts/`; the criteria line itself is still Java's.
-- **Why it looks wrong:** it is the first thing a reader sees on a printed report, and the user guides' picture of
-  that page shows it.
-- **Exposed by:** the user guides' screenshot rig (2026-11-11, `fe/guides-shots/`, `pilot/report-first-page.png`).
-- **Severity:** Low, cosmetic. Fix: a criteria line made from the report's own texts in its language; new texts,
-  a change in how the report is handed its criteria, and a template change, which ships as a release import.
-
 ## PROM7. The Twitter settings of a type answer 500, and the dialog then offers an empty form whose save is refused
 
 - **Location:** `org/niord/core/promulgation/TwitterSettingsRestService` (`GET
@@ -2152,25 +2132,71 @@ they say otherwise; every other path is from the repository root.
   `msg.field.published` as it is: the bootstrap's `messages/message-support.ftl` (289) reads it without a
   parameter and puts the date after it, so it needs the template changed with it or a key of its own for the app.
 
-## DESCS1. Four readers take a value object's list of texts as always there, which it is not for a row without a text
+## FIRING12. A firing-area template message without any message part never gets its firing exercise
 
-- **Location:** `org/niord/core/promulgation/NavtexPromulgationService.java` 304-305 and
-  `SafetyNetPromulgationService.java` 178-179 (`message.getParts().stream().flatMap(p -> p.getDescs().stream())`, in
-  `generateMessagePromulgation`); `org/niord/core/schedule/FiringExerciseService.java` 591-592
-  (`firingAreaMessageVo.getDescs().forEach(...)`, in `buildFiringExerciseMessage`);
-  `org/niord/web/PublicationRestService.java` 843 (`for (PublicationDescVo desc : publication.getDescs())`, in
-  `releasePublication`).
-- **Description:** the mappers leave a value object's list of texts (and a message's list of parts) null when the
-  row has none (`MessageMapper` 118-126 and 320, `Publication.toVo` 270-275, as `DictionaryMapper` does). These four
-  read the list without a check, so a message with a part that has no text, or no part, answers 500 to NAVTEX's or
-  SafetyNET's _Generate_ and to the message save that generates the promulgation; a firing area whose template message
-  has no title stops the firing exercise of that area; and a release of a publication of the old model without a
-  text answers 500. The other readers of the same lists check for null first (`AudioPromulgationService` 112-114,
-  `GeometryFormatService` 73-75, `SystemMessageVo` 81-83, `ApiRestService` 447).
-- **Why it looks wrong:** the same list is read two ways, and the unchecked way fails on data the product itself
-  writes: a part whose texts are blanked is kept without a text (`MessagePart.copyDescsAndRemoveBlanks`).
-- **Exposed by:** the search for readers of a value object's texts that assume a list, made while fixing the same
-  assumption in `DictionaryVo` (an entry without a text stopped every template that loads its dictionary). Read in
-  the code; not reproduced.
-- **Severity:** Low to medium (a 500 on an action, nothing written wrong). Fix: read a null list as an empty one at
-  each of the four, as the others do, with a unit test per reader.
+- **Location:** `be/niord/src/main/java/org/niord/core/schedule/FiringExerciseService.java`,
+  `buildFiringExerciseMessage` (~597): `firingAreaMessageVo.getParts().forEach(...)`, with no check.
+- **Description:** `Message.toVo` fills a value object's list of parts with `checkCreateParts()` once per part, so a
+  template message without any part gives a value object whose list is `null`, and the build fails with a
+  `NullPointerException`. The run's catch in `generateFiringExerciseMessages` counts the area as failed and keeps its
+  current exercise in force, so every hourly run logs an error for that area and none of its periods is issued.
+- **Why it looks wrong:** the method adds a `TIME` part when the template has none, so a template without parts
+  is meant to be buildable, and the list of descriptions read two lines above it is checked for `null`.
+- **Exposed by:** the fix of four readers that took a missing list of texts as always there (2026-11-27); read in
+  the code, not reproduced.
+- **Severity:** Low — a firing-area template normally holds at least a details part. Fix: read a `null` list of
+  parts as an empty one.
+
+## FIRING13. A firing area without any name stops its whole firing schedule, and hides the failure it was logging
+
+- **Location:** `be/niord/src/main/java/org/niord/core/schedule/FiringExerciseService.java`,
+  `checkCreateFiringExerciseMessage` (~352) and the catch in `generateFiringExerciseMessages` (~562):
+  `firingArea.getDescs().get(0).getName()`.
+- **Description:** an `Area` holds an empty list of descriptions when it has no name, and `get(0)` then throws an
+  `IndexOutOfBoundsException`. At 352 it is thrown outside the per-area try, so it leaves the schedule's
+  transaction and the whole schedule fails in that run (`failedSchedules`), every hour. At 562 it is thrown inside
+  the catch that logs an area's failed build, so it replaces the real failure, which is never logged, and again
+  fails the whole schedule instead of the one area.
+- **Why it looks wrong:** the area's name is read only for a log line, and the run is written so that one area's
+  fault costs that area alone.
+- **Exposed by:** the fix of four readers that took a missing list of texts as always there (2026-11-27); read in
+  the code, not reproduced.
+- **Severity:** Low — a firing area is normally named. Fix: a log name that falls back to the area's id when it has
+  no description.
+
+## PROM21. NAVTEX's and SafetyNET's Generate answer 500 for a message part text without a language
+
+- **Location:** `be/niord/src/main/java/org/niord/core/promulgation/NavtexPromulgationService.java` (~309) and
+  `SafetyNetPromulgationService.java` (~183), `generateMessagePromulgation`: `d.getLang().equals(language)`.
+- **Description:** a message part description without a language makes the filter throw a `NullPointerException`,
+  so the generation of the promulgation text fails for the whole message. `AudioPromulgationService.detailsText`
+  reads the same list with `language.equals(d.getLang())` and documents that the template execute endpoint accepts
+  such a description, and that every template run with its type ticked reaches the generation.
+- **Why it looks wrong:** three readers of one list disagree; the audio one treats a text without a language as one
+  in another language, the other two answer a server fault.
+- **Exposed by:** the fix of four readers that took a missing list of texts as always there (2026-11-27); read in
+  the code, not reproduced.
+- **Severity:** Low — the admin editor always sets a language. Fix: `language.equals(d.getLang())`, as the audio
+  generation does.
+
+## ISSUE13. A domain sorted by "Date" refuses the member list, the preview and the release of its series' open issues
+
+- **Location:** `be/niord/src/main/java/org/niord/core/publication/series/resolve/IssueOrdering.java`,
+  `resolveSort` (~109) and `parseSortBy` (~119-127); the domain editor's choices,
+  `fe/ui-apps/admin/src/app/features/admin/sections/sysadmin/domains/domain-rules.ts`,
+  `MESSAGE_SORT_ORDER_OPTIONS` (~36-43).
+- **Description:** the domain editor offers six message sort orders, `DATE ASC` and `DATE DESC` among them, and
+  the message search reads `DATE` as the event date (`MessageSearchParams.sortByEventDate`). A publication series
+  that names no sort of its own takes its domain's: `resolveSort` splits the domain's value and hands `DATE` to
+  `parseSortBy`, which knows `AREA`, `PUBLISH_DATE`, `EVENT_DATE`, `FOLLOW_UP_DATE` and `ID` (and three other
+  spellings) and throws `IllegalArgumentException("unknown sort field: DATE")`; there is no fallback. Its three
+  callers are the live member list of an unreleased issue (`IssueMemberListService.liveMembers`), the preview
+  (`IssuePublishService.preview`) and the release (`IssuePublishService.publish`), so in such a series each of them
+  answers 400 with that text (`RestExceptionStatusAdvice`) for every open issue; a released or imported issue
+  reads its stored order and is not affected. `AREA` and `ID` mean the same in both readers.
+- **Why it looks wrong:** a choice the domain editor offers, and the message lists honour, stops a publication
+  series from being released, and the answer names a sort field the operator never typed in the series.
+- **Exposed by:** a check of the domain editor's sort-order choices against the publications' sort parser,
+  2026-11-27; read in the code, not reproduced.
+- **Severity:** Medium where a domain holds a `DATE` order (the base bootstrap and the sample hold none). Fix:
+  `parseSortBy` reads `DATE` as `EVENT_DATE`, as the message search does, with a test of the domain fallback.

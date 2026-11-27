@@ -1,3 +1,4 @@
+import type { PaperSize } from '../../../../../shared/models/print/print-settings.model';
 import { formatWallClockTime, parseWallClockTime } from '../../../../../shared/utils/zoned-date';
 import type {
   Availability,
@@ -211,6 +212,79 @@ export const PAGE_SIZES: readonly PageSize[] = [
   'LEGAL',
   'LEDGER',
 ];
+
+/**
+ * The paper each page size is, in the message print dialog's words: the same eight sizes, with
+ * the three US papers spelled in lower case there.
+ */
+const PAPER_OF_PAGE_SIZE: Readonly<Record<PageSize, PaperSize>> = {
+  A3: 'A3',
+  A4: 'A4',
+  A5: 'A5',
+  B4: 'B4',
+  B5: 'B5',
+  LETTER: 'letter',
+  LEGAL: 'legal',
+  LEDGER: 'ledger',
+};
+
+/** The text key of a page size's name ("Letter" for `LETTER`). */
+export function pageSizeTextKey(size: PageSize): string {
+  return `messages.print.settings.paperSize.${PAPER_OF_PAGE_SIZE[size]}`;
+}
+
+/** One choice of the "Sort messages by" select; a choice without a text key reads as stored. */
+export interface MessageSortByOption {
+  readonly value: string;
+  readonly labelKey?: string;
+}
+
+/**
+ * The empty choice, which leaves the order to the domain, and the fields the server sorts an
+ * issue's messages by, named as the message list's sort menu names them: the issue orders each
+ * field the way that menu's search does.
+ */
+const MESSAGE_SORT_BY_OPTIONS: readonly MessageSortByOption[] = [
+  { value: '', labelKey: 'admin.publications.series.option.domainSort' },
+  { value: 'AREA', labelKey: 'messages.shell.action.sortBy.area' },
+  { value: 'PUBLISH_DATE', labelKey: 'messages.shell.action.sortBy.publishDate' },
+  { value: 'EVENT_DATE', labelKey: 'messages.shell.action.sortBy.date' },
+  { value: 'FOLLOW_UP_DATE', labelKey: 'messages.shell.action.sortBy.followUpDate' },
+  { value: 'ID', labelKey: 'messages.shell.action.sortBy.id' },
+];
+
+/** The other spellings the server reads a sort field by, in upper case, and the field they name. */
+const MESSAGE_SORT_BY_ALIASES: Readonly<Record<string, string>> = {
+  PUBLISHDATE: 'PUBLISH_DATE',
+  EVENTDATE: 'EVENT_DATE',
+  FOLLOWUPDATE: 'FOLLOW_UP_DATE',
+};
+
+/**
+ * The choice of the "Sort messages by" select a stored value is, read as the server reads it:
+ * trimmed, in any letter case, and with the spellings it also takes (`publishDate`,
+ * `FOLLOWUPDATE`); a blank value is the domain's order. A value the server would refuse is
+ * returned as stored.
+ */
+export function messageSortByChoice(stored: string): string {
+  const read = (stored ?? '').trim().toUpperCase();
+  const field = MESSAGE_SORT_BY_ALIASES[read] ?? read;
+  return MESSAGE_SORT_BY_OPTIONS.some((option) => option.value === field) ? field : stored;
+}
+
+/**
+ * The choices of the "Sort messages by" select. A stored value the server would refuse is offered
+ * too, after the empty choice, so the select shows what the series holds and an untouched save
+ * sends it back.
+ */
+export function messageSortByOptions(stored: string): readonly MessageSortByOption[] {
+  const choice = messageSortByChoice(stored);
+  if (MESSAGE_SORT_BY_OPTIONS.some((option) => option.value === choice)) {
+    return MESSAGE_SORT_BY_OPTIONS;
+  }
+  const [domainOrder, ...fields] = MESSAGE_SORT_BY_OPTIONS;
+  return [domainOrder, { value: stored }, ...fields];
+}
 
 export const PAGE_ORIENTATIONS: readonly PageOrientation[] = ['PORTRAIT', 'LANDSCAPE'];
 export const MESSAGE_PUBLICATIONS: readonly MessagePublication[] = ['NONE', 'INTERNAL', 'EXTERNAL'];

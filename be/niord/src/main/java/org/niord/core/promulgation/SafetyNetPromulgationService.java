@@ -172,15 +172,19 @@ public class SafetyNetPromulgationService
 
         SafetyNetMessagePromulgationVo safetynet = new SafetyNetMessagePromulgationVo(type.toVo(DataFilter.get()));
 
-        // Compute the SafetyNET text
+        // Compute the SafetyNET text. A message without parts, and a part without texts, hold no list at all: they
+        // give no text
         String language = getLanguage(type);
         StringBuilder text = new StringBuilder();
-        message.getParts().stream()
-            .flatMap(p -> p.getDescs().stream())
-            .filter(d -> d.getLang().equals(language))
-            .filter(d -> StringUtils.isNotBlank(d.getDetails()))
-            .map(d -> html2safetynet(d.getDetails(), type.getLanguage()))
-            .forEach(d -> text.append(d).append(System.lineSeparator()));
+        if (message.getParts() != null) {
+            message.getParts().stream()
+                .filter(p -> p.getDescs() != null)
+                .flatMap(p -> p.getDescs().stream())
+                .filter(d -> d.getLang().equals(language))
+                .filter(d -> StringUtils.isNotBlank(d.getDetails()))
+                .map(d -> html2safetynet(d.getDetails(), type.getLanguage()))
+                .forEach(d -> text.append(d).append(System.lineSeparator()));
+        }
 
         if (text.length() > 0) {
             safetynet.setPromulgate(true);

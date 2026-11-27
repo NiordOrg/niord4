@@ -1,6 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { Injectable } from '@angular/core';
-import { provideTransloco, type Translation, type TranslocoLoader } from '@jsverse/transloco';
+import {
+  provideTransloco,
+  type Translation,
+  type TranslocoLoader,
+  TranslocoService,
+} from '@jsverse/transloco';
 import { Feature as OlFeature } from 'ol';
 import { Point } from 'ol/geom';
 import { Observable, of } from 'rxjs';
@@ -43,6 +48,41 @@ function mount(feature: OlFeature) {
   ) as HTMLInputElement | null;
   return { fixture, radiusInput, changed };
 }
+
+describe('FeaturePropertyPanel radius unit', () => {
+  it("names each unit by the language's unit text, keeping the stored unit codes", () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: { availableLangs: ['en', 'da'], defaultLang: 'en' },
+          loader: TranslationLoader,
+        }),
+      ],
+    });
+    const transloco = TestBed.inject(TranslocoService);
+    transloco.setTranslation(
+      {
+        'common.distanceUnit.m': 'm',
+        'common.distanceUnit.km': 'km',
+        'common.distanceUnit.nm': 'sm',
+      },
+      'da',
+    );
+    transloco.setActiveLang('da');
+    const fixture = TestBed.createComponent(FeaturePropertyPanel);
+    fixture.componentRef.setInput('feature', bufferFeature());
+    fixture.detectChanges();
+
+    const options = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLOptionElement>(
+        'select option',
+      ),
+    ];
+    expect(options.map((option) => option.textContent?.trim())).toEqual(['m', 'km', 'sm']);
+    expect(options.map((option) => option.value)).toEqual(['m', 'km', 'nm']);
+    expect(options.find((option) => option.selected)?.value).toBe('nm');
+  });
+});
 
 describe('FeaturePropertyPanel', () => {
   it('shows the radius control for any buffer feature, seeded with the current radius', () => {

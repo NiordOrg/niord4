@@ -266,7 +266,9 @@ links has only the file and link patterns.
   names parameters of its own, they are offered to add.
 
 | Sort messages by, Sort direction
-| The order of the messages in the document. Set both or neither.
+| The order of the messages in the document: by _Areas_, _Publish date_, _Event dates_,
+  _Follow-up date_ or _ID_, _Ascending_ or _Descending_. _The domain's sort order_ leaves the order
+  to the publication's domain, and to areas, ascending, when the domain sets none.
 
 | A separate file per language
 | Whether each language gets its own document, or one document serves every language.

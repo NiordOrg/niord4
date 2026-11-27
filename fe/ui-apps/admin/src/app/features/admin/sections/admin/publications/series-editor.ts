@@ -77,6 +77,9 @@ import {
   NUMBERING_SCHEMES,
   PAGE_ORIENTATIONS,
   PAGE_SIZES,
+  pageSizeTextKey,
+  messageSortByChoice,
+  messageSortByOptions,
   isReservedReportParamKey,
   previewIntervalFrom,
   reservedReportParamKeys,
@@ -235,6 +238,7 @@ export class PublicationSeriesEditor {
   protected readonly numberingSchemes = NUMBERING_SCHEMES;
   protected readonly contentModes = CONTENT_MODES;
   protected readonly pageSizes = PAGE_SIZES;
+  protected readonly pageSizeTextKey = pageSizeTextKey;
   protected readonly pageOrientations = PAGE_ORIENTATIONS;
   protected readonly messagePublications = MESSAGE_PUBLICATIONS;
   protected readonly timeRelations = TIME_RELATIONS;
@@ -291,6 +295,16 @@ export class PublicationSeriesEditor {
    * reaches into the form's internals for a value it only wants to display.
    */
   protected readonly value = computed(() => this.formModel());
+
+  /** The sort-field choices, with the series' own value among them. */
+  protected readonly messageSortByOptions = computed(() =>
+    messageSortByOptions(this.value().messageSortBy),
+  );
+
+  /** The choice the series' sort field is, as the server reads it. */
+  protected readonly messageSortByChoice = computed(() =>
+    messageSortByChoice(this.value().messageSortBy),
+  );
 
   /**
    * The series as the server last handed it over, under the edited fields.
@@ -1039,10 +1053,6 @@ export class PublicationSeriesEditor {
 
   protected setFromSelect<K extends keyof SeriesFormModel>(key: K, event: Event): void {
     this.setField(key, (event.target as HTMLSelectElement).value as SeriesFormModel[K]);
-  }
-
-  protected setFromInput<K extends keyof SeriesFormModel>(key: K, event: Event): void {
-    this.setField(key, (event.target as HTMLInputElement).value as SeriesFormModel[K]);
   }
 
   protected setChecked(key: keyof SeriesFormModel, event: Event): void {

@@ -1186,14 +1186,20 @@ class MailingListDeliveryFaultITTest extends ITTest {
         }
     }
 
-    /** Runs the work with this context's execution service started at the given time, put back afterwards */
+    /**
+     * Runs the work with this context's execution service started at the given time and the free-text index not
+     * rebuilt since (a test of a rebuild sets its time inside, with {@link #rebuildStartedAt}), both put back
+     * afterwards. The context is shared with other test classes, and a class that saves
+     * {@code messageIndexIncludeDeletedMessages} leaves the time of its rebuild behind; within the half hour after
+     * it, that time and not the start given here would decide the wait.
+     */
     private <T> T startedAt(Instant started, Callable<T> work) throws Exception {
         MailingListExecutionService service =
                 (MailingListExecutionService) AopTestUtils.getUltimateTargetObject(executionService);
         Instant was = service.startedAt;
         service.startedAt = started;
         try {
-            return work.call();
+            return rebuildStartedAt(Instant.EPOCH, work);
         } finally {
             service.startedAt = was;
         }
