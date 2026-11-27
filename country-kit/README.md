@@ -329,9 +329,10 @@ stale copy would be found only by comparing databases. Without the old version's
 the new one holds is named, not compared; without the new version's, one item asks for the
 comparison by hand. Every other template the kit changed since `<old>` (`CODEOWNERS`,
 `dependabot.yml`, the `be/` files `init` writes, a template added or removed) is named in one line
-above `## Human actions`, with no box: it asks nothing, and a country that keeps its own copy of one
-compares it. Green means no task: review, merge, deploy. The status `niord/upgrade-actions`
-says:
+above `## Human actions`, with no box, since set-up checks none of them: a country that keeps its own
+copy of one compares it, and deletes its copy of one the kit no longer has, with the lines that name
+it (`Templates the kit no longer has since <old>`). Green means no task: review, merge, deploy. The
+status `niord/upgrade-actions` says:
 
 | State   | Description                                                                                                    | When                                                  |
 | ------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -959,7 +960,8 @@ its digest (the package's page lists them), the summary of the Pack run on `main
 — its run number is the tag — states that tag's reference with its digest, and the withdrawn marker
 holds every withdrawal with its reason and date, which each consumer's set-up prints. A repository
 that has a `pack-releases.md` from an earlier kit, which `init` wrote, deletes it with its line in
-`.github/CODEOWNERS` and the lines of its own documents that name it: nothing reads it.
+`.github/CODEOWNERS` and the lines of its own documents that name it: nothing reads it. Its first
+bump onto this kit says so in the comment's line of the templates the kit no longer has.
 
 ### Pinning a pack
 

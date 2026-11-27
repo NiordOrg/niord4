@@ -1293,6 +1293,25 @@ describe('the upgrade report: the templates that changed', () => {
     assert.deepEqual(data.otherTemplatesChanged, ['renovate.json']);
   });
 
+  it('tells a country to delete its copy of a template the kit no longer has, as pack-releases.md', () => {
+    const { markdown, data } = upgradeOf({
+      before: {
+        'templates/pack-releases.md': '# Pack releases\n',
+        'templates/AGENTS.md': 'same\n',
+      },
+      now: { 'templates/AGENTS.md': 'same\n' },
+    });
+    assert.deepEqual(data.otherTemplatesChanged, ['pack-releases.md']);
+    const look = sectionOf(markdown, 'To look at');
+    assert.ok(
+      look.includes(
+        '\n\nTemplates the kit no longer has since 4.0.0: `pack-releases.md` (no box: a country that has a copy deletes it, and the lines that name it).\n',
+      ),
+      markdown,
+    );
+    assert.doesNotMatch(look, /Other templates changed/);
+  });
+
   it('names every other changed template in one line, not an item', () => {
     const { markdown, data } = upgradeOf({
       before: {
@@ -1311,7 +1330,7 @@ describe('the upgrade report: the templates that changed', () => {
       },
     });
     const line =
-      'Other templates changed since 4.0.0, in `.niord/kit/templates/`: `CODEOWNERS`, `be/pom.xml.tmpl`, `renovate.json` (no action: a country that keeps its own copy compares it).';
+      'Other templates changed since 4.0.0, in `.niord/kit/templates/`: `CODEOWNERS`, `be/pom.xml.tmpl` (no action: a country that keeps its own copy compares it). Templates the kit no longer has since 4.0.0: `renovate.json` (no box: a country that has a copy deletes it, and the lines that name it).';
     assert.deepEqual(data.templatesChanged, ['AGENTS.md']);
     // Changed, added (nested) and removed; the tracked one, the stub and the equal one left out.
     assert.deepEqual(data.otherTemplatesChanged, [

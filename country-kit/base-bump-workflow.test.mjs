@@ -1714,9 +1714,13 @@ describe('base-bump.yml: Build the comment', () => {
     );
   });
 
+  /** KIT_FILES with the two other templates the tests below name, so the kit at NEW has them. */
+  const WITH_OTHERS = { ...KIT_FILES, CODEOWNERS: '* @o\n', 'be/pom.xml.tmpl': '<project/>\n' };
+
   it('names every other changed template in one line above the boxes, never a box', () => {
     const result = build({
       report: data({ otherTemplatesChanged: ['CODEOWNERS', 'be/pom.xml.tmpl'] }),
+      kit: WITH_OTHERS,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const line =
@@ -1737,9 +1741,29 @@ describe('base-bump.yml: Build the comment', () => {
     assert.ok(statusCall(recount).includes('state=success'), statusCall(recount));
   });
 
+  it('tells a country to delete its copy of a template the kit no longer has, still without a box', () => {
+    const result = build({
+      report: data({ otherTemplatesChanged: ['CODEOWNERS', 'pack-releases.md'] }),
+      kit: WITH_OTHERS,
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const changed =
+      '\nOther templates changed since 4.0.97, in `.niord/kit/templates/`: `CODEOWNERS` (no action: a country that keeps its own copy compares it).\n';
+    const removed =
+      '\nTemplates the kit no longer has since 4.0.97: `pack-releases.md` (no box: a country that has a copy deletes it, and the lines that name it).\n';
+    assert.ok(result.comment.includes(changed), result.comment);
+    const at = result.comment.indexOf(removed);
+    assert.ok(at > 0, result.comment);
+    assert.ok(at < result.comment.indexOf('\n## Human actions\n'));
+    assert.doesNotMatch(result.comment, /`pack-releases\.md` \(no action/);
+    assert.deepEqual(boxesOf(result.comment), []);
+    assert.deepEqual(result.outputs, { unticked: '0', security: 'false' });
+  });
+
   it('leaves the boxes of the tracked templates as they were beside the line', () => {
     const result = build({
       report: data({ templatesChanged: ['AGENTS.md'], otherTemplatesChanged: ['CODEOWNERS'] }),
+      kit: WITH_OTHERS,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.deepEqual(boxesOf(result.comment), [

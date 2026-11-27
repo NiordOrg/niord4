@@ -72,7 +72,7 @@ const MAX_DIFF_LINES = 40;
  * templates, and writes `.github/workflows/ci.yml` from the ci template with the country's code
  * filled in, so a changed ci template is a merge. The stub, templates/setup.mjs, is not here: a
  * changed stub is a failed check and a To-do item of its own. Every other file of the folder that
- * changed is named only in one line, with no action (`otherTemplatesChanged`).
+ * changed is named only in one line, with no To-do item (`otherTemplatesChanged`).
  */
 const TEMPLATES = [
   ['AGENTS.md', 'merge', 'AGENTS.md'],
@@ -706,10 +706,29 @@ function otherTemplatesChanged({ kit, previous }) {
     .sort();
   return {
     names,
-    line: names.length
-      ? `Other templates changed since ${previous.version}, in ${code(`${TEMPLATES_DIR}/`)}: ${listed(names)} (no action: a country that keeps its own copy compares it).`
-      : undefined,
+    line: names.length ? otherTemplatesLine(previous.version, names, now) : undefined,
   };
+}
+
+/**
+ * The line of the other templates: the ones the kit still has, which a country that keeps its own
+ * copy compares, and then the ones the kit no longer has, whose copy a country deletes, with the
+ * lines that name it: a template the kit removed is no longer part of a country's design. Neither
+ * is a To-do item, since set-up checks neither. base-bump.yml writes the same line.
+ */
+function otherTemplatesLine(version, names, now) {
+  const kept = names.filter((name) => now.has(name));
+  const removed = names.filter((name) => !now.has(name));
+  return [
+    kept.length
+      ? `Other templates changed since ${version}, in ${code(`${TEMPLATES_DIR}/`)}: ${listed(kept)} (no action: a country that keeps its own copy compares it).`
+      : undefined,
+    removed.length
+      ? `Templates the kit no longer has since ${version}: ${listed(removed)} (no box: a country that has a copy deletes it, and the lines that name it).`
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 /** The keys each foreign pack lacks, `[{ lang, keys }]`, in the order the pack check found them. */
