@@ -90,9 +90,8 @@ public class FmReportService extends BaseService {
 
     /**
      * Returns the report the public site prints its message lists with: the standard template without
-     * its front page. The front page is written for the editors — a heading, the search criteria with
-     * their internal ids, the number of messages and a table of contents, in English whatever the
-     * language of the list — and the public sheet opens with the messages instead.
+     * its front page. The front page is written for the editors — a heading, the search criteria, the
+     * number of messages and a table of contents — and the public sheet opens with the messages instead.
      * @return the report the public site prints its message lists with
      * @throws NiordWebException 404 when the deployment has no public report
      */

@@ -89,7 +89,13 @@ public final class RequiredTexts {
          * {@code IndexIncompleteNotice}: the line at the top of a printed message list and a mailing-list report made
          * while the free-text index is being filled after a start. Without the key it prints a built-in English text.
          */
-        INDEX_INCOMPLETE_NOTICE
+        INDEX_INCOMPLETE_NOTICE,
+        /**
+         * {@code MessageSearchCriteriaText}: the criteria line on the front page of a printed message list. Without
+         * the key of a criterion's name it prints the base product's English word, without the key of a value the
+         * value as it is stored, and without the date format the dates as day-month-year in digits.
+         */
+        SEARCH_CRITERIA
     }
 
     /**
@@ -134,7 +140,59 @@ public final class RequiredTexts {
             JavaText.of("template", "navwarn.date.time_prefix", Reader.DATE_INTERVAL_DIRECTIVE),
             JavaText.of("template", "navwarn.date.time_interval_prefix", Reader.DATE_INTERVAL_DIRECTIVE),
             JavaText.of("template", "term.and", Reader.DATE_INTERVAL_DIRECTIVE),
-            JavaText.of("pdf", "pdf.list.index_incomplete", Reader.INDEX_INCOMPLETE_NOTICE));
+            JavaText.of("pdf", "pdf.list.index_incomplete", Reader.INDEX_INCOMPLETE_NOTICE),
+            JavaText.of("web", "menu.filter.text", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.domain", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.reference", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.date", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.user", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.comments", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.status", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.type", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.kind", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.messageSeries", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.area", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.category", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.chart", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.tag", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.publication", Reader.SEARCH_CRITERIA),
+            JavaText.of("web", "menu.filter.promulgationType", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.status.DRAFT", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.status.VERIFIED", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.status.PUBLISHED", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.status.EXPIRED", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.status.CANCELLED", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.status.DELETED", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.PERMANENT_NOTICE", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.TEMPORARY_NOTICE", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.PRELIMINARY_NOTICE", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.MISCELLANEOUS_NOTICE", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.COASTAL_WARNING", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.SUBAREA_WARNING", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.NAVAREA_WARNING", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.type.LOCAL_WARNING", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.kind.WARNING", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.kind.CANCELLATION", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.field.publish_date", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.field.publish_from_date", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.field.event_dates", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.field.created_date", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.field.updated_date", Reader.SEARCH_CRITERIA),
+            JavaText.of("message", "msg.time.date_format", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.nw", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.nm", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.main_type", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.reference_levels", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.publish_to_date", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.user.CREATED_BY", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.user.UPDATED_BY", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.user.LAST_UPDATED_BY", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.comments.ANY", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.comments.OWN", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.comments.ANY_UNACK", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.comments.OWN_UNACK", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.selection", Reader.SEARCH_CRITERIA),
+            JavaText.of("pdf", "pdf.list.criteria.map_area", Reader.SEARCH_CRITERIA));
 
     /**
      * The key prefixes templates complete at runtime, such as {@code text("msg.status." + msg.status)}

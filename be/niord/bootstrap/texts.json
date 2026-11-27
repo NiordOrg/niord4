@@ -2074,6 +2074,114 @@
         ]
       },
       {
+        "key": "pdf.list.criteria.comments.ANY",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Any"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.comments.ANY_UNACK",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Any unacknowledged"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.comments.OWN",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Own"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.comments.OWN_UNACK",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Own unacknowledged"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.main_type",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Main type"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.map_area",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Map area"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.publish_to_date",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Publish to"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.reference_levels",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Reference levels"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.selection",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Selected messages"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.user.CREATED_BY",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Created by"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.user.LAST_UPDATED_BY",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Last updated by"
+          }
+        ]
+      },
+      {
+        "key": "pdf.list.criteria.user.UPDATED_BY",
+        "descs": [
+          {
+            "lang": "en",
+            "value": "Updated by"
+          }
+        ]
+      },
+      {
         "key": "pdf.list.generated",
         "descs": [
           {

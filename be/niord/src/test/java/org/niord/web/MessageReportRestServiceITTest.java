@@ -519,6 +519,27 @@ class MessageReportRestServiceITTest extends ITTest {
                 .body(not(containsString("<b>IT</b>")));
     }
 
+    /**
+     * The front page's criteria line names the search in the print's language: the filter's names and the texts of
+     * the statuses, types and kinds. FAILS without them: the line was "Statuses: [PUBLISHED], Types:
+     * [TEMPORARY_NOTICE], Kinds: [WARNING]".
+     */
+    @Test
+    void listPdf_namesItsCriteriaInWords() {
+        String body = given().auth().oauth2(accessToken())
+                .queryParam("lang", "en")
+                .queryParam("debug", "true")
+                .queryParam("report", "standard")
+                .queryParam("status", "PUBLISHED")
+                .queryParam("type", "TEMPORARY_NOTICE")
+                .when().get(LIST_PDF)
+                .then().statusCode(200).contentType(containsString("text/html"))
+                .extract().asString();
+
+        assertTrue(body.contains("Status: Published; Type: Temp.; Kind: Warnings"), "the criteria are words");
+        assertTrue(!body.contains("Statuses: ["), "the criteria are not the search's description");
+    }
+
     @Test
     void listPdf_givesASignedInCallerTheParamValuesAsText_andKeepsTheCheckedPageLayout() {
         // nm-tp-report prints its week parameter; the page layout is written into a style sheet

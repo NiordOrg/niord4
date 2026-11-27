@@ -18,10 +18,12 @@ package org.niord.web;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.niord.core.NiordApp;
 import org.niord.core.domain.Domain;
 import org.niord.core.domain.DomainService;
 import org.niord.core.message.IndexIncompleteNotice;
+import org.niord.core.message.MessageSearchCriteriaText;
 import org.niord.core.message.MessageSearchParams;
 import org.niord.core.message.MessageSeries;
 import org.niord.core.message.MessageService;
@@ -64,6 +66,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -96,6 +99,7 @@ class MessageReportRestServiceTest {
     private FmTemplateService templateService;
     private FmTemplateBuilder builder;
     private IndexIncompleteNotice indexIncompleteNotice;
+    private MessageSearchCriteriaText searchCriteriaText;
     private MessageReportRestService service;
 
     @BeforeEach
@@ -110,6 +114,8 @@ class MessageReportRestServiceTest {
         builder = mock(FmTemplateBuilder.class, RETURNS_SELF);
         when(templateService.newFmTemplateBuilder()).thenReturn(builder);
         indexIncompleteNotice = mock(IndexIncompleteNotice.class);
+        searchCriteriaText = mock(MessageSearchCriteriaText.class);
+        when(searchCriteriaText.describe(any(), any(), any())).thenReturn("");
 
         FmReport standard = new FmReport();
         standard.setReportId(FmReportService.STANDARD_REPORT_ID);
@@ -131,7 +137,7 @@ class MessageReportRestServiceTest {
     private MessageReportRestService withPermits(int anonymousPdfConcurrency) {
         return new MessageReportRestService(mock(NiordApp.class), domainService, userService, messageService,
                 messageRestService, messageSearchRestService, fmReportService, templateService, indexIncompleteNotice,
-                anonymousPdfConcurrency);
+                searchCriteriaText, anonymousPdfConcurrency);
     }
 
     // ------------------------------------------------------------------ fixtures
@@ -183,11 +189,13 @@ class MessageReportRestServiceTest {
         return domain;
     }
 
-    private void searchReturns(String description, MessageVo... messages) throws Exception {
+    /** A search that finds the messages, and whose criteria line is the given one */
+    private void searchReturns(String criteria, MessageVo... messages) throws Exception {
         PagedSearchResultVo<MessageVo> result = new PagedSearchResultVo<>();
         result.setData(new ArrayList<>(List.of(messages)));
-        result.setDescription(description);
+        result.setDescription("Statuses: [PUBLISHED]");
         when(messageSearchRestService.searchMessages(any(MessageSearchParams.class))).thenReturn(result);
+        when(searchCriteriaText.describe(any(), any(), any())).thenReturn(criteria);
     }
 
     /** Runs the streamed body, which is where the template is rendered */
@@ -401,6 +409,28 @@ class MessageReportRestServiceTest {
         verify(builder, never()).data(argThat((Map<String, Object> data) -> data.containsKey("searchCriteria")));
     }
 
+    /**
+     * The front page's criteria line describes the search as it was run, in the print's language and zone; it is not
+     * the search's English description. FAILS without the line: the template was handed the description.
+     */
+    @Test
+    void theCriteriaLineIsTheSearchAsRunInThePrintsLanguageAndZone() throws Exception {
+        when(userService.currentUser()).thenReturn(new User());
+        searchReturns("Status: Publiceret", message("m1", "dma-nw"));
+        when(domainService.currentDomain()).thenReturn(domain("niord-nw", "Europe/Copenhagen"));
+        NiordApp app = mock(NiordApp.class);
+        when(app.getLanguage("da")).thenReturn("da");
+        service = new MessageReportRestService(app, domainService, userService, messageService, messageRestService,
+                messageSearchRestService, fmReportService, templateService, indexIncompleteNotice, searchCriteriaText, 3);
+
+        render(service.generatePdfForSearch(request(Map.of("lang", new String[] { "da" }))));
+
+        ArgumentCaptor<MessageSearchParams> searched = ArgumentCaptor.forClass(MessageSearchParams.class);
+        verify(messageSearchRestService).searchMessages(searched.capture());
+        verify(searchCriteriaText).describe(same(searched.getValue()), eq("da"), eq("Europe/Copenhagen"));
+        verify(builder).data("searchCriteria", "Status: Publiceret");
+    }
+
     @Test
     void theCriteriaKeepTheirLettersOnlyTheMarkupCharactersAreEscaped() throws Exception {
         searchReturns("Område: Øresund & Bælt", message("m1", "dma-nw"));
@@ -442,7 +472,7 @@ class MessageReportRestServiceTest {
         NiordApp app = mock(NiordApp.class);
         when(app.getLanguage("en")).thenReturn("en");
         service = new MessageReportRestService(app, domainService, userService, messageService, messageRestService,
-                messageSearchRestService, fmReportService, templateService, indexIncompleteNotice, 3);
+                messageSearchRestService, fmReportService, templateService, indexIncompleteNotice, searchCriteriaText, 3);
 
         ResponseEntity<StreamingResponseBody> response = service.generatePdfForSearch(request(query));
         render(response);

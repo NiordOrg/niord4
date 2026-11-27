@@ -43,7 +43,10 @@ A new deployment gets three print reports from its bootstrap, offered in every d
 
 | Standard (`standard`)
 | Prints the details of each message of the list in the language chosen. Its front page shows the search criteria
-  of the list and a table of contents. Niord also uses it when a print names no report.
+  of the list and a table of contents. The criteria are in the language chosen too: the names of the message
+  filter's fields, the statuses, types and kinds in words, and the areas, categories, tags and publications by
+  their names; the words are texts of the "web", "message" and "pdf" dictionaries (see <<dictionaries>>). Niord
+  also uses it when a print names no report.
 
 | Draft (`draft`)
 | Like _Standard_, but prints every language of each message and a few extra fields, such as the message's type and

@@ -1139,26 +1139,6 @@ Found by the inventory behind `docs/code-data-config-plan.md` (2026-10-19/20).
 - **Severity:** Low — test hygiene. Fix: leave the provider empty in the test settings, so the no-provider branch
   is the one tested, and correct the Javadoc if a provider stays.
 
-## RENDER6. The message-list PDF's criteria line is Java's English description in every language
-
-- **Location:** `MessageSearchParams.toString` (the search description, `"Statuses: %s"` and the rest), which
-  `bootstrap/templates/messages/message-list-pdf.ftl` prints as `${searchCriteria}`.
-- **Description:** the first page of the message-list report reads "Criteria: Domain: niord-nw, Statuses:
-  [PUBLISHED], Kinds: [WARNING], Series IDs: [dma-nw-local, dma-nw]". The criteria line is the search's English
-  debug description, with Java's list brackets, printed whatever the report's language. Since 2026-11-20 the
-  description writes "Series IDs", "Area IDs" and "Category IDs" (it wrote "Series ID's"), and the time stamp is
-  printed by `msg.time.date_time_format` in the print's zone, as the message PDFs print a time (it was FreeMarker's
-  default "Nov 11, 2026, 11:28:28AM"); the template ships in the release folder
-  `be/niord/bootstrap/releases/2026-11-20-report-template-fixes/`. Since 2026-11-23 the labels around it
-  ("Generated", "Criteria", "Result" and the count of messages) are texts of the report's language
-  (`pdf.list.generated`, `pdf.list.criteria`, `pdf.list.result`, `pdf.list.result_count`), in the release folder
-  `be/niord/bootstrap/releases/2026-11-23-report-words-as-texts/`; the criteria line itself is still Java's.
-- **Why it looks wrong:** it is the first thing a reader sees on a printed report, and the user guides' picture of
-  that page shows it.
-- **Exposed by:** the user guides' screenshot rig (2026-11-11, `fe/guides-shots/`, `pilot/report-first-page.png`).
-- **Severity:** Low, cosmetic. Fix: a criteria line made from the report's own texts in its language; new texts,
-  a change in how the report is handed its criteria, and a template change, which ships as a release import.
-
 ## PROM7. The Twitter settings of a type answer 500, and the dialog then offers an empty form whose save is refused
 
 - **Location:** `org/niord/core/promulgation/TwitterSettingsRestService` (`GET
