@@ -299,14 +299,18 @@ public class NavtexPromulgationService extends BasePromulgationService {
             }
         }
 
+        // A message without parts, and a part without texts, hold no list at all: they give no text
         String language = getLanguage(type);
         StringBuilder text = new StringBuilder();
-        message.getParts().stream()
-            .flatMap(p -> p.getDescs().stream())
-            .filter(d -> d.getLang().equals(language))
-            .filter(d -> StringUtils.isNotBlank(d.getDetails()))
-            .map(d -> html2navtex(d.getDetails(), message.getId()))
-            .forEach(d -> text.append(d).append('\n'));
+        if (message.getParts() != null) {
+            message.getParts().stream()
+                .filter(p -> p.getDescs() != null)
+                .flatMap(p -> p.getDescs().stream())
+                .filter(d -> d.getLang().equals(language))
+                .filter(d -> StringUtils.isNotBlank(d.getDetails()))
+                .map(d -> html2navtex(d.getDetails(), message.getId()))
+                .forEach(d -> text.append(d).append('\n'));
+        }
 
         if (text.length() > 0) {
             navtex.setPromulgate(true);
