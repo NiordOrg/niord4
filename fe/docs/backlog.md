@@ -602,11 +602,6 @@ Background: [`features/admin.md`](features/admin.md), [`features/sysadmin.md`](f
 - A published compilation whose sources have moved since its release shows **no banner**. The issue records
   the source issues it covered, so comparing that record against today's published set is cheap; what to do
   about a difference (amend to refresh) is the decision, and it is sequenced after the first annual is out.
-- **The series criteria editor lists message types by their codes.** The _Message type_ criterion's boxes read
-  `LOCAL_WARNING`, `TEMPORARY_NOTICE` and the like: its options carry the code as their label and no
-  `labelKey` (`sections/admin/publications/series-criteria-editor.ts` 387-392), while the _Main type_ options
-  beside them have one (394-398). English names exist (`msg.type.*` in `fe/languages/en/i18n/admin/en.json`).
-  Found by the user guides' pictures (2026-11-12).
 - **An issue's History reads "1 entries".** `admin.publications.issue.historyCount` is `{{count}} entries` with
   no singular (`fe/languages/en/i18n/admin/en.json`, used in `issue-detail.html` 1456), so an issue with one
   history entry, such as a newly opened one, says "1 entries". The member count beside it already picks a key

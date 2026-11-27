@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -682,6 +682,46 @@ describe('IssueDetail — the facts strip', () => {
 
     const chip = root(fixture).querySelector('[data-testid="issue-criteria"] .chip')!;
     expect(chip.textContent).toBe('admin.publications.criteria.kind.area ≠: dk-baltic');
+  });
+
+  /**
+   * A message type and a main type are named as the editor offers them, not by
+   * their codes; a code this build does not know is shown as it is stored.
+   */
+  it('names the message types and main types of the criteria in words', async () => {
+    const { fixture } = setup({
+      status: 'OPEN',
+      seriesCriteria: {
+        criteria: [
+          {
+            kind: 'messageType',
+            operator: 'IN',
+            values: ['TEMPORARY_NOTICE', 'PRELIMINARY_NOTICE', 'SOMETHING_NEW'],
+          },
+          { kind: 'messageMainType', operator: 'IN', values: ['NM'] },
+        ],
+      },
+    });
+    TestBed.inject(TranslocoService).setTranslation(
+      {
+        'admin.publications.criteria.kind.messageType': 'Message type',
+        'admin.publications.criteria.kind.messageMainType': 'Main type',
+        'admin.publications.criteria.mainType.NM': en.admin.publications.criteria.mainType.NM,
+        'msg.type.TEMPORARY_NOTICE': en['msg.type.TEMPORARY_NOTICE'],
+        'msg.type.PRELIMINARY_NOTICE': en['msg.type.PRELIMINARY_NOTICE'],
+      },
+      'en',
+      { merge: true },
+    );
+    // The strip is worded again on a language switch, which is what a translation arriving looks like.
+    (TestBed.inject(LanguageService).selectedLanguage as WritableSignal<string>).set('en');
+    await fixture.whenStable();
+
+    const chips = [...root(fixture).querySelectorAll('[data-testid="issue-criteria"] .chip')];
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      `Message type: ${en['msg.type.TEMPORARY_NOTICE']}, ${en['msg.type.PRELIMINARY_NOTICE']}, SOMETHING_NEW`,
+      `Main type: ${en.admin.publications.criteria.mainType.NM}`,
+    ]);
   });
 
   /** The pencil opens the existing editor straight onto the criteria. */

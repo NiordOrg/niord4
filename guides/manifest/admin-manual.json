@@ -505,7 +505,7 @@
     "steps": "NM domain, 'Weekly NtM P&T': 'Settings', then the 'Criteria' tab; wait until 'What this would select' shows a count",
     "crop": "the drawer's tab list and the open tab, window 1280 x 960",
     "needsData": "a series with two criteria that match published messages",
-    "note": "The weekly NtM has one criterion only, so the in-force series is shown. The editor lists message types by their codes (TEMPORARY_NOTICE ...); the spec allows them past the guard's key check."
+    "note": "The weekly NtM has one criterion only, so the in-force series is shown."
   },
   {
     "manual": "admin-manual", "chapterFile": "05-Publications.adoc", "line": 712, "file": "PublicationSeriesCompiledFrom.png",

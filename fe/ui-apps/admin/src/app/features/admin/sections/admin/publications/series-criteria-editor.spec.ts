@@ -5,10 +5,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import en from '../../../../../../../../../languages/en/i18n/admin/en.json';
 import { APP_CONFIG } from '../../../../../core/config/app-config.token';
 import { LanguageService } from '../../../../../core/main-shell/services/language.service';
 import { provideNiordIcons } from '../../../../../shared/icons/niord-icons';
 import { provideTestTransloco } from '../../../../../shared/testing/transloco-testing';
+import { MESSAGE_TYPES_BY_MAIN_TYPE } from '../../../../messages/models/message.model';
 import type {
   CriterionKind,
   IssueCriteria,
@@ -604,6 +606,28 @@ describe('SeriesCriteriaEditor', () => {
       kind: 'messageMainType',
       operator: 'IN',
       values: ['NM'],
+    });
+  });
+
+  it('offers the message types by the names the rest of the application gives them', () => {
+    const { host, editor } = setup();
+
+    const options = editor.optionsFor('messageType');
+    expect(options.map((o) => o.value)).toEqual([
+      ...MESSAGE_TYPES_BY_MAIN_TYPE.NW,
+      ...MESSAGE_TYPES_BY_MAIN_TYPE.NM,
+    ]);
+    expect(options.map((o) => o.labelKey)).toEqual(options.map((o) => `msg.type.${o.value}`));
+    for (const option of options) {
+      expect(typeof (en as Record<string, unknown>)[`msg.type.${option.value}`]).toBe('string');
+    }
+
+    editor.addKind('messageType');
+    editor.toggleValue('messageType', 'TEMPORARY_NOTICE');
+    expect((host.last as IssueCriteria).criteria[0]).toEqual({
+      kind: 'messageType',
+      operator: 'IN',
+      values: ['TEMPORARY_NOTICE'],
     });
   });
 
