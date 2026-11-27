@@ -16,7 +16,6 @@
 /fe/info/overrides/                     @OWNER
 /fe/country/                            @OWNER
 /fe/packs/                              @OWNER
-/pack-releases.md                       @OWNER
 /.github/workflows/pack.yml             @OWNER
 /.github/workflows/base-bump.yml        @OWNER
 /be/overrides.json                      @OWNER

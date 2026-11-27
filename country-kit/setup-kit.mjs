@@ -436,7 +436,7 @@ export async function updatePins({ fe, manifest, given = {}, env = process.env, 
       lines.push(`${lang}: ${lock.packs[lang]} removed: not a pinned pack`);
   writeLock(file, { version: lock.base.version, sha256: lock.base.sha256, kit: lock.kit, packs });
   lines.push(
-    `${LOCK} written; review the new digests, and a first pin against the home's pack-releases.md`,
+    `${LOCK} written; review the new digests, and a first pin against the summary of the home's Pack run that published its tag`,
   );
   return lines;
 }

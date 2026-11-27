@@ -623,7 +623,7 @@ jobs:
           const to = pinsOf('fe/niord-pins.lock.json');
           for (const lang of (env.UPDATE_PINS ?? '').split(' ').filter(Boolean))
             done.push(
-              `The pinned pack ${lang} moved from ${from[lang] ? code(from[lang]) : 'no pin'} to ${code(to[lang] ?? 'no pin')}, its home's newest pack (${code('node setup.mjs --update-pins')}): compare the digest with the home's ${code('pack-releases.md')}.`,
+              `The pinned pack ${lang} moved from ${from[lang] ? code(from[lang]) : 'no pin'} to ${code(to[lang] ?? 'no pin')}, its home's newest pack (${code('node setup.mjs --update-pins')})${from[lang] ? '' : ": a first pin, so compare its digest with the summary of the home's Pack run that published its tag"}.`,
             );
           if (env.RECORD === 'missing')
             done.push(

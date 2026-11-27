@@ -260,7 +260,7 @@ describe('init', () => {
     });
     assert.equal(rows.length, 23);
     assert.deepEqual(written, [...rows.map((row) => row.path), ...files.keys()]);
-    assert.equal(written.length, 40, written.join('\n'));
+    assert.equal(written.length, 39, written.join('\n'));
     // The kit retired templates/renovate.json: the bump arrives by the Niord base bump app.
     assert.ok(
       !files.has('.github/renovate.json'),
@@ -1037,19 +1037,27 @@ describe('init', () => {
     assert.equal(read(own, 'fe/.gitattributes'), '* text=auto\n');
   });
 
-  it('writes pack-releases.md, the record of the packs published and withdrawn, and owns it in CODEOWNERS', () => {
+  it('writes no record of the packs published and withdrawn, and owns the packs and their workflows in CODEOWNERS', () => {
     const root = repository();
-    run(root);
-    const record = read(root, 'pack-releases.md');
-    assert.match(record, /^\| Pack \| Tag \| Digest \| Date \|$/m);
-    assert.match(record, /^\| Pack \| Tag \| Digest \| Date \| Reason \|$/m);
+    const result = run(root);
+    // A publish and a withdrawal leave nothing to record by hand: the registry and the withdrawn
+    // marker are the record.
+    assert.ok(!fs.existsSync(path.join(root, 'pack-releases.md')));
+    assert.ok(!result.written.some((file) => /pack-releases/i.test(file)), result.written.join());
+    assert.doesNotMatch(read(root, 'AGENTS.md'), /pack-releases/);
+    // A repository that kept one from an earlier kit: init runs, and neither writes nor lists it.
+    const earlier = repository();
+    writeIn(earlier, 'pack-releases.md', '# Pack releases\n');
+    const again = run(earlier);
+    assert.ok(![...again.written, ...again.kept].includes('pack-releases.md'));
+    assert.equal(read(earlier, 'pack-releases.md'), '# Pack releases\n');
     const codeowners = read(root, '.github/CODEOWNERS');
+    assert.doesNotMatch(codeowners, /pack-releases/);
     for (const owned of [
       '/fe/build-urls-allowed.json',
       '/fe/admin/branding-unaccepted.json',
       '/fe/info/branding-unaccepted.json',
       '/fe/packs/',
-      '/pack-releases.md',
       '/.github/workflows/pack.yml',
       '/.github/workflows/base-bump.yml',
     ])

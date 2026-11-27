@@ -1834,18 +1834,46 @@ describe('base-bump.yml: Build the comment', () => {
     ])
       assert.ok(
         result.comment.includes(
-          `\n- The pinned pack ${lang} moved from \`${from}\` to \`${to}\`, its home's newest pack (\`node setup.mjs --update-pins\`): compare the digest with the home's \`pack-releases.md\`.\n`,
+          `\n- The pinned pack ${lang} moved from \`${from}\` to \`${to}\`, its home's newest pack (\`node setup.mjs --update-pins\`).\n`,
         ),
         result.comment,
       );
-    // A line, not a box: set-up checks the new pack in CI.
+    // A line, not a box: set-up checks the new pack in CI. No file of the home is named.
     assert.equal(boxesOf(result.comment).length, 2);
-    assert.ok(boxesOf(result.comment).every((box) => !box.includes('pack-releases')));
+    assert.doesNotMatch(result.comment, /pack-releases/);
     const note = result.comment.indexOf(
       '\nThe bootstrap of 4.0.97 could not be fetched: every release folder of 4.0.110 is listed.\n',
     );
     assert.ok(note > result.comment.indexOf('`releases/2026-10-30-harbours/`'));
     assert.ok(note < result.comment.indexOf('\nTick each box'));
+  });
+
+  it("asks a first pin's digest to be compared with the home's Pack run, in a line and not a box", () => {
+    const result = build({
+      report: data(),
+      env: { UPDATE_PINS: 'da kl' },
+      baseLock: lockText({ version: OLD, sha256: FE_SHA, packs: { da: DA_PIN } }),
+      lock: lockText({
+        version: NEW,
+        sha256: FE_SHA,
+        kit: { sha256: KIT_SHA },
+        packs: { da: DA_PIN3, kl: KL_PIN6 },
+      }),
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.ok(
+      result.comment.includes(
+        `\n- The pinned pack kl moved from no pin to \`${KL_PIN6}\`, its home's newest pack (\`node setup.mjs --update-pins\`): a first pin, so compare its digest with the summary of the home's Pack run that published its tag.\n`,
+      ),
+      result.comment,
+    );
+    assert.ok(
+      result.comment.includes(
+        `\n- The pinned pack da moved from \`${DA_PIN}\` to \`${DA_PIN3}\`, its home's newest pack (\`node setup.mjs --update-pins\`).\n`,
+      ),
+      result.comment,
+    );
+    assert.ok(boxesOf(result.comment).every((box) => !box.includes('Pack run')));
   });
 
   it('asks for each template the country replaces whose base product file changed, after the release folders', () => {
