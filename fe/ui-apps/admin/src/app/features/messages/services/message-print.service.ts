@@ -1,7 +1,9 @@
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { DOCUMENT, Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, catchError, map, of, switchMap } from 'rxjs';
 
 import { APP_CONFIG } from '../../../core/config/app-config.token';
+import { TICKETED_REQUEST } from '../../../core/interceptors/ticketed-request';
 import { LanguageService } from '../../../core/main-shell/services/language.service';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import type { PrintRequest } from '../dialogs/message-print-dialog/message-print-dialog.service';
@@ -36,15 +38,16 @@ export class MessagePrintService {
   private readonly reportsApi = inject(MessageReportsApiService);
   private readonly language = inject(LanguageService);
   private readonly notifications = inject(NotificationService);
+  private readonly http = inject(HttpClient);
   private readonly document = inject(DOCUMENT);
   private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
 
   printList(options: PrintListOptions): Observable<void> {
     return this.dialog.open({ totalMessageNo: options.totalMessageNo, list: true }).pipe(
-      map((request) => {
-        if (!request) return;
+      switchMap((request) => {
+        if (!request) return of<void>(undefined);
         const url = this.buildListUrl(request, undefined, options.filterParams);
-        this.download(fetch(url, NOT_KEPT), LIST_FILE_NAME);
+        return this.download(url, LIST_FILE_NAME);
       }),
     );
   }
@@ -54,14 +57,13 @@ export class MessagePrintService {
       switchMap((request) => {
         if (!request) return of<void>(undefined);
         return this.tagsApi.createTempMessageTag(messageIds).pipe(
-          map((tempTag) => {
-            const url = this.buildListUrl(request, tempTag.tagId, filterParams);
-            this.download(fetch(url, NOT_KEPT), LIST_FILE_NAME);
-          }),
           catchError(() => {
             this.notifications.error('messages.print.errorTempTag');
-            return of<void>(undefined);
+            return EMPTY;
           }),
+          switchMap((tempTag) =>
+            this.download(this.buildListUrl(request, tempTag.tagId, filterParams), LIST_FILE_NAME),
+          ),
         );
       }),
     );
@@ -69,10 +71,10 @@ export class MessagePrintService {
 
   printMessage(messageId: string): Observable<void> {
     return this.dialog.open({ totalMessageNo: 1, list: false }).pipe(
-      map((request) => {
-        if (!request) return;
+      switchMap((request) => {
+        if (!request) return of<void>(undefined);
         const url = this.buildSingleMessageUrl(messageId, request);
-        this.download(fetch(url, NOT_KEPT), `message-${messageId}.pdf`);
+        return this.download(url, `message-${messageId}.pdf`);
       }),
     );
   }
@@ -101,34 +103,48 @@ export class MessagePrintService {
           report: { ...report, params: expanded.params ?? report.params },
         }),
       ),
-      map((request) => {
-        if (!request) return;
+      switchMap((request) => {
+        if (!request) return of<void>(undefined);
         const url = this.buildListUrl(request, tagId || undefined, '');
-        this.download(fetch(url, NOT_KEPT), LIST_FILE_NAME);
+        return this.download(url, LIST_FILE_NAME);
       }),
     );
   }
 
   /**
-   * Hand the fetched PDF to the browser as a download, or say that it could not be made.
+   * Fetch the PDF and hand it to the browser as a download, or say that it could not be made.
    *
    * Fetched rather than navigated to: a navigation shows whatever the backend answers, so a print
    * it cannot make (a message no longer there, an error while rendering, a backend that does not
    * answer) replaced the application with the backend's error document. The request is the one
-   * the navigation made — the address with its one-time ticket, no bearer and no domain header,
-   * which is why it is the browser's own fetch and not HttpClient, whose interceptors add both —
-   * so the backend answers it exactly as it answered the navigation (`NOT_KEPT`).
+   * the navigation made — the address with its one-time ticket, and neither the bearer nor the
+   * domain header (`TICKETED_REQUEST`) — so the backend answers it exactly as it answered the
+   * navigation; the browser keeps no copy of the document.
    *
    * The document is named as the backend names it, or by `fallbackName` when the backend's name
    * cannot be read.
    */
-  private download(answer: Promise<Response>, fallbackName: string): void {
-    answer
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        this.saveFile(await response.blob(), fileNameOf(response, fallbackName));
+  private download(url: string, fallbackName: string): Observable<void> {
+    return this.http
+      .get(url, {
+        responseType: 'blob',
+        observe: 'response',
+        cache: 'no-store',
+        context: new HttpContext().set(TICKETED_REQUEST, true),
       })
-      .catch(() => this.notifications.error('messages.print.errorDocument'));
+      .pipe(
+        map((response) => {
+          if (!response.body) throw new Error('No document');
+          this.saveFile(
+            response.body,
+            fileNameOf(response.headers.get('Content-Disposition'), fallbackName),
+          );
+        }),
+        catchError(() => {
+          this.notifications.error('messages.print.errorDocument');
+          return of<void>(undefined);
+        }),
+      );
   }
 
   /** Hand a fetched document to the browser as a download; overridable for tests. */
@@ -193,9 +209,6 @@ export class MessagePrintService {
   }
 }
 
-/** How a print is fetched: as a navigation would ask, and kept by nothing. */
-const NOT_KEPT: RequestInit = { cache: 'no-store' };
-
 /** The name the backend gives a printed list when the request names none. */
 const LIST_FILE_NAME = 'messages.pdf';
 
@@ -203,8 +216,8 @@ const LIST_FILE_NAME = 'messages.pdf';
  * The file name of a Content-Disposition `filename="…"`, which the backend writes URI-encoded, or
  * the fallback when the response carries none the page can read.
  */
-function fileNameOf(response: Response, fallback: string): string {
-  const quoted = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1];
+function fileNameOf(contentDisposition: string | null, fallback: string): string {
+  const quoted = /filename="([^"]+)"/.exec(contentDisposition ?? '')?.[1];
   if (!quoted) return fallback;
   try {
     return decodeURIComponent(quoted);

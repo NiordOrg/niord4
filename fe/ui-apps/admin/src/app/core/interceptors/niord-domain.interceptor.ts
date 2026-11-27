@@ -3,9 +3,10 @@ import { inject } from '@angular/core';
 
 import { DomainFacade } from '../domain/facades/domain.facade';
 import { isNiordBackendRequest } from './backend-prefixes';
+import { TICKETED_REQUEST } from './ticketed-request';
 
 export const niordDomainInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!isNiordBackendRequest(req.url)) {
+  if (!isNiordBackendRequest(req.url) || req.context.get(TICKETED_REQUEST)) {
     return next(req);
   }
 

@@ -468,8 +468,9 @@ the next open re-fetches, so a failed removal correctly still shows the tag.
 
 Every PDF and ZIP download out of this area is **ticketed**: the browser cannot attach the bearer token, so the
 client fetches a fresh one-time ticket and embeds it in the URL, then navigates the browser to it. A print is the
-exception to the navigation: `MessagePrintService` fetches the ticketed URL with the browser's own `fetch` (the
-same request a navigation sends: no bearer, no domain header, kept by nothing) and saves the answer as a download,
+exception to the navigation: `MessagePrintService` fetches the ticketed URL with `HttpClient` as a ticketed
+request (`TICKETED_REQUEST`, see [platform.md](../platform.md#token-refresh-and-401): the same request a
+navigation sends, no bearer and no domain header; kept by nothing) and saves the answer as a download,
 so a print the backend cannot make leaves the page as it was and says so in a toast
 (`messages.print.errorDocument`) instead of replacing the application with the backend's error document.
 Tickets are never cached. The print dialog and the export ask for a `user`-role ticket when the user
