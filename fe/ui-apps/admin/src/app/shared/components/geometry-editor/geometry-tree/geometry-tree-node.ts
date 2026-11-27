@@ -16,7 +16,9 @@ import type { Feature as OlFeature } from 'ol';
 import type { Coordinate } from 'ol/coordinate';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { Icon } from '../../../icons/icon';
+import { LanguageFlag } from '../../language-flag/language-flag';
 import { MapProjectionService } from '@niord/map/map-projection.service';
 import { formatLatLon, parseLatLon } from '../../../utils/coordinate-format';
 import type { GeometryEditType } from '../geometry-editor';
@@ -48,7 +50,7 @@ const NAMEABLE_PARENTS: readonly TreeNode['type'][] = ['Point', 'LineString', 'E
  */
 @Component({
   selector: 'app-geometry-tree-node',
-  imports: [TranslocoPipe, Icon],
+  imports: [TranslocoPipe, Icon, LanguageFlag],
   template: `
     @if (isFolder()) {
       @let label = typeLabel();
@@ -202,16 +204,23 @@ const NAMEABLE_PARENTS: readonly TreeNode['type'][] = ['Point', 'LineString', 'E
       </div>
       @if (nameable() && !locked() && expanded()) {
         <div class="flex flex-col gap-0.5 py-0.5 pl-8">
-          @for (lang of languages(); track lang) {
+          @for (item of nameLanguages(); track item.lang) {
             <label class="flex items-center gap-1 text-xs">
-              <span class="w-6 uppercase text-fg-muted">{{ lang }}</span>
+              <!-- Decorative: the input's accessible name names the language. -->
+              <span class="flex w-6 items-center">
+                <app-language-flag
+                  class="h-3.5 w-5 rounded-xs"
+                  [lang]="item.lang"
+                  [flagPath]="item.flagPath"
+                />
+              </span>
               <input
                 #langInput
                 type="text"
                 class="w-44 rounded border border-surface-300 bg-surface-0 px-1 py-0.5 text-xs dark:border-surface-700 dark:bg-surface-900"
-                [value]="nameFor(lang)"
-                [attr.aria-label]="'geometry.tree.positionName' | transloco: { lang: lang }"
-                (change)="setName(lang, langInput.value)"
+                [value]="nameFor(item.lang)"
+                [attr.aria-label]="'geometry.tree.positionName' | transloco: { lang: item.label }"
+                (change)="setName(item.lang, langInput.value)"
               />
             </label>
           }
@@ -224,6 +233,7 @@ const NAMEABLE_PARENTS: readonly TreeNode['type'][] = ['Point', 'LineString', 'E
 export class GeometryTreeNode {
   private readonly projection = inject(MapProjectionService);
   private readonly injector = inject(Injector);
+  private readonly languageService = inject(LanguageService);
   private readonly positionInput = viewChild<ElementRef<HTMLInputElement>>('posInput');
 
   readonly node = input.required<TreeNode>();
@@ -293,6 +303,18 @@ export class GeometryTreeNode {
   private editStartedAt: Coordinate | undefined;
 
   protected readonly isFolder = computed(() => this.node().type !== 'Position');
+
+  /**
+   * The languages of a position's name fields, each with its configured label ("Dansk") for the
+   * field's accessible name and its flag for the field's mark, the way the feature's own name
+   * fields show a language; a language the configuration does not name keeps its code.
+   */
+  protected readonly nameLanguages = computed(() =>
+    this.languages().map((lang) => {
+      const option = this.languageService.modelLanguages.find((entry) => entry.value === lang);
+      return { lang, label: option?.label ?? lang, flagPath: option?.flagPath };
+    }),
+  );
 
   /** A folder row's type in words ("Line", "Outer ring"), for its label and its buttons' names. */
   protected readonly typeLabel = computed(() => geometryTypeLabel(this.node().type));

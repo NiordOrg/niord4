@@ -295,8 +295,8 @@ degrees and minutes. You can change positions here:
   adds a position and opens it for typing; *−* (_Delete this position_) deletes it, as long as
   enough positions are left for the type.
 * The arrow to the left of a position (*Edit names*) opens a name for the position, one field for
-  each language. Positions of points, lines and an area's outline can have names; a client may show
-  them beside the positions.
+  each language, marked with the language's flag. Positions of points, lines and an area's
+  outline can have names; a client may show them beside the positions.
 
 You can also move through the tree with the keyboard: the up and down arrows go from row to row,
 the right and left arrows open and close a row, and F2 or Enter starts typing a position.

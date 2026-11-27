@@ -4451,7 +4451,7 @@
       "editNames": "Edit names",
       "addPosition": "Add a position after this one",
       "deletePosition": "Delete this position",
-      "positionName": "{{lang}} name for this position"
+      "positionName": "Name for this position in {{lang}}"
     },
     "restriction": {
       "none": "None",
