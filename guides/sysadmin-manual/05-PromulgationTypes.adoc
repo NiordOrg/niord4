@@ -30,8 +30,9 @@ The _Promulgation Types_ page lists the types. To open it, click *Sysadmin* in t
 
 image::PromulgationTypesPage.png[The Promulgation Types page, 800]
 
-The columns are *Active*, *Service ID*, *Type ID*, *Name*, *Requirement*, *Priority*, *Language*,
-the *Domains* the type is used in, and the message *Types* it is restricted to. The *Filter* field
+The columns are *Active*, *Service ID*, *Type ID*, *Name*, *Requirement*, *Priority*, *Language*
+(its flag and name, empty for a type of any language), the *Domains* the type is used in, and the
+message *Types* it is restricted to. The *Filter* field
 matches the type ID, the name and the service ID.
 
 [#adding-or-editing-a-promulgation-type]
