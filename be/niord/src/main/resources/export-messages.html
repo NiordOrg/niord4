@@ -171,6 +171,17 @@
             UPDATE: '(updated)'
         };
 
+        // The label of a message part by its type, in the words of the message dictionary's English texts
+        // (msg.field.details and the rest); a type this page does not know is shown as it is stored
+        const PART_TYPE_TEXTS = {
+            DETAILS: 'Details',
+            TIME: 'Time',
+            POSITIONS: 'Positions',
+            NOTE: 'Note',
+            PROHIBITION: 'Prohibition',
+            SIGNALS: 'Signals'
+        };
+
         // Elements and URL attributes that are dropped from the HTML fields (part details and publication).
         // SVG and MathML go whole: their animation elements can set a URL attribute after it is checked.
         const UNSAFE_ELEMENTS = 'script, style, iframe, object, embed, link, meta, base, form, svg, math';
@@ -254,7 +265,8 @@
 
             // Details lines
             (msg.parts || []).forEach(part => {
-                const value = appendRow(block, (part.type || '').toLowerCase());
+                const value = appendRow(block, Object.hasOwn(PART_TYPE_TEXTS, part.type)
+                    ? PART_TYPE_TEXTS[part.type] : (part.type || ''));
                 const partDesc = firstDesc(part);
                 if (partDesc && partDesc.subject) {
                     value.appendChild(element('div')).appendChild(element('strong', null, partDesc.subject));
