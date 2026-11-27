@@ -398,6 +398,7 @@ export class SeriesCriteriaEditor {
     MESSAGE_TYPES_BY_MAIN_TYPE[mainType as MainType].map((type) => ({
       value: type,
       label: type,
+      labelKey: `msg.type.${type}`,
     })),
   );
 

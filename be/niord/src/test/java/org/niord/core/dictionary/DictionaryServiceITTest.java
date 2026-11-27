@@ -38,6 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.ResourceBundle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -455,6 +456,35 @@ class DictionaryServiceITTest extends ITTest {
         DictionaryEntry reloaded = em.find(DictionaryEntry.class, id);
         assertEquals("Hello", reloaded.getDesc("en").getValue());
         assertNull(reloaded.getDesc("da"), "the blanked-out description must be removed");
+    }
+
+    /**
+     * An edit on the Dictionaries page may blank every value of an entry (the page warns, and saves): the entry
+     * stays, with no text in any language. Its dictionary is still read as the resource bundle a template and the
+     * audio text load, and the entry contributes no value to it.
+     */
+    @Test
+    @Transactional
+    void anEntryEditedToHaveNoTextLeavesItsDictionaryReadable() {
+        String name = "it-test-dict-notext";
+        newDictionary(name);
+        DictionaryEntry entry = newEntry("it.key.notext", "en", "Hello");
+        entry.createDesc("da").setValue("Hej");
+        dictionaryService.createEntry(name, entry);
+        dictionaryService.createEntry(name, newEntry("it.key.kept", "en", "Kept"));
+        Integer id = persistedEntryId(name, "it.key.notext");
+
+        DictionaryEntry template = newEntry("it.key.notext", "en", "");
+        template.createDesc("da").setValue("");
+        dictionaryService.updateEntry(name, template);
+        em.flush();
+        em.clear();
+
+        assertTrue(em.find(DictionaryEntry.class, id).getDescs().isEmpty(), "the entry is kept without a text");
+        ResourceBundle bundle = dictionaryService.getDictionariesAsResourceBundle(new String[] { name }, "da");
+        assertFalse(bundle.containsKey("it.key.notext"));
+        assertEquals("Kept", bundle.getString("it.key.kept"));
+        assertNull(dictionaryService.value(name, "da", "it.key.notext"));
     }
 
     /**

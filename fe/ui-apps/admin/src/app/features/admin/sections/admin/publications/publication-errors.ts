@@ -324,6 +324,7 @@ const WARNING_KEYS: Readonly<Record<string, string>> = {
   STALE_OVERRIDE: 'admin.publications.warning.STALE_OVERRIDE',
   OVERLAPPING_ISSUE: 'admin.publications.warning.OVERLAPPING_ISSUE',
   LIMIT_EXCEEDED: 'admin.publications.warning.LIMIT_EXCEEDED',
+  SOURCE_ISSUES_INCOMPLETE: 'admin.publications.warning.SOURCE_ISSUES_INCOMPLETE',
 };
 
 /**

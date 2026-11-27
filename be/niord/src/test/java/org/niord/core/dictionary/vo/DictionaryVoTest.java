@@ -209,6 +209,25 @@ public class DictionaryVoTest {
     }
 
     /**
+     * 2a. An entry without any text, as the mapper gives it (no list of descriptions at all: an edit on the
+     * Dictionaries page that blanked every value leaves one), has no value in any language, and the dictionary's
+     * other keys are still read, so a template or an audio text that loads the dictionary still renders.
+     */
+    @Test
+    public void anEntryWithoutAnyTextHasNoValue() {
+        DictionaryEntryVo empty = new DictionaryEntryVo();
+        empty.setKey("footer");
+        DictionaryVo dict = dictionary("web", empty, entry("title", desc("en", "English"), desc("da", "Dansk")));
+
+        Properties props = dict.toProperties("da", "en");
+        assertEquals(1, props.size(), "only the entry with a text contributes a value");
+        assertEquals("Dansk", props.getProperty("title"));
+        assertFalse(props.containsKey("footer"));
+        assertNull(dict.value("da", "footer", "en"));
+        assertNull(dict.value("da", "footer"));
+    }
+
+    /**
      * 2b. toProperties() with a matching language uses that language's value directly,
      * confirming the primary (non-fallback) branch.
      */

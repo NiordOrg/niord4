@@ -76,8 +76,12 @@ public class DictionaryVo implements IJsonSerializable {
      * Returns the entry's value in the given language. A value that is empty on purpose (the English
      * {@code navwarn.date.time_interval_prefix}) is that language's text and is kept; only a language without a
      * description, or with a null value, falls back to the default language and then to the first non-blank value.
+     * An entry without any description, whose value object then holds no list at all, has no value in any language.
      */
     private static String localizedValue(DictionaryEntryVo entry, String lang, String defaultLanguage) {
+        if (entry.getDescs() == null) {
+            return null;
+        }
         DictionaryEntryDescVo desc = entry.getDesc(lang);
         if (desc == null || desc.getValue() == null) {
             desc = entry.getDesc(defaultLanguage);

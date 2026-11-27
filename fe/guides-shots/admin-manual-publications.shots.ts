@@ -5,7 +5,6 @@ import {
   COMPILED,
   EXAMPLE_WEEKLY,
   IN_FORCE,
-  MESSAGE_TYPE_CODES,
   NM,
   ONE_OFF_FILE,
   RELEASED_HERE,
@@ -155,8 +154,7 @@ test.describe('admin-manual', () => {
       await loginAs(page, 'admin', NM);
       const drawer = await openSettings(page, IN_FORCE, 'Criteria');
       await expect(drawer.getByText(/\d+ message\(s\)/).first()).toBeVisible();
-      // The criteria editor lists the message types by their codes, as the application does.
-      await shot(page, { target: openTab(drawer), guard: { allowText: MESSAGE_TYPE_CODES } });
+      await shot(page, { target: openTab(drawer) });
     });
 
     test('admin-manual/PublicationSeriesCompiledFrom.png', async ({ page }) => {
