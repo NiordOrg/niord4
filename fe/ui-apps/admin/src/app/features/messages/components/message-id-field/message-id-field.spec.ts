@@ -9,7 +9,11 @@ import { MessageIdField } from './message-id-field';
 import { MessagesApiService } from '../../services/api/messages-api.service';
 import { LanguageService } from '../../../../core/main-shell/services/language.service';
 import { APP_CONFIG } from '../../../../core/config/app-config.token';
-import { MessageIdSearchResult } from '../../models/message-id-search-result.model';
+import {
+  MESSAGE_ID_MATCH_TYPES,
+  MessageIdMatchType,
+  MessageIdSearchResult,
+} from '../../models/message-id-search-result.model';
 import { provideTestTransloco } from '../../../../shared/testing/transloco-testing';
 
 const mockResult: MessageIdSearchResult = {
@@ -221,8 +225,16 @@ describe('MessageIdField', () => {
   });
 
   describe('matchTypeLabel', () => {
-    it('should return translation key for ID', () => {
-      expect(component.matchTypeLabel('ID')).toBe('messages.matchType.ID');
+    it("names a match on the message's uid by the database-id label", () => {
+      expect(component.matchTypeLabel('UID')).toBe('messages.matchType.ID');
+    });
+
+    it("lists the backend's MessageIdMatch.MatchType, and a label for each", () => {
+      const backend: readonly MessageIdMatchType[] = ['UID', 'SHORT_ID', 'TEXT'];
+      expect(new Set(MESSAGE_ID_MATCH_TYPES)).toEqual(new Set(backend));
+      for (const type of MESSAGE_ID_MATCH_TYPES) {
+        expect(component.matchTypeLabel(type)).toMatch(/^messages\.matchType\./);
+      }
     });
 
     it('should return translation key for SHORT_ID', () => {
