@@ -2131,3 +2131,50 @@ they say otherwise; every other path is from the repository root.
   the stand-in test pack and `texts.json` following and a release folder for the changed text. Not for
   `msg.field.published` as it is: the bootstrap's `messages/message-support.ftl` (289) reads it without a
   parameter and puts the date after it, so it needs the template changed with it or a key of its own for the app.
+
+## FIRING12. A firing-area template message without any message part never gets its firing exercise
+
+- **Location:** `be/niord/src/main/java/org/niord/core/schedule/FiringExerciseService.java`,
+  `buildFiringExerciseMessage` (~597): `firingAreaMessageVo.getParts().forEach(...)`, with no check.
+- **Description:** `Message.toVo` fills a value object's list of parts with `checkCreateParts()` once per part, so a
+  template message without any part gives a value object whose list is `null`, and the build fails with a
+  `NullPointerException`. The run's catch in `generateFiringExerciseMessages` counts the area as failed and keeps its
+  current exercise in force, so every hourly run logs an error for that area and none of its periods is issued.
+- **Why it looks wrong:** the method adds a `TIME` part when the template has none, so a template without parts
+  is meant to be buildable, and the list of descriptions read two lines above it is checked for `null`.
+- **Exposed by:** the fix of four readers that took a missing list of texts as always there (2026-11-27); read in
+  the code, not reproduced.
+- **Severity:** Low — a firing-area template normally holds at least a details part. Fix: read a `null` list of
+  parts as an empty one.
+
+## FIRING13. A firing area without any name stops its whole firing schedule, and hides the failure it was logging
+
+- **Location:** `be/niord/src/main/java/org/niord/core/schedule/FiringExerciseService.java`,
+  `checkCreateFiringExerciseMessage` (~352) and the catch in `generateFiringExerciseMessages` (~562):
+  `firingArea.getDescs().get(0).getName()`.
+- **Description:** an `Area` holds an empty list of descriptions when it has no name, and `get(0)` then throws an
+  `IndexOutOfBoundsException`. At 352 it is thrown outside the per-area try, so it leaves the schedule's
+  transaction and the whole schedule fails in that run (`failedSchedules`), every hour. At 562 it is thrown inside
+  the catch that logs an area's failed build, so it replaces the real failure, which is never logged, and again
+  fails the whole schedule instead of the one area.
+- **Why it looks wrong:** the area's name is read only for a log line, and the run is written so that one area's
+  fault costs that area alone.
+- **Exposed by:** the fix of four readers that took a missing list of texts as always there (2026-11-27); read in
+  the code, not reproduced.
+- **Severity:** Low — a firing area is normally named. Fix: a log name that falls back to the area's id when it has
+  no description.
+
+## PROM21. NAVTEX's and SafetyNET's Generate answer 500 for a message part text without a language
+
+- **Location:** `be/niord/src/main/java/org/niord/core/promulgation/NavtexPromulgationService.java` (~309) and
+  `SafetyNetPromulgationService.java` (~183), `generateMessagePromulgation`: `d.getLang().equals(language)`.
+- **Description:** a message part description without a language makes the filter throw a `NullPointerException`,
+  so the generation of the promulgation text fails for the whole message. `AudioPromulgationService.detailsText`
+  reads the same list with `language.equals(d.getLang())` and documents that the template execute endpoint accepts
+  such a description, and that every template run with its type ticked reaches the generation.
+- **Why it looks wrong:** three readers of one list disagree; the audio one treats a text without a language as one
+  in another language, the other two answer a server fault.
+- **Exposed by:** the fix of four readers that took a missing list of texts as always there (2026-11-27); read in
+  the code, not reproduced.
+- **Severity:** Low — the admin editor always sets a language. Fix: `language.equals(d.getLang())`, as the audio
+  generation does.
