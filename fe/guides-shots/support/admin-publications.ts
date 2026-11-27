@@ -84,15 +84,3 @@ export async function openSettings(page: Page, seriesId: string, tab: string): P
 export function openTab(drawer: Locator): readonly Locator[] {
   return [drawer.getByRole('tablist'), drawer.locator('[role="tabpanel"]:visible')];
 }
-
-/** The message types the criteria editor lists by their codes, as the application shows them. */
-export const MESSAGE_TYPE_CODES: readonly string[] = [
-  'LOCAL_WARNING',
-  'COASTAL_WARNING',
-  'SUBAREA_WARNING',
-  'NAVAREA_WARNING',
-  'TEMPORARY_NOTICE',
-  'PRELIMINARY_NOTICE',
-  'PERMANENT_NOTICE',
-  'MISCELLANEOUS_NOTICE',
-];

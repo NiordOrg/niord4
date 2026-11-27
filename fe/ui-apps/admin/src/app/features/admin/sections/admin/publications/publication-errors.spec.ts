@@ -305,6 +305,7 @@ describe('publicationErrorKey', () => {
  */
 describe('the warning vocabulary', () => {
   it('has a sentence for every resolution warning the backend can raise', () => {
+    const warnings: Readonly<Record<string, unknown>> = en.admin.publications.warning;
     for (const code of [
       'CANCELLED_BUT_DATE_ALIVE',
       'TYPE_DRIFT',
@@ -312,8 +313,11 @@ describe('the warning vocabulary', () => {
       'STALE_OVERRIDE',
       'OVERLAPPING_ISSUE',
       'LIMIT_EXCEEDED',
+      'SOURCE_ISSUES_INCOMPLETE',
     ]) {
       expect(warningKey(code)).toBe(`admin.publications.warning.${code}`);
+      // The key resolves to a sentence: one it lacks would render as itself in the acknowledge list.
+      expect(typeof warnings[code]).toBe('string');
     }
   });
 

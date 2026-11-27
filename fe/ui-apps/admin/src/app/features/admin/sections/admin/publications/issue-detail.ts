@@ -42,8 +42,15 @@ import { ConfirmService } from '../../../../../shared/services/confirm.service';
 import { DiscardConfirmService } from '../../../../../shared/services/discard-confirm.service';
 import { withEpochDates } from '../../../../../shared/utils/epoch-dates';
 import {
+  KNOWN_MAIN_TYPES,
+  KNOWN_MESSAGE_TYPES,
+  type MainType,
+  type MessageType,
+} from '../../../../messages/models/message.model';
+import {
   PublicationSeriesApiService,
   type AmendRequest,
+  type CriterionKind,
   type IssueArchiveFile,
   type IssueAuditEntry,
   type IssueCriteria,
@@ -1974,7 +1981,22 @@ export class IssueDetail {
   private chipLabel(criterion: IssueCriterion): string {
     const kind = this.transloco.translate(`admin.publications.criteria.kind.${criterion.kind}`);
     const relation = criterion.operator === 'NOT_IN' ? ' ≠' : '';
-    return `${kind}${relation}: ${criterion.values.join(', ')}`;
+    const values = criterion.values.map((value) => this.criterionValueLabel(criterion.kind, value));
+    return `${kind}${relation}: ${values.join(', ')}`;
+  }
+
+  /**
+   * A value of a closed vocabulary in the words the criteria editor offers it with; any other
+   * value, and a code this build does not know, as it is stored.
+   */
+  private criterionValueLabel(kind: CriterionKind, value: string): string {
+    if (kind === 'messageType' && KNOWN_MESSAGE_TYPES.has(value as MessageType)) {
+      return this.transloco.translate(`msg.type.${value}`);
+    }
+    if (kind === 'messageMainType' && KNOWN_MAIN_TYPES.has(value as MainType)) {
+      return this.transloco.translate(`admin.publications.criteria.mainType.${value}`);
+    }
+    return value;
   }
 
   /** Open the edit panel straight onto the criteria, from the facts strip. */

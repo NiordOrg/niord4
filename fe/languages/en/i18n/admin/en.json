@@ -3041,7 +3041,8 @@
         "NULL_PUBLISH_FROM_DROPPED": "Some candidates were skipped: with no publish date they cannot fall inside any period.",
         "STALE_OVERRIDE": "A manual decision points at a message these criteria would no longer consider.",
         "OVERLAPPING_ISSUE": "Some messages also belong to another issue of this publication.",
-        "LIMIT_EXCEEDED": "The result passed the configured limit on how many messages an issue may hold."
+        "LIMIT_EXCEEDED": "The result passed the configured limit on how many messages an issue may hold.",
+        "SOURCE_ISSUES_INCOMPLETE": "Some of this issue’s period is not covered by a published source issue (one is still open, or part of the period has none), so the messages of that part are not included."
       },
       "error": {
         "criteriaInvalid": "The criteria could not be read.",
