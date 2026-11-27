@@ -187,7 +187,7 @@ test.describe('editor-manual: position editor', () => {
     await card.getByRole('combobox', { name: 'Restriction' }).click();
     await page.getByRole('option', { name: 'Restricted', exact: true }).click();
     await card.getByRole('button', { name: 'Edit names' }).first().click();
-    const name = card.getByRole('textbox', { name: 'en name for this position' });
+    const name = card.getByRole('textbox', { name: 'Name for this position in English' });
     await name.fill('North-west corner');
     await name.press('Tab');
     await shot(page, { target: editor.locator('app-card').first(), pad: 0 });
