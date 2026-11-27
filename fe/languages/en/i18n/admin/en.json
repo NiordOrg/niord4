@@ -3652,8 +3652,8 @@
         "layout": "Layout",
         "paperSize": "Paper size",
         "orientation": {
-          "portrait": "portrait",
-          "landscape": "landscape"
+          "portrait": "Portrait",
+          "landscape": "Landscape"
         },
         "includeThumbnails": "include thumbnails",
         "paperSize.A3": "A3",

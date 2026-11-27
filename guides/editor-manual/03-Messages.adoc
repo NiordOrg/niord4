@@ -458,7 +458,7 @@ messages_ for two messages, has these settings:
   report, which prints every language of the messages with more of their fields, useful for reading
   messages through. A domain for Notices to Mariners often has more reports, for example for the
   weekly Notices to Mariners.
-* _Layout_ (_portrait_ or _landscape_) and _Paper size_.
+* _Layout_ (_Portrait_ or _Landscape_) and _Paper size_.
 * _include thumbnails_, a thumbnail map beside each message. It is offered only when the report
   leaves the choice to you.
 * Some reports have settings of their own, listed below the others by name.
