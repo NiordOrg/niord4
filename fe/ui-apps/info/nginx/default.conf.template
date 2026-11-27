@@ -336,11 +336,16 @@ server {
     # Each refuses a query it was not written for; the two maps at the top say what that is.
     # `return` is the one directive that is safe inside an `if` in a location.
     #
-    # The backend makes only a few PDFs at a time for a reader without an identity and answers
-    # every further request 503 at once. The reader asked in a tab of its own, so the backend's
-    # error would be all that tab shows: the 503 is answered with the site's own page instead
-    # (`location = /pdf-busy.html` below), at the same address and with the same status. Only a
-    # 503 is: every other answer of the backend passes as it came.
+    # The reader asked in a tab of its own, so the backend's error would be all that tab shows:
+    # a failure is answered with one of the site's own pages instead, at the same address and with
+    # the same status. The backend makes only a few PDFs at a time for a reader without an
+    # identity and answers every further request 503 at once, which gets the page that says to try
+    # again in a moment (`location = /pdf-busy.html` below). A document that cannot be made gets
+    # the page that says so (`location = /pdf-failed.html`): a 403 or a 404 (the message was never
+    # published or is no longer, or the report does not exist), a 400, a 500 (an error while it was
+    # made), and the 502 and 504 of a backend that does not answer. This host's own 403 for a query
+    # or a method it does not serve gets the same page, with the same status. A success passes as
+    # it came.
     location = /rest/message-reports/report.pdf {
         limit_except GET HEAD { deny all; }
         if ($niord_list_pdf_query_ok = 0) {
@@ -350,6 +355,7 @@ server {
         proxy_read_timeout 180s;
         proxy_intercept_errors on;
         error_page 503 /pdf-busy.html;
+        error_page 400 403 404 500 502 504 /pdf-failed.html;
         proxy_pass ${NIORD_SERVER_URL}/rest/message-reports/report.pdf;
     }
 
@@ -371,6 +377,7 @@ server {
         proxy_read_timeout 180s;
         proxy_intercept_errors on;
         error_page 503 /pdf-busy.html;
+        error_page 400 403 404 500 502 504 /pdf-failed.html;
         proxy_pass ${NIORD_SERVER_URL};
     }
 
@@ -384,6 +391,17 @@ server {
     location = /pdf-busy.html {
         internal;
         add_header Retry-After "10" always;
+        add_header Cache-Control "no-store" always;
+        include /etc/nginx/niord-security-headers.conf;
+        try_files $uri =404;
+    }
+
+    # What a reader whose PDF could not be made is given (see the two PDF locations above): a page
+    # that says so, in the language the PDF was asked in, with the link that asks again. It keeps
+    # the status of the failure and, unlike the busy page, names no time to ask again. Nobody may
+    # cache it; asked for by its own name it is a 404. Its script is the busy page's.
+    location = /pdf-failed.html {
+        internal;
         add_header Cache-Control "no-store" always;
         include /etc/nginx/niord-security-headers.conf;
         try_files $uri =404;

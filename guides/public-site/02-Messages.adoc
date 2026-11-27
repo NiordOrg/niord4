@@ -207,6 +207,9 @@ same moment, the new tab says instead: _Documents are being prepared for other r
 Please try again in a moment._ Click _Print_ on that page a little later, and the document is asked
 for again.
 
+When the document cannot be made at all, for example because the message is no longer published,
+the new tab says _Failed to load document_. _Print_ on that page asks for it again.
+
 [#when-the-list-does-not-load]
 === When the list does not load
 

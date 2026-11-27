@@ -392,7 +392,10 @@ sent, and never with map thumbnails. A signed-in or ticketed caller takes no per
 streamed as it is rendered. The public site opens both PDFs in a new tab, so its container answers
 that 503 with a page of the site's own (`ui-apps/info/public/pdf-busy.html`), still a 503 with
 `Retry-After: 10`, which says in the language the PDF was asked in (the bundle's `PDF_BUSY`) that
-documents are being prepared for other readers and to try again in a moment.
+documents are being prepared for other readers and to try again in a moment. Any other failure of
+the two — a 400, 403, 404 or 500, or a backend that does not answer — gets the site's
+`pdf-failed.html` with the failure's status, which says the document failed to load
+(`DOCUMENT_LOAD_FAILED`).
 
 `debug=true` on either endpoint returns the HTML the PDF is rendered from instead of the PDF —
 the cheap way to see which messages a set of parameters actually selects — and the free-form

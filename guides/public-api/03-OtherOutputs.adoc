@@ -65,12 +65,16 @@ it is busy, it answers `503` at once, with the header `Retry-After: 10`, and the
 again after that many seconds. On the system's own host the body of that answer is the usual error
 description (`application/problem+json`). On the public site's own host it is instead a page for a
 reader (`text/html`), which says that documents are being prepared for others; it carries the same
-status and `Retry-After`, and may not be cached. A client that saves the answer to a file, as the
-example above does, should check the status: with `--fail`, `curl` ends with an error on such an
-answer rather than taking it for the document.
+status and `Retry-After`, and may not be cached. Any other error of the two PDF addresses is
+likewise a page for a reader there, which says that the document failed to load; it carries the
+error's status (`400`, `403`, `404`, `500`, or `502` and `504` when the system does not answer) and
+may not be cached. A client that saves the answer to a file, as the example above does, should
+check the status: with `--fail`, `curl` ends with an error on such an answer rather than taking it
+for the document.
 
 On the public site's own host (for example nautiskinformation.brs2.dk), both PDF addresses are
-held to the requests the site itself makes, and any other request is refused with `403`:
+held to the requests the site itself makes, and any other request is refused with `403` (and the
+same page for a reader):
 
 * A list accepts only the parameters named above, with letters, digits, `.`, `_` and `-` in their
   values, and exactly one `report=public`.

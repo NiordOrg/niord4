@@ -4,13 +4,13 @@
      error (`ui-apps/info/nginx/default.conf.template`). Its words are English here and in the
      language the PDF was asked in once its script has read that language's bundle
      (pdf-busy.js); the English is the bundle's PDF_BUSY, MENU_PRINT and SITE_TITLE, held to it by
-     `scripts/info-pdf-busy.test.mjs`. -->
+     `scripts/info-pdf-busy.test.mjs`. Any other failure of a PDF is answered with pdf-failed.html. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title id="pdf-busy-title">Navigational Warnings and Notices to Mariners</title>
+    <title id="pdf-title">Navigational Warnings and Notices to Mariners</title>
     <style>
       body {
         margin: 2rem auto;
@@ -34,7 +34,7 @@
         Documents are being prepared for other readers just now. Please try again in a moment.
       </p>
       <!-- The same address again: the reader's own request, asked a moment later. -->
-      <p><a id="pdf-busy-retry" href="">Print</a></p>
+      <p><a id="pdf-retry" href="">Print</a></p>
     </main>
   </body>
 </html>

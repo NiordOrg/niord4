@@ -320,8 +320,12 @@ further one 503 at once, so those two answer a 503 with the site's own page inst
 (`public/pdf-busy.html`, an internal location: by its own name it is a 404), still a 503, with the
 same `Retry-After` as the backend (10 s, sent by the container, since the backend's headers do not
 pass an intercepted answer) and kept by nobody; its script words it from the bundle of the PDF's
-`lang` (`PDF_BUSY`), and `scripts/info-pdf-busy.test.mjs` (in `test:guards`) holds page, script,
-bundle and server together. Every other answer of the backend passes as it came. The two report
+`lang` (`PDF_BUSY`). Every other failure on those two — a 400, 403, 404 or 500 of the backend, the
+502 or 504 of one that does not answer, and the container's own 403 for a query it refuses — is
+answered with `public/pdf-failed.html` in the same way, still with the failure's status, no
+`Retry-After`, worded by the same script (`DOCUMENT_LOAD_FAILED`); `scripts/info-pdf-busy.test.mjs`
+(in `test:guards`) holds both pages, the script, the bundle and the server together. A success
+passes as it came. The two report
 paths also take no query but the parameters the site's print addresses carry, checked as one whole
 string: the list takes exactly one `report=public`, anywhere in the
 query, and around it the filter `message-pdf-url.ts` composes — `lang`, `mainType`, `area`,

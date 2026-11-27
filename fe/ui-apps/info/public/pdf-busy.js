@@ -1,25 +1,32 @@
 /**
- * The script of the page a reader is given when a PDF cannot be made just now. The backend makes
- * only a few PDFs at a time for readers without an identity and answers every further request 503
- * at once; the server answers that 503 with pdf-busy.html instead of the backend's error, at the
- * address the reader asked for (`ui-apps/info/nginx/default.conf.template` says where).
+ * The script of the two pages a reader is given when a PDF cannot be made. The backend makes only
+ * a few PDFs at a time for readers without an identity and answers every further request 503 at
+ * once; the server answers that 503 with pdf-busy.html instead of the backend's error, and any
+ * other failure of a PDF — the message no longer published, an error while the document was made,
+ * a backend that does not answer — with pdf-failed.html, at the address the reader asked for
+ * (`ui-apps/info/nginx/default.conf.template` says where and for which answers).
  *
- * The page is written in English, and this script puts it in the language the PDF was asked in:
+ * Each page is written in English, and this script puts it in the language the PDF was asked in:
  * both PDF addresses name it in `lang`. It reads that language's bundle, the one the application
- * reads, and takes the page's words from it — the sentence, the link that asks again and the
- * title. A language the build ships no bundle for, a bundle that does not arrive or one without the
- * sentence leaves the page in English, which it says it is in.
+ * reads, and takes the page's words from it — the page's sentence, the link that asks again and
+ * the title. A language the build ships no bundle for, a bundle that does not arrive or one without
+ * the page's sentence leaves the page in English, which it says it is in.
  *
  * The application's own code is bundled into its chunks, which a page without the application
  * cannot load, so this file stands alone, and `scripts/info-pdf-busy.test.mjs` holds it to the
- * bundle and to the page.
+ * bundle and to the pages.
  */
 
-/** The bundle key of each element the script words, by the element's id. */
-export const WORDS = {
+/** The bundle key of each page's sentence, by the sentence's element id; a page holds one. */
+export const SENTENCES = {
   'pdf-busy-text': 'PDF_BUSY',
-  'pdf-busy-retry': 'MENU_PRINT',
-  'pdf-busy-title': 'SITE_TITLE',
+  'pdf-failed-text': 'DOCUMENT_LOAD_FAILED',
+};
+
+/** The bundle key of each element both pages hold, by the element's id. */
+export const SHARED_WORDS = {
+  'pdf-retry': 'MENU_PRINT',
+  'pdf-title': 'SITE_TITLE',
 };
 
 /** The language the PDF was asked in: its address's `lang`, when that is a language code. */
@@ -29,15 +36,16 @@ export function requestedLanguage(search) {
 }
 
 /**
- * Words the page from a bundle, and says which language it is then in. A bundle without the
+ * Words the page from a bundle, and says which language it is then in. A bundle without the page's
  * sentence changes nothing: the page stays English and says so. A word the bundle lacks keeps its
  * English, which a build never ships: each bundle is staged complete.
  *
  * @returns whether the page was worded from the bundle
  */
 export function wordPage(document, lang, bundle) {
-  if (typeof bundle?.[WORDS['pdf-busy-text']] !== 'string') return false;
-  for (const [id, key] of Object.entries(WORDS)) {
+  const sentence = Object.entries(SENTENCES).find(([id]) => document.getElementById(id));
+  if (!sentence || typeof bundle?.[sentence[1]] !== 'string') return false;
+  for (const [id, key] of [sentence, ...Object.entries(SHARED_WORDS)]) {
     const element = document.getElementById(id);
     const value = bundle[key];
     if (element && typeof value === 'string' && value !== '') element.textContent = value;
