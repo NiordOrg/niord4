@@ -2131,26 +2131,3 @@ they say otherwise; every other path is from the repository root.
   the stand-in test pack and `texts.json` following and a release folder for the changed text. Not for
   `msg.field.published` as it is: the bootstrap's `messages/message-support.ftl` (289) reads it without a
   parameter and puts the date after it, so it needs the template changed with it or a key of its own for the app.
-
-## DESCS1. Four readers take a value object's list of texts as always there, which it is not for a row without a text
-
-- **Location:** `org/niord/core/promulgation/NavtexPromulgationService.java` 304-305 and
-  `SafetyNetPromulgationService.java` 178-179 (`message.getParts().stream().flatMap(p -> p.getDescs().stream())`, in
-  `generateMessagePromulgation`); `org/niord/core/schedule/FiringExerciseService.java` 591-592
-  (`firingAreaMessageVo.getDescs().forEach(...)`, in `buildFiringExerciseMessage`);
-  `org/niord/web/PublicationRestService.java` 843 (`for (PublicationDescVo desc : publication.getDescs())`, in
-  `releasePublication`).
-- **Description:** the mappers leave a value object's list of texts (and a message's list of parts) null when the
-  row has none (`MessageMapper` 118-126 and 320, `Publication.toVo` 270-275, as `DictionaryMapper` does). These four
-  read the list without a check, so a message with a part that has no text, or no part, answers 500 to NAVTEX's or
-  SafetyNET's _Generate_ and to the message save that generates the promulgation; a firing area whose template message
-  has no title stops the firing exercise of that area; and a release of a publication of the old model without a
-  text answers 500. The other readers of the same lists check for null first (`AudioPromulgationService` 112-114,
-  `GeometryFormatService` 73-75, `SystemMessageVo` 81-83, `ApiRestService` 447).
-- **Why it looks wrong:** the same list is read two ways, and the unchecked way fails on data the product itself
-  writes: a part whose texts are blanked is kept without a text (`MessagePart.copyDescsAndRemoveBlanks`).
-- **Exposed by:** the search for readers of a value object's texts that assume a list, made while fixing the same
-  assumption in `DictionaryVo` (an entry without a text stopped every template that loads its dictionary). Read in
-  the code; not reproduced.
-- **Severity:** Low to medium (a 500 on an action, nothing written wrong). Fix: read a null list as an empty one at
-  each of the four, as the others do, with a unit test per reader.

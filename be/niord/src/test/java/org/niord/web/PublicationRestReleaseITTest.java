@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -65,7 +66,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <em>reachable</em> branch up to (but not including) the report-rendering round-trip, which on the
  * release path means the four-way validation guard and on the report path means the temp-folder guard
  * — the guard runs <em>before</em> any HTTP connection is opened (see
- * {@code PublicationRestService.generatePublicationReport}).
+ * {@code PublicationRestService.generatePublicationReport}). The one release carried through to
+ * {@code ACTIVE} here is of a publication without any text, which opens no round-trip (it runs once per
+ * description); a release with a report is driven by {@code PublicationsSweepGroup#publicationRelease}.
  *
  * <p><b>Authorization model.</b> {@code release-publication} and {@code generate-publication-report}
  * are {@code @RolesAllowed(ADMIN)}. The {@code admin} token from
@@ -244,6 +247,41 @@ class PublicationRestReleaseITTest extends ITTest {
         // Being in RECORDING is not sufficient; the missing message tag/print settings block release,
         // and the publication is left untouched in RECORDING.
         assertPersistedStatus(id, "RECORDING");
+    }
+
+    // ------------------------------------------------------------------------------------------- //
+    // PUT /release-publication/{id} on a releasable MESSAGE_REPORT without any text: the mapper gives it no
+    // list of descriptions at all, and the release has no report to make, so it releases the publication
+    // without one (the report round-trip runs once per description, so none is opened here).
+    // ------------------------------------------------------------------------------------------- //
+
+    @Test
+    void releasePublication_aRecordingReportWithoutAnyTextIsReleasedWithoutAReport() {
+        String tagId = as(admin()).contentType(ContentType.JSON)
+                .body(Map.of("type", "PRIVATE", "name", "it-release-notext-" + System.nanoTime(), "locked", false))
+                .when().post("/rest/tags/tag")
+                .then().statusCode(200).extract().path("tagId");
+        try {
+            String id = newPublicationId();
+            Map<String, Object> body = new LinkedHashMap<>(createBody(id, "MESSAGE_REPORT", "RECORDING"));
+            body.put("messageTag", Map.of("tagId", tagId));
+            body.put("printSettings", Map.of("report", "standard"));
+            as(admin()).contentType(ContentType.JSON).body(body)
+                    .when().post(PUBLICATION)
+                    .then().statusCode(200);
+            createdPublicationIds.add(id);
+
+            as(admin()).contentType(ContentType.JSON)
+                    .when().put(RELEASE + id)
+                    .then().statusCode(200)
+                    .body("status", is("ACTIVE"));
+
+            assertPersistedStatus(id, "ACTIVE");
+        } finally {
+            cleanup();
+            as(admin()).when().put("/rest/tags/unlock-tag/" + tagId);
+            as(admin()).when().delete("/rest/tags/tag/" + tagId);
+        }
     }
 
     // ------------------------------------------------------------------------------------------- //
