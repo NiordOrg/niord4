@@ -676,9 +676,8 @@ packs/da/                                  (the same shape in the base product: 
     client's SHA-256, the tag (digits) and the reason (not blank), then `node oci.mjs withdraw` reads the marker
     (none: publish first), resolves the tag's digest, adds `{ digest, tag, reason, date }` unless listed already,
     and pushes the whole marker. It needs set-up green on `main`, since validate runs it for the verified client;
-    with `main` red a home withdraws by hand with the kit README's commands. The run summary says `withdrawn` or
-    `withdrawn already`; the home checks it before recording the withdrawal, and dispatching again is safe. A `|`
-    in the reason is written `\|` in the summary's row, fenced longer than any run of backticks in it, while the
+    with `main` red a home withdraws by hand with the kit README's commands. The run summary says `withdrawn`, with the
+    reference, the reason and the date, or `withdrawn already`, as information; dispatching again is safe. The
     marker keeps the reason as given. Each withdrawal leaves the previous `:withdrawn` manifest as an
     untagged version of the package: harmless, and housekeeping for the owner on the package's page.
 
