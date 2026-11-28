@@ -87,6 +87,39 @@ pod exists beside a new database, the environment still names its superuser's Se
 {{- end }}
 {{- end }}
 {{- /*
+The backups of the CloudNativePG databases (values.yaml, postgres.cnpg.backup). Only those
+databases are backed up: the switch without one would read as a backup of the plain pod, which
+has none. On, it needs the bucket and the Secret with the store's keys; a value left out or
+misspelt must fail here and not leave a database without backups. The window and the schedule
+are held to the forms the plugin and the operator take: a schedule of five fields, as a CronJob
+has, would be read with its minutes as seconds. A value missing from an older release's values
+is off.
+*/ -}}
+{{- $backup := (.Values.postgres.cnpg | default dict).backup | default dict }}
+{{- if not (or (kindIs "invalid" $backup.enabled) (kindIs "bool" $backup.enabled)) }}
+{{- fail (printf "postgres.cnpg.backup.enabled is %q: it is true or false" (toString $backup.enabled)) }}
+{{- end }}
+{{- if $backup.enabled }}
+{{- if not (include "niord.cnpg.enabled" .) }}
+{{- fail "postgres.cnpg.backup.enabled is true and postgres.cnpg.databases is empty: only a CloudNativePG database is backed up. The plain pod has no backup" }}
+{{- end }}
+{{- if not (regexMatch "^s3://[^/\\s]+(/\\S*)?$" (toString $backup.destinationPath)) }}
+{{- fail (printf "postgres.cnpg.backup.destinationPath is %q: it is the bucket the backups go to, as s3://<bucket>/" (toString $backup.destinationPath)) }}
+{{- end }}
+{{- if not (and (kindIs "string" $backup.existingSecret) $backup.existingSecret) }}
+{{- fail "postgres.cnpg.backup.existingSecret is empty: it names the Secret with the store's keys, under ACCESS_KEY_ID and ACCESS_SECRET_KEY" }}
+{{- end }}
+{{- if not (has (toString ($backup.s3AddressingStyle | default "")) (list "" "path" "virtual" "auto")) }}
+{{- fail (printf "postgres.cnpg.backup.s3AddressingStyle is %q: it is path, virtual or auto" (toString $backup.s3AddressingStyle)) }}
+{{- end }}
+{{- if not (regexMatch "^[1-9][0-9]*[dwm]$" (toString $backup.retentionPolicy)) }}
+{{- fail (printf "postgres.cnpg.backup.retentionPolicy is %q: it is a number and d, w or m, e.g. 3m" (toString $backup.retentionPolicy)) }}
+{{- end }}
+{{- if ne (len (regexSplit "\\s+" (trim (toString $backup.schedule)) -1)) 6 }}
+{{- fail (printf "postgres.cnpg.backup.schedule is %q: it is a cron expression of six fields, the seconds first, e.g. \"0 0 2 * * 0\" for Sundays at 02:00" (toString $backup.schedule)) }}
+{{- end }}
+{{- end }}
+{{- /*
 Keycloak's database user (keycloak.db) exists where this release makes the users. Its Secret
 without the superuser's would be ignored, so it fails the render instead; and where the superuser
 comes from a Secret, Keycloak's user does too. It is neither the superuser nor the app's user: the

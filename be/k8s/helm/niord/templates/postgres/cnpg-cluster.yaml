@@ -28,6 +28,21 @@ spec:
   # afterwards reaches no database that exists. The Secret stays where the operator reads the
   # owner's password from.
   bootstrap:
+    {{- if $db.restore }}
+    # Made from the backups of {{ $db.restore.from }}, next to it if it still exists: its folder
+    # in the store is only read. The database and the owner are named so that the owner's
+    # password is the Secret's afterwards. The locale comes with the backup.
+    recovery:
+      source: origin
+      database: {{ $.Values.postgres.database | quote }}
+      owner: {{ $.Values.postgres.username | quote }}
+      secret:
+        name: {{ include "niord.postgres.secretName" $ }}
+      {{- with $db.restore.targetTime }}
+      recoveryTarget:
+        targetTime: {{ . | quote }}
+      {{- end }}
+    {{- else }}
     initdb:
       database: {{ $.Values.postgres.database | quote }}
       owner: {{ $.Values.postgres.username | quote }}
@@ -37,6 +52,31 @@ spec:
       localeCollate: {{ . | quote }}
       localeCType: {{ . | quote }}
       {{- end }}
+    {{- end }}
+  {{- if $db.restore }}
+  externalClusters:
+    - name: origin
+      plugin:
+        name: {{ include "niord.cnpg.backup.plugin" $ }}
+        # The API server's defaults, written out (see `plugins` below).
+        enabled: true
+        isWALArchiver: false
+        parameters:
+          barmanObjectName: {{ include "niord.cnpg.backup.store" $ }}
+          serverName: {{ $db.restore.from }}
+  {{- end }}
+  {{- if include "niord.cnpg.backup" $ }}
+  # Backups (values.yaml, postgres.cnpg.backup): the plugin sends this database's WAL files to
+  # the release's ObjectStore, into a folder named after the Cluster, since no serverName is set.
+  # `enabled` is the API server's default, written out: a list item it had to complete would
+  # differ from this render for ever in a tool that compares the two (Argo CD).
+  plugins:
+    - name: {{ include "niord.cnpg.backup.plugin" $ }}
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ include "niord.cnpg.backup.store" $ }}
+  {{- end }}
   # The app connects to the read-write Service. With one instance nothing uses the other two.
   managed:
     services:

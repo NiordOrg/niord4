@@ -13,7 +13,7 @@ same namespace — see the *.host values):
   - db        {{ include "niord.componentName" (list . "db") }}         (PostgreSQL 18 + PostGIS; database {{ .Values.postgres.database }}{{ with .Values.postgres.databases }}, plus {{ join ", " . }}{{ end }})
 {{- end }}
 {{- range $db := include "niord.cnpg.databases" . | fromJsonArray }}
-  - db-{{ int $db.number }}      {{ $db.name }}       (CloudNativePG; database {{ $.Values.postgres.database }}; kubectl -n {{ $.Release.Namespace }} get cluster,database)
+  - db-{{ int $db.number }}      {{ $db.name }}       (CloudNativePG; database {{ $.Values.postgres.database }}{{ if include "niord.cnpg.backup" $ }}; backups in {{ trimSuffix "/" $.Values.postgres.cnpg.backup.destinationPath }}/{{ $db.name }}{{ end }}; kubectl -n {{ $.Release.Namespace }} get cluster,database)
 {{- end }}
 {{- if .Values.keycloak.enabled }}
   - keycloak  {{ include "niord.componentName" (list . "keycloak") }}   (realm "{{ .Values.keycloak.realm }}")

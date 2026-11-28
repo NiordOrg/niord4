@@ -1,0 +1,26 @@
+{{- if include "niord.cnpg.backup" . -}}
+{{- range $db := include "niord.cnpg.databases" . | fromJsonArray }}
+---
+# The full copies of {{ $db.name }} (values.yaml, postgres.cnpg.backup.schedule): one object for
+# each database, with the database's number in its name. A new one takes a copy at once, so a
+# new database, a restored one too, has a full copy of its own in its own folder before the next
+# scheduled one. The method is named: the operator's default is its built-in one, which is not
+# set up here and is going away. Each Backup it makes belongs to this object, so that a tool
+# that lists what nobody declared (Argo CD) does not show it as an orphan.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ $db.name }}
+  labels:
+    {{- include "niord.componentLabels" (list $ (printf "db-%d" (int $db.number))) | nindent 4 }}
+spec:
+  cluster:
+    name: {{ $db.name }}
+  schedule: {{ $.Values.postgres.cnpg.backup.schedule | quote }}
+  immediate: true
+  backupOwnerReference: self
+  method: plugin
+  pluginConfiguration:
+    name: {{ include "niord.cnpg.backup.plugin" $ }}
+{{- end }}
+{{- end }}

@@ -355,9 +355,11 @@ or nothing.
 The databases of the CloudNativePG mode (values.yaml, postgres.cnpg.databases), checked, as a JSON
 list of {number, name, image} for fromJsonArray: the Cluster's name, <fullname>-db-<number>, and
 the entry's image or postgres.cnpg.image. The name is not cut to a length as the components'
-are: its end is the number, and CNPG takes 50 characters. The checks are here and not in
-validate.yaml because every template of the mode reads this list first, so a wrong entry fails
-with these messages. The last entry is the database the app uses (niord.db.host).
+are: its end is the number, and CNPG takes 50 characters. An entry that is restored also has
+`restore`: {from, the name of the database whose backups are read, and targetTime, "" for their
+end}. The checks are here and not in validate.yaml because every template of the mode reads this
+list first, so a wrong entry fails with these messages. The last entry is the database the app
+uses (niord.db.host).
 */}}
 {{- define "niord.cnpg.databases" -}}
 {{- $cnpg := .Values.postgres.cnpg | default dict -}}
@@ -379,7 +381,18 @@ with these messages. The last entry is the database the app uses (niord.db.host)
 {{- if gt (len $name) 50 -}}
 {{- fail (printf "postgres.cnpg.databases: the database's name, %q, is longer than the 50 characters CloudNativePG takes: shorten the release name or set fullnameOverride" $name) -}}
 {{- end -}}
-{{- $databases = append $databases (dict "number" $last "name" $name "image" $image) -}}
+{{- $database := dict "number" $last "name" $name "image" $image -}}
+{{- if hasKey $db "restore" -}}
+{{- $restore := $db.restore -}}
+{{- if not (and (kindIs "map" $restore) (has (kindOf $restore.from) (list "int" "int64" "float64")) (eq (float64 (int $restore.from)) (float64 $restore.from)) (ge (int $restore.from) 1) (lt (int $restore.from) $last) (or (kindIs "invalid" $restore.targetTime) (kindIs "string" $restore.targetTime))) -}}
+{{- fail (printf "postgres.cnpg.databases: the restore of database %d is {from: <number>}, the number of an earlier database whose backups it is made from, and optionally targetTime, a quoted timestamp with its zone such as \"2026-11-26 11:14:21+00\"" $last) -}}
+{{- end -}}
+{{- if not (include "niord.cnpg.backup" $) -}}
+{{- fail (printf "postgres.cnpg.databases: database %d has `restore`, and postgres.cnpg.backup.enabled is false: a restore reads the backups in the store that postgres.cnpg.backup names" $last) -}}
+{{- end -}}
+{{- $_ := set $database "restore" (dict "from" (printf "%s-db-%d" (include "niord.fullname" $) (int $restore.from)) "targetTime" ($restore.targetTime | default "")) -}}
+{{- end -}}
+{{- $databases = append $databases $database -}}
 {{- end -}}
 {{- toJson $databases -}}
 {{- end }}
@@ -391,6 +404,20 @@ or nothing, for use in an if.
 {{- define "niord.cnpg.enabled" -}}
 {{- if include "niord.cnpg.databases" . | fromJsonArray -}}true{{- end -}}
 {{- end }}
+
+{{/*
+Whether the CloudNativePG databases are backed up (values.yaml, postgres.cnpg.backup), and the
+names the backup's objects share: CNPG's Barman Cloud plugin, and the release's one ObjectStore,
+which every Cluster names for its own WAL files and full copies and a restored one also for the
+backups it is made from. niord.cnpg.backup renders "true" or nothing.
+*/}}
+{{- define "niord.cnpg.backup" -}}
+{{- if ((.Values.postgres.cnpg | default dict).backup | default dict).enabled -}}true{{- end -}}
+{{- end }}
+
+{{- define "niord.cnpg.backup.plugin" -}}barman-cloud.cloudnative-pg.io{{- end }}
+
+{{- define "niord.cnpg.backup.store" -}}{{ include "niord.componentName" (list . "db-backup") }}{{- end }}
 
 {{/*
 The Secret of the superuser of this release's Postgres: postgres.admin.existingSecret, or the one

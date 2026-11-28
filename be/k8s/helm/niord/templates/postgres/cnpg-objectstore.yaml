@@ -1,0 +1,36 @@
+{{- if and (include "niord.cnpg.backup" .) (include "niord.cnpg.enabled" .) -}}
+{{- $backup := .Values.postgres.cnpg.backup }}
+# Where the CloudNativePG databases of this release keep their backups (values.yaml,
+# postgres.cnpg.backup): one store for the release, read by CNPG's Barman Cloud plugin. Each
+# database writes to a folder named after itself, and a restored one reads the folder of the
+# database it is made from. The window is kept folder by folder, by the database that owns the
+# folder: once a database is gone, nobody cleans its folder.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ include "niord.cnpg.backup.store" . }}
+  labels:
+    {{- include "niord.componentLabels" (list . "db-backup") | nindent 4 }}
+spec:
+  retentionPolicy: {{ $backup.retentionPolicy | quote }}
+  configuration:
+    destinationPath: {{ $backup.destinationPath | quote }}
+    {{- with $backup.endpointURL }}
+    endpointURL: {{ . | quote }}
+    {{- end }}
+    {{- with $backup.s3AddressingStyle }}
+    s3AddressingStyle: {{ . }}
+    {{- end }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ $backup.existingSecret }}
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: {{ $backup.existingSecret }}
+        key: ACCESS_SECRET_KEY
+    # Compression is off unless it is asked for, for the WAL files and for the full copies.
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+{{- end }}

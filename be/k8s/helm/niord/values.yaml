@@ -348,7 +348,41 @@ postgres:
     #   - A restore, a new major version or a second try is a new entry with the next number,
     #     next to the old one. Nothing is changed in place.
     #   - Removing an entry deletes that database and its volume. Nothing else does.
+    # With `backup` below, an entry may add `restore: {from: <number>}`: the database is then made
+    # from the backups of that earlier number, to their end or up to `targetTime` (a timestamp
+    # with its zone, "2026-11-26 11:14:21+00"), instead of created empty. The earlier database
+    # need not be in the list any more, nor exist. Read once, when the database is created, and
+    # left in the list afterwards.
     databases: []
+    # Backups, through CNPG's Barman Cloud plugin, which the cluster must run beside the operator
+    # (never CNPG's built-in barmanObjectStore, which CNPG 1.32 removes). Each database then
+    # sends its WAL files to the store all the time and takes a full copy on `schedule`, and once
+    # when it is new, both compressed with gzip, into a folder named after itself,
+    # <fullname>-db-<number>. CNPG refuses to archive into a folder that is not empty, which is
+    # why a number is never used again. The chart renders one ObjectStore for the release and one
+    # ScheduledBackup for each database. Turning this on for a database that runs restarts it
+    # once: the plugin adds a container to its pod.
+    backup:
+      enabled: false
+      # The bucket, and a folder in it if the bucket is shared in another way than by database:
+      # s3://<bucket>/. Required when enabled.
+      destinationPath: ""
+      # The store's address. "" = the address the S3 client works out itself (AWS).
+      endpointURL: ""
+      # How a request names the bucket: `path` (<endpoint>/<bucket>/<key>), `virtual`
+      # (<bucket>.<endpoint>/<key>) or `auto`. path, the default here, asks nothing of the store's
+      # certificate: a bucket's own host name needs a certificate that covers it.
+      s3AddressingStyle: path
+      # A Secret with the store's keys under ACCESS_KEY_ID and ACCESS_SECRET_KEY. Required when
+      # enabled. With the label cnpg.io/reload: "true" a changed key reaches the databases.
+      existingSecret: ""
+      # How long full copies and WAL files are kept: a number and d, w or m. Any moment inside
+      # that window can be restored. It is kept for a database that exists: the folder of one
+      # that is gone is cleaned by nobody.
+      retentionPolicy: 3m
+      # When the full copy is taken: a cron expression of SIX fields, the seconds first, in UTC.
+      # The default is Sundays at 02:00.
+      schedule: "0 0 2 * * 0"
 
 # =============================================================================
 #  Keycloak
