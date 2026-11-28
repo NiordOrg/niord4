@@ -60,6 +60,33 @@ concerned, and neither is a release without the app (an infra release).
 {{- fail (printf "postgres.database: %q is not a plain database name (lower-case letters, digits and _, at most 63 characters, not starting with a digit)" (toString .Values.postgres.database)) }}
 {{- end }}
 {{- /*
+CloudNativePG mode (values.yaml, postgres.cnpg; the entries themselves are checked in
+niord.cnpg.databases, _helpers.tpl). Nobody holds a superuser's password in it, so the two parts of
+the chart that still need one are refused: the databases Job, which also creates from the plain
+image's template_postgis, and the create-database init container of a Keycloak in production
+mode. The database's name and its owner's go into the Cluster as they are, so they are plain
+names, and never the operator's own. The operator's Service listens on 5432, whatever
+postgres.service.port says for the plain pod's. The rules above stay as they are: while the plain
+pod exists beside a new database, the environment still names its superuser's Secret.
+*/ -}}
+{{- if include "niord.cnpg.enabled" . }}
+{{- if .Values.postgres.databases }}
+{{- fail "postgres.databases is set with postgres.cnpg.databases: the databases Job connects as a superuser and creates from template_postgis, and a CloudNativePG database has neither. A further database is a Cluster of its own" }}
+{{- end }}
+{{- if and .Values.keycloak.enabled (eq (toString .Values.keycloak.mode) "production") }}
+{{- fail "keycloak.mode production with postgres.cnpg.databases: Keycloak's create-database init container needs a superuser, and a CloudNativePG database gives none. Use a Keycloak outside the release (keycloak.enabled false, keycloak.host)" }}
+{{- end }}
+{{- range $name := list "database" "username" }}
+{{- $value := toString (index $.Values.postgres $name) }}
+{{- if or (not (regexMatch "^[a-z_][a-z0-9_]{0,62}$" $value)) (has $value (list "postgres" "streaming_replica" "template0" "template1")) }}
+{{- fail (printf "postgres.%s: %q is not a plain name (lower-case letters, digits and _, at most 63 characters, not starting with a digit), or it is one of PostgreSQL's or the operator's own. With postgres.cnpg.databases, postgres.database and postgres.username name the database CloudNativePG creates and its owner, the `username` of the owner's Secret" $name $value) }}
+{{- end }}
+{{- end }}
+{{- if and (not .Values.postgres.host) (ne (toString .Values.postgres.service.port) "5432") }}
+{{- fail (printf "postgres.service.port is %s with postgres.cnpg.databases: the app connects to the CloudNativePG database's Service, which listens on 5432" (toString .Values.postgres.service.port)) }}
+{{- end }}
+{{- end }}
+{{- /*
 Keycloak's database user (keycloak.db) exists where this release makes the users. Its Secret
 without the superuser's would be ignored, so it fails the render instead; and where the superuser
 comes from a Secret, Keycloak's user does too. It is neither the superuser nor the app's user: the

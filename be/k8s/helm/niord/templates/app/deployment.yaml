@@ -122,6 +122,63 @@ spec:
               cpu: 200m
               memory: 64Mi
         {{- end }}
+        {{- if and .Values.app.waitForDependencies (include "niord.cnpg.enabled" .) (not .Values.postgres.host) }}
+        # CloudNativePG mode: the operator creates the PostGIS extension (postgres/cnpg-database.yaml)
+        # only after the database is up, and the app's first migration, run as the owner, who may
+        # not create it, fails on a database without it. So the app waits here until the extension
+        # is there, on a first install as on any later start. It connects as the app itself does,
+        # as the owner and over the network, so a Secret that does not fit the database shows here.
+        # One case it names itself: a Secret whose `username` is not the owner the Cluster was
+        # created with. CNPG then makes the owner without a password and still reports the
+        # database healthy.
+        - name: wait-for-postgis
+          # The database's own image: it brings psql.
+          image: {{ (include "niord.cnpg.databases" . | fromJsonArray | last).image | quote }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "niord.containerSecurityContext" . | nindent 12 }}
+          env:
+            - name: PGHOST
+              value: {{ include "niord.db.host" . | quote }}
+            - name: PGPORT
+              value: {{ .Values.postgres.service.port | quote }}
+            - name: PGDATABASE
+              value: {{ .Values.postgres.database | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.secretName" . }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "niord.postgres.secretName" . }}
+                  key: password
+            - name: PGCONNECT_TIMEOUT
+              value: "5"
+            - name: OWNER
+              value: {{ .Values.postgres.username | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ "$PGUSER" != "$OWNER" ]; then
+                echo "!! The Secret's username is $PGUSER, and the owner of $PGDATABASE on $PGHOST is $OWNER (postgres.username): they must be the same name, or the owner has no password." >&2
+                exit 1
+              fi
+              until found="$(psql -X -tAc "SELECT 'postgis ' || extversion FROM pg_extension WHERE extname = 'postgis'" 2>&1)" && [ -n "$found" ]; do
+                echo "waiting for the postgis extension in $PGDATABASE on $PGHOST${found:+: $found}"
+                sleep 2
+              done
+              echo "$found is in $PGDATABASE on $PGHOST"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+        {{- end }}
         {{- if and .Values.app.waitForDependencies .Values.keycloak.enabled }}
         # Only for a Keycloak of this release. A shared Keycloak (keycloak.enabled false) is
         # stopped for its upgrades; an app pod that restarts then must still serve the site and

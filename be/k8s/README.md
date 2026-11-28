@@ -502,10 +502,193 @@ schema itself. A Keycloak in production mode on such a database still connects a
 and creates its own database, which a hosted database will not allow; its own host and user there
 are step R3 of `docs/repo-files-in-database-plan.md`.
 
+**In CloudNativePG mode** there is no superuser's Secret and no init container that makes users:
+the operator makes the owner from `postgres.username` and the owner's Secret
+([CloudNativePG](#cloudnativepg)).
+
 **A local release from before** is handed over the same way at its next `./scripts/deploy.sh`: the
 chart now renders two Secrets, the superuser keeps its name (`niord`), and the app's database
 goes to `niord_app`. Values that set `postgres.username` or `postgres.password` now name the
 app's user; the superuser's are `postgres.admin.username` and `postgres.admin.password`.
+
+## CloudNativePG
+
+The database can run as a `Cluster` of the [CloudNativePG](https://cloudnative-pg.io) operator (CNPG)
+instead of the plain pod. The mode is off by default: local runs and the tests keep the pod and
+`imresamu/postgis`. It is on when `postgres.cnpg.databases` has an entry, and the cluster must
+already run the operator, 1.30 or newer. The chart renders only a database's own objects. The plan
+behind it is devops-shared, `docs/database-plan.md`.
+
+```yaml
+postgres:
+  username: niord_app         # the owner: the `username` of the Secret below, word for word
+  existingSecret: niord-postgres-app
+  cnpg:
+    image: <registry>/cloudnative-pg/postgis:18.6-3.6.4-202610261018-standard-trixie
+    databases:
+      - number: 1
+```
+
+For each entry the chart renders:
+
+- **A `Cluster`** named `<fullname>-db-<number>`: one instance, no disruption budget, the image of
+  `postgres.cnpg.image`, the pull secrets of `global.imagePullSecrets`, a volume of
+  `postgres.persistence.size` and the resources of `postgres.resources`. The operator makes the
+  pod, the volume and one Service, `<fullname>-db-<number>-rw`. At the first start it makes
+  `postgres.database`, owned by `postgres.username`, with the password of the owner's Secret
+  (`postgres.existingSecret`) and the locale of `postgres.cnpg.locale`.
+- **A `Database` object** of the same name that lists the `postgis` extension. The operator creates
+  it as the superuser. A CNPG image has no `template_postgis`, and of the plain image's four
+  extensions the app uses only this one.
+
+What differs from the plain pod:
+
+- **Nobody holds a superuser's password.** The app pod's `database-user` init container is not
+  rendered. The render refuses `postgres.databases` and a Keycloak in production mode in the
+  release: both need a superuser.
+- **The image is one value, used as it is.** `global.imageRegistry` does not apply to it: CNPG's
+  images reach a cluster through another registry project than the chart's other images. Pin a
+  full tag.
+- **The owner's name is a value that counts.** `postgres.username` must be the `username` in the
+  owner's Secret. The operator does not refuse a Secret that names someone else: the database
+  comes up healthy and its owner has no password. The app pod's `wait-for-postgis` init container
+  stops with a message that names both.
+- **The owner's Secret carries the label `cnpg.io/reload: "true"`.** Only then does a changed
+  password reach the database. The Secret the chart renders has it; an environment's own Secret
+  needs it too.
+- **The app waits for PostGIS.** The operator creates the extension some seconds after the database
+  answers (22 seconds in a local run), and the app's first migration fails on a database without
+  it. So the app pod has an init container, `wait-for-postgis`, that connects as the owner and
+  waits until the extension is there.
+
+### The databases have numbers
+
+- A number is used once and never again, also after its entry is gone. Backups are kept under the
+  database's name, and a new database cannot use an old one's folder.
+- The numbers rise down the list, and the app uses the last entry. `postgres.host` names another
+  database for as long as the app is to stay there: an older number's Service, or the plain pod's.
+- A restore, a new major PostgreSQL version or a second try is a new entry with the next number,
+  next to the old one. Nothing is changed in place. An entry may name its own `image`.
+- Removing an entry deletes that database and its volume. Nothing else does.
+- `postgres.database`, `postgres.username` and `postgres.cnpg.locale` are read when a database is
+  created. A change afterwards reaches no existing database.
+
+### Checking a render, and a local run
+
+```bash
+# The render: one Cluster and one Database for each entry, and the app on the last one.
+helm template niord helm/niord --set postgres.enabled=false \
+  --set 'postgres.cnpg.databases[0].number=1' | grep -E '^kind: (Cluster|Database)|jdbc:|name: wait-for'
+
+# A local run needs the operator in the cluster, once. It adds 11 CRDs, two webhook
+# configurations and the namespace cnpg-system.
+helm install cnpg oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg --version 0.29.2 \
+  -n cnpg-system --create-namespace --wait
+EXTRA_HELM_ARGS="--set postgres.enabled=false --set postgres.cnpg.databases[0].number=1" ./scripts/deploy.sh
+
+kubectl -n niord get cluster,database            # "Cluster in healthy state", and APPLIED true
+kubectl -n niord logs deploy/niord-app -c wait-for-postgis
+# Inside the pod only the postgres system user may use the socket; everyone else connects over
+# the network with a password.
+kubectl -n niord exec niord-db-1-1 -c postgres -- psql -d niord -c 'select postgis_full_version()'
+
+# Removing the operator again: the release first, then the CRDs, which helm keeps.
+helm uninstall cnpg -n cnpg-system
+kubectl get crd -o name | grep '\.postgresql\.cnpg\.io$' | xargs kubectl delete
+kubectl delete namespace cnpg-system
+```
+
+### Moving from the plain pod
+
+The pod and a new database exist side by side in one release while the data moves. Each step is
+one change of the values:
+
+1. **Add the database and stop the app:** `postgres.cnpg.databases: [{number: 1}]` and
+   `app.replicaCount: 0`. `postgres.enabled` stays `true`, and the environment still names
+   `postgres.admin.existingSecret`: the pod keeps running, untouched.
+2. **Dump the pod's database and restore it into the new one**, with the commands below. The new
+   database must be empty: the app has not started on it.
+3. **Start the app:** `app.replicaCount: 1`. It is on the new database, the last entry.
+4. **Later, remove the pod:** `postgres.enabled: false` and no `postgres.admin.existingSecret`, in
+   one change. The pod's volume and every database in it go with it.
+
+Until step 3 the pod's database is complete, and going back is taking the entry out again. A second
+try takes the next number.
+
+A database made by the plain image holds four extensions, and the new one has only `postgis`. So the
+dump's list is restored without what belongs to the extensions: the four extensions and their
+comments, the schemas `tiger` and `topology`, and the entries for the rows of the extensions' own
+settings tables, `spatial_ref_sys` among them. The restore runs as the owner, over the network, in
+one transaction: one error undoes all of it. Tried on 2026-11-28 with a bootstrapped database, from
+PostGIS 3.6.1 to 3.6.4: 19 of the dump's 706 entries left out, no error, and the same row count in
+all 113 tables.
+
+```bash
+NS=niord; OLD=deploy/niord-db; NEW=niord-db-1; DB=niord
+SECRET=niord-db-credentials          # the owner's Secret, postgres.existingSecret
+IMAGE=ghcr.io/cloudnative-pg/postgis:18.6-3.6.4-202610261018-standard-trixie   # the new database's
+
+# 1. Which database: the one in postgres.database. Dump it, as the pod's superuser.
+kubectl -n $NS exec $OLD -- sh -c 'psql -U "$POSTGRES_USER" -d postgres -Atc "select datname, pg_size_pretty(pg_database_size(datname)) from pg_database where not datistemplate"'
+kubectl -n $NS exec $OLD -- sh -c "pg_dump -U \"\$POSTGRES_USER\" -Fc $DB" > niord.dump
+
+# 2. A client pod with the new database's image, connected as the owner. On a cluster that pulls
+#    with a Secret, add imagePullSecrets.
+kubectl -n $NS apply -f - <<POD
+apiVersion: v1
+kind: Pod
+metadata: {name: pg-client}
+spec:
+  restartPolicy: Never
+  securityContext: {runAsNonRoot: true, runAsUser: 26, runAsGroup: 26, seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: pg
+      image: $IMAGE
+      command: ["sleep", "3600"]
+      securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}
+      env:
+        - {name: PGHOST, value: $NEW-rw}
+        - {name: PGDATABASE, value: $DB}
+        - {name: PGUSER, valueFrom: {secretKeyRef: {name: $SECRET, key: username}}}
+        - {name: PGPASSWORD, valueFrom: {secretKeyRef: {name: $SECRET, key: password}}}
+      volumeMounts: [{name: work, mountPath: /work}]
+  volumes: [{name: work, emptyDir: {}}]
+POD
+kubectl -n $NS wait --for=condition=Ready pod/pg-client --timeout=120s
+kubectl -n $NS exec -i pg-client -- sh -c 'cat > /work/niord.dump' < niord.dump
+
+# 3. The list, without what belongs to the extensions. Read what is left out: it is nothing but
+#    extensions, tiger, topology and spatial_ref_sys. The two numbers after it must be 0: every
+#    kept entry is in the schema public, and the old spatial_ref_sys held no row that PostGIS did
+#    not bring itself.
+kubectl -n $NS exec pg-client -- sh -c '
+  cd /work && pg_restore -l niord.dump > all.list
+  OUT="^[0-9]+; [0-9]+ [0-9]+ (EXTENSION - |COMMENT - EXTENSION |SCHEMA - (tiger|tiger_data|topology) |COMMENT - SCHEMA (tiger|tiger_data|topology) |[A-Z ]+ (tiger|tiger_data|topology) |TABLE DATA public spatial_ref_sys )"
+  grep -E "$OUT" all.list; grep -vE "$OUT" all.list > niord.list
+  echo "kept entries outside public: $(grep -E "^[0-9]+;" niord.list | grep -vcE "^[0-9]+; [0-9]+ [0-9]+ [A-Z ]+ public ")"
+  echo "rows of spatial_ref_sys in the dump: $(pg_restore -a -n public -t spatial_ref_sys -f - niord.dump | grep -cE "^[0-9]+[[:space:]]")"'
+
+# 4. The restore: zero errors, or nothing.
+kubectl -n $NS exec pg-client -- sh -c 'cd /work && pg_restore -L niord.list --no-owner --no-acl \
+  --single-transaction -d "$PGDATABASE" niord.dump && echo "restored with no error"'
+
+# 5. The row count of every table that no extension owns, old against new: no difference.
+cat > counts.sql <<'SQL'
+select format('select %L || ''|'' || count(*) from %I.%I', n.nspname || '.' || c.relname, n.nspname, c.relname)
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where c.relkind in ('r', 'p') and n.nspname not in ('pg_catalog', 'information_schema') and n.nspname !~ '^pg_'
+   and not exists (select 1 from pg_depend d where d.classid = 'pg_class'::regclass and d.objid = c.oid and d.deptype = 'e')
+ order by 1 \gexec
+SQL
+kubectl -n $NS exec -i $OLD -- sh -c "psql -X -At -U \"\$POSTGRES_USER\" -d $DB" < counts.sql > old-counts.txt
+kubectl -n $NS exec -i pg-client -- psql -X -At < counts.sql > new-counts.txt
+diff old-counts.txt new-counts.txt && echo "$(wc -l < new-counts.txt) tables, the same row counts"
+
+kubectl -n $NS delete pod pg-client
+```
+
+The dump holds everything the database holds, the files of the repository included. Keep it
+readable by you alone, and delete it when the pod is removed.
 
 ## Configuration
 
@@ -629,6 +812,9 @@ app's user; the superuser's are `postgres.admin.username` and `postgres.admin.pa
 | `keycloak.testUsers` | `false` | Production mode only: `true` keeps the test realm's users, with the passwords in this repository, in the rendered realm; never for production. Dev mode always imports them. Anything but `true` or `false` fails the render. |
 | `keycloak.database` | `keycloak` | Production mode: the database on this release's Postgres (or `postgres.host`) that Keycloak keeps its data in, created by an init container when missing. |
 | `postgres.databases` | `[]` | Further databases this release's Postgres holds, next to `postgres.database`. An infra release serving several app releases lists one per app (`[niord_dk, niord_gl]`), and each app release names its own in `postgres.database`. A post-install/post-upgrade Job creates any that is missing (from `template_postgis`, owned by the superuser, `postgres.admin`) and never drops one. An app release on such a database needs it handed to its user ("A database of someone else's", above). |
+| `postgres.cnpg.databases` | `[]` | CloudNativePG mode ([CloudNativePG](#cloudnativepg)): one `Cluster` of the operator's for each entry `{number: <n>}`, named `<fullname>-db-<number>`, next to or instead of the plain pod. The app uses the last entry. A number is used once; removing an entry deletes that database. An entry may name its own `image`. |
+| `postgres.cnpg.image` | `ghcr.io/cloudnative-pg/postgis:18.6-3.6.4-202610261018-standard-trixie` | The database image of that mode: one full reference with its tag, used as it is. `global.imageRegistry` does not apply. |
+| `postgres.cnpg.locale` | `en_US.utf8` | The locale a new database is created with, the plain image's. `""` = CNPG's default, `C`. |
 | `app.persistence` / `postgres.persistence` | `enabled: true` | PVCs for NIORD_HOME and the DB. The repository files (attachments, publication files, the archive) are rows of the DB; NIORD_HOME is a cache (thumbnails and map images under `cache/`, the map tile cache of at most 200 MB, the AtoN tiles, the Lucene index) and the batch jobs' files, and nothing on it is backed up. |
 | `app.javaOpts` | `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC` | Handed to the JVM as `JAVA_TOOL_OPTIONS`. One string that replaces the default whole, so a value that adds a flag repeats the two above. A `-D<settingKey>=<value>` here pins a setting ahead of `app.settings` and the stored row; pin settings with `app.settings` instead (see "Pinned settings"). Add the `-Dhttps.proxyHost`/`-Dhttps.proxyPort`/`-Dhttp.nonProxyHosts` flags when the tile host is reached through a proxy. The pod's JVM runs in UTC (`TZ=UTC`, set by the image and the chart, not by this value, so a value that replaces it keeps UTC); do not add `-Duser.timezone`. |
 | `app.resources.limits.memory` | `2Gi` | Heap is `MaxRAMPercentage=70`. |
@@ -826,6 +1012,10 @@ kubectl -n niord logs deploy/niord-keycloak
   waits for Postgres, then needs the superuser's Secret to match the superuser the volume was
   created with (the image creates it once, on a new volume, and ignores the Secret afterwards),
   and the app's Secret to name another user than that one.
+- **App pod stays in `Init` in CloudNativePG mode** — `kubectl -n niord logs deploy/niord-app -c
+  wait-for-postgis`. It names what it waits for: the extension (`kubectl -n niord get database`
+  shows whether the operator applied it), a password the database does not take, or a Secret
+  whose `username` is not `postgres.username`.
 - **`localhost:18888` not responding** — confirm the proxy Service got a LoadBalancer
   (`kubectl -n niord get svc niord-proxy`), the proxy + app pods are `Ready`, and
   nothing else owns 18888. It is also at `niord-proxy.k8s.orb.local`.
@@ -850,7 +1040,7 @@ k8s/
 │   └── templates/
 │       ├── nginx/          # reverse proxy (single public entry point)
 │       ├── app/            # the Niord application (niord-app, or a country image)
-│       ├── postgres/
+│       ├── postgres/       # the plain pod, and the CloudNativePG objects (cnpg-*.yaml)
 │       ├── keycloak/
 │       └── mailhog/
 └── scripts/

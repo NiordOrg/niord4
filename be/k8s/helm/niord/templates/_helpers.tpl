@@ -74,11 +74,16 @@ renders (short DNS name, resolvable inside the release namespace) unless the cor
 host value points at another release's Service — the seam that lets an app-only release
 wire to an infra-only release in the same namespace. A dependency this release needs (the
 app's, or the proxy's Keycloak) that is neither rendered here nor named explicitly is a
-values error, reported at render time.
+values error, reported at render time. The database is the last CloudNativePG database's
+read-write Service where the release has one (niord.cnpg.databases), also while the plain pod
+still exists beside it: a move ends on the new database, and postgres.host names the old one
+for as long as the app is to stay there.
 */}}
 {{- define "niord.db.host" -}}
 {{- if .Values.postgres.host -}}
 {{- .Values.postgres.host -}}
+{{- else if include "niord.cnpg.enabled" . -}}
+{{- (include "niord.cnpg.databases" . | fromJsonArray | last).name -}}-rw
 {{- else if .Values.postgres.enabled -}}
 {{- include "niord.componentName" (list . "db") -}}
 {{- else -}}
@@ -338,10 +343,53 @@ it would connect as the superuser. Renders "true" or nothing, for use in an if.
 Whether the app (and a Keycloak in production mode) has a database user of its own that this
 release makes: the superuser has its own Secret (niord.postgres.separateAdmin) and the database is
 this release's Postgres. With postgres.host set the database is someone else's, whatever this
-release renders beside it, and the user is given. Renders "true" or nothing.
+release renders beside it, and the user is given. So it is in CloudNativePG mode, where the
+operator makes the user and nothing in the release holds a superuser's password. Renders "true"
+or nothing.
 */}}
 {{- define "niord.postgres.ownUser" -}}
-{{- if and (include "niord.postgres.separateAdmin" .) (not .Values.postgres.host) -}}true{{- end -}}
+{{- if and (include "niord.postgres.separateAdmin" .) (not .Values.postgres.host) (not (include "niord.cnpg.enabled" .)) -}}true{{- end -}}
+{{- end }}
+
+{{/*
+The databases of the CloudNativePG mode (values.yaml, postgres.cnpg.databases), checked, as a JSON
+list of {number, name, image} for fromJsonArray: the Cluster's name, <fullname>-db-<number>, and
+the entry's image or postgres.cnpg.image. The name is not cut to a length as the components'
+are: its end is the number, and CNPG takes 50 characters. The checks are here and not in
+validate.yaml because every template of the mode reads this list first, so a wrong entry fails
+with these messages. The last entry is the database the app uses (niord.db.host).
+*/}}
+{{- define "niord.cnpg.databases" -}}
+{{- $cnpg := .Values.postgres.cnpg | default dict -}}
+{{- $databases := list -}}
+{{- $last := 0 -}}
+{{- if and $cnpg.databases (not (kindIs "slice" $cnpg.databases)) -}}
+{{- fail "postgres.cnpg.databases is not a list: it lists the databases, e.g. [{number: 1}]" -}}
+{{- end -}}
+{{- range $db := $cnpg.databases -}}
+{{- if not (and (kindIs "map" $db) (has (kindOf $db.number) (list "int" "int64" "float64")) (eq (float64 (int $db.number)) (float64 $db.number)) (gt (int $db.number) $last)) -}}
+{{- fail "postgres.cnpg.databases: every entry is a map with `number`, a whole number of 1 or more that is higher than the entry's before it, e.g. [{number: 1}, {number: 2}]. A new database is a new entry at the end with the next number; a number is never used twice" -}}
+{{- end -}}
+{{- $last = int $db.number -}}
+{{- $image := $db.image | default $cnpg.image -}}
+{{- if not (and (kindIs "string" $image) (regexMatch "^[^\\s@]+:[^\\s:/@]+(@sha256:[0-9a-f]{64})?$" $image)) -}}
+{{- fail (printf "postgres.cnpg.image (or the image of database %d) is %q: it is one full image reference with its tag, e.g. ghcr.io/cloudnative-pg/postgis:18.6-3.6.4-202610261018-standard-trixie, used as it is; not the registry, repository and tag of the other images" $last (toString $image)) -}}
+{{- end -}}
+{{- $name := printf "%s-db-%d" (include "niord.fullname" $) $last -}}
+{{- if gt (len $name) 50 -}}
+{{- fail (printf "postgres.cnpg.databases: the database's name, %q, is longer than the 50 characters CloudNativePG takes: shorten the release name or set fullnameOverride" $name) -}}
+{{- end -}}
+{{- $databases = append $databases (dict "number" $last "name" $name "image" $image) -}}
+{{- end -}}
+{{- toJson $databases -}}
+{{- end }}
+
+{{/*
+Whether the release is in CloudNativePG mode: postgres.cnpg.databases has an entry. Renders "true"
+or nothing, for use in an if.
+*/}}
+{{- define "niord.cnpg.enabled" -}}
+{{- if include "niord.cnpg.databases" . | fromJsonArray -}}true{{- end -}}
 {{- end }}
 
 {{/*
