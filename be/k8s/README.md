@@ -557,7 +557,8 @@ What differs from the plain pod:
   password reach the database. The Secret the chart renders has it; an environment's own Secret
   needs it too.
 - **The app waits for PostGIS.** The operator creates the extension some seconds after the database
-  answers (22 seconds in a local run), and the app's first migration fails on a database without
+  answers (22 seconds in a local run, up to a few minutes on a cluster), and the app's first
+  migration fails on a database without
   it. So the app pod has an init container, `wait-for-postgis`, that connects as the owner and
   waits until the extension is there.
 
@@ -621,7 +622,11 @@ comments, the schemas `tiger` and `topology`, and the entries for the rows of th
 settings tables, `spatial_ref_sys` among them. The restore runs as the owner, over the network, in
 one transaction: one error undoes all of it. Tried on 2026-11-28 with a bootstrapped database, from
 PostGIS 3.6.1 to 3.6.4: 19 of the dump's 706 entries left out, no error, and the same row count in
-all 113 tables.
+all 113 tables. The same commands then moved two staging databases, a large one among them, with
+the same entries left out and no error.
+
+Before the restore, check that the new database has PostGIS: `kubectl -n $NS get database` says
+`APPLIED true` then. The tables with positions need it.
 
 ```bash
 NS=niord; OLD=deploy/niord-db; NEW=niord-db-1; DB=niord
@@ -668,9 +673,13 @@ kubectl -n $NS exec pg-client -- sh -c '
   echo "kept entries outside public: $(grep -E "^[0-9]+;" niord.list | grep -vcE "^[0-9]+; [0-9]+ [0-9]+ [A-Z ]+ public ")"
   echo "rows of spatial_ref_sys in the dump: $(pg_restore -a -n public -t spatial_ref_sys -f - niord.dump | grep -cE "^[0-9]+[[:space:]]")"'
 
-# 4. The restore: zero errors, or nothing.
-kubectl -n $NS exec pg-client -- sh -c 'cd /work && pg_restore -L niord.list --no-owner --no-acl \
-  --single-transaction -d "$PGDATABASE" niord.dump && echo "restored with no error"'
+# 4. The restore: zero errors, or nothing. It prints a line every 20 seconds while it works, so
+#    that a long restore does not look dead. If the session is cut off before the last line, do
+#    not run it again: count the owner's tables first (0 = not restored, or still running).
+kubectl -n $NS exec pg-client -- sh -c 'cd /work || exit 1; date
+  (while sleep 20; do echo "... still restoring $(date +%T)"; done) & hb=$!
+  pg_restore -L niord.list --no-owner --no-acl --single-transaction -d "$PGDATABASE" niord.dump; rc=$?
+  kill $hb; if [ $rc -eq 0 ]; then echo "restored with no error"; else echo "pg_restore FAILED, exit $rc"; fi; date'
 
 # 5. The row count of every table that no extension owns, old against new: no difference.
 cat > counts.sql <<'SQL'
@@ -685,6 +694,19 @@ kubectl -n $NS exec -i pg-client -- psql -X -At < counts.sql > new-counts.txt
 diff old-counts.txt new-counts.txt && echo "$(wc -l < new-counts.txt) tables, the same row counts"
 
 kubectl -n $NS delete pod pg-client
+
+# 6. The repository's files. They are rows of the table "RepoFile", each with its size and a
+#    SHA-256 checksum. Both databases work every file's size and checksum out again. The two lines
+#    must say the same, with no wrong size and no wrong checksum: then every file in the new
+#    database has the bytes its checksum was made from, and both hold the same files.
+cat > files.sql <<'SQL'
+select count(*) || ' files, ' || pg_size_pretty(coalesce(sum(length(data)), 0)) || ', wrong size: ' || count(*) filter (where length(data) <> size)
+       || ', wrong checksum: ' || count(*) filter (where sha256 is not null and encode(sha256(data), 'hex') <> sha256)
+       || ', fingerprint ' || coalesce(md5(string_agg(encode(sha256(data), 'hex'), ',' order by path)), '-')
+  from "RepoFile";
+SQL
+echo "old: $(kubectl -n $NS exec -i $OLD -- sh -c "psql -X -At -U \"\$POSTGRES_USER\" -d $DB" < files.sql)"
+echo "new: $(kubectl -n $NS exec -i $NEW-1 -c postgres -- psql -X -At -d $DB < files.sql)"
 ```
 
 The dump holds everything the database holds, the files of the repository included. Keep it
