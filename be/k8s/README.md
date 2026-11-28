@@ -564,7 +564,7 @@ What differs from the plain pod:
 ### The databases have numbers
 
 - A number is used once and never again, also after its entry is gone. Backups are kept under the
-  database's name, and a new database cannot use an old one's folder.
+  database's name, and a new database cannot use an old one's folder ([Backups](#backups)).
 - The numbers rise down the list, and the app uses the last entry. `postgres.host` names another
   database for as long as the app is to stay there: an older number's Service, or the plain pod's.
 - A restore, a new major PostgreSQL version or a second try is a new entry with the next number,
@@ -690,6 +690,207 @@ kubectl -n $NS delete pod pg-client
 The dump holds everything the database holds, the files of the repository included. Keep it
 readable by you alone, and delete it when the pod is removed.
 
+### Backups
+
+`postgres.cnpg.backup` sends the CloudNativePG databases' backups to an S3 store, through CNPG's
+Barman Cloud plugin. The cluster must run the plugin beside the operator, in the operator's
+namespace. Off by default, and only these databases are backed up: the plain pod has no backup.
+
+```yaml
+postgres:
+  cnpg:
+    databases:
+      - number: 1
+    backup:
+      enabled: true
+      destinationPath: s3://<bucket>/
+      endpointURL: https://<the store's address>
+      existingSecret: niord-postgres-backup   # the keys ACCESS_KEY_ID and ACCESS_SECRET_KEY
+```
+
+The chart then renders:
+
+- **One `ObjectStore`** for the release, `<fullname>-db-backup`: the bucket, the address, the keys
+  from the Secret, `gzip` for WAL files and full copies, and the window they are kept for
+  (`retentionPolicy`, three months).
+- **The plugin on each `Cluster`**, as its WAL archiver. A WAL file goes to the store when it is
+  full, or five minutes old.
+- **One `ScheduledBackup` for each database**, with the database's number in its name. It takes a
+  full copy on `schedule` (six fields, the seconds first; Sundays at 02:00 UTC) and one at once
+  when it is new.
+
+Each database writes to a folder named after itself, `<fullname>-db-<number>`, with nothing to
+set. CNPG refuses to archive into a folder that is not empty, and a database that is refused still
+looks healthy. That is why a number is never used twice.
+
+- **The Secret** holds the store's keys under `ACCESS_KEY_ID` and `ACCESS_SECRET_KEY`. With the
+  label `cnpg.io/reload: "true"` a changed key reaches the databases.
+- **`s3AddressingStyle`** is `path` by default: the bucket is part of the path, so the store's
+  certificate need not cover a host name for each bucket.
+- **A database may run without backups first and get them later, under the same number**: its
+  folder in the store has never been used. Without backups nothing piles up on its volume: the
+  operator takes each WAL file from PostgreSQL and drops it. Turning them on for a database
+  that already runs does two things to know:
+  - Its pod is replaced once, because the plugin adds a container. With the app connected,
+    PostgreSQL first waits up to three minutes for the app's connections to end; in a local run
+    the app was without its database for 15 seconds at the end of that. With the app stopped
+    the pod was back in 18 seconds.
+  - The full copy the new `ScheduledBackup` asks for at once is refused (`requested plugin is
+    not available`): the pod does not have the plugin yet. None is asked for again before the
+    schedule, and WAL files alone restore nothing. Ask for one by hand when the pod is back:
+
+    ```bash
+    kubectl -n niord apply -f - <<BACKUP
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Backup
+    metadata: {name: niord-db-1-first}
+    spec:
+      cluster: {name: niord-db-1}
+      method: plugin
+      pluginConfiguration: {name: barman-cloud.cloudnative-pg.io}
+    BACKUP
+    kubectl -n niord get backup                  # niord-db-1-first: completed
+    ```
+
+    A database that has backups from its first start needs none of this: its first full copy
+    waits for it.
+- **The window is kept by the database that owns the folder.** The folder of a database that is
+  gone is cleaned by nobody.
+
+```bash
+kubectl -n niord get scheduledbackup,backup      # a Backup per full copy, PHASE completed
+# Archiving, from the database itself: the last WAL file in the store, and the failures.
+kubectl -n niord exec niord-db-1-1 -c postgres -- psql -Atc \
+  "select last_archived_wal, last_archived_time, failed_count from pg_stat_archiver"
+```
+
+### A restore
+
+A restore adds a database. It never replaces one. An entry with `restore` is made from the backups
+of an earlier number, next to it if it still exists, and reads that folder only:
+
+```yaml
+    databases:
+      - number: 1
+      - number: 2
+        restore:
+          from: 1
+          # targetTime: "2026-11-26 11:14:21+00"   # up to a moment; left out, to the end
+```
+
+1. **Stop the app:** `app.replicaCount: 0`.
+2. **If the old database is alive, close its WAL file,** so that the store holds every write. The
+   first command names the file it closed, and the second shows that name once the file is in
+   the store, a second later in a local run. With nothing written since the last file, none is
+   closed: the first command then names the file that is still open, and the store holds every
+   write already.
+
+   ```bash
+   kubectl -n niord exec niord-db-1-1 -c postgres -- psql -Atc "select pg_walfile_name(pg_switch_wal())"
+   kubectl -n niord exec niord-db-1-1 -c postgres -- psql -Atc "select last_archived_wal from pg_stat_archiver"
+   ```
+
+3. **Add the next number with `restore`.** The database comes up with the old one's data, its
+   owner and the owner's password from the Secret.
+4. **Check the data, and wait for its first full copy:** `kubectl -n niord get backup` shows one
+   for the new database, completed. Until then its folder holds WAL files and nothing to replay
+   them onto.
+5. **Start the app:** `app.replicaCount: 1`. It is on the new database, the last entry.
+
+The old database stays, unused, until its entry is removed. Until then, going back is naming it
+in `postgres.host`.
+
+The `restore` of an entry is read once, when its database is created. Leave it in the list: it
+says where the database came from, and neither a later change of the values nor a new pod
+restores again. The earlier number need not be in the list. A cluster that is replaced starts
+with a list that holds only the next number, with `restore` from the last one.
+
+Tried locally on 2026-11-28: database 2 came up from database 1's folder in 41 seconds while
+database 1 kept running, with rows written after the last full copy; it took a full copy of its
+own into its own folder at once, and the old folder did not change. A third one, restored to a
+moment between two writes, held the first and not the second. The same held for a database that
+was moved from the plain pod and ran without backups first: once they were on and its first
+full copy was asked for by hand, a second database restored from it had the same row count in
+all 113 tables.
+
+### A local run with backups
+
+```bash
+# The plugin, in the operator's namespace, with two self-signed certificates in place of
+# cert-manager: the server's names the DNS name barman-cloud, and the plugin trusts exactly the
+# client's. It adds one CRD.
+mk() {
+  printf '[req]\ndistinguished_name=dn\nx509_extensions=v3\nprompt=no\n[dn]\nCN=%s\n[v3]\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=%s\nsubjectKeyIdentifier=hash\n%s\n' "$2" "$3" "$4" > $1.cnf
+  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout $1.key -out $1.crt -config $1.cnf
+  kubectl -n cnpg-system create secret tls barman-cloud-$1-tls --cert=$1.crt --key=$1.key
+}
+mk server barman-cloud serverAuth 'subjectAltName=DNS:barman-cloud'
+mk client barman-cloud-client clientAuth ''
+helm install plugin-barman-cloud oci://ghcr.io/cloudnative-pg/charts/plugin-barman-cloud --version 0.9.0 \
+  -n cnpg-system --wait --set certificate.createClientCertificate=false \
+  --set certificate.createServerCertificate=false --set certificate.createIssuer=false
+
+# A throwaway S3 store in the release's namespace: MinIO over plain HTTP, with made-up keys and
+# a bucket, niord-backup. Nothing in it is kept.
+kubectl create namespace niord
+kubectl -n niord apply -f - <<STORE
+apiVersion: v1
+kind: Secret
+metadata: {name: backup-s3, labels: {cnpg.io/reload: "true"}}
+stringData: {ACCESS_KEY_ID: local-key, ACCESS_SECRET_KEY: local-secret-key}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: minio}
+spec:
+  selector: {matchLabels: {app: minio}}
+  template:
+    metadata: {labels: {app: minio}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      initContainers:
+        - name: bucket
+          image: docker.io/library/busybox:1.36
+          command: ["mkdir", "-p", "/data/niord-backup"]
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}
+          volumeMounts: [{name: data, mountPath: /data}]
+      containers:
+        - name: minio
+          image: cgr.dev/chainguard/minio:latest
+          args: ["server", "/data"]
+          env:
+            - {name: MINIO_ROOT_USER, valueFrom: {secretKeyRef: {name: backup-s3, key: ACCESS_KEY_ID}}}
+            - {name: MINIO_ROOT_PASSWORD, valueFrom: {secretKeyRef: {name: backup-s3, key: ACCESS_SECRET_KEY}}}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}
+          volumeMounts: [{name: data, mountPath: /data}]
+      volumes: [{name: data, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: minio}
+spec: {selector: {app: minio}, ports: [{port: 9000}]}
+STORE
+
+cat > cnpg-backup.yaml <<VALUES
+postgres:
+  enabled: false
+  cnpg:
+    databases:
+      - number: 1
+    backup:
+      enabled: true
+      destinationPath: s3://niord-backup/
+      endpointURL: http://minio:9000
+      existingSecret: backup-s3
+VALUES
+EXTRA_HELM_ARGS="-f cnpg-backup.yaml" ./scripts/deploy.sh
+kubectl -n niord get backup                      # the first full copy: started, then completed
+
+# Removing the plugin again, before the operator.
+helm uninstall plugin-barman-cloud -n cnpg-system
+kubectl delete crd objectstores.barmancloud.cnpg.io
+```
+
 ## Configuration
 
 - **`k8s` Spring profile** (`SPRING_PROFILES_ACTIVE=k8s`) — no bean is gated on it today. The
@@ -812,9 +1013,12 @@ readable by you alone, and delete it when the pod is removed.
 | `keycloak.testUsers` | `false` | Production mode only: `true` keeps the test realm's users, with the passwords in this repository, in the rendered realm; never for production. Dev mode always imports them. Anything but `true` or `false` fails the render. |
 | `keycloak.database` | `keycloak` | Production mode: the database on this release's Postgres (or `postgres.host`) that Keycloak keeps its data in, created by an init container when missing. |
 | `postgres.databases` | `[]` | Further databases this release's Postgres holds, next to `postgres.database`. An infra release serving several app releases lists one per app (`[niord_dk, niord_gl]`), and each app release names its own in `postgres.database`. A post-install/post-upgrade Job creates any that is missing (from `template_postgis`, owned by the superuser, `postgres.admin`) and never drops one. An app release on such a database needs it handed to its user ("A database of someone else's", above). |
-| `postgres.cnpg.databases` | `[]` | CloudNativePG mode ([CloudNativePG](#cloudnativepg)): one `Cluster` of the operator's for each entry `{number: <n>}`, named `<fullname>-db-<number>`, next to or instead of the plain pod. The app uses the last entry. A number is used once; removing an entry deletes that database. An entry may name its own `image`. |
+| `postgres.cnpg.databases` | `[]` | CloudNativePG mode ([CloudNativePG](#cloudnativepg)): one `Cluster` of the operator's for each entry `{number: <n>}`, named `<fullname>-db-<number>`, next to or instead of the plain pod. The app uses the last entry. A number is used once; removing an entry deletes that database. An entry may name its own `image`, and `restore: {from: <number>}` to be made from an earlier number's backups ([A restore](#a-restore)). |
 | `postgres.cnpg.image` | `ghcr.io/cloudnative-pg/postgis:18.6-3.6.4-202610261018-standard-trixie` | The database image of that mode: one full reference with its tag, used as it is. `global.imageRegistry` does not apply. |
 | `postgres.cnpg.locale` | `en_US.utf8` | The locale a new database is created with, the plain image's. `""` = CNPG's default, `C`. |
+| `postgres.cnpg.backup.enabled` | `false` | Backups of the CloudNativePG databases to an S3 store, through CNPG's Barman Cloud plugin ([Backups](#backups)): one `ObjectStore` for the release, the plugin on each `Cluster` and one `ScheduledBackup` for each database. Needs `destinationPath` (`s3://<bucket>/`) and `existingSecret` (the keys `ACCESS_KEY_ID` and `ACCESS_SECRET_KEY`); the render fails without them, and without a database. |
+| `postgres.cnpg.backup.endpointURL`, `.s3AddressingStyle` | `""`, `path` | The store's address, and how a request names the bucket: `path`, `virtual` or `auto`. |
+| `postgres.cnpg.backup.retentionPolicy`, `.schedule` | `3m`, `0 0 2 * * 0` | How long full copies and WAL files are kept (a number and `d`, `w` or `m`), and when a full copy is taken: a cron expression of six fields, the seconds first, in UTC. Five fields fail the render. |
 | `app.persistence` / `postgres.persistence` | `enabled: true` | PVCs for NIORD_HOME and the DB. The repository files (attachments, publication files, the archive) are rows of the DB; NIORD_HOME is a cache (thumbnails and map images under `cache/`, the map tile cache of at most 200 MB, the AtoN tiles, the Lucene index) and the batch jobs' files, and nothing on it is backed up. |
 | `app.javaOpts` | `-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC` | Handed to the JVM as `JAVA_TOOL_OPTIONS`. One string that replaces the default whole, so a value that adds a flag repeats the two above. A `-D<settingKey>=<value>` here pins a setting ahead of `app.settings` and the stored row; pin settings with `app.settings` instead (see "Pinned settings"). Add the `-Dhttps.proxyHost`/`-Dhttps.proxyPort`/`-Dhttp.nonProxyHosts` flags when the tile host is reached through a proxy. The pod's JVM runs in UTC (`TZ=UTC`, set by the image and the chart, not by this value, so a value that replaces it keeps UTC); do not add `-Duser.timezone`. |
 | `app.resources.limits.memory` | `2Gi` | Heap is `MaxRAMPercentage=70`. |
