@@ -360,8 +360,10 @@ postgres:
     # when it is new, both compressed with gzip, into a folder named after itself,
     # <fullname>-db-<number>. CNPG refuses to archive into a folder that is not empty, which is
     # why a number is never used again. The chart renders one ObjectStore for the release and one
-    # ScheduledBackup for each database. Turning this on for a database that runs restarts it
-    # once: the plugin adds a container to its pod.
+    # ScheduledBackup for each database. Turning this on for a database that already runs
+    # replaces its pod once, since the plugin adds a container to it, and that database's first
+    # full copy must then be asked for by hand: the one asked for at once comes before the pod
+    # has the plugin, and is refused (README, "Backups").
     backup:
       enabled: false
       # The bucket, and a folder in it if the bucket is shared in another way than by database:

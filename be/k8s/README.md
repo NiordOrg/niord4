@@ -727,8 +727,33 @@ looks healthy. That is why a number is never used twice.
   label `cnpg.io/reload: "true"` a changed key reaches the databases.
 - **`s3AddressingStyle`** is `path` by default: the bucket is part of the path, so the store's
   certificate need not cover a host name for each bucket.
-- **Turning backups on for a database that runs replaces its pod once**: the plugin adds a
-  container. Locally the database was away for 18 seconds.
+- **A database may run without backups first and get them later, under the same number**: its
+  folder in the store has never been used. Without backups nothing piles up on its volume: the
+  operator takes each WAL file from PostgreSQL and drops it. Turning them on for a database
+  that already runs does two things to know:
+  - Its pod is replaced once, because the plugin adds a container. With the app connected,
+    PostgreSQL first waits up to three minutes for the app's connections to end; in a local run
+    the app was without its database for 15 seconds at the end of that. With the app stopped
+    the pod was back in 18 seconds.
+  - The full copy the new `ScheduledBackup` asks for at once is refused (`requested plugin is
+    not available`): the pod does not have the plugin yet. None is asked for again before the
+    schedule, and WAL files alone restore nothing. Ask for one by hand when the pod is back:
+
+    ```bash
+    kubectl -n niord apply -f - <<BACKUP
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Backup
+    metadata: {name: niord-db-1-first}
+    spec:
+      cluster: {name: niord-db-1}
+      method: plugin
+      pluginConfiguration: {name: barman-cloud.cloudnative-pg.io}
+    BACKUP
+    kubectl -n niord get backup                  # niord-db-1-first: completed
+    ```
+
+    A database that has backups from its first start needs none of this: its first full copy
+    waits for it.
 - **The window is kept by the database that owns the folder.** The folder of a database that is
   gone is cleaned by nobody.
 
@@ -783,7 +808,10 @@ with a list that holds only the next number, with `restore` from the last one.
 Tried locally on 2026-11-28: database 2 came up from database 1's folder in 41 seconds while
 database 1 kept running, with rows written after the last full copy; it took a full copy of its
 own into its own folder at once, and the old folder did not change. A third one, restored to a
-moment between two writes, held the first and not the second.
+moment between two writes, held the first and not the second. The same held for a database that
+was moved from the plain pod and ran without backups first: once they were on and its first
+full copy was asked for by hand, a second database restored from it had the same row count in
+all 113 tables.
 
 ### A local run with backups
 
