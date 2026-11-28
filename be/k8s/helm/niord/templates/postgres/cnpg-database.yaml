@@ -1,0 +1,25 @@
+{{- range $db := include "niord.cnpg.databases" . | fromJsonArray }}
+---
+# The PostGIS extension in the app's database on {{ $db.name }}: the operator creates it, as the
+# superuser, once the database is up. The owner may not (PostGIS is not a trusted extension), and
+# the app's first migration needs it there, so the app pod waits for it (wait-for-postgis,
+# app/deployment.yaml). CNPG's images have no template_postgis, and of the plain image's four
+# extensions the app uses only this one. The database itself is the one the Cluster created;
+# removing this object drops nothing (the reclaim policy's default, retain).
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ $db.name }}
+  labels:
+    {{- include "niord.componentLabels" (list $ (printf "db-%d" (int $db.number))) | nindent 4 }}
+spec:
+  cluster:
+    name: {{ $db.name }}
+  name: {{ $.Values.postgres.database | quote }}
+  owner: {{ $.Values.postgres.username | quote }}
+  extensions:
+    - name: postgis
+      # The API server's default, written out: a list item it had to complete would differ
+      # from this render for ever in a tool that compares the two (Argo CD).
+      ensure: present
+{{- end }}

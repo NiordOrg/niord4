@@ -1,0 +1,51 @@
+{{- /* `default dict`: values from before postgres.cnpg render nothing here, as an empty list does. */ -}}
+{{- $cnpg := .Values.postgres.cnpg | default dict }}
+{{- range $db := include "niord.cnpg.databases" . | fromJsonArray }}
+---
+# CloudNativePG mode (values.yaml, postgres.cnpg): one database of the operator's for each entry
+# of postgres.cnpg.databases, with its number in its name. The operator makes the pod, the volume
+# and the Service the app connects to, {{ $db.name }}-rw, and at the first start the database and
+# its owner, with the password of the owner's Secret. Nothing here is a superuser's.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $db.name }}
+  labels:
+    {{- include "niord.componentLabels" (list $ (printf "db-%d" (int $db.number))) | nindent 4 }}
+spec:
+  # One instance, and no disruption budget: with one instance a budget would block the drain of
+  # the node the database is on. The pod comes back on another node with its volume.
+  instances: 1
+  enablePDB: false
+  imageName: {{ $db.image | quote }}
+  {{- with $.Values.global.imagePullSecrets }}
+  # Named here: a database pod pulls its images (PostgreSQL, the operator's as an init container,
+  # a plugin's sidecar) with these and nothing else. A Secret that is only in the namespace is not used.
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  # The database, its owner and the locale are read once, when the database is created: a change
+  # afterwards reaches no database that exists. The Secret stays where the operator reads the
+  # owner's password from.
+  bootstrap:
+    initdb:
+      database: {{ $.Values.postgres.database | quote }}
+      owner: {{ $.Values.postgres.username | quote }}
+      secret:
+        name: {{ include "niord.postgres.secretName" $ }}
+      {{- with $cnpg.locale }}
+      localeCollate: {{ . | quote }}
+      localeCType: {{ . | quote }}
+      {{- end }}
+  # The app connects to the read-write Service. With one instance nothing uses the other two.
+  managed:
+    services:
+      disabledDefaultServices: ["ro", "r"]
+  storage:
+    size: {{ $.Values.postgres.persistence.size }}
+    {{- with $.Values.postgres.persistence.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  resources:
+    {{- toYaml $.Values.postgres.resources | nindent 4 }}
+{{- end }}

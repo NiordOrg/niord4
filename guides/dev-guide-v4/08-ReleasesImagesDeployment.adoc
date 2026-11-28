@@ -112,7 +112,8 @@ country's own namespace. It has six components, each behind an `enabled` flag:
 |The backend, which also serves the administration application.
 
 |`postgres`
-|PostgreSQL with PostGIS.
+|PostgreSQL with PostGIS: one plain pod, or, on a cluster that runs the CloudNativePG operator, a
+ database of that operator's (`postgres.cnpg`, off by default).
 
 |`keycloak`
 |Keycloak. A cluster can instead use a Keycloak outside the release, shared by several

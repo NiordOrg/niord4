@@ -249,7 +249,8 @@ info:
 postgres:
   enabled: true
   # In-cluster hostname of the database the app connects to. "" = the Postgres Service
-  # this release renders (<fullname>-db, see the header). An app-only release (enabled: false)
+  # this release renders (<fullname>-db, see the header; the last CloudNativePG database's where
+  # `cnpg.databases` below has an entry). An app-only release (enabled: false)
   # must name the infra release's Service here, e.g. "staging-infra-niord-db"; the port is service.port
   # and `database` and the credentials below are still the app's.
   host: ""
@@ -308,6 +309,46 @@ postgres:
     limits:
       cpu: "1"
       memory: 1Gi
+  # ---------------------------------------------------------------------------
+  #  CloudNativePG
+  # ---------------------------------------------------------------------------
+  # The database as a `Cluster` of the CloudNativePG operator (CNPG) instead of the pod above.
+  # On when `databases` has an entry; empty, the default, renders nothing: local runs and the
+  # tests keep the plain pod. The cluster must already run the operator, 1.30 or newer; the
+  # chart renders only a database's own objects. It is a switch apart from postgres.enabled:
+  # the pod and a Cluster can exist side by side in one release, which a move needs (README,
+  # "CloudNativePG").
+  #   Taken from the values above: `database`; `username`, the owner CNPG creates with it, and
+  #   its Secret, `existingSecret`, whose `username` must be that same name, so an environment
+  #   sets the real one above (with another name in the Secret the database still comes up
+  #   healthy, with an owner that has no password; the app pod's wait-for-postgis says so);
+  #   `persistence.size` and `.storageClass`; `resources`; and global.imagePullSecrets, which
+  #   each Cluster names itself.
+  #   Nobody gets a superuser password. The app pod's database-user init container is not
+  #   rendered, and the render refuses postgres.databases and a Keycloak in production mode in
+  #   the release: both need a superuser.
+  cnpg:
+    # The database image: one full reference, used as it is. global.imageRegistry does not
+    # apply, because CNPG's images reach a cluster through another registry project than the
+    # chart's other images. A CNPG PostGIS image of the `standard` flavour, which has the
+    # locales, pinned to a full tag: a moving one (18-3-standard-trixie) already means another
+    # PostGIS. An entry of `databases` may name its own.
+    image: ghcr.io/cloudnative-pg/postgis:18.6-3.6.4-202610261018-standard-trixie
+    # The locale a new database is created with: its sort order and character classes. The
+    # plain pod's image creates its databases with en_US.utf8, so a dump moved over sorts as
+    # before. "" = CNPG's default, C. Read when a database is first created, never afterwards.
+    locale: en_US.utf8
+    # The databases: one Cluster each, named <fullname>-db-<number>, with the app's database
+    # and the PostGIS extension in it. An entry is {number: <n>}, and may add `image` for that
+    # database alone (a new major PostgreSQL version next to the old one).
+    #   - A number is used once and never again, also after its entry is gone: backups are
+    #     kept under the database's name, and a new database cannot use an old one's folder.
+    #   - The numbers rise down the list. The app uses the LAST entry (its Service,
+    #     <fullname>-db-<number>-rw), unless postgres.host names another database.
+    #   - A restore, a new major version or a second try is a new entry with the next number,
+    #     next to the old one. Nothing is changed in place.
+    #   - Removing an entry deletes that database and its volume. Nothing else does.
+    databases: []
 
 # =============================================================================
 #  Keycloak
